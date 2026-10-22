@@ -1,0 +1,102 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &8245254658527938774
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2654244592862217440, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3431203916488744538, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      propertyPath: m_Name
+      value: Zombie_Prototype
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3431203916488744538, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1630638075582992709}
+  m_SourcePrefab: {fileID: 100100000, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+--- !u!1 &6769775166324790924 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3431203916488744538, guid: 361a421ed38c8114a8cd5a889a1a9439, type: 3}
+  m_PrefabInstance: {fileID: 8245254658527938774}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1630638075582992709
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6769775166324790924}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a33bcc33ff617b4ea075705187041bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Prototype.ZombieController
+  sightRange: 14
+  sightAngle: 140
+  closeSenseRange: 3.5
+  hearingRange: 12
+  alertNeighboursRange: 7
+  runSpeed: 3.2
+  animationRunSpeed: 1.8
+  attackRange: 1.5
+  attackDamage: 10
+  attackInterval: 1.2
+  bodyHitsToKill: 0
