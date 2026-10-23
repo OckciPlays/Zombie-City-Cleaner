@@ -215,8 +215,8 @@ Light:
   serializedVersion: 13
   m_Type: 0
   m_Color: {r: 1, g: 0.94, b: 0.82, a: 1}
-  m_Intensity: 14
-  m_Range: 24
+  m_Intensity: 30
+  m_Range: 28
   m_SpotAngle: 55
   m_InnerSpotAngle: 24
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -370,7 +370,7 @@ MonoBehaviour:
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 1
   m_Cameras: []
-  m_RendererIndex: -1
+  m_RendererIndex: 1
   m_VolumeLayerMask:
     serializedVersion: 2
     m_Bits: 1
@@ -475,7 +475,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3822680240
+  GlobalObjectIdHash: 1252970292
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -589,6 +589,7 @@ MonoBehaviour:
   aceleracao: 10
   alturaPulo: 0.8
   gravidade: -20
+  alturaMinima: -20
   sensibilidadeMouse: 0.08
   sensibilidadeControle: 160
   pitchMaximo: 85
@@ -632,6 +633,7 @@ MonoBehaviour:
   rede: {fileID: 2703077472034892032}
   luz: {fileID: 1646867083303763218}
   posicaoNoPeito: {x: 0.08, y: 1.28, z: 0.22}
+  inclinacao: 9
   atraso: 9
 --- !u!1001 &3603273135457184940
 PrefabInstance:

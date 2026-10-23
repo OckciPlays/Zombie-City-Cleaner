@@ -100,6 +100,8 @@ namespace ZombieCityCleaner.EditorTools
             dadosBracos.renderType = CameraRenderType.Overlay;
             dadosBracos.renderPostProcessing = false;
             dadosBracos.renderShadows = false;
+            // renderizador 1 (PC_Renderer_Bracos): sem a neblina de altura, que já foi aplicada pela câmera do mundo
+            if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp && urp.rendererDataList.Length > 1) dadosBracos.SetRenderer(1);
             dadosCam.cameraStack.Add(camBracos);
 
             var bracos = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador_FP.fbx"));
@@ -117,7 +119,7 @@ namespace ZombieCityCleaner.EditorTools
             luzGo.transform.localPosition = lanterna.posicaoNoPeito;
             var luz = luzGo.AddComponent<Light>();
             luz.type = LightType.Spot; luz.color = new Color(1f, 0.94f, 0.82f);
-            luz.intensity = 14f; luz.range = 24f; luz.spotAngle = 55f; luz.innerSpotAngle = 24f;
+            luz.intensity = 30f; luz.range = 28f; luz.spotAngle = 55f; luz.innerSpotAngle = 24f;
             luz.shadows = LightShadows.Soft; luz.shadowNearPlane = 0.2f;
 
             // ligações

@@ -17,6 +17,8 @@ namespace ZombieCityCleaner.Player
         public Light luz;
         [Tooltip("Posição em relação aos pés do jogador (x direita, y altura, z frente).")]
         public Vector3 posicaoNoPeito = new Vector3(0.08f, 1.28f, 0.22f);
+        [Tooltip("Graus para baixo em relação ao olhar: a luz pega o chão à frente, não só o horizonte.")]
+        public float inclinacao = 9f;
         public float atraso = 9f;
 
         public readonly NetworkVariable<bool> Ligada = new(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
@@ -46,7 +48,7 @@ namespace ZombieCityCleaner.Player
                 }
             }
             luz.enabled = Ligada.Value;
-            var alvo = transform.rotation * Quaternion.Euler(rede.Pitch.Value, 0f, 0f);
+            var alvo = transform.rotation * Quaternion.Euler(rede.Pitch.Value + inclinacao, 0f, 0f);
             _rotacao = Quaternion.Slerp(_rotacao, alvo, 1f - Mathf.Exp(-atraso * Time.deltaTime));
             luz.transform.SetPositionAndRotation(transform.TransformPoint(posicaoNoPeito), _rotacao);
         }

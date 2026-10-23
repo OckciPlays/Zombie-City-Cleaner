@@ -56,6 +56,7 @@ namespace ZombieCityCleaner.UI
         void Relatorio()
         {
             _proximoRelatorio = Time.time + 3f;
+            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}");
             foreach (var j in Player.JogadorRede.Todos)
                 Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}");
         }

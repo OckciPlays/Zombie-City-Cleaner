@@ -8,8 +8,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 ## Branches
 
 - `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
-  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola) e Parte 3 (o online base) estão feitas.
-  - O próximo passo é a Parte 4 (a cidade em blocos, o clima e o dia).
+  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base) e Parte 4 (a cidade em blocos, o clima e o dia) estão feitas.
+  - O próximo passo é a Parte 5 (os zumbis na cidade: IA, LOD, pool e rede), que também traz a furtividade da noite.
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
@@ -24,24 +24,70 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - para tempos guardados em `static`, use `Time.realtimeSinceStartup`.
 - **Não recompile scripts com o Play rodando:** os campos não serializados zeram.
 - **URP (`Assets/Settings/PC_RPAsset`):** gradação de cor em HDR, sombras até 40 m com 2 cascatas e HDR ligado.
+  - `PC_Renderer` (renderizador 0) tem o recurso "NeblinaDeAltura" (Full Screen Pass, antes dos transparentes, com profundidade).
+  - `PC_Renderer_Bracos` (renderizador 1, sem recursos) é usado pela câmera dos braços. Sem ele, a neblina de altura seria aplicada de novo por cima da imagem, só com a profundidade dos braços.
+  - Os dois são montados por `Editor/MontagemDoClima`, que só mexe nos assets de URP dentro de `Assets/` (nunca no asset do pacote).
 
 ## Pastas
 
 - `Assets/_Game/` é tudo da demo:
   - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings.
-  - `Settings/Demo_Volume.asset`: o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
+  - `Settings/Demo_Volume.asset` (noite) e `Settings/Demo_Volume_Dia.asset` (dia): o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
   - `Art/Characters/Zombie/`: o zumbi.
   - `Art/Characters/Jogador/`: o jogador (corpo, braços de primeira pessoa e pistola).
-  - `Art/Materials/`: materiais de teste do cenário (`Teste_*`).
+  - `Art/Materials/Blocos/`: os materiais da cidade em blocos, de cor sólida (URP Lit, com instancing). `ConeDeLuz.mat` é o cone falso dos postes (aditivo, com o degradê `DegradeCone.png`).
+  - `Art/Materials/`: também `NeblinaDeAltura.mat`, `Particulas.mat` e `Clarao.mat`. Os `Teste_*` são da fundação.
+  - `Art/Meshes/`: malhas geradas pela montagem da cidade (`Prisma`, `ConeDeLuz`, `Pinheiro`).
+  - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
+  - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), usada nos gemidos distantes.
 - Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
 
 ## Cena `Demo_Cidade`
 
-- **Noite:**
-  - neblina exponencial ao quadrado (cor `#353D45`, densidade 0,05) e fundo da câmera na mesma cor;
-  - luz ambiente Trilight azulada e "Luar", uma luz direcional fria e fraca com sombra suave.
-- **"Teste (temporário)":** uma rua, calçadas, casas em caixas, postes com luz de sódio, um chão grande e três zumbis de teste (Idle, Walk, Chase). Tudo isso será trocado pela cidade em blocos da Parte 4.
-- **"Câmera de teste":** a câmera do menu (veja "Rede e jogador online").
+- **Raízes:** "Cidade", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento" e "Câmera de teste".
+- Os valores de neblina e luz guardados na cena (densidade 0,05, ambiente azulado) são só os do Editor parado. Em Play, o `AmbienteDoDia` reescreve tudo a cada quadro.
+
+## A cidade em blocos (Parte 4)
+
+- **Montada por código:** `Editor/MontagemDaCidade`, menu Zombie City Cleaner > Montar cidade em blocos. Ela apaga e refaz a raiz "Cidade" (e o antigo "Teste (temporário)"), então mudanças feitas à mão na cidade se perdem. Mude o script e rode de novo.
+  - Os materiais (`Art/Materials/Blocos/`) usam as cores do `Plano_Demo.md`. As peças são caixas, com ajudantes para parede com portas e janelas (`Parede` + `Abertura`), laje com buraco (`Laje`), escada e telhado.
+  - Tudo é estático (batching e oclusão), menos as luzes, os postes e os cones de luz, que mudam em Play.
+  - No fim, ela põe os 4 pontos de nascimento na frente da casa da família.
+- **Planta (metros, +Z = norte):**
+  - Ruas em grade nas linhas x e z = −40, 0 e 40, com 8 m de largura, faixa amarela tracejada e calçadas de 2,5 m em volta dos 4 quarteirões. As 4 saídas, em ±60, têm barricadas.
+  - **Prédio** em (20, 0, 21), 22 × 14 m, 4 andares de 3 m: escada em U no fundo, corredor no meio e 2 apartamentos por andar, com eco (reverb) dentro.
+  - **Casa da família** em (−20, 0, −18), virada para o sul (yaw 180), 12 × 10 m, azul, com cerca. É a única com bunker.
+  - **Outras casas:** Casa 1 (−27, 0, 19), Casa 2 (−12, 0, 23), Casa 4 (13, 0, −14) e Casa 5 (28, 0, −26). Todas dá para entrar.
+  - Praça em (24, 0, −12), estacionamento em (10, 0, 33), 8 carros, cercas e árvores.
+  - Um anel de 320 pinheiros (raio 64 a 98) e a barreira invisível de 48 lados no raio 63.
+  - O chão é uma laje de 220 × 220 m feita por último, com um buraco na escada do bunker.
+- **Bunker** (embaixo do quintal da casa da família):
+  - a escada começa no meio do cômodo de trás, com grade em volta do buraco, e desce para os fundos (19 degraus, do piso a −3,2 m);
+  - um patamar de 1,2 m e a porta (1,2 × 2,3 m) levam às salas: sala comum (mesa), quarto (beliche) e despensa (prateleiras);
+  - uma lâmpada quente (intensidade 5, alcance 9) e eco de corredor de pedra;
+  - lá embaixo a luz do dia não chega (veja "Clima e ciclo do dia").
+- **Postes (`World/PosteDeLuz`):** 28 postes com luz de sódio (spot, intensidade 95, alcance 16, ângulo 105°, sem sombra) e um cone falso de luz.
+  - Eles acendem com a noite, cada um com um atraso próprio. Alguns piscam (`i % 7 == 3`) e alguns estão quebrados (`i % 11 == 5`).
+  - O cone e a lâmpada mudam por MaterialPropertyBlock. A luz só fica ligada quando o poste está aceso.
+
+## Clima e ciclo do dia (Parte 4)
+
+- **Montado por `Editor/MontagemDoClima`** (menu Zombie City Cleaner > Montar clima e ciclo do dia): o objeto "Clima", o perfil do dia, a neblina de altura no renderizador, o renderizador dos braços e o som. Pode rodar de novo.
+- **"Clima"** tem um NetworkObject e estes scripts:
+  - **`World/CicloDoDia`:** o anfitrião manda na hora e a envia a cada 1 s (`HoraRede`); entre um envio e outro, cada um avança sozinho. Fora da partida o relógio roda localmente.
+    - `CicloDoDia.Hora` (0 a 24) e `CicloDoDia.Noite` (0 das 8h às 17h, 1 das 20h às 5h, com transição suave) são estáticos, para qualquer script ler.
+    - Começa às 21h, e um dia inteiro leva 24 minutos reais.
+    - Teste: o anfitrião avança ou volta 1 hora com Page Up / Page Down. `-hora N` na linha de comando muda a hora inicial.
+  - **`World/AmbienteDoDia`:** troca os tons de dia e de noite (neblina, luz ambiente, cor, força e altura de "Sol e lua", o peso dos dois volumes e o fundo das câmeras) e passa os valores da neblina de altura ao shader.
+    - Dia: neblina pesada e clara (cinza, densidade 0,032). Noite: neblina escura e azulada (densidade 0,042) e luar frio. Neblina clara à noite apagaria as poças de luz dos postes.
+    - **Subsolo:** quando a câmera desce de −0,3 m para −1,5 m (a escada do bunker), a luz ambiente, o sol e as duas neblinas caem para 15%. Lá embaixo só a lâmpada e a lanterna iluminam.
+  - **`Atmosphere/SomAmbiente`:** o vento é gerado por código, em loop. Eventos distantes (35 a 60 m) tocam a cada 10 a 26 s, e à noite com o dobro da frequência: gemidos (trechos de `SomZombie1.mp3` mais graves), sirene e pancada de metal.
+  - **"Partículas no ar" (`Atmosphere/ParticulasNoAr`):** uma caixa de 26 × 12 × 26 m que segue a câmera, com cinza de dia e poeira à noite.
+- **Neblina de altura (`Shaders/NeblinaDeAltura.shader`):** um passe de tela cheia antes dos transparentes (os cones e as partículas ficam por cima).
+  - A densidade cai com a altura (exponencial, calculada exata ao longo do raio) e tem manchas de ruído arrastadas pelo vento.
+  - Abaixo da altura base a conta usa a base, para a neblina não engrossar debaixo da terra.
+- **Lanterna:** intensidade 30, alcance 28, inclinada 9° para baixo do olhar.
+- **Como testar:** em Play, Page Up / Page Down mudam a hora. Por código, `typeof(CicloDoDia).GetProperty("Hora").GetSetMethod(true).Invoke(null, new object[] { 12f })`.
 
 ## O zumbi (`Art/Characters/Zombie/`)
 
@@ -106,12 +152,12 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - telas de hospedar, entrar com código e modo local;
   - na partida, o código e o número de jogadores ficam no canto, e ESC abre o menu (o mundo continua rodando);
   - `MenuOnline.Aberto` bloqueia os comandos do jogador.
-- **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]` e `-bot`.
-  - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s, troca a lanterna a cada 5 s e registra no log, a cada 3 s, o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
+- **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot` e `-hora N`.
+  - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s, troca a lanterna a cada 5 s e registra no log, a cada 3 s, a hora que recebeu (`[robô] hora HH:MM`) e o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
 - **Como testar com dois jogadores:**
   1. gere a build em `Builds/Teste/` (Development, ignorada pelo git);
-  2. no Editor, em Play, hospede;
-  3. rode a build sem janela, por exemplo `ZombieCityCleaner.exe -batchmode -nographics -entrar CÓDIGO -bot -logFile caminho.log`;
+  2. no Editor, em Play, hospede (com código, ou "Hospedar local" para testar sem internet);
+  3. rode a build sem janela, por exemplo `ZombieCityCleaner.exe -batchmode -nographics -entrar CÓDIGO -bot -logFile caminho.log` (ou `-entrar-local 127.0.0.1` no lugar de `-entrar CÓDIGO`);
   4. confira no Editor (`JogadorRede.Todos`, `TirosRecebidos`) e no log da build.
   - Ao terminar, desligue `MenuOnline.Bot` se ele foi ligado no Editor: sem Domain Reload, ele continuaria ligado no próximo Play.
 - **O jogador (`Assets/_Game/Prefabs/Jogador.prefab`, montado por `Editor/MontagemDaRede`, menu Zombie City Cleaner > Montar jogador e rede):**
@@ -122,7 +168,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga.
   - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
   - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (`Jogador_FP.fbx`, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
-  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz.
+  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
   - Só o dono liga as câmeras, o ouvido, os braços, o movimento e a arma.
 - **O que vai pela rede:**
   - a posição e o giro (NetworkTransform);
@@ -133,7 +179,6 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Ações de input do projeto** (`InputSystem_Actions`, mapa Player): as do modelo da Unity, mais `Aim` (botão direito / gatilho esquerdo), `Reload` (R / X) e `Flashlight` (F / direcional para cima). O tiro no controle foi para o gatilho direito.
 - **`Combat/Efeitos`** (objeto "Efeitos" na cena): sons gerados por código (tiro, clique, recarga, lanterna), o clarão do cano e as faíscas e poeira do impacto. Os materiais `Particulas` e `Clarao` ficam em `Art/Materials/`.
 - **Cena:**
-  - **"Pontos de nascimento":** 4 pontos na rua de teste.
+  - **"Pontos de nascimento":** 4 pontos na frente da casa da família, postos pela montagem da cidade.
   - **"Câmera de teste":** com `CameraDoMenu`, aparece no menu e some quando o jogador local nasce.
-  - **"Teste (temporário)":** ganhou um chão grande.
 - **Peças das armas nos modelos:** `Boca_TP` (filho de `weapon.R` no corpo) e `Boca_FP` (filho de `gun` nos braços) marcam a ponta do cano.
