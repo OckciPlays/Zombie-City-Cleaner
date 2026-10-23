@@ -1,0 +1,137 @@
+# 02 – Plano da demo
+
+O projeto é grande, então é feito em partes, com calma. Cada parte termina com algo que dá para ver ou jogar, e só se passa para a próxima quando a anterior está aprovada.
+
+## A demo
+
+### O que entra
+
+- **Online desde já, com o Relay da Unity:** até 4 jogadores. Um hospeda e os amigos entram com um código.
+- **A cidade:** pequena, com um prédio de 4 andares e 5 casas onde dá para entrar, cercada de pinheiros. Uma das casas é a da família, com o bunker embaixo.
+- **O bunker:** pequeno, e dá para andar por ele (quarto, despensa e sala comum).
+- **Um dia completo:** sair do bunker, explorar, saquear lugares que não se renovam, matar zumbis, voltar, guardar tudo na despensa e dormir para passar ao próximo dia.
+- **Dia e noite:** dia com neblina e noite com a vantagem da furtividade.
+- **Zumbis:** lentos, desistem de seguir quando o jogador se afasta, e o tiro na cabeça explode a cabeça.
+- **Salvar:** o anfitrião salva o mundo.
+- **Objetivo da demo:** limpar a cidade.
+
+### O que fica para depois
+
+A família controlada pelo jogo, água da chuva, plantações, criação de itens, a expansão para a casa, as invasões de hordas, os veículos, as outras cidades e as comunidades.
+
+## Como o online funciona
+
+- **Quem roda a partida:** a máquina de um dos jogadores, o anfitrião. Ela roda os zumbis, o saque e o mundo. Os amigos se conectam pelo Relay, sem abrir portas no roteador. Para co-op de 4, isso basta.
+- **Quem decide o quê:**
+  - **movimento:** cada jogador controla o próprio personagem, para a resposta ser imediata;
+  - **mundo e zumbis:** o anfitrião decide zumbis, dano, mortes, saque, inventário e o dia;
+  - **tiro:** o jogador mira e atira na própria máquina, e o anfitrião confirma o acerto. Como é co-op, dá para ser tolerante com o atraso da rede.
+- **Zumbis na rede:** não dá para mandar centenas de zumbis completos a cada quadro. Cada jogador só recebe os zumbis perto dele, numa taxa menor, e a máquina dele suaviza o movimento entre as atualizações.
+- **Regra para a lógica do jogo:** nada de "o jogador" único ou `Camera.main`. A IA, o saque e o dia sempre pensam na lista de jogadores. (O `Camera.main` só aparece no que é visual e local, como o som abafado pela distância e as partículas em volta da câmera.)
+
+## As partes, em ordem
+
+Legenda: ✅ feita · ⏭️ próxima · ⬜ por fazer. Os detalhes do que foi feito estão no [histórico](03-Historico.md).
+
+### ✅ Parte 0: fundação do projeto Unity
+
+- A branch `feature/demo-cidade` no mesmo projeto Unity (6000.6, URP, Input System, AI Navigation). O protótipo antigo ficou na branch dele.
+- As pastas em `Assets/_Game/`, a cena `Demo_Cidade`, o URP com pós-processamento e Forward+, e os pacotes de rede ligados ao projeto na Unity Cloud.
+- **Pronto quando:** a cena abre com noite, neblina e o pós-processamento base, e os pacotes de rede compilam.
+
+### ✅ Parte 1: o zumbi no Blender
+
+- O esqueleto padrão (`root > hips > spine > chest > neck > head`, braços e pernas com `.L`/`.R`), o desmembramento preparado na malha e as animações `Idle`, `Walk` e `Chase` (24 fps, sem root motion).
+- **Pronto quando:** o FBX com as animações toca na Unity, na escala certa.
+- **Mudou depois:** o zumbi dessa parte (o `NovoZombie`) foi trocado por 4 modelos novos nos ajustes antes da Parte 7. O esqueleto e as animações dele continuam sendo a base dos novos.
+
+### ✅ Parte 2: o personagem do jogador e a pistola
+
+- O corpo no estilo quadradão (o que os amigos veem), os braços em primeira pessoa e a pistola, com as animações dos dois e 4 variações de cor para a família.
+- **Pronto quando:** os modelos e as animações tocam na Unity.
+- **Mudou depois:** os braços e a pistola foram refeitos com as 4 armas.
+
+### ✅ Parte 3: o online base
+
+- Hospedar uma partida, ver o código e entrar com ele (menu simples).
+- Os jogadores aparecem e andam juntos; cada um vê as próprias mãos com a arma (numa câmera separada, que não atravessa paredes) e o corpo dos outros.
+- Andar, correr, olhar, pular e a lanterna, tudo sincronizado.
+- **Pronto quando:** 2 a 4 jogadores se veem andando e atirando, sem zumbis ainda.
+
+### ✅ Parte 4: a cidade em blocos, o clima e o dia
+
+- A cidade montada primeiro com caixas (blockout): ruas, o prédio, as 5 casas, o bunker, carros, cercas e o anel de pinheiros com uma barreira invisível.
+- **Clima:** a neblina do URP mais uma neblina de altura com ruído que se mexe, partículas no ar, pós-processamento (tonemapping, cores dessaturadas, vinheta, granulado e bloom) e eco nos ambientes fechados.
+- **Dia e noite** controlados pelo anfitrião: dia com neblina pesada e clara; noite escura, com luar frio e postes de luz de sódio (alguns piscando) com cones de luz falsos na neblina.
+- **Pronto quando:** andar pela cidade, de dia e de noite, já passa a sensação de medo.
+
+### ✅ Parte 5: os zumbis na cidade
+
+- **Comportamento** (decidido pelo anfitrião): vagar, perceber (visão que depende da luz, proximidade, passos correndo e o barulho do tiro), perseguir devagar, atacar e desistir.
+- **LOD de IA:** perto (até 15 m, IA completa), médio (15 a 40 m, só vagar) e longe (mais de 40 m, o zumbi fica parado e não custa nada), com histerese.
+- **Pool** (os zumbis são reaproveitados), **rede** só com os zumbis perto de cada jogador e um **benchmark** com 50, 100, 250 e 500 zumbis.
+- **Pronto quando:** a cidade tem as hordas espalhadas, em rede, e o benchmark tem os números.
+
+### ✅ Parte 6: combate
+
+- Tiro por raycast do centro da tela, confirmado pelo anfitrião; pente e recarga; clarão, som e marca de tiro.
+- Regiões do corpo com vida própria, a cabeça que explode, sangue e manchas no chão.
+- **Mudou depois:** o desmembramento (braços e pernas caindo, zumbi rastejando) foi feito, mas saiu nos ajustes antes da Parte 7. A morte virou ragdoll.
+
+### ✅ Parte 8: a arte final da cidade e do bunker
+
+- **Veio antes da Parte 7, a pedido.** Os móveis de saque ganharam o modelo agora; o saque fica para a Parte 7.
+- Em 6 fatias: a paleta e os objetos de rua; as casas; o prédio; o bunker e os móveis; o chão; e a oclusão com o benchmark.
+- **Decidido:** a luz continua em tempo real (o dia é contínuo e os postes piscam, e luz assada não acompanha isso); LOD não foi preciso.
+- **Pronto quando:** os blocos foram trocados pelos modelos finais, com o clima mantido.
+
+### ✅ Ajustes antes da Parte 7
+
+Pedidos depois da Parte 8, em 3 fatias:
+
+1. **Som e nascimento:** o tiro novo, gerado em camadas; sem o som ambiente e a sirene; os jogadores nascem na sala comum do bunker.
+2. **Zumbis:** 4 modelos novos com o mesmo esqueleto e as mesmas animações; só a cabeça explode; a morte com ragdoll.
+3. **Armas:** pistola, rifle, submetralhadora e espingarda, com braços de luva novos, animações de cada uma e um suporte na parede do bunker (pegar uma arma deixa a da mão no lugar).
+
+Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura mais os braços e o número de zumbis dobrou (258).
+
+### ⏭️ Parte 7: o bunker, o saque e o dia
+
+- **Bunker:** quarto (camas para dormir e passar o dia), despensa (o estoque da família) e sala comum.
+- **Saque:** armários, geladeiras, gavetas e carros com itens (munição, comida, água, remédio e materiais).
+  - O que foi saqueado fica vazio para sempre.
+  - A cidade é dividida em áreas, para o jogo saber o que já foi limpo.
+  - Os móveis de saque já existem na cena, com o nome da malha (armário, cômoda, criado-mudo, geladeira, balcão e prateleiras).
+- **Inventário:** espaço limitado na mochila de cada jogador e a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
+- **Dia:** sair, explorar, voltar antes de escurecer (ou arriscar a noite) e dormir. Dormir passa o dia e salva.
+- **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do suporte de armas, que hoje volta ao inicial a cada partida.
+- **Pronto quando:** dá para jogar vários dias seguidos, sair do jogo, voltar e encontrar tudo como estava.
+
+### ⬜ Parte 9: o fechamento da demo
+
+- **Objetivo:** limpar a cidade, com o número de dias mostrado no fim.
+- **HUD:** mira, munição, vida, mochila e a hora do dia.
+- **Menus:** hospedar ou entrar, e pausa (a pausa não congela o mundo, porque é online).
+- **Sons:** passos em cada piso, a voz do zumbi e o tiro de cada arma.
+- **Ajuste final de desempenho e de rede**, medido com o benchmark.
+
+## Fases depois da demo
+
+1. **Família:** criar os membros; quem não é jogado fica no bunker fazendo tarefas; os amigos assumem membros ao entrar.
+2. **Sobrevivência que se renova:** água da chuva, plantações e criação de itens; fome e sede.
+3. **Base:** do bunker para a casa (barricadas e defesas) e depois para a comunidade; hordas tentam invadir a cidade.
+4. **Veículos.**
+5. **Cidade limpa:** proteger as entradas.
+6. **Mundo maior:** outras cidades, sobreviventes e comunidades com missões em troca de recursos.
+7. **Rede mais robusta:** trocar de anfitrião e reconectar quem caiu.
+
+## Sobre o sistema de zumbis "estilo Dead Rising"
+
+- Não há material técnico oficial sobre como o Dead Rising fazia as hordas. O caso documentado mais próximo é a palestra da Ubisoft sobre o Assassin's Creed Unity: poucos NPCs com IA de verdade e milhares na tela, trocando o simples pelo completo sem o jogador perceber. É a mesma ideia do LOD de IA da Parte 5.
+- **O que adotamos:** um gerenciador central, 3 níveis com histerese, pool, medir com o Profiler antes de otimizar e não prender a IA à câmera.
+- **O que muda no nosso caso:**
+  - o LOD já nasce no projeto, em vez de otimizar algo que existe;
+  - no protótipo antigo, 500 zumbis custavam ~18 ms por quadro, quase tudo na física das hitboxes. Por isso as hitboxes completas só ficam ligadas no nível "perto";
+  - zumbis lentos que desistem simplificam muito: ninguém atravessa a cidade atrás do jogador;
+  - a IA roda só no anfitrião, e o nível de cada zumbi também decide se ele é enviado pela rede;
+  - GPU Instancing não funciona com malha animada (SkinnedMeshRenderer). Para multidões enormes ao longe, a saída seria assar a animação numa textura. Com a neblina escondendo o que está longe, isso não foi necessário.

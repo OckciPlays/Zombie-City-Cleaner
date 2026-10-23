@@ -58,6 +58,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
   - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), tocada em trechos.
 - Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
+- `Docs/` (fora de `Assets`): a documentação para quem colabora no projeto, em português: visão do jogo, plano da demo com o estado de cada parte, histórico, arquitetura, arte e como colaborar. O `README.md` da raiz aponta para ela. Ao terminar uma parte ou mudar algo importante, atualize também o `Docs/` (sobretudo o histórico e o plano).
 
 ## Cena `Demo_Cidade`
 
@@ -122,7 +123,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 ## Clima e ciclo do dia (Parte 4)
 
-- **Montado por `Editor/MontagemDoClima`** (menu Zombie City Cleaner > Montar clima e ciclo do dia): o objeto "Clima", o perfil do dia, a neblina de altura no renderizador, o renderizador dos braços e o som. Pode rodar de novo.
+- **Montado por `Editor/MontagemDoClima`** (menu Zombie City Cleaner > Montar clima e ciclo do dia): o objeto "Clima", o perfil do dia, a neblina de altura no renderizador, e o renderizador dos braços. Pode rodar de novo.
 - **"Clima"** tem um NetworkObject e estes scripts:
   - **`World/CicloDoDia`:** o anfitrião manda na hora e a envia a cada 1 s (`HoraRede`); entre um envio e outro, cada um avança sozinho. Fora da partida o relógio roda localmente.
     - `CicloDoDia.Hora` (0 a 24) e `CicloDoDia.Noite` (0 das 8h às 17h, 1 das 20h às 5h, com transição suave) são estáticos, para qualquer script ler.
@@ -267,8 +268,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **A arma no corpo do dono fica desligada** (o renderer, nem sombra): a ponta do rifle e da espingarda passa dos 60 cm em que a sombra da lanterna começa, e a sombra do cano aparecia no facho. O corpo continua só como sombra.
     - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Depois de 8 s sem apanhar, recupera 2 por segundo (provisório, até o saque da Parte 7).
   - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
-  - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (`Jogador_FP.fbx`, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
-  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
+  - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (os braços de primeira pessoa de cada arma, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
+  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a arma de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
   - **"Bracos"** tem um filho por arma (`Bracos_<Arma>`, o FBX de primeira pessoa com o controlador ou o override dele), só o da arma da mão ligado.
   - Só o dono liga as câmeras, o ouvido, os braços, o movimento e a arma.
 - **O que vai pela rede:**
