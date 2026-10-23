@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Jogador_FP_Espingarda
+  m_Controller: {fileID: 9100000, guid: 59e83342d60996143a4186f826af8ae2, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -3100369314251171874, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: -3100369314251171874, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: 2667949614841947897, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: 2667949614841947897, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: 5522812681064789136, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: 5522812681064789136, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: -4579541417933013020, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: -4579541417933013020, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: -2575560670772373192, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: -2575560670772373192, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: 229770723416056496, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: 229770723416056496, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
+  - m_OriginalClip: {fileID: 6326907279473880864, guid: e2235ad135111c346a0a44ff8e39bbc1, type: 3}
+    m_OverrideClip: {fileID: 6326907279473880864, guid: 80282f9f07b2cf644879948d7721fa01, type: 3}
