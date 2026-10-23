@@ -5,7 +5,9 @@ namespace ZombieCityCleaner.Combat
 {
     /// <summary>
     /// Efeitos de tiro compartilhados: clarão do cano (luz rápida + brilho), faíscas no impacto e sons gerados por
-    /// código (tiro, clique sem bala, recarga, lanterna). Fica num objeto da cena, com os materiais das partículas.
+    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna). O tiro de cada arma vem do
+    /// <see cref="SomDeTiro"/>, em variações.
+    /// Fica num objeto da cena, com os materiais das partículas.
     /// </summary>
     public class Efeitos : MonoBehaviour
     {
@@ -13,7 +15,9 @@ namespace ZombieCityCleaner.Combat
         public Material materialClarao;
 
         static Efeitos _instancia;
-        public static AudioClip Tiro, Clique, Recarga, Lanterna;
+        /// <summary>As variações do tiro de cada arma (na ordem de <see cref="TipoDeArma"/>).</summary>
+        public static AudioClip[][] Tiros;
+        public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
         ParticleSystem _faiscas, _poeira;
@@ -21,16 +25,25 @@ namespace ZombieCityCleaner.Combat
         void Awake()
         {
             _instancia = this;
-            Tiro = Gerar("Tiro", 0.5f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 18f) * 0.9f + Mathf.Sin(t * 2 * Mathf.PI * 70f) * Mathf.Exp(-t * 10f) * 0.6f);
+            Tiros = new AudioClip[Armas.Quantas][];
+            for (int i = 0; i < Armas.Quantas; i++) Tiros[i] = SomDeTiro.Gerar("Tiro d" + Armas.Todas[i].nomeComArtigo, Armas.Todas[i].som);
             Clique = Gerar("Clique", 0.06f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 160f) * 0.7f);
             Recarga = Gerar("Recarga", 0.5f, (t, r) => (float)(r.NextDouble() * 2 - 1) * (Mathf.Exp(-t * 120f) + Mathf.Exp(-Mathf.Max(0, t - 0.28f) * 140f) * (t > 0.28f ? 1 : 0)) * 0.6f);
             Lanterna = Gerar("Lanterna", 0.04f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 220f) * 0.5f);
-            for (int i = 0; i < 16; i++)
+            // o carregador saindo ou entrando: um estalo seco e o metal batendo logo depois
+            Carregador = Gerar("Carregador", 0.12f, (t, r) => (float)(r.NextDouble() * 2 - 1) * (Mathf.Exp(-t * 180f) + 0.6f * Mathf.Exp(-Mathf.Max(0f, t - 0.035f) * 150f) * (t > 0.035f ? 1 : 0)) * 0.6f
+                                                         + Mathf.Sin(2f * Mathf.PI * 2100f * t) * Mathf.Exp(-t * 90f) * 0.15f);
+            // a bomba da espingarda: para trás (no começo) e para a frente (0,3 s depois), dois golpes de metal
+            Bomba = Gerar("Bomba", 0.45f, (t, r) => Golpe(t, r, 0f, 1f) + Golpe(t, r, 0.3f, 1.2f));
+            // o cartucho entrando no tubo: um clique curto
+            Cartucho = Gerar("Cartucho", 0.08f, (t, r) => Golpe(t, r, 0f, 0.6f));
+            for (int i = 0; i < 24; i++)
             {
                 var go = new GameObject("Som");
                 go.transform.SetParent(transform);
                 var s = go.AddComponent<AudioSource>();
                 s.playOnAwake = false; s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = 2f; s.maxDistance = 60f;
+                go.AddComponent<AudioLowPassFilter>().cutoffFrequency = 22000f;
                 _fontes.Enqueue(s);
             }
             _faiscas = Particulas("Faíscas", new Color(1f, 0.8f, 0.4f), 0.03f, 0.25f, 6f);
@@ -54,6 +67,14 @@ namespace ZombieCityCleaner.Combat
             return clip;
         }
 
+        // um golpe de metal: ruído que some rápido e um tilintar
+        static float Golpe(float t, System.Random r, float em, float forca)
+        {
+            float d = t - em;
+            if (d < 0f) return 0f;
+            return ((float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-d * 120f) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1700f * d) * Mathf.Exp(-d * 60f) * 0.25f) * forca;
+        }
+
         ParticleSystem Particulas(string nome, Color cor, float tamanho, float vida, float velocidade)
         {
             var go = new GameObject(nome);
@@ -71,15 +92,29 @@ namespace ZombieCityCleaner.Combat
             return ps;
         }
 
-        /// <summary>Toca um som. Espacial = 3D no ponto; senão, sai "dentro da cabeça" (o próprio tiro).</summary>
-        public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true)
+        /// <summary>
+        /// Toca um som. Espacial = 3D no ponto, ouvido até o alcance e mais abafado quanto mais longe; senão, sai
+        /// "dentro da cabeça" (o próprio tiro).
+        /// </summary>
+        public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f)
         {
             if (_instancia == null || clip == null) return;
             var s = _instancia._fontes.Dequeue(); _instancia._fontes.Enqueue(s);
             s.transform.position = posicao;
             s.spatialBlend = espacial ? 1f : 0f;
+            s.maxDistance = alcance;
+            var cam = Camera.main;
+            float longe = espacial && cam != null ? Mathf.Clamp01(Vector3.Distance(cam.transform.position, posicao) / alcance) : 0f;
+            s.GetComponent<AudioLowPassFilter>().cutoffFrequency = 22000f * Mathf.Pow(0.08f, longe);
             s.pitch = Random.Range(0.94f, 1.06f);
             s.PlayOneShot(clip, volume);
+        }
+
+        /// <summary>Toca uma das variações, sorteada.</summary>
+        public static void Som(AudioClip[] clips, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f)
+        {
+            if (clips == null || clips.Length == 0) return;
+            Som(clips[Random.Range(0, clips.Length)], posicao, volume, espacial, alcance);
         }
 
         /// <summary>Clarão do cano: uma luz de um instante e um brilho na boca da arma (na camada informada).</summary>

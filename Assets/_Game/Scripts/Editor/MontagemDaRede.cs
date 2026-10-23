@@ -50,8 +50,11 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = camada;
         }
 
-        /// <summary>Só o prefab do jogador (a montagem dos zumbis usa isto para dar a vida ao jogador).</summary>
-        internal static GameObject MontarPrefab()
+        /// <summary>
+        /// Só o prefab do jogador (a montagem dos zumbis usa isto para dar a vida ao jogador). Precisa das armas preparadas
+        /// (<see cref="MontagemDasArmas.Preparar"/>): os braços de cada arma, as malhas e os controladores.
+        /// </summary>
+        public static GameObject MontarPrefab()
         {
             var raiz = new GameObject("Jogador") { layer = JogadorRede.CamadaJogador };
             var cc = raiz.AddComponent<CharacterController>();
@@ -106,14 +109,56 @@ namespace ZombieCityCleaner.EditorTools
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp && urp.rendererDataList.Length > 1) dadosBracos.SetRenderer(1);
             dadosCam.cameraStack.Add(camBracos);
 
-            var bracos = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador_FP.fbx"));
-            bracos.name = "Bracos";
+            // os braços de primeira pessoa: um modelo por arma (com a arma junto), só o da arma da mão ligado
+            var bracos = new GameObject("Bracos") { layer = JogadorRede.CamadaBracos };
             bracos.transform.SetParent(camGo.transform, false);
-            Camada(bracos, JogadorRede.CamadaBracos);
-            foreach (var r in bracos.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = ShadowCastingMode.Off;
-            var animBracos = bracos.GetComponent<Animator>();
-            animBracos.runtimeAnimatorController = Carregar<RuntimeAnimatorController>(Arte + "/Jogador_FP.controller");
-            animBracos.applyRootMotion = false;
+            int n = Armas.Quantas;
+            var modelosFP = new GameObject[n];
+            var animadoresFP = new Animator[n];
+            var bocasFP = new Transform[n];
+            var smrBracos = new SkinnedMeshRenderer[n];
+            for (int i = 0; i < n; i++)
+            {
+                string modelo = Armas.Modelos[i];
+                var fp = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(MontagemDasArmas.FbxFP(i)));
+                fp.name = "Bracos_" + modelo;
+                fp.transform.SetParent(bracos.transform, false);
+                Camada(fp, JogadorRede.CamadaBracos);
+                foreach (var r in fp.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = ShadowCastingMode.Off;
+                var anim = fp.GetComponent<Animator>();
+                anim.runtimeAnimatorController = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorFPDa(i));
+                anim.applyRootMotion = false;
+                modelosFP[i] = fp;
+                animadoresFP[i] = anim;
+                bocasFP[i] = Buscar(fp.transform, "Boca_FP_" + modelo);
+                smrBracos[i] = Buscar(fp.transform, "FP_Bracos_" + modelo).GetComponent<SkinnedMeshRenderer>();
+                fp.SetActive(i == 0);
+            }
+
+            // a arma no corpo: as armas avulsas dentro do Arma_TP (filho do weapon.R, com os eixos da arma), só a da mão
+            // ligada, cada uma com a boca do cano. Um vazio filho de osso chega do FBX com o eixo do osso convertido: o
+            // cano do Arma_TP fica no Y dele e o topo no -Z, daí os 90° em X
+            var pontoDaArma = Buscar(corpo.transform, "Arma_TP");
+            var materialArma = Carregar<Material>(Arte + "/Materials/Pistola.mat");
+            var armasCorpo = new GameObject[n];
+            var bocasCorpo = new Transform[n];
+            var renderersArmas = new Renderer[n];
+            for (int i = 0; i < n; i++)
+            {
+                var a = new GameObject("Arma_" + Armas.Modelos[i]);
+                a.transform.SetParent(pontoDaArma, false);
+                a.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                a.AddComponent<MeshFilter>().sharedMesh = Carregar<Mesh>(MontagemDasArmas.MalhaDaArma(i));
+                var r = a.AddComponent<MeshRenderer>();
+                r.sharedMaterial = materialArma;
+                var boca = new GameObject("Boca").transform;
+                boca.SetParent(a.transform, false);
+                boca.localPosition = Armas.Todas[i].boca;
+                armasCorpo[i] = a;
+                bocasCorpo[i] = boca;
+                renderersArmas[i] = r;
+                a.SetActive(i == 0);
+            }
 
             // lanterna no peito
             var luzGo = new GameObject("Lanterna");
@@ -128,18 +173,19 @@ namespace ZombieCityCleaner.EditorTools
 
             // ligações
             rede.cameraMundo = cam; rede.cameraBracos = camBracos; rede.ouvido = ouvido;
-            rede.bracos = bracos; rede.animadorBracos = animBracos; rede.animadorCorpo = animCorpo;
+            rede.bracos = bracos; rede.animadorCorpo = animCorpo;
             var smrCorpo = Buscar(corpo.transform, "Jogador_Corpo").GetComponent<SkinnedMeshRenderer>();
-            var smrPistola = Buscar(corpo.transform, "Pistola_TP").GetComponent<SkinnedMeshRenderer>();
-            var smrBracos = Buscar(bracos.transform, "FP_Bracos").GetComponent<SkinnedMeshRenderer>();
-            rede.renderersCorpo = new Renderer[] { smrCorpo, smrPistola };
+            rede.renderersCorpo = new Renderer[] { smrCorpo }.Concat(renderersArmas).ToArray();
             rede.ossoPeito = Buscar(corpo.transform, "chest");
             rede.ossoCabeca = Buscar(corpo.transform, "head");
-            rede.bocaCorpo = Buscar(corpo.transform, "Boca_TP");
+            rede.armasCorpo = armasCorpo;
+            rede.bocasCorpo = bocasCorpo;
+            rede.controladoresCorpo = Enumerable.Range(0, n).Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDa(i))).ToArray();
             rede.variacoes = Enumerable.Range(0, 4).Select(k => Carregar<Material>($"{Arte}/Materials/Jogador_Variacao{k}.mat")).ToArray();
-            rede.pintaveis = new Renderer[] { smrCorpo, smrBracos };
+            rede.pintaveis = new Renderer[] { smrCorpo }.Concat(smrBracos).ToArray();
             movimento.rede = rede; movimento.cabeca = cabeca;
-            arma.rede = rede; arma.movimento = movimento; arma.bocaBracos = Buscar(bracos.transform, "Boca_FP");
+            arma.rede = rede; arma.movimento = movimento;
+            arma.modelos = modelosFP; arma.animadores = animadoresFP; arma.bocas = bocasFP;
             lanterna.rede = rede; lanterna.luz = luz;
 
             var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, PrefabJogador);
@@ -226,7 +272,7 @@ namespace ZombieCityCleaner.EditorTools
                 p.SetParent(pontos.transform, false);
                 p.position = posicoes[i];
             }
-            MontagemDaCidade.PontosNaCasaDaFamilia(cena);   // com a cidade montada, os pontos vão para a frente da casa da família
+            MontagemDaCidade.PontosNoBunker(cena);   // com a cidade montada, os pontos vão para a sala comum do bunker
 
             // a câmera de teste vira a câmera do menu (some quando o jogador local nasce)
             var camMenu = Camera.main;

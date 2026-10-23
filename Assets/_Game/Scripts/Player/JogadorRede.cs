@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -12,7 +13,8 @@ namespace ZombieCityCleaner.Player
     /// <summary>
     /// O jogador na rede. O dono controla o próprio movimento (NetworkTransform com autoridade do dono) e joga em
     /// primeira pessoa: a câmera do mundo, a câmera dos braços por cima (camada própria, não atravessa paredes) e o
-    /// próprio corpo só como sombra. Os outros veem o corpo animado, para onde ele olha, a lanterna e os tiros.
+    /// próprio corpo só como sombra. Os outros veem o corpo animado, para onde ele olha, a arma da mão, a lanterna e os
+    /// tiros.
     /// </summary>
     public class JogadorRede : NetworkBehaviour
     {
@@ -25,14 +27,19 @@ namespace ZombieCityCleaner.Player
         public Camera cameraBracos;
         public AudioListener ouvido;
         public GameObject bracos;
-        public Animator animadorBracos;
 
         [Header("Corpo (o que os outros veem)")]
         public Animator animadorCorpo;
         public Renderer[] renderersCorpo;
         public Transform ossoPeito;
         public Transform ossoCabeca;
-        public Transform bocaCorpo;
+
+        [Header("A arma no corpo (uma por arma, na ordem de TipoDeArma)")]
+        [Tooltip("As armas avulsas dentro do Arma_TP (filho do weapon.R): só a da mão fica ligada.")]
+        public GameObject[] armasCorpo;
+        public Transform[] bocasCorpo;
+        [Tooltip("O controlador do corpo com cada arma: o da pistola e os override com as animações de arma longa.")]
+        public RuntimeAnimatorController[] controladoresCorpo;
 
         [Header("Cores da família")]
         [Tooltip("Jogador_Variacao0..3: cada jogador recebe uma, na ordem em que entra.")]
@@ -44,6 +51,8 @@ namespace ZombieCityCleaner.Player
         public readonly NetworkVariable<float> Pitch = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<bool> Mirando = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<int> Cor = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>A arma da mão (<see cref="TipoDeArma"/>). Só o anfitrião troca (no suporte de armas do bunker).</summary>
+        public readonly NetworkVariable<byte> Arma = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>Quantos tiros deste jogador chegaram pela rede (para testes).</summary>
         public int TirosRecebidos { get; private set; }
@@ -80,8 +89,15 @@ namespace ZombieCityCleaner.Player
             bracos.SetActive(dono);
             foreach (var r in renderersCorpo)
                 r.shadowCastingMode = dono ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+            // a arma do corpo do dono fica desligada, nem sombra: a ponta das armas longas passa dos 60 cm em que a sombra
+            // da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de primeira
+            // pessoa
+            if (dono)
+                foreach (var a in armasCorpo) a.GetComponent<Renderer>().enabled = false;
             GetComponent<MovimentoPrimeiraPessoa>().enabled = dono;
             GetComponent<ArmaJogador>().enabled = dono;
+            Arma.OnValueChanged += AoMudarArma;
+            AplicarArma(Arma.Value);
             if (dono)
             {
                 Local = this;
@@ -96,6 +112,7 @@ namespace ZombieCityCleaner.Player
         {
             Todos.Remove(this);
             Cor.OnValueChanged -= AoMudarCor;
+            Arma.OnValueChanged -= AoMudarArma;
             if (Local == this)
             {
                 Local = null;
@@ -128,6 +145,22 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        void AoMudarArma(byte antes, byte depois) => AplicarArma(depois);
+
+        /// <summary>
+        /// A arma da mão: o modelo no corpo, as animações do corpo (pistola ou arma longa) e, no dono, a de primeira
+        /// pessoa.
+        /// </summary>
+        void AplicarArma(byte arma)
+        {
+            int a = Mathf.Clamp(arma, 0, Armas.Quantas - 1);
+            for (int i = 0; i < armasCorpo.Length; i++) armasCorpo[i].SetActive(i == a);
+            if (animadorCorpo.runtimeAnimatorController != controladoresCorpo[a]) animadorCorpo.runtimeAnimatorController = controladoresCorpo[a];
+            if (IsOwner) GetComponent<ArmaJogador>().Trocar((TipoDeArma)a);
+        }
+
+        Transform BocaCorpo => bocasCorpo[Mathf.Clamp(Arma.Value, 0, Armas.Quantas - 1)];
+
         void Update()
         {
             if (!IsSpawned) return;
@@ -152,7 +185,6 @@ namespace ZombieCityCleaner.Player
             _velocidade = Mathf.Lerp(_velocidade, medida, 1f - Mathf.Exp(-12f * Time.deltaTime));
             animadorCorpo.SetFloat(SpeedId, _velocidade);
             animadorCorpo.SetBool(AimingId, Mirando.Value);
-            if (IsOwner) animadorBracos.SetFloat(SpeedId, _velocidade);
         }
 
         void LateUpdate()
@@ -168,26 +200,51 @@ namespace ZombieCityCleaner.Player
         /// <summary>O que o tiro acertou, para os outros mostrarem o efeito certo.</summary>
         public enum TipoDeAcerto : byte { Nada, Cenario, Carne, Outro }
 
+        /// <summary>Onde um tiro (ou um chumbo da espingarda) parou, e no quê.</summary>
+        public struct Impacto : INetworkSerializable
+        {
+            public TipoDeAcerto tipo;
+            public Vector3 ponto, normal;
+
+            public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
+            {
+                s.SerializeValue(ref tipo);
+                s.SerializeValue(ref ponto);
+                s.SerializeValue(ref normal);
+            }
+        }
+
         /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro.</summary>
-        public void AnunciarTiro(TipoDeAcerto tipo, Vector3 ponto, Vector3 normal)
+        public void AnunciarTiro(Impacto[] impactos)
         {
             animadorCorpo.SetTrigger(FireId);
             if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
-            TiroRpc(tipo, ponto, normal);
+            TiroRpc(impactos);
         }
 
         [Rpc(SendTo.NotMe)]
-        void TiroRpc(TipoDeAcerto tipo, Vector3 ponto, Vector3 normal)
+        void TiroRpc(Impacto[] impactos)
         {
             TirosRecebidos++;
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
             if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
             animadorCorpo.SetTrigger(FireId);
-            Efeitos.Clarao(bocaCorpo, 0);
-            Efeitos.Som(Efeitos.Tiro, bocaCorpo.position);
-            if (tipo == TipoDeAcerto.Carne) Sangue.Respingo(ponto, normal);
-            else if (tipo != TipoDeAcerto.Nada) Efeitos.Impacto(ponto, normal);
-            if (tipo == TipoDeAcerto.Cenario) Sangue.FuroDeTiro(ponto, normal);
+            var boca = BocaCorpo;
+            Efeitos.Clarao(boca, 0);
+            Efeitos.Som(Efeitos.Tiros[Mathf.Clamp(Arma.Value, 0, Armas.Quantas - 1)], boca.position, 1f, true, 150f);   // tiro se ouve longe
+            if (Arma.Value == (byte)TipoDeArma.Espingarda) StartCoroutine(BombaDepois(boca));
+            foreach (var i in impactos)
+            {
+                if (i.tipo == TipoDeAcerto.Carne) Sangue.Respingo(i.ponto, i.normal);
+                else if (i.tipo != TipoDeAcerto.Nada) Efeitos.Impacto(i.ponto, i.normal);
+                if (i.tipo == TipoDeAcerto.Cenario) Sangue.FuroDeTiro(i.ponto, i.normal);
+            }
+        }
+
+        IEnumerator BombaDepois(Transform boca)
+        {
+            yield return new WaitForSeconds(0.33f);
+            if (boca != null) Efeitos.Som(Efeitos.Bomba, boca.position, 0.8f, true, 25f);
         }
 
         /// <summary>

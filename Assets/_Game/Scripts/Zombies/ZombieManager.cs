@@ -18,7 +18,9 @@ namespace ZombieCityCleaner.Zombies
     ///   com histerese: Perto (IA completa), Médio (só vaga) e Longe (zumbi virtual, parado e sem custo);
     /// - faz os zumbis pensarem em fatias, alguns por quadro, dentro de um orçamento;
     /// - manda para cada cliente só os zumbis perto dele (ZombieManager.Rede.cs).
-    /// Nos clientes, mantém as cópias. F3 mostra os números na tela.
+    /// Nos clientes, mantém as cópias. Em todas as máquinas, cuida dos corpos que caem (ZombieManager.Corpos.cs).
+    /// Há vários modelos de zumbi (um prefab e um pool para cada); o modelo sai do Id e da geração, então o anfitrião e
+    /// os clientes chegam ao mesmo sem mandar nada a mais. F3 mostra os números na tela.
     /// </summary>
     public partial class ZombieManager : NetworkBehaviour
     {
@@ -44,20 +46,13 @@ namespace ZombieCityCleaner.Zombies
         public static ZombieManager Instancia { get; private set; }
 
         [Header("Peças")]
-        public Zumbi prefab;
+        [Tooltip("Os modelos de zumbi (um prefab para cada), sorteados pelo Id.")]
+        public Zumbi[] modelos;
+        [Tooltip("O corpo com física de cada modelo, na mesma ordem.")]
+        public CorpoDeZumbi[] corpos;
         [Tooltip("A voz do zumbi (SomZombie1), tocada em trechos.")]
         public AudioClip vozDoZumbi;
         public Vector2[] trechosDaVoz = { new Vector2(0.1f, 1f), new Vector2(1.75f, 1f), new Vector2(3.1f, 0.85f), new Vector2(4.35f, 1f) };
-
-        [Header("Desmembramento (a montagem preenche)")]
-        [Tooltip("As regiões juntas num submesh só: o zumbi inteiro, um draw call.")]
-        public Mesh malhaInteira;
-        [Tooltip("Todas as regiões e tampas separadas (legível): a base das variantes sem os membros perdidos.")]
-        public Mesh malhaCompleta;
-        public MapaDaMalha mapa = new MapaDaMalha();
-        public Material materialCorpo, materialCarne;
-        [Tooltip("Tempo que o corpo fica no chão antes de afundar e voltar ao pool (s).")]
-        public float tempoDoCorpo = 15f;
 
         [Header("População")]
         public bool povoarAoComecar = true;
@@ -93,12 +88,8 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Zumbis mortos nesta partida (no anfitrião).</summary>
         public int Mortos { get; private set; }
 
-        Material[] _materiaisInteiro, _materiaisFerido;
-        internal Material[] MateriaisInteiro => _materiaisInteiro ??= new[] { materialCorpo };
-        internal Material[] MateriaisFerido => _materiaisFerido ??= new[] { materialCorpo, materialCarne };
-
         readonly List<Zumbi> _ativos = new List<Zumbi>();
-        readonly Stack<Zumbi> _pool = new Stack<Zumbi>();
+        Stack<Zumbi>[] _pools;
         readonly Zumbi[] _porId = new Zumbi[MaxZumbis];
         readonly byte[] _geracoes = new byte[MaxZumbis];
         readonly Stack<int> _idsLivres = new Stack<int>();
@@ -118,7 +109,7 @@ namespace ZombieCityCleaner.Zombies
         public override void OnNetworkSpawn()
         {
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
-            StartCoroutine(PreaquecerVariantes());
+            PrepararCorpos();
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += AoSairCliente;
@@ -141,6 +132,7 @@ namespace ZombieCityCleaner.Zombies
             }
             Limpar();
             LimparCopias();
+            GuardarCorpos();
             _niveisPorCliente.Clear();
         }
 
@@ -161,19 +153,12 @@ namespace ZombieCityCleaner.Zombies
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)
                     if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe) _ativos[i].QuadroNoServidor(dt);
-                Corpos(agora, dt);
+                DevolverMortos(agora);
                 EnviarParaClientes();
             }
             else AtualizarCopias();
+            AtualizarCorpos(Time.time, Time.deltaTime);
             GemidosAoAcaso();
-        }
-
-        void LateUpdate()
-        {
-            if (!IsSpawned) return;
-            var lista = IsServer ? _ativos : _copias;
-            for (int i = 0; i < lista.Count; i++)
-                if (lista[i].TemBote) lista[i].AplicarBote();
         }
 
         // ------------------------------------------------------------------ jogadores e percepção
@@ -223,27 +208,14 @@ namespace ZombieCityCleaner.Zombies
 
         internal void ContarMorte() => Mortos++;
 
-        // as malhas de um membro perdido, montadas aos poucos no começo (uma por quadro): o primeiro tiro não engasga
-        IEnumerator PreaquecerVariantes()
-        {
-            if (malhaCompleta == null) yield break;
-            for (int bit = 0; bit < 9; bit++)
-            {
-                MembrosDoZumbi.Variante(malhaCompleta, mapa, MembrosDoZumbi.ComOQueVemJunto((Membros)(1 << bit)));
-                yield return null;
-            }
-        }
-
-        // o corpo fica no chão um tempo, afunda devagar (a neblina e o escuro escondem) e volta ao pool
-        void Corpos(float agora, float dt)
+        // o zumbi morto (já invisível: quem aparece é o corpo) continua na lista o tempo do corpo, para a morte chegar
+        // aos clientes que passarem perto, e depois volta ao pool
+        void DevolverMortos(float agora)
         {
             for (int i = _ativos.Count - 1; i >= 0; i--)
             {
                 var z = _ativos[i];
-                if (!z.Morto) continue;
-                float tempo = agora - z.mortoEm;
-                if (tempo > tempoDoCorpo + 2.5f) Devolver(z);
-                else if (tempo > tempoDoCorpo) z.transform.position += Vector3.down * (0.25f * dt);
+                if (z.Morto && agora - z.mortoEm > tempoDoCorpo + 2.5f) Devolver(z);
             }
         }
 
@@ -259,7 +231,9 @@ namespace ZombieCityCleaner.Zombies
             var z = m._porId[id];
             if (z == null || z.Geracao != geracao || z.Morto) return;
             if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
-            z.LevarTiro(regiao, Mathf.Clamp(dano, 0f, 10f), autor, Time.time);
+            // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
+            Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
+            z.LevarTiro(regiao, Mathf.Clamp(dano, 0f, 10f), ponto, direcao, autor, Time.time);
         }
 
         internal void Golpear(JogadorRede alvo, float dano, Vector3 de)
@@ -432,11 +406,14 @@ namespace ZombieCityCleaner.Zombies
             _povoando = null;
         }
 
+        /// <summary>O modelo de um zumbi: sai do Id e da geração, igual no anfitrião e nos clientes.</summary>
+        int ModeloDe(int id, byte geracao) => (id * 7 + geracao * 3) % modelos.Length;
+
         Zumbi Nascer(Vector3 posicao)
         {
             int id = _idsLivres.Count > 0 ? _idsLivres.Pop() : _proximoId++;
             if (id >= MaxZumbis) return null;
-            var z = PegarDoPool();
+            var z = PegarDoPool(ModeloDe(id, _geracoes[id]));
             _porId[id] = z;
             _ativos.Add(z);
             z.PrepararNoServidor(id, _geracoes[id], posicao, Random.Range(0f, 360f), this);
@@ -459,23 +436,29 @@ namespace ZombieCityCleaner.Zombies
             _cursor = 0;
         }
 
-        Zumbi PegarDoPool()
+        Zumbi PegarDoPool(int modelo)
         {
-            if (_pool.Count > 0)
+            if (_pools == null)
             {
-                var z = _pool.Pop();
+                _pools = new Stack<Zumbi>[modelos.Length];
+                for (int i = 0; i < _pools.Length; i++) _pools[i] = new Stack<Zumbi>();
+            }
+            var pool = _pools[modelo];
+            if (pool.Count > 0)
+            {
+                var z = pool.Pop();
                 z.gameObject.SetActive(true);
                 return z;
             }
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
-            return Instantiate(prefab, _vivos);
+            return Instantiate(modelos[modelo], _vivos);
         }
 
         void GuardarNoPool(Zumbi z)
         {
             z.Zerar();
             z.gameObject.SetActive(false);
-            _pool.Push(z);
+            _pools[z.modelo].Push(z);
         }
 
         // ------------------------------------------------------------------ voz

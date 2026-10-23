@@ -6,9 +6,9 @@ using UnityEngine.Rendering.Universal;
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// Os efeitos de carne, todos de pools (nada é criado no meio do combate): respingo no acerto, o jorro do toco,
-    /// a cabeça explodindo, as manchas no chão e os furos de tiro (decals do URP) e os pedaços que caem com física.
-    /// Cada máquina toca os seus: o anfitrião decide o que cai, e cada um vê pelo estado do zumbi que chega pela rede.
+    /// Os efeitos de carne, todos de pools (nada é criado no meio do combate): respingo no acerto, a cabeça explodindo,
+    /// o jorro do pescoço, as manchas no chão e os furos de tiro (decals do URP).
+    /// Cada máquina toca os seus: o anfitrião decide a morte, e cada um vê pelo estado do zumbi que chega pela rede.
     /// Fica no objeto "Efeitos" da cena, ao lado do Efeitos.
     /// </summary>
     public class Sangue : MonoBehaviour
@@ -16,15 +16,7 @@ namespace ZombieCityCleaner.Combat
         public Material materialParticulas;
         public Material decalSangue;
         public Material decalFuro;
-        public int manchas = 40, furos = 40, pedacos = 16, jorros = 10;
-        [Tooltip("Tempo que um pedaço fica no chão antes de afundar (s).")]
-        public float vidaDoPedaco = 25f;
-
-        /// <summary>
-        /// Os pedaços ficam numa camada só deles: o tiro passa por eles e eles só batem no cenário (nem nos zumbis, nem
-        /// nos jogadores). Antes, um pedaço parado em cima da cápsula de alguém tapava o tiro na cabeça.
-        /// </summary>
-        public const int CamadaPedacos = 8;
+        public int manchas = 40, furos = 40, jorros = 10;
 
         static Sangue _instancia;
         static readonly Color Vermelho = new Color(0.38f, 0.02f, 0.02f, 1f);
@@ -32,16 +24,6 @@ namespace ZombieCityCleaner.Combat
         ParticleSystem _respingo, _pedacinhos;
         readonly Queue<ParticleSystem> _jorros = new Queue<ParticleSystem>();
         readonly Queue<DecalProjector> _manchas = new Queue<DecalProjector>(), _furos = new Queue<DecalProjector>();
-        readonly Queue<Peca> _pedacos = new Queue<Peca>();
-
-        class Peca
-        {
-            public GameObject go;
-            public MeshFilter filtro;
-            public Rigidbody corpo;
-            public BoxCollider caixa;
-            public int geracao;
-        }
 
         void Awake()
         {
@@ -58,7 +40,6 @@ namespace ZombieCityCleaner.Combat
             }
             for (int i = 0; i < manchas; i++) _manchas.Enqueue(Decal("Mancha", decalSangue));
             for (int i = 0; i < furos; i++) _furos.Enqueue(Decal("Furo", decalFuro));
-            for (int i = 0; i < pedacos; i++) _pedacos.Enqueue(NovoPedaco());
         }
 
         ParticleSystem Particulas(string nome, float tamanho, float vida, float velocidade, float gravidade, int maximo)
@@ -100,20 +81,6 @@ namespace ZombieCityCleaner.Combat
             return d;
         }
 
-        Peca NovoPedaco()
-        {
-            var go = new GameObject("Pedaço") { layer = CamadaPedacos };
-            go.transform.SetParent(transform, false);
-            var p = new Peca { go = go, filtro = go.AddComponent<MeshFilter>() };
-            go.AddComponent<MeshRenderer>();
-            p.corpo = go.AddComponent<Rigidbody>();
-            p.corpo.mass = 3f; p.corpo.linearDamping = 0.3f; p.corpo.angularDamping = 0.5f;
-            p.corpo.interpolation = RigidbodyInterpolation.Interpolate;
-            p.caixa = go.AddComponent<BoxCollider>();
-            go.SetActive(false);
-            return p;
-        }
-
         // ------------------------------------------------------------------ efeitos
 
         /// <summary>O acerto na carne: um esguicho de gotas saindo da superfície.</summary>
@@ -145,7 +112,7 @@ namespace ZombieCityCleaner.Combat
             }
         }
 
-        /// <summary>O toco jorra sangue por um tempo, preso ao osso (acompanha o zumbi andando).</summary>
+        /// <summary>O pescoço jorra sangue por um tempo, preso ao osso (acompanha o corpo caindo).</summary>
         public static void Jorro(Transform osso, Vector3 direcao, float duracao = 3.5f)
         {
             if (_instancia == null || osso == null || _instancia._jorros.Count == 0) return;
@@ -189,43 +156,6 @@ namespace ZombieCityCleaner.Combat
             float s = Random.Range(0.07f, 0.1f);
             d.size = new Vector3(s, s, 0.12f);
             d.gameObject.SetActive(true);
-        }
-
-        /// <summary>Um membro que caiu: a peça sai com um empurrão, cai com física e some depois de um tempo.</summary>
-        public static void Pedaco(Mesh malha, Material[] materiais, Vector3 posicao, Quaternion rotacao, Vector3 velocidade)
-        {
-            if (_instancia == null || malha == null) return;
-            var p = _instancia._pedacos.Dequeue(); _instancia._pedacos.Enqueue(p);
-            p.geracao++;
-            p.filtro.sharedMesh = malha;
-            if (materiais != null && materiais.Length > 0) p.go.GetComponent<MeshRenderer>().sharedMaterials = materiais;
-            var limites = malha.bounds;
-            p.caixa.center = limites.center; p.caixa.size = Vector3.Max(limites.size, Vector3.one * 0.05f);
-            p.go.transform.SetPositionAndRotation(posicao, rotacao);
-            p.go.SetActive(true);
-            p.corpo.isKinematic = false;
-            p.corpo.linearVelocity = velocidade;
-            p.corpo.angularVelocity = Random.insideUnitSphere * 6f;
-            _instancia.StartCoroutine(_instancia.Afundar(p, p.geracao));
-        }
-
-        IEnumerator Afundar(Peca p, int geracao)
-        {
-            yield return new WaitForSeconds(0.6f);
-            if (p.geracao != geracao) yield break;
-            Mancha(p.go.transform.position, Random.Range(0.4f, 0.7f));
-            yield return new WaitForSeconds(vidaDoPedaco);
-            if (p.geracao != geracao) yield break;
-            // afunda no chão devagar e volta para o pool
-            p.corpo.isKinematic = true;
-            float t = 0f;
-            while (t < 2f && p.geracao == geracao)
-            {
-                t += Time.deltaTime;
-                p.go.transform.position += Vector3.down * (0.15f * Time.deltaTime);
-                yield return null;
-            }
-            if (p.geracao == geracao) p.go.SetActive(false);
         }
     }
 }

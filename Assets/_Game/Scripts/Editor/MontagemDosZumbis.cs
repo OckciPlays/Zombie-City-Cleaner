@@ -17,13 +17,15 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
-    /// Monta os zumbis (Partes 5 e 6):
-    /// - a importação do NovoZombie.fbx (os 9 clipes e os materiais das 19 peças da malha);
-    /// - a camada "Zumbi" (7), que não colide com ela mesma nem com os braços de primeira pessoa;
-    /// - as malhas: a completa (regiões e tampas separadas, base das variantes sem membros) e a inteira (um submesh só,
-    ///   um draw call), com o mapa de qual submesh é cada região e cada tampa, medido pela posição dos ossos;
-    /// - o Animator (andar, cair, rastejar, morrer e, só no tronco, atacar e reagir ao tiro);
-    /// - o prefab, com agente, cápsula, corpo cinemático, voz, hitboxes nos ossos e os pedaços que caem;
+    /// Monta os zumbis (Partes 5 e 6, e os modelos novos dos ajustes antes da Parte 7):
+    /// - a importação dos 4 modelos (Zombie1, ZombieHomem2, ZombieMulher, ZombieMulherLoira), com os 5 clipes de cada;
+    /// - as camadas "Zumbi" (7, que não colide com ela mesma nem com os braços de primeira pessoa) e "Corpos" (8);
+    /// - de cada modelo, as duas malhas (inteira, um draw call; e sem cabeça, com a tampa de carne no pescoço) e o
+    ///   material com a textura dele;
+    /// - o Animator (andar e, só no tronco, atacar e reagir ao tiro), do primeiro modelo; os outros usam um override com
+    ///   os clipes deles;
+    /// - de cada modelo, o prefab do zumbi (agente, cápsula, corpo cinemático, voz e hitboxes nos ossos, medidas na
+    ///   malha) e o do corpo que cai (ragdoll: 11 partes com física e juntas com os limites do corpo humano);
     /// - o jogador com vida (VidaJogador), refazendo o prefab dele;
     /// - na cena, o objeto "Zumbis" (ZombieManager, benchmark e pontos de horda), o sangue no "Efeitos" e o NavMesh;
     /// - os decals (manchas de sangue e furos de tiro) no renderizador.
@@ -32,76 +34,105 @@ namespace ZombieCityCleaner.EditorTools
     public static class MontagemDosZumbis
     {
         const string Arte = "Assets/_Game/Art/Characters/Zombie";
-        const string Fbx = Arte + "/NovoZombie.fbx";
-        const string FbxPedacos = Arte + "/NovoZombie_Gibs.fbx";
+        static readonly string[] Modelos = { "Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira" };
         const string Controlador = Arte + "/Zombie.controller";
         const string MascaraTronco = Arte + "/Zombie_Tronco.mask";
-        const string MalhaInteira = Arte + "/Malhas/Zumbi_Inteiro.asset";
-        const string MalhaCompleta = Arte + "/Malhas/Zumbi_Completo.asset";
-        const string PrefabZumbi = "Assets/_Game/Prefabs/Zumbi.prefab";
+        const string Malhas = Arte + "/Malhas";
+        const string Prefabs = "Assets/_Game/Prefabs/Zumbis";
         const string ArquivoNavMesh = "Assets/_Game/Scenes/Demo_Cidade/NavMesh da cidade.asset";
         const string PastaDecals = "Assets/_Game/Art/Materials/Decals";
         const string RendererPrincipal = "Assets/Settings/PC_Renderer.asset";
 
-        // nome, centro, raio, quantidade (~130 zumbis; nenhum perto da casa da família)
+        // nome, centro, raio, quantidade (~260 zumbis, o dobro da Parte 5; nenhum perto da casa da família). Na rua o raio
+        // cresceu 1 m com o dobro, para os grupos não ficarem amontoados; nas casas e nos andares do prédio ficou o mesmo
         static readonly (string nome, Vector3 centro, float raio, int quantidade)[] Hordas =
         {
-            ("Cruzamento central", new Vector3(0f, 0f, 0f), 6f, 8),
-            ("Rua norte", new Vector3(0f, 0f, 22f), 5f, 6),
-            ("Rua sul", new Vector3(0f, 0f, -24f), 5f, 5),
-            ("Rua leste", new Vector3(22f, 0f, 0f), 6f, 7),
-            ("Rua oeste", new Vector3(-40f, 0f, 12f), 5f, 5),
-            ("Praça", new Vector3(24f, 0f, -12f), 6f, 8),
-            ("Estacionamento", new Vector3(10f, 0f, 33f), 6f, 7),
-            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 4f, 4),
-            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 5f, 4),
-            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 5f, 3),
-            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 5f, 3),
-            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 2.5f, 3),
-            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 2.5f, 3),
-            ("Casa 4", new Vector3(13f, 0.15f, -14f), 2.5f, 3),
-            ("Casa 5", new Vector3(28f, 0.15f, -26f), 2.5f, 3),
-            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 5f, 5),
-            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 5f, 5),
-            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 5f, 5),
-            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 5f, 4),
-            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 5f, 4),
-            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 5f, 5),
-            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 5f, 4),
-            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 5f, 4),
-            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 5f, 4),
-            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 5f, 3),
-            ("Saída norte", new Vector3(0f, 0f, 54f), 4f, 4),
-            ("Saída leste", new Vector3(54f, 0f, 0f), 4f, 4),
-            ("Saída sul", new Vector3(0f, 0f, -54f), 4f, 3),
-            ("Saída oeste", new Vector3(-54f, 0f, 0f), 4f, 3),
+            ("Cruzamento central", new Vector3(0f, 0f, 0f), 7f, 16),
+            ("Rua norte", new Vector3(0f, 0f, 22f), 6f, 12),
+            ("Rua sul", new Vector3(0f, 0f, -24f), 6f, 10),
+            ("Rua leste", new Vector3(22f, 0f, 0f), 7f, 14),
+            ("Rua oeste", new Vector3(-40f, 0f, 12f), 6f, 10),
+            ("Praça", new Vector3(24f, 0f, -12f), 7f, 16),
+            ("Estacionamento", new Vector3(10f, 0f, 33f), 7f, 14),
+            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 4f, 8),
+            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 5f, 8),
+            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 5f, 6),
+            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 5f, 6),
+            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 2.5f, 6),
+            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 2.5f, 6),
+            ("Casa 4", new Vector3(13f, 0.15f, -14f), 2.5f, 6),
+            ("Casa 5", new Vector3(28f, 0.15f, -26f), 2.5f, 6),
+            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 6f, 10),
+            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 6f, 10),
+            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 6f, 10),
+            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 6f, 8),
+            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 6f, 8),
+            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 6f, 10),
+            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 6f, 8),
+            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 6f, 8),
+            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 6f, 8),
+            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 6f, 6),
+            ("Saída norte", new Vector3(0f, 0f, 54f), 5f, 8),
+            ("Saída leste", new Vector3(54f, 0f, 0f), 5f, 8),
+            ("Saída sul", new Vector3(0f, 0f, -54f), 5f, 6),
+            ("Saída oeste", new Vector3(-54f, 0f, 0f), 5f, 6),
         };
 
         // clipe (take do Blender "Zombie_Rig|Zombie_X"), em loop?
         static readonly (string nome, bool loop)[] Clipes =
         {
             ("Idle", true), ("Walk", true), ("Chase", true), ("Attack", false), ("HitReact", false),
-            ("Death", false), ("Fall", false), ("Crawl", true), ("CrawlIdle", true),
         };
+
+        // as partes do corpo com física: osso, osso onde a cápsula termina, massa (kg)
+        static readonly (string osso, string ate, float massa)[] PartesDoCorpo =
+        {
+            ("hips", "chest", 12f), ("chest", "neck", 14f), ("head", null, 5f),
+            ("upper_arm.L", "forearm.L", 2.5f), ("forearm.L", "hand.L", 1.8f), ("upper_arm.R", "forearm.R", 2.5f), ("forearm.R", "hand.R", 1.8f),
+            ("thigh.L", "shin.L", 8f), ("shin.L", "foot.L", 4.5f), ("thigh.R", "shin.R", 8f), ("shin.R", "foot.R", 4.5f),
+        };
+
+        /// <summary>O que a montagem precisa de cada modelo importado.</summary>
+        class Modelo
+        {
+            public int indice;
+            public string nome, fbx;
+            public Dictionary<string, AnimationClip> clipes;
+            public Mesh inteira, semCabeca;
+            public Material material;
+            public int submeshCabeca, submeshCarne;
+            public float altura;
+        }
 
         [MenuItem("Zombie City Cleaner/Montar zumbis")]
         public static void Montar()
         {
-            CamadaDosZumbis();
-            var clipes = ImportarZumbi();
-            var (inteira, completa, mapa) = MalhasDoZumbi();
-            var controlador = ControladorDoZumbi(clipes, MascaraDoTronco());
-            var prefab = MontarPrefab(inteira, controlador);
+            CamadasDosZumbis();
+            var modelos = Modelos.Select(ImportarModelo).ToArray();
+            var controlador = ControladorDoZumbi(modelos[0].clipes, MascaraDoTronco(modelos[0].fbx));
+            var prefabs = new Zumbi[modelos.Length];
+            var corpos = new CorpoDeZumbi[modelos.Length];
+            Directory.CreateDirectory(Prefabs);
+            foreach (var m in modelos)
+            {
+                RuntimeAnimatorController animacao = m.indice == 0 ? controlador : Sobrepor(controlador, modelos[0], m);
+                prefabs[m.indice] = MontarPrefab(m, animacao);
+                corpos[m.indice] = MontarCorpo(m);
+            }
             MontagemDaRede.MontarPrefab();
             var decals = MateriaisDosDecals();
             DecalsNoRenderizador();
             var cena = EditorSceneManager.GetActiveScene();
-            MontarCena(cena, prefab, inteira, completa, mapa, decals);
+            MontarCena(cena, prefabs, corpos, decals);
             AssarNavegacao(cena);
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             AssetDatabase.SaveAssets();
-            Debug.Log("Zumbis montados.");
+            // O controlador é apagado e criado de novo (com o mesmo GUID). Ao ser apagado, os prefabs são reimportados
+            // sem ele; salvos depois iguais, a Unity não os importa de novo, e os zumbis nasciam sem animação (pose T).
+            foreach (var p in AssetDatabase.FindAssets("t:Prefab", new[] { Prefabs }).Select(AssetDatabase.GUIDToAssetPath))
+                AssetDatabase.ImportAsset(p, ImportAssetOptions.ForceUpdate);
+            Debug.Log("Zumbis montados: " + string.Join(", ", modelos.Select(m => $"{m.nome} ({m.altura:F2} m)")));
         }
 
         static T Carregar<T>(string caminho) where T : Object
@@ -112,124 +143,69 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// As camadas: 7 "Zumbi" (cápsulas e hitboxes), 8 "Pedacos" (os membros caídos) e 9 "Jogador" (a raiz dos jogadores).
-        /// Os pedaços só batem no cenário: atravessam zumbis, jogadores e os braços de primeira pessoa.
+        /// As camadas: 7 "Zumbi" (cápsulas e hitboxes), 8 "Corpos" (os zumbis mortos, com física) e 9 "Jogador" (a raiz
+        /// dos jogadores). Os corpos só batem no cenário e uns nos outros: o tiro passa, e zumbis e jogadores atravessam.
         /// </summary>
-        static void CamadaDosZumbis()
+        static void CamadasDosZumbis()
         {
             var tags = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
             var camadas = tags.FindProperty("layers");
             camadas.GetArrayElementAtIndex(Zumbi.CamadaZumbi).stringValue = "Zumbi";
-            camadas.GetArrayElementAtIndex(Sangue.CamadaPedacos).stringValue = "Pedacos";
+            camadas.GetArrayElementAtIndex(CorpoDeZumbi.Camada).stringValue = "Corpos";
             camadas.GetArrayElementAtIndex(JogadorRede.CamadaJogador).stringValue = "Jogador";
             tags.ApplyModifiedPropertiesWithoutUndo();
             Physics.IgnoreLayerCollision(Zumbi.CamadaZumbi, Zumbi.CamadaZumbi, true);
             Physics.IgnoreLayerCollision(Zumbi.CamadaZumbi, JogadorRede.CamadaBracos, true);
             foreach (int outra in new[] { 2, Zumbi.CamadaZumbi, JogadorRede.CamadaBracos, JogadorRede.CamadaJogador })
-                Physics.IgnoreLayerCollision(Sangue.CamadaPedacos, outra, true);
+                Physics.IgnoreLayerCollision(CorpoDeZumbi.Camada, outra, true);
         }
 
-        // ------------------------------------------------------------------ importação, malhas e mapa
+        // ------------------------------------------------------------------ importação, malhas e material
 
-        /// <summary>Os 9 clipes (renomeados, com loop onde precisa) e os materiais: regiões no Zombie, tampas na carne.</summary>
-        static Dictionary<string, AnimationClip> ImportarZumbi()
+        /// <summary>
+        /// Os 5 clipes (renomeados, com loop onde precisa), as duas malhas e o material. Os submeshes são achados pelo
+        /// nome do material que veio do Blender: "_Corpo", "_Cabeca" e "Zombie_Flesh" (a tampa do pescoço).
+        /// </summary>
+        static Modelo ImportarModelo(string nome, int indice)
         {
-            var importador = (ModelImporter)AssetImporter.GetAtPath(Fbx);
-            var padrao = importador.defaultClipAnimations.ToDictionary(c => c.takeName);
+            var m = new Modelo { indice = indice, nome = nome, fbx = $"{Arte}/{nome}.fbx" };
+            var importador = (ModelImporter)AssetImporter.GetAtPath(m.fbx);
+            importador.animationType = ModelImporterAnimationType.Generic;
+            importador.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            importador.importAnimation = true;
+            var padrao = importador.defaultClipAnimations;
             importador.clipAnimations = Clipes.Select(c =>
             {
-                var clipe = padrao["Zombie_Rig|Zombie_" + c.nome];
+                var clipe = padrao.First(p => p.takeName.EndsWith("|Zombie_" + c.nome));
                 clipe.name = c.nome;
                 clipe.loopTime = c.loop;
                 return clipe;
             }).ToArray();
-            var corpo = Carregar<Material>(Arte + "/Materials/Zombie.mat");
-            var carne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
-            foreach (var n in new[] { "Zombie_Body", "Zombie_Head", "Zombie_UpperArm.L", "Zombie_Forearm.L", "Zombie_UpperArm.R", "Zombie_Forearm.R",
-                                      "Zombie_Thigh.L", "Zombie_Shin.L", "Zombie_Thigh.R", "Zombie_Shin.R" })
-                importador.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), n), corpo);
-            foreach (var n in new[] { "Cap_Neck", "Cap_Elbow.L", "Cap_Shoulder.L", "Cap_Elbow.R", "Cap_Shoulder.R", "Cap_Knee.L", "Cap_Hip.L", "Cap_Knee.R", "Cap_Hip.R" })
-                importador.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), n), carne);
             importador.SaveAndReimport();
-            return AssetDatabase.LoadAllAssetsAtPath(Fbx).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")).ToDictionary(c => c.name);
-        }
+            m.clipes = AssetDatabase.LoadAllAssetsAtPath(m.fbx).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")).ToDictionary(c => c.name);
 
-        /// <summary>
-        /// A Unity reordena os materiais do FBX, então cada submesh é identificado pela posição: o centro dele (no espaço da
-        /// malha) é comparado com pontos esperados nos ossos da bindpose (o meio do antebraço, o joelho...), um por vez.
-        /// </summary>
-        static (Mesh inteira, Mesh completa, MapaDaMalha mapa) MalhasDoZumbi()
-        {
-            var smr = Carregar<GameObject>(Fbx).GetComponentInChildren<SkinnedMeshRenderer>();
+            var smr = Carregar<GameObject>(m.fbx).GetComponentInChildren<SkinnedMeshRenderer>();
             var original = smr.sharedMesh;
-            var carne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
-            Vector3 J(string osso) => original.bindposes[System.Array.FindIndex(smr.bones, b => b.name == osso)].inverse.MultiplyPoint3x4(Vector3.zero);
-            Vector3 Entre(string a, string b, float t) => Vector3.Lerp(J(a), J(b), t);
-            var regioes = new Dictionary<RegiaoDaMalha, Vector3>
-            {
-                [RegiaoDaMalha.Corpo] = J("chest"),
-                [RegiaoDaMalha.Cabeca] = J("head") + (J("head") - J("neck")) * 1.5f,
-            };
-            var tampas = new Dictionary<Tampa, Vector3> { [Tampa.Pescoco] = Entre("neck", "head", 0.56f) };
-            foreach (var (s, e) in new[] { (".L", true), (".R", false) })
-            {
-                regioes[e ? RegiaoDaMalha.BracoE : RegiaoDaMalha.BracoD] = Entre("upper_arm" + s, "forearm" + s, 0.8f);
-                regioes[e ? RegiaoDaMalha.AntebracoE : RegiaoDaMalha.AntebracoD] = J("hand" + s);
-                regioes[e ? RegiaoDaMalha.CoxaE : RegiaoDaMalha.CoxaD] = Entre("thigh" + s, "shin" + s, 0.69f);
-                regioes[e ? RegiaoDaMalha.CanelaE : RegiaoDaMalha.CanelaD] = Entre("shin" + s, "foot" + s, 0.6f);
-                tampas[e ? Tampa.OmbroE : Tampa.OmbroD] = Entre("upper_arm" + s, "forearm" + s, 0.62f);
-                tampas[e ? Tampa.CotoveloE : Tampa.CotoveloD] = J("forearm" + s);
-                tampas[e ? Tampa.QuadrilE : Tampa.QuadrilD] = Entre("thigh" + s, "shin" + s, 0.38f);
-                tampas[e ? Tampa.JoelhoE : Tampa.JoelhoD] = J("shin" + s);
-            }
-            var submeshesCorpo = new List<int>();
-            var submeshesCarne = new List<int>();
-            for (int i = 0; i < original.subMeshCount; i++) (smr.sharedMaterials[i] == carne ? submeshesCarne : submeshesCorpo).Add(i);
-            var mapa = new MapaDaMalha
-            {
-                regioes = Casar(original, submeshesCorpo, regioes.ToDictionary(k => (int)k.Key, k => k.Value), 10),
-                tampas = Casar(original, submeshesCarne, tampas.ToDictionary(k => (int)k.Key, k => k.Value), 9),
-            };
-            Debug.Log("Mapa da malha do zumbi: regiões " + string.Join(", ", mapa.regioes.Select((s, i) => $"{(RegiaoDaMalha)i}={s}")) +
-                      "; tampas " + string.Join(", ", mapa.tampas.Select((s, i) => $"{(Tampa)i}={s}")));
-
-            Directory.CreateDirectory(Path.GetDirectoryName(MalhaCompleta));
-            var completa = Object.Instantiate(original);
-            completa.name = "Zumbi_Completo";
-            completa = Salvar(completa, MalhaCompleta);
-            // a cópia herda o "não legível" do FBX; as variantes são montadas lendo os triângulos dela no jogo
-            var legivel = new SerializedObject(completa);
-            legivel.FindProperty("m_IsReadable").boolValue = true;
-            legivel.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(completa);
-            var inteira = Object.Instantiate(original);
-            inteira.name = "Zumbi_Inteiro";
-            var triangulos = new List<int>();
-            foreach (int s in mapa.regioes) triangulos.AddRange(original.GetTriangles(s));
-            inteira.subMeshCount = 1;
-            inteira.SetTriangles(triangulos, 0, false);
-            inteira = Salvar(inteira, MalhaInteira);
-            return (inteira, completa, mapa);
+            int Sub(string fim) => System.Array.FindIndex(smr.sharedMaterials, x => x.name.EndsWith(fim));
+            int corpo = Sub("_Corpo"), cabeca = Sub("_Cabeca"), carne = Sub("Zombie_Flesh");
+            if (corpo < 0 || cabeca < 0 || carne < 0) throw new System.Exception($"{nome}: faltam os materiais _Corpo, _Cabeca ou Zombie_Flesh.");
+            m.submeshCabeca = cabeca;
+            m.submeshCarne = carne;
+            Directory.CreateDirectory(Malhas);
+            m.inteira = Malha(original, $"{nome}_Inteira", original.GetTriangles(corpo).Concat(original.GetTriangles(cabeca)));
+            m.semCabeca = Malha(original, $"{nome}_SemCabeca", original.GetTriangles(corpo), original.GetTriangles(carne));
+            m.altura = original.bounds.size.z;   // a malha do Blender tem o z para cima
+            m.material = MaterialDoModelo(nome);
+            return m;
         }
 
-        // casa cada ponto esperado com o submesh mais perto, do par mais próximo para o mais distante
-        static int[] Casar(Mesh malha, List<int> submeshes, Dictionary<int, Vector3> esperados, int quantos)
+        static Mesh Malha(Mesh original, string nome, params IEnumerable<int>[] submeshes)
         {
-            if (submeshes.Count != quantos || esperados.Count != quantos)
-                throw new System.Exception($"A malha do zumbi tem {submeshes.Count} submeshes deste tipo; eram esperados {quantos}.");
-            var pares = new List<(float d, int submesh, int alvo)>();
-            foreach (int s in submeshes)
-                foreach (var e in esperados)
-                    pares.Add(((malha.GetSubMesh(s).bounds.center - e.Value).sqrMagnitude, s, e.Key));
-            var resultado = Enumerable.Repeat(-1, quantos).ToArray();
-            var usados = new HashSet<int>();
-            foreach (var p in pares.OrderBy(p => p.d))
-            {
-                if (resultado[p.alvo] >= 0 || usados.Contains(p.submesh)) continue;
-                resultado[p.alvo] = p.submesh;
-                usados.Add(p.submesh);
-            }
-            return resultado;
+            var malha = Object.Instantiate(original);
+            malha.name = nome;
+            malha.subMeshCount = submeshes.Length;
+            for (int i = 0; i < submeshes.Length; i++) malha.SetTriangles(submeshes[i].ToList(), i, false);
+            return Salvar(malha, $"{Malhas}/{nome}.asset");
         }
 
         static Mesh Salvar(Mesh nova, string caminho)
@@ -245,12 +221,32 @@ namespace ZombieCityCleaner.EditorTools
             return existente;
         }
 
+        /// <summary>URP Lit com a textura do modelo, pouco brilho e sem o passe de motion vectors (como o zumbi antigo).</summary>
+        static Material MaterialDoModelo(string nome)
+        {
+            string caminho = $"{Arte}/Materials/{nome}.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            if (m == null)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(m, caminho);
+            }
+            var textura = Carregar<Texture2D>($"{Arte}/{nome}_basecolor.jpg");
+            m.SetTexture("_BaseMap", textura);
+            m.SetTexture("_MainTex", textura);
+            m.SetColor("_BaseColor", Color.white);
+            m.SetFloat("_Smoothness", 0.15f);
+            m.SetShaderPassEnabled("MotionVectors", false);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
         // ------------------------------------------------------------------ Animator
 
-        static AvatarMask MascaraDoTronco()
+        static AvatarMask MascaraDoTronco(string fbx)
         {
             var mascara = new AvatarMask();
-            mascara.AddTransformPath(Carregar<GameObject>(Fbx).transform, true);
+            mascara.AddTransformPath(Carregar<GameObject>(fbx).transform, true);
             for (int i = 0; i < mascara.transformCount; i++) mascara.SetTransformActive(i, mascara.GetTransformPath(i).Contains("/spine"));
             AssetDatabase.DeleteAsset(MascaraTronco);
             AssetDatabase.CreateAsset(mascara, MascaraTronco);
@@ -258,40 +254,21 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// Camada base: Andar (Idle/Walk/Chase pela Speed) → Cair → Rastejar (CrawlIdle/Crawl), e a morte de pé ou deitado.
-        /// Camada "Ações" (só do tronco para cima): Ataque e Tiro (reação), disparados por trigger, voltando ao vazio.
-        /// Write Defaults desligado em todos os estados.
+        /// Camada base: Andar (Idle/Walk/Chase pela Speed). Camada "Ações" (só do tronco para cima): Ataque e Tiro
+        /// (reação), disparados por trigger, voltando ao vazio. Write Defaults desligado em todos os estados.
+        /// A morte não tem estado: o zumbi some e o corpo com física cai no lugar.
         /// </summary>
         static AnimatorController ControladorDoZumbi(Dictionary<string, AnimationClip> c, AvatarMask tronco)
         {
             AssetDatabase.DeleteAsset(Controlador);
             var ctrl = AnimatorController.CreateAnimatorControllerAtPath(Controlador);
             ctrl.AddParameter("Speed", AnimatorControllerParameterType.Float);
-            ctrl.AddParameter("Rastejando", AnimatorControllerParameterType.Bool);
-            ctrl.AddParameter("Morto", AnimatorControllerParameterType.Bool);
             ctrl.AddParameter("Atacar", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Tiro", AnimatorControllerParameterType.Trigger);
 
             var baseSm = ctrl.layers[0].stateMachine;
             var andar = Arvore(ctrl, "Andar", (c["Idle"], 0f), (c["Walk"], 0.6f), (c["Chase"], 1.12f));
-            var rastejar = Arvore(ctrl, "Rastejar", (c["CrawlIdle"], 0f), (c["Crawl"], 0.45f));
-            var cair = Estado(baseSm, "Cair", c["Fall"]);
-            var morte = Estado(baseSm, "Morte", c["Death"]);
-            // morrendo já deitado: fica no último quadro da morte (de bruços), sem levantar
-            var morteDeitado = Estado(baseSm, "Morte deitado", c["Death"]);
-            morteDeitado.speed = 0f;
-            morteDeitado.cycleOffset = 0.98f;
             baseSm.defaultState = andar;
-            var t = andar.AddTransition(cair);
-            t.AddCondition(AnimatorConditionMode.If, 0f, "Rastejando"); t.hasExitTime = false; t.duration = 0.1f;
-            t = cair.AddTransition(rastejar);
-            t.hasExitTime = true; t.exitTime = 0.95f; t.duration = 0.1f;
-            t = baseSm.AddAnyStateTransition(morte);
-            t.AddCondition(AnimatorConditionMode.If, 0f, "Morto"); t.AddCondition(AnimatorConditionMode.IfNot, 0f, "Rastejando");
-            t.duration = 0.15f; t.canTransitionToSelf = false;
-            t = baseSm.AddAnyStateTransition(morteDeitado);
-            t.AddCondition(AnimatorConditionMode.If, 0f, "Morto"); t.AddCondition(AnimatorConditionMode.If, 0f, "Rastejando");
-            t.duration = 0.4f; t.canTransitionToSelf = false;
 
             ctrl.AddLayer("Ações");
             var camadas = ctrl.layers;
@@ -305,7 +282,7 @@ namespace ZombieCityCleaner.EditorTools
             acoes.defaultState = vazio;
             var ataque = Estado(acoes, "Ataque", c["Attack"]);
             var tiro = Estado(acoes, "Tiro", c["HitReact"]);
-            t = acoes.AddAnyStateTransition(ataque);
+            var t = acoes.AddAnyStateTransition(ataque);
             t.AddCondition(AnimatorConditionMode.If, 0f, "Atacar"); t.duration = 0.1f; t.canTransitionToSelf = false;
             t = ataque.AddTransition(vazio); t.hasExitTime = true; t.exitTime = 0.9f; t.duration = 0.15f;
             t = acoes.AddAnyStateTransition(tiro);
@@ -313,6 +290,20 @@ namespace ZombieCityCleaner.EditorTools
             t = tiro.AddTransition(vazio); t.hasExitTime = true; t.exitTime = 0.85f; t.duration = 0.15f;
             EditorUtility.SetDirty(ctrl);
             return ctrl;
+        }
+
+        /// <summary>
+        /// Os outros modelos usam o mesmo Animator com os clipes deles: cada FBX traz as animações assadas no próprio
+        /// esqueleto (as posições dos ossos são as dele), então os clipes de um modelo não servem no outro.
+        /// </summary>
+        static AnimatorOverrideController Sobrepor(AnimatorController baseCtrl, Modelo primeiro, Modelo m)
+        {
+            string caminho = $"{Arte}/Zombie_{m.nome}.overrideController";
+            AssetDatabase.DeleteAsset(caminho);
+            var aoc = new AnimatorOverrideController(baseCtrl) { name = "Zombie_" + m.nome };
+            aoc.ApplyOverrides(Clipes.Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
+            AssetDatabase.CreateAsset(aoc, caminho);
+            return aoc;
         }
 
         static AnimatorState Arvore(AnimatorController ctrl, string nome, params (Motion clipe, float limite)[] filhos)
@@ -334,22 +325,87 @@ namespace ZombieCityCleaner.EditorTools
             return e;
         }
 
-        // ------------------------------------------------------------------ prefab
+        // ------------------------------------------------------------------ pose de repouso e medidas na malha
 
-        static Zumbi MontarPrefab(Mesh malha, AnimatorController controlador)
+        /// <summary>
+        /// O FBX abre numa pose da animação: os ossos voltam à pose de repouso (braços abertos), pela bindpose. Tudo o que
+        /// é medido (hitboxes, colisores e juntas do corpo) parte dela, e o corpo que cai precisa ser criado nela.
+        /// </summary>
+        static void PoseDeRepouso(SkinnedMeshRenderer smr)
         {
-            var raiz = new GameObject("Zumbi") { layer = Zumbi.CamadaZumbi };
+            var binds = smr.sharedMesh.bindposes;
+            var ossos = smr.bones;
+            // dos pais para os filhos: cada osso vai para a matriz do repouso no mundo
+            foreach (int i in Enumerable.Range(0, ossos.Length).OrderBy(i => Profundidade(ossos[i])))
+            {
+                var mundo = smr.transform.localToWorldMatrix * binds[i].inverse;
+                ossos[i].SetPositionAndRotation(mundo.GetPosition(), mundo.rotation);
+            }
+        }
+
+        static int Profundidade(Transform t)
+        {
+            int n = 0;
+            for (; t.parent != null; t = t.parent) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// O raio de um pedaço do corpo: a distância dos vértices (presos sobretudo a estes ossos) até o segmento de-até,
+        /// no percentil dado. Os vértices vão para o mundo pela pose de repouso.
+        /// </summary>
+        static float Raio(SkinnedMeshRenderer smr, Vector3 de, Vector3 ate, float percentil, params string[] ossos)
+        {
+            var malha = smr.sharedMesh;
+            var indices = ossos.Select(o => System.Array.FindIndex(smr.bones, b => b.name == o)).ToArray();
+            var pesos = malha.boneWeights;
+            var vertices = malha.vertices;
+            var m = smr.transform.localToWorldMatrix;
+            var d = new List<float>();
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                if (!indices.Contains(pesos[i].boneIndex0) || pesos[i].weight0 < 0.5f) continue;
+                Vector3 p = m.MultiplyPoint3x4(vertices[i]);
+                Vector3 seg = ate - de;
+                float t = Mathf.Clamp01(Vector3.Dot(p - de, seg) / seg.sqrMagnitude);
+                d.Add(Vector3.Distance(p, de + seg * t));
+            }
+            d.Sort();
+            return d.Count == 0 ? 0.08f : d[Mathf.Min(d.Count - 1, Mathf.RoundToInt(percentil * (d.Count - 1)))];
+        }
+
+        /// <summary>
+        /// A esfera da cabeça: a cabeça acima do corte do pescoço (a altura da tampa), com o queixo; o cabelo comprido que
+        /// desce até os ombros fica de fora. O raio é a média das três metades: de perto, a borda do cabelo também conta.
+        /// </summary>
+        static (Vector3 centro, float raio) Cranio(Modelo m, Matrix4x4 malhaNoMundo)
+        {
+            var malha = AssetDatabase.LoadAllAssetsAtPath(m.fbx).OfType<Mesh>().First();
+            var vertices = malha.vertices;
+            float corte = malha.GetTriangles(m.submeshCarne).Average(i => malhaNoMundo.MultiplyPoint3x4(vertices[i]).y);
+            var cranio = malha.GetTriangles(m.submeshCabeca).Distinct().Select(i => malhaNoMundo.MultiplyPoint3x4(vertices[i]))
+                              .Where(p => p.y > corte + 0.03f).ToList();
+            var limites = new Bounds(cranio[0], Vector3.zero);
+            foreach (var p in cranio) limites.Encapsulate(p);
+            return (limites.center, (limites.extents.x + limites.extents.y + limites.extents.z) / 3f);
+        }
+
+        // ------------------------------------------------------------------ prefab do zumbi
+
+        static Zumbi MontarPrefab(Modelo m, RuntimeAnimatorController animacao)
+        {
+            var raiz = new GameObject("Zumbi_" + m.nome) { layer = Zumbi.CamadaZumbi };
             var z = raiz.AddComponent<Zumbi>();
             var agente = raiz.AddComponent<NavMeshAgent>();
             agente.enabled = false;   // o anfitrião liga quando o zumbi está perto de alguém; nas cópias fica desligado
             agente.agentTypeID = 0;
-            agente.radius = 0.3f; agente.height = 1.75f; agente.baseOffset = 0f;
+            agente.radius = 0.3f; agente.height = m.altura; agente.baseOffset = 0f;
             agente.speed = 0.55f; agente.angularSpeed = 240f; agente.acceleration = 6f;
             agente.stoppingDistance = 0.4f; agente.autoBraking = true;
             agente.obstacleAvoidanceType = ObstacleAvoidanceType.MedQualityObstacleAvoidance;
             agente.avoidancePriority = 50;
             var capsula = raiz.AddComponent<CapsuleCollider>();
-            capsula.center = new Vector3(0f, 0.875f, 0f); capsula.height = 1.75f; capsula.radius = 0.28f;
+            capsula.center = new Vector3(0f, m.altura / 2f, 0f); capsula.height = m.altura; capsula.radius = 0.28f;
             // a cápsula também é a hitbox do nível médio (o corpo inteiro)
             var hitboxCorpo = raiz.AddComponent<Hitbox>();
             hitboxCorpo.zumbi = z; hitboxCorpo.regiao = RegiaoDoCorpo.Corpo; hitboxCorpo.colisor = capsula;
@@ -360,107 +416,76 @@ namespace ZombieCityCleaner.EditorTools
             voz.playOnAwake = false; voz.spatialBlend = 1f; voz.rolloffMode = AudioRolloffMode.Linear;
             voz.minDistance = 1.5f; voz.maxDistance = 22f; voz.dopplerLevel = 0f; voz.volume = 0.9f;
 
-            var modelo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Fbx));
+            var modelo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(m.fbx));
             modelo.name = "Modelo";
             modelo.transform.SetParent(raiz.transform, false);
             var animador = modelo.GetComponent<Animator>();
-            animador.runtimeAnimatorController = controlador;
+            animador.runtimeAnimatorController = animacao;
             animador.applyRootMotion = false;
             animador.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-            animador.keepAnimatorStateOnDisable = true;   // o nível Longe desliga o Animator; ao voltar, ele continua rastejando ou morto
+            animador.keepAnimatorStateOnDisable = true;   // o nível Longe desliga o Animator; ao voltar, ele continua de onde estava
             var smr = modelo.GetComponentInChildren<SkinnedMeshRenderer>();
-            var original = smr.sharedMesh;
+            PoseDeRepouso(smr);
+            Transform Osso(string nome) => smr.bones.First(t => t.name == nome);
 
-            // hitboxes: as cápsulas vão de osso a osso (na pose em que o FBX abre, que não é a T-pose); a esfera da
-            // cabeça é medida na malha e levada para o espaço do osso pela bindpose dele
-            Transform Osso(string nome) => modelo.GetComponentsInChildren<Transform>(true).First(t => t.name == nome);
+            // hitboxes: cápsulas de osso a osso, com o raio medido na malha; a esfera da cabeça no crânio
             var hitboxes = new List<Hitbox>();
-            hitboxes.Add(EsferaDaCabeca(z, original, smr));
-            hitboxes.Add(Capsula(z, Osso("spine"), Osso("hips").position, Osso("chest").position, 0.15f, RegiaoDoCorpo.Tronco));
-            hitboxes.Add(Capsula(z, Osso("chest"), Osso("chest").position, Osso("neck").position, 0.17f, RegiaoDoCorpo.Tronco));
-            foreach (var (lado, braco, antebraco, coxa, canela) in new[]
-                     {
-                         ("L", RegiaoDoCorpo.BracoE, RegiaoDoCorpo.AntebracoE, RegiaoDoCorpo.CoxaE, RegiaoDoCorpo.CanelaE),
-                         ("R", RegiaoDoCorpo.BracoD, RegiaoDoCorpo.AntebracoD, RegiaoDoCorpo.CoxaD, RegiaoDoCorpo.CanelaD),
-                     })
+            var (centro, raio) = Cranio(m, smr.transform.localToWorldMatrix);
+            var cabeca = NovaHitbox(z, Osso("head"), "Cabeca", RegiaoDoCorpo.Cabeca, out var goCabeca);
+            goCabeca.transform.position = centro;
+            var esfera = goCabeca.AddComponent<SphereCollider>();
+            esfera.radius = raio / Mathf.Max(0.0001f, goCabeca.transform.lossyScale.x);
+            cabeca.colisor = esfera;
+            hitboxes.Add(cabeca);
+            Vector3 P(string nome) => Osso(nome).position;
+            hitboxes.Add(Capsula(z, Osso("spine"), P("hips"), P("chest"), Raio(smr, P("hips"), P("chest"), 0.6f, "hips", "spine"), RegiaoDoCorpo.Tronco));
+            hitboxes.Add(Capsula(z, Osso("chest"), P("chest"), P("neck"), Raio(smr, P("chest"), P("neck"), 0.6f, "chest"), RegiaoDoCorpo.Tronco));
+            foreach (var lado in new[] { "L", "R" })
             {
-                Transform ombro = Osso($"upper_arm.{lado}"), cotovelo = Osso($"forearm.{lado}"), mao = Osso($"hand.{lado}");
-                hitboxes.Add(Capsula(z, ombro, ombro.position, cotovelo.position, 0.065f, braco));
-                hitboxes.Add(Capsula(z, cotovelo, cotovelo.position, mao.position + (mao.position - cotovelo.position).normalized * 0.12f, 0.06f, antebraco));
-                Transform quadril = Osso($"thigh.{lado}"), joelho = Osso($"shin.{lado}"), pe = Osso($"foot.{lado}");
-                hitboxes.Add(Capsula(z, quadril, quadril.position, joelho.position, 0.085f, coxa));
-                hitboxes.Add(Capsula(z, joelho, joelho.position, pe.position, 0.07f, canela));
+                Vector3 ombro = P($"upper_arm.{lado}"), cotovelo = P($"forearm.{lado}"), mao = P($"hand.{lado}");
+                Vector3 dedos = mao + (mao - cotovelo).normalized * 0.12f;
+                hitboxes.Add(Capsula(z, Osso($"upper_arm.{lado}"), ombro, cotovelo, Raio(smr, ombro, cotovelo, 0.75f, $"upper_arm.{lado}"), RegiaoDoCorpo.Braco));
+                hitboxes.Add(Capsula(z, Osso($"forearm.{lado}"), cotovelo, dedos, Raio(smr, cotovelo, dedos, 0.75f, $"forearm.{lado}", $"hand.{lado}"), RegiaoDoCorpo.Braco));
+                Vector3 quadril = P($"thigh.{lado}"), joelho = P($"shin.{lado}"), pe = P($"foot.{lado}");
+                hitboxes.Add(Capsula(z, Osso($"thigh.{lado}"), quadril, joelho, Raio(smr, quadril, joelho, 0.7f, $"thigh.{lado}"), RegiaoDoCorpo.Perna));
+                hitboxes.Add(Capsula(z, Osso($"shin.{lado}"), joelho, pe, Raio(smr, joelho, pe, 0.7f, $"shin.{lado}"), RegiaoDoCorpo.Perna));
             }
 
-            smr.sharedMesh = malha;
-            smr.sharedMaterials = new[] { Carregar<Material>(Arte + "/Materials/Zombie.mat") };
+            smr.sharedMesh = m.inteira;
+            smr.sharedMaterials = new[] { m.material };
             smr.updateWhenOffscreen = false;
             smr.skinnedMotionVectors = false;
 
+            z.modelo = m.indice;
             z.animador = animador;
             z.agente = agente;
             z.capsula = capsula;
             z.hitboxes = hitboxes.ToArray();
             z.renderers = new Renderer[] { smr };
             z.voz = voz;
-            z.ossoPeito = Osso("chest");
-            z.ossoBracoE = Osso("upper_arm.L");
-            z.ossoBracoD = Osso("upper_arm.R");
-            z.pedacos = Pedacos(modelo.transform, smr, original, Osso);
+            z.raizDoModelo = modelo.transform;
+            z.esqueleto = smr.bones;
+            z.partes = CorpoDeZumbi.Partes.Select(Osso).ToArray();
 
-            Directory.CreateDirectory(Path.GetDirectoryName(PrefabZumbi));
-            var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, PrefabZumbi);
+            var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, $"{Prefabs}/Zumbi_{m.nome}.prefab");
             Object.DestroyImmediate(raiz);
             return salvo.GetComponent<Zumbi>();
         }
 
-        // a esfera da cabeça: no centro da região da cabeça (o submesh de textura mais perto do topo da cabeça), com o
-        // raio dela, levada para o espaço do osso pela bindpose
-        static Hitbox EsferaDaCabeca(Zumbi z, Mesh malha, SkinnedMeshRenderer smr)
-        {
-            const string osso = "head";
-            var carne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
-            Vector3 J(string b) => malha.bindposes[System.Array.FindIndex(smr.bones, t => t.name == b)].inverse.MultiplyPoint3x4(Vector3.zero);
-            Vector3 esperado = J("head") + (J("head") - J("neck")) * 1.5f;
-            int melhor = -1; float menor = float.MaxValue;
-            for (int i = 0; i < malha.subMeshCount; i++)
-            {
-                if (smr.sharedMaterials[i] == carne) continue;
-                float d = (malha.GetSubMesh(i).bounds.center - esperado).sqrMagnitude;
-                if (d < menor) { menor = d; melhor = i; }
-            }
-            var vertices = malha.vertices;
-            var triangulos = malha.GetTriangles(melhor);
-            var limites = new Bounds(vertices[triangulos[0]], Vector3.zero);
-            foreach (int i in triangulos) limites.Encapsulate(vertices[i]);
-            int indice = System.Array.FindIndex(smr.bones, t => t.name == osso);
-            var bind = malha.bindposes[indice];
-            // o raio é a média das três metades da cabeça (com o cabelo): de perto, mirar na borda do cabelo também acerta
-            float media = (limites.extents.x + limites.extents.y + limites.extents.z) / 3f;
-            float raio = bind.MultiplyVector(Vector3.right * media).magnitude;
-            var h = NovaHitbox(smr.bones[indice], RegiaoDoCorpo.Cabeca.ToString(), RegiaoDoCorpo.Cabeca, out var go);
-            h.zumbi = z;
-            go.transform.localPosition = bind.MultiplyPoint3x4(limites.center);
-            var c = go.AddComponent<SphereCollider>();
-            c.radius = raio;
-            h.colisor = c;
-            return h;
-        }
-
-        static Hitbox NovaHitbox(Transform osso, string nome, RegiaoDoCorpo regiao, out GameObject go)
+        static Hitbox NovaHitbox(Zumbi z, Transform osso, string nome, RegiaoDoCorpo regiao, out GameObject go)
         {
             go = new GameObject($"Hitbox {nome}") { layer = Zumbi.CamadaZumbi };
             go.transform.SetParent(osso, false);
             var h = go.AddComponent<Hitbox>();
+            h.zumbi = z;
             h.regiao = regiao;
             return h;
         }
 
-        /// <summary>Uma cápsula entre dois pontos (na pose em que o modelo abre), presa ao osso que a move.</summary>
+        /// <summary>Uma cápsula entre dois pontos (na pose de repouso), presa ao osso que a move.</summary>
         static Hitbox Capsula(Zumbi z, Transform osso, Vector3 de, Vector3 ate, float raio, RegiaoDoCorpo regiao)
         {
-            var h = NovaHitbox(osso, $"{regiao} ({osso.name})", regiao, out var go);
-            h.zumbi = z;
+            var h = NovaHitbox(z, osso, $"{regiao} ({osso.name})", regiao, out var go);
             go.transform.SetPositionAndRotation((de + ate) * 0.5f, Quaternion.FromToRotation(Vector3.up, ate - de));
             float escala = Mathf.Max(0.0001f, go.transform.lossyScale.x);
             var c = go.AddComponent<CapsuleCollider>();
@@ -471,40 +496,115 @@ namespace ZombieCityCleaner.EditorTools
             return h;
         }
 
+        // ------------------------------------------------------------------ o corpo que cai (ragdoll)
+
         /// <summary>
-        /// Os membros que caem. A peça solta (do NovoZombie_Gibs.fbx) foi exportada na pose de repouso, no mesmo espaço
-        /// do modelo: a pose dela em relação ao osso é a da bindpose (osso⁻¹ · peça), e no jogo ela nasce no osso animado.
+        /// O corpo do modelo: o FBX desempacotado, sem Animator, na pose de repouso, na camada "Corpos". Onze partes têm
+        /// corpo rígido e colisor (o mesmo tamanho das hitboxes, um pouco mais fino), ligadas por juntas com os limites do
+        /// corpo humano. As juntas são criadas nesta pose, e é dela que os limites contam.
         /// </summary>
-        static Zumbi.Pedaco[] Pedacos(Transform modelo, SkinnedMeshRenderer smr, Mesh malha, System.Func<string, Transform> osso)
+        static CorpoDeZumbi MontarCorpo(Modelo m)
         {
-            var arquivo = Carregar<GameObject>(FbxPedacos);
-            Matrix4x4 smrNoModelo = modelo.worldToLocalMatrix * smr.transform.localToWorldMatrix;
-            Zumbi.Pedaco Pedaco(Membros membro, string nomeOsso, string nomeFilho, string nomePeca)
+            var raiz = new GameObject("Corpo_" + m.nome) { layer = CorpoDeZumbi.Camada };
+            var c = raiz.AddComponent<CorpoDeZumbi>();
+            var modelo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(m.fbx));
+            PrefabUtility.UnpackPrefabInstance(modelo, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            modelo.name = "Modelo";
+            modelo.transform.SetParent(raiz.transform, false);
+            Object.DestroyImmediate(modelo.GetComponent<Animator>());
+            foreach (var t in modelo.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = CorpoDeZumbi.Camada;
+            var smr = modelo.GetComponentInChildren<SkinnedMeshRenderer>();
+            PoseDeRepouso(smr);
+            Transform Osso(string nome) => smr.bones.First(t => t.name == nome);
+            Vector3 P(string nome) => Osso(nome).position;
+
+            var partes = new Rigidbody[PartesDoCorpo.Length];
+            for (int i = 0; i < PartesDoCorpo.Length; i++)
             {
-                var p = new Zumbi.Pedaco { membro = membro, osso = osso(nomeOsso), ossoFilho = nomeFilho != null ? osso(nomeFilho) : null, rotacao = Quaternion.identity };
-                if (nomePeca == null) return p;
-                var peca = arquivo.GetComponentsInChildren<MeshFilter>(true).First(f => f.name == nomePeca);
-                Matrix4x4 bindDoOsso = smrNoModelo * malha.bindposes[System.Array.FindIndex(smr.bones, b => b.name == nomeOsso)].inverse;
-                Matrix4x4 pecaNoModelo = arquivo.transform.worldToLocalMatrix * peca.transform.localToWorldMatrix;
-                Matrix4x4 relativo = bindDoOsso.inverse * pecaNoModelo;
-                p.malha = peca.sharedMesh;
-                p.materiais = peca.GetComponent<MeshRenderer>().sharedMaterials;
-                p.posicao = relativo.MultiplyPoint3x4(Vector3.zero);
-                p.rotacao = relativo.rotation;
-                return p;
+                var (nome, ate, massa) = PartesDoCorpo[i];
+                var osso = Osso(nome);
+                var rb = osso.gameObject.AddComponent<Rigidbody>();
+                rb.mass = massa;
+                rb.linearDamping = 0.05f;
+                rb.angularDamping = 0.3f;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+                rb.solverIterations = 12;
+                partes[i] = rb;
+                float escala = Mathf.Max(0.0001f, osso.lossyScale.x);
+                if (ate == null)
+                {
+                    var (centro, raio) = Cranio(m, smr.transform.localToWorldMatrix);
+                    var esfera = osso.gameObject.AddComponent<SphereCollider>();
+                    esfera.center = osso.InverseTransformPoint(centro);
+                    esfera.radius = raio * 0.85f / escala;
+                    continue;
+                }
+                Vector3 de = osso.position, fim = P(ate);
+                if (nome.StartsWith("forearm")) fim += (fim - de).normalized * 0.1f;   // a mão vai junto
+                var ossos = nome == "hips" ? new[] { "hips", "spine" } : nome.StartsWith("forearm") ? new[] { nome, nome.Replace("forearm", "hand") } : new[] { nome };
+                float r = Raio(smr, de, fim, 0.6f, ossos) * 0.9f;
+                var cap = osso.gameObject.AddComponent<CapsuleCollider>();
+                Vector3 local = osso.InverseTransformPoint(fim);
+                // o eixo da cápsula é o eixo do osso mais alinhado com o segmento (no Blender, o osso aponta em Y)
+                Vector3 abs = new Vector3(Mathf.Abs(local.x), Mathf.Abs(local.y), Mathf.Abs(local.z));
+                cap.direction = abs.y >= abs.x && abs.y >= abs.z ? 1 : abs.x >= abs.z ? 0 : 2;
+                cap.center = local * 0.5f;
+                cap.radius = r / escala;
+                cap.height = local.magnitude + 2f * r / escala;
             }
-            return new[]
+
+            // as juntas: eixo de giro principal e eixo de balanço (no mundo, na pose de repouso: o modelo olha para +Z,
+            // a direita dele é +X), limites do giro (baixo, alto) e dos dois balanços, em graus
+            Vector3 D = Vector3.right, F = Vector3.forward, C = Vector3.up;
+            void Junta(int parte, int pai, Vector3 giro, Vector3 balanco, float baixo, float alto, float balanco1, float balanco2)
             {
-                Pedaco(Membros.Cabeca, "head", null, null),
-                Pedaco(Membros.BracoE, "upper_arm.L", "forearm.L", "Gib_Arm.L"),
-                Pedaco(Membros.AntebracoE, "forearm.L", "hand.L", "Gib_Forearm.L"),
-                Pedaco(Membros.BracoD, "upper_arm.R", "forearm.R", "Gib_Arm.R"),
-                Pedaco(Membros.AntebracoD, "forearm.R", "hand.R", "Gib_Forearm.R"),
-                Pedaco(Membros.CoxaE, "thigh.L", "shin.L", "Gib_Leg.L"),
-                Pedaco(Membros.CanelaE, "shin.L", "foot.L", "Gib_Shin.L"),
-                Pedaco(Membros.CoxaD, "thigh.R", "shin.R", "Gib_Leg.R"),
-                Pedaco(Membros.CanelaD, "shin.R", "foot.R", "Gib_Shin.R"),
-            };
+                var rb = partes[parte];
+                var j = rb.gameObject.AddComponent<CharacterJoint>();
+                j.connectedBody = partes[pai];
+                j.anchor = Vector3.zero;
+                j.axis = rb.transform.InverseTransformDirection(giro);
+                j.swingAxis = rb.transform.InverseTransformDirection(balanco);
+                j.lowTwistLimit = new SoftJointLimit { limit = baixo };
+                j.highTwistLimit = new SoftJointLimit { limit = alto };
+                j.swing1Limit = new SoftJointLimit { limit = balanco1 };
+                j.swing2Limit = new SoftJointLimit { limit = balanco2 };
+                j.enableProjection = true;
+                j.enablePreprocessing = false;
+            }
+            // tronco e cabeça: dobrar para a frente é positivo (em volta da direita)
+            Junta(1, 0, D, F, -20f, 40f, 15f, 15f);
+            Junta(2, 1, D, F, -30f, 40f, 25f, 25f);
+            // braços (abertos na pose): sobem e descem em volta da frente, vão para a frente e para trás em volta do alto;
+            // o cotovelo dobra para a frente em volta do alto (o sinal muda de um lado para o outro)
+            Junta(3, 1, F, C, -80f, 80f, 70f, 30f);
+            Junta(4, 3, C, D, -5f, 130f, 5f, 5f);
+            Junta(5, 1, F, C, -80f, 80f, 70f, 30f);
+            Junta(6, 5, C, D, -130f, 5f, 5f, 5f);
+            // pernas: o quadril dobra para a frente (negativo em volta da direita); o joelho só dobra para trás
+            Junta(7, 0, D, F, -100f, 30f, 30f, 15f);
+            Junta(8, 7, D, F, -5f, 120f, 3f, 3f);
+            Junta(9, 0, D, F, -100f, 30f, 30f, 15f);
+            Junta(10, 9, D, F, -5f, 120f, 3f, 3f);
+
+            smr.sharedMesh = m.inteira;
+            smr.sharedMaterials = new[] { m.material };
+            smr.rootBone = Osso("hips");   // o quadril voa com o corpo; a raiz do esqueleto fica parada
+            smr.localBounds = new Bounds(Vector3.zero, Vector3.one * 2.6f);
+            smr.updateWhenOffscreen = false;
+            smr.skinnedMotionVectors = false;
+
+            c.pele = smr;
+            c.malhaInteira = m.inteira;
+            c.malhaSemCabeca = m.semCabeca;
+            c.materiaisInteira = new[] { m.material };
+            c.materiaisSemCabeca = new[] { m.material, Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat") };
+            c.esqueleto = smr.bones;
+            c.partes = partes;
+            c.pescoco = Osso("neck");
+
+            var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, $"{Prefabs}/Corpo_{m.nome}.prefab");
+            Object.DestroyImmediate(raiz);
+            return salvo.GetComponent<CorpoDeZumbi>();
         }
 
         // ------------------------------------------------------------------ decals (manchas de sangue e furos de tiro)
@@ -609,7 +709,7 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ cena
 
-        static void MontarCena(Scene cena, Zumbi prefab, Mesh inteira, Mesh completa, MapaDaMalha mapa, (Material sangue, Material furo) decals)
+        static void MontarCena(Scene cena, Zumbi[] prefabs, CorpoDeZumbi[] corpos, (Material sangue, Material furo) decals)
         {
             var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Zumbis");
             if (velho != null) Object.DestroyImmediate(velho);
@@ -617,17 +717,13 @@ namespace ZombieCityCleaner.EditorTools
             go.AddComponent<NetworkObject>();
             var m = go.AddComponent<ZombieManager>();
             go.AddComponent<BenchmarkDeZumbis>();
-            m.prefab = prefab;
+            m.modelos = prefabs;
+            m.corpos = corpos;
             m.vozDoZumbi = Carregar<AudioClip>("Assets/_Game/Audio/SomZombie1.mp3");
-            m.malhaInteira = inteira;
-            m.malhaCompleta = completa;
-            m.mapa = mapa;
-            m.materialCorpo = Carregar<Material>(Arte + "/Materials/Zombie.mat");
-            m.materialCarne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
             m.areasLivres = new[]
             {
                 new ZombieManager.AreaLivre { centro = new Vector3(-20f, 0f, -20f), raio = 11f },   // a casa da família e o bunker
-                new ZombieManager.AreaLivre { centro = new Vector3(-20f, 0f, -4.4f), raio = 12f },  // onde os jogadores aparecem
+                new ZombieManager.AreaLivre { centro = new Vector3(-20f, 0f, -4.4f), raio = 12f },  // a frente da casa
             };
             foreach (var (nome, centro, raio, quantidade) in Hordas)
             {
@@ -659,7 +755,7 @@ namespace ZombieCityCleaner.EditorTools
             superficie.center = new Vector3(0f, 4f, 0f);
             superficie.size = new Vector3(128f, 24f, 128f);   // a cidade até a barreira (raio 63), do bunker ao telhado do prédio
             superficie.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-            superficie.layerMask = ~((1 << JogadorRede.CamadaBracos) | (1 << Zumbi.CamadaZumbi));
+            superficie.layerMask = ~((1 << JogadorRede.CamadaBracos) | (1 << Zumbi.CamadaZumbi) | (1 << CorpoDeZumbi.Camada));
             superficie.BuildNavMesh();
             Directory.CreateDirectory(Path.GetDirectoryName(ArquivoNavMesh));
             AssetDatabase.CreateAsset(superficie.navMeshData, ArquivoNavMesh);

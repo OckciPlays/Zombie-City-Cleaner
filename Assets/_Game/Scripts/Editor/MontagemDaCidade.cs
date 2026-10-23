@@ -86,7 +86,7 @@ namespace ZombieCityCleaner.EditorTools
                 if (EscondeOQueEstaAtras(t)) flags |= StaticEditorFlags.OccluderStatic;
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
             }
-            PontosNaCasaDaFamilia(cena);
+            PontosNoBunker(cena);
             MontagemDosZumbis.AssarNavegacao(cena);   // a cidade mudou: o NavMesh dos zumbis precisa ser refeito
             AssarOclusao();
             EditorSceneManager.MarkSceneDirty(cena);
@@ -482,6 +482,9 @@ namespace ZombieCityCleaner.EditorTools
             Movel(m, "Radio", mx - 0.3f, fundo + 0.76f, mz - 0.1f, 15f, false);
             Movel(m, "Caixas", bx0 + 0.55f, fundo, bz1 - 0.6f, 10f);
             Movel(m, "Tambor", bx0 + 0.45f, fundo, bz1 - 1.5f, 0f);
+            // o suporte de armas na parede da esquerda, logo depois da porta (as costas na parede, de 20 cm, e na faixa
+            // verde pintada nela); as armas, a montagem das armas põe em cima ("Parede de armas")
+            Movel(m, "Suporte_Armas", bx0 + 0.12f, fundo, bz0 + 1.8f, 90f);
             // quarto: dois beliches (a família tem quatro)
             Movel(m, "Beliche", bx1 - 0.6f, fundo, bz0 + 1.4f, 0f);
             Movel(m, "Beliche", bx1 - 2.0f, fundo, bz0 + 1.4f, 0f);
@@ -797,16 +800,26 @@ namespace ZombieCityCleaner.EditorTools
             }
         }
 
-        internal static void PontosNaCasaDaFamilia(UnityEngine.SceneManagement.Scene cena)
+        /// <summary>
+        /// Os 4 pontos de nascimento vão para a sala comum do bunker (nas coordenadas da casa da família, como o
+        /// <see cref="Bunker"/>): dois entre a porta blindada e a mesa, dois dos lados da mesa, todos olhando para ela.
+        /// </summary>
+        internal static void PontosNoBunker(UnityEngine.SceneManagement.Scene cena)
         {
             var pontos = cena.GetRootGameObjects().FirstOrDefault(r => r.name == "Pontos de nascimento");
-            if (pontos == null) return;
-            var lugares = new[] { new Vector3(-22f, 0.05f, -4.6f), new Vector3(-18f, 0.05f, -4.6f), new Vector3(-24f, 0.05f, -4.2f), new Vector3(-16f, 0.05f, -4.2f) };
+            var bunker = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true))
+                .FirstOrDefault(t => t.name == "Bunker" && t.parent != null && t.parent.name == "Casa da família");
+            if (pontos == null || bunker == null) return;
+            const float fundo = -3.2f;
+            var mesa = new Vector3(-2.9f, fundo, 11.6f);
+            var lugares = new[] { new Vector3(-3.4f, fundo, 8.7f), new Vector3(-1.5f, fundo, 8.7f), new Vector3(-4.8f, fundo, 10.2f), new Vector3(-1.1f, fundo, 10.6f) };
             for (int i = 0; i < pontos.transform.childCount && i < lugares.Length; i++)
             {
                 var p = pontos.transform.GetChild(i);
-                p.position = lugares[i];
-                p.rotation = Quaternion.Euler(0f, 30f - i * 20f, 0f);
+                p.position = bunker.TransformPoint(lugares[i] + Vector3.up * 0.05f);
+                var olhar = bunker.TransformDirection(mesa - lugares[i]);
+                olhar.y = 0f;
+                p.rotation = Quaternion.LookRotation(olhar);
             }
         }
     }

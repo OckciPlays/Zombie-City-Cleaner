@@ -8,10 +8,11 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 ## Branches
 
 - `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
-  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base), Parte 4 (a cidade em blocos, o clima e o dia), Parte 5 (os zumbis na cidade) e Parte 6 (combate e desmembramento, com as pernas também) estão feitas.
+  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base), Parte 4 (a cidade em blocos, o clima e o dia), Parte 5 (os zumbis na cidade) e Parte 6 (combate; o desmembramento dela saiu nos ajustes antes da Parte 7) estão feitas.
   - A pedido do usuário, a Parte 8 (a arte final) veio antes da Parte 7 (o bunker, o saque e o dia), que fica para depois.
-  - Parte 8 em andamento, em fatias (veja o `Plano_Demo.md`): as 6 fatias estão feitas: 1 (a paleta da cidade, o material único e os objetos de rua), 2 (as casas), 3 (o prédio), 4 (o bunker e os móveis), 5 (o chão) e 6 (oclusão, neblina dentro de casa e benchmark; a luz ficou em tempo real e não houve LOD, veja "Clima e ciclo do dia").
-  - O próximo passo é a Parte 7 (o bunker, o saque e o dia), que tinha ficado para depois.
+  - A Parte 8 está feita, nas 6 fatias do `Plano_Demo.md`: 1 (a paleta da cidade, o material único e os objetos de rua), 2 (as casas), 3 (o prédio), 4 (o bunker e os móveis), 5 (o chão) e 6 (oclusão, neblina dentro de casa e benchmark; a luz ficou em tempo real e não houve LOD, veja "Clima e ciclo do dia").
+  - Depois dela, os "ajustes antes da Parte 7", em 3 fatias, todas feitas: 1 (o tiro novo, sem som ambiente, nascer no bunker), 2 (os 4 modelos de zumbi, só a cabeça explode, morte com ragdoll) e 3 (as 4 armas, os braços de luva e o suporte de armas no bunker).
+  - Depois, a Parte 7 (o bunker, o saque e o dia).
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
@@ -34,19 +35,19 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Camadas:**
   - 6 "ArmasPrimeiraPessoa" (os braços);
   - 7 "Zumbi" (cápsulas e hitboxes dos zumbis; não colide com ela mesma nem com a 6);
-  - 8 "Pedacos" (os membros caídos): só colide com o cenário e o tiro passa por ela;
+  - 8 "Corpos" (os zumbis mortos, com física): só colide com o cenário e com ela mesma, e o tiro passa por ela;
   - 9 "Jogador" (a raiz do jogador, com o CharacterController).
   - O cenário fica na Default.
-  - Um pedaço sólido na camada 7 ficava parado em cima da cápsula do zumbi ou do jogador e tapava o tiro na cabeça (faísca em vez de sangue). Por isso os pedaços ganharam camada própria.
+  - Um corpo sólido na camada 7 ficaria parado em cima da cápsula de um zumbi ou do jogador e taparia o tiro na cabeça (faísca em vez de sangue). Por isso os corpos têm camada própria (antes, era a dos membros caídos).
 
 ## Pastas
 
 - `Assets/_Game/` é tudo da demo:
   - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings. `Scenes/Demo_Cidade/NavMesh da cidade.asset` é o NavMesh dela.
-  - `Prefabs/`: `Jogador.prefab` e `Zumbi.prefab`, os dois montados por scripts de editor.
+  - `Prefabs/`: `Jogador.prefab` e, em `Prefabs/Zumbis/`, um `Zumbi_<modelo>.prefab` e um `Corpo_<modelo>.prefab` para cada zumbi, todos montados por scripts de editor.
   - `Settings/Demo_Volume.asset` (noite) e `Settings/Demo_Volume_Dia.asset` (dia): o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
-  - `Art/Characters/Zombie/`: o zumbi.
-  - `Art/Characters/Jogador/`: o jogador (corpo, braços de primeira pessoa e pistola).
+  - `Art/Characters/Zombie/`: os 4 modelos de zumbi.
+  - `Art/Characters/Jogador/`: o jogador (corpo, os braços de primeira pessoa de cada arma, as armas avulsas e as malhas delas).
   - `Art/Paleta.png`: a paleta de cores 16×16 dos personagens (linhas 0 a 4) e da cidade (linhas 5 a 10). O alfa das linhas da cidade é a suavidade.
   - `Art/Cidade/`: a arte final (Parte 8), exportada de `Modelo 3D/Cidade/Cidade.blend`: `Cidade_Rua.fbx` (objetos de rua), `Cidade_Moveis.fbx` (móveis), `Cidade_Chao.fbx` (o chão, em 25 pedaços "Chao_i_j"), e `Cidade_Casas.fbx` (as 5 casas), `Cidade_Predio.fbx` (o prédio) e `Cidade_Bunker.fbx` (o bunker), estas três com o seu `_Colisao.fbx` (legível).
   - `Art/Materials/Cidade.mat`: o material único da arte final (URP Lit com a paleta e a suavidade vinda do alfa).
@@ -55,17 +56,19 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Art/Materials/Decals/`: os decals de sangue e de furo de tiro (shader "Shader Graphs/Decal", texturas geradas por código).
   - `Art/Meshes/`: malhas geradas pela montagem da cidade (`ConeDeLuz`).
   - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
-  - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), usada nos gemidos distantes.
+  - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), tocada em trechos.
 - Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
 
 ## Cena `Demo_Cidade`
 
-- **Raízes:** "Cidade", "Navegação" (o NavMesh), "Zumbis", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento" e "Câmera de teste".
+- **Raízes:** "Cidade", "Navegação" (o NavMesh), "Zumbis", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento", "Parede de armas" e "Câmera de teste".
 - **Os scripts de montagem**, no menu Zombie City Cleaner, refazem partes da cena. Mudanças feitas à mão nessas partes se perdem; mude o script e rode de novo.
+  - **Controlador apagado e recriado:** as montagens dos zumbis e das armas apagam o controlador de animação e criam outro (que fica com o mesmo GUID). Ao ser apagado, os prefabs que usam o controlador são reimportados sem ele. Se depois são salvos iguais, a Unity não os importa de novo, e o personagem nascia sem animação (pose T). Por isso, as duas montagens forçam a reimportação dos prefabs no fim.
   - Montar cidade em blocos: "Cidade", os pontos de nascimento e o NavMesh.
   - Montar clima e ciclo do dia: "Clima" e os volumes.
   - Montar jogador e rede: o prefab do jogador, "Rede", "Efeitos" e "Pontos de nascimento".
   - Montar zumbis: a importação do zumbi, a camada, as malhas, o Animator, o prefab do zumbi, o prefab do jogador, "Zumbis", o sangue no "Efeitos", os decals e o NavMesh.
+  - Montar armas: a importação dos braços de cada arma, do corpo e das armas avulsas, as malhas das armas, os Animators dos braços e os override de cada arma, o prefab do jogador e o "Parede de armas" (o suporte do bunker, que precisa da cidade montada).
 - Os valores de neblina e luz guardados na cena (densidade 0,05, ambiente azulado) são só os do Editor parado. Em Play, o `AmbienteDoDia` reescreve tudo a cada quadro.
 
 ## A cidade em blocos (Parte 4)
@@ -86,7 +89,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
       - O sofá acaba antes da porta da frente; se não couber, vira poltrona (casas de 9 m). O rack fica antes da porta da cozinha.
       - Na casa da família, a boca da escada do bunker fica livre: o balcão vai para a parede da sala, depois da porta.
     - `MoveisDoApartamento`: sofá contra a fachada, TV, mesa com cadeiras e a cozinha americana na parede do quarto; no quarto, cama, criado-mudo, armário e cômoda.
-    - Bunker: mesa grande com rádio e 4 cadeiras, 2 beliches, 3 prateleiras cheias na despensa, tambores e caixas.
+    - Bunker: mesa grande com rádio e 4 cadeiras, 2 beliches, 3 prateleiras cheias na despensa, tambores, caixas e o `Suporte_Armas` na parede da esquerda da sala comum, logo depois da porta (as armas dele são o "Parede de armas", da montagem das armas).
     - Conferido com os 187 móveis: caminho completo da rua até a sala, a cozinha e o quarto das 5 casas, da cozinha da família até as 3 salas do bunker e da rua até os apartamentos dos 4 andares.
   - **Prédio:** `Predio()` põe o modelo "Predio" e um "Colisão" com a malha `Predio_Colisao`, mais os móveis de cada apartamento e o eco.
     - Escada, patamares, muretas, guarda-corpo do último andar, degraus da entrada e portas estão na colisão. A escada de incêndio, a marquise e a cobertura são só visuais.
@@ -99,7 +102,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **"Objetos de rua":** 8 placas de pare nos cruzamentos (a frente olha para quem chega), 4 placas de rua, 6 hidrantes virados para a rua, 10 lixeiras (2 caídas), 2 caçambas e sacos de lixo. A praça tem os bancos virados para o coreto e 2 lixeiras.
   - **Barricadas:** 5 barreiras de concreto, o cavalete e 3 cones do lado de dentro, e os 2 carros do lado de fora.
   - A calçada fica 12 cm acima da rua: o que fica em cima dela usa y = 0,12.
-  - No fim, ela põe os 4 pontos de nascimento na frente da casa da família.
+  - No fim, ela põe os 4 pontos de nascimento na sala comum do bunker (`PontosNoBunker`), olhando para a mesa.
 - **Planta (metros, +Z = norte):**
   - Ruas em grade nas linhas x e z = −40, 0 e 40, com 8 m de largura, faixa amarela tracejada e calçadas de 2,5 m em volta dos 4 quarteirões. As 4 saídas, em ±60, têm barricadas. (O chão de arte, `cidade_chao.py`, repete esta planta: ao mudá-la, mude lá também.)
   - **Prédio** em (20, 0, 21), 22 × 14 m, 4 andares de 3 m: escada em U no fundo, corredor no meio e 2 apartamentos por andar, com eco (reverb) dentro.
@@ -131,7 +134,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - **Dentro das casas e do prédio** (Parte 8): com a câmera numa `World/AreaInterna`, as duas neblinas caem para 40% (`neblinaDentro`), em 0,6 s (`trocaDentro`). A luz não muda, porque ela entra pelas janelas.
       - A montagem da cidade põe uma área em cada casa (do piso ao forro, W × D) e uma no prédio (os 4 andares). O bunker usa a regra do subsolo.
       - Sem isso, a neblina de fora enchia as salas.
-  - **`Atmosphere/SomAmbiente`:** o vento é gerado por código, em loop. Eventos distantes (35 a 60 m) tocam a cada 10 a 26 s, e à noite com o dobro da frequência: gemidos (trechos de `SomZombie1.mp3` mais graves), sirene e pancada de metal.
+  - **Sem som ambiente:** o vento, os gemidos distantes e a sirene saíram a pedido (o `SomAmbiente` foi apagado). O que se ouve é a voz dos zumbis, o tiro e os sons da arma e da lanterna, com o eco das construções.
   - **"Partículas no ar" (`Atmosphere/ParticulasNoAr`):** uma caixa de 26 × 12 × 26 m que segue a câmera, com cinza de dia e poeira à noite.
 - **Neblina de altura (`Shaders/NeblinaDeAltura.shader`):** um passe de tela cheia antes dos transparentes (os cones e as partículas ficam por cima).
   - A densidade cai com a altura (exponencial, calculada exata ao longo do raio) e tem manchas de ruído arrastadas pelo vento.
@@ -147,61 +150,74 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Mudou a cidade, rode a montagem de novo, e a oclusão vem junto.
 - **LOD:** não há LOD Groups. Os triângulos vêm quase todos dos zumbis (o benchmark tem a conta), a câmera corta a 150 m com neblina, e os móveis de dentro das casas somem pela oclusão.
 
-## O zumbi (`Art/Characters/Zombie/`)
+## Os zumbis (`Art/Characters/Zombie/`)
 
-- **Arquivos:**
-  - `NovoZombie.fbx`, exportado de `Modelo 3D/NovoZombie_Anim/` na pasta de arte. Ao atualizar o modelo, copie o FBX de novo.
-  - `NovoZombie_Gibs.fbx`, com os pedaços soltos.
-  - A textura `NovoZombie_basecolor.jpg`.
+- **Os 4 modelos:** `Zombie1` (o garoto, 1,75 m), `ZombieHomem2` (1,80 m), `ZombieMulher` (1,68 m) e `ZombieMulherLoira` (1,70 m).
+  - Vêm de `Modelo 3D/Zumbis/` na pasta de arte (`Zumbis.blend` e o script `zumbis.py`). Ao atualizar, copie de novo os `<modelo>.fbx` e as texturas `Texturas/<modelo>_basecolor.jpg` para cá e rode a montagem dos zumbis.
+  - Os 4 têm o mesmo esqueleto (os 22 ossos do zumbi antigo, com os mesmos nomes) e a mesma hierarquia (`Zombie_Body`, `Zombie_Rig`), cada um com as juntas nas medidas dele.
+  - O antigo `NovoZombie` (com desmembramento e os pedaços soltos) saiu do projeto.
 - **Importação:**
-  - mede 1,75 m na escala 1 e olha para +Z;
+  - mede a altura do modelo na escala 1 e olha para +Z;
   - deixe **"Bake Axis Conversion" desligado**, porque ligado ele vira o zumbi de costas. Os filhos do FBX ficam com rotação de 270° em X, o que é normal;
   - rig Generic, com avatar criado do próprio modelo;
-  - 9 clipes, sem root motion. Em loop: `Idle` (3 s), `Walk` (1,33 s), `Chase` (1 s), `Crawl` (2 s) e `CrawlIdle` (2 s). Sem loop: `Attack` (1 s), `HitReact` (0,5 s), `Death` (1,67 s) e `Fall` (0,75 s).
-  - A montagem dos zumbis refaz a lista de clipes (nomes e loop) e os remapeamentos de material: as 10 regiões vão para o `Zombie.mat` e as 9 tampas para o `Zombie_Flesh.mat`.
-- **`Zombie.controller`** (refeito pela montagem; Write Defaults desligado em todos os estados):
-  - **Camada base:**
-    - "Andar" é uma árvore pelo float `Speed` (m/s): `Idle` em 0, `Walk` em 0,6 e `Chase` em 1,12.
-    - Com o bool `Rastejando`, vai para "Cair" (`Fall`) e depois para "Rastejar", outra árvore pela `Speed`: `CrawlIdle` em 0 e `Crawl` em 0,45.
-    - O bool `Morto` leva, de qualquer estado, a "Morte" (`Death`) ou, se estava rastejando, a "Morte deitado": o último quadro da morte, parado, para não levantar.
-  - **Camada "Ações":** máscara `Zombie_Tronco.mask` (da `spine` para cima). Os triggers `Atacar` (`Attack`) e `Tiro` (`HitReact`) voltam sozinhos ao estado vazio. O peso vai a 0 rastejando ou morto.
-- **Materiais:**
-  - `Materials/Zombie.mat`: URP Lit com a textura;
-  - `Materials/Zombie_Flesh.mat`: a carne das tampas, cor sólida `#6B0F0F`.
-- **Desmembramento:** a malha tem 19 submeshes: 10 regiões (corpo, cabeça, braço, antebraço, coxa e canela de cada lado) e 9 tampas (pescoço, ombro, cotovelo, quadril e joelho de cada lado).
-  - A Unity reordena os submeshes no import. A montagem acha cada um pela posição: o centro do submesh é casado com um ponto nos ossos da bindpose, do par mais próximo para o mais distante. O resultado é o `MapaDaMalha` do `ZombieManager`, registrado no log.
-  - `Malhas/Zumbi_Inteiro.asset`: as 10 regiões juntas num submesh só (um draw call). É a malha do zumbi inteiro.
-  - `Malhas/Zumbi_Completo.asset`: a cópia legível (Read/Write) da malha com os 19 submeshes. As variantes são montadas dela, no jogo (veja "Combate e desmembramento").
-- **Pedaços soltos (`NovoZombie_Gibs.fbx`):** `Gib_Arm.L/R`, `Gib_Forearm.L/R`, `Gib_Leg.L/R` e `Gib_Shin.L/R`. São malhas estáticas na pose de repouso, com a origem no corte e dois materiais (`Zombie` e a tampa de carne).
+  - 5 clipes, sem root motion: `Idle` (3 s), `Walk` (1,33 s) e `Chase` (1 s) em loop; `Attack` (1 s) e `HitReact` (0,5 s) sem loop.
+  - Cada FBX traz as animações assadas no próprio esqueleto (as posições dos ossos são as dele): os clipes de um modelo não servem no outro.
+  - Com o braço levantado (perseguir, atacar, o braço meio erguido do andar), a palma fica para baixo; pendurado, o braço fica como no zumbi antigo.
+- **Malha:** 3 submeshes, achados pelo nome do material que veio do Blender: `<modelo>_Corpo`, `<modelo>_Cabeca` e `Zombie_Flesh` (a tampa de carne no corte do pescoço). A montagem monta duas malhas em `Malhas/`:
+  - `<modelo>_Inteira`: corpo e cabeça num submesh só (um draw call), a do zumbi vivo e do corpo inteiro;
+  - `<modelo>_SemCabeca`: o corpo (submesh 0) e a tampa (submesh 1), a do corpo que caiu com a cabeça explodida.
+- **Materiais:** `Materials/<modelo>.mat` (URP Lit com a textura, suavidade 0,15, sem o passe de motion vectors) e `Materials/Zombie_Flesh.mat` (a carne da tampa, cor sólida `#6B0F0F`).
+- **`Zombie.controller`** (refeito pela montagem, com os clipes do `Zombie1`; Write Defaults desligado em todos os estados):
+  - **Camada base:** "Andar", uma árvore pelo float `Speed` (m/s): `Idle` em 0, `Walk` em 0,6 e `Chase` em 1,12. A morte não tem estado: o zumbi some e o corpo com física cai no lugar.
+  - **Camada "Ações":** máscara `Zombie_Tronco.mask` (da `spine` para cima). Os triggers `Atacar` (`Attack`) e `Tiro` (`HitReact`) voltam sozinhos ao estado vazio.
+  - Os outros modelos usam `Zombie_<modelo>.overrideController`, com os clipes deles no lugar dos do `Zombie1`.
 
-## O jogador (`Art/Characters/Jogador/`)
+## O jogador e as armas (`Art/Characters/Jogador/`)
 
-- **Arquivos:** exportados de `Modelo 3D/Jogador/Jogador.blend` na pasta de arte. Ao atualizar, copie os FBX e a `Paleta.png` de novo.
+- **Arquivos:** exportados de `Modelo 3D/Jogador/Jogador.blend` na pasta de arte (por script; veja "Convenções das armas" no `CLAUDE.md` de lá). Ao atualizar, copie os FBX e a `Paleta.png` de novo e rode a montagem das armas.
   - `Jogador.fbx`: o corpo, visto pelos outros jogadores.
-  - `Jogador_FP.fbx`: os braços com a pistola, na primeira pessoa.
-  - `Pistola.fbx`: a pistola avulsa, estática, para uso futuro (no chão, para pegar).
+  - `Jogador_FP_<Arma>.fbx` (Pistola, Rifle, Submetralhadora e Espingarda): os braços de primeira pessoa de cada arma, com a arma junto.
+  - `Armas.fbx`: as 4 armas avulsas, em peças. A montagem junta as peças de cada uma em `Malhas/Arma_<Arma>.asset` (a origem no cabo, o cano em +Z, o topo em +Y), usadas no corpo e no suporte.
   - A textura de cores fica em `Art/Paleta.png` (movida para lá na Parte 8, porque a cidade usa a mesma): 16×16, RGBA, filtro Point, sem mipmaps e sem compressão.
 - **Cores pela paleta:** o personagem é feito de blocos de cor sólida, e o UV de cada face aponta para um quadradinho da `Paleta.png`.
-  - As linhas 0 a 3 são as 4 variações da família (pele, cabelo, jaqueta, camisa, calça, sapato, cinto, escuro e jaqueta escura).
+  - As linhas 0 a 3 são as 4 variações da família (pele, cabelo, jaqueta, camisa, calça, sapato, cinto, escuro e jaqueta escura). As luvas ficam nas colunas 9 e 10, iguais nas 4 linhas.
   - `Materials/Jogador_Variacao0..3`: os UVs apontam para a linha 0, e cada material desloca a textura em `k/16` no V para mostrar a linha `k`.
-  - A pistola usa a linha 4 com o material `Materials/Pistola` (sem deslocamento). Por isso ela tem material próprio, inclusive dentro de `FP_Bracos`, que tem dois submeshes.
+  - As armas usam a linha 12 com o material `Materials/Pistola` (sem deslocamento). Por isso elas têm material próprio, inclusive dentro dos braços (`FP_Bracos_<Arma>`, dois submeshes).
+- **As 4 armas (`Combat/Armas`):** a tabela dos números de cada uma (`DadosDaArma`), na ordem de `TipoDeArma` (o número que vai pela rede):
+
+  | Arma | Pente | Cadência | Dano | Dispersão (parado / correndo +) | Recarga |
+  |---|---|---|---|---|---|
+  | Pistola | 12 | 0,18 s | 1 | 0,3° / 1,2° | 1,67 s |
+  | Rifle (automático) | 30 | 0,1 s | 1,4 | 0,5° / 1,8° | 1,92 s |
+  | Submetralhadora (automática) | 25 | 0,075 s | 0,8 | 0,9° / 1,6° | 1,67 s |
+  | Espingarda (8 chumbos) | 6 | 0,92 s (com a bomba) | 0,5 por chumbo | 3,5° / 1° | 0,54 s por cartucho |
+
+  - A vida dos zumbis é contada em tiros de pistola. Na cabeça, qualquer acerto (um chumbo também) explode a cabeça.
+  - A tabela também tem o coice, o alcance, o perfil do som do tiro, quando o carregador sai e entra (para o som) e a boca do cano na malha avulsa.
 - **Corpo (`Jogador.fbx`):**
   - 1,80 m de altura, olhando para +Z, com "Bake Axis Conversion" desligado como no zumbi;
-  - rig Generic, com os ossos do zumbi mais `fingers` e `thumb` em cada mão e `weapon.R` (filho de `hand.R`);
-  - a pistola de terceira pessoa (`Pistola_TP`) é um SkinnedMeshRenderer separado, preso inteiro ao `weapon.R`; dá para desligá-lo;
-  - os clipes são `Idle` (2 s), `Walk` (0,75 s, ~1,33 m/s), `Run` (0,58 s, ~3,33 m/s) e `Aim` (2 s), em loop, mais `Fire` (0,25 s). Idle, Walk e Run seguram a pistola baixa com as duas mãos.
+  - rig Generic, com os ossos do zumbi mais `fingers` e `thumb` em cada mão e `weapon.R` (filho de `hand.R`); as mãos são de luva;
+  - **a arma no corpo:** o vazio `Arma_TP` (filho do `weapon.R`) tem os eixos da arma. A montagem põe dentro dele as 4 armas avulsas (`Arma_<Arma>`, com a malha e uma "Boca" na ponta do cano), só a da mão ligada.
+    - As armas ficam com 90° em X: um vazio filho de osso chega do FBX com o eixo do osso convertido (o cano no Y dele e o topo no -Z).
+  - os clipes da pistola são `Idle` (2 s), `Walk` (0,75 s, ~1,33 m/s), `Run` (0,58 s, ~3,33 m/s) e `Aim` (2 s), em loop, mais `Fire` (0,25 s). Idle, Walk e Run seguram a pistola baixa com as duas mãos;
+  - os de arma longa são `<clipe>_Rifle`, `<clipe>_Submetralhadora` e `<clipe>_Espingarda`, com as mesmas durações: o tronco girado para a direita, a coronha no ombro e a mão esquerda no guarda-mão (ou na telha).
 - **`Jogador_TP.controller`:**
   - a camada base é uma árvore pelo float `Speed` (0, 1,33 e 3,33);
-  - a camada "Mira" usa a máscara `Jogador_Tronco.mask` (da `spine` para cima): `Aiming` (bool) leva ao `Aim`, e `Fire` (trigger) toca o tiro.
-- **Primeira pessoa (`Jogador_FP.fbx`):**
-  - a origem é o olho. Ponha o modelo como filho da câmera, com posição e rotação zero;
-  - foi enquadrado para um FOV de ~55°. Na Parte 3 ele vai ter uma câmera própria, para não atravessar paredes;
-  - ossos: `upper_arm/forearm/hand/fingers/thumb` de cada lado, mais `gun` (a arma), `slide` (o ferrolho) e `mag` (o carregador);
-  - os ombros ficam fora da tela, abaixo e um pouco atrás do olho. Os braços são 12% mais compridos e as mãos 12% maiores que no corpo, um truque de primeira pessoa;
-  - os clipes são `Idle`, `Walk` e `Run` (a arma baixa e inclinada), em loop, mais `Fire` (coice e ferrolho), `DryFire` (gatilho sem bala) e `Reload` (1,67 s: o carregador cai, a mão esquerda traz outro e puxa o ferrolho).
-- **`Jogador_FP.controller`:** a base é uma árvore pelo `Speed`. A camada "Ações" tem os triggers `Fire`, `DryFire` e `Reload`, e cada um volta sozinho ao estado vazio.
+  - a camada "Mira" usa a máscara `Jogador_Tronco.mask` (da `spine` para cima): `Aiming` (bool) leva ao `Aim`, e `Fire` (trigger) toca o tiro;
+  - `Jogador_TP_<Arma>.overrideController` (rifle, submetralhadora e espingarda) troca os 5 clipes pelos de arma longa. O `JogadorRede` troca o controlador do corpo quando a arma da mão muda.
+- **Primeira pessoa (`Jogador_FP_<Arma>.fbx`):**
+  - a origem é o olho: o modelo é filho da câmera, com posição e rotação zero, enquadrado para o FOV de 55° da câmera dos braços;
+  - **o cano aponta para a mira:** a arma fica quase paralela ao olhar (girada só o bastante para a reta do cano cruzar o centro da tela a 20 m), então na tela o cano aponta para a mira, de onde sai o tiro. Girada para o lado (como antes, 5° a 12°), ela parecia torta;
+  - ossos: `upper_arm/forearm/hand/fingers/thumb` de cada lado, mais `gun` (a arma) e as peças que mexem: `slide` (o ferrolho), `mag` (o carregador), `pump` (a telha) e `shell` (o cartucho da recarga da espingarda);
+  - os ombros ficam fora da tela, em lugares diferentes em cada arma. Os braços são 12% mais compridos e as mãos 12% maiores que no corpo, um truque de primeira pessoa;
+  - a boca do cano é o vazio `Boca_FP_<Arma>`;
+  - clipes: `Idle`, `Walk` e `Run` (a arma baixa e deitada), em loop, mais `Fire` (na espingarda, com a bomba), `DryFire`, `Reload` (na espingarda, um cartucho) e `Sacar` (a arma sobe de baixo da tela).
+- **`Jogador_FP.controller`** (refeito pela montagem das armas, com os clipes da pistola):
+  - a base é uma árvore pelo `Speed` (0, 2,0 e 4,2);
+  - a camada "Ações" tem os estados `Fire`, `DryFire`, `Reload` e `Sacar`, que o código toca do começo (`Animator.Play`). No automático, um tiro recomeça o anterior. Cada um volta sozinho ao estado vazio;
+  - `Jogador_FP_<Arma>.overrideController` troca os clipes pelos da arma.
 - **Write Defaults desligado nos Animators:** está desligado em todos os estados (do jogador e do zumbi). Com ele ligado, o estado vazio de uma camada de cima jogaria o personagem na pose T.
-- **Lanterna:** não a cole na câmera, porque ela estoura a pistola de luz. Ela fica no peito (veja "Rede e jogador online").
+- **Lanterna:** não a cole na câmera, porque ela estoura a arma de luz. Ela fica no peito (veja "Rede e jogador online") e não ilumina os braços de primeira pessoa: o `LanternaJogador` a desliga só durante o desenho da câmera dos braços (`RenderPipelineManager.beginCameraRendering`). Sem isso, a arma e a manga esquerda, dentro do facho, ficavam brancas. De perto, ela ainda clareia muito as armas escuras do suporte.
 
 ## Rede e jogador online (`Assets/_Game/Scripts/`)
 
@@ -218,7 +234,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s e troca a lanterna a cada 5 s.
     - Com um zumbi vivo a até 18 m, ele mira no peito desse zumbi e recua devagar (o acerto vai ao anfitrião como o de um jogador).
     - A cada 3 s, ele registra no log:
-      - a hora, os zumbis que recebe e a vida (`[robô] hora HH:MM, zumbis N (perto P, médio M; sem membro F, caídos C), vida V`);
+      - a hora, os zumbis que recebe e a vida (`[robô] hora HH:MM, zumbis N (perto P, médio M; caídos C, sem cabeça S), vida V`);
       - o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
   - Matar a build sem fechar a conexão deixa o jogador dela na partida até o tempo limite do transporte.
 - **Como testar com dois jogadores:**
@@ -229,9 +245,14 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Ao terminar, desligue `MenuOnline.Bot` se ele foi ligado no Editor: sem Domain Reload, ele continuaria ligado no próximo Play.
 - **O jogador (`Assets/_Game/Prefabs/Jogador.prefab`, montado por `Editor/MontagemDaRede`, menu Zombie City Cleaner > Montar jogador e rede):**
   - **Raiz:** CharacterController (1,8 m, raio 0,3), NetworkObject e NetworkTransform com autoridade do dono (posição e só o giro em Y).
-    - `JogadorRede`: as câmeras, o corpo, a cor da família (o servidor dá a primeira livre) e o RPC do tiro.
+    - `JogadorRede`: as câmeras, o corpo, a cor da família (o servidor dá a primeira livre), a arma da mão (`Arma`) e o RPC do tiro.
     - `MovimentoPrimeiraPessoa`: andar 2,0 m/s, correr 4,2 m/s, mirando 1,3 m/s, pulo; abaixo de y = −20, volta ao ponto de nascimento.
-    - `ArmaJogador`: 12 balas, raycast do centro da tela, recarga com R, mira no botão direito (FOV 70 → 58), mira e munição na tela.
+    - `ArmaJogador`: a arma da mão (os números em `Combat/Armas`), raycast do centro da tela, recarga com R, mira no botão direito (FOV 70 → 58), mira, munição e o nome da arma na tela.
+      - Tem os 4 modelos de primeira pessoa (`modelos`, `animadores`, `bocas`); `Trocar(arma)` liga o da arma nova, enche o pente e toca o `Sacar` (0,4 s sem atirar).
+      - O rifle e a submetralhadora atiram com o gatilho apertado; o próximo tiro conta do anterior, sem perder a cadência com o tempo do quadro. A espingarda solta 8 chumbos, cada um com o seu raio, e bombeia sozinha.
+      - A dispersão é um círculo em volta do olhar, girada com a câmera.
+      - A espingarda recarrega cartucho a cartucho (R enche o tubo), e atirar interrompe a recarga. As outras trocam o pente inteiro, com o som do carregador saindo e entrando.
+      - Mirando uma arma do suporte do bunker a até 2,2 m, aparece "[E] Pegar … (deixa …)", e E pede a troca (`ParedeDeArmas.PedirTroca`).
       - Antes do raio, `Physics.SyncTransforms()` (as hitboxes andam com a animação).
       - O raio ignora a camada Ignore Raycast (a cápsula do zumbi de perto) e os pedaços (camada 8).
       - Ele pega todos os acertos (`RaycastNonAlloc`, buffer de 64, em ordem de distância). Com o buffer cheio, o Unity não garante os mais perto.
@@ -242,43 +263,61 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
       - Acertou uma `Hitbox`: sangue na hora, a marca de acerto na mira (vermelha na cabeça) e o acerto vai para o anfitrião (`JogadorRede.AcertarZumbi`).
       - **O tiro atravessa até dois braços ou antebraços:** o braço leva o acerto (e pode cair), e a bala segue para o que estiver atrás. Numa multidão, as mãos de quem ataca ficam na frente da mira.
       - No cenário: faíscas e a marca do tiro (decal).
-    - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga.
+    - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga. Ela fica desligada só enquanto a câmera dos braços desenha (os braços não recebem a luz dela).
+  - **A arma no corpo do dono fica desligada** (o renderer, nem sombra): a ponta do rifle e da espingarda passa dos 60 cm em que a sombra da lanterna começa, e a sombra do cano aparecia no facho. O corpo continua só como sombra.
     - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Depois de 8 s sem apanhar, recupera 2 por segundo (provisório, até o saque da Parte 7).
   - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
   - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (`Jogador_FP.fbx`, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
   - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
+  - **"Bracos"** tem um filho por arma (`Bracos_<Arma>`, o FBX de primeira pessoa com o controlador ou o override dele), só o da arma da mão ligado.
   - Só o dono liga as câmeras, o ouvido, os braços, o movimento e a arma.
 - **O que vai pela rede:**
   - a posição e o giro (NetworkTransform);
   - `Pitch`, `Mirando` e `Ligada` da lanterna (NetworkVariables escritas pelo dono);
-  - `Cor` (escrita pelo servidor);
-  - o tiro, por `TiroRpc` (`SendTo.NotMe`), com o ponto de impacto e o que ele acertou (`TipoDeAcerto`: nada, cenário, carne ou outro). Quem recebe toca a animação de tiro do corpo, o clarão, o som 3D e o efeito certo (sangue, ou faíscas e o furo).
-  - o acerto num zumbi, por `AcertoRpc` (`SendTo.Server`): Id, geração, região, dano e ponto. O anfitrião confere quem mandou (só o dono atira com o jogador dele).
+  - `Cor` e `Arma` (escritas pelo servidor). Quando a `Arma` muda, todos trocam a arma do corpo e o controlador dele; o dono troca também a de primeira pessoa;
+  - o tiro, por `TiroRpc` (`SendTo.NotMe`), com um `Impacto` por chumbo (um só nas armas de bala): o ponto e o que ele acertou (`TipoDeAcerto`: nada, cenário, carne ou outro). Quem recebe toca a animação de tiro do corpo, o clarão e o som 3D da arma dele (e a bomba da espingarda), e o efeito certo de cada impacto (sangue, ou faíscas e o furo).
+  - o acerto num zumbi, por `AcertoRpc` (`SendTo.Server`): Id, geração, região, dano e ponto, um por chumbo que acertou. O anfitrião confere quem mandou (só o dono atira com o jogador dele).
+  - **o suporte de armas** (`Combat/ParedeDeArmas`, no NetworkObject da cena "Parede de armas"): o conteúdo das 4 vagas num `NetworkVariable<int>` (8 bits por vaga: 0 vazia, senão o tipo + 1), escrito pelo servidor. O pedido de troca vai por `TrocarRpc` (`SendTo.Server`); o anfitrião confere a distância (3 m dos pés ao meio da vaga) e troca a vaga e a `Arma` do jogador.
   - A velocidade dos outros, usada pela animação, é medida pela posição recebida a cada 0,1 s.
 - **Ações de input do projeto** (`InputSystem_Actions`, mapa Player): as do modelo da Unity, mais `Aim` (botão direito / gatilho esquerdo), `Reload` (R / X) e `Flashlight` (F / direcional para cima). O tiro no controle foi para o gatilho direito.
-- **`Combat/Efeitos`** (objeto "Efeitos" na cena): sons gerados por código (tiro, clique, recarga, lanterna), o clarão do cano e as faíscas e poeira do impacto. Os materiais `Particulas` e `Clarao` ficam em `Art/Materials/`. O mesmo objeto tem o `Combat/Sangue` (veja "Combate e desmembramento").
+- **`Combat/Efeitos`** (objeto "Efeitos" na cena): sons gerados por código (tiro, clique, recarga, lanterna), o clarão do cano e as faíscas e poeira do impacto.
+  - **O tiro (`Combat/SomDeTiro`):** camadas geradas por código e normalizadas pela energia. O peso de cada uma no `Perfil` é a raiz da parte da energia. Há um perfil por arma: `Pistola`, `Rifle` (estalo mais agudo, cauda mais longa), `Submetralhadora` (seca e curta) e `Espingarda` (grave e comprida, sem ferrolho).
+    - As camadas: o estalo (ruído em ~3 kHz, 6 ms), o soco (um seno que cai de 160 para 60 Hz), o corpo (ruído em ~700 Hz, 40 ms), os cliques do ferrolho, a cauda (ruído grave que escurece em ~0,35 s) e dois rebatimentos abafados (130 e 290 ms).
+    - No fim, uma saturação suave (tanh) e o pico em 0,95. Saem 3 variações de cada arma (`Efeitos.Tiros[arma]`), sorteadas a cada tiro.
+    - Sons à parte: `Carregador` (o pente saindo e entrando), `Bomba` (para trás e para a frente, 0,3 s depois) e `Cartucho`.
+    - Para ouvir fora do jogo: `SomDeTiro.Amostras(perfil, semente)` devolve as amostras (44,1 kHz, mono). As prévias ficam em `Sons/Previas/` da pasta de arte.
+  - `Efeitos.Som(...)` espacial tem alcance (o tiro de outro jogador vai a 150 m) e um passa-baixa por fonte: quanto mais longe, mais abafado (22 kHz perto, ~1,8 kHz no alcance).
+  - Os materiais `Particulas` e `Clarao` ficam em `Art/Materials/`. O mesmo objeto tem o `Combat/Sangue` (veja "Combate e morte").
   - O brilho do clarão é um Quad primitivo. O colisor dele é apagado na hora (`DestroyImmediate`): com `Destroy`, ele só sumiria no fim do quadro, e o raio do tiro, feito logo depois, podia batê-lo.
 - **Cena:**
-  - **"Pontos de nascimento":** 4 pontos na frente da casa da família, postos pela montagem da cidade.
+  - **"Pontos de nascimento":** 4 pontos na sala comum do bunker, postos pela montagem da cidade. É também onde o jogador volta quando cai.
   - **"Câmera de teste":** com `CameraDoMenu`, aparece no menu e some quando o jogador local nasce.
-- **Peças das armas nos modelos:** `Boca_TP` (filho de `weapon.R` no corpo) e `Boca_FP` (filho de `gun` nos braços) marcam a ponta do cano.
+- **Peças das armas nos modelos:** a "Boca" de cada arma do corpo e o `Boca_FP_<Arma>` (filho de `gun` nos braços) marcam a ponta do cano.
+- **O suporte de armas ("Parede de armas"):** montado pela montagem das armas no lugar do móvel `Suporte_Armas` do bunker.
+  - 4 vagas ("Vaga 1" a "Vaga 4", de baixo para cima, no topo de cada prateleira), cada uma com um BoxCollider gatilho (o que a mira procura), o `VagaDeArma` e a arma deitada ("Arma": a malha muda com o que está na vaga).
+  - A arma fica com o cano ao longo da parede, o lado esquerdo para fora e a parte de baixo encostada na prateleira, centrada pelo tamanho da malha.
+  - Começa com pistola, submetralhadora, rifle e espingarda (de baixo para cima). A arma pega vem cheia, e a munição de reserva é infinita até o saque da Parte 7.
 
 ## Os zumbis na cidade (Parte 5, `Assets/_Game/Scripts/Zombies/`)
 
 - **Montados por `Editor/MontagemDosZumbis`** (menu Zombie City Cleaner > Montar zumbis). Pode rodar de novo.
-- **O prefab `Zumbi.prefab`:**
-  - **Raiz (camada 7):** `Zumbi`, NavMeshAgent (desligado no prefab, raio 0,3), CapsuleCollider (1,75 m, raio 0,28), Rigidbody cinemático e AudioSource (a voz).
-  - **"Modelo":** o `NovoZombie.fbx` com o `Zombie.controller` e a malha `Zumbi_Inteiro`. O Animator guarda o estado quando é desligado (`keepAnimatorStateOnDisable`), e o zumbi ainda reaplica os parâmetros ao religar.
+- **Os prefabs `Prefabs/Zumbis/Zumbi_<modelo>.prefab`** (um por modelo, todos iguais na montagem):
+  - **Raiz (camada 7):** `Zumbi` (com o índice do `modelo`), NavMeshAgent (desligado no prefab, raio 0,3, altura do modelo), CapsuleCollider (a altura do modelo, raio 0,28), Rigidbody cinemático e AudioSource (a voz).
+  - **"Modelo":** o FBX do modelo com o controller (ou o override dele) e a malha `<modelo>_Inteira`. O Animator guarda o estado quando é desligado (`keepAnimatorStateOnDisable`).
   - **A cápsula da raiz** também é uma `Hitbox` (região `Corpo`): é ela que leva o tiro no nível médio.
-  - **11 hitboxes nos ossos** (camada 7, com `Hitbox` e a `RegiaoDoCorpo`):
-    - a cabeça é uma esfera, medida na malha e levada para o osso pela bindpose. O raio é a média das três metades da cabeça com o cabelo (13,2 cm), para a borda do cabelo também contar;
-    - o resto são cápsulas de osso a osso: duas no tronco (`Tronco`), braço e antebraço de cada lado, e coxa e canela de cada lado (`CoxaE`, `CanelaE`...).
-    - A pose em que o FBX abre não é a T-pose; por isso as medidas usam os ossos e a bindpose, e não a posição dos vértices.
-    - **Cobertura medida:** numa horda atacando, 93% dos raios que tocam o corpo visível acertam carne. O que passa fica quase todo nos tênis (abaixo de 25 cm), que não têm hitbox.
-  - **`pedacos`:** para cada membro que pode cair, o osso, o osso seguinte (a direção do toco), a peça solta e a pose dela em relação ao osso (osso⁻¹ · peça, na bindpose).
+  - **11 hitboxes nos ossos** (camada 7, com `Hitbox` e a `RegiaoDoCorpo`), medidas na malha com o modelo posto na pose de repouso (pela bindpose; o FBX abre numa pose da animação):
+    - a cabeça é uma esfera: a cabeça acima do corte do pescoço (a altura da tampa), com o queixo e sem o cabelo comprido que desce até os ombros. O raio é a média das três metades (14 a 16 cm), para a borda do cabelo também contar;
+    - o resto são cápsulas de osso a osso: duas no tronco (`Tronco`), braço e antebraço de cada lado (`Braco`) e coxa e canela de cada lado (`Perna`). O raio é a distância dos vértices presos a cada osso até o segmento, no percentil 60 a 75 (braço 6 a 8 cm, coxa 8 a 10 cm).
+  - `raizDoModelo`, `esqueleto` (os 22 ossos, na ordem da malha) e `partes` (os 11 ossos com física, na ordem de `CorpoDeZumbi.Partes`): o corpo que cai copia a pose deles.
   - O `Zumbi` não tem Update próprio: o `ZombieManager` faz um laço só para todos.
+- **Os corpos `Prefabs/Zumbis/Corpo_<modelo>.prefab`** (ragdoll, `CorpoDeZumbi`): o FBX desempacotado, sem Animator, na camada 8 e na pose de repouso.
+  - 11 partes com Rigidbody e colisor (cápsulas um pouco mais finas que as hitboxes e a esfera da cabeça a 85%): quadril, peito, cabeça, braço e antebraço (com a mão) de cada lado, coxa e canela de cada lado. Massa total de 64 kg.
+  - 10 CharacterJoints com limites do corpo humano (o joelho e o cotovelo só dobram para um lado; o quadril dobra 100° para a frente). Os limites contam da pose em que a junta foi criada (a de repouso): por isso o corpo nunca é desligado no pool, só fica cinemático, sem colisão e invisível.
+  - A pele usa o quadril como `rootBone` (a raiz do esqueleto fica parada enquanto o corpo cai).
 - **"Zumbis" na cena:** um NetworkObject com o `ZombieManager` e o `BenchmarkDeZumbis`.
-  - Os filhos são 29 `PontoDeHorda` (quantidade e raio; ~130 zumbis na rua, na praça, no estacionamento, nas casas e nos 4 andares do prédio).
+  - Os filhos são 29 `PontoDeHorda` (quantidade e raio; 258 zumbis na rua, na praça, no estacionamento, nas casas e nos 4 andares do prédio).
+    - Eram 129 na Parte 5; o usuário pediu o dobro (ajustes antes da Parte 7). Na rua o raio de cada ponto cresceu 1 m, para os grupos não ficarem amontoados; nas casas e nos andares do prédio ficou o mesmo.
+    - No benchmark (14:42), o quadro foi de 3,8 ms com 100 para 4,2 ms com 250 zumbis.
   - `areasLivres`: a casa da família com o bunker e a frente dela não recebem zumbis.
 - **NavMesh ("Navegação"):** um `NavMeshSurface` pelos colisores, só no volume da cidade (128 × 24 × 128 m, dentro da barreira). Ele é refeito pela montagem dos zumbis e pela da cidade.
 - **Comportamento (`Zumbi`, só no anfitrião):**
@@ -290,7 +329,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - a lanterna apontada para ele denuncia mesmo de costas.
   - Tiro (`ZombieManager.Barulho`, chamado pelo `JogadorRede` no anfitrião): até 12 m, o zumbi vai atrás de quem atirou; até 35 m, vai investigar o lugar.
   - Perseguir a 1,1 m/s (o jogador andando já se afasta).
-  - Atacar a 1,3 m: a cada 1,4 s, a animação `Attack`. O dano (12) sai 0,45 s depois, quando ela agarra, se o alvo ainda estiver ao alcance. Com uma mão sai 65% do dano e sem nenhuma, 30%. Rastejando, o golpe é um bote do peito, girado por cima da animação no LateUpdate.
+  - Atacar a 1,3 m: a cada 1,4 s, a animação `Attack`. O dano (12) sai 0,45 s depois, quando ela agarra, se o alvo ainda estiver ao alcance.
   - Desistir com o alvo a mais de 20 m, ou 6 s sem vê-lo: vai até onde o viu, olha em volta e volta a vagar ali.
   - Gemidos com trechos da `SomZombie1.mp3`: ao começar a perseguir e, de vez em quando, os que estão a até 18 m de quem escuta (no máximo 3 por segundo).
   - Os números ficam em `ajustes` (`AjustesDeZumbi`), no Inspector do `ZombieManager`.
@@ -303,23 +342,24 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   | Longe | mais de 40 m | nenhuma (zumbi virtual, parado) | agente desligado | desligada | nada; não desenha |
 
   - A histerese é de 3 m: para chegar mais perto é preciso passar a distância menos 3 m.
-  - Quem persegue, ataca ou levou tiro há menos de 5 s fica sempre no Perto. O corpo de um zumbi morto não anda nem pensa, mas continua visível.
+  - Quem persegue, ataca ou levou tiro há menos de 5 s fica sempre no Perto. Morto, o zumbi some (quem aparece é o corpo com física).
   - No máximo 40 zumbis pensam por quadro (`orcamentoPorQuadro`), em rodízio.
   - Além de 65 m de quem joga na máquina, o zumbi não é desenhado.
-- **Pool:** `Repovoar…` devolve todos e cria de novo, 6 por quadro. `Zerar()` limpa estado, agente, voz, Animator, vida e membros. O ponto de nascimento é validado no NavMesh, na mesma altura do ponto.
+- **Os modelos e o pool:** cada modelo tem o seu pool. O modelo de cada zumbi sai do Id e da geração (`(id * 7 + geração * 3) % 4`), então o anfitrião e os clientes chegam ao mesmo sem mandar nada a mais. Numa população de 258, ficam 64 ou 65 de cada.
+  - `Repovoar…` devolve todos e cria de novo, 6 por quadro. `Zerar()` limpa estado, agente, voz, Animator e vida. O ponto de nascimento é validado no NavMesh, na mesma altura do ponto.
 - **Rede (`ZombieManager.Rede.cs`):** os zumbis não são NetworkObjects.
   - O anfitrião manda a cada cliente uma mensagem nomeada (`ZCC.Zumbis`, não confiável e em ordem) só com os zumbis perto dele, com a mesma histerese do LOD:
     - até 15 m, 10 vezes por segundo;
     - de 15 a 40 m, a cada 3 envios (em rodízio pelo Id);
     - mais longe, não manda.
-  - Cada zumbi ocupa 15 bytes:
+  - Cada zumbi ocupa 13 bytes:
     - Id, geração, posição em cm, giro e velocidade;
     - o estado (4 bits), com as contagens de golpes e de tiros levados (2 bits cada);
-    - os membros perdidos (16 bits).
-  - São até 80 zumbis por mensagem (~1,2 KB, abaixo do limite de 1.300 bytes).
+    - como ele morreu (`InfoDaMorte`): o bit 0 diz se a cabeça explodiu, e os bits 1 a 4, a parte do corpo que levou o tiro. Morto, o byte da velocidade traz a direção do tiro (em 256 avos de volta).
+  - São até 80 zumbis por mensagem (~1 KB, abaixo do limite de 1.300 bytes).
   - No cliente, cada Id vira uma cópia (do mesmo pool), mostrada um pouco no passado (~0,2 s perto, ~0,5 s no médio) e interpolada. Ela some depois de 1,5 s sem notícias. A geração muda quando o Id volta do pool, e aí a cópia é trocada.
   - Não há RPC de evento: o estado inteiro vai em todos os pacotes, e a cópia transforma o que mudou em efeito.
-    - Um membro novo derruba o pedaço com sangue. A morte toca a animação.
+    - A morte some com o zumbi e derruba o corpo dele, com o mesmo empurrão (e a cabeça explodindo, se foi na cabeça).
     - Uma contagem de golpes nova toca o ataque, e uma de tiros nova toca a reação. O gemido toca quando o estado vira Perseguindo.
     - Na primeira vez que a cópia aparece, ela só mostra o zumbi como está, sem efeito.
   - As hitboxes da cópia seguem a distância de quem joga ali.
@@ -338,43 +378,32 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - o quadro ficou igual, 4,3 a 6,2 ms (preso na CPU e no Editor); a GPU, 2,4 a 3,0 ms;
     - os triângulos vão de ~0,5 milhão (50 zumbis) a ~1,3 milhão (500): quase tudo são zumbis.
     - A oclusão cortou 4 a 5% dos draw calls e 8% dos triângulos dessa vista aberta; ela rende mais dentro das casas e atrás dos prédios.
+  - **Com os 4 modelos e o ragdoll** (mesma vista, às 23 h): 617 a 695 draw calls, quadro de 3,7 a 4,9 ms, GPU 2,1 a 2,5 ms, 265 a 784 mil triângulos. Não piorou; a queda em relação à Parte 8 pode ser em parte da hora da noite (os postes acesos mudam as sombras), então não é uma comparação limpa.
 
-## Combate e desmembramento (Parte 6)
+## Combate e morte (Parte 6, refeita nos ajustes antes da Parte 7)
 
 - **O acerto:** quem atira decide se acertou (na própria máquina), e o anfitrião confirma e aplica (`ZombieManager.Acertar`).
   - A conferência é tolerante, porque é co-op: o zumbi tem que existir com o mesmo Id e a mesma geração, estar vivo e estar a até 3,5 m do ponto do acerto. O dano fica entre 0 e 10.
-  - Uma hitbox de um membro que já caiu (a cópia de quem atirou estava atrasada) vira um raspão no corpo, com metade do dano.
+  - A direção do tiro (do olho de quem atirou até o ponto) vai junto: é ela que empurra o corpo, se o zumbi cair.
+- **Sem desmembramento:** os membros não caem mais (o `Membros.cs`, as variantes da malha, os pedaços soltos e o rastejar saíram). Só a cabeça explode.
 - **Vida, em tiros de pistola** (dano 1 por tiro; números em `AjustesDeZumbi`):
-  - cabeça 1: explode e o zumbi morre;
-  - antebraço 2, braço inteiro 3, canela 2, perna inteira 3. Cada tiro num membro também tira 35% de um tiro do corpo;
-  - corpo 6: no tronco ou na cápsula do nível médio. Quando acaba, o zumbi cai morto.
-  - Cada tiro que não mata toca a reação (`HitReact`) e põe o zumbi atrás de quem atirou.
-- **Membros (`Zombies/Membros.cs`):** `Membros` é um conjunto de bits (cabeça, braço, antebraço, coxa e canela de cada lado).
-  - Perder o braço leva o antebraço junto, e perder a coxa leva a canela.
-  - As **variantes da malha** (`MembrosDoZumbi.Variante`) são montadas da `Zumbi_Completo` no jogo, uma vez por combinação, e reaproveitadas por todos os zumbis.
-    - O submesh 0 tem as regiões que sobraram (textura) e o 1 tem as tampas dos cortes que ficaram expostos (carne).
-    - A tampa que aparece é a do último corte de cada lado: sem o braço inteiro, a do ombro, e não a do cotovelo.
-    - As 9 variantes de um membro só são montadas no começo da partida, uma por quadro.
-    - Montar uma variante nova custa uns 2 ms. Num teste com 30 zumbis desmembrados no mesmo quadro, foram 19 ms; depois de prontas, 27 tiros custaram 0,11 ms.
-  - O zumbi inteiro volta para a `Zumbi_Inteiro` (um draw call); o ferido usa dois materiais.
-  - As hitboxes dos membros perdidos se desligam.
-- **Sem perna (rastejando):**
-  - na primeira perda de perna, o zumbi cai (`Fall`, 0,85 s parado) e passa a rastejar;
-  - as velocidades caem para 36% (perseguir: 0,4 m/s), e sem mão nenhuma caem mais ainda (×0,3);
-  - os olhos ficam a 0,45 m do chão, a cápsula fica deitada ao longo do corpo, e a camada "Ações" desliga (o golpe vira o bote do peito).
-- **Morte:**
-  - pela cabeça ou pelo corpo: o Animator vai para a morte (ou fica deitado, se rastejava), a cápsula e as hitboxes desligam e o `ZombieManager` conta (`Mortos`);
-  - o corpo fica no chão por 15 s (`tempoDoCorpo`), afunda 0,6 m em 2,5 s e volta ao pool;
-  - zumbis mortos não renascem.
+  - cabeça: um tiro explode a cabeça e mata;
+  - corpo 6: cada tiro no tronco (ou na cápsula do nível médio) tira 1; nos braços e nas pernas, metade (`danoNosMembros`);
+  - cada tiro que não mata toca a reação (`HitReact`) e põe o zumbi atrás de quem atirou.
+- **O tiro atravessa até dois braços** (`ArmaJogador`): numa multidão, as mãos de quem ataca ficam na frente da mira. O braço leva o acerto (meio tiro) e a bala segue.
+- **Morte (ragdoll):**
+  - o zumbi some (renderer, hitboxes, cápsula e Animator desligados), e um corpo do pool do modelo dele (`ZombieManager.Corpos.cs`, 12 por modelo, criados no começo da partida) toma o lugar: a mesma pose, osso a osso, e a velocidade que ele tinha;
+  - cada parte com física recebe a pose também no Rigidbody (`position` e `rotation`). Só mexer nos ossos não basta: a física não lê a pose nova sozinha, e as partes caíam de onde o corpo estava guardado no pool (o meio do mapa);
+  - nessa troca, a interpolação das partes fica desligada até um passo de física rodar na pose nova (o `CorpoDeZumbi` só fica ligado para isso). Ligada, ela desenhava o corpo entre a pose antiga e a nova por uns 4 quadros: um clarão do corpo sendo puxado pela rua (aparecia quando um corpo ainda caindo era reaproveitado em outro lugar);
+  - a parte do corpo mais perto do ponto do tiro leva um empurrão de 30 N·s na direção do tiro (um pouco para cima). Na cabeça, o corpo cai sem ela (a malha `_SemCabeca`), a cabeça explode (`Sangue.Explosao`) e o pescoço jorra por 4 s;
+  - com todos os corpos daquele modelo em uso, o mais antigo que está fora da tela some e é reaproveitado (se todos estão na tela, o mais antigo);
+  - depois de 6 s a física para (o corpo fica cinemático, parado no chão); aos 15 s (`tempoDoCorpo`) ele afunda 0,6 m em 2,5 s e volta ao pool;
+  - o zumbi morto (invisível) fica na lista o mesmo tempo, para a morte chegar aos clientes que passarem perto, e depois volta ao pool. Zumbis mortos não renascem.
+  - Cada máquina tem os seus corpos (são só visuais): caem para o mesmo lado em todas, mas podem parar em lugares um pouco diferentes.
+  - **Custo medido:** 20 zumbis mortos no mesmo quadro deram um quadro de 19 ms (as 220 partes começando a cair, mais o sangue); os seguintes ficaram em 5 a 8 ms até os corpos assentarem. Uma morte sozinha fica abaixo de 1 ms.
 - **Efeitos (`Combat/Sangue`, no "Efeitos"):** tudo vem de pools, criados no começo.
   - respingo de gotas no acerto (as gotas param no chão);
-  - jorro no toco, preso ao osso, por 3,5 s;
   - explosão da cabeça: muito sangue, pedacinhos e 4 manchas em volta;
-  - manchas de sangue no chão (40 decals) e furos de tiro no cenário (40 decals), reaproveitando o mais antigo;
-  - os pedaços que caem (16, camada 8): ganham a malha do membro, um empurrão curto para fora do toco (0,8 a 1,6 m/s) e física. Ficam 25 s no chão, deixam uma mancha e afundam.
-  - Sem o antebraço (ou a canela), o braço (ou a perna) que cai depois não solta peça: sobra só o toco, com sangue.
-- **Na rede:** o estado do zumbi (membros, morte, contagens de golpes e de tiros) vai em todos os pacotes de zumbis. Cada máquina transforma o que mudou em efeito, então todos veem o mesmo membro cair.
-- **Testado** com o robô conectado:
-  - o tiro do robô chegou ao anfitrião e foi aplicado;
-  - os membros e as mortes que o anfitrião aplicou apareceram iguais no robô (3 sem membro, 3 caídos);
-  - nenhum erro nos dois lados.
+  - o jorro do pescoço, preso ao osso do corpo que cai;
+  - manchas de sangue no chão (40 decals) e furos de tiro no cenário (40 decals), reaproveitando o mais antigo.
+- **Na rede:** o estado do zumbi (a morte com a parte e a direção do tiro, as contagens de golpes e de tiros) vai em todos os pacotes de zumbis. Cada máquina transforma o que mudou em efeito, então todos veem o mesmo zumbi cair, para o mesmo lado.

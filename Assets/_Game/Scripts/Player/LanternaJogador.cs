@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.UI;
 
@@ -10,6 +11,8 @@ namespace ZombieCityCleaner.Player
     /// Lanterna presa no peito, no estilo Silent Hill: segue o olhar com um leve atraso e liga/desliga com F.
     /// Fica abaixo e à frente dos olhos, longe da pistola (colada na câmera, ela estourava a arma de luz).
     /// Os outros jogadores veem a luz de cada um, ligada ou não.
+    /// Ela não ilumina os braços de primeira pessoa do dono: de tão perto, deixava a arma e as mangas brancas. Só durante o
+    /// desenho da câmera dos braços ela fica desligada.
     /// </summary>
     public class LanternaJogador : NetworkBehaviour
     {
@@ -26,11 +29,38 @@ namespace ZombieCityCleaner.Player
         InputAction _alternar;
         Quaternion _rotacao;
         float _proximaTrocaBot;
+        bool _desligadaNosBracos;
 
         void Awake()
         {
             _alternar = InputSystem.actions.FindAction("Player/Flashlight", true);
             _rotacao = transform.rotation;
+        }
+
+        void OnEnable()
+        {
+            RenderPipelineManager.beginCameraRendering += AntesDaCamera;
+            RenderPipelineManager.endCameraRendering += DepoisDaCamera;
+        }
+
+        void OnDisable()
+        {
+            RenderPipelineManager.beginCameraRendering -= AntesDaCamera;
+            RenderPipelineManager.endCameraRendering -= DepoisDaCamera;
+        }
+
+        void AntesDaCamera(ScriptableRenderContext contexto, Camera camera)
+        {
+            if (camera != rede.cameraBracos || !luz.enabled) return;
+            luz.enabled = false;
+            _desligadaNosBracos = true;
+        }
+
+        void DepoisDaCamera(ScriptableRenderContext contexto, Camera camera)
+        {
+            if (!_desligadaNosBracos) return;
+            luz.enabled = true;
+            _desligadaNosBracos = false;
         }
 
         void LateUpdate()

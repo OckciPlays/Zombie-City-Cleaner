@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
     /// Monta o clima da Parte 4 na cena aberta: o ciclo do dia (em rede), o ambiente que troca dia e noite, os dois
-    /// perfis de pós-processamento, a neblina de altura no renderizador, as partículas no ar e o som ambiente.
+    /// perfis de pós-processamento, a neblina de altura no renderizador e as partículas no ar.
     /// Menu: Zombie City Cleaner > Montar clima e ciclo do dia. Pode rodar de novo.
     /// </summary>
     public static class MontagemDoClima
@@ -49,8 +49,6 @@ namespace ZombieCityCleaner.EditorTools
             clima.AddComponent<CicloDoDia>();
             var ambiente = clima.AddComponent<AmbienteDoDia>();
             ambiente.sol = luz.GetComponent<Light>(); ambiente.volumeDia = dia; ambiente.volumeNoite = noite;
-            var som = clima.AddComponent<SomAmbiente>();
-            som.gemidos = AudioDaVoz();
             var particulas = new GameObject("Partículas no ar");
             particulas.transform.SetParent(clima.transform, false);
             particulas.AddComponent<ParticleSystem>();
@@ -145,21 +143,6 @@ namespace ZombieCityCleaner.EditorTools
                 lista.GetArrayElementAtIndex(lista.arraySize - 1).objectReferenceValue = bracos;
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
-        }
-
-        static AudioClip AudioDaVoz()
-        {
-            const string caminho = "Assets/_Game/Audio/SomZombie1.mp3";
-            var importador = AssetImporter.GetAtPath(caminho) as AudioImporter;
-            if (importador != null)
-            {
-                importador.forceToMono = true;
-                var s = importador.defaultSampleSettings;
-                s.loadType = AudioClipLoadType.DecompressOnLoad;   // para tocar trechos sem atraso
-                importador.defaultSampleSettings = s;
-                importador.SaveAndReimport();
-            }
-            return AssetDatabase.LoadAssetAtPath<AudioClip>(caminho);
         }
     }
 }
