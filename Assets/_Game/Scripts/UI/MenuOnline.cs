@@ -59,7 +59,13 @@ namespace ZombieCityCleaner.UI
             var zumbis = Zombies.ZombieManager.Instancia;
             int perto = 0, medio = 0;
             if (zumbis != null && zumbis.IsSpawned) zumbis.ContarNiveis(out perto, out medio, out _);
-            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
+            int feridos = 0, mortos = 0;
+            foreach (var z in FindObjectsByType<Zombies.Zumbi>())
+            {
+                if (z.Morto) mortos++;
+                else if (z.Membros != Zombies.Membros.Nenhum) feridos++;
+            }
+            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}; sem membro {feridos}, caídos {mortos}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
             foreach (var j in Player.JogadorRede.Todos)
                 Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}");
         }

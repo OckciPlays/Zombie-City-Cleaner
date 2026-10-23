@@ -53,7 +53,7 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>Só o prefab do jogador (a montagem dos zumbis usa isto para dar a vida ao jogador).</summary>
         internal static GameObject MontarPrefab()
         {
-            var raiz = new GameObject("Jogador");
+            var raiz = new GameObject("Jogador") { layer = JogadorRede.CamadaJogador };
             var cc = raiz.AddComponent<CharacterController>();
             cc.height = 1.8f; cc.radius = 0.3f; cc.center = new Vector3(0f, 0.9f, 0f); cc.stepOffset = 0.35f; cc.skinWidth = 0.04f;
             raiz.AddComponent<NetworkObject>();
@@ -122,7 +122,9 @@ namespace ZombieCityCleaner.EditorTools
             var luz = luzGo.AddComponent<Light>();
             luz.type = LightType.Spot; luz.color = new Color(1f, 0.94f, 0.82f);
             luz.intensity = 30f; luz.range = 28f; luz.spotAngle = 55f; luz.innerSpotAngle = 24f;
-            luz.shadows = LightShadows.Soft; luz.shadowNearPlane = 0.2f;
+            // a sombra ignora o que está a menos de 0,6 m da luz: a pistola e os braços do corpo (que o dono vê só como
+            // sombra) ficam bem na frente do peito e cortavam a luz ao meio
+            luz.shadows = LightShadows.Soft; luz.shadowNearPlane = 0.6f;
 
             // ligações
             rede.cameraMundo = cam; rede.cameraBracos = camBracos; rede.ouvido = ouvido;

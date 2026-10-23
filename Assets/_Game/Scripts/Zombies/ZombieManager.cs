@@ -49,6 +49,16 @@ namespace ZombieCityCleaner.Zombies
         public AudioClip vozDoZumbi;
         public Vector2[] trechosDaVoz = { new Vector2(0.1f, 1f), new Vector2(1.75f, 1f), new Vector2(3.1f, 0.85f), new Vector2(4.35f, 1f) };
 
+        [Header("Desmembramento (a montagem preenche)")]
+        [Tooltip("As regiões juntas num submesh só: o zumbi inteiro, um draw call.")]
+        public Mesh malhaInteira;
+        [Tooltip("Todas as regiões e tampas separadas (legível): a base das variantes sem os membros perdidos.")]
+        public Mesh malhaCompleta;
+        public MapaDaMalha mapa = new MapaDaMalha();
+        public Material materialCorpo, materialCarne;
+        [Tooltip("Tempo que o corpo fica no chão antes de afundar e voltar ao pool (s).")]
+        public float tempoDoCorpo = 15f;
+
         [Header("População")]
         public bool povoarAoComecar = true;
         public int criadosPorQuadro = 6;
@@ -78,8 +88,14 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Benchmark: os zumbis atacam, mas não tiram vida.</summary>
         public bool SemDano { get; set; }
         public bool Povoando => _povoando != null;
-        /// <summary>Zumbis vivos (no anfitrião) ou cópias recebidas (nos clientes).</summary>
+        /// <summary>Zumbis na cidade, vivos ou caídos (no anfitrião), ou cópias recebidas (nos clientes).</summary>
         public int Quantos => IsServer ? _ativos.Count : _copias.Count;
+        /// <summary>Zumbis mortos nesta partida (no anfitrião).</summary>
+        public int Mortos { get; private set; }
+
+        Material[] _materiaisInteiro, _materiaisFerido;
+        internal Material[] MateriaisInteiro => _materiaisInteiro ??= new[] { materialCorpo };
+        internal Material[] MateriaisFerido => _materiaisFerido ??= new[] { materialCorpo, materialCarne };
 
         readonly List<Zumbi> _ativos = new List<Zumbi>();
         readonly Stack<Zumbi> _pool = new Stack<Zumbi>();
@@ -102,6 +118,7 @@ namespace ZombieCityCleaner.Zombies
         public override void OnNetworkSpawn()
         {
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
+            StartCoroutine(PreaquecerVariantes());
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += AoSairCliente;
@@ -144,6 +161,7 @@ namespace ZombieCityCleaner.Zombies
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)
                     if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe) _ativos[i].QuadroNoServidor(dt);
+                Corpos(agora, dt);
                 EnviarParaClientes();
             }
             else AtualizarCopias();
@@ -194,7 +212,7 @@ namespace ZombieCityCleaner.Zombies
 
         internal bool Enxerga(Vector3 olho, Vector3 alvo)
         {
-            // para meio metro antes: o próprio jogador (CharacterController, na camada Default) não tapa a visão
+            // para meio metro antes do alvo: o que encosta nele (uma porta, a parede onde ele se apoia) não conta
             Vector3 para = alvo - olho;
             float d = para.magnitude;
             if (d < 0.6f) return true;
@@ -202,6 +220,47 @@ namespace ZombieCityCleaner.Zombies
         }
 
         internal void Engajou(Zumbi z) => z.MudarNivelNoServidor(Zumbi.Nivel.Perto);
+
+        internal void ContarMorte() => Mortos++;
+
+        // as malhas de um membro perdido, montadas aos poucos no começo (uma por quadro): o primeiro tiro não engasga
+        IEnumerator PreaquecerVariantes()
+        {
+            if (malhaCompleta == null) yield break;
+            for (int bit = 0; bit < 9; bit++)
+            {
+                MembrosDoZumbi.Variante(malhaCompleta, mapa, MembrosDoZumbi.ComOQueVemJunto((Membros)(1 << bit)));
+                yield return null;
+            }
+        }
+
+        // o corpo fica no chão um tempo, afunda devagar (a neblina e o escuro escondem) e volta ao pool
+        void Corpos(float agora, float dt)
+        {
+            for (int i = _ativos.Count - 1; i >= 0; i--)
+            {
+                var z = _ativos[i];
+                if (!z.Morto) continue;
+                float tempo = agora - z.mortoEm;
+                if (tempo > tempoDoCorpo + 2.5f) Devolver(z);
+                else if (tempo > tempoDoCorpo) z.transform.position += Vector3.down * (0.25f * dt);
+            }
+        }
+
+        /// <summary>
+        /// Um tiro que acertou um zumbi, confirmado aqui no anfitrião. A cópia de quem atirou pode estar um pouco
+        /// atrasada, então a conferência é tolerante (é co-op): o zumbi tem que existir (mesmo Id e geração), estar
+        /// vivo e perto do ponto do acerto.
+        /// </summary>
+        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, float dano, Vector3 ponto, JogadorRede autor)
+        {
+            var m = Instancia;
+            if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
+            var z = m._porId[id];
+            if (z == null || z.Geracao != geracao || z.Morto) return;
+            if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
+            z.LevarTiro(regiao, Mathf.Clamp(dano, 0f, 10f), autor, Time.time);
+        }
 
         internal void Golpear(JogadorRede alvo, float dano, Vector3 de)
         {
@@ -217,7 +276,7 @@ namespace ZombieCityCleaner.Zombies
             float raio2 = m.ajustes.barulhoDoTiro * m.ajustes.barulhoDoTiro, direto2 = m.ajustes.tiroChamaDireto * m.ajustes.tiroChamaDireto;
             foreach (var z in m._ativos)
             {
-                if (z.NivelAtual == Zumbi.Nivel.Longe || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
+                if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
                 float d2 = (z.transform.position - ponto).sqrMagnitude;
                 if (d2 > raio2) continue;
                 if (d2 < direto2 && autor != null) z.ComecarPerseguicao(autor, agora);
@@ -278,7 +337,7 @@ namespace ZombieCityCleaner.Zombies
                 {
                     _cursor = (_cursor + 1) % n;
                     var z = _ativos[_cursor];
-                    if (z.NivelAtual == Zumbi.Nivel.Longe || agora < z.proximaDecisao) continue;
+                    if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || agora < z.proximaDecisao) continue;
                     float dt = Mathf.Min(agora - z.ultimaDecisao, 0.6f);
                     z.ultimaDecisao = agora;
                     z.proximaDecisao = agora + (z.NivelAtual == Zumbi.Nivel.Perto ? intervaloPerto : intervaloMedio) * Random.Range(0.85f, 1.15f);
@@ -463,7 +522,7 @@ namespace ZombieCityCleaner.Zombies
             var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u) };
             estilo.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
             string texto = IsServer
-                ? $"Zumbis: {_ativos.Count}  ·  perto {perto}  ·  médio {medio}  ·  longe {longe}  ·  rede {KbPorSegundo:F1} KB/s"
+                ? $"Zumbis: {_ativos.Count}  ·  perto {perto}  ·  médio {medio}  ·  longe {longe}  ·  mortos {Mortos}  ·  rede {KbPorSegundo:F1} KB/s"
                 : $"Zumbis recebidos: {_copias.Count}  ·  perto {perto}  ·  médio {medio}";
             GUI.Label(new Rect(14 * u, 36 * u, 900 * u, 24 * u), texto, estilo);
         }

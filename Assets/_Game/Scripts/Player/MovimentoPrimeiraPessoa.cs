@@ -62,6 +62,24 @@ namespace ZombieCityCleaner.Player
         /// <summary>Coice do tiro: a mira sobe um pouco e volta sozinha.</summary>
         public void Coice(float graus) => _coice += graus;
 
+        // robô: o zumbi vivo mais perto (até 18 m), procurado duas vezes por segundo
+        Transform _alvoDoRobo;
+        float _proximaBusca;
+        Transform AlvoDoRobo()
+        {
+            if (Time.time < _proximaBusca) return _alvoDoRobo != null && _alvoDoRobo.gameObject.activeInHierarchy ? _alvoDoRobo : null;
+            _proximaBusca = Time.time + 0.5f;
+            _alvoDoRobo = null;
+            float menor = 18f * 18f;
+            foreach (var z in FindObjectsByType<Zombies.Zumbi>())
+            {
+                if (z.Morto) continue;
+                float d2 = (z.transform.position - transform.position).sqrMagnitude;
+                if (d2 < menor) { menor = d2; _alvoDoRobo = z.transform; }
+            }
+            return _alvoDoRobo;
+        }
+
         void Update()
         {
             float dt = Time.deltaTime;
@@ -77,10 +95,24 @@ namespace ZombieCityCleaner.Player
             bool correr = false, pular = false;
             if (bot)
             {
-                // teste automático: anda em círculo e olha em volta
-                mover = new Vector2(0f, 1f);
-                olhar = new Vector2(35f * dt, Mathf.Sin(Time.time * 0.7f) * 8f * dt);
-                correr = Mathf.Repeat(Time.time, 8f) > 6f;
+                var zumbi = AlvoDoRobo();
+                if (zumbi != null)
+                {
+                    // teste automático com zumbi perto: mira no peito dele e recua devagar (a arma atira sozinha)
+                    Vector3 d = zumbi.position + Vector3.up * 1.1f - cabeca.position;
+                    float yawAlvo = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                    float pitchAlvo = -Mathf.Atan2(d.y, new Vector2(d.x, d.z).magnitude) * Mathf.Rad2Deg;
+                    float k = Mathf.Min(1f, 8f * dt);
+                    olhar = new Vector2(Mathf.DeltaAngle(_yaw, yawAlvo) * k, -(pitchAlvo - _pitch) * k);
+                    mover = new Vector2(0f, -0.4f);
+                }
+                else
+                {
+                    // teste automático: anda em círculo e olha em volta
+                    mover = new Vector2(0f, 1f);
+                    olhar = new Vector2(35f * dt, Mathf.Sin(Time.time * 0.7f) * 8f * dt);
+                    correr = Mathf.Repeat(Time.time, 8f) > 6f;
+                }
             }
             else if (controla)
             {

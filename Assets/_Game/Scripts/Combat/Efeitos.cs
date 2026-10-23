@@ -97,7 +97,8 @@ namespace ZombieCityCleaner.Combat
             var luz = go.AddComponent<Light>();
             luz.type = LightType.Point; luz.color = new Color(1f, 0.75f, 0.4f); luz.intensity = 5f; luz.range = 6f; luz.shadows = LightShadows.None;
             var brilho = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            Destroy(brilho.GetComponent<Collider>());
+            // na hora: com Destroy o colisor só sumiria no fim do quadro, e o raio do tiro, feito logo depois, podia batê-lo
+            DestroyImmediate(brilho.GetComponent<Collider>());
             brilho.layer = camada;
             brilho.transform.SetParent(go.transform, false);
             brilho.transform.localScale = Vector3.one * 0.12f;

@@ -17,6 +17,8 @@ namespace ZombieCityCleaner.Player
     public class JogadorRede : NetworkBehaviour
     {
         public const int CamadaBracos = 6;
+        /// <summary>A raiz do jogador (o CharacterController): os pedaços dos zumbis não param em cima de ninguém.</summary>
+        public const int CamadaJogador = 9;
 
         [Header("Primeira pessoa (só o dono)")]
         public Camera cameraMundo;
@@ -163,16 +165,19 @@ namespace ZombieCityCleaner.Player
             if (ossoCabeca != null) ossoCabeca.rotation = Quaternion.AngleAxis(pitch * 0.5f, eixo) * ossoCabeca.rotation;
         }
 
+        /// <summary>O que o tiro acertou, para os outros mostrarem o efeito certo.</summary>
+        public enum TipoDeAcerto : byte { Nada, Cenario, Carne, Outro }
+
         /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro.</summary>
-        public void AnunciarTiro(bool acertou, Vector3 ponto, Vector3 normal)
+        public void AnunciarTiro(TipoDeAcerto tipo, Vector3 ponto, Vector3 normal)
         {
             animadorCorpo.SetTrigger(FireId);
             if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
-            TiroRpc(acertou, ponto, normal);
+            TiroRpc(tipo, ponto, normal);
         }
 
         [Rpc(SendTo.NotMe)]
-        void TiroRpc(bool acertou, Vector3 ponto, Vector3 normal)
+        void TiroRpc(TipoDeAcerto tipo, Vector3 ponto, Vector3 normal)
         {
             TirosRecebidos++;
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
@@ -180,7 +185,26 @@ namespace ZombieCityCleaner.Player
             animadorCorpo.SetTrigger(FireId);
             Efeitos.Clarao(bocaCorpo, 0);
             Efeitos.Som(Efeitos.Tiro, bocaCorpo.position);
-            if (acertou) Efeitos.Impacto(ponto, normal);
+            if (tipo == TipoDeAcerto.Carne) Sangue.Respingo(ponto, normal);
+            else if (tipo != TipoDeAcerto.Nada) Efeitos.Impacto(ponto, normal);
+            if (tipo == TipoDeAcerto.Cenario) Sangue.FuroDeTiro(ponto, normal);
+        }
+
+        /// <summary>
+        /// O dono acertou um zumbi (a cópia dele, ou o zumbi de verdade no anfitrião). Quem decide o dano é o anfitrião:
+        /// o acerto vai para ele com o Id, a geração, a região e o ponto.
+        /// </summary>
+        public void AcertarZumbi(Zumbi zumbi, RegiaoDoCorpo regiao, float dano, Vector3 ponto)
+        {
+            if (IsServer) ZombieManager.Acertar(zumbi.Id, zumbi.Geracao, regiao, dano, ponto, this);
+            else AcertoRpc((ushort)zumbi.Id, zumbi.Geracao, (byte)regiao, dano, ponto);
+        }
+
+        [Rpc(SendTo.Server)]
+        void AcertoRpc(ushort id, byte geracao, byte regiao, float dano, Vector3 ponto, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId) return;   // só o dono atira com este jogador
+            ZombieManager.Acertar(id, geracao, (RegiaoDoCorpo)regiao, dano, ponto, this);
         }
     }
 }

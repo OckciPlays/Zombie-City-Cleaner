@@ -9,16 +9,17 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// Os zumbis na rede. Não são NetworkObjects (seriam centenas): o anfitrião manda, para cada cliente, um pacote
     /// próprio só com os zumbis perto dele. Os que estão a menos de 15 m vão 10 vezes por segundo, os de 15 a 40 m a cada
-    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 12 bytes (posição em centímetros, giro, estado, contagem de
-    /// golpes e velocidade), em mensagens não confiáveis e em ordem: um pacote perdido é coberto pelo próximo.
+    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 15 bytes: posição em centímetros, giro, estado (com as
+    /// contagens de golpes e de tiros levados), velocidade e os membros perdidos. As mensagens são não confiáveis e em
+    /// ordem: um pacote perdido é coberto pelo próximo, e como o estado inteiro vai em todos, nada se perde de vez.
     /// No cliente, cada zumbi recebido vira uma cópia (do mesmo pool), que some se ficar sem notícias.
     /// </summary>
     public partial class ZombieManager
     {
         const string NomeDaMensagem = "ZCC.Zumbis";
-        // ~1,1 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
-        const int PorPacote = 90;
-        const int BytesPorZumbi = 12;
+        // ~1,2 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
+        const int PorPacote = 80;
+        const int BytesPorZumbi = 15;
 
         [Header("Rede")]
         [Tooltip("Intervalo entre envios (s). Os zumbis perto de cada cliente vão em todos.")]
@@ -106,8 +107,9 @@ namespace ZombieCityCleaner.Zombies
                     w.WriteValueSafe(Centimetros(p.y));
                     w.WriteValueSafe(Centimetros(p.z));
                     w.WriteValueSafe((byte)(Mathf.RoundToInt(z.transform.eulerAngles.y * (256f / 360f)) & 255));
-                    w.WriteValueSafe((byte)((byte)z.Atual | ((z.Golpes & 3) << 4)));
+                    w.WriteValueSafe((byte)((byte)z.Atual | ((z.Golpes & 3) << 4) | ((z.Reacoes & 3) << 6)));
                     w.WriteValueSafe((byte)Mathf.Clamp(Mathf.RoundToInt(z.Velocidade * 40f), 0, 255));
+                    w.WriteValueSafe((ushort)z.Membros);
                 }
                 NetworkManager.CustomMessagingManager.SendNamedMessage(NomeDaMensagem, cliente, w, NetworkDelivery.UnreliableSequenced);
                 BytesEnviados += w.Length;
@@ -134,6 +136,7 @@ namespace ZombieCityCleaner.Zombies
                     r.ReadValueSafe(out byte yaw);
                     r.ReadValueSafe(out byte estado);
                     r.ReadValueSafe(out byte velocidade);
+                    r.ReadValueSafe(out ushort membros);
                     if (id >= MaxZumbis) continue;
                     var c = _porId[id];
                     if (c == null || c.Geracao != geracao)
@@ -142,7 +145,8 @@ namespace ZombieCityCleaner.Zombies
                         if (c != null) DevolverCopia(c);
                         c = NovaCopia(id, geracao);
                     }
-                    c.Receber(tempo, new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), (Zumbi.Estado)(estado & 15), (byte)((estado >> 4) & 3), velocidade / 40f);
+                    c.Receber(tempo, new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), (Zumbi.Estado)(estado & 15), (byte)((estado >> 4) & 3),
+                              (byte)((estado >> 6) & 3), (Membros)membros, velocidade / 40f);
                 }
             }
         }

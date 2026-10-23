@@ -258,6 +258,9 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>Laje retangular (x0..x1, z0..z1) com o topo em y e um buraco opcional.</summary>
         static void Laje(Transform pai, string nome, float x0, float x1, float z0, float z1, float topo, float espessura, string mat, Rect? buraco = null)
         {
+            // o buraco encostado na borda deixa uma faixa de largura zero: escala zero dá normais infinitas no shader
+            // (o pixel vira NaN e o bloom espalha um clarão branco), então a faixa vazia não é criada
+            if (x1 - x0 < 0.01f || z1 - z0 < 0.01f) return;
             if (buraco == null)
             {
                 Caixa(pai, nome, new Vector3((x0 + x1) / 2f, topo - espessura / 2f, (z0 + z1) / 2f), new Vector3(x1 - x0, espessura, z1 - z0), mat);

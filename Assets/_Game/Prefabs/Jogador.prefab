@@ -227,7 +227,7 @@ Light:
     m_Strength: 1
     m_Bias: 0.05
     m_NormalBias: 0.4
-    m_NearPlane: 0.2
+    m_NearPlane: 0.6
     m_CullingMatrixOverride:
       e00: 1
       e01: 0
@@ -414,7 +414,7 @@ GameObject:
   - component: {fileID: 8739591328639826434}
   - component: {fileID: 3063724150362686526}
   - component: {fileID: 7424524915852960560}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Jogador
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -476,7 +476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3909549882
+  GlobalObjectIdHash: 2985581146
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -616,6 +616,7 @@ MonoBehaviour:
   coiceGraus: 1.6
   dispersao: 0.3
   dispersaoAndando: 1.2
+  dano: 1
   fovNormal: 70
   fovMirando: 58
 --- !u!114 &3063724150362686526

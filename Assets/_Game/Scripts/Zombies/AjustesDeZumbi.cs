@@ -39,6 +39,24 @@ namespace ZombieCityCleaner.Zombies
         public float tempoSemVer = 6f;
         public float alcanceDoAtaque = 1.3f;
         public float intervaloDoGolpe = 1.4f;
+        [Tooltip("Dano de cada golpe com as duas mãos. Com uma mão sai 65%; sem nenhuma (só a mordida), 30%.")]
         public float danoDoGolpe = 12f;
+        [Tooltip("Do começo do golpe até o dano: o momento em que a animação agarra (s).")]
+        public float atrasoDoDano = 0.45f;
+
+        [Header("Vida (em tiros de pistola)")]
+        public float vidaDoCorpo = 6f;
+        [Tooltip("Um tiro na cabeça explode a cabeça.")]
+        public float vidaDaCabeca = 1f;
+        public float vidaDoBraco = 3f;
+        public float vidaDoAntebraco = 2f;
+        public float vidaDaCoxa = 3f;
+        public float vidaDaCanela = 2f;
+        [Tooltip("Quanto de cada tiro num membro também conta para o corpo.")]
+        public float membroNoCorpo = 0.35f;
+
+        [Header("Sem perna")]
+        [Tooltip("Rastejando, as velocidades caem para esta fração (perseguir: 1,1 → 0,4 m/s).")]
+        public float fatorRastejando = 0.36f;
     }
 }
