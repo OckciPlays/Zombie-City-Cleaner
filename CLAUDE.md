@@ -8,15 +8,15 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 ## Branches
 
 - `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
-  - Parte 0 (fundação), Parte 1 (o zumbi) e Parte 2 (o jogador e a pistola) estão feitas.
-  - O próximo passo é a Parte 3 (o online base).
+  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola) e Parte 3 (o online base) estão feitas.
+  - O próximo passo é a Parte 4 (a cidade em blocos, o clima e o dia).
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
 
 - **Versões:** Unity 6000.6, URP 17.6 (renderer Forward+), apenas o Input System novo e AI Navigation 2.0.
 - **Rede:** Netcode for GameObjects 2.13, `com.unity.services.multiplayer` 2.4 (a partida, o código de entrada e o Relay) e Multiplayer Play Mode 3.0 (vários jogadores no Editor).
-  - O projeto ainda precisa ser ligado a um projeto na Unity Cloud. O usuário faz isso no Editor, com a conta dele.
+  - O projeto está ligado à Unity Cloud (projeto "Zombie City Cleaner", id `c6d7d134-66e6-4af9-a402-28aad4b0e691`).
   - Topologia: um jogador é o anfitrião e roda os zumbis, o saque e o mundo. Nenhum código de jogo pode depender de "o jogador" único ou de `Camera.main`; tudo usa a lista de jogadores.
 - **Play sem Domain Reload e sem Scene Reload.** Por isso:
   - estado `static` sobrevive entre sessões de Play, então inscreva e desinscreva eventos estáticos em `OnEnable`/`OnDisable`;
@@ -40,8 +40,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Noite:**
   - neblina exponencial ao quadrado (cor `#353D45`, densidade 0,05) e fundo da câmera na mesma cor;
   - luz ambiente Trilight azulada e "Luar", uma luz direcional fria e fraca com sombra suave.
-- **"Teste (temporário)":** uma rua, calçadas, casas em caixas, postes com luz de sódio, três zumbis de teste (Idle, Walk, Chase) e o jogador de terceira pessoa mirando. Tudo isso será trocado pela cidade em blocos da Parte 4.
-- **"Câmera de teste":** a câmera provisória, com pós-processamento e SMAA, até existir o jogador de rede. Os braços de primeira pessoa estão presos nela.
+- **"Teste (temporário)":** uma rua, calçadas, casas em caixas, postes com luz de sódio, um chão grande e três zumbis de teste (Idle, Walk, Chase). Tudo isso será trocado pela cidade em blocos da Parte 4.
+- **"Câmera de teste":** a câmera do menu (veja "Rede e jogador online").
 
 ## O zumbi (`Art/Characters/Zombie/`)
 
@@ -93,4 +93,47 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - os clipes são `Idle`, `Walk` e `Run` (a arma baixa e inclinada), em loop, mais `Fire` (coice e ferrolho), `DryFire` (gatilho sem bala) e `Reload` (1,67 s: o carregador cai, a mão esquerda traz outro e puxa o ferrolho).
 - **`Jogador_FP.controller`:** a base é uma árvore pelo `Speed`. A camada "Ações" tem os triggers `Fire`, `DryFire` e `Reload`, e cada um volta sozinho ao estado vazio.
 - **Write Defaults desligado nos Animators:** está desligado em todos os estados (do jogador e do zumbi). Com ele ligado, o estado vazio de uma camada de cima jogaria o personagem na pose T.
-- **Lanterna:** colada na câmera, ela estoura a pistola de luz. Na Parte 3, ela precisa ficar à frente do cano ou não iluminar a camada dos braços.
+- **Lanterna:** não a cole na câmera, porque ela estoura a pistola de luz. Ela fica no peito (veja "Rede e jogador online").
+
+## Rede e jogador online (`Assets/_Game/Scripts/`)
+
+- **Entrar na partida (`Network/SessaoOnline`, no objeto "Rede" junto do NetworkManager e do UnityTransport):**
+  - `Hospedar()` cria uma partida privada de até 4 jogadores com `WithRelayNetwork()` e guarda o `Codigo`. `Entrar(codigo)` usa `JoinSessionByCodeAsync`. O pacote de multiplayer liga o Netcode sozinho (o anfitrião vira host).
+  - Antes, os serviços da Unity são iniciados com um perfil anônimo sorteado a cada execução, porque duas cópias no mesmo PC não podem usar a mesma conta.
+  - `HospedarLocal()` / `EntrarLocal(ip)` usam IP direto na porta 7777, sem Relay. Servem para testar sem internet ou jogar em rede local.
+  - Quando o anfitrião sai ou a conexão cai, o estado volta a `Desconectado` com uma mensagem, e o menu reaparece.
+- **Menu (`UI/MenuOnline`, OnGUI):**
+  - telas de hospedar, entrar com código e modo local;
+  - na partida, o código e o número de jogadores ficam no canto, e ESC abre o menu (o mundo continua rodando);
+  - `MenuOnline.Aberto` bloqueia os comandos do jogador.
+- **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]` e `-bot`.
+  - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s, troca a lanterna a cada 5 s e registra no log, a cada 3 s, o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
+- **Como testar com dois jogadores:**
+  1. gere a build em `Builds/Teste/` (Development, ignorada pelo git);
+  2. no Editor, em Play, hospede;
+  3. rode a build sem janela, por exemplo `ZombieCityCleaner.exe -batchmode -nographics -entrar CÓDIGO -bot -logFile caminho.log`;
+  4. confira no Editor (`JogadorRede.Todos`, `TirosRecebidos`) e no log da build.
+  - Ao terminar, desligue `MenuOnline.Bot` se ele foi ligado no Editor: sem Domain Reload, ele continuaria ligado no próximo Play.
+- **O jogador (`Assets/_Game/Prefabs/Jogador.prefab`, montado por `Editor/MontagemDaRede`, menu Zombie City Cleaner > Montar jogador e rede):**
+  - **Raiz:** CharacterController (1,8 m, raio 0,3), NetworkObject e NetworkTransform com autoridade do dono (posição e só o giro em Y).
+    - `JogadorRede`: as câmeras, o corpo, a cor da família (o servidor dá a primeira livre) e o RPC do tiro.
+    - `MovimentoPrimeiraPessoa`: andar 2,0 m/s, correr 4,2 m/s, mirando 1,3 m/s, pulo; abaixo de y = −20, volta ao ponto de nascimento.
+    - `ArmaJogador`: 12 balas, raycast do centro da tela, recarga com R, mira no botão direito (FOV 70 → 58), mira e munição na tela.
+    - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga.
+  - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
+  - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (`Jogador_FP.fbx`, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
+  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz.
+  - Só o dono liga as câmeras, o ouvido, os braços, o movimento e a arma.
+- **O que vai pela rede:**
+  - a posição e o giro (NetworkTransform);
+  - `Pitch`, `Mirando` e `Ligada` da lanterna (NetworkVariables escritas pelo dono);
+  - `Cor` (escrita pelo servidor);
+  - o tiro, por `TiroRpc` (`SendTo.NotMe`), com o ponto de impacto. Quem recebe toca a animação de tiro do corpo, o clarão, o som 3D e as faíscas.
+  - A velocidade dos outros, usada pela animação, é medida pela posição recebida a cada 0,1 s.
+- **Ações de input do projeto** (`InputSystem_Actions`, mapa Player): as do modelo da Unity, mais `Aim` (botão direito / gatilho esquerdo), `Reload` (R / X) e `Flashlight` (F / direcional para cima). O tiro no controle foi para o gatilho direito.
+- **`Combat/Efeitos`** (objeto "Efeitos" na cena): sons gerados por código (tiro, clique, recarga, lanterna), o clarão do cano e as faíscas e poeira do impacto. Os materiais `Particulas` e `Clarao` ficam em `Art/Materials/`.
+- **Cena:**
+  - **"Pontos de nascimento":** 4 pontos na rua de teste.
+  - **"Câmera de teste":** com `CameraDoMenu`, aparece no menu e some quando o jogador local nasce.
+  - **"Teste (temporário)":** ganhou um chão grande.
+- **Peças das armas nos modelos:** `Boca_TP` (filho de `weapon.R` no corpo) e `Boca_FP` (filho de `gun` nos braços) marcam a ponta do cano.
