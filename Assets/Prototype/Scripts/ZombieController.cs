@@ -9,7 +9,7 @@ namespace ZombieCityCleaner.Prototype
     /// <summary>
     /// Zumbi do protótipo. Fica parado (Idle) até perceber o jogador (visão, proximidade ou barulho de tiro),
     /// então corre atrás dele pelo NavMesh e ataca de perto. Tiro na cabeça mata na hora; no corpo, ele só cambaleia.
-    /// As hitboxes são criadas nos ossos ao iniciar, a partir da pose de bind do modelo.
+    /// As hitboxes são criadas nos ossos ao iniciar; a da cabeça vem de headCenter/headRadius, calculados no editor.
     /// </summary>
     [RequireComponent(typeof(Animator))]
     public class ZombieController : MonoBehaviour
@@ -22,7 +22,8 @@ namespace ZombieCityCleaner.Prototype
         public float alertNeighboursRange = 7f;
 
         [Header("Movimento")]
-        public float runSpeed = 3.2f;
+        public float runSpeed = 2.2f;
+        public float acceleration = 12f;
         [Tooltip("Velocidade (m/s) em que a animação de corrida combina com o deslocamento, com velocidade 1 no Animator.")]
         public float animationRunSpeed = 1.8f;
 
@@ -34,6 +35,20 @@ namespace ZombieCityCleaner.Prototype
         [Header("Vida")]
         [Tooltip("Quantos tiros no corpo matam. 0 = só morre com tiro na cabeça.")]
         public int bodyHitsToKill = 0;
+
+        [Header("Som")]
+        [Tooltip("Gravação com vários grunhidos. Vazio = usa o grunhido gerado por código.")]
+        public AudioClip voiceClip;
+        [Tooltip("Trechos do clipe (início, duração em segundos); cada grunhido sorteia um.")]
+        public Vector2[] voiceSegments = { new Vector2(0.1f, 1f), new Vector2(1.75f, 1f), new Vector2(3.1f, 0.85f), new Vector2(4.35f, 1f) };
+        public Vector2 moanInterval = new Vector2(5f, 12f);
+        [Tooltip("Só geme se o jogador estiver a até esta distância.")]
+        public float voiceRange = 18f;
+
+        [Header("Cabeça")]
+        [Tooltip("Centro e raio da hitbox da cabeça, no espaço do osso head. Use o menu de contexto para recalcular.")]
+        public Vector3 headCenter;
+        public float headRadius;
 
         public bool IsDead { get; private set; }
         public bool IsAlerted { get; private set; }
@@ -52,17 +67,15 @@ namespace ZombieCityCleaner.Prototype
             ("thigh.L", "shin.L", 0.065f), ("shin.L", "foot.L", 0.055f),
             ("thigh.R", "shin.R", 0.065f), ("shin.R", "foot.R", 0.055f),
         };
-        // Centro e raio da cabeça no espaço do modelo (pose de bind).
-        static readonly Vector3 HeadCenterModel = new Vector3(0f, 0.885f, 0.03f);
-        const float HeadRadiusModel = 0.085f;
 
         Animator _animator;
         NavMeshAgent _agent;
         PlayerHealth _target;
         Transform _targetEye;
         Transform _head;
+        SphereCollider _headSphere;
         readonly List<Collider> _colliders = new List<Collider>();
-        float _nextSense, _nextAttack, _staggerUntil, _nextRepath;
+        float _nextSense, _nextAttack, _staggerUntil, _nextRepath, _nextMoan;
         int _bodyHits;
 
         void Awake()
@@ -74,13 +87,13 @@ namespace ZombieCityCleaner.Prototype
         void OnEnable()
         {
             All.Add(this);
-            Pistol.ShotFired += OnShotHeard;
+            Gun.ShotFired += OnShotHeard;
         }
 
         void OnDisable()
         {
             All.Remove(this);
-            Pistol.ShotFired -= OnShotHeard;
+            Gun.ShotFired -= OnShotHeard;
         }
 
         void Start()
@@ -91,7 +104,7 @@ namespace ZombieCityCleaner.Prototype
             float scale = transform.lossyScale.y;
             _agent = gameObject.AddComponent<NavMeshAgent>();
             _agent.speed = runSpeed;
-            _agent.acceleration = 24f;
+            _agent.acceleration = acceleration;
             _agent.angularSpeed = 720f;
             _agent.radius = 0.35f / scale;   // o raio e a altura do agente são multiplicados pela escala
             _agent.height = 1.8f / scale;
@@ -103,6 +116,28 @@ namespace ZombieCityCleaner.Prototype
             // Cada zumbi começa o idle num ponto diferente, para a horda não ficar sincronizada.
             _animator.Play("Idle", 0, UnityEngine.Random.value);
             _animator.SetFloat(SpeedId, 0f);
+            _nextMoan = Time.time + UnityEngine.Random.Range(1f, moanInterval.y);
+        }
+
+        void Voice(float volume)
+        {
+            Vector3 position = _head != null ? _head.position : transform.position + Vector3.up * 1.5f;
+            float pitch = UnityEngine.Random.Range(0.85f, 1.15f);
+            if (voiceClip == null || voiceSegments == null || voiceSegments.Length == 0)
+            {
+                Effects.PlayAt(Effects.Growl, position, volume, pitch);
+                return;
+            }
+            var segment = voiceSegments[UnityEngine.Random.Range(0, voiceSegments.Length)];
+            Effects.PlayVoice(voiceClip, segment.x, segment.y, position, volume, pitch);
+        }
+
+        void UpdateMoan(float distance)
+        {
+            if (Time.time < _nextMoan) return;
+            float interval = UnityEngine.Random.Range(moanInterval.x, moanInterval.y);
+            _nextMoan = Time.time + (IsAlerted ? interval : interval * 1.8f);
+            if (distance <= voiceRange) Voice(IsAlerted ? 0.9f : 0.6f);
         }
 
         void Update()
@@ -118,6 +153,7 @@ namespace ZombieCityCleaner.Prototype
                 _nextSense = Time.time + 0.2f;
                 if (CanSensePlayer(toTarget, distance)) Alert();
             }
+            UpdateMoan(distance);
 
             if (!IsAlerted || _target.IsDead)
             {
@@ -186,7 +222,8 @@ namespace ZombieCityCleaner.Prototype
         {
             if (IsDead || IsAlerted) return;
             IsAlerted = true;
-            Effects.PlayAt(Effects.Growl, transform.position + Vector3.up * 1.5f, 0.9f, UnityEngine.Random.Range(0.85f, 1.15f));
+            Voice(1f);
+            _nextMoan = Time.time + UnityEngine.Random.Range(moanInterval.x, moanInterval.y);
             if (!spread) return;
             foreach (var other in All)
                 if (other != this && (other.transform.position - transform.position).sqrMagnitude < alertNeighboursRange * alertNeighboursRange)
@@ -230,10 +267,10 @@ namespace ZombieCityCleaner.Prototype
             _animator.enabled = false;
             foreach (var c in _colliders) c.enabled = false;
 
-            if (headshot && _head != null)
+            if (headshot && _headSphere != null)
             {
                 // A cabeça "explode": encolhe o osso e espirra sangue.
-                Vector3 headPosition = transform.TransformPoint(HeadCenterModel);
+                Vector3 headPosition = _head.TransformPoint(_headSphere.center);
                 _head.localScale = Vector3.zero;
                 Effects.Burst(headPosition, Vector3.up + direction * 0.5f, new Color(0.6f, 0.03f, 0.03f), 45, 4.5f, 0.09f, 1.5f, 1.1f, 60f);
                 Effects.Burst(headPosition, direction, new Color(0.85f, 0.75f, 0.65f), 10, 3f, 0.05f, 1.5f, 0.9f, 40f);
@@ -285,11 +322,13 @@ namespace ZombieCityCleaner.Prototype
 
             if (bones.TryGetValue("head", out _head))
             {
-                var sphere = _head.gameObject.AddComponent<SphereCollider>();
-                sphere.center = _head.InverseTransformPoint(transform.TransformPoint(HeadCenterModel));
-                sphere.radius = HeadRadiusModel * scale / MaxAbs(_head.lossyScale);
-                sphere.isTrigger = true;
-                AddHitbox(sphere, true);
+                if (headRadius <= 0f && !ComputeHeadSphere())
+                    Debug.LogWarning($"{name}: hitbox da cabeça sem medida; rode \"Calcular hitbox da cabeça\" no prefab.", this);
+                _headSphere = _head.gameObject.AddComponent<SphereCollider>();
+                _headSphere.center = headCenter;
+                _headSphere.radius = headRadius > 0f ? headRadius : 0.1f;
+                _headSphere.isTrigger = true;
+                AddHitbox(_headSphere, true);
             }
 
             // Corpo sólido (na layer Ignore Raycast, para não bloquear os tiros) para o jogador não atravessar o zumbi.
@@ -300,6 +339,46 @@ namespace ZombieCityCleaner.Prototype
             body.radius = 0.17f;
             _colliders.Add(body);
         }
+
+        /// <summary>
+        /// Mede a cabeça pelos vértices com peso no osso head, levados ao espaço do osso pela bindpose. Não dá para
+        /// usar a posição dos ossos: a pose padrão do FBX é o 1º quadro do Idle, não a de bind. Precisa ler a malha,
+        /// então roda no editor (o construtor da variante grava o resultado no prefab).
+        /// </summary>
+        [ContextMenu("Calcular hitbox da cabeça")]
+        public bool ComputeHeadSphere()
+        {
+            foreach (var skin in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                var mesh = skin.sharedMesh;
+                int headIndex = Array.FindIndex(skin.bones, b => b != null && b.name == "head");
+                if (mesh == null || headIndex < 0 || (!mesh.isReadable && Application.isPlaying)) continue;
+
+                var vertices = mesh.vertices;
+                var weights = mesh.boneWeights;
+                var bindpose = mesh.bindposes[headIndex];
+                var bounds = new Bounds();
+                bool any = false;
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    if (WeightOf(weights[i], headIndex) < 0.5f) continue;
+                    Vector3 p = bindpose.MultiplyPoint3x4(vertices[i]);
+                    if (any) bounds.Encapsulate(p);
+                    else bounds = new Bounds(p, Vector3.zero);
+                    any = true;
+                }
+                if (!any) continue;
+                // Um pouco maior que a cabeça: no PS1 a malha treme com o snap de vértices.
+                headCenter = bounds.center;
+                headRadius = MaxAbs(bounds.extents) * 1.1f;
+                return true;
+            }
+            return false;
+        }
+
+        static float WeightOf(BoneWeight w, int bone) =>
+            (w.boneIndex0 == bone ? w.weight0 : 0f) + (w.boneIndex1 == bone ? w.weight1 : 0f) +
+            (w.boneIndex2 == bone ? w.weight2 : 0f) + (w.boneIndex3 == bone ? w.weight3 : 0f);
 
         void AddHitbox(Collider collider, bool isHead)
         {

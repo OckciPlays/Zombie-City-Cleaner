@@ -11,8 +11,8 @@ namespace ZombieCityCleaner.Prototype
     {
         public Light spotLight;
         public Transform follow;
-        [Tooltip("Posição em relação à câmera. Fica à frente da pistola para não estourar ela de luz.")]
-        public Vector3 offset = new Vector3(0.06f, -0.06f, 0.5f);
+        [Tooltip("Posição em relação à câmera. Fica à frente do cano da arma para não estourar ela de luz.")]
+        public Vector3 offset = new Vector3(0.09f, -0.12f, 0.95f);
         public float lag = 12f;
         public bool startOn = true;
 
@@ -20,6 +20,9 @@ namespace ZombieCityCleaner.Prototype
         public float flickerChancePerSecond = 0.06f;
 
         public bool IsOn { get; private set; }
+
+        const int IgnoreRaycastMask = 1 << 2;
+        const float WallMargin = 0.15f;
 
         float _baseIntensity;
         float _flickerUntil;
@@ -29,7 +32,18 @@ namespace ZombieCityCleaner.Prototype
             _baseIntensity = spotLight.intensity;
             IsOn = startOn;
             spotLight.enabled = IsOn;
-            transform.SetPositionAndRotation(follow.TransformPoint(offset), follow.rotation);
+            transform.SetPositionAndRotation(OffsetPosition(), follow.rotation);
+        }
+
+        // Encostado numa parede, a luz recua junto com ela (senão iluminaria o outro lado).
+        Vector3 OffsetPosition()
+        {
+            Vector3 target = follow.TransformPoint(offset);
+            Vector3 toTarget = target - follow.position;
+            float distance = toTarget.magnitude;
+            if (Physics.Raycast(follow.position, toTarget / distance, out RaycastHit hit, distance + WallMargin, ~IgnoreRaycastMask, QueryTriggerInteraction.Ignore))
+                return follow.position + toTarget * (Mathf.Max(0f, hit.distance - WallMargin) / distance);
+            return target;
         }
 
         void LateUpdate()
@@ -42,7 +56,7 @@ namespace ZombieCityCleaner.Prototype
                 Effects.PlayAt(Effects.Click, transform.position, 0.6f, 1.4f);
             }
 
-            transform.position = follow.TransformPoint(offset);
+            transform.position = OffsetPosition();
             transform.rotation = Quaternion.Slerp(transform.rotation, follow.rotation, 1f - Mathf.Exp(-lag * Time.deltaTime));
 
             if (!IsOn) return;

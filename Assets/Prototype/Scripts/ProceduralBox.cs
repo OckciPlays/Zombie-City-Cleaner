@@ -22,6 +22,22 @@ namespace ZombieCityCleaner.Prototype
         Mesh _mesh;
         bool _dirty = true;
 
+        /// <summary>Cria uma caixa de cenário pronta (malha, colisor e material).</summary>
+        public static GameObject Create(Transform parent, string name, Vector3 localCenter, Vector3 size, Material material,
+            float uvScale = 0.5f, bool fitTextureToFace = false, float yaw = 0f)
+        {
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer), typeof(BoxCollider), typeof(ProceduralBox));
+            go.transform.SetParent(parent, false);
+            go.transform.SetLocalPositionAndRotation(localCenter, Quaternion.Euler(0f, yaw, 0f));
+            var box = go.GetComponent<ProceduralBox>();
+            box.size = size;
+            box.uvScale = uvScale;
+            box.fitTextureToFace = fitTextureToFace;
+            box.Rebuild();
+            go.GetComponent<MeshRenderer>().sharedMaterial = material;
+            return go;
+        }
+
         void OnEnable() => Rebuild();
         void OnValidate() => _dirty = true;
 

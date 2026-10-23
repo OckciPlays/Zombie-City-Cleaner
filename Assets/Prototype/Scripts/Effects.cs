@@ -11,13 +11,50 @@ namespace ZombieCityCleaner.Prototype
         public static Material ParticleMaterial;
 
         const int SampleRate = 22050;
-        static AudioClip _gunshot, _dryFire, _click, _flesh, _growl;
+        static AudioClip _gunshot, _dryFire, _click, _flesh, _growl, _ding, _hum, _doorSlide;
 
         public static AudioClip Gunshot => _gunshot != null ? _gunshot : _gunshot = MakeGunshot();
         public static AudioClip DryFire => _dryFire != null ? _dryFire : _dryFire = MakeClick("DryFire", 0.9f);
         public static AudioClip Click => _click != null ? _click : _click = MakeClick("Click", 0.5f);
         public static AudioClip Flesh => _flesh != null ? _flesh : _flesh = MakeFlesh();
         public static AudioClip Growl => _growl != null ? _growl : _growl = MakeGrowl();
+        public static AudioClip Ding => _ding != null ? _ding : _ding = MakeDing();
+        public static AudioClip Hum => _hum != null ? _hum : _hum = MakeHum();
+        public static AudioClip DoorSlide => _doorSlide != null ? _doorSlide : _doorSlide = MakeDoorSlide();
+
+        // Vozes de zumbi tocando agora (limite para uma horda não virar uma parede de som).
+        const int MaxVoices = 6;
+        static readonly float[] VoiceEnds = new float[MaxVoices];
+
+        /// <summary>
+        /// Toca um trecho [start, start + length] de um clipe em 3D. Retorna false (e não toca)
+        /// se já houver vozes demais ao mesmo tempo.
+        /// </summary>
+        public static bool PlayVoice(AudioClip clip, float start, float length, Vector3 position, float volume = 1f, float pitch = 1f)
+        {
+            int slot = -1;
+            for (int i = 0; i < MaxVoices; i++)
+                if (VoiceEnds[i] <= Time.realtimeSinceStartup) { slot = i; break; }
+            if (slot < 0 || clip == null) return false;
+
+            float duration = length / Mathf.Max(0.1f, pitch);
+            VoiceEnds[slot] = Time.realtimeSinceStartup + duration;   // tempo real: não zera entre sessões de Play
+            var go = new GameObject("SFX Voice");
+            go.transform.position = position;
+            var source = go.AddComponent<AudioSource>();
+            source.clip = clip;
+            source.volume = volume;
+            source.pitch = pitch;
+            source.spatialBlend = 1f;
+            source.minDistance = 2f;
+            source.maxDistance = 25f;
+            source.rolloffMode = AudioRolloffMode.Linear;
+            source.time = Mathf.Clamp(start, 0f, clip.length - 0.05f);
+            source.Play();
+            source.SetScheduledEndTime(AudioSettings.dspTime + duration);
+            Object.Destroy(go, duration + 0.2f);
+            return true;
+        }
 
         public static void Burst(Vector3 position, Vector3 direction, Color color, int count, float speed, float size, float gravity, float lifetime, float spreadAngle = 35f)
         {
@@ -110,6 +147,41 @@ namespace ZombieCityCleaner.Prototype
             {
                 low += (Noise(r) - low) * 0.12f;
                 return low * Mathf.Exp(-t * 22f) * 2.2f;
+            });
+        }
+
+        static AudioClip MakeDing()
+        {
+            return Build("Ding", 1.4f, (t, r) =>
+            {
+                float a = Mathf.Sin(2f * Mathf.PI * 1318f * t) * Mathf.Exp(-t * 3f);
+                float b = t > 0.35f ? Mathf.Sin(2f * Mathf.PI * 1046f * (t - 0.35f)) * Mathf.Exp(-(t - 0.35f) * 3f) : 0f;
+                return (a + b) * 0.35f;
+            });
+        }
+
+        // Ronco do motor do elevador. Feito para tocar em loop (frequências que fecham ciclos em 2 s).
+        static AudioClip MakeHum()
+        {
+            float low = 0f;
+            return Build("Hum", 2f, (t, r) =>
+            {
+                low += (Noise(r) - low) * 0.02f;
+                float motor = Mathf.Sin(2f * Mathf.PI * 55f * t) * 0.35f + Mathf.Sin(2f * Mathf.PI * 110f * t) * 0.12f;
+                float rattle = Mathf.Sin(2f * Mathf.PI * 7f * t) * 0.5f + 0.5f;
+                return motor * (0.7f + 0.3f * rattle) + low * 0.8f;
+            });
+        }
+
+        static AudioClip MakeDoorSlide()
+        {
+            float low = 0f;
+            return Build("DoorSlide", 0.9f, (t, r) =>
+            {
+                low += (Noise(r) - low) * 0.05f;
+                float envelope = Mathf.Clamp01(t * 8f) * Mathf.Clamp01((0.9f - t) * 4f);
+                float clunk = t > 0.8f ? Noise(r) * Mathf.Exp(-(t - 0.8f) * 60f) * 0.8f : 0f;
+                return low * envelope * 1.5f + clunk;
             });
         }
 

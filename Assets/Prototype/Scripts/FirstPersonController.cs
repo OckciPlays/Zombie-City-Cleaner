@@ -27,6 +27,10 @@ namespace ZombieCityCleaner.Prototype
         public float headBobAmplitude = 0.035f;
         public float headBobFrequency = 1.7f;
 
+        [Header("Segurança")]
+        [Tooltip("Se cair mais que isto abaixo do último chão firme (ex.: empurrado através do piso), volta para ele.")]
+        public float fallRecoveryDepth = 5f;
+
         public bool InputEnabled { get; set; } = true;
         /// <summary>Velocidade horizontal de 0 (parado) a 1 (correndo).</summary>
         public float Speed01 { get; private set; }
@@ -41,8 +45,8 @@ namespace ZombieCityCleaner.Prototype
         CharacterController _controller;
         Vector3 _velocity;
         float _yaw, _pitch, _recoil, _bobTime, _shake;
-        Vector3 _pivotBase;
-        bool _dead;
+        Vector3 _pivotBase, _lastSafePosition;
+        bool _hasSafePosition, _dead;
         float _deadTime;
 
         void Start()
@@ -73,6 +77,8 @@ namespace ZombieCityCleaner.Prototype
             transform.position = position;
             _velocity = Vector3.zero;
             _controller.enabled = true;
+            _lastSafePosition = position;
+            _hasSafePosition = true;
         }
 
         /// <summary>Define para onde o jogador olha (yaw no corpo, pitch na câmera).</summary>
@@ -139,6 +145,14 @@ namespace ZombieCityCleaner.Prototype
             _velocity.y += gravity * dt;
             _velocity = new Vector3(horizontal.x, _velocity.y, horizontal.z);
             _controller.Move(_velocity * dt);
+
+            if (_controller.isGrounded)
+            {
+                _lastSafePosition = transform.position;
+                _hasSafePosition = true;
+            }
+            else if (_hasSafePosition && transform.position.y < _lastSafePosition.y - fallRecoveryDepth)
+                Teleport(_lastSafePosition);
 
             float speed = horizontal.magnitude;
             Speed01 = Mathf.Clamp01(speed / sprintSpeed);

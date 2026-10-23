@@ -94,9 +94,20 @@ MonoBehaviour:
   closeSenseRange: 3.5
   hearingRange: 12
   alertNeighboursRange: 7
-  runSpeed: 3.2
+  runSpeed: 2.2
+  acceleration: 12
   animationRunSpeed: 1.8
   attackRange: 1.5
   attackDamage: 10
   attackInterval: 1.2
   bodyHitsToKill: 0
+  voiceClip: {fileID: 8300000, guid: c5a7309878a9ae2498e1d53ccbaeb9fb, type: 3}
+  voiceSegments:
+  - {x: 0.1, y: 1}
+  - {x: 1.75, y: 1}
+  - {x: 3.1, y: 0.85}
+  - {x: 4.35, y: 1}
+  moanInterval: {x: 5, y: 12}
+  voiceRange: 18
+  headCenter: {x: 0.0063476562, y: 0.09807623, z: 0.031611264}
+  headRadius: 0.10607909
