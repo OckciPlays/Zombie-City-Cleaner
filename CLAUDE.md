@@ -1,64 +1,66 @@
 # Zombie City Cleaner (Unity)
 
-Jogo co-op em primeira pessoa de limpar zumbis, com visual de PS1. A arte (Blender, referências, sons originais) fica em `C:\Users\gusta\OneDrive\Documentos\Projetos\Projeto Zombie City Cleaner`, que tem o `CLAUDE.md` com o conceito do jogo.
+Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infestada de zumbis, em low-poly com cores sólidas e clima sombrio no estilo Silent Hill.
 
-## Conceito atual: o prédio
+- A arte (Blender, referências, sons originais) fica em `C:\Users\gusta\OneDrive\Documentos\Projetos\Projeto Zombie City Cleaner`. O `CLAUDE.md` de lá tem o conceito do jogo.
+- O plano, dividido em partes, está no `Plano_Demo.md` da mesma pasta. Siga a ordem dele e só avance com a parte anterior aprovada.
 
-- Os jogadores começam dentro de um elevador. Ele sobe andar por andar, sem fim por enquanto.
-- Cada andar é gerado só quando o elevador está indo para ele: um corredor com apartamentos dos dois lados e ~30 zumbis (+1 por andar, até 45) espalhados pelos cômodos e pelo corredor.
-- Com o andar limpo (todos os zumbis mortos), o elevador libera a subida: dentro da cabine, aperte E.
-- Existe um andar por vez na memória, para o jogo continuar leve (o teste com 500 zumbis ativos custava ~18 ms de CPU por quadro, quase tudo em física das hitboxes).
+## Branches
+
+- `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
+  - Parte 0 (fundação) e Parte 1 (o zumbi) estão feitas.
+  - O próximo passo é a Parte 2 (o jogador e a pistola).
+- `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
 
-- Unity 6000.6, URP 17.6 (renderer Forward+), apenas o Input System novo (`activeInputHandler = 1`) e AI Navigation 2.0.
-- O agente Humanoid do NavMesh foi ajustado pelo construtor do prédio para raio 0,35 m e altura 1,8 m, porque os vãos de porta têm 1,1 m.
-- O Play entra com Domain Reload e Scene Reload desligados. Por isso:
+- **Versões:** Unity 6000.6, URP 17.6 (renderer Forward+), apenas o Input System novo e AI Navigation 2.0.
+- **Rede:** Netcode for GameObjects 2.13, `com.unity.services.multiplayer` 2.4 (a partida, o código de entrada e o Relay) e Multiplayer Play Mode 3.0 (vários jogadores no Editor).
+  - O projeto ainda precisa ser ligado a um projeto na Unity Cloud. O usuário faz isso no Editor, com a conta dele.
+  - Topologia: um jogador é o anfitrião e roda os zumbis, o saque e o mundo. Nenhum código de jogo pode depender de "o jogador" único ou de `Camera.main`; tudo usa a lista de jogadores.
+- **Play sem Domain Reload e sem Scene Reload.** Por isso:
+  - estado `static` sobrevive entre sessões de Play, então inscreva e desinscreva eventos estáticos em `OnEnable`/`OnDisable`;
   - scripts `[ExecuteAlways]` não recebem `Awake` de novo ao dar Play;
-  - estado `static` sobrevive entre sessões de Play, então inscreva e desinscreva eventos estáticos em `OnEnable`/`OnDisable`. Para tempos guardados em `static`, use `Time.realtimeSinceStartup`, que não zera entre sessões.
-- Não recompile scripts com o Play rodando: os campos não serializados zeram.
+  - para tempos guardados em `static`, use `Time.realtimeSinceStartup`.
+- **Não recompile scripts com o Play rodando:** os campos não serializados zeram.
+- **URP (`Assets/Settings/PC_RPAsset`):** gradação de cor em HDR, sombras até 40 m com 2 cascatas e HDR ligado.
 
-## Cenas e construtores (`Assets/Prototype/`)
+## Pastas
 
-- As cenas são geradas pelo menu **Zombie City Cleaner**. Ajustes de layout, luzes, texturas e posição da arma devem ser feitos nos construtores (`Scripts/Editor/`), não à mão na cena:
-  - **Recriar cena do prédio** (`TowerSceneBuilder`) gera `Assets/Scenes/Prototype_Predio.unity`, que é a cena principal (primeira nas Build Settings);
-  - **Recriar cena do galpão** (`PrototypeSceneBuilder`) gera `Assets/Scenes/Prototype_Galpao.unity`, o primeiro protótipo, com 6 zumbis fixos.
-- `Ps1Assets` reúne o que os dois construtores compartilham: as texturas 64x64 geradas por código (filtro Point, em `Textures/`), os materiais (`Materials/`), a variante do zumbi, o jogador e a atmosfera.
+- `Assets/_Game/` é tudo da demo:
+  - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings.
+  - `Settings/Demo_Volume.asset`: o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
+  - `Art/Characters/Zombie/`: o zumbi.
+  - `Art/Materials/`: materiais de teste do cenário (`Teste_*`).
+- Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
 
-## Modo prédio
+## Cena `Demo_Cidade`
 
-- `Elevator`: a cabine fica parada em x < 0, com a porta em x = 0. Na viagem (portas fechadas, motor e tremor) ela chama `FloorGenerator.Generate`. As portas têm `NavMeshModifier` com ignoreFromBuild, então o zumbi entra na cabine quando elas abrem. O indicador acima da porta fica vermelho com o andar sujo, verde com o andar limpo e laranja em movimento.
-- `FloorGenerator` fica na raiz "Prédio", que tem o `NavMeshSurface` (filhos, colisores físicos).
-  - A cada andar, ele sorteia o número de apartamentos (3 ou 4 por lado), as larguras e profundidades, as portas, a divisão em sala, quarto e banheiro, os móveis, as luzes (algumas apagadas ou piscando), o sangue e os zumbis. A semente é `seed da partida + andar * 7919`.
-  - O andar anterior é desativado e depois destruído, gera o NavMesh e só então cria os zumbis (a mais de 5 m do elevador).
-  - Paredes com materiais diferentes em cada face viram duas meias-paredes. O UV das paredes cobre do chão ao teto (`uvScale = 1 / altura`), por isso as texturas de parede têm rodapé e barrado embaixo.
-- `TowerGame`: cota por andar, recorde em `PlayerPrefs` ("ZombieCityCleaner.MelhorAndar"), pausa (congela o tempo e o áudio) e HUD. R reinicia depois de morrer.
+- **Noite:**
+  - neblina exponencial ao quadrado (cor `#353D45`, densidade 0,05) e fundo da câmera na mesma cor;
+  - luz ambiente Trilight azulada e "Luar", uma luz direcional fria e fraca com sombra suave.
+- **"Teste (temporário)":** uma rua, calçadas, casas em caixas, postes com luz de sódio e três zumbis de teste (Idle, Walk, Chase). Tudo isso será trocado pela cidade em blocos da Parte 4.
+- **"Câmera de teste":** a câmera provisória, com pós-processamento e SMAA, até existir o jogador.
 
-## Peças comuns
+## O zumbi (`Art/Characters/Zombie/`)
 
-- Visual de PS1:
-  - `Shaders/PS1Lit.shader`: vértices presos à grade de pixels (`_VertexSnap`), UV afim (`_Affine`), cor de 15 bits com dithering, neblina, alpha clip em 0,5 e luz por pixel (Forward+ via `LIGHT_LOOP_BEGIN`). A emissão é multiplicada pela textura, e a luz ambiente vem do global `_PS1Ambient` (componente `PS1Atmosphere`).
-  - `PS1Screen`: a câmera renderiza numa RenderTexture de 240 linhas, mostrada esticada com filtro Point.
-  - `ProceduralBox`: o cenário é feito de caixas subdivididas em células de 1 m, para a distorção afim ficar pequena. A malha é gerada em tempo de execução (`DontSave`). `ProceduralBox.Create` monta uma caixa pronta.
-- `Hud`: desenho com OnGUI (mira com hitmarker, vida, munição, mensagens), usado por `PrototypeGame` e `TowerGame`.
-- Jogador (montado por `Ps1Assets.BuildPlayer`):
-  - `FirstPersonController`: WASD, Shift, Espaço e mouse. Começa pausado até o primeiro clique, e ESC pausa. Tem `Teleport`, `SetLook`, `Pause` e `Resume`. Se o jogador cair 5 m abaixo do último chão firme, ele volta para esse chão.
-  - `PlayerHealth`.
-  - `WeaponHolder` com dois `Gun`, cada um num filho "Arma ...". As teclas 1/2 ou a rodinha do mouse trocam a arma, e só a arma atual fica ligada.
-    - A SCAR é a principal: automática, 30 balas, modelo `Assets/Weapons/Scar/` (vindo de `Modelo 3D/Scar`), com a textura reduzida para 256 px.
-    - A pistola, feita de blocos, é a secundária: semiautomática, 12 balas.
-  - O `Gun` dispara um raycast do centro da tela, com uma dispersão que cresce ao andar e ao atirar rápido. R recarrega, e `TryFire` é público.
-  - `Flashlight` (F). A luz fica à frente do cano e recua quando o jogador encosta numa parede.
-  - `NavMeshObstacle` (sem carving): os zumbis desviam do jogador em vez de empurrá-lo.
-- As paredes e o piso da cabine têm 0,4 m de espessura, e a laje dos andares tem 1 m. Assim, zumbis espremidos contra o jogador não o empurram através delas.
-- Zumbis: o prefab `Prefabs/Zombie_Prototype.prefab` é uma variante de `Assets/Characters/ZombiePS1/ZombiePS1.prefab` com escala 1,8 e `ZombieController`.
-  - O `ZombieController` cria as hitboxes nos ossos no `Awake` (triggers com `Hitbox`): uma esfera na cabeça e cápsulas no corpo. Ele cria o `NavMeshAgent` no `Start`. O zumbi corre a 2,2 m/s.
-  - A esfera da cabeça usa `headCenter`/`headRadius`, que ficam no espaço do osso `head` e são gravados no prefab:
-    - `CreateZombieVariant` os calcula com `ComputeHeadSphere`, a partir dos vértices com peso na cabeça e da bindpose (menu de contexto "Calcular hitbox da cabeça").
-    - Não meça a cabeça pela posição dos ossos: a pose padrão do FBX é o 1º quadro do Idle, não a de bind. Era isso que deixava a hitbox deslocada uns 35 cm.
-  - Tiro na cabeça mata. Tiro no corpo só faz o zumbi cambalear (`bodyHitsToKill = 0`). O tiro conta como na cabeça se a esfera da cabeça do primeiro zumbi atingido estiver em qualquer ponto do raio, antes de uma parede ou de outro zumbi.
-  - O zumbi percebe o jogador pela visão (14 m, cone de 140°), pela proximidade (3,5 m) e pelo barulho de tiro (12 m).
-  - A voz é `Audio/SomZombie1.mp3` (o som do usuário): 4 grunhidos, e cada vez toca um trecho sorteado (`voiceSegments`) com variação de tom. O som é importado em mono e descomprimido ao carregar.
-  - `Effects.PlayVoice` limita a 6 vozes de zumbi ao mesmo tempo.
-- O corpo sólido do zumbi fica na layer 2 (Ignore Raycast), e os tiros ignoram essa layer, então os raycasts acertam as hitboxes.
-- Os outros sons (tiro, recarga, carne, elevador) são gerados por código em `Effects.cs`.
+- **Arquivos:**
+  - `NovoZombie.fbx`, exportado de `Modelo 3D/NovoZombie_Anim/` na pasta de arte. Ao atualizar o modelo, copie o FBX de novo.
+  - `NovoZombie_Gibs.fbx`, com os pedaços soltos.
+  - A textura `NovoZombie_basecolor.jpg`.
+- **Importação:**
+  - mede 1,75 m na escala 1 e olha para +Z;
+  - deixe **"Bake Axis Conversion" desligado**, porque ligado ele vira o zumbi de costas. Os filhos do FBX ficam com rotação de 270° em X, o que é normal;
+  - rig Generic, com avatar criado do próprio modelo;
+  - os clipes `Idle` (3 s), `Walk` (1,33 s) e `Chase` (1 s) estão em loop, sem root motion.
+- **`Zombie.controller`:** uma árvore de blend 1D pelo float `Speed`, em m/s. As animações batem com o deslocamento nestes valores: `Idle` em 0, `Walk` em 0,6 e `Chase` em 1,12.
+- **Materiais:**
+  - `Materials/Zombie.mat`: URP Lit com a textura;
+  - `Materials/Zombie_Flesh.mat`: a carne das tampas, cor sólida `#6B0F0F`.
+- **Desmembramento:** a malha tem 11 submeshes, um por material do Blender, nesta ordem na Unity:
+  - 0 `Zombie_Body`, 1 `Zombie_Forearm.R`, 2 `Zombie_Head`, 3 `Zombie_Forearm.L`, 4 `Zombie_UpperArm.R`, 5 `Zombie_UpperArm.L`;
+  - 6 a 10: as tampas `Cap_Neck`, `Cap_Elbow.L`, `Cap_Shoulder.L`, `Cap_Elbow.R` e `Cap_Shoulder.R`.
+  - Os 6 primeiros são as regiões que podem cair. As tampas tampam o buraco que fica quando uma região sai.
+  - Com o zumbi inteiro, o renderer recebe só 6 materiais, e os submeshes sem material (as tampas) não são desenhados.
+  - Na Parte 6, um script de editor vai gerar as variantes da malha, sem a região perdida e com a tampa dela, montadas pelo nome do submesh.
+- **Pedaços soltos (`NovoZombie_Gibs.fbx`):** `Gib_Arm.L/R` (o braço inteiro) e `Gib_Forearm.L/R`. São malhas estáticas na pose T, com a origem no ponto do corte e uma tampa de carne na ponta.
