@@ -8,8 +8,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 ## Branches
 
 - `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
-  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base) e Parte 4 (a cidade em blocos, o clima e o dia) estão feitas.
-  - O próximo passo é a Parte 5 (os zumbis na cidade: IA, LOD, pool e rede), que também traz a furtividade da noite.
+  - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base), Parte 4 (a cidade em blocos, o clima e o dia) e Parte 5 (os zumbis na cidade) estão feitas.
+  - O próximo passo é a Parte 6 (combate e desmembramento).
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
@@ -27,11 +27,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `PC_Renderer` (renderizador 0) tem o recurso "NeblinaDeAltura" (Full Screen Pass, antes dos transparentes, com profundidade).
   - `PC_Renderer_Bracos` (renderizador 1, sem recursos) é usado pela câmera dos braços. Sem ele, a neblina de altura seria aplicada de novo por cima da imagem, só com a profundidade dos braços.
   - Os dois são montados por `Editor/MontagemDoClima`, que só mexe nos assets de URP dentro de `Assets/` (nunca no asset do pacote).
+- **Camadas:** 6 "ArmasPrimeiraPessoa" (os braços) e 7 "Zumbi" (cápsulas e hitboxes dos zumbis; não colide com ela mesma nem com a 6). O cenário e os jogadores ficam na Default.
 
 ## Pastas
 
 - `Assets/_Game/` é tudo da demo:
-  - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings.
+  - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings. `Scenes/Demo_Cidade/NavMesh da cidade.asset` é o NavMesh dela.
+  - `Prefabs/`: `Jogador.prefab` e `Zumbi.prefab`, os dois montados por scripts de editor.
   - `Settings/Demo_Volume.asset` (noite) e `Settings/Demo_Volume_Dia.asset` (dia): o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
   - `Art/Characters/Zombie/`: o zumbi.
   - `Art/Characters/Jogador/`: o jogador (corpo, braços de primeira pessoa e pistola).
@@ -44,7 +46,12 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 ## Cena `Demo_Cidade`
 
-- **Raízes:** "Cidade", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento" e "Câmera de teste".
+- **Raízes:** "Cidade", "Navegação" (o NavMesh), "Zumbis", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento" e "Câmera de teste".
+- **Os scripts de montagem**, no menu Zombie City Cleaner, refazem partes da cena. Mudanças feitas à mão nessas partes se perdem; mude o script e rode de novo.
+  - Montar cidade em blocos: "Cidade", os pontos de nascimento e o NavMesh.
+  - Montar clima e ciclo do dia: "Clima" e os volumes.
+  - Montar jogador e rede: o prefab do jogador, "Rede", "Efeitos" e "Pontos de nascimento".
+  - Montar zumbis: a camada, o prefab do zumbi, o prefab do jogador, "Zumbis" e o NavMesh.
 - Os valores de neblina e luz guardados na cena (densidade 0,05, ambiente azulado) são só os do Editor parado. Em Play, o `AmbienteDoDia` reescreve tudo a cada quadro.
 
 ## A cidade em blocos (Parte 4)
@@ -109,6 +116,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - 6 a 10: as tampas `Cap_Neck`, `Cap_Elbow.L`, `Cap_Shoulder.L`, `Cap_Elbow.R` e `Cap_Shoulder.R`.
   - Os 6 primeiros são as regiões que podem cair. As tampas tampam o buraco que fica quando uma região sai.
   - Com o zumbi inteiro, o renderer recebe só 6 materiais, e os submeshes sem material (as tampas) não são desenhados.
+  - O prefab usa `Malhas/Zumbi_Inteiro.asset`: as 6 regiões juntas num submesh só, com um material (um draw call em vez de seis). É gerada pela montagem dos zumbis.
   - Na Parte 6, um script de editor vai gerar as variantes da malha, sem a região perdida e com a tampa dela, montadas pelo nome do submesh.
 - **Pedaços soltos (`NovoZombie_Gibs.fbx`):** `Gib_Arm.L/R` (o braço inteiro) e `Gib_Forearm.L/R`. São malhas estáticas na pose T, com a origem no ponto do corte e uma tampa de carne na ponta.
 
@@ -153,7 +161,10 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - na partida, o código e o número de jogadores ficam no canto, e ESC abre o menu (o mundo continua rodando);
   - `MenuOnline.Aberto` bloqueia os comandos do jogador.
 - **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot` e `-hora N`.
-  - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s, troca a lanterna a cada 5 s e registra no log, a cada 3 s, a hora que recebeu (`[robô] hora HH:MM`) e o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
+  - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s, troca a lanterna a cada 5 s e registra no log, a cada 3 s:
+    - a hora, os zumbis que recebe e a vida (`[robô] hora HH:MM, zumbis N (perto P, médio M), vida V`);
+    - o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
+  - Matar a build sem fechar a conexão deixa o jogador dela na partida até o tempo limite do transporte.
 - **Como testar com dois jogadores:**
   1. gere a build em `Builds/Teste/` (Development, ignorada pelo git);
   2. no Editor, em Play, hospede (com código, ou "Hospedar local" para testar sem internet);
@@ -166,6 +177,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - `MovimentoPrimeiraPessoa`: andar 2,0 m/s, correr 4,2 m/s, mirando 1,3 m/s, pulo; abaixo de y = −20, volta ao ponto de nascimento.
     - `ArmaJogador`: 12 balas, raycast do centro da tela, recarga com R, mira no botão direito (FOV 70 → 58), mira e munição na tela.
     - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga.
+    - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Depois de 8 s sem apanhar, recupera 2 por segundo (provisório, até o saque da Parte 7).
   - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
   - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (`Jogador_FP.fbx`, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
   - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a pistola de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
@@ -182,3 +194,59 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **"Pontos de nascimento":** 4 pontos na frente da casa da família, postos pela montagem da cidade.
   - **"Câmera de teste":** com `CameraDoMenu`, aparece no menu e some quando o jogador local nasce.
 - **Peças das armas nos modelos:** `Boca_TP` (filho de `weapon.R` no corpo) e `Boca_FP` (filho de `gun` nos braços) marcam a ponta do cano.
+
+## Os zumbis na cidade (Parte 5, `Assets/_Game/Scripts/Zombies/`)
+
+- **Montados por `Editor/MontagemDosZumbis`** (menu Zombie City Cleaner > Montar zumbis). Pode rodar de novo.
+- **O prefab `Zumbi.prefab`:**
+  - **Raiz (camada 7):** `Zumbi`, NavMeshAgent (desligado no prefab, raio 0,3), CapsuleCollider (1,75 m, raio 0,28), Rigidbody cinemático e AudioSource (a voz).
+  - **"Modelo":** o `NovoZombie.fbx` com o `Zombie.controller` e a malha `Zumbi_Inteiro`.
+  - **11 hitboxes nos ossos** (camada 7, com `Hitbox` e a `RegiaoDoCorpo`):
+    - a cabeça é uma esfera, medida na malha e levada para o osso pela bindpose;
+    - o resto são cápsulas de osso a osso: duas no tronco, braço e antebraço de cada lado, e coxa e canela de cada lado.
+    - A pose em que o FBX abre não é a T-pose; por isso as medidas usam os ossos e a bindpose, e não a posição dos vértices.
+  - O `Zumbi` não tem Update próprio: o `ZombieManager` faz um laço só para todos.
+- **"Zumbis" na cena:** um NetworkObject com o `ZombieManager` e o `BenchmarkDeZumbis`.
+  - Os filhos são 29 `PontoDeHorda` (quantidade e raio; ~130 zumbis na rua, na praça, no estacionamento, nas casas e nos 4 andares do prédio).
+  - `areasLivres`: a casa da família com o bunker e a frente dela não recebem zumbis.
+- **NavMesh ("Navegação"):** um `NavMeshSurface` pelos colisores, só no volume da cidade (128 × 24 × 128 m, dentro da barreira). Ele é refeito pela montagem dos zumbis e pela da cidade.
+- **Comportamento (`Zumbi`, só no anfitrião):**
+  - Parado e vagando: vaga devagar (0,55 m/s) em volta de onde está. Um em cada três para três vezes mais.
+  - Perceber, só no nível Perto:
+    - contato (2,5 m) e passos correndo (9 m) são na hora;
+    - a visão (140°, com linha de visada no cenário) enche um alerta, mais rápido de perto; desconfiado, ele para e vira para o jogador;
+    - o alcance da visão é de 16 m de dia e 6 m à noite; à noite, sobe para 13 m embaixo de um poste aceso (`PosteDeLuz.Ilumina`) e 26 m com a lanterna ligada;
+    - a lanterna apontada para ele denuncia mesmo de costas.
+  - Tiro (`ZombieManager.Barulho`, chamado pelo `JogadorRede` no anfitrião): até 12 m, o zumbi vai atrás de quem atirou; até 35 m, vai investigar o lugar.
+  - Perseguir a 1,1 m/s (o jogador andando já se afasta). Ataca a 1,3 m: 12 de dano a cada 1,4 s, com um "bote" (tronco e braços girados por cima da animação, no LateUpdate).
+  - Desistir com o alvo a mais de 20 m, ou 6 s sem vê-lo: vai até onde o viu, olha em volta e volta a vagar ali.
+  - Gemidos com trechos da `SomZombie1.mp3`: ao começar a perseguir e, de vez em quando, os que estão a até 18 m de quem escuta (no máximo 3 por segundo).
+  - Os números ficam em `ajustes` (`AjustesDeZumbi`), no Inspector do `ZombieManager`.
+- **LOD de IA (`ZombieManager`)**, pela distância até o jogador mais próximo, refeito a cada 0,2 s:
+
+  | Nível | Distância | IA | Navegação | Animação | Colisão e sombra |
+  |---|---|---|---|---|---|
+  | Perto | até 15 m | completa, a cada 0,1 s | agente, desvio médio | `CullUpdateTransforms` | hitboxes; a cápsula só segura o jogador (camada Ignore Raycast); com sombra |
+  | Médio | 15 a 40 m | só vagar e tiros, a cada 0,5 s | agente, desvio barato | `CullCompletely` | a cápsula é a hitbox; sem sombra |
+  | Longe | mais de 40 m | nenhuma (zumbi virtual, parado) | agente desligado | desligada | nada; não desenha |
+
+  - A histerese é de 3 m: para chegar mais perto é preciso passar a distância menos 3 m.
+  - Quem persegue, ataca ou levou tiro (`LevouTiro`, para a Parte 6) fica sempre no Perto.
+  - No máximo 40 zumbis pensam por quadro (`orcamentoPorQuadro`), em rodízio.
+  - Além de 65 m de quem joga na máquina, o zumbi não é desenhado.
+- **Pool:** `Repovoar…` devolve todos e cria de novo, 6 por quadro. `Zerar()` limpa estado, agente, voz e Animator (na Parte 6, também a vida e os membros). O ponto de nascimento é validado no NavMesh, na mesma altura do ponto.
+- **Rede (`ZombieManager.Rede.cs`):** os zumbis não são NetworkObjects.
+  - O anfitrião manda a cada cliente uma mensagem nomeada (`ZCC.Zumbis`, não confiável e em ordem) só com os zumbis perto dele, com a mesma histerese do LOD:
+    - até 15 m, 10 vezes por segundo;
+    - de 15 a 40 m, a cada 3 envios (em rodízio pelo Id);
+    - mais longe, não manda.
+  - Cada zumbi ocupa 12 bytes: Id, geração, posição em cm, giro, estado com a contagem de golpes e velocidade. São até 90 por mensagem (~1,1 KB, abaixo do limite de 1.300 bytes).
+  - No cliente, cada Id vira uma cópia (do mesmo pool), mostrada um pouco no passado (~0,2 s perto, ~0,5 s no médio) e interpolada. Ela some depois de 1,5 s sem notícias. A geração muda quando o Id volta do pool, e aí a cópia é trocada.
+  - A cópia toca o gemido quando o estado vira Perseguindo e o bote quando a contagem de golpes muda. As hitboxes dela seguem a distância de quem joga ali.
+  - Eventos que acontecem uma vez (membro arrancado, cabeça, morte) vão entrar na Parte 6, como RPCs com o Id.
+- **Na tela:** F3 mostra os zumbis por nível e a rede (KB/s) no anfitrião, ou as cópias no cliente.
+- **Benchmark (`BenchmarkDeZumbis`):**
+  - F9 no anfitrião, ou `-hospedar-local -benchmark -resultado caminho.md` na build (espera um cliente por até 25 s e fecha no fim).
+  - Troca a população por 50, 100, 250 e 500 zumbis espalhados e mede cada quantidade por 10 s, sem vsync e sem dano.
+  - Mede o quadro (média e p95), a thread principal, a IA + LOD, a rede, `Animators.Update`, `NavMeshManager`, `Physics.Simulate`, os draw calls e os KB/s por cliente. Os marcadores só funcionam no Editor e em builds Development.
+  - A tabela vai para `Benchmarks/Benchmark_Zumbis.md` (no Editor) e depois as hordas voltam.

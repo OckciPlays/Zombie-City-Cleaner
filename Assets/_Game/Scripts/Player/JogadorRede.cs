@@ -5,6 +5,7 @@ using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Zombies;
 
 namespace ZombieCityCleaner.Player
 {
@@ -44,6 +45,10 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>Quantos tiros deste jogador chegaram pela rede (para testes).</summary>
         public int TirosRecebidos { get; private set; }
+        /// <summary>Velocidade no chão (m/s): a real no dono, a medida pela posição recebida nos outros.</summary>
+        public float Velocidade => _velocidade;
+        public LanternaJogador Lanterna { get; private set; }
+        public VidaJogador Vida { get; private set; }
 
         public static JogadorRede Local { get; private set; }
         public static readonly List<JogadorRede> Todos = new List<JogadorRede>();
@@ -60,6 +65,8 @@ namespace ZombieCityCleaner.Player
         {
             Todos.Add(this);
             _corpoFisico = GetComponent<CharacterController>();
+            Lanterna = GetComponent<LanternaJogador>();
+            Vida = GetComponent<VidaJogador>();
             if (IsServer) Cor.Value = CorLivre();
             Cor.OnValueChanged += AoMudarCor;
             AplicarCor(Cor.Value);
@@ -160,6 +167,7 @@ namespace ZombieCityCleaner.Player
         public void AnunciarTiro(bool acertou, Vector3 ponto, Vector3 normal)
         {
             animadorCorpo.SetTrigger(FireId);
+            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
             TiroRpc(acertou, ponto, normal);
         }
 
@@ -167,6 +175,8 @@ namespace ZombieCityCleaner.Player
         void TiroRpc(bool acertou, Vector3 ponto, Vector3 normal)
         {
             TirosRecebidos++;
+            // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
+            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
             animadorCorpo.SetTrigger(FireId);
             Efeitos.Clarao(bocaCorpo, 0);
             Efeitos.Som(Efeitos.Tiro, bocaCorpo.position);

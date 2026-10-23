@@ -68,6 +68,7 @@ namespace ZombieCityCleaner.EditorTools
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
             }
             PontosNaCasaDaFamilia(cena);
+            MontagemDosZumbis.AssarNavegacao(cena);   // a cidade mudou: o NavMesh dos zumbis precisa ser refeito
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             AssetDatabase.SaveAssets();
@@ -675,7 +676,7 @@ namespace ZombieCityCleaner.EditorTools
             }
         }
 
-        static void PontosNaCasaDaFamilia(UnityEngine.SceneManagement.Scene cena)
+        internal static void PontosNaCasaDaFamilia(UnityEngine.SceneManagement.Scene cena)
         {
             var pontos = cena.GetRootGameObjects().FirstOrDefault(r => r.name == "Pontos de nascimento");
             if (pontos == null) return;

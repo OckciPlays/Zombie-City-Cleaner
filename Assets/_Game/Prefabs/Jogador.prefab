@@ -413,6 +413,7 @@ GameObject:
   - component: {fileID: 4766829551984611367}
   - component: {fileID: 8739591328639826434}
   - component: {fileID: 3063724150362686526}
+  - component: {fileID: 7424524915852960560}
   m_Layer: 0
   m_Name: Jogador
   m_TagString: Untagged
@@ -475,7 +476,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1252970292
+  GlobalObjectIdHash: 3909549882
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -635,6 +636,22 @@ MonoBehaviour:
   posicaoNoPeito: {x: 0.08, y: 1.28, z: 0.22}
   inclinacao: 9
   atraso: 9
+--- !u!114 &7424524915852960560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7478600392428893789}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddbc874db36f7604a9af6055f538bd04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Player.VidaJogador
+  ShowTopMostFoldoutHeaderGroup: 1
+  vidaMaxima: 100
+  recuperacao: 2
+  esperaParaRecuperar: 8
 --- !u!1001 &3603273135457184940
 PrefabInstance:
   m_ObjectHideFlags: 0

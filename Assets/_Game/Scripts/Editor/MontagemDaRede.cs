@@ -50,7 +50,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = camada;
         }
 
-        static GameObject MontarPrefab()
+        /// <summary>Só o prefab do jogador (a montagem dos zumbis usa isto para dar a vida ao jogador).</summary>
+        internal static GameObject MontarPrefab()
         {
             var raiz = new GameObject("Jogador");
             var cc = raiz.AddComponent<CharacterController>();
@@ -65,6 +66,7 @@ namespace ZombieCityCleaner.EditorTools
             var movimento = raiz.AddComponent<MovimentoPrimeiraPessoa>();
             var arma = raiz.AddComponent<ArmaJogador>();
             var lanterna = raiz.AddComponent<LanternaJogador>();
+            raiz.AddComponent<VidaJogador>();
 
             // corpo (o que os outros veem; para o dono vira só sombra)
             var corpo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador.fbx"));
@@ -222,6 +224,7 @@ namespace ZombieCityCleaner.EditorTools
                 p.SetParent(pontos.transform, false);
                 p.position = posicoes[i];
             }
+            MontagemDaCidade.PontosNaCasaDaFamilia(cena);   // com a cidade montada, os pontos vão para a frente da casa da família
 
             // a câmera de teste vira a câmera do menu (some quando o jogador local nasce)
             var camMenu = Camera.main;
