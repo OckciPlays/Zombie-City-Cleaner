@@ -10,20 +10,34 @@ using ZombieCityCleaner.World;
 namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
-    /// Monta a cidade em blocos (Parte 4): ruas, calçadas, o prédio de 4 andares, as 5 casas (uma é a da família,
-    /// com o bunker embaixo), carros abandonados, cercas, postes, o anel de pinheiros e a barreira invisível.
-    /// Tudo é caixa com cor sólida; a arte final (Parte 8) troca os blocos pelos modelos.
+    /// Monta a cidade (Parte 4): ruas, calçadas, o prédio de 4 andares, as 5 casas (uma é a da família, com o bunker
+    /// embaixo), carros abandonados, cercas, postes, o anel de pinheiros e a barreira invisível.
+    /// A arte final (Parte 8) trocou os blocos pelos modelos do Blender (pasta de arte, `Modelo 3D/Cidade`): objetos de
+    /// rua, casas, prédio, bunker, móveis e o chão. O chão (ruas, calçadas, grama, praça, estacionamento) ainda colide
+    /// com caixas invisíveis, nas mesmas alturas do visual.
     /// Menu: Zombie City Cleaner > Montar cidade em blocos. Pode rodar de novo: apaga e refaz a raiz "Cidade".
     /// </summary>
     public static class MontagemDaCidade
     {
         const string PastaMateriais = "Assets/_Game/Art/Materials/Blocos";
         const string PastaMalhas = "Assets/_Game/Art/Meshes";
-        const float AlturaParede = 2.8f, Espessura = 0.2f, Porta = 1.1f, AlturaPorta = 2.1f;
+        const string FbxRua = "Assets/_Game/Art/Cidade/Cidade_Rua.fbx";
+        const string FbxCasas = "Assets/_Game/Art/Cidade/Cidade_Casas.fbx";
+        const string FbxCasasColisao = "Assets/_Game/Art/Cidade/Cidade_Casas_Colisao.fbx";
+        const string FbxPredio = "Assets/_Game/Art/Cidade/Cidade_Predio.fbx";
+        const string FbxPredioColisao = "Assets/_Game/Art/Cidade/Cidade_Predio_Colisao.fbx";
+        const string FbxMoveis = "Assets/_Game/Art/Cidade/Cidade_Moveis.fbx";
+        const string FbxBunker = "Assets/_Game/Art/Cidade/Cidade_Bunker.fbx";
+        const string FbxBunkerColisao = "Assets/_Game/Art/Cidade/Cidade_Bunker_Colisao.fbx";
+        const string FbxChao = "Assets/_Game/Art/Cidade/Cidade_Chao.fbx";
+        const string CaminhoPaleta = "Assets/_Game/Art/Paleta.png";
+        const string CaminhoMaterialCidade = "Assets/_Game/Art/Materials/Cidade.mat";
+        const float Porta = 1.1f;      // largura das portas das casas (a mesma do cidade_casas.py)
 
         static Dictionary<string, Material> _m;
+        static Dictionary<string, Mesh> _malhas;
         static Rect? _buracoNoChao;
-        static Mesh _prisma, _cone, _pinheiro;
+        static Mesh _cone;
         static System.Random _rng;
 
         [MenuItem("Zombie City Cleaner/Montar cidade em blocos")]
@@ -34,6 +48,7 @@ namespace ZombieCityCleaner.EditorTools
             _rng = new System.Random(1987);
             Materiais();
             Malhas();
+            ArteDaCidade();
 
             var cena = EditorSceneManager.GetActiveScene();
             foreach (var nome in new[] { "Cidade", "Teste (temporário)" })
@@ -47,17 +62,19 @@ namespace ZombieCityCleaner.EditorTools
             Ruas(raiz);
             Postes(raiz);
             Predio(Grupo(raiz, "Prédio"), new Vector3(20f, 0f, 21f), 0f);
-            Casa(Grupo(raiz, "Casa 1"), new Vector3(-27f, 0f, 19f), 0f, 10f, 8f, "Parede_Verde", false);
-            Casa(Grupo(raiz, "Casa 2"), new Vector3(-12f, 0f, 23f), 0f, 9f, 8f, "Parede_Bege", false);
-            Casa(Grupo(raiz, "Casa da família"), new Vector3(-20f, 0f, -18f), 180f, 12f, 10f, "Parede_Azul", true);
-            Casa(Grupo(raiz, "Casa 4"), new Vector3(13f, 0f, -14f), 180f, 9f, 8f, "Parede_Bege", false);
-            Casa(Grupo(raiz, "Casa 5"), new Vector3(28f, 0f, -26f), 270f, 10f, 8f, "Parede_Verde", false);
+            // o tamanho (W × D) tem de bater com o CASAS do cidade_casas.py, que fez o modelo de cada uma
+            Casa(Grupo(raiz, "Casa 1"), "Casa_1", new Vector3(-27f, 0f, 19f), 0f, 10f, 8f, false);
+            Casa(Grupo(raiz, "Casa 2"), "Casa_2", new Vector3(-12f, 0f, 23f), 0f, 9f, 8f, false);
+            Casa(Grupo(raiz, "Casa da família"), "Casa_Familia", new Vector3(-20f, 0f, -18f), 180f, 12f, 10f, true);
+            Casa(Grupo(raiz, "Casa 4"), "Casa_4", new Vector3(13f, 0f, -14f), 180f, 9f, 8f, false);
+            Casa(Grupo(raiz, "Casa 5"), "Casa_5", new Vector3(28f, 0f, -26f), 270f, 10f, 8f, false);
             Praca(Grupo(raiz, "Praça"), new Vector3(24f, 0f, -12f));
             Estacionamento(Grupo(raiz, "Estacionamento"), new Vector3(10f, 0f, 33f));
             Carros(Grupo(raiz, "Carros"));
             Cercas(Grupo(raiz, "Cercas"));
             Arvores(Grupo(raiz, "Árvores"));
             Barricadas(Grupo(raiz, "Barricadas"));
+            ObjetosDeRua(Grupo(raiz, "Objetos de rua"));
             Pinheiros(Grupo(raiz, "Pinheiros"));
             Barreira(Grupo(raiz, "Barreira invisível"));
             Chao(raiz);   // por último: precisa do buraco da escada do bunker, que a casa da família marca
@@ -65,44 +82,65 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var t in raiz.GetComponentsInChildren<Transform>(true))
             {
                 if (t.GetComponent<Light>() != null || t.GetComponent<PosteDeLuz>() != null || t.name == "Cone de luz") continue;
-                GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+                var flags = StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic;
+                if (EscondeOQueEstaAtras(t)) flags |= StaticEditorFlags.OccluderStatic;
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
             }
             PontosNaCasaDaFamilia(cena);
             MontagemDosZumbis.AssarNavegacao(cena);   // a cidade mudou: o NavMesh dos zumbis precisa ser refeito
+            AssarOclusao();
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             AssetDatabase.SaveAssets();
             Debug.Log("Cidade em blocos montada.");
         }
 
+        // ------------------------------------------------------------------ oclusão
+
+        /// <summary>
+        /// Só a arquitetura grande esconde o que está atrás dela (Occluder): as casas, o prédio, o bunker e os pedaços do
+        /// chão (que escondem o bunker de quem está na rua). O resto é só escondido (Occludee): objeto pequeno como
+        /// oclusor só deixa a oclusão mais lenta de assar e maior, sem esconder nada.
+        /// </summary>
+        static bool EscondeOQueEstaAtras(Transform t)
+        {
+            var mf = t.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return false;
+            string n = mf.sharedMesh.name;
+            return n.StartsWith("Casa_") || n == "Predio" || n == "Bunker" || n.StartsWith("Chao_");
+        }
+
+        /// <summary>
+        /// Assa a oclusão da cena (Umbra): o que está atrás de uma casa, do prédio ou embaixo do chão não é desenhado.
+        /// Fica num arquivo junto da cena; precisa ser refeita sempre que a cidade é montada de novo (por isso fica aqui).
+        /// </summary>
+        static void AssarOclusao()
+        {
+            StaticOcclusionCulling.smallestOccluder = 3f;     // as paredes das casas e do prédio
+            StaticOcclusionCulling.smallestHole = 0.25f;      // portas e janelas deixam ver através
+            StaticOcclusionCulling.backfaceThreshold = 100f;
+            var t0 = System.DateTime.Now;
+            StaticOcclusionCulling.Compute();
+            Debug.Log($"Oclusão assada em {(System.DateTime.Now - t0).TotalSeconds:F1} s.");
+        }
+
         // ------------------------------------------------------------------ materiais e malhas
 
         static void Materiais()
         {
+            // a cidade inteira usa o material "Cidade" (a paleta); aqui só ficaram a lente dos postes (que acende) e o cone
             _m = new Dictionary<string, Material>();
-            var cores = new Dictionary<string, string>
-            {
-                ["Asfalto"] = "#3A3D42", ["Calcada"] = "#8A8A84", ["MeioFio"] = "#B8B29A", ["Grama"] = "#4B5240", ["Terra"] = "#5A4B3C",
-                ["Parede_Verde"] = "#6E7B6A", ["Parede_Bege"] = "#8C7B6A", ["Parede_Azul"] = "#5E6B7A", ["Parede_Interna"] = "#A8A49A",
-                ["Piso"] = "#6E655A", ["Teto"] = "#B8B5AC", ["Telhado"] = "#4A3B38", ["Telhado_Azul"] = "#3E4A52", ["Tijolo"] = "#7A4A3C",
-                ["Concreto"] = "#6A6A64", ["Bunker"] = "#5E5E58", ["Batente"] = "#D8D2C0", ["Madeira"] = "#5A4636", ["Cerca"] = "#8C7B6A",
-                ["Pinheiro"] = "#2F3D33", ["Tronco"] = "#4A3A2E", ["Copa"] = "#3E4A38", ["Poste"] = "#2E3134", ["Lampada"] = "#FFB46B",
-                ["Carro_Azul"] = "#5E6B7A", ["Carro_Vinho"] = "#6B3434", ["Carro_Cinza"] = "#8C8A80", ["Carro_Verde"] = "#3E4A3A",
-                ["Vidro"] = "#1E2A30", ["Pneu"] = "#1A1A1C", ["Barreira"] = "#B8B29A", ["Faixa"] = "#B8A24A",
-            };
-            foreach (var kv in cores)
-            {
-                string caminho = $"{PastaMateriais}/{kv.Key}.mat";
-                var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
-                if (m == null) { m = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(m, caminho); }
-                ColorUtility.TryParseHtmlString(kv.Value, out var c);
-                m.SetColor("_BaseColor", c);
-                m.SetFloat("_Smoothness", kv.Key == "Vidro" ? 0.6f : kv.Key == "Asfalto" ? 0.2f : 0.08f);
-                m.enableInstancing = true;
-                if (kv.Key == "Lampada") { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", c * 2.5f); m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; }
-                EditorUtility.SetDirty(m);
-                _m[kv.Key] = m;
-            }
+            string caminhoLampada = $"{PastaMateriais}/Lampada.mat";
+            var lampada = AssetDatabase.LoadAssetAtPath<Material>(caminhoLampada);
+            if (lampada == null) { lampada = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(lampada, caminhoLampada); }
+            ColorUtility.TryParseHtmlString("#FFB46B", out var corDaLampada);
+            lampada.SetColor("_BaseColor", corDaLampada);
+            lampada.SetFloat("_Smoothness", 0.08f);
+            lampada.enableInstancing = true;
+            lampada.EnableKeyword("_EMISSION"); lampada.SetColor("_EmissionColor", corDaLampada * 2.5f);
+            lampada.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            EditorUtility.SetDirty(lampada);
+            _m["Lampada"] = lampada;
             // cone de luz dos postes: aditivo, dos dois lados, mais forte perto da lâmpada
             string caminhoCone = $"{PastaMateriais}/ConeDeLuz.mat";
             var cone = AssetDatabase.LoadAssetAtPath<Material>(caminhoCone);
@@ -149,20 +187,6 @@ namespace ZombieCityCleaner.EditorTools
 
         static void Malhas()
         {
-            // prisma do telhado: base 1x1 (x, z) em y = 0, cumeeira no centro em y = 1, ao longo de z
-            var p = new Mesh { name = "Prisma" };
-            var v = new List<Vector3>(); var tri = new List<int>();
-            void Face(params Vector3[] q)
-            {
-                int b = v.Count; v.AddRange(q);
-                for (int i = 1; i + 1 < q.Length; i++) { tri.Add(b); tri.Add(b + i); tri.Add(b + i + 1); }
-            }
-            Vector3 a0 = new Vector3(-0.5f, 0, -0.5f), a1 = new Vector3(0.5f, 0, -0.5f), b0 = new Vector3(-0.5f, 0, 0.5f), b1 = new Vector3(0.5f, 0, 0.5f);
-            Vector3 c0 = new Vector3(0, 1, -0.5f), c1 = new Vector3(0, 1, 0.5f);
-            Face(a0, c0, c1, b0); Face(b1, c1, c0, a1); Face(a1, c0, a0); Face(b0, c1, b1); Face(a0, b0, b1, a1);
-            p.SetVertices(v); p.SetTriangles(tri, 0); p.RecalculateNormals(); p.RecalculateBounds();
-            _prisma = SalvarMalha(p, "Prisma");
-
             // cone aberto: ponta em y = 0, base de raio 1 em y = -1; v = 1 na ponta
             var c = new Mesh { name = "ConeDeLuz" };
             var cv = new List<Vector3>(); var cuv = new List<Vector2>(); var ct = new List<int>();
@@ -176,30 +200,78 @@ namespace ZombieCityCleaner.EditorTools
             for (int i = 0; i < lados; i++) { int b = i * 2; ct.AddRange(new[] { b, b + 3, b + 1 }); }
             c.SetVertices(cv); c.SetUVs(0, cuv); c.SetTriangles(ct, 0); c.RecalculateNormals(); c.RecalculateBounds();
             _cone = SalvarMalha(c, "ConeDeLuz");
+        }
 
-            // pinheiro: tronco (submalha 0) e três camadas de copa piramidal de 8 lados (submalha 1)
-            var pm = new Mesh { name = "Pinheiro" };
-            var pv = new List<Vector3>(); var t0 = new List<int>(); var t1 = new List<int>();
-            void Piramide(List<int> alvo, float baseY, float raio, float altura, int n, float giro)
+        // ------------------------------------------------------------------ arte final (Parte 8)
+
+        /// <summary>
+        /// Os modelos do Blender (`Modelo 3D/Cidade` na pasta de arte): a importação do FBX, o material único "Cidade"
+        /// e as malhas por nome. O material é a paleta, com a suavidade de cada cor guardada no alfa.
+        /// </summary>
+        static void ArteDaCidade()
+        {
+            var paleta = (TextureImporter)AssetImporter.GetAtPath(CaminhoPaleta);
+            if (paleta.alphaIsTransparency || paleta.mipmapEnabled || paleta.filterMode != FilterMode.Point || paleta.textureCompression != TextureImporterCompression.Uncompressed)
             {
-                for (int i = 0; i < n; i++)
-                {
-                    float a = giro + i * Mathf.PI * 2f / n, b = giro + (i + 1) * Mathf.PI * 2f / n;
-                    int k = pv.Count;
-                    pv.Add(new Vector3(0, baseY + altura, 0)); pv.Add(new Vector3(Mathf.Cos(b) * raio, baseY, Mathf.Sin(b) * raio)); pv.Add(new Vector3(Mathf.Cos(a) * raio, baseY, Mathf.Sin(a) * raio));
-                    alvo.AddRange(new[] { k, k + 1, k + 2 });
-                    k = pv.Count;
-                    pv.Add(new Vector3(0, baseY, 0)); pv.Add(new Vector3(Mathf.Cos(a) * raio, baseY, Mathf.Sin(a) * raio)); pv.Add(new Vector3(Mathf.Cos(b) * raio, baseY, Mathf.Sin(b) * raio));
-                    alvo.AddRange(new[] { k, k + 1, k + 2 });
-                }
+                // 16 × 16 com um quadradinho por cor: sem filtro, sem mipmap (misturaria as cores) e sem compressão
+                paleta.alphaIsTransparency = false; paleta.mipmapEnabled = false; paleta.filterMode = FilterMode.Point;
+                paleta.textureCompression = TextureImporterCompression.Uncompressed;
+                paleta.SaveAndReimport();
             }
-            Piramide(t0, 0f, 0.25f, 3.5f, 6, 0f);
-            Piramide(t1, 1.6f, 2.3f, 3.2f, 8, 0.2f);
-            Piramide(t1, 3.4f, 1.8f, 2.8f, 8, 0.6f);
-            Piramide(t1, 5.0f, 1.2f, 2.6f, 8, 0.1f);
-            pm.subMeshCount = 2; pm.SetVertices(pv); pm.SetTriangles(t0, 0); pm.SetTriangles(t1, 1);
-            pm.RecalculateNormals(); pm.RecalculateBounds();
-            _pinheiro = SalvarMalha(pm, "Pinheiro");
+            _malhas = new Dictionary<string, Mesh>();
+            foreach (var (caminho, colisao) in new[] { (FbxRua, false), (FbxCasas, false), (FbxCasasColisao, true), (FbxPredio, false), (FbxPredioColisao, true),
+                                                       (FbxMoveis, false), (FbxBunker, false), (FbxBunkerColisao, true), (FbxChao, false) })
+            {
+                var fbx = (ModelImporter)AssetImporter.GetAtPath(caminho);
+                // visual: UV de lightmap, para a luz assada. Colisão: legível (o MeshCollider cozinha a malha em Play)
+                if (fbx.materialImportMode != ModelImporterMaterialImportMode.None || fbx.generateSecondaryUV == colisao || fbx.isReadable != colisao || fbx.importAnimation)
+                {
+                    fbx.materialImportMode = ModelImporterMaterialImportMode.None;
+                    fbx.generateSecondaryUV = !colisao;
+                    fbx.isReadable = colisao;
+                    fbx.importAnimation = false; fbx.animationType = ModelImporterAnimationType.None;
+                    fbx.importCameras = false; fbx.importLights = false;
+                    fbx.SaveAndReimport();
+                }
+                foreach (var m in AssetDatabase.LoadAllAssetsAtPath(caminho).OfType<Mesh>()) _malhas[m.name] = m;
+            }
+
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(CaminhoMaterialCidade);
+            if (mat == null) { mat = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(mat, CaminhoMaterialCidade); }
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(CaminhoPaleta));
+            mat.SetColor("_BaseColor", Color.white);
+            mat.SetFloat("_SmoothnessTextureChannel", 1f);   // suavidade = alfa da paleta × _Smoothness
+            mat.EnableKeyword("_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A");
+            mat.SetFloat("_Smoothness", 1f);
+            mat.SetFloat("_Metallic", 0f);
+            mat.enableInstancing = true;
+            EditorUtility.SetDirty(mat);
+            _m["Cidade"] = mat;
+        }
+
+        /// <summary>Um modelo dos FBX da cidade (pelo nome da malha), com o material da cidade. Sem colisor.</summary>
+        static GameObject Modelo(Transform pai, string malha, Vector3 pos, float yaw = 0f, string nome = null)
+        {
+            if (!_malhas.TryGetValue(malha, out var m)) throw new System.Exception($"A malha {malha} não está nos FBX da cidade (Art/Cidade).");
+            var go = new GameObject(nome ?? malha);
+            go.transform.SetParent(pai, false);
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            go.AddComponent<MeshFilter>().sharedMesh = m;
+            go.AddComponent<MeshRenderer>().sharedMaterial = _m["Cidade"];
+            return go;
+        }
+
+        static BoxCollider Colisor(GameObject go, Vector3 centro, Vector3 tamanho)
+        {
+            var c = go.AddComponent<BoxCollider>(); c.center = centro; c.size = tamanho; return c;
+        }
+
+        /// <summary>Uma caixa do tamanho da malha (carros, barreiras, lixeiras: peças cheias).</summary>
+        static BoxCollider ColisorDaMalha(GameObject go)
+        {
+            var b = go.GetComponent<MeshFilter>().sharedMesh.bounds;
+            return Colisor(go, b.center, b.size);
         }
 
         // ------------------------------------------------------------------ peças básicas
@@ -209,97 +281,48 @@ namespace ZombieCityCleaner.EditorTools
             var g = new GameObject(nome).transform; g.SetParent(pai, false); return g;
         }
 
-        static GameObject Caixa(Transform pai, string nome, Vector3 centro, Vector3 tamanho, string mat, float yaw = 0f, bool colisor = true)
+        /// <summary>
+        /// Caixa só de colisão (sem renderer): o chão, as calçadas, a praça e o estacionamento. O que se vê deles vem do
+        /// Cidade_Chao.fbx, feito com as mesmas alturas (rua no 0, calçada em 0,12, grama em -0,02...).
+        /// </summary>
+        static GameObject Bloco(Transform pai, string nome, Vector3 centro, Vector3 tamanho)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = nome;
+            var go = new GameObject(nome);
             go.transform.SetParent(pai, false);
             go.transform.localPosition = centro;
-            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            go.transform.localScale = tamanho;
-            go.GetComponent<MeshRenderer>().sharedMaterial = _m[mat];
-            if (!colisor) Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.AddComponent<BoxCollider>().size = tamanho;
             return go;
         }
 
-        /// <summary>Abertura numa parede: posição do começo ao longo da parede, largura, altura de baixo e de cima.</summary>
-        struct Abertura
+        /// <summary>Laje retangular de colisão (x0..x1, z0..z1) com o topo em y e um buraco opcional.</summary>
+        static void Laje(Transform pai, string nome, float x0, float x1, float z0, float z1, float topo, float espessura, Rect? buraco = null)
         {
-            public float inicio, largura, baixo, alto;
-            public Abertura(float inicio, float largura, float baixo, float alto) { this.inicio = inicio; this.largura = largura; this.baixo = baixo; this.alto = alto; }
-            public static Abertura Porta(float centro) => new Abertura(centro - MontagemDaCidade.Porta / 2f, MontagemDaCidade.Porta, 0f, AlturaPorta);
-            public static Abertura Janela(float centro, float largura = 1.2f) => new Abertura(centro - largura / 2f, largura, 0.9f, 2.1f);
-        }
-
-        /// <summary>Parede reta de a até b (no plano), com portas e janelas. As partes sólidas viram caixas.</summary>
-        static void Parede(Transform pai, string nome, Vector2 a, Vector2 b, float baseY, float altura, string mat, params Abertura[] aberturas)
-        {
-            Vector2 d = b - a; float comprimento = d.magnitude; Vector2 u = d / comprimento;
-            float yaw = -Mathf.Atan2(u.y, u.x) * Mathf.Rad2Deg;
-            void Pedaco(float s0, float s1, float y0, float y1)
-            {
-                if (s1 - s0 < 0.01f || y1 - y0 < 0.01f) return;
-                Vector2 m = a + u * ((s0 + s1) / 2f);
-                Caixa(pai, nome, new Vector3(m.x, baseY + (y0 + y1) / 2f, m.y), new Vector3(s1 - s0, y1 - y0, Espessura), mat, yaw);
-            }
-            float s = 0f;
-            foreach (var ab in aberturas.OrderBy(x => x.inicio))
-            {
-                Pedaco(s, ab.inicio, 0f, altura);
-                Pedaco(ab.inicio, ab.inicio + ab.largura, 0f, ab.baixo);
-                Pedaco(ab.inicio, ab.inicio + ab.largura, ab.alto, altura);
-                if (ab.baixo > 0.01f) Caixa(pai, "Peitoril", new Vector3((a + u * (ab.inicio + ab.largura / 2f)).x, baseY + ab.baixo - 0.03f, (a + u * (ab.inicio + ab.largura / 2f)).y),
-                    new Vector3(ab.largura, 0.06f, Espessura + 0.1f), "Batente", yaw, false);
-                s = ab.inicio + ab.largura;
-            }
-            Pedaco(s, comprimento, 0f, altura);
-        }
-
-        /// <summary>Laje retangular (x0..x1, z0..z1) com o topo em y e um buraco opcional.</summary>
-        static void Laje(Transform pai, string nome, float x0, float x1, float z0, float z1, float topo, float espessura, string mat, Rect? buraco = null)
-        {
-            // o buraco encostado na borda deixa uma faixa de largura zero: escala zero dá normais infinitas no shader
-            // (o pixel vira NaN e o bloom espalha um clarão branco), então a faixa vazia não é criada
+            // o buraco encostado na borda deixaria uma faixa de largura zero: não é criada
             if (x1 - x0 < 0.01f || z1 - z0 < 0.01f) return;
             if (buraco == null)
             {
-                Caixa(pai, nome, new Vector3((x0 + x1) / 2f, topo - espessura / 2f, (z0 + z1) / 2f), new Vector3(x1 - x0, espessura, z1 - z0), mat);
+                Bloco(pai, nome, new Vector3((x0 + x1) / 2f, topo - espessura / 2f, (z0 + z1) / 2f), new Vector3(x1 - x0, espessura, z1 - z0));
                 return;
             }
             var h = buraco.Value;
-            Laje(pai, nome, x0, x1, z0, h.yMin, topo, espessura, mat);
-            Laje(pai, nome, x0, x1, h.yMax, z1, topo, espessura, mat);
-            Laje(pai, nome, x0, h.xMin, h.yMin, h.yMax, topo, espessura, mat);
-            Laje(pai, nome, h.xMax, x1, h.yMin, h.yMax, topo, espessura, mat);
-        }
-
-        /// <summary>Escada reta: degraus maciços saindo de (x, y, z) na direção dir (+1/-1 em z), com largura em x.</summary>
-        static void Escada(Transform pai, float xCentro, float largura, float y0, float z0, int degraus, float altura, float piso, int dir, string mat)
-        {
-            for (int i = 0; i < degraus; i++)
-            {
-                float topo = y0 + altura * (i + 1);
-                float zc = z0 + dir * (piso * i + piso / 2f);
-                float alturaBloco = Mathf.Min(topo - y0 + 0.02f, 0.6f);
-                Caixa(pai, "Degrau", new Vector3(xCentro, topo - alturaBloco / 2f, zc), new Vector3(largura, alturaBloco, piso), mat);
-            }
-        }
-
-        static void Telhado(Transform pai, Vector3 centro, float largura, float profundidade, float altura, string mat)
-        {
-            var go = new GameObject("Telhado");
-            go.transform.SetParent(pai, false);
-            go.transform.localPosition = centro;
-            go.transform.localScale = new Vector3(largura, altura, profundidade);
-            go.AddComponent<MeshFilter>().sharedMesh = _prisma;
-            go.AddComponent<MeshRenderer>().sharedMaterial = _m[mat];
+            Laje(pai, nome, x0, x1, z0, h.yMin, topo, espessura);
+            Laje(pai, nome, x0, x1, h.yMax, z1, topo, espessura);
+            Laje(pai, nome, x0, h.xMin, h.yMin, h.yMax, topo, espessura);
+            Laje(pai, nome, h.xMax, x1, h.yMin, h.yMax, topo, espessura);
         }
 
         // ------------------------------------------------------------------ terreno, ruas e calçadas
 
+        /// <summary>
+        /// A colisão da grama (com o buraco da escada do bunker) e o visual do chão inteiro: os 25 pedaços "Chao_i_j" do
+        /// Cidade_Chao.fbx (ruas, calçadas, grama, entulho, coreto, estacionamento), já nas coordenadas do mundo.
+        /// </summary>
         static void Chao(Transform raiz)
         {
-            Laje(raiz, "Chão", -110f, 110f, -110f, 110f, -0.02f, 0.1f, "Grama", _buracoNoChao);
+            Laje(raiz, "Chão", -110f, 110f, -110f, 110f, -0.02f, 0.1f, _buracoNoChao);
+            var arte = Grupo(raiz, "Chão (arte)");
+            foreach (var nome in _malhas.Keys.Where(n => n.StartsWith("Chao_")).OrderBy(n => n))
+                Modelo(arte, nome, Vector3.zero);
         }
 
         static readonly float[] Linhas = { -40f, 0f, 40f };
@@ -309,23 +332,17 @@ namespace ZombieCityCleaner.EditorTools
             var g = Grupo(raiz, "Ruas");
             const float meia = 4f, fim = 44f;
             // anel e cruzamento central
-            foreach (float x in Linhas) Caixa(g, "Rua", new Vector3(x, -0.05f, 0f), new Vector3(meia * 2f, 0.1f, fim * 2f), "Asfalto");
+            foreach (float x in Linhas) Bloco(g, "Rua", new Vector3(x, -0.05f, 0f), new Vector3(meia * 2f, 0.1f, fim * 2f));
             foreach (float z in Linhas)
             {
-                Caixa(g, "Rua", new Vector3(-22f, -0.049f, z), new Vector3(36f, 0.1f, meia * 2f), "Asfalto");
-                Caixa(g, "Rua", new Vector3(22f, -0.049f, z), new Vector3(36f, 0.1f, meia * 2f), "Asfalto");
+                Bloco(g, "Rua", new Vector3(-22f, -0.049f, z), new Vector3(36f, 0.1f, meia * 2f));
+                Bloco(g, "Rua", new Vector3(22f, -0.049f, z), new Vector3(36f, 0.1f, meia * 2f));
             }
             // saídas da cidade (bloqueadas mais à frente)
-            Caixa(g, "Saída norte", new Vector3(0f, -0.05f, 54f), new Vector3(meia * 2f, 0.1f, 20f), "Asfalto");
-            Caixa(g, "Saída sul", new Vector3(0f, -0.05f, -54f), new Vector3(meia * 2f, 0.1f, 20f), "Asfalto");
-            Caixa(g, "Saída leste", new Vector3(54f, -0.05f, 0f), new Vector3(20f, 0.1f, meia * 2f), "Asfalto");
-            Caixa(g, "Saída oeste", new Vector3(-54f, -0.05f, 0f), new Vector3(20f, 0.1f, meia * 2f), "Asfalto");
-            // faixas amarelas tracejadas no meio das ruas principais
-            for (float t = -60f; t <= 60f; t += 6f)
-            {
-                if (Mathf.Abs(t) > 5f) Caixa(g, "Faixa", new Vector3(0f, 0.005f, t), new Vector3(0.15f, 0.01f, 3f), "Faixa", 0f, false);
-                if (Mathf.Abs(t) > 5f) Caixa(g, "Faixa", new Vector3(t, 0.005f, 0f), new Vector3(3f, 0.01f, 0.15f), "Faixa", 0f, false);
-            }
+            Bloco(g, "Saída norte", new Vector3(0f, -0.05f, 54f), new Vector3(meia * 2f, 0.1f, 20f));
+            Bloco(g, "Saída sul", new Vector3(0f, -0.05f, -54f), new Vector3(meia * 2f, 0.1f, 20f));
+            Bloco(g, "Saída leste", new Vector3(54f, -0.05f, 0f), new Vector3(20f, 0.1f, meia * 2f));
+            Bloco(g, "Saída oeste", new Vector3(-54f, -0.05f, 0f), new Vector3(20f, 0.1f, meia * 2f));
             // calçadas: um anel em volta de cada quarteirão (2,5 m de largura, 12 cm acima da rua)
             var calcadas = Grupo(raiz, "Calçadas");
             for (int i = 0; i < 2; i++)
@@ -339,10 +356,10 @@ namespace ZombieCityCleaner.EditorTools
         static void AnelDeCalcada(Transform pai, float x0, float x1, float z0, float z1)
         {
             const float w = 2.5f, y = 0.06f, h = 0.12f;
-            Caixa(pai, "Calçada", new Vector3((x0 + x1) / 2f, y, z0 + w / 2f), new Vector3(x1 - x0, h, w), "Calcada");
-            Caixa(pai, "Calçada", new Vector3((x0 + x1) / 2f, y, z1 - w / 2f), new Vector3(x1 - x0, h, w), "Calcada");
-            Caixa(pai, "Calçada", new Vector3(x0 + w / 2f, y, (z0 + z1) / 2f), new Vector3(w, h, z1 - z0 - 2 * w), "Calcada");
-            Caixa(pai, "Calçada", new Vector3(x1 - w / 2f, y, (z0 + z1) / 2f), new Vector3(w, h, z1 - z0 - 2 * w), "Calcada");
+            Bloco(pai, "Calçada", new Vector3((x0 + x1) / 2f, y, z0 + w / 2f), new Vector3(x1 - x0, h, w));
+            Bloco(pai, "Calçada", new Vector3((x0 + x1) / 2f, y, z1 - w / 2f), new Vector3(x1 - x0, h, w));
+            Bloco(pai, "Calçada", new Vector3(x0 + w / 2f, y, (z0 + z1) / 2f), new Vector3(w, h, z1 - z0 - 2 * w));
+            Bloco(pai, "Calçada", new Vector3(x1 - w / 2f, y, (z0 + z1) / 2f), new Vector3(w, h, z1 - z0 - 2 * w));
         }
 
         // ------------------------------------------------------------------ postes de luz
@@ -372,16 +389,19 @@ namespace ZombieCityCleaner.EditorTools
                 var (pos, yaw) = lugares[i];
                 var poste = Grupo(g, $"Poste {i + 1}");
                 poste.localPosition = pos; poste.localRotation = Quaternion.Euler(0f, yaw, 0f);
-                Caixa(poste, "Haste", new Vector3(0f, 3f, 0f), new Vector3(0.16f, 6f, 0.16f), "Poste");
-                Caixa(poste, "Braço", new Vector3(0f, 5.9f, 0.7f), new Vector3(0.1f, 0.1f, 1.5f), "Poste", 0f, false);
-                var lampada = Caixa(poste, "Lâmpada", new Vector3(0f, 5.8f, 1.35f), new Vector3(0.35f, 0.12f, 0.5f), "Lampada", 0f, false);
+                // o modelo tem a haste, o braço e a cabeça; a lente (embaixo da cabeça, em z = 1,4) é à parte, porque
+                // acende e apaga com o material da lâmpada
+                var modelo = Modelo(poste, "Poste", Vector3.zero);
+                Colisor(modelo, new Vector3(0f, 3.05f, 0f), new Vector3(0.24f, 6.1f, 0.24f));
+                var lampada = Modelo(poste, "Poste_Lente", Vector3.zero, 0f, "Lâmpada");
+                var rl = lampada.GetComponent<MeshRenderer>(); rl.sharedMaterial = _m["Lampada"]; rl.shadowCastingMode = ShadowCastingMode.Off;
                 var luzGo = new GameObject("Luz"); luzGo.transform.SetParent(poste, false);
-                luzGo.transform.localPosition = new Vector3(0f, 5.65f, 1.35f); luzGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                luzGo.transform.localPosition = new Vector3(0f, 5.8f, 1.4f); luzGo.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 var luz = luzGo.AddComponent<Light>();
                 luz.type = LightType.Spot; ColorUtility.TryParseHtmlString("#FFB46B", out var cor); luz.color = cor;
                 luz.intensity = 95f; luz.range = 16f; luz.spotAngle = 105f; luz.innerSpotAngle = 35f; luz.shadows = LightShadows.None;
                 var cone = new GameObject("Cone de luz"); cone.transform.SetParent(poste, false);
-                cone.transform.localPosition = new Vector3(0f, 5.7f, 1.35f); cone.transform.localScale = new Vector3(3.2f, 5.7f, 3.2f);
+                cone.transform.localPosition = new Vector3(0f, 5.82f, 1.4f); cone.transform.localScale = new Vector3(3.2f, 5.82f, 3.2f);
                 cone.AddComponent<MeshFilter>().sharedMesh = _cone;
                 var r = cone.AddComponent<MeshRenderer>(); r.sharedMaterial = _m["ConeDeLuz"]; r.shadowCastingMode = ShadowCastingMode.Off; r.receiveShadows = false;
                 var p = poste.gameObject.AddComponent<PosteDeLuz>();
@@ -393,32 +413,30 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ casas
 
-        /// <summary>Casa térrea com sala na frente e dois cômodos atrás. A frente fica para -Z local (gire com yaw).</summary>
-        static void Casa(Transform g, Vector3 centro, float yaw, float W, float D, string parede, bool bunker)
+        /// <summary>
+        /// Casa térrea com sala na frente e dois cômodos atrás (cozinha à esquerda, quarto à direita). A frente fica
+        /// para -Z local (gire com yaw). Paredes, piso, forro, telhado, varanda e acabamento vêm do modelo do Blender
+        /// (`modelo`, no Cidade_Casas.fbx), feito com a mesma planta; a colisão é a malha `modelo_Colisao` (só as partes
+        /// sólidas). Os móveis ainda são blocos.
+        /// </summary>
+        static void Casa(Transform g, string modelo, Vector3 centro, float yaw, float W, float D, bool bunker)
         {
             g.localPosition = centro; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
             const float piso = 0.15f;
             float x0 = -W / 2f, x1 = W / 2f, z0 = -D / 2f, z1 = D / 2f;
             float zDiv = z0 + D * 0.55f;
-            // buraco no piso para a escada do bunker: do meio do cômodo de trás (à esquerda) até a borda da laje
+            // buraco no piso para a escada do bunker: do meio do cômodo de trás (à esquerda) até a borda da laje (o
+            // modelo já vem com ele; aqui ele serve para abrir o mesmo buraco no chão de grama)
             Rect? buraco = bunker ? new Rect(x0 + 0.4f, EscadaDoBunkerInicio(zDiv), 1.2f, z1 + 0.2f - EscadaDoBunkerInicio(zDiv)) : (Rect?)null;
-            Laje(g, "Piso", x0 - 0.2f, x1 + 0.2f, z0 - 0.2f, z1 + 0.2f, piso, 0.3f, "Piso", buraco);
-            Caixa(g, "Degrau da porta", new Vector3(-W * 0.2f, 0.04f, z0 - 0.6f), new Vector3(1.6f, 0.08f, 0.8f), "Concreto");
-            // paredes externas
-            Parede(g, "Parede frente", new Vector2(x0, z0), new Vector2(x1, z0), piso, AlturaParede, parede, Abertura.Porta(W * 0.3f), Abertura.Janela(W * 0.72f), Abertura.Janela(W * 0.08f + 0.6f));
-            Parede(g, "Parede fundo", new Vector2(x1, z1), new Vector2(x0, z1), piso, AlturaParede, parede, Abertura.Janela(W * 0.25f), Abertura.Porta(W * 0.7f));
-            Parede(g, "Parede esquerda", new Vector2(x0, z1), new Vector2(x0, z0), piso, AlturaParede, parede, Abertura.Janela(D * 0.3f), Abertura.Janela(D * 0.75f));
-            Parede(g, "Parede direita", new Vector2(x1, z0), new Vector2(x1, z1), piso, AlturaParede, parede, Abertura.Janela(D * 0.25f), Abertura.Janela(D * 0.7f));
-            // divisões internas: sala na frente; quarto e cozinha atrás
-            Parede(g, "Parede interna", new Vector2(x0 + 0.1f, zDiv), new Vector2(x1 - 0.1f, zDiv), piso, AlturaParede, "Parede_Interna", Abertura.Porta(W * 0.25f), Abertura.Porta(W * 0.75f));
-            Parede(g, "Parede interna", new Vector2(0f, zDiv + 0.1f), new Vector2(0f, z1 - 0.1f), piso, AlturaParede, "Parede_Interna");
-            Laje(g, "Forro", x0 - 0.1f, x1 + 0.1f, z0 - 0.1f, z1 + 0.1f, piso + AlturaParede + 0.12f, 0.12f, "Teto");
-            Telhado(g, new Vector3(0f, piso + AlturaParede + 0.12f, 0f), W + 0.9f, D + 0.9f, 2.0f, parede == "Parede_Azul" ? "Telhado_Azul" : "Telhado");
-            // móveis em blocos: dão escala e esconderijos
-            Caixa(g, "Sofá", new Vector3(x0 + 1.5f, piso + 0.4f, z0 + 1.0f), new Vector3(2.2f, 0.8f, 0.9f), "Madeira");
-            Caixa(g, "Mesa", new Vector3(x1 - 1.6f, piso + 0.38f, z0 + 2.2f), new Vector3(1.4f, 0.76f, 0.9f), "Madeira");
-            Caixa(g, "Cama", new Vector3(x1 - 1.4f, piso + 0.25f, z1 - 1.3f), new Vector3(1.6f, 0.5f, 2.0f), "Teto");
-            Caixa(g, "Armário", new Vector3(bunker ? -0.6f : x0 + 0.5f, piso + 1.0f, z1 - 0.4f), new Vector3(bunker ? 1.0f : 0.8f, 2.0f, 0.6f), "Madeira");
+            Modelo(g, modelo, Vector3.zero, 0f, "Casa");
+            var colisor = new GameObject("Colisão");
+            colisor.transform.SetParent(g, false);
+            colisor.AddComponent<MeshCollider>().sharedMesh = _malhas[modelo + "_Colisao"];
+            var interior = new GameObject("Interior").AddComponent<AreaInterna>();
+            interior.transform.SetParent(g, false);
+            interior.transform.localPosition = new Vector3(0f, 1.55f, 0f);     // do piso (0,15) ao forro (2,95)
+            interior.tamanho = new Vector3(W, 2.9f, D);
+            MoveisDaCasa(Grupo(g, "Móveis"), W, D, bunker);
             var eco = new GameObject("Eco da casa").AddComponent<AudioReverbZone>();
             eco.transform.SetParent(g, false); eco.transform.localPosition = new Vector3(0f, 1.5f, 0f);
             eco.reverbPreset = AudioReverbPreset.Room; eco.minDistance = Mathf.Min(W, D) * 0.4f; eco.maxDistance = Mathf.Max(W, D) * 0.6f;
@@ -436,43 +454,43 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>
         /// O bunker da família, embaixo do quintal: a escada começa no meio do cômodo de trás, desce para os fundos
         /// (passando por baixo da parede) e chega à porta do bunker, com sala comum, quarto e despensa.
+        /// Escada, poço, grades, salas, porta blindada, canos e luminárias vêm do modelo "Bunker" do Blender
+        /// (`cidade_bunker.py`, mesma planta, nas coordenadas da casa); a colisão é `Bunker_Colisao`. Aqui ficam os
+        /// móveis, a luz e o eco.
         /// </summary>
         static void Bunker(Transform casa, float x0, float zDiv, float z1, float piso)
         {
             var g = Grupo(casa, "Bunker");
-            const float fundo = -3.2f, teto = -0.55f, h = teto - fundo;
+            const float fundo = -3.2f, teto = -0.55f;
             float xEsc = x0 + 1.0f, zTopo = EscadaDoBunkerInicio(zDiv);
-            int degraus = 19; float alturaDegrau = (piso - fundo) / degraus, pisoDegrau = 0.26f;
-            for (int i = 0; i < degraus; i++)
-            {
-                float topo = piso - alturaDegrau * (i + 1);
-                Caixa(g, "Degrau", new Vector3(xEsc, topo - 0.15f, zTopo + pisoDegrau * (i + 0.5f)), new Vector3(1.2f, 0.3f, pisoDegrau), "Concreto");
-            }
-            float zBase = zTopo + pisoDegrau * degraus;                       // pé da escada
-            float zPorta = zBase + 1.2f;                                       // patamar antes da porta (a cabeça não bate na verga)
-            // poço da escada: paredes de concreto dos dois lados e grade em volta do buraco, dentro da casa
-            Parede(g, "Poço", new Vector2(xEsc - 0.7f, zTopo), new Vector2(xEsc - 0.7f, zPorta), fundo, piso - fundo, "Bunker");
-            Parede(g, "Poço", new Vector2(xEsc + 0.7f, zTopo), new Vector2(xEsc + 0.7f, zPorta), fundo, piso - fundo, "Bunker");
-            Parede(g, "Poço", new Vector2(xEsc - 0.7f, zTopo - 0.1f), new Vector2(xEsc + 0.7f, zTopo - 0.1f), fundo, piso - fundo - 0.3f, "Bunker");
-            Caixa(g, "Grade", new Vector3(xEsc + 0.65f, piso + 0.5f, (zTopo + z1) / 2f + 0.15f), new Vector3(0.06f, 1.0f, z1 - zTopo - 0.3f), "Poste");
-            Caixa(g, "Grade", new Vector3(xEsc - 0.65f, piso + 0.5f, (zTopo + z1) / 2f + 0.15f), new Vector3(0.06f, 1.0f, z1 - zTopo - 0.3f), "Poste");
-            // salas: um retângulo depois do pé da escada, embaixo do quintal
+            float zPorta = zTopo + 0.26f * 19 + 1.2f;                          // pé da escada e o patamar antes da porta
             float bx0 = xEsc - 0.7f, bx1 = bx0 + 9.5f, bz0 = zPorta, bz1 = zPorta + 7.5f;
-            Laje(g, "Chão do bunker", bx0 - 0.3f, bx1 + 0.3f, zTopo - 0.3f, bz1 + 0.3f, fundo, 0.3f, "Concreto");
-            Laje(g, "Teto do bunker", bx0 - 0.3f, bx1 + 0.3f, bz0 - 0.3f, bz1 + 0.3f, teto + 0.3f, 0.3f, "Concreto");
-            Parede(g, "Parede", new Vector2(bx0, bz0), new Vector2(bx1, bz0), fundo, h, "Bunker", new Abertura(0.1f, 1.2f, 0f, 2.3f));
-            Parede(g, "Parede", new Vector2(bx1, bz0), new Vector2(bx1, bz1), fundo, h, "Bunker");
-            Parede(g, "Parede", new Vector2(bx1, bz1), new Vector2(bx0, bz1), fundo, h, "Bunker");
-            Parede(g, "Parede", new Vector2(bx0, bz1), new Vector2(bx0, bz0), fundo, h, "Bunker");
-            // divisões: sala comum (lado da porta), quarto e despensa (do outro lado)
             float xDiv = bx0 + 5.5f, zMeio = (bz0 + bz1) / 2f;
-            Parede(g, "Divisória", new Vector2(xDiv, bz0), new Vector2(xDiv, bz1), fundo, h, "Bunker", Abertura.Porta(1.6f), Abertura.Porta(5.4f));
-            Parede(g, "Divisória", new Vector2(xDiv, zMeio), new Vector2(bx1, zMeio), fundo, h, "Bunker");
-            // móveis
-            Caixa(g, "Mesa", new Vector3(bx0 + 2.8f, fundo + 0.38f, zMeio + 0.5f), new Vector3(1.8f, 0.76f, 1.0f), "Madeira");
-            Caixa(g, "Beliche", new Vector3(bx1 - 0.6f, fundo + 0.9f, bz0 + 1.4f), new Vector3(0.9f, 1.8f, 2.0f), "Madeira");
-            Caixa(g, "Prateleira", new Vector3(bx1 - 0.35f, fundo + 1.0f, bz1 - 1.8f), new Vector3(0.5f, 2.0f, 2.6f), "Madeira");
-            Caixa(g, "Prateleira", new Vector3(xDiv + 1.8f, fundo + 1.0f, bz1 - 0.35f), new Vector3(2.0f, 2.0f, 0.5f), "Madeira");
+            Modelo(g, "Bunker", Vector3.zero, 0f);
+            var colisor = new GameObject("Colisão");
+            colisor.transform.SetParent(g, false);
+            colisor.AddComponent<MeshCollider>().sharedMesh = _malhas["Bunker_Colisao"];
+            // sala comum: mesa com rádio e quatro cadeiras; tambor e caixas no canto
+            var m = Grupo(g, "Móveis");
+            float mx = bx0 + 2.8f, mz = zMeio + 0.5f;
+            Movel(m, "Mesa_Grande", mx, fundo, mz, 0f);
+            foreach (float dx in new[] { -0.5f, 0.5f })
+            {
+                Movel(m, "Cadeira", mx + dx, fundo, mz - 0.75f, 0f);
+                Movel(m, "Cadeira", mx + dx, fundo, mz + 0.75f, 180f);
+            }
+            Movel(m, "Radio", mx - 0.3f, fundo + 0.76f, mz - 0.1f, 15f, false);
+            Movel(m, "Caixas", bx0 + 0.55f, fundo, bz1 - 0.6f, 10f);
+            Movel(m, "Tambor", bx0 + 0.45f, fundo, bz1 - 1.5f, 0f);
+            // quarto: dois beliches (a família tem quatro)
+            Movel(m, "Beliche", bx1 - 0.6f, fundo, bz0 + 1.4f, 0f);
+            Movel(m, "Beliche", bx1 - 2.0f, fundo, bz0 + 1.4f, 0f);
+            // despensa: prateleiras cheias na parede da direita e no fundo, tambores de água perto da porta
+            Movel(m, "Prateleira_Cheia", bx1 - 0.37f, fundo, bz1 - 0.95f, 270f);
+            Movel(m, "Prateleira_Cheia", bx1 - 0.37f, fundo, bz1 - 2.35f, 270f);
+            Movel(m, "Prateleira_Cheia", xDiv + 1.6f, fundo, bz1 - 0.37f, 180f);
+            Movel(m, "Tambor", xDiv + 0.55f, fundo, bz1 - 0.5f, 0f);
+            Movel(m, "Tambor", xDiv + 0.6f, fundo, bz1 - 1.2f, 30f);
             var lampada = new GameObject("Lâmpada do bunker").AddComponent<Light>();
             // a luz do dia não chega aqui (AmbienteDoDia apaga o ambiente no subsolo): a lâmpada ilumina a sala sozinha
             lampada.transform.SetParent(g, false); lampada.transform.localPosition = new Vector3(bx0 + 2.7f, teto - 0.45f, zMeio);
@@ -486,64 +504,108 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ prédio de 4 andares
 
+        /// <summary>
+        /// Prédio de 4 andares, 22 × 14 m: corredor central da frente até a escada em U no fundo, um apartamento de cada
+        /// lado (sala na frente, quarto atrás) e cobertura com platibanda. Tudo (paredes, lajes, escada, fachada, escada
+        /// de incêndio, caixa d'água) vem do modelo "Predio" do Blender (`cidade_predio.py`, mesma planta); a colisão é a
+        /// malha `Predio_Colisao`. Os móveis de cada apartamento ainda são blocos.
+        /// </summary>
         static void Predio(Transform g, Vector3 centro, float yaw)
         {
             g.localPosition = centro; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
             const float W = 22f, D = 14f, H = 3.0f; const int andares = 4;
             float x0 = -W / 2f, x1 = W / 2f, z0 = -D / 2f, z1 = D / 2f;
-            // núcleo: escada em U no fundo, no meio (3,2 m de largura)
-            float ex0 = -1.6f, ex1 = 1.6f, ezFrente = z1 - 5.0f, ezFundo = z1 - 0.2f;
-            var buraco = new Rect(ex0, ezFrente, ex1 - ex0, ezFundo - ezFrente);
-            for (int a = 0; a <= andares; a++)
+            Modelo(g, "Predio", Vector3.zero, 0f, "Prédio");
+            var colisor = new GameObject("Colisão");
+            colisor.transform.SetParent(g, false);
+            colisor.AddComponent<MeshCollider>().sharedMesh = _malhas["Predio_Colisao"];
+            var interior = new GameObject("Interior").AddComponent<AreaInterna>();
+            interior.transform.SetParent(g, false);
+            interior.transform.localPosition = new Vector3(0f, 0.15f + andares * H / 2f, 0f);
+            interior.tamanho = new Vector3(W, andares * H, D);
+            for (int a = 0; a < andares; a++)
             {
-                float y = 0.15f + a * H;
-                bool cobertura = a == andares;
-                Laje(g, cobertura ? "Laje da cobertura" : $"Piso {a}", x0 - 0.2f, x1 + 0.2f, z0 - 0.2f, z1 + 0.2f, y, a == 0 ? 0.3f : 0.25f, a == 0 ? "Concreto" : "Piso", (a > 0 && !cobertura) ? buraco : (Rect?)null);
-                if (cobertura)
-                {
-                    foreach (var (a2, b2) in new[] { (new Vector2(x0, z0), new Vector2(x1, z0)), (new Vector2(x1, z0), new Vector2(x1, z1)), (new Vector2(x1, z1), new Vector2(x0, z1)), (new Vector2(x0, z1), new Vector2(x0, z0)) })
-                        Parede(g, "Platibanda", a2, b2, y, 0.9f, "Tijolo");
-                    break;
-                }
+                float y = 0.15f + a * H + 0.005f;          // em cima do revestimento do piso
                 var andar = Grupo(g, a == 0 ? "Térreo" : $"Andar {a}");
-                float hParede = H - 0.25f;
-                // fachada com janelas em todos os andares; porta de entrada no térreo
-                var frente = new List<Abertura>();
-                for (float s = 1.5f; s < W - 1f; s += 3.5f)
-                    if (!(a == 0 && Mathf.Abs(s - W / 2f) < 2f)) frente.Add(Abertura.Janela(s, 1.4f));
-                if (a == 0) frente.Add(new Abertura(W / 2f - 1.0f, 2.0f, 0f, 2.4f));
-                Parede(andar, "Fachada", new Vector2(x0, z0), new Vector2(x1, z0), y, hParede, "Tijolo", frente.ToArray());
-                Parede(andar, "Fundos", new Vector2(x1, z1), new Vector2(x0, z1), y, hParede, "Tijolo", Abertura.Janela(3f, 1.4f), Abertura.Janela(7f, 1.4f), Abertura.Janela(15f, 1.4f), Abertura.Janela(19f, 1.4f));
-                Parede(andar, "Lateral", new Vector2(x0, z1), new Vector2(x0, z0), y, hParede, "Tijolo", Abertura.Janela(4f, 1.4f), Abertura.Janela(10f, 1.4f));
-                Parede(andar, "Lateral", new Vector2(x1, z0), new Vector2(x1, z1), y, hParede, "Tijolo", Abertura.Janela(4f, 1.4f), Abertura.Janela(10f, 1.4f));
-                // corredor central (3,2 m) que vai da frente até a escada; um apartamento de cada lado
                 foreach (float lado in new[] { -1f, 1f })
-                {
-                    float xp = 1.6f * lado;
-                    Parede(andar, "Parede do apartamento", new Vector2(xp, z0 + 0.1f), new Vector2(xp, z1 - 0.1f), y, hParede, "Parede_Interna", Abertura.Porta(3.0f));
-                    float xFim = lado < 0 ? x0 + 0.1f : x1 - 0.1f;
-                    Parede(andar, "Quarto", new Vector2(xp, 0.5f), new Vector2(xFim, 0.5f), y, hParede, "Parede_Interna", Abertura.Porta(Mathf.Abs(xFim - xp) * 0.5f));
-                    float xm = (xp + xFim) / 2f;
-                    Caixa(andar, "Cama", new Vector3(xm + 1.2f * lado, y + 0.25f, z1 - 1.5f), new Vector3(1.6f, 0.5f, 2.0f), "Teto");
-                    Caixa(andar, "Sofá", new Vector3(xm, y + 0.4f, z0 + 1.0f), new Vector3(2.2f, 0.8f, 0.9f), "Madeira");
-                    Caixa(andar, "Mesa", new Vector3(xm - 1.5f * lado, y + 0.38f, -2.0f), new Vector3(1.2f, 0.76f, 0.8f), "Madeira");
-                }
-                // escada em U até o próximo andar: lance A sobe para o fundo (lado esquerdo), patamar, lance B volta (lado direito)
-                if (a < andares - 1)
-                {
-                    int degraus = 9; float altura = H / 2f / degraus, piso = 0.28f;
-                    Escada(andar, -0.85f, 1.4f, y, ezFrente, degraus, altura, piso, +1, "Concreto");
-                    float zPatamar = ezFrente + degraus * piso;
-                    Caixa(andar, "Patamar", new Vector3(0f, y + H / 2f - 0.1f, (zPatamar + ezFundo) / 2f), new Vector3(3.2f, 0.2f, ezFundo - zPatamar), "Concreto");
-                    Escada(andar, 0.85f, 1.4f, y + H / 2f, zPatamar, degraus, altura, piso, -1, "Concreto");
-                    Caixa(andar, "Mureta", new Vector3(0f, y + 1.1f, ezFrente + 1.6f), new Vector3(0.12f, 2.2f, 3.4f), "Parede_Interna");
-                }
+                    MoveisDoApartamento(Grupo(andar, lado < 0 ? "Apartamento oeste" : "Apartamento leste"), y, lado, x0, x1, z0, z1);
             }
-            Caixa(g, "Marquise", new Vector3(0f, 2.75f, z0 - 0.8f), new Vector3(4f, 0.15f, 1.6f), "Concreto", 0f, false);
-            Caixa(g, "Degraus da entrada", new Vector3(0f, 0.05f, z0 - 0.7f), new Vector3(3f, 0.1f, 1.2f), "Concreto");
             var eco = new GameObject("Eco do prédio").AddComponent<AudioReverbZone>();
             eco.transform.SetParent(g, false); eco.transform.localPosition = new Vector3(0f, 6f, 0f);
             eco.reverbPreset = AudioReverbPreset.Hallway; eco.minDistance = 6f; eco.maxDistance = 12f;
+        }
+
+        // ------------------------------------------------------------------ móveis
+
+        /// <summary>
+        /// Um móvel do Cidade_Moveis.fbx no chão (y do piso), virado por yaw (a frente do modelo olha para +Z), com uma
+        /// caixa de colisão do tamanho da malha. O nome do objeto é o da malha: a Parte 7 vai achar os de saque por ele.
+        /// </summary>
+        static GameObject Movel(Transform pai, string malha, float x, float y, float z, float yaw, bool colisor = true)
+        {
+            var go = Modelo(pai, malha, new Vector3(x, y, z), yaw);
+            if (colisor) ColisorDaMalha(go);
+            return go;
+        }
+
+        /// <summary>
+        /// Os móveis de uma casa (coordenadas locais; a planta é a da Casa). Os lugares fogem das portas: o sofá acaba
+        /// antes da porta da frente (se não cabe, vira poltrona), o rack fica antes da porta da cozinha, e na casa da
+        /// família nada fica na frente da boca da escada do bunker (o balcão vai para a parede da sala).
+        /// </summary>
+        static void MoveisDaCasa(Transform g, float W, float D, bool bunker)
+        {
+            float x0 = -W / 2f, x1 = W / 2f, z0 = -D / 2f, z1 = D / 2f, zDiv = z0 + D * 0.55f;
+            const float y = 0.155f;
+            string tecido = _rng.NextDouble() < 0.5 ? "Verde" : "Marrom";
+            // sala
+            float fimDoSofa = x0 + 0.3f * W - Porta / 2f - 0.15f;
+            bool cabe = fimDoSofa - 2.1f > x0 + 0.15f;
+            float xSofa = cabe ? fimDoSofa - 1.05f : fimDoSofa - 0.48f;
+            Movel(g, "Tapete", xSofa, y, z0 + 1.9f, 0f, false);
+            Movel(g, cabe ? "Sofa_" + tecido : "Poltrona_Vinho", xSofa, y, z0 + 0.55f, 0f);
+            if (cabe) Movel(g, "Poltrona_" + (tecido == "Verde" ? "Vinho" : "Azul"), x0 + 0.62f, y, z0 + 2.4f, 90f);
+            float portaDaCozinha = x0 + 0.1f + 0.25f * W - Porta / 2f;
+            Movel(g, "Rack_TV", Mathf.Min(xSofa, portaDaCozinha - 0.8f), y, zDiv - 0.38f, 180f);
+            float mx = x1 - 1.6f, mz = z0 + 2.2f;
+            Movel(g, "Mesa", mx, y, mz, 0f);
+            Movel(g, "Cadeira", mx - 0.35f, y, mz - 0.68f, 0f);
+            Movel(g, "Cadeira", mx + 0.35f, y, mz + 0.68f, 180f);
+            // cozinha: geladeira e fogão na divisória do quarto; o balcão sob a janela da esquerda (ou, na casa da
+            // família, na parede da sala, depois da porta)
+            Movel(g, "Geladeira", -0.47f, y, z1 - 0.55f, 270f);
+            Movel(g, "Fogao", -0.44f, y, z1 - 1.45f, 270f);
+            if (bunker) Movel(g, "Balcao", -1.25f, y, zDiv + 0.43f, 0f);
+            else Movel(g, "Balcao", x0 + 0.43f, y, z1 - 0.3f * D, 90f);
+            // quarto: cama com a cabeceira na parede do fundo, criado-mudo, armário e cômoda na divisória
+            Movel(g, "Cama", x1 - 1.4f, y, z1 - 1.15f, 180f);
+            Movel(g, "Criado_Mudo", x1 - 2.6f, y, z1 - 0.35f, 180f);
+            Movel(g, _rng.NextDouble() < 0.5 ? "Armario" : "Armario_Aberto", 0.41f, y, zDiv + 0.7f, 90f);
+            Movel(g, "Comoda", 0.36f, y, z1 - 1.0f, 90f);
+        }
+
+        /// <summary>
+        /// Os móveis de um apartamento do prédio (lado -1 = oeste, +1 = leste). Sala: sofá contra a fachada, TV, mesa
+        /// com cadeiras e a cozinha americana na parede do quarto. Quarto: cama no fundo, criado-mudo, armário e cômoda.
+        /// </summary>
+        static void MoveisDoApartamento(Transform g, float y, float lado, float x0, float x1, float z0, float z1)
+        {
+            float xm = (1.6f * lado + (lado < 0 ? x0 + 0.1f : x1 - 0.1f)) / 2f;
+            string tecido = _rng.NextDouble() < 0.5 ? "Verde" : "Marrom";
+            Movel(g, "Tapete", xm, y, -4.9f, 0f, false);
+            Movel(g, "Sofa_" + tecido, xm, y, z0 + 0.55f, 0f);
+            Movel(g, "Rack_TV", xm, y, -3.0f, 180f);
+            float mx = xm - 1.5f * lado;
+            Movel(g, "Mesa", mx, y, -2.0f, 0f);
+            Movel(g, "Cadeira", mx - 0.35f, y, -2.68f, 0f);
+            Movel(g, "Cadeira", mx + 0.35f, y, -1.32f, 180f);
+            Movel(g, "Geladeira", 2.2f * lado, y, 0.04f, 180f);
+            Movel(g, "Fogao", 3.05f * lado, y, 0.07f, 180f);
+            Movel(g, "Balcao", 4.3f * lado, y, 0.08f, 180f);
+            Movel(g, "Cama", xm + 1.2f * lado, y, z1 - 1.15f, 180f);
+            Movel(g, "Criado_Mudo", xm, y, z1 - 0.35f, 180f);
+            Movel(g, _rng.NextDouble() < 0.5 ? "Armario" : "Armario_Aberto", 2.5f * lado, y, 0.93f, 0f);
+            Movel(g, "Comoda", 4.0f * lado, y, z1 - 0.35f, 180f);
         }
 
         // ------------------------------------------------------------------ resto da cidade
@@ -551,59 +613,72 @@ namespace ZombieCityCleaner.EditorTools
         static void Praca(Transform g, Vector3 centro)
         {
             g.localPosition = centro;
-            Caixa(g, "Piso da praça", new Vector3(0f, 0.04f, 0f), new Vector3(10f, 0.08f, 10f), "Calcada");
-            Caixa(g, "Coreto", new Vector3(0f, 0.3f, 0f), new Vector3(4f, 0.6f, 4f), "Concreto");
+            // o piso e o coreto que se veem estão no chão de arte (o coreto octogonal cabe nesta caixa de 4 × 4 × 0,6)
+            Bloco(g, "Piso da praça", new Vector3(0f, 0.04f, 0f), new Vector3(10f, 0.08f, 10f));
+            Bloco(g, "Coreto", new Vector3(0f, 0.3f, 0f), new Vector3(4f, 0.6f, 4f));
             for (int i = 0; i < 4; i++)
             {
                 float ang = i * 90f;
                 Vector3 p = Quaternion.Euler(0f, ang, 0f) * new Vector3(0f, 0f, 4f);
-                Caixa(g, "Banco", p + new Vector3(0f, 0.25f, 0f), new Vector3(2f, 0.5f, 0.5f), "Madeira", ang);
+                // a frente do banco olha para o coreto; o piso da praça tem 8 cm
+                ColisorDaMalha(Modelo(g, "Banco", p + Vector3.up * 0.08f, ang + 180f));
             }
+            Lixeira(g, new Vector3(4.3f, 0.08f, 2.6f), 0f);
+            Lixeira(g, new Vector3(-2.6f, 0.08f, -4.4f), 30f, true);
             Arvore(g, new Vector3(-3.5f, 0f, 3.5f)); Arvore(g, new Vector3(3.5f, 0f, -3.5f));
         }
 
         static void Estacionamento(Transform g, Vector3 centro)
         {
             g.localPosition = centro;
-            Caixa(g, "Pátio", new Vector3(0f, -0.04f, 0f), new Vector3(10f, 0.1f, 4.5f), "Asfalto");
-            Carro(g, new Vector3(-3f, 0f, 0f), 90f, "Carro_Cinza");
-            Carro(g, new Vector3(3.2f, 0f, 0.3f), 95f, "Carro_Azul");
+            Bloco(g, "Pátio", new Vector3(0f, -0.04f, 0f), new Vector3(10f, 0.1f, 4.5f));
+            Carro(g, new Vector3(-2.7f, 0f, 0f), 90f, "Carro_Sedan_Cinza");
+            Carro(g, new Vector3(2.7f, 0f, 0.3f), 95f, "Carro_Sedan_Azul");
         }
 
-        static void Carro(Transform pai, Vector3 pos, float yaw, string cor)
+        /// <summary>Carro abandonado: um dos modelos (Carro_Sedan_Azul, Carro_Pickup_Bege...), com uma caixa de colisão.</summary>
+        static void Carro(Transform pai, Vector3 pos, float yaw, string modelo)
         {
-            var g = Grupo(pai, "Carro");
-            g.localPosition = pos; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            Caixa(g, "Lataria", new Vector3(0f, 0.65f, 0f), new Vector3(1.8f, 0.7f, 4.2f), cor);
-            Caixa(g, "Cabine", new Vector3(0f, 1.25f, -0.2f), new Vector3(1.6f, 0.55f, 2.2f), "Vidro");
-            foreach (var (x, z) in new[] { (-0.8f, 1.3f), (0.8f, 1.3f), (-0.8f, -1.3f), (0.8f, -1.3f) })
-                Caixa(g, "Pneu", new Vector3(x, 0.32f, z), new Vector3(0.3f, 0.64f, 0.64f), "Pneu", 0f, false);
+            ColisorDaMalha(Modelo(pai, modelo, pos, yaw, "Carro"));
         }
 
         static void Carros(Transform g)
         {
-            Carro(g, new Vector3(2.2f, 0f, 18f), 8f, "Carro_Vinho");
-            Carro(g, new Vector3(-1.5f, 0f, -24f), 175f, "Carro_Verde");
-            Carro(g, new Vector3(-26f, 0f, 1.8f), 80f, "Carro_Azul");
-            Carro(g, new Vector3(31f, 0f, -2.5f), 260f, "Carro_Cinza");
-            Carro(g, new Vector3(38.5f, 0f, 22f), 20f, "Carro_Vinho");
-            Carro(g, new Vector3(-41.5f, 0f, -18f), 190f, "Carro_Cinza");
-            Carro(g, new Vector3(14f, 0f, 41.5f), 275f, "Carro_Verde");
-            Carro(g, new Vector3(-12f, 0f, -38.5f), 95f, "Carro_Azul");
+            Carro(g, new Vector3(2.2f, 0f, 18f), 8f, "Carro_Sedan_Vinho");
+            Carro(g, new Vector3(-1.5f, 0f, -24f), 175f, "Carro_Pickup_Bege");
+            Carro(g, new Vector3(-26f, 0f, 1.8f), 80f, "Carro_Sedan_Azul");
+            Carro(g, new Vector3(31f, 0f, -2.5f), 260f, "Carro_Sedan_Cinza");
+            Carro(g, new Vector3(38.5f, 0f, 22f), 20f, "Carro_Pickup_Azul");
+            Carro(g, new Vector3(-41.5f, 0f, -18f), 190f, "Carro_Sedan_Verde");
+            Carro(g, new Vector3(14f, 0f, 41.5f), 275f, "Carro_Pickup_Branco");
+            Carro(g, new Vector3(-12f, 0f, -38.5f), 95f, "Carro_Sedan_Vinho");
         }
 
+        /// <summary>
+        /// Linha de cerca de madeira de a até b: trechos de ~2 m (esticados para fechar a conta; alguns quebrados), o
+        /// mourão da ponta e uma caixa de colisão só, fina, na linha toda.
+        /// </summary>
         static void Cerca(Transform pai, Vector2 a, Vector2 b)
         {
             Vector2 d = b - a; float n = d.magnitude; Vector2 u = d / n;
-            float yaw = -Mathf.Atan2(u.y, u.x) * Mathf.Rad2Deg;
-            for (float s = 0f; s <= n + 0.01f; s += 2f)
+            float yaw = -Mathf.Atan2(u.y, u.x) * Mathf.Rad2Deg;   // +X local = de a para b
+            var linha = Grupo(pai, "Cerca");
+            int trechos = Mathf.Max(1, Mathf.RoundToInt(n / 2f));
+            float l = n / trechos;
+            for (int i = 0; i < trechos; i++)
             {
-                Vector2 p = a + u * Mathf.Min(s, n);
-                Caixa(pai, "Mourão", new Vector3(p.x, 0.5f, p.y), new Vector3(0.1f, 1.0f, 0.1f), "Cerca", yaw);
+                Vector2 c = a + u * (l * (i + 0.5f));
+                var t = Modelo(linha, _rng.NextDouble() < 0.15 ? "Cerca_Quebrada" : "Cerca", new Vector3(c.x, 0f, c.y), yaw);
+                t.transform.localScale = new Vector3(l / 2f, 1f, 1f);
             }
-            Vector2 m = (a + b) / 2f;
-            Caixa(pai, "Travessa", new Vector3(m.x, 0.75f, m.y), new Vector3(n, 0.08f, 0.04f), "Cerca", yaw);
-            Caixa(pai, "Travessa", new Vector3(m.x, 0.35f, m.y), new Vector3(n, 0.08f, 0.04f), "Cerca", yaw);
+            // cada trecho tem o mourão só no lado +X (o de b): falta o da ponta a
+            Modelo(linha, "Cerca_Mourao", new Vector3(a.x, 0f, a.y), yaw);
+            var m = (a + b) / 2f;
+            var colisor = new GameObject("Colisor");
+            colisor.transform.SetParent(linha, false);
+            colisor.transform.localPosition = new Vector3(m.x, 0f, m.y);
+            colisor.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            Colisor(colisor, new Vector3(0f, 0.55f, 0f), new Vector3(n + 0.1f, 1.1f, 0.12f));
         }
 
         static void Cercas(Transform g)
@@ -618,12 +693,13 @@ namespace ZombieCityCleaner.EditorTools
             Cerca(g, new Vector2(7f, -31f), new Vector2(20f, -31f));
         }
 
+        /// <summary>Árvore de rua: com copa rala ou seca (sem folhas), girada ao acaso. Colide só o tronco.</summary>
         static void Arvore(Transform pai, Vector3 pos)
         {
-            var g = Grupo(pai, "Árvore"); g.localPosition = pos;
-            float yaw = (float)_rng.NextDouble() * 90f;
-            Caixa(g, "Tronco", new Vector3(0f, 1.3f, 0f), new Vector3(0.3f, 2.6f, 0.3f), "Tronco", yaw);
-            Caixa(g, "Copa", new Vector3(0f, 3.4f, 0f), new Vector3(2.6f, 2.2f, 2.6f), "Copa", yaw + 15f, false);
+            string malha = _rng.NextDouble() < 0.4 ? "Arvore_Seca" : "Arvore";
+            var go = Modelo(pai, malha, pos, (float)_rng.NextDouble() * 360f, "Árvore");
+            var tronco = go.AddComponent<CapsuleCollider>();
+            tronco.center = new Vector3(0f, 1.5f, 0f); tronco.radius = 0.22f; tronco.height = 3f;
         }
 
         static void Arvores(Transform g)
@@ -635,14 +711,61 @@ namespace ZombieCityCleaner.EditorTools
 
         static void Barricadas(Transform g)
         {
+            // +Z local aponta para fora da cidade: as barreiras de concreto, o cavalete e os cones do lado de dentro,
+            // e os carros que fecharam a estrada do lado de fora
             foreach (var (pos, yaw) in new[] { (new Vector3(0f, 0f, 60f), 0f), (new Vector3(0f, 0f, -60f), 180f), (new Vector3(60f, 0f, 0f), 90f), (new Vector3(-60f, 0f, 0f), 270f) })
             {
                 var b = Grupo(g, "Barricada"); b.localPosition = pos; b.localRotation = Quaternion.Euler(0f, yaw, 0f);
-                for (int i = -2; i <= 2; i++) Caixa(b, "Barreira", new Vector3(i * 1.9f, 0.45f, 0f), new Vector3(1.8f, 0.9f, 0.5f), "Barreira", (i % 2) * 6f);
-                Carro(b, new Vector3(-2.2f, 0f, 3.5f), 70f, "Carro_Vinho");
-                Carro(b, new Vector3(2.8f, 0f, 4.2f), 115f, "Carro_Cinza");
+                for (int i = -2; i <= 2; i++) ColisorDaMalha(Modelo(b, "Barreira", new Vector3(i * 1.9f, 0f, (i % 2) * 0.15f), (i % 2) * 6f));
+                ColisorDaMalha(Modelo(b, "Cavalete", new Vector3(0.8f, 0f, -2.3f), 8f));
+                foreach (var (x, z) in new[] { (-3.0f, -1.6f), (-1.2f, -2.8f), (3.1f, -1.9f) })
+                    ColisorDaMalha(Modelo(b, "Cone", new Vector3(x, 0f, z), (float)_rng.NextDouble() * 90f));
+                Carro(b, new Vector3(-2.2f, 0f, 3.5f), 70f, "Carro_Sedan_Vinho");
+                Carro(b, new Vector3(2.8f, 0f, 4.2f), 115f, "Carro_Pickup_Branco");
             }
         }
+
+        /// <summary>Lixeira de metal, em pé ou caída de lado (a tampa para a frente).</summary>
+        static void Lixeira(Transform pai, Vector3 pos, float yaw, bool caida = false)
+        {
+            var go = Modelo(pai, "Lixeira", pos, yaw);
+            if (caida)
+            {
+                // deita girando 90° em X (o fundo fica na origem): sobe o raio para encostar no chão
+                go.transform.localRotation = Quaternion.Euler(90f, yaw, 0f);
+                go.transform.localPosition = pos + Vector3.up * 0.3f;
+            }
+            ColisorDaMalha(go);
+        }
+
+        /// <summary>
+        /// O que fica nas calçadas: placas de pare nos cruzamentos (a frente olha para quem chega), placas com o nome
+        /// das ruas, hidrantes virados para a rua, lixeiras (algumas caídas), caçambas e sacos de lixo.
+        /// Os lugares evitam os postes (nas calçadas, a 5,2 m do meio da rua) e as portas das casas.
+        /// </summary>
+        static void ObjetosDeRua(Transform g)
+        {
+            foreach (var (x, z, yaw) in new[] { (5.5f, -5.5f, 180f), (-5.5f, 5.5f, 0f), (-5.5f, -5.5f, 270f), (5.5f, 5.5f, 90f),
+                                                 (5.5f, 34.5f, 180f), (-5.5f, -34.5f, 0f), (34.5f, -5.5f, 270f), (-34.5f, 5.5f, 90f) })
+                Colisor(Modelo(g, "Placa_Pare", new Vector3(x, 0.12f, z), yaw), new Vector3(0f, 1.1f, -0.02f), new Vector3(0.08f, 2.2f, 0.08f));
+            foreach (var (x, z, yaw) in new[] { (-5.5f, 34.5f, 0f), (5.5f, -34.5f, 180f), (34.5f, 5.5f, 90f), (-34.5f, -5.5f, 270f) })
+                Colisor(Modelo(g, "Placa_Rua", new Vector3(x, 0.12f, z), yaw), new Vector3(0f, 1.3f, 0f), new Vector3(0.08f, 2.6f, 0.08f));
+            foreach (var (x, z, yaw) in new[] { (4.8f, -23f, 270f), (-4.8f, 31f, 90f), (23f, -4.8f, 0f), (-27f, 4.8f, 180f), (34.6f, -20f, 90f), (-20f, -34.6f, 180f) })
+                ColisorDaMalha(Modelo(g, "Hidrante", new Vector3(x, 0.12f, z), yaw));
+            foreach (var (x, z) in new[] { (5.9f, -9.5f), (-5.9f, 18.5f), (14.5f, 5.9f), (-15.5f, -5.9f), (30.5f, -5.9f), (-31f, 5.9f), (34.6f, 21.5f), (-34.6f, -21.5f) })
+                Lixeira(g, new Vector3(x, 0.12f, z), (float)_rng.NextDouble() * 360f);
+            Lixeira(g, new Vector3(16.5f, 0.12f, 5.4f), 75f, true);
+            Lixeira(g, new Vector3(-34.9f, 0.12f, 14f), 200f, true);
+            // caçambas: ao lado do prédio (entre a parede leste e a calçada) e atrás da casa 2, fora da cerca
+            ColisorDaMalha(Modelo(g, "Cacamba", new Vector3(32.6f, 0f, 18.5f), 90f));
+            ColisorDaMalha(Modelo(g, "Cacamba", new Vector3(-9f, 0f, 32.3f), 0f));
+            // sacos: y = 0,12 em cima da calçada, 0 na grama
+            foreach (var (pos, yaw) in new[] { (new Vector3(32.5f, 0f, 16.3f), 20f), (new Vector3(-6.9f, 0f, 32.4f), 110f), (new Vector3(6.2f, 0.12f, -10.6f), 300f),
+                                               (new Vector3(-31.2f, 0f, 7.4f), 45f), (new Vector3(29.4f, 0.12f, -5.5f), 160f) })
+                ColisorDaMalha(Modelo(g, "Sacos", pos, yaw));
+        }
+
+        static readonly string[] TiposDePinheiro = { "Pinheiro_A", "Pinheiro_B", "Pinheiro_C" };
 
         static void Pinheiros(Transform g)
         {
@@ -653,13 +776,8 @@ namespace ZombieCityCleaner.EditorTools
                 float r = 64f + (float)_rng.NextDouble() * 34f;
                 var pos = new Vector3(Mathf.Cos(ang) * r, 0f, Mathf.Sin(ang) * r);
                 if (Mathf.Abs(pos.x) > 100f || Mathf.Abs(pos.z) > 100f) continue;
-                var go = new GameObject("Pinheiro");
-                go.transform.SetParent(g, false);
-                go.transform.localPosition = pos;
-                go.transform.localRotation = Quaternion.Euler(0f, (float)_rng.NextDouble() * 360f, 0f);
+                var go = Modelo(g, TiposDePinheiro[_rng.Next(TiposDePinheiro.Length)], pos, (float)_rng.NextDouble() * 360f, "Pinheiro");
                 go.transform.localScale = Vector3.one * (0.9f + (float)_rng.NextDouble() * 0.7f);
-                go.AddComponent<MeshFilter>().sharedMesh = _pinheiro;
-                go.AddComponent<MeshRenderer>().sharedMaterials = new[] { _m["Tronco"], _m["Pinheiro"] };
                 n++;
             }
         }

@@ -31,6 +31,9 @@ namespace ZombieCityCleaner.Zombies
 
         public bool Rodando { get; private set; }
 
+        /// <summary>Nome da rodada, no título da seção (por exemplo, "cidade de arte, antes da oclusão").</summary>
+        public static string Rotulo = "";
+
         bool _automatico;
         string _arquivo, _status = "";
         float _statusAte;
@@ -74,14 +77,16 @@ namespace ZombieCityCleaner.Zombies
             m.SemDano = true;
 
             var tabela = new StringBuilder();
-            tabela.AppendLine("# Benchmark dos zumbis");
+            tabela.AppendLine($"## {DateTime.Now:dd/MM/yyyy HH:mm}{(string.IsNullOrEmpty(Rotulo) ? "" : " — " + Rotulo)}");
             tabela.AppendLine();
-            tabela.AppendLine($"- {DateTime.Now:dd/MM/yyyy HH:mm}, {(Application.isEditor ? "Editor" : "build")} {Application.unityVersion}, {Screen.width}×{Screen.height}");
+            tabela.AppendLine($"- {(Application.isEditor ? "Editor" : "build")} {Application.unityVersion}, {Screen.width}×{Screen.height}");
             tabela.AppendLine($"- {SystemInfo.processorType} ({SystemInfo.processorCount} núcleos), {SystemInfo.graphicsDeviceName}");
-            tabela.AppendLine($"- Zumbis espalhados pela cidade, {medir:F0} s de medida para cada quantidade, sem vsync. Jogadores na partida: {JogadorRede.Todos.Count}.");
+            var cam = JogadorRede.Local != null && JogadorRede.Local.cameraMundo != null ? JogadorRede.Local.cameraMundo.transform : null;
+            tabela.AppendLine($"- Zumbis espalhados pela cidade, {medir:F0} s de medida para cada quantidade, sem vsync. Jogadores na partida: {JogadorRede.Todos.Count}." +
+                              (cam != null ? $" Câmera em {cam.position:F0}, olhando {cam.forward:F1}." : ""));
             tabela.AppendLine();
-            tabela.AppendLine("| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Rede (KB/s por cliente) |");
-            tabela.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
+            tabela.AppendLine("| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |");
+            tabela.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
             foreach (int n in quantidades)
             {
                 _status = $"Benchmark: criando {n} zumbis...";
@@ -108,7 +113,9 @@ namespace ZombieCityCleaner.Zombies
                     ? Path.Combine(Application.dataPath, "..", "Benchmarks", "Benchmark_Zumbis.md")
                     : Path.Combine(Application.persistentDataPath, "Benchmark_Zumbis.md");
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(caminho)));
-            File.WriteAllText(caminho, tabela.ToString());
+            // cada rodada entra como uma seção nova no fim do arquivo: o histórico fica para comparar
+            if (!File.Exists(caminho)) File.WriteAllText(caminho, "# Benchmark dos zumbis\n\n");
+            File.AppendAllText(caminho, tabela.ToString() + "\n");
             Debug.Log($"[benchmark] tabela gravada em {Path.GetFullPath(caminho)}\n{tabela}");
             _status = $"Benchmark pronto: {Path.GetFullPath(caminho)}";
             _statusAte = Time.unscaledTime + 10f;
@@ -119,9 +126,11 @@ namespace ZombieCityCleaner.Zombies
         class Medida
         {
             readonly List<float> _quadros = new List<float>();
-            double _thread, _ia, _rede, _animacao, _navegacao, _fisica, _drawCalls;
+            double _thread, _ia, _rede, _animacao, _navegacao, _fisica, _drawCalls, _batches, _setPass, _triangulos, _gpu;
             long _perto, _medio, _longe;
+            int _comGpu;
             float _kbPorCliente;
+            readonly FrameTiming[] _tempos = new FrameTiming[1];
 
             public IEnumerator Medir(ZombieManager m, float duracao)
             {
@@ -133,6 +142,9 @@ namespace ZombieCityCleaner.Zombies
                 var navegacao = ProfilerRecorder.StartNew(ProfilerCategory.Ai, "NavMeshManager");
                 var fisica = ProfilerRecorder.StartNew(ProfilerCategory.Physics, "Physics.Simulate");
                 var drawCalls = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
+                var batches = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count");
+                var setPass = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count");
+                var triangulos = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count");
                 try
                 {
                     long bytes = m.BytesEnviados;
@@ -149,6 +161,16 @@ namespace ZombieCityCleaner.Zombies
                         _navegacao += navegacao.LastValue * 1e-6;
                         _fisica += fisica.LastValue * 1e-6;
                         _drawCalls += drawCalls.LastValue;
+                        _batches += batches.LastValue;
+                        _setPass += setPass.LastValue;
+                        _triangulos += triangulos.LastValue;
+                        // tempo da GPU: precisa de "Frame Timing Stats" nas Player Settings; sem ele, fica de fora
+                        FrameTimingManager.CaptureFrameTimings();
+                        if (FrameTimingManager.GetLatestTimings(1, _tempos) > 0 && _tempos[0].gpuFrameTime > 0)
+                        {
+                            _gpu += _tempos[0].gpuFrameTime;
+                            _comGpu++;
+                        }
                         m.ContarNiveis(out int perto, out int medio, out int longe);
                         _perto += perto; _medio += medio; _longe += longe;
                         clientes = Mathf.Max(clientes, m.ClientesNaRede);
@@ -161,6 +183,7 @@ namespace ZombieCityCleaner.Zombies
                 {
                     thread.Dispose(); ia.Dispose(); lod.Dispose(); rede.Dispose();
                     animacao.Dispose(); navegacao.Dispose(); fisica.Dispose(); drawCalls.Dispose();
+                    batches.Dispose(); setPass.Dispose(); triangulos.Dispose();
                 }
             }
 
@@ -172,8 +195,10 @@ namespace ZombieCityCleaner.Zombies
                 media /= n;
                 _quadros.Sort();
                 float p95 = _quadros.Count > 0 ? _quadros[Mathf.Min(_quadros.Count - 1, Mathf.FloorToInt(_quadros.Count * 0.95f))] : 0f;
-                return $"| {zumbis} | {_perto / n} / {_medio / n} / {_longe / n} | {media:F1} | {p95:F1} | {_thread / n:F1} | {_ia / n:F2} | {_rede / n:F2} | " +
-                       $"{_animacao / n:F2} | {_navegacao / n:F2} | {_fisica / n:F2} | {_drawCalls / n:F0} | {_kbPorCliente:F1} |";
+                string gpu = _comGpu > 0 ? (_gpu / _comGpu).ToString("F1") : "—";
+                return $"| {zumbis} | {_perto / n} / {_medio / n} / {_longe / n} | {media:F1} | {p95:F1} | {_thread / n:F1} | {gpu} | {_ia / n:F2} | {_rede / n:F2} | " +
+                       $"{_animacao / n:F2} | {_navegacao / n:F2} | {_fisica / n:F2} | {_drawCalls / n:F0} | {_batches / n:F0} | {_setPass / n:F0} | " +
+                       $"{_triangulos / n / 1000:F0} | {_kbPorCliente:F1} |";
             }
         }
 

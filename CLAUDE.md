@@ -9,7 +9,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 - `feature/demo-cidade` (esta): a demo da cidade, começada do zero.
   - Parte 0 (fundação), Parte 1 (o zumbi), Parte 2 (o jogador e a pistola), Parte 3 (o online base), Parte 4 (a cidade em blocos, o clima e o dia), Parte 5 (os zumbis na cidade) e Parte 6 (combate e desmembramento, com as pernas também) estão feitas.
-  - O próximo passo é a Parte 7 (o bunker, o saque e o dia).
+  - A pedido do usuário, a Parte 8 (a arte final) veio antes da Parte 7 (o bunker, o saque e o dia), que fica para depois.
+  - Parte 8 em andamento, em fatias (veja o `Plano_Demo.md`): as 6 fatias estão feitas: 1 (a paleta da cidade, o material único e os objetos de rua), 2 (as casas), 3 (o prédio), 4 (o bunker e os móveis), 5 (o chão) e 6 (oclusão, neblina dentro de casa e benchmark; a luz ficou em tempo real e não houve LOD, veja "Clima e ciclo do dia").
+  - O próximo passo é a Parte 7 (o bunker, o saque e o dia), que tinha ficado para depois.
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
 ## Projeto
@@ -28,7 +30,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `PC_Renderer_Bracos` (renderizador 1, sem recursos) é usado pela câmera dos braços. Sem ele, a neblina de altura seria aplicada de novo por cima da imagem, só com a profundidade dos braços.
   - Os dois são montados por `Editor/MontagemDoClima`, que só mexe nos assets de URP dentro de `Assets/` (nunca no asset do pacote).
   - `PC_Renderer` também tem o recurso "Decals" (técnica de tela, até 60 m), para as manchas de sangue e os furos de tiro. Quem o põe é a montagem dos zumbis.
-- **Escala zero é proibida:** uma peça com escala 0 em algum eixo tem normais infinitas no shader. O pixel vira NaN e o bloom espalha um clarão branco, com um risco preto no meio. A `Laje` da cidade não cria mais faixas vazias.
+- **Escala zero é proibida:** uma peça com escala 0 em algum eixo tem normais infinitas no shader. O pixel vira NaN e o bloom espalha um clarão branco, com um risco preto no meio. (Foi uma laje de largura zero dos blocos da Parte 4; hoje o chão que se vê vem do Blender, e a `Laje` só faz colisão, sem faixas vazias.)
 - **Camadas:**
   - 6 "ArmasPrimeiraPessoa" (os braços);
   - 7 "Zumbi" (cápsulas e hitboxes dos zumbis; não colide com ela mesma nem com a 6);
@@ -45,10 +47,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Settings/Demo_Volume.asset` (noite) e `Settings/Demo_Volume_Dia.asset` (dia): o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
   - `Art/Characters/Zombie/`: o zumbi.
   - `Art/Characters/Jogador/`: o jogador (corpo, braços de primeira pessoa e pistola).
-  - `Art/Materials/Blocos/`: os materiais da cidade em blocos, de cor sólida (URP Lit, com instancing). `ConeDeLuz.mat` é o cone falso dos postes (aditivo, com o degradê `DegradeCone.png`).
+  - `Art/Paleta.png`: a paleta de cores 16×16 dos personagens (linhas 0 a 4) e da cidade (linhas 5 a 10). O alfa das linhas da cidade é a suavidade.
+  - `Art/Cidade/`: a arte final (Parte 8), exportada de `Modelo 3D/Cidade/Cidade.blend`: `Cidade_Rua.fbx` (objetos de rua), `Cidade_Moveis.fbx` (móveis), `Cidade_Chao.fbx` (o chão, em 25 pedaços "Chao_i_j"), e `Cidade_Casas.fbx` (as 5 casas), `Cidade_Predio.fbx` (o prédio) e `Cidade_Bunker.fbx` (o bunker), estas três com o seu `_Colisao.fbx` (legível).
+  - `Art/Materials/Cidade.mat`: o material único da arte final (URP Lit com a paleta e a suavidade vinda do alfa).
+  - `Art/Materials/Blocos/`: o que sobrou dos blocos: `Lampada.mat` (a lente dos postes, que acende) e `ConeDeLuz.mat` (o cone falso, aditivo, com o degradê `DegradeCone.png`).
   - `Art/Materials/`: também `NeblinaDeAltura.mat`, `Particulas.mat` e `Clarao.mat`. Os `Teste_*` são da fundação.
   - `Art/Materials/Decals/`: os decals de sangue e de furo de tiro (shader "Shader Graphs/Decal", texturas geradas por código).
-  - `Art/Meshes/`: malhas geradas pela montagem da cidade (`Prisma`, `ConeDeLuz`, `Pinheiro`).
+  - `Art/Meshes/`: malhas geradas pela montagem da cidade (`ConeDeLuz`).
   - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
   - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), usada nos gemidos distantes.
 - Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
@@ -66,11 +71,37 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 ## A cidade em blocos (Parte 4)
 
 - **Montada por código:** `Editor/MontagemDaCidade`, menu Zombie City Cleaner > Montar cidade em blocos. Ela apaga e refaz a raiz "Cidade" (e o antigo "Teste (temporário)"), então mudanças feitas à mão na cidade se perdem. Mude o script e rode de novo.
-  - Os materiais (`Art/Materials/Blocos/`) usam as cores do `Plano_Demo.md`. As peças são caixas, com ajudantes para parede com portas e janelas (`Parede` + `Abertura`), laje com buraco (`Laje`), escada e telhado.
   - Tudo é estático (batching e oclusão), menos as luzes, os postes e os cones de luz, que mudam em Play.
+- **Arte final (Parte 8):** tudo o que se vê é modelo do Blender (objetos de rua, casas, prédio, bunker, móveis e o chão), com o material único `Cidade`.
+  - **O chão colide com caixas invisíveis** (`Bloco`: só BoxCollider, sem renderer): ruas, saídas, calçadas, a grama (`Laje`, com o buraco da escada do bunker), o piso da praça, o coreto e o estacionamento. As alturas batem com o visual: rua no 0, calçada em 0,12, grama em -0,02, praça em 0,08, estacionamento em 0,01 e coreto em 0,6.
+  - O visual do chão são os 25 pedaços "Chao_i_j" (grupo "Chão (arte)"), já nas coordenadas do mundo.
+  - `ArteDaCidade()` acerta a importação dos FBX da cidade (sem materiais; o visual com UV de lightmap, a colisão legível e sem UV de lightmap) e o material `Cidade`, e carrega todas as malhas por nome. `Modelo(pai, malha, pos, yaw)` põe uma malha com o material da cidade, sem colisor.
+  - **Casas:** `Casa(grupo, "Casa_1", centro, yaw, W, D, bunker)` põe o modelo ("Casa") e um "Colisão" com um MeshCollider da malha `Casa_1_Colisao`.
+    - O modelo foi feito no Blender com a mesma planta (`cidade_casas.py`): o W × D e as aberturas têm de bater com o `CASAS` de lá.
+    - A montagem ainda põe os móveis em blocos, o eco, o bunker (blocos) e abre no chão de grama o buraco da escada.
+    - Conferido: NavMesh na sala e no quarto das 5 casas, caminho completo da rua até o quarto e da cozinha da família até o bunker, e o buraco da escada aberto na colisão.
+  - **Bunker:** `Bunker()` põe o modelo "Bunker" e um "Colisão" com `Bunker_Colisao` (no grupo da casa da família, nas coordenadas dela), os móveis, a lâmpada (a única luz lá embaixo) e o eco.
+  - **Móveis:** `Movel(pai, "Geladeira", x, y, z, yaw)` põe um móvel do `Cidade_Moveis.fbx` com uma caixa de colisão do tamanho da malha. O objeto leva o nome da malha (a Parte 7 vai achar os de saque por ele).
+    - `MoveisDaCasa`: sala (tapete, sofá ou poltrona, TV, mesa com cadeiras), cozinha (geladeira e fogão na divisória, balcão sob a janela) e quarto (cama, criado-mudo, armário e cômoda).
+      - O sofá acaba antes da porta da frente; se não couber, vira poltrona (casas de 9 m). O rack fica antes da porta da cozinha.
+      - Na casa da família, a boca da escada do bunker fica livre: o balcão vai para a parede da sala, depois da porta.
+    - `MoveisDoApartamento`: sofá contra a fachada, TV, mesa com cadeiras e a cozinha americana na parede do quarto; no quarto, cama, criado-mudo, armário e cômoda.
+    - Bunker: mesa grande com rádio e 4 cadeiras, 2 beliches, 3 prateleiras cheias na despensa, tambores e caixas.
+    - Conferido com os 187 móveis: caminho completo da rua até a sala, a cozinha e o quarto das 5 casas, da cozinha da família até as 3 salas do bunker e da rua até os apartamentos dos 4 andares.
+  - **Prédio:** `Predio()` põe o modelo "Predio" e um "Colisão" com a malha `Predio_Colisao`, mais os móveis de cada apartamento e o eco.
+    - Escada, patamares, muretas, guarda-corpo do último andar, degraus da entrada e portas estão na colisão. A escada de incêndio, a marquise e a cobertura são só visuais.
+    - Conferido: caminho completo da rua até o corredor e os dois apartamentos dos 4 andares.
+  - **Colisores à parte:** `ColisorDaMalha` (uma caixa do tamanho da malha: carros, barreiras, lixo, bancos) ou caixas e cápsulas à mão (a haste do poste, o poste das placas, o tronco das árvores). Os pinheiros, atrás da barreira, não têm colisor.
+  - **Poste:** o modelo e a lente ("Lâmpada", com o material `Lampada`, que o `PosteDeLuz` acende). A luz fica em (0; 5,8; 1,4) e o cone, em (0; 5,82; 1,4).
+  - **Carros:** `Carro(pai, pos, yaw, "Carro_Sedan_Vinho")`, por exemplo.
+  - **Cerca:** trechos de ~2 m, esticados para fechar a linha (15% quebrados), o mourão da ponta `a` (cada trecho só tem o do lado +X) e uma caixa de colisão só, fina, na linha toda.
+  - **Árvores:** 40% secas. **Pinheiros:** os três tipos, sorteados, com escala de 0,9 a 1,6.
+  - **"Objetos de rua":** 8 placas de pare nos cruzamentos (a frente olha para quem chega), 4 placas de rua, 6 hidrantes virados para a rua, 10 lixeiras (2 caídas), 2 caçambas e sacos de lixo. A praça tem os bancos virados para o coreto e 2 lixeiras.
+  - **Barricadas:** 5 barreiras de concreto, o cavalete e 3 cones do lado de dentro, e os 2 carros do lado de fora.
+  - A calçada fica 12 cm acima da rua: o que fica em cima dela usa y = 0,12.
   - No fim, ela põe os 4 pontos de nascimento na frente da casa da família.
 - **Planta (metros, +Z = norte):**
-  - Ruas em grade nas linhas x e z = −40, 0 e 40, com 8 m de largura, faixa amarela tracejada e calçadas de 2,5 m em volta dos 4 quarteirões. As 4 saídas, em ±60, têm barricadas.
+  - Ruas em grade nas linhas x e z = −40, 0 e 40, com 8 m de largura, faixa amarela tracejada e calçadas de 2,5 m em volta dos 4 quarteirões. As 4 saídas, em ±60, têm barricadas. (O chão de arte, `cidade_chao.py`, repete esta planta: ao mudá-la, mude lá também.)
   - **Prédio** em (20, 0, 21), 22 × 14 m, 4 andares de 3 m: escada em U no fundo, corredor no meio e 2 apartamentos por andar, com eco (reverb) dentro.
   - **Casa da família** em (−20, 0, −18), virada para o sul (yaw 180), 12 × 10 m, azul, com cerca. É a única com bunker.
   - **Outras casas:** Casa 1 (−27, 0, 19), Casa 2 (−12, 0, 23), Casa 4 (13, 0, −14) e Casa 5 (28, 0, −26). Todas dá para entrar.
@@ -79,7 +110,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - O chão é uma laje de 220 × 220 m feita por último, com um buraco na escada do bunker.
 - **Bunker** (embaixo do quintal da casa da família):
   - a escada começa no meio do cômodo de trás, com grade em volta do buraco, e desce para os fundos (19 degraus, do piso a −3,2 m);
-  - um patamar de 1,2 m e a porta (1,2 × 2,3 m) levam às salas: sala comum (mesa), quarto (beliche) e despensa (prateleiras);
+  - um patamar de 1,2 m e a porta blindada (1,2 × 2,3 m) levam às salas: sala comum (mesa e rádio), quarto (2 beliches) e despensa (prateleiras e tambores);
   - uma lâmpada quente (intensidade 5, alcance 9) e eco de corredor de pedra;
   - lá embaixo a luz do dia não chega (veja "Clima e ciclo do dia").
 - **Postes (`World/PosteDeLuz`):** 28 postes com luz de sódio (spot, intensidade 95, alcance 16, ângulo 105°, sem sombra) e um cone falso de luz.
@@ -97,6 +128,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **`World/AmbienteDoDia`:** troca os tons de dia e de noite (neblina, luz ambiente, cor, força e altura de "Sol e lua", o peso dos dois volumes e o fundo das câmeras) e passa os valores da neblina de altura ao shader.
     - Dia: neblina pesada e clara (cinza, densidade 0,032). Noite: neblina escura e azulada (densidade 0,042) e luar frio. Neblina clara à noite apagaria as poças de luz dos postes.
     - **Subsolo:** quando a câmera desce de −0,3 m para −1,5 m (a escada do bunker), a luz ambiente, o sol e as duas neblinas caem para 15%. Lá embaixo só a lâmpada e a lanterna iluminam.
+    - **Dentro das casas e do prédio** (Parte 8): com a câmera numa `World/AreaInterna`, as duas neblinas caem para 40% (`neblinaDentro`), em 0,6 s (`trocaDentro`). A luz não muda, porque ela entra pelas janelas.
+      - A montagem da cidade põe uma área em cada casa (do piso ao forro, W × D) e uma no prédio (os 4 andares). O bunker usa a regra do subsolo.
+      - Sem isso, a neblina de fora enchia as salas.
   - **`Atmosphere/SomAmbiente`:** o vento é gerado por código, em loop. Eventos distantes (35 a 60 m) tocam a cada 10 a 26 s, e à noite com o dobro da frequência: gemidos (trechos de `SomZombie1.mp3` mais graves), sirene e pancada de metal.
   - **"Partículas no ar" (`Atmosphere/ParticulasNoAr`):** uma caixa de 26 × 12 × 26 m que segue a câmera, com cinza de dia e poeira à noite.
 - **Neblina de altura (`Shaders/NeblinaDeAltura.shader`):** um passe de tela cheia antes dos transparentes (os cones e as partículas ficam por cima).
@@ -104,6 +138,14 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Abaixo da altura base a conta usa a base, para a neblina não engrossar debaixo da terra.
 - **Lanterna:** intensidade 30, alcance 28, inclinada 9° para baixo do olhar. A sombra dela começa a 0,6 m da luz (`shadowNearPlane`): a pistola e os braços do corpo ficam na frente do peito e cortavam a luz ao meio.
 - **Como testar:** em Play, Page Up / Page Down mudam a hora. Por código, `typeof(CicloDoDia).GetProperty("Hora").GetSetMethod(true).Invoke(null, new object[] { 12f })`.
+- **Luz em tempo real (decidido na Parte 8):** a cidade não tem luz assada. Os 28 postes são spots sem sombra (Forward+), a lanterna tem sombra e o SSAO do `PC_Renderer` dá o sombreado de contato.
+  - O ciclo do dia é contínuo, e os postes acendem, apagam e piscam: lightmap ou APV não acompanham. Seriam dois cenários de APV misturados pela hora, só para ganhar a luz rebatida.
+  - No benchmark, a GPU gastou 2,4 a 3,0 ms à noite com tudo isso ligado.
+- **Oclusão:** assada pela montagem da cidade, no fim (`AssarOclusao`, uns 2 s). Os dados ficam em `Scenes/Demo_Cidade/OcclusionCullingData.asset`.
+  - Só a arquitetura grande é oclusora: as casas, o prédio, o bunker e os 25 pedaços do chão (que escondem o bunker). O resto (objetos de rua, móveis, pinheiros) só é escondido. Os zumbis usam a oclusão dinâmica, que é o padrão.
+  - Menor oclusor 3 m e menor buraco 0,25 m: portas e janelas deixam ver através.
+  - Mudou a cidade, rode a montagem de novo, e a oclusão vem junto.
+- **LOD:** não há LOD Groups. Os triângulos vêm quase todos dos zumbis (o benchmark tem a conta), a câmera corta a 150 m com neblina, e os móveis de dentro das casas somem pela oclusão.
 
 ## O zumbi (`Art/Characters/Zombie/`)
 
@@ -138,7 +180,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Jogador.fbx`: o corpo, visto pelos outros jogadores.
   - `Jogador_FP.fbx`: os braços com a pistola, na primeira pessoa.
   - `Pistola.fbx`: a pistola avulsa, estática, para uso futuro (no chão, para pegar).
-  - `Paleta.png`: a textura de cores, 16×16, com filtro Point, sem mipmaps e sem compressão.
+  - A textura de cores fica em `Art/Paleta.png` (movida para lá na Parte 8, porque a cidade usa a mesma): 16×16, RGBA, filtro Point, sem mipmaps e sem compressão.
 - **Cores pela paleta:** o personagem é feito de blocos de cor sólida, e o UV de cada face aponta para um quadradinho da `Paleta.png`.
   - As linhas 0 a 3 são as 4 variações da família (pele, cabelo, jaqueta, camisa, calça, sapato, cinto, escuro e jaqueta escura).
   - `Materials/Jogador_Variacao0..3`: os UVs apontam para a linha 0, e cada material desloca a textura em `k/16` no V para mostrar a linha `k`.
@@ -285,8 +327,17 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Benchmark (`BenchmarkDeZumbis`):**
   - F9 no anfitrião, ou `-hospedar-local -benchmark -resultado caminho.md` na build (espera um cliente por até 25 s e fecha no fim).
   - Troca a população por 50, 100, 250 e 500 zumbis espalhados e mede cada quantidade por 10 s, sem vsync e sem dano.
-  - Mede o quadro (média e p95), a thread principal, a IA + LOD, a rede, `Animators.Update`, `NavMeshManager`, `Physics.Simulate`, os draw calls e os KB/s por cliente. Os marcadores só funcionam no Editor e em builds Development.
-  - A tabela vai para `Benchmarks/Benchmark_Zumbis.md` (no Editor) e depois as hordas voltam.
+  - Mede o quadro (média e p95), a thread principal, a GPU, a IA + LOD, a rede, `Animators.Update`, `NavMeshManager`, `Physics.Simulate`, os draw calls, os batches, os SetPass, os triângulos e os KB/s por cliente.
+    - Os marcadores só funcionam no Editor e em builds Development.
+    - O tempo da GPU vem do `FrameTimingManager` e precisa de "Frame Timing Stats" ligado nas Player Settings (ligado na Parte 8). Sem ele, a coluna sai "—".
+  - Cada rodada entra como uma seção nova no fim de `Benchmarks/Benchmark_Zumbis.md` (no Editor), com a data, o rótulo (`BenchmarkDeZumbis.Rotulo`) e a posição da câmera. O histórico fica para comparar. Depois as hordas voltam.
+  - Para comparar duas rodadas, use a mesma vista: a câmera muda muito os draw calls e os triângulos.
+  - A coluna "Batches" sai 0 no Editor (o contador não responde lá).
+  - **Números da Parte 8** (Editor, à noite, do cruzamento do meio olhando para o prédio):
+    - a cidade de arte deu 940 a 1.100 draw calls, contra ~2.460 da cidade em blocos;
+    - o quadro ficou igual, 4,3 a 6,2 ms (preso na CPU e no Editor); a GPU, 2,4 a 3,0 ms;
+    - os triângulos vão de ~0,5 milhão (50 zumbis) a ~1,3 milhão (500): quase tudo são zumbis.
+    - A oclusão cortou 4 a 5% dos draw calls e 8% dos triângulos dessa vista aberta; ela rende mais dentro das casas e atrás dos prédios.
 
 ## Combate e desmembramento (Parte 6)
 

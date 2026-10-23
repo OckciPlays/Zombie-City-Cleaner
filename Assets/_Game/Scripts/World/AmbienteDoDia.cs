@@ -43,6 +43,13 @@ namespace ZombieCityCleaner.World
         public Vector2 subsolo = new Vector2(-0.3f, -1.5f);
         [Tooltip("Quanto da luz ambiente, do sol e da neblina sobra lá embaixo.")]
         [Range(0f, 1f)] public float sobraNoSubsolo = 0.15f;
+        [Header("Dentro das casas e do prédio (AreaInterna)")]
+        [Tooltip("Quanto da neblina sobra lá dentro (a luz não muda: ela entra pelas janelas).")]
+        [Range(0f, 1f)] public float neblinaDentro = 0.4f;
+        [Tooltip("Tempo (s) para a neblina afinar ou voltar ao entrar e sair.")]
+        public float trocaDentro = 0.6f;
+
+        float _dentro, _dentroVel;
 
         static readonly int CorId = Shader.PropertyToID("_NeblinaCor");
         static readonly int ParamsId = Shader.PropertyToID("_NeblinaParams");
@@ -58,10 +65,14 @@ namespace ZombieCityCleaner.World
             var olho = Camera.main;
             float fundo = olho != null ? Mathf.InverseLerp(subsolo.x, subsolo.y, olho.transform.position.y) : 0f;
             float fora = Mathf.Lerp(1f, sobraNoSubsolo, fundo);
+            // dentro de casa a neblina de fora fica rala (sem mexer na luz)
+            bool dentro = olho != null && AreaInterna.Contem(olho.transform.position);
+            _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
+            float neblinaAqui = fora * Mathf.Lerp(1f, neblinaDentro, _dentro);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;
-            RenderSettings.fogDensity = Mathf.Lerp(dia.densidade, noite.densidade, n) * fora;
+            RenderSettings.fogDensity = Mathf.Lerp(dia.densidade, noite.densidade, n) * neblinaAqui;
             RenderSettings.ambientSkyColor = Color.Lerp(dia.ceu, noite.ceu, n) * fora;
             RenderSettings.ambientEquatorColor = Color.Lerp(dia.horizonte, noite.horizonte, n) * fora;
             RenderSettings.ambientGroundColor = Color.Lerp(dia.chao, noite.chao, n) * fora;
@@ -78,7 +89,7 @@ namespace ZombieCityCleaner.World
             foreach (var cam in Camera.allCameras)
                 if (cam.clearFlags == CameraClearFlags.SolidColor) cam.backgroundColor = neblina;
 
-            float alturaFixa = Mathf.Lerp(dia.neblinaDeAltura, noite.neblinaDeAltura, n) * fora;
+            float alturaFixa = Mathf.Lerp(dia.neblinaDeAltura, noite.neblinaDeAltura, n) * neblinaAqui;
             Shader.SetGlobalColor(CorId, new Color(neblina.r * 1.05f, neblina.g * 1.05f, neblina.b * 1.08f, 1f));
             Shader.SetGlobalVector(ParamsId, new Vector4(alturaFixa, alturaBase, queda, 140f));
             Shader.SetGlobalVector(VentoId, new Vector4(vento.x * Time.time, vento.y * Time.time, 0.045f, 0.6f));
