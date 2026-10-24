@@ -49,7 +49,17 @@ namespace ZombieCityCleaner.World
         [Tooltip("Tempo (s) para a neblina afinar ou voltar ao entrar e sair.")]
         public float trocaDentro = 0.6f;
 
-        float _dentro, _dentroVel;
+        [Header("Luneta")]
+        [Tooltip("Quanto das neblinas sobra olhando pela luneta da sniper (só na máquina de quem mira): sem isso, a neblina " +
+                 "escondia tudo a mais de 40 m, e a luneta não servia.")]
+        [Range(0f, 1f)] public float neblinaNaLuneta = 0.35f;
+
+        /// <summary>Quem joga nesta máquina está olhando pela luneta (a ArmaJogador liga e desliga).</summary>
+        public static bool NaLuneta { get; set; }
+
+        float _dentro, _dentroVel, _luneta;
+
+        void OnEnable() => NaLuneta = false;
 
         static readonly int CorId = Shader.PropertyToID("_NeblinaCor");
         static readonly int ParamsId = Shader.PropertyToID("_NeblinaParams");
@@ -68,7 +78,9 @@ namespace ZombieCityCleaner.World
             // dentro de casa a neblina de fora fica rala (sem mexer na luz)
             bool dentro = olho != null && AreaInterna.Contem(olho.transform.position);
             _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
-            float neblinaAqui = fora * Mathf.Lerp(1f, neblinaDentro, _dentro);
+            // pela luneta a neblina afina (rápido: a luneta já fecha em ~0,2 s)
+            _luneta = Mathf.MoveTowards(_luneta, NaLuneta ? 1f : 0f, Time.deltaTime * 8f);
+            float neblinaAqui = fora * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;

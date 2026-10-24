@@ -17,7 +17,7 @@ namespace ZombieCityCleaner.Combat
         static Efeitos _instancia;
         /// <summary>As variações do tiro de cada arma (na ordem de <see cref="TipoDeArma"/>).</summary>
         public static AudioClip[][] Tiros;
-        public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna;
+        public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna, Ferrolho, LunetaEntra, LunetaSai;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
         ParticleSystem _faiscas, _poeira;
@@ -37,6 +37,13 @@ namespace ZombieCityCleaner.Combat
             Bomba = Gerar("Bomba", 0.45f, (t, r) => Golpe(t, r, 0f, 1f) + Golpe(t, r, 0.3f, 1.2f));
             // o cartucho entrando no tubo: um clique curto
             Cartucho = Gerar("Cartucho", 0.08f, (t, r) => Golpe(t, r, 0f, 0.6f));
+            // o ferrolho da sniper, puxado à mão: a alavanca sobe, vai para trás, volta e desce (tocado 0,42 s depois do
+            // tiro, junto da animação)
+            Ferrolho = Gerar("Ferrolho", 0.5f, (t, r) => Golpe(t, r, 0.04f, 0.5f) + Arrasto(t, r, 0.07f, 0.09f) + Golpe(t, r, 0.165f, 0.9f)
+                                                       + Arrasto(t, r, 0.2f, 0.08f) + Golpe(t, r, 0.29f, 1.0f) + Golpe(t, r, 0.37f, 0.55f));
+            // a luneta: o pano da manga roçando e a borracha da ocular encostando no rosto; ao sair, só um roçar curto
+            LunetaEntra = Gerar("Luneta entra", 0.22f, (t, r) => Arrasto(t, r, 0f, 0.14f) * 0.8f + Golpe(t, r, 0.15f, 0.25f));
+            LunetaSai = Gerar("Luneta sai", 0.14f, (t, r) => Arrasto(t, r, 0f, 0.1f) * 0.6f + Golpe(t, r, 0.02f, 0.12f));
             for (int i = 0; i < 24; i++)
             {
                 var go = new GameObject("Som");
@@ -73,6 +80,14 @@ namespace ZombieCityCleaner.Combat
             float d = t - em;
             if (d < 0f) return 0f;
             return ((float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-d * 120f) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1700f * d) * Mathf.Exp(-d * 60f) * 0.25f) * forca;
+        }
+
+        // um arrasto: ruído que sobe e desce durante a duração (metal deslizando, pano roçando)
+        static float Arrasto(float t, System.Random r, float em, float duracao)
+        {
+            float d = t - em;
+            if (d < 0f || d > duracao) return 0f;
+            return (float)(r.NextDouble() * 2 - 1) * Mathf.Sin(Mathf.PI * d / duracao) * 0.22f;
         }
 
         ParticleSystem Particulas(string nome, Color cor, float tamanho, float vida, float velocidade)

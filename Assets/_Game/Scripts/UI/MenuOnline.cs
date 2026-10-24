@@ -59,15 +59,21 @@ namespace ZombieCityCleaner.UI
             var zumbis = Zombies.ZombieManager.Instancia;
             int perto = 0, medio = 0;
             if (zumbis != null && zumbis.IsSpawned) zumbis.ContarNiveis(out perto, out medio, out _);
-            int semCabeca = 0, mortos = 0;
+            int semCabeca = 0, mortos = 0, cortados = 0, mancando = 0, rastejando = 0;
             foreach (var z in FindObjectsByType<Zombies.Zumbi>())
             {
+                if (!z.isActiveAndEnabled) continue;
                 if (z.Morto) mortos++;
                 if (z.SemCabeca) semCabeca++;
+                if (z.Cortes != 0) cortados++;
+                if (z.Pernas == 1 || z.Pernas == 2) mancando++;
+                if (z.Pernas >= 3) rastejando++;
             }
-            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}; caídos {mortos}, sem cabeça {semCabeca}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
+            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}; caídos {mortos}, sem cabeça {semCabeca}; " +
+                      $"sem membros {cortados}, mancando {mancando}, rastejando {rastejando}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
             foreach (var j in Player.JogadorRede.Todos)
-                Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}");
+                Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, " +
+                          $"lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}, arma {(Combat.TipoDeArma)j.Arma.Value}{(j.Luneta.Value ? " (na luneta)" : "")}");
         }
 
         void Estilos()

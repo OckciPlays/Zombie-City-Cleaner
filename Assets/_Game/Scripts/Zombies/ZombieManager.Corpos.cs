@@ -20,6 +20,8 @@ namespace ZombieCityCleaner.Zombies
         public float tempoDoCorpo = 15f;
         [Tooltip("O empurrão do tiro na parte do corpo atingida (N·s).")]
         public float empurraoDoTiro = 30f;
+        [Tooltip("A espingarda de perto joga o corpo inteiro: a velocidade para trás e para cima (m/s).")]
+        public Vector2 arremesso = new Vector2(4.5f, 2.2f);
 
         List<CorpoDeZumbi>[] _corpos;
 
@@ -40,8 +42,11 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        /// <summary>Um corpo do modelo deste zumbi cai no lugar dele, com a velocidade dele e o empurrão do tiro.</summary>
-        internal void Cair(Zumbi z, Vector3 velocidade, bool semCabeca, int parte, Vector3 direcao)
+        /// <summary>
+        /// Um corpo do modelo deste zumbi cai no lugar dele, com a velocidade dele e o empurrão do tiro. Arremessado (a
+        /// espingarda de perto), o corpo inteiro voa para trás.
+        /// </summary>
+        internal void Cair(Zumbi z, Vector3 velocidade, bool semCabeca, int parte, Vector3 direcao, bool arremessado, byte cortes)
         {
             if (_corpos == null || z.modelo >= _corpos.Length) return;
             var lista = _corpos[z.modelo];
@@ -67,7 +72,8 @@ namespace ZombieCityCleaner.Zombies
             }
             // um pouco para cima: o tiro tira o pé do chão, e o corpo não arrasta
             Vector3 empurrao = (direcao.normalized + Vector3.up * 0.15f) * empurraoDoTiro;
-            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao);
+            if (arremessado) velocidade = direcao.normalized * arremesso.x + Vector3.up * arremesso.y;
+            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes);
         }
 
         void AtualizarCorpos(float agora, float dt)

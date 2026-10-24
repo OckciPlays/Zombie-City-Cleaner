@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.World;
 using ZombieCityCleaner.Zombies;
 
 namespace ZombieCityCleaner.Player
@@ -13,6 +14,8 @@ namespace ZombieCityCleaner.Player
     /// Clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta vários
     /// chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira (aproxima
     /// a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique. Mirando uma arma do suporte, E troca.
+    /// A sniper tem luneta: mirando, a câmera fecha até o campo de visão dela, os braços somem e a tela mostra a luneta
+    /// (o preto em volta e o retículo); o mouse fica mais lento na proporção do aumento. Sem a luneta, ela espalha muito.
     /// Acertar um zumbi: o sangue sai na hora aqui, e o acerto (zumbi, região e ponto) vai para o anfitrião, que tira a
     /// vida. O tiro atravessa até dois braços ou mãos e segue para o que estiver atrás. No cenário, faíscas e a marca do
     /// tiro.
@@ -34,6 +37,8 @@ namespace ZombieCityCleaner.Player
         public float alcanceDaMao = 2.2f;
 
         public int Municao { get; private set; }
+        /// <summary>Olhando pela luneta (a câmera já fechou): os braços somem e a tela mostra a luneta.</summary>
+        public bool NaLuneta { get; private set; }
         public bool Recarregando { get; private set; }
         public TipoDeArma Atual { get; private set; }
         public DadosDaArma Dados => Armas.Dados(Atual);
@@ -58,7 +63,8 @@ namespace ZombieCityCleaner.Player
         CharacterController _corpo;
         Coroutine _recarga;
         float _proximoTiro, _marcaAte;
-        bool _marcaNaCabeca;
+        bool _marcaNaCabeca, _mirandoAntes;
+        static Texture2D _texturaDaLuneta;
         VagaDeArma _vagaMirada;
 
         void Awake()
@@ -76,6 +82,15 @@ namespace ZombieCityCleaner.Player
         {
             StopAllCoroutines();
             Recarregando = false;
+            SairDaLuneta();
+        }
+
+        void SairDaLuneta()
+        {
+            NaLuneta = false;
+            if (rede != null && rede.IsOwner) AmbienteDoDia.NaLuneta = false;   // a neblina é da máquina de quem joga
+            if (rede != null && rede.cameraBracos != null) rede.cameraBracos.enabled = rede.IsOwner;
+            if (movimento != null) movimento.MultiplicadorDoOlhar = 1f;
         }
 
         /// <summary>A arma da mão mudou (no começo, ou trocada no suporte): mostra o modelo dela, cheia, sacando.</summary>
@@ -84,6 +99,7 @@ namespace ZombieCityCleaner.Player
             StopAllCoroutines();
             Recarregando = false;
             Atual = nova;
+            SairDaLuneta();
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == (int)nova);
             Municao = Dados.capacidade;
             Animador.Play(SacarId, CamadaAcoes, 0f);
@@ -94,10 +110,28 @@ namespace ZombieCityCleaner.Player
         {
             bool bot = MenuOnline.Bot;
             bool controla = bot || (!MenuOnline.Aberto && Cursor.lockState == CursorLockMode.Locked);
-            bool mirar = controla && !bot && _mirar.IsPressed();
+            var dados = Dados;
+            bool luneta = dados.fovLuneta > 0f;
+            // recarregando, a sniper sai da luneta (a mão está no carregador). O robô de teste, com a sniper, fica na luneta
+            // (testa o nível de detalhe dos zumbis pela luneta, na rede)
+            bool mirar = controla && (bot ? luneta : _mirar.IsPressed()) && !(luneta && Recarregando);
             if (rede.Mirando.Value != mirar) rede.Mirando.Value = mirar;
             var cam = rede.cameraMundo;
-            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, mirar ? fovMirando : fovNormal, 1f - Mathf.Exp(-12f * Time.deltaTime));
+            float fovAlvo = mirar ? (luneta ? dados.fovLuneta : fovMirando) : fovNormal;
+            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, fovAlvo, 1f - Mathf.Exp(-(luneta ? 20f : 12f) * Time.deltaTime));
+            if (luneta && mirar != _mirandoAntes) Efeitos.Som(mirar ? Efeitos.LunetaEntra : Efeitos.LunetaSai, cam.transform.position, 0.6f, false);
+            _mirandoAntes = mirar;
+            // os braços somem quando a câmera já fechou quase toda (antes disso, a arma sobe para o rosto)
+            bool naLuneta = luneta && mirar && cam.fieldOfView < dados.fovLuneta + 8f;
+            if (naLuneta != NaLuneta)
+            {
+                NaLuneta = naLuneta;
+                rede.cameraBracos.enabled = !naLuneta;
+                AmbienteDoDia.NaLuneta = naLuneta;   // a neblina afina para quem olha pela luneta
+            }
+            if (rede.Luneta.Value != naLuneta) rede.Luneta.Value = naLuneta;
+            movimento.MultiplicadorDoOlhar = luneta && mirar
+                ? Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(fovNormal * 0.5f * Mathf.Deg2Rad) : 1f;
             Animador.SetFloat(SpeedId, rede.Velocidade);
             ProcurarVaga(cam.transform);
             if (!controla) return;
@@ -132,36 +166,124 @@ namespace ZombieCityCleaner.Player
             Efeitos.Clarao(Boca, JogadorRede.CamadaBracos);
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
+            if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
             movimento.Coice(d.coiceGraus);
 
             var cam = rede.cameraMundo.transform;
             _marcaNaCabeca = false;
-            float abertura = d.dispersao + (movimento.Correndo ? d.dispersaoAndando * 2f : 0f);
+            float abertura = (d.fovLuneta > 0f && !NaLuneta ? d.dispersaoSemLuneta : d.dispersao) + (movimento.Correndo ? d.dispersaoAndando * 2f : 0f);
             // as hitboxes andam com a animação: sincroniza a física antes do raio, para acertar onde o zumbi está agora
             Physics.SyncTransforms();
             var impactos = new JogadorRede.Impacto[d.chumbos];
+            _carne.Clear();
             for (int k = 0; k < d.chumbos; k++)
             {
-                Vector2 desvio = Random.insideUnitCircle * abertura;
+                // na espingarda um chumbo sai bem no meio da mira: é a parte que ele pega que conta (veja MandarAcertos)
+                _chumboDoCentro = k == 0 && d.chumbos > 1;
+                Vector2 desvio = _chumboDoCentro ? Vector2.zero : Random.insideUnitCircle * abertura;
                 Vector3 direcao = cam.rotation * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
                 impactos[k] = Disparar(cam.position, direcao, d);
             }
+            _chumboDoCentro = false;
+            MandarAcertos(d);
             rede.AnunciarTiro(impactos);
         }
+
+        /// <summary>Um pedaço de zumbi que o tiro (ou um chumbo) pegou, e a que distância do olho.</summary>
+        struct NaCarne
+        {
+            public Hitbox hitbox;
+            public Vector3 ponto;
+            public float distancia;
+            /// <summary>Do chumbo do meio da mira (na espingarda).</summary>
+            public bool centro;
+        }
+
+        bool _chumboDoCentro;
+
+        readonly System.Collections.Generic.List<NaCarne> _carne = new System.Collections.Generic.List<NaCarne>();
+
+        /// <summary>
+        /// Os acertos do disparo vão para o anfitrião, com o dano da distância (no tronco ou no membro). Na espingarda os
+        /// chumbos contam juntos: cada zumbi leva um acerto só, na parte onde se mirou (a que o chumbo do meio pegou). De
+        /// perto, um chumbo na cabeça já basta para explodir a cabeça; de longe não (um chumbo perdido matava na média
+        /// distância, e lá a espingarda precisa de dois tiros). Se o chumbo do meio não pegou este zumbi, conta a parte que
+        /// mais levou chumbo (o tronco, se empatar com um membro; a cabeça, se empatar com qualquer uma).
+        /// </summary>
+        void MandarAcertos(DadosDaArma d)
+        {
+            if (!d.chumbosJuntos)
+            {
+                foreach (var c in _carne) Mandar(c, d);
+                return;
+            }
+            for (int i = 0; i < _carne.Count; i++)
+            {
+                var zumbi = _carne[i].hitbox.zumbi;
+                bool repetido = false;
+                for (int k = 0; k < i && !repetido; k++) repetido = _carne[k].hitbox.zumbi == zumbi;
+                if (repetido) continue;
+                float perto = float.MaxValue;
+                for (int k = i; k < _carne.Count; k++)
+                    if (_carne[k].hitbox.zumbi == zumbi) perto = Mathf.Min(perto, _carne[k].distancia);
+                bool dePerto = perto <= d.arremessoAte;
+                int melhor = -1, maisChumbos = 0, doCentro = -1;
+                bool naCabeca = false;
+                for (int k = i; k < _carne.Count; k++)
+                {
+                    if (_carne[k].hitbox.zumbi != zumbi) continue;
+                    if (_carne[k].centro && doCentro < 0) doCentro = k;
+                    naCabeca |= _carne[k].hitbox.regiao == RegiaoDoCorpo.Cabeca;
+                }
+                for (int k = i; k < _carne.Count; k++)
+                {
+                    var h = _carne[k].hitbox;
+                    if (h.zumbi != zumbi) continue;
+                    int chumbos = 0;
+                    for (int j = i; j < _carne.Count; j++)
+                        if (_carne[j].hitbox.zumbi == zumbi && _carne[j].hitbox.regiao == h.regiao && _carne[j].hitbox.membro == h.membro) chumbos++;
+                    // a conta vale o dobro mais o desempate: cabeça, depois tronco, depois membro
+                    if (h.regiao == RegiaoDoCorpo.Cabeca) chumbos = dePerto ? 1000 : chumbos * 3 + 2;
+                    else if (!EhMembro(h.regiao)) chumbos = chumbos * 3 + 1;
+                    else chumbos *= 3;
+                    if (chumbos > maisChumbos) { maisChumbos = chumbos; melhor = k; }
+                }
+                if (doCentro >= 0 && !(dePerto && naCabeca)) melhor = doCentro;
+                var escolhido = _carne[melhor];
+                escolhido.distancia = perto;
+                Mandar(escolhido, d);
+            }
+        }
+
+        void Mandar(in NaCarne c, DadosDaArma d)
+        {
+            var faixa = Armas.Dano(d, c.distancia);
+            float dano = EhMembro(c.hitbox.regiao) ? faixa.membro : faixa.corpo;
+            bool arremesso = d.arremessoAte > 0f && c.distancia <= d.arremessoAte;
+            rede.AcertarZumbi(c.hitbox.zumbi, c.hitbox.regiao, c.hitbox.membro, dano, c.ponto, arremesso);
+        }
+
+        static bool EhMembro(RegiaoDoCorpo r) => r == RegiaoDoCorpo.Braco || r == RegiaoDoCorpo.Perna;
 
         /// <summary>Um raio (o tiro, ou um chumbo): o efeito aqui, o acerto ao anfitrião e o que os outros devem ver.</summary>
         JogadorRede.Impacto Disparar(Vector3 origem, Vector3 direcao, DadosDaArma d)
         {
             var impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Nada, normal = Vector3.up };
             int bracos = 0;
+            // a bala que atravessa o antebraço e pega o braço logo atrás conta uma vez só naquele membro (senão o braço
+            // caía com dois tiros em vez de três)
+            Zumbi ultimoZumbi = null;
+            int ultimoMembro = -1;
             // à queima-roupa, a hitbox colada na câmera leva o tiro primeiro
             var encostada = Encostada(origem, direcao, out Vector3 pontoEncostado);
             if (encostada != null)
             {
                 impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = pontoEncostado, normal = -direcao };
-                Carne(encostada, pontoEncostado, -direcao, d.dano);
+                Carne(encostada, pontoEncostado, -direcao, 0f);
                 if (!EhBraco(encostada.regiao)) return impacto;
                 bracos++;
+                ultimoZumbi = encostada.zumbi;
+                ultimoMembro = Membros.Limbo(encostada.membro);
             }
             // o tiro atravessa braços e mãos (até dois): numa multidão, as mãos de quem ataca ficam na frente da mira e
             // comiam o tiro que era do zumbi de trás
@@ -177,7 +299,11 @@ namespace ZombieCityCleaner.Player
                 if (hitbox != null && hitbox == encostada) continue;
                 if (hitbox != null && hitbox.zumbi != null)
                 {
-                    Carne(hitbox, hit.point, hit.normal, d.dano);
+                    int membro = Membros.Limbo(hitbox.membro);
+                    if (membro >= 0 && hitbox.zumbi == ultimoZumbi && membro == ultimoMembro) continue;
+                    ultimoZumbi = hitbox.zumbi;
+                    ultimoMembro = membro;
+                    Carne(hitbox, hit.point, hit.normal, hit.distance);
                     impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
                     if (EhBraco(hitbox.regiao) && ++bracos <= 2) continue;
                     break;
@@ -200,11 +326,11 @@ namespace ZombieCityCleaner.Player
 
         static bool EhBraco(RegiaoDoCorpo r) => r == RegiaoDoCorpo.Braco;
 
-        // um acerto num zumbi: sangue aqui na hora, a marca na mira e o acerto vai para o anfitrião
-        void Carne(Hitbox hitbox, Vector3 ponto, Vector3 normal, float dano)
+        // um acerto num zumbi: sangue aqui na hora e a marca na mira; o acerto vai para o anfitrião no fim do disparo
+        void Carne(Hitbox hitbox, Vector3 ponto, Vector3 normal, float distancia)
         {
             Sangue.Respingo(ponto, normal);
-            rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, dano, ponto);
+            _carne.Add(new NaCarne { hitbox = hitbox, ponto = ponto, distancia = distancia, centro = _chumboDoCentro });
             _marcaAte = Time.time + 0.18f;
             _marcaNaCabeca |= hitbox.regiao == RegiaoDoCorpo.Cabeca;
         }
@@ -298,12 +424,17 @@ namespace ZombieCityCleaner.Player
         {
             if (MenuOnline.Aberto) return;
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
-            // mira: um ponto com quatro tracinhos
-            Color cor = new Color(0.95f, 0.93f, 0.85f, 0.85f);
-            float t = Mathf.Max(1f, Mathf.Round(2 * u)), g = 6 * u, l = 7 * u;
-            Retangulo(cx - t / 2, cy - t / 2, t, t, cor);
-            Retangulo(cx - g - l, cy - t / 2, l, t, cor); Retangulo(cx + g, cy - t / 2, l, t, cor);
-            Retangulo(cx - t / 2, cy - g - l, t, l, cor); Retangulo(cx - t / 2, cy + g, t, l, cor);
+            float t = Mathf.Max(1f, Mathf.Round(2 * u));
+            if (NaLuneta) Luneta(cx, cy, u);
+            else
+            {
+                // mira: um ponto com quatro tracinhos
+                Color cor = new Color(0.95f, 0.93f, 0.85f, 0.85f);
+                float g = 6 * u, l = 7 * u;
+                Retangulo(cx - t / 2, cy - t / 2, t, t, cor);
+                Retangulo(cx - g - l, cy - t / 2, l, t, cor); Retangulo(cx + g, cy - t / 2, l, t, cor);
+                Retangulo(cx - t / 2, cy - g - l, t, l, cor); Retangulo(cx - t / 2, cy + g, t, l, cor);
+            }
             // acertou carne: quatro tracinhos diagonais (vermelhos na cabeça)
             if (Time.time < _marcaAte)
             {
@@ -335,6 +466,49 @@ namespace ZombieCityCleaner.Player
                               $"[E] Pegar {Armas.Dados(naVaga.Value).nomeComArtigo} (deixa {d.nomeComArtigo})", dica);
                 }
             }
+        }
+
+        /// <summary>
+        /// A luneta na tela: o círculo do tamanho da altura da tela, preto em volta (com a borda escurecendo para dentro)
+        /// e o retículo: as linhas grossas vêm da borda e afinam perto do meio, com um ponto vermelho no centro.
+        /// </summary>
+        static void Luneta(float cx, float cy, float u)
+        {
+            if (_texturaDaLuneta == null) _texturaDaLuneta = TexturaDaLuneta();
+            float lado = Screen.height;
+            var r = new Rect(cx - lado / 2f, cy - lado / 2f, lado, lado);
+            GUI.DrawTexture(r, _texturaDaLuneta);
+            Retangulo(0f, 0f, r.x + 1f, Screen.height, Color.black);
+            Retangulo(r.xMax - 1f, 0f, Screen.width - r.xMax + 1f, Screen.height, Color.black);
+            var preto = new Color(0f, 0f, 0f, 0.92f);
+            float fino = Mathf.Max(1f, Mathf.Round(1.5f * u)), grosso = Mathf.Round(5f * u), raio = lado * 0.47f, vao = lado * 0.15f;
+            Retangulo(cx - raio, cy - fino / 2f, raio * 2f, fino, preto);
+            Retangulo(cx - fino / 2f, cy - raio, fino, raio * 2f, preto);
+            Retangulo(cx - raio, cy - grosso / 2f, raio - vao, grosso, preto);
+            Retangulo(cx + vao, cy - grosso / 2f, raio - vao, grosso, preto);
+            Retangulo(cx - grosso / 2f, cy + vao, grosso, raio - vao, preto);
+            Retangulo(cx - grosso / 2f, cy - raio, grosso, raio - vao, preto);
+            float ponto = Mathf.Max(2f, Mathf.Round(3f * u));
+            Retangulo(cx - ponto / 2f, cy - ponto / 2f, ponto, ponto, new Color(0.85f, 0.12f, 0.08f, 0.95f));
+        }
+
+        // o círculo da luneta: transparente no meio, escurecendo perto da borda e preto fora
+        static Texture2D TexturaDaLuneta()
+        {
+            const int n = 512;
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n - 0.5f, dy = (y + 0.5f) / n - 0.5f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.Max(Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.33f, 0.47f, d)) * 0.7f, Mathf.InverseLerp(0.465f, 0.475f, d));
+                    px[y * n + x] = new Color32(0, 0, 0, (byte)Mathf.RoundToInt(Mathf.Clamp01(a) * 255f));
+                }
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Luneta", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            t.SetPixels32(px);
+            t.Apply(false, true);
+            return t;
         }
 
         static void Retangulo(float x, float y, float w, float h, Color c)

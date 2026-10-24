@@ -50,6 +50,11 @@ namespace ZombieCityCleaner.Player
         /// <summary>Para onde a cabeça aponta na vertical, em graus (positivo = olhando para baixo).</summary>
         public readonly NetworkVariable<float> Pitch = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<bool> Mirando = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>
+        /// Olhando pela luneta (a sniper). O anfitrião usa para os zumbis na linha da luneta: de longe eles contam como
+        /// se estivessem perto (aparecem, têm hitboxes e vão pela rede), na proporção do aumento.
+        /// </summary>
+        public readonly NetworkVariable<bool> Luneta = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<int> Cor = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>A arma da mão (<see cref="TipoDeArma"/>). Só o anfitrião troca (no suporte de armas do bunker).</summary>
         public readonly NetworkVariable<byte> Arma = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -232,7 +237,8 @@ namespace ZombieCityCleaner.Player
             var boca = BocaCorpo;
             Efeitos.Clarao(boca, 0);
             Efeitos.Som(Efeitos.Tiros[Mathf.Clamp(Arma.Value, 0, Armas.Quantas - 1)], boca.position, 1f, true, 150f);   // tiro se ouve longe
-            if (Arma.Value == (byte)TipoDeArma.Espingarda) StartCoroutine(BombaDepois(boca));
+            if (Arma.Value == (byte)TipoDeArma.Espingarda) StartCoroutine(SomDepois(boca, Efeitos.Bomba, 0.33f, 0.8f));
+            if (Armas.Dados((TipoDeArma)Arma.Value).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
             foreach (var i in impactos)
             {
                 if (i.tipo == TipoDeAcerto.Carne) Sangue.Respingo(i.ponto, i.normal);
@@ -241,27 +247,30 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        IEnumerator BombaDepois(Transform boca)
+        IEnumerator SomDepois(Transform boca, AudioClip clip, float espera, float volume)
         {
-            yield return new WaitForSeconds(0.33f);
-            if (boca != null) Efeitos.Som(Efeitos.Bomba, boca.position, 0.8f, true, 25f);
+            yield return new WaitForSeconds(espera);
+            if (boca != null) Efeitos.Som(clip, boca.position, volume, true, 25f);
         }
 
         /// <summary>
         /// O dono acertou um zumbi (a cópia dele, ou o zumbi de verdade no anfitrião). Quem decide o dano é o anfitrião:
-        /// o acerto vai para ele com o Id, a geração, a região e o ponto.
+        /// o acerto vai para ele com o Id, a geração, a região, o membro, o dano, o ponto e se o corpo deve ser
+        /// arremessado (a espingarda de perto). A região, o membro e o arremesso vão num byte só.
         /// </summary>
-        public void AcertarZumbi(Zumbi zumbi, RegiaoDoCorpo regiao, float dano, Vector3 ponto)
+        public void AcertarZumbi(Zumbi zumbi, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso)
         {
-            if (IsServer) ZombieManager.Acertar(zumbi.Id, zumbi.Geracao, regiao, dano, ponto, this);
-            else AcertoRpc((ushort)zumbi.Id, zumbi.Geracao, (byte)regiao, dano, ponto);
+            if (IsServer) ZombieManager.Acertar(zumbi.Id, zumbi.Geracao, regiao, membro, dano, ponto, arremesso, this);
+            else AcertoRpc((ushort)zumbi.Id, zumbi.Geracao, (byte)((byte)regiao | ((byte)membro << 3) | (arremesso ? 128 : 0)), dano, ponto);
         }
 
         [Rpc(SendTo.Server)]
-        void AcertoRpc(ushort id, byte geracao, byte regiao, float dano, Vector3 ponto, RpcParams parametros = default)
+        void AcertoRpc(ushort id, byte geracao, byte parte, float dano, Vector3 ponto, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;   // só o dono atira com este jogador
-            ZombieManager.Acertar(id, geracao, (RegiaoDoCorpo)regiao, dano, ponto, this);
+            var regiao = (RegiaoDoCorpo)(parte & 7);
+            var membro = (Membro)Mathf.Min((parte >> 3) & 15, (int)Membro.CanelaD);
+            ZombieManager.Acertar(id, geracao, regiao, membro, dano, ponto, (parte & 128) != 0, this);
         }
     }
 }

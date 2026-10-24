@@ -39,6 +39,10 @@ namespace ZombieCityCleaner.EditorTools
         public static string MalhaDaArma(int arma) => $"{Malhas}/Arma_{Armas.Modelos[arma]}.asset";
         public static string ControladorFPDa(int arma) => arma == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Armas.Modelos[arma]}.overrideController";
         public static string ControladorTPDa(int arma) => arma == 0 ? ControladorTP : $"{Arte}/Jogador_TP_{Armas.Modelos[arma]}.overrideController";
+        /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
+        static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
+        /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
+        static int CorpoDa(int arma) => (int)(Armas.Todas[arma].corpoComo ?? (TipoDeArma)arma);
 
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
@@ -68,7 +72,7 @@ namespace ZombieCityCleaner.EditorTools
             for (int i = 1; i < Armas.Quantas; i++)
             {
                 MontarOverride(ControladorFP, FbxFP(0), FbxFP(i), ClipesFP, c => c, ControladorFPDa(i));
-                string modelo = Armas.Modelos[i];
+                string modelo = Armas.Modelos[CorpoDa(i)];
                 MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_{modelo}", ControladorTPDa(i));
             }
             AssetDatabase.SaveAssets();
@@ -118,7 +122,14 @@ namespace ZombieCityCleaner.EditorTools
 
         static void ImportarArmas()
         {
-            var imp = Importador(FbxArmas);
+            ImportarAvulsas(FbxArmas);
+            for (int i = 0; i < Armas.Quantas; i++)
+                if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
+        }
+
+        static void ImportarAvulsas(string fbx)
+        {
+            var imp = Importador(fbx);
             imp.animationType = ModelImporterAnimationType.None;
             imp.importAnimation = false;
             imp.isReadable = true;
@@ -131,8 +142,9 @@ namespace ZombieCityCleaner.EditorTools
         static void MontarMalha(int arma)
         {
             string prefixo = Armas.Modelos[arma] + "_";
-            var pecas = AssetDatabase.LoadAllAssetsAtPath(FbxArmas).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
-            if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {FbxArmas}.");
+            string fbx = File.Exists(FbxAvulsaDa(arma)) ? FbxAvulsaDa(arma) : FbxArmas;
+            var pecas = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
+            if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {fbx}.");
             var juntas = pecas.Select(m => new CombineInstance { mesh = m, transform = Matrix4x4.identity }).ToArray();
             string caminho = MalhaDaArma(arma);
             var malha = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
@@ -216,7 +228,8 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>
         /// "Parede de armas": um NetworkObject da cena no lugar do móvel "Suporte_Armas" (posto pela montagem da cidade no
-        /// bunker), com as 4 vagas (de baixo para cima), cada uma com o colisor que a mira procura e a arma deitada.
+        /// bunker), com as 4 vagas (de baixo para cima), cada uma com o colisor que a mira procura e a arma deitada, e a 5ª
+        /// em cima da "Mesa_Grande" da sala comum: a sniper, deitada de lado, ao longo da mesa.
         /// </summary>
         public static void MontarSuporte(UnityEngine.SceneManagement.Scene cena)
         {
@@ -234,12 +247,23 @@ namespace ZombieCityCleaner.EditorTools
             var parede = raiz.AddComponent<ParedeDeArmas>();
             parede.malhas = Enumerable.Range(0, Armas.Quantas).Select(i => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaArma(i))).ToArray();
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
-            parede.vagas = new VagaDeArma[AlturasDoSuporte.Length];
-            for (int k = 0; k < AlturasDoSuporte.Length; k++)
+            var mesa = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Mesa_Grande");
+            int vagas = AlturasDoSuporte.Length + (mesa != null ? 1 : 0);
+            if (mesa == null) Debug.LogWarning("A Mesa_Grande do bunker não está na cena: a sniper fica sem vaga.");
+            parede.vagas = new VagaDeArma[vagas];
+            for (int k = 0; k < vagas; k++)
             {
-                var go = new GameObject($"Vaga {k + 1}");
+                var go = new GameObject(k < AlturasDoSuporte.Length ? $"Vaga {k + 1}" : "Vaga da mesa");
                 go.transform.SetParent(raiz.transform, false);
-                go.transform.localPosition = new Vector3(0f, AlturasDoSuporte[k], FrenteDoSuporte);
+                if (k < AlturasDoSuporte.Length) go.transform.localPosition = new Vector3(0f, AlturasDoSuporte[k], FrenteDoSuporte);
+                else
+                {
+                    // em cima da mesa, do lado de lá do rádio: o "alto" da vaga (+Z) aponta para cima, então a arma fica
+                    // deitada de lado, com o cano ao longo da mesa
+                    var limites = mesa.GetComponentInChildren<Renderer>().bounds;
+                    go.transform.SetPositionAndRotation(new Vector3(limites.center.x + 0.1f, limites.max.y, limites.center.z + 0.12f),
+                                                        Quaternion.LookRotation(Vector3.up, Vector3.back));
+                }
                 var col = go.AddComponent<BoxCollider>();
                 col.isTrigger = true;
                 col.center = new Vector3(0f, 0.14f, 0.05f);

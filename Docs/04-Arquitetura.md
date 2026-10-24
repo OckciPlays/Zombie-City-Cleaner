@@ -79,7 +79,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 - **Raiz:** CharacterController, NetworkObject e NetworkTransform com autoridade do dono (cada um controla o próprio movimento).
   - `JogadorRede`: as câmeras, o corpo, a cor da família, a arma da mão e o tiro pela rede.
   - `MovimentoPrimeiraPessoa`: andar (2,0 m/s), correr (4,2 m/s), mirando (1,3 m/s) e pular.
-  - `ArmaJogador`: o tiro, a recarga, a mira e a troca no suporte.
+  - `ArmaJogador`: o tiro, a recarga, a mira (e a luneta da sniper) e a troca no suporte.
   - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
   - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker.
 - **"Corpo":** o modelo que os outros veem. Para o próprio jogador, ele só faz sombra.
@@ -87,20 +87,22 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 
 ### As armas (`Combat/Armas`, `Player/ArmaJogador`, `Combat/ParedeDeArmas`)
 
-- **`Armas`** é a tabela dos números de cada arma (`DadosDaArma`), na ordem de `TipoDeArma` (o número que vai pela rede):
+- **`Armas`** é a tabela dos números de cada arma (`DadosDaArma`), na ordem de `TipoDeArma` (o número que vai pela rede). A vida dos zumbis é contada em tiros de pistola: o corpo aguenta 6 e cada braço ou perna, 3 (entre parênteses, os tiros que matam ou arrancam):
 
-  | Arma | Pente | Cadência | Dano | Recarga |
-  |---|---|---|---|---|
-  | Pistola | 12 | 0,18 s | 1 | 1,67 s |
-  | Rifle (automático) | 30 | 0,1 s | 1,4 | 1,92 s |
-  | Submetralhadora (automática) | 25 | 0,075 s | 0,8 | 1,67 s |
-  | Espingarda (8 chumbos) | 6 | 0,92 s (com a bomba) | 0,5 por chumbo | 0,54 s por cartucho |
+  | Arma | Pente | Cadência | No tronco | Num membro | Recarga |
+  |---|---|---|---|---|---|
+  | Pistola | 12 | 0,18 s | 1 (6) | 1 (3) | 1,67 s |
+  | Rifle (automático) | 30 | 0,1 s | 1,5 (4) | 1,5 (2) | 1,92 s |
+  | Submetralhadora (automática) | 25 | 0,075 s | 1 (6) | 1 (3) | 1,67 s |
+  | Espingarda (8 chumbos) | 6 | 0,92 s (com a bomba) | 7 até 5 m (1), 3 até 15 m (2), 1 depois | 3 (1), 1,5 (2), 0,5 | 0,54 s por cartucho |
+  | Sniper (ferrolho e luneta) | 5 | 1,25 s (com o ferrolho) | 8 (1) | 8 (1) | 1,92 s |
 
-  A vida dos zumbis é contada em tiros de pistola (dano 1). Na cabeça, qualquer acerto explode a cabeça.
-- **O tiro:** um raio do centro da tela (um por chumbo na espingarda), com dispersão em volta do olhar. O raio atravessa até dois braços (numa multidão, as mãos de quem ataca ficam na frente) e confere os primeiros 35 cm à parte (à queima-roupa).
-- **Quem decide:** quem atira vê o acerto na hora (sangue, a marca na mira) e manda o acerto para o anfitrião, que confere e aplica o dano.
-- **O suporte de armas** (`ParedeDeArmas`, um objeto de rede da cena): 4 vagas com uma arma deitada em cada. Mirando uma arma de perto, E pede a troca; o anfitrião confere a distância e troca a vaga e a arma do jogador. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
-- **As animações:** cada arma tem os seus braços de primeira pessoa (um FBX por arma) com o mesmo Animator, trocando os clipes por um override. O corpo usa outro override para as armas longas.
+  Na cabeça, qualquer acerto explode a cabeça (na espingarda, um chumbo perdido só conta de perto). A espingarda conta os chumbos juntos: um acerto por zumbi, na parte do chumbo do meio da mira; de perto, o tiro que mata joga o corpo para trás.
+- **O tiro:** um raio do centro da tela (um por chumbo na espingarda), com dispersão em volta do olhar. O raio atravessa até dois braços (numa multidão, as mãos de quem ataca ficam na frente; o mesmo braço não conta duas vezes) e confere os primeiros 35 cm à parte (à queima-roupa).
+- **Quem decide:** quem atira vê o acerto na hora (sangue, a marca na mira) e manda o acerto para o anfitrião (a região, o membro, o dano da distância e se o corpo é arremessado), que confere e aplica o dano.
+- **A luneta da sniper:** o botão direito fecha a câmera para 12° (~6,7×), esconde os braços e desenha a luneta na tela; o mouse fica mais lento e a neblina afina, só para quem mira. O anfitrião sabe quem está na luneta (`JogadorRede.Luneta`) e, na linha dela, trata os zumbis de longe como de perto (veja o LOD).
+- **O suporte de armas** (`ParedeDeArmas`, um objeto de rede da cena): 4 vagas na parede e a 5ª na mesa da sala comum (a sniper), com uma arma deitada em cada. Mirando uma arma de perto, E pede a troca; o anfitrião confere a distância e troca a vaga e a arma do jogador. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
+- **As animações:** cada arma tem os seus braços de primeira pessoa (um FBX por arma) com o mesmo Animator, trocando os clipes por um override. O corpo usa outro override para as armas longas (a sniper usa o do rifle).
 
 ### Os zumbis (`Zombies/`)
 
@@ -117,14 +119,15 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
   | Médio | 15 a 40 m | só vagar e tiros, a cada 0,5 s | só quando aparece na tela | uma cápsula |
   | Longe | mais de 40 m | nenhuma (fica parado) | desligada | nenhuma |
 
-  No máximo 40 zumbis pensam por quadro, em rodízio. Quem persegue, ataca ou levou tiro há menos de 5 s fica sempre no Perto.
+  No máximo 40 zumbis pensam por quadro, em rodízio. Quem persegue, ataca ou levou tiro há menos de 5 s fica sempre no Perto. Para quem olha pela luneta, os zumbis na linha dela contam a distância dividida pelo aumento (a 70 m, viram Perto).
 - **Os 4 modelos:** cada um tem o seu pool. O modelo de cada zumbi é calculado do Id e da geração dele (`(id * 7 + geração * 3) % 4`), então anfitrião e clientes chegam ao mesmo sem mandar nada.
-- **Rede (`ZombieManager.Rede.cs`):** o anfitrião manda a cada cliente só os zumbis perto dele (até 15 m, 10 vezes por segundo; de 15 a 40 m, menos), 13 bytes por zumbi, numa mensagem não confiável. O cliente mostra cópias interpoladas um pouco no passado. Não há evento separado: a morte, os golpes e os tiros levados estão no estado de cada zumbi.
-- **Morte (`CorpoDeZumbi`, `ZombieManager.Corpos.cs`):** o zumbi some, e um corpo com física (11 partes com juntas) cai no lugar, empurrado pelo tiro. Os corpos são só visuais (cada máquina tem os seus) e voltam ao pool afundando depois de 15 s.
+- **Rede (`ZombieManager.Rede.cs`):** o anfitrião manda a cada cliente só os zumbis perto dele (até 15 m, 10 vezes por segundo; de 15 a 40 m, menos), 14 bytes por zumbi, numa mensagem não confiável. O cliente mostra cópias interpoladas um pouco no passado. Não há evento separado: a morte, os golpes, os tiros levados e os membros perdidos estão no estado de cada zumbi.
+- **Desmembramento (`Membros`, `ZombieManager.Pedacos.cs`):** cada braço e cada perna tem vida (3 tiros de pistola); sem ela, o membro cai no cotovelo ou no joelho (tiro no antebraço ou na canela) ou inteiro (no braço ou na coxa). A malha cortada (com tampas de carne) e o pedaço que voa são feitos na hora, a partir da malha inteira, e guardados; os cortes comuns ficam prontos no começo da partida. Sem uma perna o zumbi manca; sem as duas, cai e rasteja.
+- **Morte (`CorpoDeZumbi`, `ZombieManager.Corpos.cs`):** o zumbi some, e um corpo com física (11 partes com juntas) cai no lugar, empurrado pelo tiro (e cortado, se perdeu membros). Os corpos são só visuais (cada máquina tem os seus) e voltam ao pool afundando depois de 15 s.
 
 ### Efeitos e som (`Combat/`)
 
-- **`Efeitos`:** os sons gerados por código (o tiro de cada arma, clique, carregador, bomba, cartucho e lanterna), o clarão do cano (criado a cada tiro) e as faíscas. O som espacial fica mais abafado quanto mais longe.
+- **`Efeitos`:** os sons gerados por código (o tiro de cada arma, clique, carregador, bomba, cartucho, ferrolho, a luneta entrando e saindo e lanterna), o clarão do cano (criado a cada tiro) e as faíscas. O som espacial fica mais abafado quanto mais longe.
 - **`SomDeTiro`:** o tiro sintetizado em camadas, com um perfil por arma e 3 variações de cada.
 - **`Sangue`:** respingo, explosão da cabeça, jorro do pescoço e manchas no chão (decals), tudo em pools.
 

@@ -106,6 +106,20 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
   - O `_EMISSION` do material Lit some depois que o material carrega (o arquivo ainda o tem). Por isso o pisca usa Unlit com a cor em HDR. A lente dos postes (`Lampada`) tem o mesmo problema e não brilha pela emissão: fica para depois.
 - **Testado com dois jogadores** (o Editor hospedando e a build com o robô, `-entrar-local 127.0.0.1 -bot`): em 25 s, com o robô girando e olhando para cima e para baixo, o facho dele, visto do anfitrião, ficou em média a 0,36° da mira dele (no máximo 8°, nas viradas rápidas, pela suavização); a conta antiga daria 27°. As 5 vezes que ele ligou e desligou a lanterna chegaram, e a luz nunca ficou diferente do estado recebido.
 
+## Armas rebalanceadas, a sniper e o desmembramento (antes da Parte 7, a pedido; branch `feature/armas-sniper`)
+
+- **O dano das armas, refeito:** cada arma tem dano no tronco e dano nos membros. A vida dos zumbis continua em tiros de pistola: o corpo aguenta 6 e cada braço ou perna, 3.
+  - Pistola e submetralhadora: 1 por tiro (6 no tronco, 3 num membro); a submetralhadora era mais fraca que a pistola por tiro (0,8) e perdia para o rifle em tudo. Rifle: 1,5 (4 no tronco, 2 num membro), a arma de grau acima.
+  - Espingarda: o dano muda com a distância e os chumbos contam juntos (um acerto por zumbi, na parte do chumbo do meio da mira). De perto (até 5 m), mata com um tiro no corpo, arranca um membro e joga o corpo para trás; na média (até 15 m), dois tiros; de longe, pouco. Um chumbo perdido na cabeça só explode a cabeça de perto (antes, a 10 m, matava com um tiro).
+- **A sniper:** um fuzil de ferrolho de caça com luneta, feito no Blender (scripts em `Blender/`) sobre os braços do rifle, com a animação do tiro puxando o ferrolho (1,25 s). Cinco no pente; um tiro no corpo mata e um num membro o arranca. Sem a luneta, espalha 4°.
+  - **A luneta:** o botão direito fecha a câmera para 12°, esconde os braços e desenha a luneta (o retículo com um ponto vermelho), com som de encostar o olho; o mouse fica mais lento. Para quem mira, a neblina afina (sem isso, a 60 m não se via nada) e os zumbis na linha da luneta contam como perto: aparecem, ganham as hitboxes (a cabeça também) e vão pela rede. Testado: a 70 m, a cabeça explode com um tiro; a 60 m, um tiro no corpo mata.
+  - Fica na mesa da sala comum do bunker (a 5ª vaga do suporte).
+- **Desmembramento, de volta** (tinha saído com os modelos novos): cada braço e cada perna cai no cotovelo ou no joelho (tiro no antebraço ou na canela) ou inteiro (no braço ou na coxa), com o pedaço voando, o toco jorrando e uma tampa de carne. A malha cortada é feita na hora e guardada. Sem uma perna, o zumbi manca; sem as duas, cai e rasteja. As animações de cair e rastejar vieram do zumbi antigo da Parte 6, transferidas para os 4 modelos; as de mancar saíram do andar de cada um.
+  - Medido: pistola e submetralhadora arrancam um membro com 3 tiros; rifle e espingarda a 9 m, com 2; sniper e espingarda de perto, com 1. Uma bala que atravessa o antebraço e pega o braço logo atrás contava duas vezes (o braço caía com 2 tiros): agora conta uma.
+  - Cortar uma malha leva de 3 a 15 ms na primeira vez (o pedaço, de 6 a 20 ms): os cortes comuns ficam prontos no começo da partida, um por quadro.
+- **Rede:** o estado de cada zumbi ganhou 1 byte (os membros perdidos), 14 por zumbi. O acerto leva o membro e o arremesso no byte da região. Testado só no Editor (o anfitrião); o teste com dois jogadores (a build com o robô) ficou para depois.
+- **Medido** (2 rodadas, mesma vista, à noite, contra as últimas da ambientação; veja o fim de [`Benchmarks/Benchmark_Zumbis.md`](../Benchmarks/Benchmark_Zumbis.md)): a GPU de 8,4 a 9,2 ms (antes 8,5 a 9,4), 912 a 1.078 draw calls (antes 914 a 1.043, a mesma faixa com a população sorteada), os mesmos 67 a 68 SetPass, e a IA, a animação, a navegação e a física iguais. O nível de detalhe pela luneta não custou nada que apareça na medida.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
@@ -113,6 +127,7 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 | Recomeço | A corporação e a cota saíram; o jogo virou a família no bunker. O visual de PS1 saiu. |
 | Parte 8 | Veio antes da Parte 7, a pedido. A luz ficou em tempo real. |
 | Ajustes antes da Parte 7 | O desmembramento saiu (só a cabeça explode); a morte virou ragdoll; o `NovoZombie` foi trocado por 4 modelos; a pistola única virou 4 armas; o som ambiente saiu. |
+| Armas e desmembramento | O desmembramento voltou, nos modelos novos, com mancar e rastejar; a sniper com luneta virou a 5ª arma; o dano das armas foi refeito (tronco e membros, a espingarda pela distância). |
 
 ## Pendências e observações conhecidas
 
@@ -120,4 +135,7 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **O suporte de armas não é salvo:** ao recomeçar a partida, ele volta ao conteúdo inicial.
 - **Atirar dentro do bunker atrai os zumbis próximos** (o barulho do tiro chama até 35 m). Defender a base é assunto de depois.
 - **A lanterna de perto clareia muito as armas escuras do suporte.**
+- **A luneta afina a neblina só para quem mira:** é uma ajuda de jogo, não física. Se ficar estranho, o `neblinaNaLuneta` (no `AmbienteDoDia`) volta a 1.
+- **Um corte raro** (por exemplo, três membros de uma vez, ou um zumbi sem cabeça e sem membros) ainda é feito na hora do tiro, e custa alguns milissegundos naquele quadro.
 - **Se o anfitrião sair, a partida acaba** para todos.
+- **Falta testar com dois jogadores** a sniper e o desmembramento: os cortes, a luneta e os acertos vindos de outra máquina.

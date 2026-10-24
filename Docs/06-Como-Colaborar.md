@@ -32,7 +32,7 @@
 - **Escala zero é proibida:** uma peça com escala 0 em algum eixo gera normais infinitas, e o bloom espalha um clarão branco na tela.
 - **Write Defaults desligado em todos os estados dos Animators:** ligado, o estado vazio de uma camada de cima joga o personagem na pose T.
 - **Depois de gerar uma build,** a Unity coloca o `InputSystem_Actions` nos Preloaded Assets do Player Settings. Tire de lá antes de commitar (o `ProjectSettings.asset` não deve mudar por causa disso).
-- **Novas armas:** em `Combat/Armas.cs`, o `TipoDeArma`, a linha da tabela e o nome do modelo (`Armas.Modelos`); no Blender, o modelo e a pose (`armas.py`), as animações de primeira pessoa (`armas_anim.py`) e, se for arma longa, as do corpo (`jogador_tp.py`); depois, o export e a montagem das armas.
+- **Novas armas:** em `Combat/Armas.cs`, o `TipoDeArma`, a linha da tabela e o nome do modelo (`Armas.Modelos`); no Blender, o modelo e a pose (`armas.py`), as animações de primeira pessoa (`armas_anim.py`) e, se for arma longa, as do corpo (`jogador_tp.py`); depois, o export e a montagem das armas. A sniper foi feita de outro jeito, pelos scripts de `Blender/` (no repositório), sobre os braços do rifle, com as peças avulsas num FBX próprio (`Armas_<Arma>.fbx`, que a montagem também lê) e as animações do corpo de outra arma (`corpoComo`). Uma vaga nova no suporte também entra na `MontagemDasArmas` (o suporte guarda até 8).
 
 ## Como testar
 

@@ -68,6 +68,14 @@ Para mexer na arte, peça essa pasta ao autor (ou combine de colocá-la num repo
 - **As animações de primeira pessoa** (`armas_anim.py`): parado, andando, correndo, tiro, gatilho sem bala, recarga e sacar. Cada clipe descreve o movimento da arma e de onde vai a mão esquerda; os braços saem por IK a cada quadro.
 - **As animações de arma longa do corpo** (`jogador_tp.py`): as pernas vêm das animações da pistola, o tronco gira 30° para a direita e a arma fica numa pose fixa em relação ao peito, com os braços por IK.
 
+### A sniper e as animações do desmembramento (`Blender/`, no repositório)
+
+Feitas depois, num PC sem a pasta de arte: os scripts ficam no próprio repositório, em `Blender/`, e partem dos FBX que já estão em `Assets/` (o README de lá tem o passo a passo).
+
+- **A sniper** (`sniper_modelo.py`, `sniper_tiro.py`, `sniper_construir.py`): o modelo no espaço da arma do rifle, os braços do rifle com a sniper no lugar e a animação do tiro com o ferrolho. Sai `Jogador_FP_Sniper.fbx` e `Armas_Sniper.fbx`.
+- **Os zumbis** (`zumbi_extras.py`): cair, rastejar e mancar para cada modelo, num `<modelo>_Extra.fbx`. Cair e rastejar vêm do zumbi antigo da Parte 6, tirado do histórico do git.
+- **O export que reproduz os FBX do projeto:** escala "FBX_SCALE_ALL", sem ossos-folha e um take por faixa de NLA. Uma ida e volta de um FBX do projeto por esse caminho não muda nada (conferido). Um FBX com um nó só no topo perde esse nó na Unity (ele vira a raiz), e os caminhos dos ossos nos clipes mudam: por isso os `_Extra` levam a malha junto.
+
 ### A cidade (`Modelo 3D/Cidade/`)
 
 - `cidade_kit.py`: o kit de modelagem (caixas, cilindros, tubos, perfis), a paleta e o export.
@@ -80,7 +88,8 @@ Para mexer na arte, peça essa pasta ao autor (ou combine de colocá-la num repo
 | O que mudou | Para onde copiar | O que rodar na Unity |
 |---|---|---|
 | Um zumbi (`Modelo 3D/Zumbis/<Modelo>.fbx` + a textura de `Texturas/`) | `Assets/_Game/Art/Characters/Zombie/` | Montar zumbis |
-| O jogador ou as armas (`Jogador.fbx`, `Jogador_FP_<Arma>.fbx`, `Armas.fbx`) | `Assets/_Game/Art/Characters/Jogador/` | Montar armas |
+| O jogador ou as armas (`Jogador.fbx`, `Jogador_FP_<Arma>.fbx`, `Armas.fbx`, `Armas_Sniper.fbx`) | `Assets/_Game/Art/Characters/Jogador/` | Montar armas |
+| As animações do desmembramento (`<Modelo>_Extra.fbx`, pelos scripts de `Blender/`) | `Assets/_Game/Art/Characters/Zombie/` (o script já salva lá) | Montar zumbis |
 | A cidade (`Cidade_*.fbx`) | `Assets/_Game/Art/Cidade/` | Montar cidade em blocos |
 | A paleta (`Modelo 3D/Jogador/Paleta.png`) | `Assets/_Game/Art/Paleta.png` | — (a Unity reimporta sozinha) |
 

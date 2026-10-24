@@ -5,23 +5,24 @@ using ZombieCityCleaner.Player;
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// O suporte de armas na parede do bunker: 4 vagas, cada uma com uma arma deitada na prateleira. Quem mira uma arma
-    /// de perto e aperta E troca com a da mão (a da mão fica no lugar). Quem manda é o anfitrião: o pedido vai para ele,
-    /// que confere a distância e troca as duas (a vaga e a <see cref="JogadorRede.Arma"/> do jogador).
-    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1).
+    /// O suporte de armas do bunker: 4 vagas na parede, cada uma com uma arma deitada na prateleira, e a 5ª na mesa da
+    /// sala comum (a sniper, deitada de lado). Quem mira uma arma de perto e aperta E troca com a da mão (a da mão fica no
+    /// lugar). Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e troca as duas (a vaga e a
+    /// <see cref="JogadorRede.Arma"/> do jogador).
+    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas.
     /// </summary>
     public class ParedeDeArmas : NetworkBehaviour
     {
-        [Tooltip("As vagas, de baixo para cima.")]
+        [Tooltip("As vagas: as da parede de baixo para cima, e a da mesa.")]
         public VagaDeArma[] vagas;
         [Tooltip("A malha de cada arma, na ordem de TipoDeArma (origem no cabo, cano em +Z, topo em +Y).")]
         public Mesh[] malhas;
         [Tooltip("O que cada vaga tem no começo da partida.")]
-        public TipoDeArma[] inicio = { TipoDeArma.Pistola, TipoDeArma.Submetralhadora, TipoDeArma.Rifle, TipoDeArma.Espingarda };
+        public TipoDeArma[] inicio = { TipoDeArma.Pistola, TipoDeArma.Submetralhadora, TipoDeArma.Rifle, TipoDeArma.Espingarda, TipoDeArma.Sniper };
         [Tooltip("Até onde o anfitrião aceita o pedido de troca (m, dos pés do jogador ao meio da vaga).")]
         public float distanciaMaxima = 3f;
 
-        readonly NetworkVariable<int> _conteudo = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<long> _conteudo = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         void Start()
         {
@@ -41,7 +42,7 @@ namespace ZombieCityCleaner.Combat
             Aplicar(Codificar(inicio));
         }
 
-        void AoMudar(int antes, int depois) => Aplicar(depois);
+        void AoMudar(long antes, long depois) => Aplicar(depois);
 
         /// <summary>A arma de uma vaga (ou null, vazia).</summary>
         public TipoDeArma? Vaga(int indice) => Ler(IsSpawned ? _conteudo.Value : Codificar(inicio), indice);
@@ -66,24 +67,24 @@ namespace ZombieCityCleaner.Combat
             jogador.Arma.Value = (byte)naVaga.Value;
         }
 
-        static int Codificar(TipoDeArma[] armas)
+        static long Codificar(TipoDeArma[] armas)
         {
-            int v = 0;
-            for (int i = 0; i < armas.Length && i < 4; i++) v = Gravar(v, i, armas[i]);
+            long v = 0;
+            for (int i = 0; i < armas.Length && i < 8; i++) v = Gravar(v, i, armas[i]);
             return v;
         }
 
-        static int Gravar(int conteudo, int indice, TipoDeArma arma) => (conteudo & ~(0xFF << (8 * indice))) | (((int)arma + 1) << (8 * indice));
+        static long Gravar(long conteudo, int indice, TipoDeArma arma) => (conteudo & ~(0xFFL << (8 * indice))) | (((long)arma + 1) << (8 * indice));
 
-        static TipoDeArma? Ler(int conteudo, int indice)
+        static TipoDeArma? Ler(long conteudo, int indice)
         {
-            int v = (conteudo >> (8 * indice)) & 0xFF;
+            int v = (int)((conteudo >> (8 * indice)) & 0xFF);
             return v == 0 ? null : (TipoDeArma)(v - 1);
         }
 
         // cada arma deitada na prateleira da vaga: o cano ao longo da parede, o lado esquerdo para fora, a parte de baixo
         // (o carregador ou o cabo) encostada na prateleira e o meio dela no meio da vaga
-        void Aplicar(int conteudo)
+        void Aplicar(long conteudo)
         {
             if (vagas == null) return;
             for (int i = 0; i < vagas.Length; i++)

@@ -32,6 +32,9 @@ namespace ZombieCityCleaner.Player
         public float sensibilidadeControle = 160f;
         public float pitchMaximo = 85f;
 
+        /// <summary>Quanto o olhar anda por movimento do mouse (a luneta deixa mais lento, na proporção do aumento).</summary>
+        public float MultiplicadorDoOlhar { get; set; } = 1f;
+
         public bool Correndo { get; private set; }
 
         CharacterController _controle;
@@ -118,6 +121,7 @@ namespace ZombieCityCleaner.Player
             {
                 Vector2 bruto = _olhar.ReadValue<Vector2>();
                 olhar = _olhar.activeControl != null && _olhar.activeControl.device is Gamepad ? bruto * (sensibilidadeControle * dt) : bruto * sensibilidadeMouse;
+                olhar *= MultiplicadorDoOlhar;
                 mover = _mover.ReadValue<Vector2>();
                 correr = _correr.IsPressed();
                 pular = _pular.WasPressedThisFrame();

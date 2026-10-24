@@ -196,3 +196,29 @@
 | 250 | 6 / 61 / 181 | 13,3 | 14,3 | 13,3 | 8,9 | 0,03 | 0,00 | 0,19 | 0,21 | 0,16 | 952 | 0 | 67 | 679 | 0,0 |
 | 500 | 17 / 143 / 338 | 12,9 | 14,2 | 12,9 | 8,6 | 0,06 | 0,00 | 0,42 | 0,31 | 0,21 | 1032 | 0 | 67 | 1208 | 0,0 |
 
+## 23/10/2026 23:26 — armas rebalanceadas, sniper e desmembramento (noite, 2560×1440)
+
+- Editor 6000.6.5f1, 2560×1440
+- 11th Gen Intel(R) Core(TM) i5-11600KF @ 3.90GHz (12 núcleos), AMD Radeon RX 6750 XT
+- Zumbis espalhados pela cidade, 10 s de medida para cada quantidade, sem vsync. Jogadores na partida: 1. Câmera em (-6, 2, -9), olhando (0.6, 0.0, 0.8).
+
+| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 50 | 3 / 15 / 31 | 13,4 | 14,2 | 13,4 | 9,0 | 0,01 | 0,00 | 0,09 | 0,11 | 0,11 | 912 | 0 | 67 | 435 | 0,0 |
+| 100 | 1 / 30 / 68 | 13,4 | 14,2 | 13,4 | 9,2 | 0,01 | 0,00 | 0,12 | 0,15 | 0,10 | 930 | 0 | 67 | 530 | 0,0 |
+| 250 | 12 / 64 / 173 | 13,4 | 14,1 | 13,4 | 9,2 | 0,03 | 0,00 | 0,21 | 0,21 | 0,18 | 963 | 0 | 68 | 727 | 0,0 |
+| 500 | 13 / 143 / 342 | 13,4 | 14,4 | 13,4 | 8,4 | 0,06 | 0,00 | 0,46 | 0,31 | 0,22 | 1078 | 0 | 67 | 1400 | 0,0 |
+
+## 23/10/2026 23:27 — armas rebalanceadas, sniper e desmembramento, 2ª rodada (noite, 2560×1440)
+
+- Editor 6000.6.5f1, 2560×1440
+- 11th Gen Intel(R) Core(TM) i5-11600KF @ 3.90GHz (12 núcleos), AMD Radeon RX 6750 XT
+- Zumbis espalhados pela cidade, 10 s de medida para cada quantidade, sem vsync. Jogadores na partida: 1. Câmera em (-6, 2, -9), olhando (0.6, 0.0, 0.8).
+
+| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 50 | 1 / 14 / 35 | 13,4 | 14,2 | 13,4 | 8,7 | 0,01 | 0,00 | 0,09 | 0,11 | 0,11 | 913 | 0 | 67 | 440 | 0,0 |
+| 100 | 0 / 26 / 73 | 13,4 | 14,2 | 13,4 | 8,7 | 0,01 | 0,00 | 0,09 | 0,13 | 0,10 | 914 | 0 | 68 | 446 | 0,0 |
+| 250 | 5 / 76 / 168 | 13,4 | 14,0 | 13,4 | 9,2 | 0,03 | 0,00 | 0,22 | 0,20 | 0,14 | 967 | 0 | 68 | 768 | 0,0 |
+| 500 | 10 / 153 / 335 | 13,4 | 14,0 | 13,4 | 9,0 | 0,05 | 0,00 | 0,40 | 0,29 | 0,20 | 1040 | 0 | 68 | 1193 | 0,0 |
+

@@ -95,6 +95,13 @@ Pedidos depois da Parte 8, em 3 fatias:
 
 Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura mais os braços e o número de zumbis dobrou (258).
 
+### ✅ Armas, sniper e desmembramento (antes da Parte 7, a pedido)
+
+- **Armas rebalanceadas:** dano no tronco e nos membros por arma; a submetralhadora ficou igual à pistola por tiro (e mais rápida), o rifle um grau acima, e a espingarda muda com a distância (de perto mata com um tiro e arremessa o corpo; na média, dois).
+- **A sniper:** de ferrolho, com luneta (12°), som do ferrolho e da luneta; um tiro no corpo mata e arranca um membro. Fica na mesa da sala comum do bunker.
+- **Desmembramento nos 4 modelos novos:** cada braço e cada perna cai (no cotovelo/joelho ou inteiro); sem uma perna o zumbi manca, sem as duas cai e rasteja.
+- **Pronto quando:** as armas se comportam como pedido, a sniper acerta de longe pela luneta e os membros caem em todas as máquinas, sem perder desempenho.
+
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
 - **Bunker:** quarto (camas para dormir e passar o dia), despensa (o estoque da família) e sala comum.
