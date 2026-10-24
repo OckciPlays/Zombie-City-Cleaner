@@ -24,6 +24,14 @@ namespace ZombieCityCleaner.Player
         public const int CamadaJogador = 9;
         /// <summary>O retrato do jogador na tela do inventário (<see cref="RetratoDoJogador"/>): só a câmera dele desenha.</summary>
         public const int CamadaRetrato = 10;
+        /// <summary>
+        /// A camada de render (rendering layer, não a camada do GameObject) do corpo do dono, só na máquina dele: a lanterna
+        /// dele não faz sombra dela (as mãos e os braços do corpo, invisíveis na primeira pessoa, faziam sombra no facho),
+        /// e a lua faz (a sombra dele no chão continua). Os assets de URP precisam das camadas de render ligadas
+        /// (<c>MontagemDoClima.CamadasDeRender</c>).
+        /// </summary>
+        public const int CamadaDeRenderDoDono = 1;
+        public const uint MascaraDoDono = 1u << CamadaDeRenderDoDono;
 
         [Header("Primeira pessoa (só o dono)")]
         public Camera cameraMundo;
@@ -70,6 +78,8 @@ namespace ZombieCityCleaner.Player
         public LanternaJogador Lanterna { get; private set; }
         public VidaJogador Vida { get; private set; }
         public InventarioJogador Inventario { get; private set; }
+        /// <summary>O jogador num carro (entrando, sentado ou saindo).</summary>
+        public PassageiroDoCarro Passageiro { get; private set; }
         /// <summary>O que está na mão (o item do atalho escolhido do inventário).</summary>
         public Item NaMao => Inventario != null ? Inventario.NaMao : Item.Nada;
         /// <summary>A arma da mão; sem arma, a pistola (para quem pergunta pela luneta, por exemplo).</summary>
@@ -87,6 +97,21 @@ namespace ZombieCityCleaner.Player
         float _velocidade, _medidaRemota, _janela;
         Item _naMaoAplicado = (Item)255;
         ushort _idAplicado;
+        bool _naMaoEscondida;
+
+        /// <summary>
+        /// O corpo do dono, na máquina dele: só sombra (a primeira pessoa), na <see cref="CamadaDeRenderDoDono"/> (fora da
+        /// sombra da própria lanterna), ou visível e na camada normal (a câmera de trás do carro).
+        /// </summary>
+        public void CorpoDoDono(bool visivel)
+        {
+            foreach (var r in renderersCorpo)
+            {
+                if (r == null) continue;
+                r.shadowCastingMode = visivel ? ShadowCastingMode.On : ShadowCastingMode.ShadowsOnly;
+                r.renderingLayerMask = visivel ? 1u : MascaraDoDono;
+            }
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -95,6 +120,7 @@ namespace ZombieCityCleaner.Player
             Lanterna = GetComponent<LanternaJogador>();
             Vida = GetComponent<VidaJogador>();
             Inventario = GetComponent<InventarioJogador>();
+            Passageiro = GetComponent<PassageiroDoCarro>();
             if (IsServer) Cor.Value = CorLivre();
             Cor.OnValueChanged += AoMudarCor;
             AplicarCor(Cor.Value);
@@ -104,9 +130,8 @@ namespace ZombieCityCleaner.Player
             cameraBracos.enabled = dono;
             ouvido.enabled = dono;
             bracos.SetActive(dono);
-            foreach (var r in renderersCorpo)
-                r.shadowCastingMode = dono ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-            // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm em que
+            if (dono) CorpoDoDono(false);
+            else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;            // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm em que
             // a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de
             // primeira pessoa
             if (dono)
@@ -178,10 +203,18 @@ namespace ZombieCityCleaner.Player
             _naMaoAplicado = item;
             _idAplicado = id;
             int m = Itens.Modelo(item);
-            for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m);
+            for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m && !_naMaoEscondida);
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)] : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
             if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
             if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, id);
+        }
+
+        /// <summary>Esconde (sentado num carro) ou mostra de novo o que está na mão do corpo.</summary>
+        public void EsconderNaMao(bool esconder)
+        {
+            _naMaoEscondida = esconder;
+            int m = Itens.Modelo(Inventario != null ? Inventario.NaMao : Item.Nada);
+            for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(!esconder && i == m);
         }
 
         void Update()
@@ -205,6 +238,7 @@ namespace ZombieCityCleaner.Player
                 }
                 medida = _medidaRemota;
             }
+            if (Passageiro != null && Passageiro.NoCarro) medida = 0f;   // no carro, ele não anda nem corre (a fome, os zumbis)
             _velocidade = Mathf.Lerp(_velocidade, medida, 1f - Mathf.Exp(-12f * Time.deltaTime));
             animadorCorpo.SetFloat(SpeedId, _velocidade);
             animadorCorpo.SetBool(AimingId, Mirando.Value);

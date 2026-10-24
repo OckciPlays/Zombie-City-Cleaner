@@ -1,4 +1,4 @@
-# Scripts do Blender (sniper, mochilas, munição e animações do desmembramento)
+# Scripts do Blender (sniper, mochilas, munição, carro e animações do desmembramento)
 
 Estes scripts geram arte que não veio da pasta de arte do projeto (`Projeto Zombie City Cleaner`): a sniper e as animações
 novas dos zumbis. Eles leem os FBX que já estão em `Assets/` e escrevem os FBX novos lá, nos mesmos formatos (a ida e
@@ -65,3 +65,12 @@ Como rodar:
 3. Carregue `zumbi_extras.py` e chame `construir(modelo, bpy.data.objects["Antigo_Rig"])` para `Zombie1`,
    `ZombieHomem2`, `ZombieMulher` e `ZombieMulherLoira`.
 4. Na Unity, rode Zombie City Cleaner > Montar zumbis.
+
+## O carro
+
+- `carro.py`: o carro que se dirige (uma perua dos anos 90, mostarda), em blocos de cor da `Paleta.png`, com a carroceria
+  (e o interior), as 4 portas (a origem na dobradiça), a roda e o volante como peças à parte, e os vidros num material
+  próprio. As medidas são escritas nos eixos da Unity; o formato do FBX é o do `Itens.fbx`.
+- Como rodar: carregue `carro.py` e chame `construir()`, `exportar()` (grava `Assets/_Game/Art/Veiculos/Carro.fbx`) e,
+  se quiser conferir, `foto(caminho)`. Depois, na Unity, rode Zombie City Cleaner > Montar veículos. Ao mudar uma medida
+  (portas, rodas, bancos), mude também a `MontagemDosVeiculos`.

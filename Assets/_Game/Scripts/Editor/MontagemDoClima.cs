@@ -54,6 +54,7 @@ namespace ZombieCityCleaner.EditorTools
             particulas.AddComponent<ParticleSystem>();
             particulas.GetComponent<ParticleSystemRenderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Materials/Particulas.mat");
             particulas.AddComponent<ParticulasNoAr>();
+            CamadasDeRender();
 
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
@@ -114,6 +115,33 @@ namespace ZombieCityCleaner.EditorTools
             recurso.SetActive(true);
             EditorUtility.SetDirty(recurso);
             EditorUtility.SetDirty(dados);
+        }
+
+        /// <summary>
+        /// As camadas de render (rendering layers) ligadas em todos os assets de URP, e o "Sol e lua" iluminando e fazendo
+        /// sombra de todas elas. O corpo do dono fica numa camada só dele (<c>JogadorRede.CamadaDeRenderDoDono</c>), que a
+        /// lanterna dele não vê na sombra (as mãos e os braços do corpo, invisíveis na primeira pessoa, faziam sombra no
+        /// facho) e a lua vê (a sombra dele no chão continua). Pode rodar sozinha.
+        /// </summary>
+        public static void CamadasDeRender()
+        {
+            foreach (var guid in AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset", new[] { "Assets" }))
+            {
+                var urp = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(AssetDatabase.GUIDToAssetPath(guid));
+                var so = new SerializedObject(urp);
+                var camadas = so.FindProperty("m_SupportsLightLayers");   // "Use Rendering Layers" (o setter não é público)
+                if (camadas == null || camadas.boolValue) continue;
+                camadas.boolValue = true;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            var sol = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Sol e lua");
+            if (sol == null || !sol.TryGetComponent<Light>(out var luz)) return;
+            var dados = luz.GetUniversalAdditionalLightData();
+            dados.renderingLayers = uint.MaxValue;
+            dados.customShadowLayers = false;
+            EditorUtility.SetDirty(dados);
+            EditorSceneManager.MarkSceneDirty(cena);
         }
 
         // A câmera dos braços (sobreposição) usa um renderizador sem recursos extras: sem ele, a neblina de altura seria
