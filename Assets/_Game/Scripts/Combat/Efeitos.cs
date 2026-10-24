@@ -20,11 +20,16 @@ namespace ZombieCityCleaner.Combat
         /// <summary>As variações do tiro de cada arma (na ordem de <see cref="TipoDeArma"/>).</summary>
         public static AudioClip[][] Tiros;
         public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna, Ferrolho, LunetaEntra, LunetaSai;
-        /// <summary>
-        /// A porta do bunker (<see cref="SomDaPorta"/>): o volante e as trancas soltando, a folha abrindo, a folha fechando
-        /// e a batida no batente com a tranca; e o interruptor.
-        /// </summary>
-        public static AudioClip PortaDestranca, PortaAbrindo, PortaFechando, PortaBatida, Chave;
+        /// <summary>O interruptor do bunker.</summary>
+        public static AudioClip Chave;
+        /// <summary>A comida e a água (<see cref="SomDosItens"/>): abrir, as mordidas, os goles e largar no chão.</summary>
+        public static AudioClip AbrirLata, AbrirTampa, Largar;
+        public static AudioClip[] Mastigar, Gole;
+        /// <summary>Os passos (<see cref="SomDePasso"/>): [superfície][correndo ? 1 : 0][variação].</summary>
+        public static AudioClip[][][] Passos;
+        /// <summary>O soco (<see cref="SomDoSoco"/>): o vento do braço, a pancada num zumbi e a batida numa parede.</summary>
+        public static AudioClip[] SocoVento, SocoCarne;
+        public static AudioClip SocoParede;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
         ParticleSystem _faiscas, _poeira;
@@ -51,11 +56,26 @@ namespace ZombieCityCleaner.Combat
             // a luneta: o pano da manga roçando e a borracha da ocular encostando no rosto; ao sair, só um roçar curto
             LunetaEntra = Gerar("Luneta entra", 0.22f, (t, r) => Arrasto(t, r, 0f, 0.14f) * 0.8f + Golpe(t, r, 0.15f, 0.25f));
             LunetaSai = Gerar("Luneta sai", 0.14f, (t, r) => Arrasto(t, r, 0f, 0.1f) * 0.6f + Golpe(t, r, 0.02f, 0.12f));
-            PortaDestranca = SomDaPorta.Clip("Porta destranca", SomDaPorta.Destranca(11));
-            PortaAbrindo = SomDaPorta.Clip("Porta abrindo", SomDaPorta.Abrindo(12));
-            PortaFechando = SomDaPorta.Clip("Porta fechando", SomDaPorta.Fechando(13));
-            PortaBatida = SomDaPorta.Clip("Porta bate", SomDaPorta.Batida(14));
             Chave = Gerar("Interruptor", 0.07f, (t, r) => Golpe(t, r, 0f, 0.45f) + Golpe(t, r, 0.012f, 0.3f));
+            AbrirLata = SomDosItens.Clip("Abrir lata", SomDosItens.AbrirLata(21));
+            AbrirTampa = SomDosItens.Clip("Abrir tampa", SomDosItens.AbrirTampa(22));
+            Largar = SomDosItens.Clip("Largar", SomDosItens.Largar(23));
+            Mastigar = new AudioClip[3];
+            Gole = new AudioClip[3];
+            for (int i = 0; i < 3; i++)
+            {
+                Mastigar[i] = SomDosItens.Clip($"Mastigar {i + 1}", SomDosItens.Mastigar(30 + i));
+                Gole[i] = SomDosItens.Clip($"Gole {i + 1}", SomDosItens.Gole(40 + i));
+            }
+            Passos = SomDePasso.Gerar();
+            SocoVento = new AudioClip[3];
+            SocoCarne = new AudioClip[3];
+            for (int i = 0; i < 3; i++)
+            {
+                SocoVento[i] = SomGerado.Clip($"Soco vento {i + 1}", SomDoSoco.Vento(51 + i));
+                SocoCarne[i] = SomGerado.Clip($"Soco na carne {i + 1}", SomDoSoco.NaCarne(61 + i));
+            }
+            SocoParede = SomGerado.Clip("Soco na parede", SomDoSoco.NaParede(71));
             for (int i = 0; i < 24; i++)
             {
                 var go = new GameObject("Som");
@@ -81,9 +101,7 @@ namespace ZombieCityCleaner.Combat
                 filtro = Mathf.Lerp(filtro, onda(i / (float)taxa, r), 0.35f);   // passa-baixa simples: som mais grave
                 dados[i] = filtro;
             }
-            var clip = AudioClip.Create(nome, n, 1, taxa, false);
-            clip.SetData(dados, 0);
-            return clip;
+            return SomGerado.Clip(nome, dados, taxa);
         }
 
         // um golpe de metal: ruído que some rápido e um tilintar

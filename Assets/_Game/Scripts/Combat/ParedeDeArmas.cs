@@ -1,14 +1,18 @@
 using Unity.Netcode;
 using UnityEngine;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
 
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
     /// O painel de armas do salão do bunker: cada arma tem o seu lugar (as 4 longas e 4 pistolas), em pé, com o lado
-    /// esquerdo para fora. Quem mira uma arma de perto e aperta E pega ela, e a da mão volta para uma vaga livre do tipo
-    /// dela (se não houver, fica no lugar da que foi pega). Quem manda é o anfitrião: o pedido vai para ele, que confere a
-    /// distância e troca (as vagas e a <see cref="JogadorRede.Arma"/> do jogador). Quem sai da partida devolve a arma.
+    /// esquerdo para fora. Quem mira uma arma de perto e aperta E pega ela: vai para a mão, se estiver vazia, ou para um
+    /// lugar livre do inventário (<see cref="InventarioJogador"/>). Com o inventário cheio, ela troca pela arma da mão,
+    /// que volta para uma vaga livre do tipo dela (se não houver, fica no lugar da que foi pega). Mirando uma vaga vazia
+    /// com a arma dela na mão, E guarda a arma.
+    /// Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e muda as vagas e o inventário. Quem sai
+    /// da partida devolve as armas.
     /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas.
     /// </summary>
     public class ParedeDeArmas : NetworkBehaviour
@@ -57,26 +61,48 @@ namespace ZombieCityCleaner.Combat
         /// <summary>A arma de uma vaga (ou null, vazia).</summary>
         public TipoDeArma? Vaga(int indice) => Ler(IsSpawned ? _conteudo.Value : Codificar(inicio), indice);
 
-        /// <summary>O jogador local pede para trocar a arma da mão pela da vaga.</summary>
-        public void PedirTroca(int indice)
+        /// <summary>O jogador local usou a vaga: pega a arma dela (ou troca pela da mão), ou guarda a da mão nela.</summary>
+        public void PedirVaga(int indice, InventarioJogador quem)
         {
-            if (IsSpawned && indice >= 0 && indice < vagas.Length) TrocarRpc((byte)indice);
+            if (!IsSpawned || indice < 0 || indice >= vagas.Length) return;
+            quem.AvisarQuePegou();
+            VagaRpc((byte)indice);
         }
 
         [Rpc(SendTo.Server)]
-        void TrocarRpc(byte indice, RpcParams parametros = default)
+        void VagaRpc(byte indice, RpcParams parametros = default)
         {
             if (indice >= vagas.Length) return;
             if (!NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var cliente) || cliente.PlayerObject == null) return;
-            var jogador = cliente.PlayerObject.GetComponent<JogadorRede>();
-            if (jogador == null || Vector3.Distance(jogador.transform.position, vagas[indice].transform.position) > distanciaMaxima) return;
+            var inventario = cliente.PlayerObject.GetComponent<InventarioJogador>();
+            if (inventario == null || Vector3.Distance(cliente.PlayerObject.transform.position, vagas[indice].transform.position) > distanciaMaxima) return;
             var naVaga = Ler(_conteudo.Value, indice);
-            var naMao = (TipoDeArma)jogador.Arma.Value;
-            if (naVaga == null || naVaga.Value == naMao) return;
+            var naMao = inventario.NaMao;
+            if (naVaga == null)
+            {
+                // guardar: só a arma desta vaga
+                if (!Itens.EhArma(naMao) || Itens.Arma(naMao) != vagas[indice].dono) return;
+                _conteudo.Value = Gravar(_conteudo.Value, indice, Itens.Arma(naMao));
+                inventario.Por(inventario.Escolhido.Value, Item.Nada);
+                return;
+            }
+            var nova = Itens.DaArma(naVaga.Value);
             long c = Gravar(_conteudo.Value, indice, null);
-            int casa = VagaLivre(c, naMao);
-            _conteudo.Value = Gravar(c, casa >= 0 ? casa : indice, naMao);
-            jogador.Arma.Value = (byte)naVaga.Value;
+            int lugar = inventario.LugarParaReceber();
+            if (lugar >= 0)
+            {
+                _conteudo.Value = c;
+                inventario.Por(lugar, nova);
+            }
+            else if (Itens.EhArma(naMao))
+            {
+                // tudo cheio: a arma da mão volta para uma vaga do tipo dela (ou fica no lugar desta)
+                var tipo = Itens.Arma(naMao);
+                int casa = VagaLivre(c, tipo);
+                _conteudo.Value = Gravar(c, casa >= 0 ? casa : indice, tipo);
+                inventario.Por(inventario.Escolhido.Value, nova);
+            }
+            // tudo cheio e comida ou água na mão: nada (a dica avisa)
         }
 
         /// <summary>No anfitrião: a arma de quem saiu da partida volta para uma vaga livre do tipo dela (se houver).</summary>

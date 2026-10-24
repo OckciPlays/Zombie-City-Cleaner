@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.Combat;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.UI;
@@ -70,6 +71,9 @@ namespace ZombieCityCleaner.EditorTools
             var arma = raiz.AddComponent<ArmaJogador>();
             var lanterna = raiz.AddComponent<LanternaJogador>();
             raiz.AddComponent<VidaJogador>();
+            var inventario = raiz.AddComponent<InventarioJogador>();
+            raiz.AddComponent<FomeESede>();
+            var passos = raiz.AddComponent<PassosJogador>();
 
             // corpo (o que os outros veem; para o dono vira só sombra)
             var corpo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador.fbx"));
@@ -109,17 +113,18 @@ namespace ZombieCityCleaner.EditorTools
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp && urp.rendererDataList.Length > 1) dadosBracos.SetRenderer(1);
             dadosCam.cameraStack.Add(camBracos);
 
-            // os braços de primeira pessoa: um modelo por arma (com a arma junto), só o da arma da mão ligado
+            // os braços de primeira pessoa: um modelo por arma ou item (com ele na mão) e os punhos da mão vazia, só o da
+            // mão ligado
             var bracos = new GameObject("Bracos") { layer = JogadorRede.CamadaBracos };
             bracos.transform.SetParent(camGo.transform, false);
-            int n = Armas.Quantas;
-            var modelosFP = new GameObject[n];
-            var animadoresFP = new Animator[n];
-            var bocasFP = new Transform[n];
-            var smrBracos = new SkinnedMeshRenderer[n];
-            for (int i = 0; i < n; i++)
+            int n = Itens.QuantosModelos, nFP = Itens.QuantosModelosFP;
+            var modelosFP = new GameObject[nFP];
+            var animadoresFP = new Animator[nFP];
+            var bocasFP = new Transform[nFP];
+            var smrBracos = new SkinnedMeshRenderer[nFP];
+            for (int i = 0; i < nFP; i++)
             {
-                string modelo = Armas.Modelos[i];
+                string modelo = Itens.ModeloFP(i);
                 var fp = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(MontagemDasArmas.FbxFP(i)));
                 fp.name = "Bracos_" + modelo;
                 fp.transform.SetParent(bracos.transform, false);
@@ -135,27 +140,30 @@ namespace ZombieCityCleaner.EditorTools
                 fp.SetActive(i == 0);
             }
 
-            // a arma no corpo: as armas avulsas dentro do Arma_TP (filho do weapon.R, com os eixos da arma), só a da mão
-            // ligada, cada uma com a boca do cano. Um vazio filho de osso chega do FBX com o eixo do osso convertido: o
-            // cano do Arma_TP fica no Y dele e o topo no -Z, daí os 90° em X
+            // o que está na mão, no corpo: as armas e os itens avulsos dentro do Arma_TP (filho do weapon.R, com os eixos
+            // da arma), só o da mão ligado; as armas com a boca do cano. Um vazio filho de osso chega do FBX com o eixo do
+            // osso convertido: o cano do Arma_TP fica no Y dele e o topo no -Z, daí os 90° em X
             var pontoDaArma = Buscar(corpo.transform, "Arma_TP");
             var materialArma = Carregar<Material>(Arte + "/Materials/Pistola.mat");
-            var armasCorpo = new GameObject[n];
-            var bocasCorpo = new Transform[n];
+            var naMaoCorpo = new GameObject[n];
+            var bocasCorpo = new Transform[Armas.Quantas];
             var renderersArmas = new Renderer[n];
             for (int i = 0; i < n; i++)
             {
-                var a = new GameObject("Arma_" + Armas.Modelos[i]);
+                var a = new GameObject((i < Armas.Quantas ? "Arma_" : "Item_") + Itens.Modelos[i]);
                 a.transform.SetParent(pontoDaArma, false);
                 a.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                a.AddComponent<MeshFilter>().sharedMesh = Carregar<Mesh>(MontagemDasArmas.MalhaDaArma(i));
+                a.AddComponent<MeshFilter>().sharedMesh = Carregar<Mesh>(MontagemDasArmas.MalhaDo(i));
                 var r = a.AddComponent<MeshRenderer>();
                 r.sharedMaterial = materialArma;
-                var boca = new GameObject("Boca").transform;
-                boca.SetParent(a.transform, false);
-                boca.localPosition = Armas.Todas[i].boca;
-                armasCorpo[i] = a;
-                bocasCorpo[i] = boca;
+                if (i < Armas.Quantas)
+                {
+                    var boca = new GameObject("Boca").transform;
+                    boca.SetParent(a.transform, false);
+                    boca.localPosition = Armas.Todas[i].boca;
+                    bocasCorpo[i] = boca;
+                }
+                naMaoCorpo[i] = a;
                 renderersArmas[i] = r;
                 a.SetActive(i == 0);
             }
@@ -179,15 +187,18 @@ namespace ZombieCityCleaner.EditorTools
             rede.renderersCorpo = new Renderer[] { smrCorpo }.Concat(renderersArmas).ToArray();
             rede.ossoPeito = Buscar(corpo.transform, "chest");
             rede.ossoCabeca = Buscar(corpo.transform, "head");
-            rede.armasCorpo = armasCorpo;
+            rede.naMaoCorpo = naMaoCorpo;
             rede.bocasCorpo = bocasCorpo;
-            rede.controladoresCorpo = Enumerable.Range(0, n).Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDa(i))).ToArray();
+            rede.controladoresCorpo = Enumerable.Range(0, Armas.Quantas).Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDa(i))).ToArray();
+            rede.controladorDasMaos = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDasMaos);
             rede.variacoes = Enumerable.Range(0, 4).Select(k => Carregar<Material>($"{Arte}/Materials/Jogador_Variacao{k}.mat")).ToArray();
             rede.pintaveis = new Renderer[] { smrCorpo }.Concat(smrBracos).ToArray();
             movimento.rede = rede; movimento.cabeca = cabeca;
             arma.rede = rede; arma.movimento = movimento;
             arma.modelos = modelosFP; arma.animadores = animadoresFP; arma.bocas = bocasFP;
             lanterna.rede = rede; lanterna.luz = luz;
+            inventario.icones = Enumerable.Range(0, n).Select(i => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDo(i))).ToArray();
+            passos.rede = rede;
 
             var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, PrefabJogador);
             Object.DestroyImmediate(raiz);

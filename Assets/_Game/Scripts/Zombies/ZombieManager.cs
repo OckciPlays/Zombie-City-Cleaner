@@ -201,7 +201,7 @@ namespace ZombieCityCleaner.Zombies
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
             };
-            var dados = Armas.Dados((TipoDeArma)j.Arma.Value);
+            var dados = Armas.Dados(j.ArmaNaMao);
             if (j.Luneta.Value && dados.fovLuneta > 0f)
             {
                 a.aumento = Mathf.Tan(FovNormal * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(dados.fovLuneta * 0.5f * Mathf.Deg2Rad);

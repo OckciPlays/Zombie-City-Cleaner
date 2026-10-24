@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
 using ZombieCityCleaner.World;
 using ZombieCityCleaner.Zombies;
@@ -9,12 +10,17 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// A arma do jogador local. Qual arma está na mão é a <see cref="JogadorRede.Arma"/>, que o anfitrião troca no suporte
-    /// do bunker (<see cref="ParedeDeArmas"/>); os números de cada uma estão em <see cref="Armas"/>.
-    /// Clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta vários
-    /// chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira (aproxima
-    /// a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique. Mirando de perto uma coisa que se usa
-    /// (<see cref="Interagivel"/>: uma arma do painel, a porta do bunker, um interruptor), a dica aparece e E usa.
+    /// O que o jogador local tem na mão: o item do lugar escolhido do <see cref="InventarioJogador"/> (uma arma, a lata de
+    /// comida, a garrafa de água ou nada). Os números de cada arma estão em <see cref="Armas"/>; cada lugar guarda o pente
+    /// da arma dele (trocar de arma não recarrega).
+    /// Com arma: clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta
+    /// vários chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira
+    /// (aproxima a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique.
+    /// Com comida ou água: clique come ou bebe (o clipe Usar, com o som); no fim o item acaba e a mão volta para a última
+    /// arma. Enquanto isso, nada de trocar, largar ou usar outra coisa.
+    /// Com a mão vazia: os punhos em guarda, e o clique soca (<see cref="Socar"/>).
+    /// Mirando de perto uma coisa que se usa (<see cref="Interagivel"/>: um item no chão, uma arma do painel, a porta do
+    /// bunker, um interruptor), a dica aparece e E usa.
     /// A sniper tem luneta: mirando, a câmera fecha até o campo de visão dela, os braços somem e a tela mostra a luneta
     /// (o preto em volta e o retículo); o mouse fica mais lento na proporção do aumento. Sem a luneta, ela espalha muito.
     /// Acertar um zumbi: o sangue sai na hora aqui, e o acerto (zumbi, região e ponto) vai para o anfitrião, que tira a
@@ -26,7 +32,7 @@ namespace ZombieCityCleaner.Player
         public JogadorRede rede;
         public MovimentoPrimeiraPessoa movimento;
 
-        [Header("Primeira pessoa (um modelo por arma, na ordem de TipoDeArma)")]
+        [Header("Primeira pessoa (um modelo por coisa na mão, na ordem de Itens.Modelos: as armas, a lata e a garrafa; e os punhos)")]
         public GameObject[] modelos;
         public Animator[] animadores;
         public Transform[] bocas;
@@ -37,14 +43,38 @@ namespace ZombieCityCleaner.Player
         [Tooltip("Até onde a mira pega o que se usa com E: uma arma do painel, a porta, um interruptor (m).")]
         public float alcanceDaMao = 2.2f;
 
+        [Header("Soco (a mão vazia)")]
+        [Tooltip("Tempo entre um soco e o próximo (s); o clipe tem 0,42 s.")]
+        public float intervaloDoSoco = 0.42f;
+        [Tooltip("Até onde o punho chega, do olho (m).")]
+        public float alcanceDoSoco = 1.15f;
+        [Tooltip("A grossura do golpe (o raio da esfera que procura o alvo, m).")]
+        public float raioDoSoco = 0.16f;
+        [Tooltip("Dano de um soco no corpo do zumbi (a vida do corpo é 6, em tiros de pistola).")]
+        public float danoDoSoco = 0.75f;
+
         public int Municao { get; private set; }
         /// <summary>Olhando pela luneta (a câmera já fechou): os braços somem e a tela mostra a luneta.</summary>
         public bool NaLuneta { get; private set; }
         public bool Recarregando { get; private set; }
+        /// <summary>A última arma que esteve na mão (a da mão, com arma).</summary>
         public TipoDeArma Atual { get; private set; }
         public DadosDaArma Dados => Armas.Dados(Atual);
+        public Item NaMao { get; private set; }
+        public bool ComArma => Itens.EhArma(NaMao);
+        /// <summary>Comendo ou bebendo (o clipe Usar).</summary>
+        public bool Usando { get; private set; }
+        public InventarioJogador Inventario { get; private set; }
 
-        Animator Animador => animadores[(int)Atual];
+        Animator Animador
+        {
+            get
+            {
+                int m = Itens.ModeloNaMao(NaMao);
+                return m >= 0 && m < animadores.Length ? animadores[m] : null;
+            }
+        }
+
         Transform Boca => bocas[(int)Atual];
 
         // os estados da camada "Ações" do Jogador_FP.controller: o código toca cada um do começo (no automático, um
@@ -54,7 +84,10 @@ namespace ZombieCityCleaner.Player
         static readonly int DryFireId = Animator.StringToHash("DryFire");
         static readonly int ReloadId = Animator.StringToHash("Reload");
         static readonly int SacarId = Animator.StringToHash("Sacar");
+        static readonly int VazioId = Animator.StringToHash("Vazio");
         static readonly int SpeedId = Animator.StringToHash("Speed");
+        // o peso da camada "Ações": inteiro durante uma ação, e descendo até zero depois (veja PesoDasAcoes)
+        float _pesoDasAcoes;
         // o tiro não pega a cápsula do zumbi de perto (camada Ignore Raycast; quem leva o tiro são as hitboxes) nem os
         // corpos caídos
         const int MascaraDoTiro = ~((1 << 2) | (1 << CorpoDeZumbi.Camada));
@@ -64,14 +97,19 @@ namespace ZombieCityCleaner.Player
         CharacterController _corpo;
         Coroutine _recarga;
         float _proximoTiro, _marcaAte;
-        bool _marcaNaCabeca, _mirandoAntes;
+        bool _marcaNaCabeca, _mirandoAntes, _socoDireito = true;
         static Texture2D _texturaDaLuneta;
         Interagivel _alvo;
         string _dica;
+        // o pente de cada lugar do inventário, com a arma a que ele pertence (outra arma no lugar chega cheia)
+        readonly int[] _municaoDoLugar = { -1, -1, -1 };
+        readonly Item[] _armaDoLugar = new Item[InventarioJogador.Lugares];
+        int _lugar = -1, _ultimoLugarDeArma = -1;
 
         void Awake()
         {
             Municao = Dados.capacidade;
+            Inventario = GetComponent<InventarioJogador>();
             _corpo = GetComponent<CharacterController>();
             var acoes = InputSystem.actions;
             _atirar = acoes.FindAction("Player/Attack", true);
@@ -84,6 +122,7 @@ namespace ZombieCityCleaner.Player
         {
             StopAllCoroutines();
             Recarregando = false;
+            Usando = false;
             SairDaLuneta();
         }
 
@@ -95,16 +134,33 @@ namespace ZombieCityCleaner.Player
             if (movimento != null) movimento.MultiplicadorDoOlhar = 1f;
         }
 
-        /// <summary>A arma da mão mudou (no começo, ou trocada no suporte): mostra o modelo dela, cheia, sacando.</summary>
-        public void Trocar(TipoDeArma nova)
+        /// <summary>
+        /// O que está na mão mudou (no começo, trocando de lugar, pegando ou largando): mostra o modelo dele, sacando. A
+        /// arma que sai guarda o pente no lugar dela; a que entra volta com o pente que tinha (ou cheia, se é outra arma).
+        /// </summary>
+        public void Trocar(Item novo, int lugar)
         {
+            if (ComArma && _lugar >= 0)
+            {
+                _municaoDoLugar[_lugar] = Municao;
+                _armaDoLugar[_lugar] = NaMao;
+            }
             StopAllCoroutines();
             Recarregando = false;
-            Atual = nova;
+            Usando = false;
+            _recarga = null;
             SairDaLuneta();
-            for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == (int)nova);
-            Municao = Dados.capacidade;
-            Animador.Play(SacarId, CamadaAcoes, 0f);
+            NaMao = novo;
+            _lugar = lugar;
+            int m = Itens.ModeloNaMao(novo);   // a mão vazia mostra os punhos
+            for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m);
+            if (ComArma)
+            {
+                Atual = Itens.Arma(novo);
+                _ultimoLugarDeArma = lugar;
+                Municao = _armaDoLugar[lugar] == novo && _municaoDoLugar[lugar] >= 0 ? Mathf.Min(_municaoDoLugar[lugar], Dados.capacidade) : Dados.capacidade;
+            }
+            if (m >= 0) Acao(SacarId);
             _proximoTiro = Time.time + 0.4f;
         }
 
@@ -112,11 +168,12 @@ namespace ZombieCityCleaner.Player
         {
             bool bot = MenuOnline.Bot;
             bool controla = bot || MenuOnline.Controla;
+            bool comArma = ComArma;
             var dados = Dados;
-            bool luneta = dados.fovLuneta > 0f;
+            bool luneta = comArma && dados.fovLuneta > 0f;
             // recarregando, a sniper sai da luneta (a mão está no carregador). O robô de teste, com a sniper, fica na luneta
             // (testa o nível de detalhe dos zumbis pela luneta, na rede)
-            bool mirar = controla && (bot ? luneta : _mirar.IsPressed()) && !(luneta && Recarregando);
+            bool mirar = comArma && controla && (bot ? luneta : _mirar.IsPressed()) && !(luneta && Recarregando);
             if (rede.Mirando.Value != mirar) rede.Mirando.Value = mirar;
             var cam = rede.cameraMundo;
             float fovAlvo = mirar ? (luneta ? dados.fovLuneta : fovMirando) : fovNormal;
@@ -134,36 +191,144 @@ namespace ZombieCityCleaner.Player
             if (rede.Luneta.Value != naLuneta) rede.Luneta.Value = naLuneta;
             movimento.MultiplicadorDoOlhar = luneta && mirar
                 ? Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(fovNormal * 0.5f * Mathf.Deg2Rad) : 1f;
-            Animador.SetFloat(SpeedId, rede.Velocidade);
+            var animador = Animador;
+            if (animador != null)
+            {
+                animador.SetFloat(SpeedId, rede.Velocidade);
+                PesoDasAcoes(animador);
+            }
             ProcurarAlvo(cam.transform);
             if (!controla) return;
 
-            var d = Dados;
-            bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame();
-            bool atirar = apertou || (!bot && d.automatica && _atirar.IsPressed());
-            bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame();
-            if (recarregar && !Recarregando && Municao < d.capacidade) _recarga = StartCoroutine(Recarregar());
-            // a espingarda para de pôr cartucho para atirar
-            if (atirar && Recarregando && d.cartuchoACartucho && Municao > 0) PararRecarga();
-            if (atirar && !Recarregando && Time.time >= _proximoTiro)
+            if (comArma)
             {
-                // no automático, o próximo tiro conta do anterior (sem perder a cadência com o tempo do quadro)
-                _proximoTiro = (Time.time - _proximoTiro > Time.deltaTime ? Time.time : _proximoTiro) + d.intervalo;
-                if (Municao > 0) Atirar();
-                else if (apertou)
+                var d = Dados;
+                bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame();
+                bool atirar = apertou || (!bot && d.automatica && _atirar.IsPressed());
+                bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame();
+                if (recarregar && !Recarregando && Municao < d.capacidade) _recarga = StartCoroutine(Recarregar());
+                // a espingarda para de pôr cartucho para atirar
+                if (atirar && Recarregando && d.cartuchoACartucho && Municao > 0) PararRecarga();
+                if (atirar && !Recarregando && Time.time >= _proximoTiro)
                 {
-                    Animador.Play(DryFireId, CamadaAcoes, 0f);
-                    Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
+                    // no automático, o próximo tiro conta do anterior (sem perder a cadência com o tempo do quadro)
+                    _proximoTiro = (Time.time - _proximoTiro > Time.deltaTime ? Time.time : _proximoTiro) + d.intervalo;
+                    if (Municao > 0) Atirar();
+                    else if (apertou)
+                    {
+                        Acao(DryFireId);
+                        Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
+                    }
                 }
             }
-            if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+            else if (Itens.EhConsumivel(NaMao) && !Usando && !bot && Time.time >= _proximoTiro && _atirar.WasPressedThisFrame())
+                StartCoroutine(Usar());
+            // a mão vazia soca (segurando o botão, um soco atrás do outro)
+            else if (NaMao == Item.Nada && !bot && Time.time >= _proximoTiro && _atirar.IsPressed())
+                StartCoroutine(Socar());
+            if (_alvo != null && !bot && !Usando && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+        }
+
+        /// <summary>Toca uma ação (sacar, tiro, gatilho sem bala, recarga, comer ou beber) do começo, na camada "Ações".</summary>
+        void Acao(int estado)
+        {
+            var animador = Animador;
+            if (animador == null) return;
+            _pesoDasAcoes = 1f;
+            animador.SetLayerWeight(CamadaAcoes, 1f);
+            animador.Play(estado, CamadaAcoes, 0f);
+        }
+
+        /// <summary>
+        /// A camada "Ações" fica por cima da locomoção (parado, andando, correndo) só durante uma ação. Parada no estado
+        /// vazio, com o Write Defaults desligado, ela segurava a última pose da ação para sempre: os braços ficavam
+        /// congelados no fim do sacar, e a arma não respirava, não balançava andando nem baixava correndo. Agora, quando
+        /// a ação acaba, o peso desce até zero em 0,15 s (sem pulo da pose da ação para a da locomoção).
+        /// </summary>
+        void PesoDasAcoes(Animator animador)
+        {
+            bool parada = animador.GetCurrentAnimatorStateInfo(CamadaAcoes).shortNameHash == VazioId && !animador.IsInTransition(CamadaAcoes);
+            _pesoDasAcoes = parada ? Mathf.MoveTowards(_pesoDasAcoes, 0f, Time.deltaTime / 0.15f) : 1f;
+            animador.SetLayerWeight(CamadaAcoes, _pesoDasAcoes);
+        }
+
+        /// <summary>
+        /// O soco, com a mão vazia: um punho de cada vez (o direito no estado do tiro, o esquerdo no do gatilho sem bala),
+        /// com o vento do braço. No quadro do golpe, uma esfera curta sai do olho, na direção da mira: o primeiro zumbi
+        /// que ela pega leva o dano no corpo (sem arrancar membro nem explodir a cabeça), com a pancada, um pouco de sangue
+        /// e a marca na mira; uma parede faz o barulho dos nós dos dedos. Os outros veem o soco no corpo e ouvem tudo.
+        /// </summary>
+        IEnumerator Socar()
+        {
+            _proximoTiro = Time.time + intervaloDoSoco;
+            bool direito = _socoDireito;
+            _socoDireito = !_socoDireito;
+            Acao(direito ? FireId : DryFireId);
+            Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.45f, false);
+            rede.AnunciarSoco();
+            yield return new WaitForSeconds(SomDoSoco.Impacto);
+            Golpear();
+        }
+
+        void Golpear()
+        {
+            var cam = rede.cameraMundo.transform;
+            Physics.SyncTransforms();   // as hitboxes andam com a animação
+            int n = Physics.SphereCastNonAlloc(cam.position, raioDoSoco, cam.forward, _acertos, alcanceDoSoco, MascaraDoTiro, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(_acertos, 0, n, PorDistancia);
+            for (int i = 0; i < n; i++)
+            {
+                var hit = _acertos[i];
+                if (hit.collider == _corpo) continue;
+                // uma esfera que já começa encostada não tem ponto: o mais perto do olho, no colisor
+                Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(cam.position) : hit.point;
+                var hitbox = hit.collider.GetComponent<Hitbox>();
+                if (hitbox != null && hitbox.zumbi != null)
+                {
+                    if (hitbox.zumbi.Morto) continue;
+                    Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, false);
+                    Sangue.Respingo(ponto, -cam.forward);
+                    _marcaAte = Time.time + 0.18f;
+                    _marcaNaCabeca = false;
+                    rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, danoDoSoco, ponto, false);
+                    rede.AnunciarPancada(ponto, true);
+                    return;
+                }
+                Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
+                rede.AnunciarPancada(ponto, false);
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Comer ou beber: o clipe Usar (o item vem até a boca e deita), com o som de abrir e as mordidas ou os goles. No
+        /// fim, o anfitrião tira o item do lugar e enche a fome e a sede; a mão volta para a última arma.
+        /// </summary>
+        IEnumerator Usar()
+        {
+            Usando = true;
+            var item = NaMao;
+            int lugar = _lugar;
+            bool lata = item == Item.Comida;
+            float inicio = Time.time;
+            Acao(FireId);   // o estado do tiro toca o clipe Usar (o override do item)
+            Efeitos.Som(lata ? Efeitos.AbrirLata : Efeitos.AbrirTampa, rede.cameraMundo.transform.position, 0.45f, false);
+            // as mordidas e os goles, nos quadros 14, 20 e 26 do clipe (itens.py)
+            foreach (float quando in new[] { 14 / 24f, 20 / 24f, 26 / 24f })
+            {
+                yield return new WaitForSeconds(Mathf.Max(0f, quando - (Time.time - inicio)));
+                Efeitos.Som(lata ? Efeitos.Mastigar : Efeitos.Gole, rede.cameraMundo.transform.position, 0.5f, false);
+            }
+            yield return new WaitForSeconds(Mathf.Max(0f, Itens.Consumivel(item).tempoDeUso - (Time.time - inicio)));
+            Usando = false;
+            if (NaMao == item && _lugar == lugar) Inventario.Consumir(lugar, _ultimoLugarDeArma);
         }
 
         void Atirar()
         {
             var d = Dados;
             Municao--;
-            Animador.Play(FireId, CamadaAcoes, 0f);
+            Acao(FireId);
             Efeitos.Clarao(Boca, JogadorRede.CamadaBracos);
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
@@ -187,7 +352,7 @@ namespace ZombieCityCleaner.Player
             }
             _chumboDoCentro = false;
             MandarAcertos(d);
-            rede.AnunciarTiro(impactos);
+            rede.AnunciarTiro(Atual, impactos);
         }
 
         /// <summary>Um pedaço de zumbi que o tiro (ou um chumbo) pegou, e a que distância do olho.</summary>
@@ -364,7 +529,7 @@ namespace ZombieCityCleaner.Player
                 // um cartucho por vez; o cartucho entra perto do fim da animação (quadro 9 a 10 de 13)
                 while (Municao < d.capacidade)
                 {
-                    Animador.Play(ReloadId, CamadaAcoes, 0f);
+                    Acao(ReloadId);
                     yield return new WaitForSeconds(d.tempoRecarga * 0.72f);
                     Efeitos.Som(Efeitos.Cartucho, Boca.position, 0.7f, false);
                     Municao++;
@@ -373,7 +538,7 @@ namespace ZombieCityCleaner.Player
             }
             else
             {
-                Animador.Play(ReloadId, CamadaAcoes, 0f);
+                Acao(ReloadId);
                 yield return new WaitForSeconds(d.carregadorSai);
                 Efeitos.Som(Efeitos.Carregador, Boca.position, 0.6f, false);
                 yield return new WaitForSeconds(d.carregadorEntra - d.carregadorSai);
@@ -444,15 +609,18 @@ namespace ZombieCityCleaner.Player
                 Retangulo(cx - t / 2, cy - m - ml, t, ml, marca); Retangulo(cx - t / 2, cy + m, t, ml, marca);
                 GUI.matrix = antes;
             }
-            var d = Dados;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
-            estilo.normal.textColor = Municao == 0 ? new Color(1f, 0.45f, 0.4f) : new Color(0.9f, 0.88f, 0.8f);
-            string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO" : $"{Municao} / {d.capacidade}";
-            GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
-            var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
-            nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
-            GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u), d.nome.ToUpperInvariant(), nome);
-            // o que se usa com E (pegar uma arma do painel, abrir a porta, acender a luz)
+            if (ComArma)
+            {
+                var d = Dados;
+                var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
+                estilo.normal.textColor = Municao == 0 ? new Color(1f, 0.45f, 0.4f) : new Color(0.9f, 0.88f, 0.8f);
+                string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO" : $"{Municao} / {d.capacidade}";
+                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
+                var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
+                nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
+                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u), d.nome.ToUpperInvariant(), nome);
+            }
+            // o que se usa com E (pegar um item ou uma arma do painel, abrir a porta, acender a luz)
             if (_dica != null)
             {
                 // com uma sombra embaixo, para ler na frente de coisa clara (a porta na luz da lanterna)

@@ -138,6 +138,26 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **Agora:** o menu prende o mouse sozinho quando a partida começa e quando ele fecha. Se o mouse se soltar (alt-tab), o clique que o prende de novo não atira nem mira: os comandos só voltam depois de soltar o botão.
 - Testado no Editor com cliques simulados: a partida começa com o mouse preso, o clique de voltar não gasta bala (nem chegando no mesmo quadro em que o mouse se soltou), o clique seguinte atira, e o ESC abre e fecha o menu soltando e prendendo o mouse.
 
+## O começo do saque: inventário, comida e água, fome e sede (24/10/2026, a pedido)
+
+- **Inventário de 3 lugares** (embaixo, no meio, com ícones renderizados no Blender): até 3 armas, latas de comida ou garrafas de água. A roda do mouse passa pelos lugares ocupados, 1, 2 e 3 escolhem, G larga (no chão, ou na mesa para onde a mira aponta) e E pega. Cada lugar guarda o pente da arma dele. O painel de armas passou a pegar para o inventário, trocar com a arma da mão quando está cheio e guardar a arma da mão na vaga dela.
+- **A lata e a garrafa** foram modeladas no Blender (`itens.py`), com os braços de primeira pessoa segurando cada uma e as animações (parado, andando, correndo, sacar, e comer ou beber: o item vem até a boca e deita). 34 delas ficam nos tampos dos móveis das casas e dos apartamentos, e 2 na mesa do depósito do bunker. Os itens no chão vão pela rede numa lista só.
+- **Fome e sede:** duas barras que esvaziam em 40 e 25 minutos (mais rápido correndo). Abaixo de 25, a vida para de voltar sozinha; vazias, tiram vida. A lata enche a fome (e um pouco da sede), a garrafa, a sede.
+- **Passos:** sons gerados por código para concreto, madeira e grama, pelo chão embaixo do pé; os dos outros jogadores saem no pé deles. Os primeiros saíram graves demais (um "bum" em vez do "toc" da sola) e foram refeitos, medidos por bandas de frequência.
+- **Opções no ESC** (e no menu do começo): o volume, o limite de FPS e o contador de FPS, gravados no computador.
+- **A arma na corrida:** as armas longas (e a sniper, que usa as animações do rifle) corriam com o cano para baixo e só uma ponta aparecia no meio de baixo da tela; agora atravessam a tela inteiras. No teste apareceu um bug mais antigo: a camada de ações dos braços segurava a pose do fim do sacar, e os braços nunca respiravam, balançavam nem baixavam correndo. O código passou a tirar o peso dela quando não há ação.
+- **Testado no Editor, com um jogador:** pegar, trocar, largar, comer, beber, o painel com o inventário, a roda, as 5 armas correndo e o painel de opções. O teste com dois jogadores ficou para depois.
+
+### Depois do primeiro teste do usuário (24/10/2026)
+
+- **A porta do bunker abre em silêncio;** só o fechar e a batida têm som. No teste seguinte, saiu também o de fechar: a porta não faz som nenhum.
+- **A roda do mouse passa pela mão vazia** (os punhos), se houver um lugar vazio: uma vez só na volta, pulando os outros vazios.
+- **Os passos dentro das casas:** cada cômodo passou a ter o som do piso que ele tem no modelo (taco, carpete ou o piso frio da cozinha; antes era tudo madeira), e os quartos do bunker soam como taco. A madeira foi refeita (era um "tum" grave; agora é o "toc" seco da tábua, com corpo) e entrou o carpete, abafado.
+- **O jogo ficava mudo depois de comer ou beber**, só com um chiado: o som do ar da lata saía com valores inválidos (NaN, de um filtro instável), e isso cala a mistura de áudio da Unity inteira. O filtro foi corrigido, todo som gerado passou a ser conferido antes de tocar, e a mastigada foi refeita (três mordidas molhadas, a saliva e a mandíbula).
+- **O soco:** com a mão vazia (um lugar vazio escolhido), os punhos ficam em guarda e o clique soca, alternando direita e esquerda (feitos no Blender, `maos.py`, na primeira pessoa e no corpo). O soco faz o zumbi recuar e tira pouco (8 socos matam), com som no ar, na carne e na parede, e os outros jogadores veem e ouvem.
+- As prévias dos sons (passos de cada piso, comer, beber, largar, os socos e a porta) se gravam de novo pelo menu Zombie City Cleaner > Gravar prévias dos sons.
+- **Testado no Editor:** o piso de cada cômodo das 5 casas e dos quartos do bunker, o som depois de comer e beber (sem NaN, e o tiro logo depois soando normal) e 3 socos num zumbi (3 recuos, e ele parte para o ataque).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
@@ -150,7 +170,8 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 
 ## Pendências e observações conhecidas
 
-- **Saque, inventário, dormir e salvar** ainda não existem (Parte 7). A munição de reserva é infinita, e a vida se recupera sozinha depois de 8 s sem apanhar (provisório).
+- **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A munição de reserva é infinita. A comida e a água no chão não são salvas: cada partida começa com as 34 do começo.
+- **Os outros não veem comer e beber:** o corpo segura a lata ou a garrafa na guarda dos punhos, e só quem come ou bebe ouve o som.
 - **O painel de armas, a porta e as luzes do bunker não são salvos:** ao recomeçar a partida, o painel volta ao conteúdo inicial, a porta fecha e as luzes acendem.
 - **Atirar dentro do bunker com a porta aberta atrai os zumbis próximos** (o barulho do tiro chama até 35 m). Com a porta fechada, não. Defender a base é assunto de depois.
 - **A lanterna de perto clareia muito as armas escuras do painel e a porta do bunker.**

@@ -102,13 +102,24 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 - **Desmembramento nos 4 modelos novos:** cada braço e cada perna cai (no cotovelo/joelho ou inteiro); sem uma perna o zumbi manca, sem as duas cai e rasteja.
 - **Pronto quando:** as armas se comportam como pedido, a sniper acerta de longe pela luneta e os membros caem em todas as máquinas, sem perder desempenho.
 
-### 🔎 O bunker maior (a pedido, antes da Parte 7; esperando a aprovação)
+### ✅ O bunker maior (a pedido, antes da Parte 7)
 
 - **Planta:** o salão de 10 × 14 m com o pé-direito dobrado (5,3 m), 4 quartos e o depósito no fim de corredores curtos (3 m de pé-direito); a escada mais funda, em dois lances.
 - **Painel de armas:** um lugar fixo para cada arma (as 4 longas e 4 pistolas), na parede do fundo do salão, com a bancada embaixo.
 - **Porta blindada:** abre e fecha com E; fechada, isola o som nos dois sentidos, e os zumbis de fora não ouvem os tiros de dentro.
 - **Luzes:** interruptores em cada cômodo, no salão e na escada. **Sem neblina e sem partículas** lá dentro.
 - **Pronto quando:** o usuário aprova, e o teste com dois jogadores mostra a porta e as luzes iguais nas duas máquinas.
+
+### 🔎 O começo do saque (a pedido, 24/10/2026; esperando o teste do usuário)
+
+- **Inventário de 3 lugares**, embaixo, no meio da tela, com o ícone de cada coisa: até 3 armas, latas ou garrafas. A roda do mouse passa pelos lugares, 1, 2 e 3 escolhem, G larga e E pega.
+- **Comida e água:** latas de comida e garrafas de água nas mesas, balcões, cômodas e criados-mudos das casas e dos apartamentos (34, e 2 na mesa do depósito do bunker). Com o item na mão, o clique come ou bebe (com a animação e o som).
+- **Fome e sede:** duas barras que esvaziam com o tempo (mais rápido correndo); com pouca, a vida não volta sozinha; vazias, tiram vida.
+- **Passos** com som de concreto, madeira, carpete ou grama (o piso de cada cômodo das casas), e o **menu de opções** no ESC (volume, limite de FPS e o FPS na tela).
+- **Soco:** com a mão vazia, o clique soca (direita e esquerda); o zumbi recua a cada soco.
+- **Correção:** correndo, a arma longa não mostra mais só uma ponta no meio de baixo da tela (e os braços voltaram a respirar, balançar andando e baixar correndo: estavam congelados no fim do sacar).
+- **Depois do primeiro teste:** a porta do bunker não faz mais som (nem abrindo nem fechando), a roda do mouse passa pela mão vazia, os passos das casas foram refeitos por cômodo, o jogo não fica mais mudo depois de comer ou beber (e a mastigada foi refeita) e entrou o soco.
+- **Pronto quando:** o usuário testa e aprova.
 
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
@@ -117,7 +128,8 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
   - O que foi saqueado fica vazio para sempre.
   - A cidade é dividida em áreas, para o jogo saber o que já foi limpo.
   - Os móveis de saque já existem na cena, com o nome da malha (armário, cômoda, criado-mudo, geladeira, balcão e prateleiras).
-- **Inventário:** espaço limitado na mochila de cada jogador e a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
+  - Já feito (acima): a comida e a água soltas pelos tampos, que se pegam, largam e consomem.
+- **Inventário:** a mochila de 3 lugares já existe (acima); falta a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
 - **Dia:** sair, explorar, voltar antes de escurecer (ou arriscar a noite) e dormir. Dormir passa o dia e salva.
 - **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do painel de armas, a porta e as luzes do bunker, que hoje voltam ao inicial a cada partida.
 - **Pronto quando:** dá para jogar vários dias seguidos, sair do jogo, voltar e encontrar tudo como estava.

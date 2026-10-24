@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.World;
 using P = ZombieCityCleaner.EditorTools.PlantaDoBunker;
 
@@ -50,6 +51,7 @@ namespace ZombieCityCleaner.EditorTools
             Directory.CreateDirectory(PastaMateriais);
             Directory.CreateDirectory(PastaMalhas);
             _rng = new System.Random(1987);
+            _rngSaque = new System.Random(2077);   // à parte, para não mudar o sorteio dos móveis
             Materiais();
             Malhas();
             ArteDaCidade();
@@ -96,6 +98,7 @@ namespace ZombieCityCleaner.EditorTools
             }
             MontarRedeDoBunker(raiz.Find("Casa da família"));
             PontosNoBunker(cena);
+            MontagemDasArmas.MontarItensNoMundo(cena);   // a comida e a água, nos lugares marcados
             MontagemDosZumbis.AssarNavegacao(cena);   // a cidade mudou: o NavMesh dos zumbis precisa ser refeito
             AssarOclusao();
             EditorSceneManager.MarkSceneDirty(cena);
@@ -453,6 +456,7 @@ namespace ZombieCityCleaner.EditorTools
             interior.transform.localPosition = new Vector3(0f, 1.55f, 0f);     // do piso (0,15) ao forro (2,95)
             interior.tamanho = new Vector3(W, 2.9f, D);
             MoveisDaCasa(Grupo(g, "Móveis"), W, D, bunker);
+            MarcarPisos(g, modelo, W, D);
             var eco = new GameObject("Eco da casa").AddComponent<AudioReverbZone>();
             eco.transform.SetParent(g, false); eco.transform.localPosition = new Vector3(0f, 1.5f, 0f);
             eco.reverbPreset = AudioReverbPreset.Room; eco.minDistance = Mathf.Min(W, D) * 0.4f; eco.maxDistance = Mathf.Max(W, D) * 0.6f;
@@ -468,6 +472,36 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
+        /// O piso de cada cômodo das casas (os `pisos` do CASAS do cidade_casas.py: o taco é madeira, o "ConcretoClaro" da
+        /// cozinha é concreto) e o de fora (o deck da varanda, ou o degrau de concreto). Ao mudar lá, mude aqui.
+        /// </summary>
+        static readonly Dictionary<string, (Superficie sala, Superficie cozinha, Superficie quarto, bool varanda)> PisosDasCasas =
+            new Dictionary<string, (Superficie, Superficie, Superficie, bool)>
+            {
+                ["Casa_1"] = (Superficie.Madeira, Superficie.Concreto, Superficie.Carpete, true),
+                ["Casa_2"] = (Superficie.Carpete, Superficie.Concreto, Superficie.Madeira, false),
+                ["Casa_Familia"] = (Superficie.Madeira, Superficie.Concreto, Superficie.Madeira, true),
+                ["Casa_4"] = (Superficie.Madeira, Superficie.Concreto, Superficie.Carpete, false),
+                ["Casa_5"] = (Superficie.Carpete, Superficie.Concreto, Superficie.Madeira, true),
+            };
+
+        /// <summary>
+        /// O chão de cada cômodo para o som dos passos (<see cref="PisoPorZona"/>, no grupo da casa): a sala na frente, a
+        /// cozinha atrás à esquerda e o quarto atrás à direita (a planta da Casa), do porão ao meio da parede.
+        /// </summary>
+        static void MarcarPisos(Transform casa, string modelo, float W, float D)
+        {
+            if (!PisosDasCasas.TryGetValue(modelo, out var p)) return;
+            float x0 = -W / 2f, x1 = W / 2f, z0 = -D / 2f, z1 = D / 2f, zDiv = z0 + D * 0.55f;
+            Bounds Caixa(float xa, float xb, float za, float zb) =>
+                new Bounds(new Vector3((xa + xb) / 2f, 0.4f, (za + zb) / 2f), new Vector3(xb - xa, 1.6f, zb - za));
+            var piso = casa.gameObject.AddComponent<PisoPorZona>();
+            piso.zonas = new[] { Caixa(x0, x1, z0, zDiv), Caixa(x0, 0f, zDiv, z1), Caixa(0f, x1, zDiv, z1) };
+            piso.superficies = new[] { p.sala, p.cozinha, p.quarto };
+            piso.resto = p.varanda ? Superficie.Madeira : Superficie.Concreto;
+        }
+
+        /// <summary>
         /// O bunker da família, embaixo do quintal (a planta é a <see cref="PlantaDoBunker"/>): a escada começa no meio
         /// da cozinha e desce para os fundos em dois lances até o vestíbulo e a porta blindada; depois dela, o salão alto,
         /// com dois quartos de cada lado e o depósito, no fim de corredores curtos.
@@ -479,6 +513,12 @@ namespace ZombieCityCleaner.EditorTools
         {
             var g = Grupo(casa, "Bunker");
             Modelo(g, "Bunker", Vector3.zero, 0f);
+            // o som dos passos: os 4 quartos são de taco; o resto (salão, corredores, depósito e escada), de concreto
+            var piso = g.gameObject.AddComponent<PisoPorZona>();
+            piso.zonas = Enumerable.Range(0, 4).Select(i => P.Comodos[i]).Select(c =>
+                new Bounds(new Vector3((c.X0 + c.X1) / 2f, P.Fundo + 0.4f, (c.Z0 + c.Z1) / 2f), new Vector3(c.X1 - c.X0, 1.6f, c.Z1 - c.Z0))).ToArray();
+            piso.superficies = Enumerable.Repeat(Superficie.Madeira, 4).ToArray();
+            piso.resto = Superficie.Concreto;
             var colisor = new GameObject("Colisão");
             colisor.transform.SetParent(g, false);
             colisor.AddComponent<MeshCollider>().sharedMesh = _malhas["Bunker_Colisao"];
@@ -531,7 +571,11 @@ namespace ZombieCityCleaner.EditorTools
                 foreach (float dz in new[] { -1f, 0f, 1f }) Movel(m, "Armario_Metal", xf + 0.27f, f, c.ZMeio + dz, 90f);
                 Movel(m, "Prateleira_Cheia", xf + 1.35f, f, c.Z1 - 0.37f, 180f);
                 Movel(m, "Prateleira_Cheia", xf + 2.7f, f, c.Z1 - 0.37f, 180f);
-                Movel(m, "Mesa_Grande", xf + 2.6f, f, c.ZMeio - 0.35f, 90f);
+                var mesa = Movel(m, "Mesa_Grande", xf + 2.6f, f, c.ZMeio - 0.35f, 90f);
+                // o que sobrou para a família: uma lata e uma garrafa na mesa
+                var sobras = Grupo(g, "Comida e água");
+                MarcarItem(sobras, mesa.transform.TransformPoint(new Vector3(-0.3f, Tampos["Mesa_Grande"].topo, 0.1f)), "Comida");
+                MarcarItem(sobras, mesa.transform.TransformPoint(new Vector3(0.25f, Tampos["Mesa_Grande"].topo, -0.15f)), "Agua");
                 Movel(m, "Tambor", xf + 1.1f, f, c.Z0 + 0.45f, 0f);
                 Movel(m, "Tambor", xf + 1.75f, f, c.Z0 + 0.45f, 40f);
                 Movel(m, "Caixas", xf + 3.9f, f, c.Z0 + 0.55f, 15f);
@@ -570,10 +614,8 @@ namespace ZombieCityCleaner.EditorTools
             var obstaculo = porta.AddComponent<NavMeshObstacle>();
             obstaculo.shape = NavMeshObstacleShape.Box; obstaculo.center = caixa.center; obstaculo.size = caixa.size;
             obstaculo.carving = true; obstaculo.carveOnlyStationary = true;
-            var som = porta.AddComponent<AudioSource>();
-            som.playOnAwake = false; som.spatialBlend = 1f; som.rolloffMode = AudioRolloffMode.Linear; som.minDistance = 2f; som.maxDistance = 30f;
             var folha = porta.AddComponent<PortaDoBunker>();
-            folha.bunker = bunker; folha.som = som;
+            folha.bunker = bunker;
             bunker.porta = folha;
 
             // as luzes: uma lâmpada (que brilha acesa) e a luz, sem sombra, em cada luminária do modelo
@@ -686,20 +728,76 @@ namespace ZombieCityCleaner.EditorTools
             float portaDaCozinha = x0 + 0.1f + 0.25f * W - Porta / 2f;
             Movel(g, "Rack_TV", Mathf.Min(xSofa, portaDaCozinha - 0.8f), y, zDiv - 0.38f, 180f);
             float mx = x1 - 1.6f, mz = z0 + 2.2f;
-            Movel(g, "Mesa", mx, y, mz, 0f);
+            var mesa = Movel(g, "Mesa", mx, y, mz, 0f);
             Movel(g, "Cadeira", mx - 0.35f, y, mz - 0.68f, 0f);
             Movel(g, "Cadeira", mx + 0.35f, y, mz + 0.68f, 180f);
             // cozinha: geladeira e fogão na divisória do quarto; o balcão sob a janela da esquerda (ou, na casa da
             // família, na parede da sala, depois da porta)
             Movel(g, "Geladeira", -0.47f, y, z1 - 0.55f, 270f);
             Movel(g, "Fogao", -0.44f, y, z1 - 1.45f, 270f);
-            if (bunker) Movel(g, "Balcao", -1.25f, y, zDiv + 0.43f, 0f);
-            else Movel(g, "Balcao", x0 + 0.43f, y, z1 - 0.3f * D, 90f);
+            GameObject balcao;
+            if (bunker) balcao = Movel(g, "Balcao", -1.25f, y, zDiv + 0.43f, 0f);
+            else balcao = Movel(g, "Balcao", x0 + 0.43f, y, z1 - 0.3f * D, 90f);
             // quarto: cama com a cabeceira na parede do fundo, criado-mudo, armário e cômoda na divisória
             Movel(g, "Cama", x1 - 1.4f, y, z1 - 1.15f, 180f);
-            Movel(g, "Criado_Mudo", x1 - 2.6f, y, z1 - 0.35f, 180f);
+            var criado = Movel(g, "Criado_Mudo", x1 - 2.6f, y, z1 - 0.35f, 180f);
             Movel(g, _rng.NextDouble() < 0.5 ? "Armario" : "Armario_Aberto", 0.41f, y, zDiv + 0.7f, 90f);
-            Movel(g, "Comoda", 0.36f, y, z1 - 1.0f, 90f);
+            var comoda = Movel(g, "Comoda", 0.36f, y, z1 - 1.0f, 90f);
+            // a comida e a água: a casa da família já foi saqueada (o que sobrou está no bunker)
+            if (!bunker)
+                Saque(g.parent, 4, mesa, balcao, criado, comoda, mesa, balcao,
+                      g.TransformPoint(new Vector3(-1.2f, y, z1 - 0.9f)), g.TransformPoint(new Vector3(x1 - 2.2f, y, zDiv + 1.0f)));
+        }
+
+        // ------------------------------------------------------------------ comida e água (Parte 7)
+
+        /// <summary>
+        /// O tampo de cada móvel onde pode haver comida ou água: a altura e a área livre em cima (x e z locais do móvel,
+        /// na Unity; as medidas são as do cidade_moveis.py). No balcão, o lado sem a pia; no criado-mudo, o lado sem o
+        /// abajur.
+        /// </summary>
+        static readonly Dictionary<string, (float topo, Rect area)> Tampos = new Dictionary<string, (float, Rect)>
+        {
+            ["Mesa"] = (0.76f, new Rect(-0.6f, -0.35f, 1.2f, 0.7f)),
+            ["Mesa_Grande"] = (0.76f, new Rect(-0.8f, -0.4f, 1.6f, 0.8f)),
+            ["Balcao"] = (0.9f, new Rect(0.08f, -0.18f, 0.64f, 0.38f)),
+            ["Comoda"] = (0.87f, new Rect(-0.42f, -0.16f, 0.84f, 0.32f)),
+            ["Criado_Mudo"] = (0.58f, new Rect(0.12f, -0.12f, 0.07f, 0.24f)),
+        };
+
+        static System.Random _rngSaque;
+
+        /// <summary>
+        /// Sorteia 'quantos' lugares entre os candidatos (móveis com tampo ou pontos no chão, que podem se repetir: dois
+        /// itens na mesma mesa) e marca cada um com um objeto "Lugar de item (Comida)" ou "(Agua)", no ponto de apoio e
+        /// girado. A montagem das armas junta as marcas no "Itens no mundo" (<see cref="MontagemDasArmas.MontarItensNoMundo"/>).
+        /// </summary>
+        static void Saque(Transform pai, int quantos, params object[] candidatos)
+        {
+            var g = pai.Find("Comida e água") ?? Grupo(pai, "Comida e água");
+            var lista = candidatos.ToList();
+            for (int k = 0; k < quantos && lista.Count > 0; k++)
+            {
+                int i = _rngSaque.Next(lista.Count);
+                var c = lista[i];
+                lista.RemoveAt(i);
+                Vector3 ponto;
+                if (c is GameObject movel && Tampos.TryGetValue(movel.name, out var tampo))
+                {
+                    var a = tampo.area;
+                    ponto = movel.transform.TransformPoint(new Vector3(a.x + a.width * (float)_rngSaque.NextDouble(), tampo.topo, a.y + a.height * (float)_rngSaque.NextDouble()));
+                }
+                else if (c is Vector3 chao) ponto = chao + new Vector3((float)_rngSaque.NextDouble() - 0.5f, 0f, (float)_rngSaque.NextDouble() - 0.5f) * 0.4f;
+                else continue;
+                MarcarItem(g, ponto, _rngSaque.NextDouble() < 0.55 ? "Comida" : "Agua");
+            }
+        }
+
+        static void MarcarItem(Transform g, Vector3 ponto, string item)
+        {
+            var marca = new GameObject($"Lugar de item ({item})").transform;
+            marca.SetParent(g, false);
+            marca.SetPositionAndRotation(ponto, Quaternion.Euler(0f, (float)_rngSaque.NextDouble() * 360f, 0f));
         }
 
         /// <summary>
@@ -714,16 +812,17 @@ namespace ZombieCityCleaner.EditorTools
             Movel(g, "Sofa_" + tecido, xm, y, z0 + 0.55f, 0f);
             Movel(g, "Rack_TV", xm, y, -3.0f, 180f);
             float mx = xm - 1.5f * lado;
-            Movel(g, "Mesa", mx, y, -2.0f, 0f);
+            var mesa = Movel(g, "Mesa", mx, y, -2.0f, 0f);
             Movel(g, "Cadeira", mx - 0.35f, y, -2.68f, 0f);
             Movel(g, "Cadeira", mx + 0.35f, y, -1.32f, 180f);
             Movel(g, "Geladeira", 2.2f * lado, y, 0.04f, 180f);
             Movel(g, "Fogao", 3.05f * lado, y, 0.07f, 180f);
-            Movel(g, "Balcao", 4.3f * lado, y, 0.08f, 180f);
+            var balcao = Movel(g, "Balcao", 4.3f * lado, y, 0.08f, 180f);
             Movel(g, "Cama", xm + 1.2f * lado, y, z1 - 1.15f, 180f);
-            Movel(g, "Criado_Mudo", xm, y, z1 - 0.35f, 180f);
+            var criado = Movel(g, "Criado_Mudo", xm, y, z1 - 0.35f, 180f);
             Movel(g, _rng.NextDouble() < 0.5 ? "Armario" : "Armario_Aberto", 2.5f * lado, y, 0.93f, 0f);
-            Movel(g, "Comoda", 4.0f * lado, y, z1 - 0.35f, 180f);
+            var comoda = Movel(g, "Comoda", 4.0f * lado, y, z1 - 0.35f, 180f);
+            Saque(g, 2, mesa, balcao, criado, comoda, g.TransformPoint(new Vector3(3.0f * lado, y, -0.9f)));
         }
 
         // ------------------------------------------------------------------ resto da cidade

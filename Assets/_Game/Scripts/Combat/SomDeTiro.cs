@@ -81,8 +81,7 @@ namespace ZombieCityCleaner.Combat
             for (int v = 0; v < variacoes; v++)
             {
                 var dados = Amostras(p, nome.GetHashCode() + v * 7919);
-                clips[v] = AudioClip.Create($"{nome} {v + 1}", dados.Length, 1, Taxa, false);
-                clips[v].SetData(dados, 0);
+                clips[v] = SomGerado.Clip($"{nome} {v + 1}", dados, Taxa);
             }
             return clips;
         }

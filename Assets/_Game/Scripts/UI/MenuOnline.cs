@@ -7,7 +7,8 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// Menu simples (OnGUI): hospedar, entrar com código ou testar em modo local. Na partida, mostra o código no
-    /// canto e ESC abre o menu (o mundo continua rodando, porque é online).
+    /// canto e ESC abre o menu (o mundo continua rodando, porque é online). Nos dois, as <see cref="Opcoes"/> (volume,
+    /// limite de FPS e o contador de FPS, que este menu desenha em cima de tudo).
     /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
     /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip] e -bot (o jogador anda e
     /// atira sozinho).
@@ -30,7 +31,7 @@ namespace ZombieCityCleaner.UI
         static bool _esperarSoltar;
         SessaoOnline _sessao;
         string _codigo = "", _ip = "127.0.0.1";
-        bool _pausa, _estavaAberto = true;
+        bool _pausa, _opcoes, _estavaAberto = true;
         GUIStyle _titulo, _texto, _botao, _campo, _erro;
 
         void OnEnable() => _esperarSoltar = true;
@@ -38,6 +39,7 @@ namespace ZombieCityCleaner.UI
         void Start()
         {
             _sessao = SessaoOnline.Instancia;
+            Opcoes.Carregar();   // antes da linha de comando: o robô de teste fica em 60 FPS
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length; i++)
             {
@@ -50,9 +52,14 @@ namespace ZombieCityCleaner.UI
 
         void Update()
         {
+            Opcoes.Medir(Time.unscaledDeltaTime);
             bool naPartida = _sessao.Atual == SessaoOnline.Estado.Conectado;
             var teclado = Keyboard.current;
-            if (naPartida && teclado != null && teclado.escapeKey.wasPressedThisFrame) _pausa = !_pausa;
+            bool esc = teclado != null && teclado.escapeKey.wasPressedThisFrame;
+            // ESC nas opções volta para o menu; na partida, abre e fecha o menu
+            if (esc && _opcoes) _opcoes = false;
+            else if (naPartida && esc) _pausa = !_pausa;
+            if (naPartida && !_pausa) _opcoes = false;
             if (!naPartida) _pausa = false;
             Aberto = !naPartida || _pausa;
             if (Aberto && !Bot)
@@ -106,7 +113,7 @@ namespace ZombieCityCleaner.UI
                       $"sem membros {cortados}, mancando {mancando}, rastejando {rastejando}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
             foreach (var j in Player.JogadorRede.Todos)
                 Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, " +
-                          $"lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}, arma {(Combat.TipoDeArma)j.Arma.Value}{(j.Luneta.Value ? " (na luneta)" : "")}");
+                          $"lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}, na mão {j.NaMao}{(j.Luneta.Value ? " (na luneta)" : "")}");
         }
 
         void Estilos()
@@ -127,6 +134,13 @@ namespace ZombieCityCleaner.UI
         {
             Estilos();
             float u = Screen.height / 720f;
+            Menu(u);
+            // o contador de FPS por cima do menu (o OnGUI do jogador não usa o canto de cima, à direita)
+            if (Event.current.type == EventType.Repaint) Opcoes.Contador(u);
+        }
+
+        void Menu(float u)
+        {
             var estado = _sessao.Atual;
             if (estado == SessaoOnline.Estado.Conectado)
             {
@@ -139,6 +153,11 @@ namespace ZombieCityCleaner.UI
             GUI.color = new Color(0, 0, 0, 0.6f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            if (_opcoes)
+            {
+                if (Opcoes.Painel(u, Screen.height * 0.3f, _titulo, _botao)) _opcoes = false;
+                return;
+            }
             float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.18f;
             GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
             GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Demo · até 4 jogadores", _texto);
@@ -162,6 +181,7 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao)) _sessao.EntrarLocal(_ip);
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
+            if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Opções", _botao)) _opcoes = true;
         }
 
         void Pausa(float u)
@@ -169,6 +189,11 @@ namespace ZombieCityCleaner.UI
             GUI.color = new Color(0, 0, 0, 0.55f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            if (_opcoes)
+            {
+                if (Opcoes.Painel(u, Screen.height * 0.3f, _titulo, _botao)) _opcoes = false;
+                return;
+            }
             float w = 320 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.35f;
             GUI.Label(new Rect(0, y - 60 * u, Screen.width, 40 * u), "MENU", _titulo);
             if (!_sessao.Local)
@@ -177,7 +202,8 @@ namespace ZombieCityCleaner.UI
                 if (GUI.Button(new Rect(x, y + 12 * u, w, 36 * u), "Copiar código", _botao)) GUIUtility.systemCopyBuffer = _sessao.Codigo;
             }
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
-            if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Sair da partida", _botao)) { _pausa = false; _sessao.Sair(); }
+            if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Opções", _botao)) _opcoes = true;
+            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), "Sair da partida", _botao)) { _pausa = false; _sessao.Sair(); }
         }
     }
 }

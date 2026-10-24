@@ -4,6 +4,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.UI;
 using ZombieCityCleaner.Zombies;
@@ -13,8 +14,8 @@ namespace ZombieCityCleaner.Player
     /// <summary>
     /// O jogador na rede. O dono controla o próprio movimento (NetworkTransform com autoridade do dono) e joga em
     /// primeira pessoa: a câmera do mundo, a câmera dos braços por cima (camada própria, não atravessa paredes) e o
-    /// próprio corpo só como sombra. Os outros veem o corpo animado, para onde ele olha, a arma da mão, a lanterna e os
-    /// tiros.
+    /// próprio corpo só como sombra. Os outros veem o corpo animado, para onde ele olha, o que está na mão (do
+    /// <see cref="InventarioJogador"/>), a lanterna e os tiros.
     /// </summary>
     public class JogadorRede : NetworkBehaviour
     {
@@ -34,12 +35,15 @@ namespace ZombieCityCleaner.Player
         public Transform ossoPeito;
         public Transform ossoCabeca;
 
-        [Header("A arma no corpo (uma por arma, na ordem de TipoDeArma)")]
-        [Tooltip("As armas avulsas dentro do Arma_TP (filho do weapon.R): só a da mão fica ligada.")]
-        public GameObject[] armasCorpo;
+        [Header("O que está na mão, no corpo (na ordem de Itens.Modelos: as armas, a lata e a garrafa)")]
+        [Tooltip("As armas e os itens avulsos dentro do Arma_TP (filho do weapon.R): só o da mão fica ligado.")]
+        public GameObject[] naMaoCorpo;
+        [Tooltip("A boca do cano de cada arma (na ordem de TipoDeArma).")]
         public Transform[] bocasCorpo;
         [Tooltip("O controlador do corpo com cada arma: o da pistola e os override com as animações de arma longa.")]
         public RuntimeAnimatorController[] controladoresCorpo;
+        [Tooltip("O corpo com a mão vazia (os punhos em guarda e o soco) ou com comida e água na mão.")]
+        public RuntimeAnimatorController controladorDasMaos;
 
         [Header("Cores da família")]
         [Tooltip("Jogador_Variacao0..3: cada jogador recebe uma, na ordem em que entra.")]
@@ -56,8 +60,6 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public readonly NetworkVariable<bool> Luneta = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<int> Cor = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        /// <summary>A arma da mão (<see cref="TipoDeArma"/>). Só o anfitrião troca (no suporte de armas do bunker).</summary>
-        public readonly NetworkVariable<byte> Arma = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>Quantos tiros deste jogador chegaram pela rede (para testes).</summary>
         public int TirosRecebidos { get; private set; }
@@ -65,6 +67,11 @@ namespace ZombieCityCleaner.Player
         public float Velocidade => _velocidade;
         public LanternaJogador Lanterna { get; private set; }
         public VidaJogador Vida { get; private set; }
+        public InventarioJogador Inventario { get; private set; }
+        /// <summary>O que está na mão (o item do lugar escolhido do inventário).</summary>
+        public Item NaMao => Inventario != null ? Inventario.NaMao : Item.Nada;
+        /// <summary>A arma da mão; sem arma, a pistola (para quem pergunta pela luneta, por exemplo).</summary>
+        public TipoDeArma ArmaNaMao => Itens.EhArma(NaMao) ? Itens.Arma(NaMao) : TipoDeArma.Pistola;
 
         public static JogadorRede Local { get; private set; }
         public static readonly List<JogadorRede> Todos = new List<JogadorRede>();
@@ -76,6 +83,8 @@ namespace ZombieCityCleaner.Player
         CharacterController _corpoFisico;
         Vector3 _posJanela;
         float _velocidade, _medidaRemota, _janela;
+        Item _naMaoAplicado = (Item)255;
+        int _lugarAplicado = -1;
 
         public override void OnNetworkSpawn()
         {
@@ -83,6 +92,7 @@ namespace ZombieCityCleaner.Player
             _corpoFisico = GetComponent<CharacterController>();
             Lanterna = GetComponent<LanternaJogador>();
             Vida = GetComponent<VidaJogador>();
+            Inventario = GetComponent<InventarioJogador>();
             if (IsServer) Cor.Value = CorLivre();
             Cor.OnValueChanged += AoMudarCor;
             AplicarCor(Cor.Value);
@@ -94,15 +104,15 @@ namespace ZombieCityCleaner.Player
             bracos.SetActive(dono);
             foreach (var r in renderersCorpo)
                 r.shadowCastingMode = dono ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
-            // a arma do corpo do dono fica desligada, nem sombra: a ponta das armas longas passa dos 60 cm em que a sombra
-            // da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de primeira
-            // pessoa
+            // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm em que
+            // a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de
+            // primeira pessoa
             if (dono)
-                foreach (var a in armasCorpo) a.GetComponent<Renderer>().enabled = false;
+                foreach (var a in naMaoCorpo) a.GetComponent<Renderer>().enabled = false;
             GetComponent<MovimentoPrimeiraPessoa>().enabled = dono;
             GetComponent<ArmaJogador>().enabled = dono;
-            Arma.OnValueChanged += AoMudarArma;
-            AplicarArma(Arma.Value);
+            Inventario.Mudou += AplicarNaMao;
+            AplicarNaMao();
             if (dono)
             {
                 Local = this;
@@ -116,11 +126,11 @@ namespace ZombieCityCleaner.Player
         public override void OnNetworkDespawn()
         {
             Todos.Remove(this);
-            // quem sai da partida devolve a arma ao painel do bunker (a pistola, a uma vaga de pistola livre)
-            if (IsServer && !NetworkManager.ShutdownInProgress && ParedeDeArmas.Instancia != null)
-                ParedeDeArmas.Instancia.Devolver((TipoDeArma)Arma.Value);
+            // quem sai da partida devolve as armas ao painel do bunker (a pistola, a uma vaga de pistola livre) e deixa a
+            // comida e a água no chão
+            if (IsServer && !NetworkManager.ShutdownInProgress) Inventario.Esvaziar();
             Cor.OnValueChanged -= AoMudarCor;
-            Arma.OnValueChanged -= AoMudarArma;
+            Inventario.Mudou -= AplicarNaMao;
             if (Local == this)
             {
                 Local = null;
@@ -153,21 +163,24 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        void AoMudarArma(byte antes, byte depois) => AplicarArma(depois);
-
         /// <summary>
-        /// A arma da mão: o modelo no corpo, as animações do corpo (pistola ou arma longa) e, no dono, a de primeira
-        /// pessoa.
+        /// O que está na mão: o modelo no corpo, as animações do corpo (as da pistola, as de arma longa ou, sem arma, as
+        /// dos punhos) e, no dono, o
+        /// de primeira pessoa (que também muda quando o lugar muda com a mesma arma: cada lugar tem o seu pente).
         /// </summary>
-        void AplicarArma(byte arma)
+        void AplicarNaMao()
         {
-            int a = Mathf.Clamp(arma, 0, Armas.Quantas - 1);
-            for (int i = 0; i < armasCorpo.Length; i++) armasCorpo[i].SetActive(i == a);
-            if (animadorCorpo.runtimeAnimatorController != controladoresCorpo[a]) animadorCorpo.runtimeAnimatorController = controladoresCorpo[a];
-            if (IsOwner) GetComponent<ArmaJogador>().Trocar((TipoDeArma)a);
+            var item = Inventario.NaMao;
+            int lugar = Inventario.Escolhido.Value;
+            if (item == _naMaoAplicado && (lugar == _lugarAplicado || !IsOwner)) return;
+            _naMaoAplicado = item;
+            _lugarAplicado = lugar;
+            int m = Itens.Modelo(item);
+            for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m);
+            var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)] : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
+            if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
+            if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, lugar);
         }
-
-        Transform BocaCorpo => bocasCorpo[Mathf.Clamp(Arma.Value, 0, Armas.Quantas - 1)];
 
         void Update()
         {
@@ -222,32 +235,61 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro.</summary>
-        public void AnunciarTiro(Impacto[] impactos)
+        /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro (e de que arma).</summary>
+        public void AnunciarTiro(TipoDeArma arma, Impacto[] impactos)
         {
             animadorCorpo.SetTrigger(FireId);
             if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
-            TiroRpc(impactos);
+            TiroRpc((byte)arma, impactos);
         }
 
         [Rpc(SendTo.NotMe)]
-        void TiroRpc(Impacto[] impactos)
+        void TiroRpc(byte qual, Impacto[] impactos)
         {
             TirosRecebidos++;
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
             if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
             animadorCorpo.SetTrigger(FireId);
-            var boca = BocaCorpo;
+            var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);
+            var boca = bocasCorpo[(int)arma];
             Efeitos.Clarao(boca, 0);
-            Efeitos.Som(Efeitos.Tiros[Mathf.Clamp(Arma.Value, 0, Armas.Quantas - 1)], boca.position, 1f, true, 150f);   // tiro se ouve longe
-            if (Arma.Value == (byte)TipoDeArma.Espingarda) StartCoroutine(SomDepois(boca, Efeitos.Bomba, 0.33f, 0.8f));
-            if (Armas.Dados((TipoDeArma)Arma.Value).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
+            Efeitos.Som(Efeitos.Tiros[(int)arma], boca.position, 1f, true, 150f);   // tiro se ouve longe
+            if (arma == TipoDeArma.Espingarda) StartCoroutine(SomDepois(boca, Efeitos.Bomba, 0.33f, 0.8f));
+            if (Armas.Dados(arma).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
             foreach (var i in impactos)
             {
                 if (i.tipo == TipoDeAcerto.Carne) Sangue.Respingo(i.ponto, i.normal);
                 else if (i.tipo != TipoDeAcerto.Nada) Efeitos.Impacto(i.ponto, i.normal);
                 if (i.tipo == TipoDeAcerto.Cenario) Sangue.FuroDeTiro(i.ponto, i.normal);
             }
+        }
+
+        /// <summary>Chamado pelo dono ao socar: o corpo dele (a sombra) e o dos outros mostram o soco, e os outros ouvem o vento.</summary>
+        public void AnunciarSoco()
+        {
+            animadorCorpo.SetTrigger(FireId);
+            SocoRpc();
+        }
+
+        [Rpc(SendTo.NotMe)]
+        void SocoRpc()
+        {
+            animadorCorpo.SetTrigger(FireId);
+            Efeitos.Som(Efeitos.SocoVento, transform.position + Vector3.up * 1.4f, 0.5f, true, 15f);
+        }
+
+        /// <summary>Chamado pelo dono quando o soco pega: os outros ouvem a pancada (na carne, com um pouco de sangue, ou na parede).</summary>
+        public void AnunciarPancada(Vector3 ponto, bool carne) => PancadaRpc(ponto, carne);
+
+        [Rpc(SendTo.NotMe)]
+        void PancadaRpc(Vector3 ponto, bool carne)
+        {
+            if (carne)
+            {
+                Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, true, 20f);
+                Sangue.Respingo(ponto, (transform.position + Vector3.up * 1.5f - ponto).normalized);
+            }
+            else Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, true, 15f);
         }
 
         IEnumerator SomDepois(Transform boca, AudioClip clip, float espera, float volume)

@@ -1,4 +1,5 @@
 using UnityEngine;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
 
 namespace ZombieCityCleaner.Combat
@@ -19,11 +20,21 @@ namespace ZombieCityCleaner.Combat
 
         public override string Dica(ArmaJogador quem)
         {
+            var inventario = quem.Inventario;
+            if (inventario == null) return null;
             var naVaga = parede.Vaga(indice);
-            if (naVaga == null || naVaga.Value == quem.Atual) return null;
-            return $"[E] Pegar {Armas.Dados(naVaga.Value).nomeComArtigo} (deixa {quem.Dados.nomeComArtigo})";
+            var naMao = inventario.NaMao;
+            if (naVaga == null)
+                return Itens.EhArma(naMao) && Itens.Arma(naMao) == dono ? $"[E] Guardar {Itens.NomeComArtigo(naMao)}" : null;
+            var nova = Itens.DaArma(naVaga.Value);
+            if (inventario.LugarParaReceber() >= 0) return $"[E] Pegar {Itens.NomeComArtigo(nova)}";
+            if (Itens.EhArma(naMao)) return $"[E] Trocar {Itens.NomeComArtigo(naMao)} {Itens.Pelo(nova)}";
+            return $"Sem lugar para {Itens.NomeComArtigo(nova)} (G larga {Itens.NomeComArtigo(naMao)})";
         }
 
-        public override void Usar(ArmaJogador quem) => parede.PedirTroca(indice);
+        public override void Usar(ArmaJogador quem)
+        {
+            if (quem.Inventario != null) parede.PedirVaga(indice, quem.Inventario);
+        }
     }
 }

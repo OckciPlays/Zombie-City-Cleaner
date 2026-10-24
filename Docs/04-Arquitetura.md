@@ -14,15 +14,16 @@ Como o projeto Unity está organizado. Para cada detalhe (números, motivos de c
 ```text
 Assets/_Game/
   Art/
-    Characters/Jogador/   corpo, braços de 1ª pessoa de cada arma, armas avulsas, controladores e materiais
+    Characters/Jogador/   corpo, braços de 1ª pessoa de cada arma e item, armas e itens avulsos, controladores e materiais
     Characters/Zombie/    os 4 modelos de zumbi, malhas, materiais e o Animator
     Cidade/               a arte final da cidade (FBX exportados do Blender)
     Materials/            materiais de efeitos, decals, neblina, partículas
+    UI/Icones/            os ícones do inventário (um por arma e item)
     Paleta.png            a paleta 16 × 16 de tudo o que não tem textura
   Audio/                  SomZombie1.mp3 (a voz dos zumbis)
   Prefabs/                Jogador.prefab e Zumbis/ (um zumbi e um corpo com física por modelo)
   Scenes/                 Demo_Cidade.unity (+ o NavMesh e a oclusão dela)
-  Scripts/                Network, Player, Zombies, Combat, World, Atmosphere, UI e Editor
+  Scripts/                Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI e Editor
   Settings/               volumes de pós-processamento (dia e noite)
   Shaders/                NeblinaDeAltura.shader
 Assets/Settings/          os assets do URP (PC_RPAsset, PC_Renderer, PC_Renderer_Bracos)
@@ -45,6 +46,7 @@ Docs/                     esta documentação
 | Efeitos | sons, clarão do cano, faíscas e sangue (os sons, as faíscas e o sangue em pools) |
 | Pontos de nascimento | 4 pontos no salão do bunker, em volta da mesa |
 | Parede de armas | o painel de armas do bunker (objeto de rede) |
+| Itens no mundo | a comida, a água e o que os jogadores largam (objeto de rede) |
 | Câmera de teste | a câmera do menu (some quando o jogador nasce) |
 
 ## Os scripts de montagem
@@ -53,11 +55,11 @@ Quase tudo na cena e nos prefabs é **gerado por código**, pelos scripts de `Sc
 
 | Menu | O que monta |
 |---|---|
-| Montar cidade em blocos (`MontagemDaCidade`) | a raiz "Cidade" com a arte final, os colisores, os móveis e os postes, o "Bunker (rede)", o NavMesh e a oclusão; e move os pontos de nascimento (se já existem) para o bunker |
+| Montar cidade em blocos (`MontagemDaCidade`) | a raiz "Cidade" com a arte final, os colisores, os móveis (e os lugares da comida e da água) e os postes, o "Bunker (rede)", os "Itens no mundo", o NavMesh e a oclusão; e move os pontos de nascimento (se já existem) para o bunker |
 | Montar clima e ciclo do dia (`MontagemDoClima`) | o "Clima", os volumes, a neblina de altura no renderizador e o renderizador dos braços |
 | Montar jogador e rede (`MontagemDaRede`) | o prefab do jogador, a "Rede", os "Efeitos" e os pontos de nascimento |
 | Montar zumbis (`MontagemDosZumbis`) | a importação dos 4 zumbis, as malhas, o Animator, os prefabs, os "Zumbis" com as hordas, os decals e o NavMesh |
-| Montar armas (`MontagemDasArmas`) | a importação das armas e dos braços, as malhas das armas, os Animators dos braços, o prefab do jogador e a "Parede de armas" |
+| Montar armas (`MontagemDasArmas`) | a importação das armas, dos itens, dos braços e dos ícones, as malhas, os Animators dos braços, o prefab do jogador, a "Parede de armas" e os "Itens no mundo" |
 
 A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 
@@ -73,18 +75,27 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 
 - **`SessaoOnline`:** `Hospedar()` cria uma partida privada de até 4 jogadores pelo Relay e guarda o código; `Entrar(codigo)` entra por ele. `HospedarLocal()` e `EntrarLocal(ip)` usam IP direto (porta 7777), sem Relay. Os serviços da Unity entram com um perfil anônimo sorteado (duas cópias no mesmo PC não podem usar a mesma conta).
 - **`MenuOnline`** (OnGUI): as telas de hospedar, entrar e modo local; ESC abre o menu durante a partida (o mundo continua). Também é o dono do mouse: preso no jogo assim que a partida começa ou o menu fecha; `MenuOnline.Controla` diz quando o jogador recebe comandos (o clique que devolve o foco à janela não atira).
+- **`Opcoes`:** o volume geral, o limite de FPS (VSync, 30, 60, 120, 144 ou sem limite) e o contador de FPS, no menu do ESC e no do começo, gravados no `PlayerPrefs`.
 - **Linha de comando** (para testes com a build): `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot`, `-hora N`, e `-benchmark -resultado caminho.md` (com `-hospedar-local`: roda o benchmark e grava o resultado).
 
 ### O jogador (`Player/`, prefab `Jogador.prefab`)
 
 - **Raiz:** CharacterController, NetworkObject e NetworkTransform com autoridade do dono (cada um controla o próprio movimento).
-  - `JogadorRede`: as câmeras, o corpo, a cor da família, a arma da mão e o tiro pela rede.
+  - `JogadorRede`: as câmeras, o corpo, a cor da família, o que está na mão (no corpo) e o tiro pela rede.
   - `MovimentoPrimeiraPessoa`: andar (2,0 m/s), correr (4,2 m/s), mirando (1,3 m/s) e pular.
-  - `ArmaJogador`: o tiro, a recarga, a mira (e a luneta da sniper) e o E: mirando de perto uma coisa que se usa (`Interagivel`: uma arma do painel, a porta do bunker, um interruptor), mostra a dica e usa.
+  - `InventarioJogador`: os 3 lugares (armas, latas, garrafas), o da mão, a roda e 1–3 para trocar, G para largar e os 3 lugares na tela. O conteúdo é do anfitrião; o lugar escolhido, do dono.
+  - `ArmaJogador`: o que está na mão: com arma, o tiro, a recarga e a mira (e a luneta da sniper), com o pente guardado por lugar; com comida ou água, comer ou beber no clique; com a mão vazia, o soco (uma esfera curta da câmera; no zumbi, pouco dano e o recuo). E o E: mirando de perto uma coisa que se usa (`Interagivel`: um item no chão, uma arma do painel, a porta do bunker, um interruptor), mostra a dica e usa.
   - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
-  - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker.
+  - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker. Ela volta sozinha só sem fome e sem sede.
+  - `FomeESede`: duas barras (0 a 100) do anfitrião, que esvaziam com o tempo (25 min a sede, 40 a fome; mais rápido correndo) e tiram vida quando vazias.
+  - `PassosJogador`: os passos, em todas as cópias, pela distância andada e pelo chão embaixo do pé (concreto, madeira, carpete, grama). Dentro das casas e do bunker, o `World/PisoPorZona` (posto pela montagem da cidade) diz o piso de cada cômodo.
 - **"Corpo":** o modelo que os outros veem. Para o próprio jogador, ele só faz sombra.
-- **"Cabeca" > "Camera" > "CameraBracos" e "Bracos":** a câmera do mundo, e por cima dela a câmera dos braços (camada 6), que desenha só os braços de primeira pessoa. Por isso os braços nunca atravessam paredes. "Bracos" tem um modelo por arma, e só o da arma da mão fica ligado.
+- **"Cabeca" > "Camera" > "CameraBracos" e "Bracos":** a câmera do mundo, e por cima dela a câmera dos braços (camada 6), que desenha só os braços de primeira pessoa. Por isso os braços nunca atravessam paredes. "Bracos" tem um modelo por arma e item, mais os punhos (a mão vazia), e só o da mão fica ligado.
+
+### Os itens (`Loot/`)
+
+- **`Itens`:** o que cabe num lugar do inventário (`Item`: as 5 armas, a lata de comida e a garrafa de água) e quanto a comida e a água enchem a fome e a sede.
+- **`ItensNoMundo`** (no objeto "Itens no mundo"): os itens soltos pelo mundo, numa lista de rede só (Id, item, ponto de apoio, giro). Cada máquina monta os objetos (a malha e o colisor que a mira procura); pegar pede ao anfitrião. Os 34 do começo vêm das marcas que a montagem da cidade põe nos tampos dos móveis.
 
 ### As armas (`Combat/Armas`, `Player/ArmaJogador`, `Combat/ParedeDeArmas`)
 
@@ -102,8 +113,8 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 - **O tiro:** um raio do centro da tela (um por chumbo na espingarda), com dispersão em volta do olhar. O raio atravessa até dois braços (numa multidão, as mãos de quem ataca ficam na frente; o mesmo braço não conta duas vezes) e confere os primeiros 35 cm à parte (à queima-roupa).
 - **Quem decide:** quem atira vê o acerto na hora (sangue, a marca na mira) e manda o acerto para o anfitrião (a região, o membro, o dano da distância e se o corpo é arremessado), que confere e aplica o dano.
 - **A luneta da sniper:** o botão direito fecha a câmera para 12° (~6,7×), esconde os braços e desenha a luneta na tela; o mouse fica mais lento e a neblina afina, só para quem mira. O anfitrião sabe quem está na luneta (`JogadorRede.Luneta`) e, na linha dela, trata os zumbis de longe como de perto (veja o LOD).
-- **O painel de armas** (`ParedeDeArmas`, um objeto de rede da cena): na parede do fundo do salão do bunker, com um lugar para cada arma (as 4 longas e 4 pistolas; `VagaDeArma.dono`). Mirando uma arma de perto, E pede a troca; o anfitrião confere a distância, põe a arma da mão numa vaga livre do tipo dela e troca a arma do jogador. Quem sai da partida devolve a arma. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
-- **As animações:** cada arma tem os seus braços de primeira pessoa (um FBX por arma) com o mesmo Animator, trocando os clipes por um override. O corpo usa outro override para as armas longas (a sniper usa o do rifle).
+- **O painel de armas** (`ParedeDeArmas`, um objeto de rede da cena): na parede do fundo do salão do bunker, com um lugar para cada arma (as 4 longas e 4 pistolas; `VagaDeArma.dono`). Mirando uma arma de perto, E pede ao anfitrião, que confere a distância e põe a arma no inventário (na mão vazia ou num lugar livre); com o inventário cheio, troca pela arma da mão, que volta para uma vaga do tipo dela. Mirando uma vaga vazia com a arma dela na mão, E guarda. Quem sai da partida devolve as armas. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
+- **As animações:** cada arma e item tem os seus braços de primeira pessoa (um FBX por modelo) com o mesmo Animator, trocando os clipes por um override (nos itens, o `Usar` no lugar do tiro; nos punhos, o soco de direita e o de esquerda). O peso da camada das ações é do código: 1 durante uma ação, e descendo a 0 depois (parada, ela segurava a última pose, e os braços ficavam congelados). O corpo usa outro override para as armas longas (a sniper usa o do rifle) e um para os punhos (sem arma na mão).
 
 ### Os zumbis (`Zombies/`)
 
@@ -130,6 +141,8 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 
 - **`Efeitos`:** os sons gerados por código (o tiro de cada arma, clique, carregador, bomba, cartucho, ferrolho, a luneta entrando e saindo e lanterna), o clarão do cano (criado a cada tiro) e as faíscas. O som espacial fica mais abafado quanto mais longe.
 - **`SomDeTiro`:** o tiro sintetizado em camadas, com um perfil por arma e 3 variações de cada.
+- **`SomDePasso`:** os passos (o calcanhar e a ponta do pé) em concreto, madeira, carpete e grama, 4 variações de cada, andando e correndo. **`SomDosItens`:** abrir a lata, mastigar, abrir a garrafa, o gole e largar no chão. **`SomDoSoco`:** o soco no ar, na carne e na parede.
+- **`SomGerado`:** todo som feito por código passa por ele, que troca valores inválidos (NaN) por zero. Um NaN num clipe cala o áudio da Unity inteiro (o jogo ficava mudo depois de comer).
 - **`Sangue`:** respingo, explosão da cabeça, jorro do pescoço e manchas no chão (decals), tudo em pools.
 
 ### A cidade, o clima e o dia (`World/`, `Atmosphere/`)
@@ -148,12 +161,17 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 |---|---|---|
 | posição e giro do jogador | NetworkTransform | o dono |
 | para onde olha, se está mirando, a lanterna | NetworkVariables | o dono |
-| a cor da família e a arma da mão | NetworkVariables | o anfitrião |
-| o tiro (os impactos de cada chumbo) | `TiroRpc`, para os outros | o dono |
+| a cor da família | NetworkVariable | o anfitrião |
+| o inventário (os 3 lugares) e o lugar da mão | NetworkVariables | o anfitrião (o conteúdo) e o dono (o lugar) |
+| largar e comer | `LargarRpc` e `ConsumirRpc`, para o anfitrião | o dono (o anfitrião confere) |
+| os itens no chão e o pedido de pegar | `NetworkList` e `PegarRpc` | o anfitrião |
+| a fome e a sede | NetworkVariables (uma vez por segundo) | o anfitrião |
+| o tiro (a arma e os impactos de cada chumbo) | `TiroRpc`, para os outros | o dono |
+| o soco (a animação, o som e o que ele acertou) | `SocoRpc` e `PancadaRpc`, para os outros | o dono |
 | o acerto num zumbi | `AcertoRpc`, para o anfitrião | o dono (o anfitrião confere) |
 | os zumbis perto de cada jogador | mensagem nomeada `ZCC.Zumbis` | o anfitrião |
 | a hora do dia | a cada 1 s | o anfitrião |
-| o painel de armas e o pedido de troca | NetworkVariable e `TrocarRpc` | o anfitrião |
+| o painel de armas e o pedido (pegar, trocar, guardar) | NetworkVariable e `VagaRpc` | o anfitrião |
 | a porta e as luzes do bunker | NetworkVariables, `PortaRpc` e `LuzRpc` | o anfitrião |
 | a vida do jogador, o golpe e a queda | NetworkVariable `Vida`, `GolpeRpc` e `CaiuRpc` para o dono | o anfitrião |
 
