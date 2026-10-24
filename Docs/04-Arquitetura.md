@@ -80,7 +80,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
   - `JogadorRede`: as câmeras, o corpo, a cor da família, a arma da mão e o tiro pela rede.
   - `MovimentoPrimeiraPessoa`: andar (2,0 m/s), correr (4,2 m/s), mirando (1,3 m/s) e pular.
   - `ArmaJogador`: o tiro, a recarga, a mira e a troca no suporte.
-  - `LanternaJogador`: a luz no peito, que segue o olhar com atraso.
+  - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
   - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker.
 - **"Corpo":** o modelo que os outros veem. Para o próprio jogador, ele só faz sombra.
 - **"Cabeca" > "Camera" > "CameraBracos" e "Bracos":** a câmera do mundo, e por cima dela a câmera dos braços (camada 6), que desenha só os braços de primeira pessoa. Por isso os braços nunca atravessam paredes. "Bracos" tem um modelo por arma, e só o da arma da mão fica ligado.

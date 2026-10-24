@@ -86,6 +86,26 @@ Pedidos depois da Parte 8, em 3 fatias aprovadas uma de cada vez.
 - O dobro de zumbis: de 129 para 258, nos mesmos 29 pontos de horda.
 - As montagens passaram a forçar a reimportação dos prefabs (o controlador de animação recriado deixava os zumbis em pose T).
 
+## Ambientação da cidade, fatia 1: a rua abandonada (em teste, branch `feature/ambientacao-teste`)
+
+Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm aí). Feita só com as peças que já existiam, pela montagem da cidade (grupo "Abandono").
+
+- 12 carros abandonados: a fila de quem tentou fugir nas saídas norte e leste, uma batida no cruzamento do meio, um capotado, um que parou no poste e a picape de uma blitz.
+- A blitz abandonada na avenida sul: barreiras abertas, o cavalete e os cones derrubados.
+- Lixo nas calçadas: sacos, caixas, tambores e uma lixeira caída.
+- **Medido** (no PC do Pedro, Editor em 2560 × 1440, à noite, na vista de sempre, 2 rodadas antes e 2 depois): ~50 a 60 draw calls a mais (+5 a 6%), o mesmo número de SetPass e a GPU dentro da variação entre rodadas (8,3 a 9,1 ms depois, 8,4 a 9,9 ms antes). O quadro ficou travado em ~13,4 ms nas duas medições (parece o limite de 75 Hz da tela), então ele não serve para comparar aqui.
+
+## Ambientação, fatia 2: marcas no chão e sinais de vida, e a lanterna nova (em teste, mesma branch)
+
+- **A lanterna, corrigida:** o facho agora converge no ponto da mira, sem atraso para quem a usa. Antes ela apontava 9° abaixo do olhar e seguia a câmera com atraso, então o centro da luz caía longe da mira (uns 2 m abaixo, a 10 m). Os outros jogadores veem o facho seguir o olhar de quem a usa.
+- **A lanterna, melhorada:** um facho de lanterna de verdade (o centro forte, um anel leve e a borda mais fraca e quente, feito por código) e uma falha rápida ao ligar.
+- **Marcas no chão:** 23 decals com um material só: freadas atrás das batidas, óleo embaixo dos carros batidos, sangue seco arrastado e papéis espalhados.
+- **Sinais de vida:** duas TVs ligadas (a casa 2 e um apartamento do 2º andar), duas lâmpadas esquecidas acesas (a casa 4 e um apartamento do 3º andar) e o pisca-alerta em dois carros abandonados.
+- **Medido** (mesma vista, à noite, 2 rodadas limpas, comparando com a fatia 1): draw calls iguais (914 a 1.043), 2 a 3 SetPass a mais (67 a 68 contra 64 a 65) e a GPU dentro da variação entre rodadas (8,5 a 9,4 ms contra 8,3 a 9,1 ms). Física, navegação e animação iguais.
+  - O pisca-alerta mudava o brilho das lanternas por MaterialPropertyBlock, o que as tirava do SRP Batcher: ~10 SetPass a mais. Agora ele liga e desliga o renderer.
+  - O `_EMISSION` do material Lit some depois que o material carrega (o arquivo ainda o tem). Por isso o pisca usa Unlit com a cor em HDR. A lente dos postes (`Lampada`) tem o mesmo problema e não brilha pela emissão: fica para depois.
+- **Testado com dois jogadores** (o Editor hospedando e a build com o robô, `-entrar-local 127.0.0.1 -bot`): em 25 s, com o robô girando e olhando para cima e para baixo, o facho dele, visto do anfitrião, ficou em média a 0,36° da mira dele (no máximo 8°, nas viradas rápidas, pela suavização); a conta antiga daria 27°. As 5 vezes que ele ligou e desligou a lanterna chegaram, e a luz nunca ficou diferente do estado recebido.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

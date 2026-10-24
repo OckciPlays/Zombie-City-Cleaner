@@ -51,9 +51,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Art/Paleta.png`: a paleta de cores 16×16 dos personagens (linhas 0 a 4) e da cidade (linhas 5 a 10). O alfa das linhas da cidade é a suavidade.
   - `Art/Cidade/`: a arte final (Parte 8), exportada de `Modelo 3D/Cidade/Cidade.blend`: `Cidade_Rua.fbx` (objetos de rua), `Cidade_Moveis.fbx` (móveis), `Cidade_Chao.fbx` (o chão, em 25 pedaços "Chao_i_j"), e `Cidade_Casas.fbx` (as 5 casas), `Cidade_Predio.fbx` (o prédio) e `Cidade_Bunker.fbx` (o bunker), estas três com o seu `_Colisao.fbx` (legível).
   - `Art/Materials/Cidade.mat`: o material único da arte final (URP Lit com a paleta e a suavidade vinda do alfa).
-  - `Art/Materials/Blocos/`: o que sobrou dos blocos: `Lampada.mat` (a lente dos postes, que acende) e `ConeDeLuz.mat` (o cone falso, aditivo, com o degradê `DegradeCone.png`).
+  - `Art/Materials/Blocos/`: o que sobrou dos blocos: `Lampada.mat` (a lente dos postes, que acende) e `ConeDeLuz.mat` (o cone falso, aditivo, com o degradê `DegradeCone.png`). Também o `PiscaAlerta.mat` (as lanternas do pisca-alerta dos carros, ambientação).
   - `Art/Materials/`: também `NeblinaDeAltura.mat`, `Particulas.mat` e `Clarao.mat`. Os `Teste_*` são da fundação.
-  - `Art/Materials/Decals/`: os decals de sangue e de furo de tiro (shader "Shader Graphs/Decal", texturas geradas por código).
+  - `Art/Materials/Decals/`: os decals de sangue e de furo de tiro (shader "Shader Graphs/Decal", texturas geradas por código), e o `Decal_Rua` (as marcas no chão da ambientação, com a textura `Rua.png` de 4 desenhos, feita pela montagem da cidade).
   - `Art/Meshes/`: malhas geradas pela montagem da cidade (`ConeDeLuz`).
   - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
   - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), tocada em trechos.
@@ -102,6 +102,22 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **Árvores:** 40% secas. **Pinheiros:** os três tipos, sorteados, com escala de 0,9 a 1,6.
   - **"Objetos de rua":** 8 placas de pare nos cruzamentos (a frente olha para quem chega), 4 placas de rua, 6 hidrantes virados para a rua, 10 lixeiras (2 caídas), 2 caçambas e sacos de lixo. A praça tem os bancos virados para o coreto e 2 lixeiras.
   - **Barricadas:** 5 barreiras de concreto, o cavalete e 3 cones do lado de dentro, e os 2 carros do lado de fora.
+  - **"Abandono"** (ambientação, fatia 1, em teste na branch `feature/ambientacao-teste`): o começo do apocalipse na rua, só com peças que já existem.
+    - "Carros abandonados" (12, com o nome "Carro", que no futuro podem virar fonte de peças): a fila da fuga nas saídas norte e leste, a batida no cruzamento do meio, um capotado na rua oeste (z ≈ -1), um que subiu na calçada e parou no poste (2,9; 24,3) e a picape da blitz.
+    - "Blitz abandonada" na avenida sul (z ≈ -31): 2 barreiras abertas no meio, o cavalete deitado e cones, 2 deles caídos.
+    - "Lixo": sacos, caixas, tambores (alguns deitados) e uma lixeira caída nas calçadas, fora das portas, do portão da família e da saída do bunker.
+    - `Peca(pai, malha, pos, giro, sombra)` gira a peça em qualquer eixo e a apoia no chão (`NoChao`: o ponto mais baixo da malha girada vai para `pos.y`). Sacos, caixas e cones não fazem sombra.
+    - Custo medido (2 rodadas antes e 2 depois, mesma vista, noite): ~50 a 60 draw calls a mais (+5 a 6%), mesmo número de SetPass, a GPU dentro da variação (8,3 a 9,1 ms contra 8,4 a 9,9 ms).
+  - **"Marcas no chão"** (ambientação, fatia 2, na mesma branch): 23 decals com um material só (`Decal_Rua`; a textura tem 4 desenhos, um em cada quarto, e cada decal escolhe o seu pelo `uvBias`): freadas atrás das batidas, óleo embaixo dos carros batidos, sangue seco arrastado e papéis.
+    - A caixa de cada decal tem 0,6 m de altura: pega o chão (rua, calçada ou praça) e não o coreto (60 cm). Até 40 m.
+    - O sangue seco é vermelho-escuro: marrom, de noite e com a gradação fria, virava cinza e parecia sombra.
+  - **"Sinais de vida"** (fatia 2): o que ficou ligado quando as pessoas fugiram. Luzes pontuais pequenas, sem sombra, que o `World/SinalDeVida` faz mudar em Play (só visual, cada máquina tem o seu):
+    - 2 TVs (a casa 2 e o apartamento leste do 2º andar): a luz fria sai da frente do `Rack_TV` e muda de força e de tom a cada "corte de cena";
+    - 2 lâmpadas esquecidas (a sala da casa 4 e o apartamento oeste do 3º andar), que às vezes tremem;
+    - o pisca-alerta em 2 carros (o sedã batido no cruzamento do meio e um da fila da saída norte): 4 caixinhas com o `PiscaAlerta.mat` (Unlit com a cor em HDR: o `_EMISSION` do Lit some do material depois de carregado) nos cantos e uma luz laranja em cima, a 1,4 Hz. As caixinhas aparecem e somem (o renderer liga e desliga): mudar o brilho por MaterialPropertyBlock as tirava do SRP Batcher e custava ~5 SetPass a mais. As caixinhas encostam na lataria: um raio na malha (com um MeshCollider temporário) acha a superfície, porque o carro não é uma caixa.
+    - A marcação de estático pula o que está dentro de um `SinalDeVida` (as caixinhas ligam e desligam).
+  - Custo medido da fatia 2 com a lanterna nova (2 rodadas limpas, mesma vista, noite, contra a fatia 1): draw calls iguais, 2 a 3 SetPass a mais, a GPU dentro da variação (8,5 a 9,4 ms contra 8,3 a 9,1 ms).
+  - **Cuidado com `_EMISSION` no Lit:** a palavra-chave some do material depois de carregado (o arquivo ainda a tem). O `PiscaAlerta` usa Unlit por isso; a `Lampada` dos postes não brilha pela emissão (pendente).
   - A calçada fica 12 cm acima da rua: o que fica em cima dela usa y = 0,12.
   - No fim, ela põe os 4 pontos de nascimento na sala comum do bunker (`PontosNoBunker`), olhando para a mesa.
 - **Planta (metros, +Z = norte):**
@@ -140,7 +156,10 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Neblina de altura (`Shaders/NeblinaDeAltura.shader`):** um passe de tela cheia antes dos transparentes (os cones e as partículas ficam por cima).
   - A densidade cai com a altura (exponencial, calculada exata ao longo do raio) e tem manchas de ruído arrastadas pelo vento.
   - Abaixo da altura base a conta usa a base, para a neblina não engrossar debaixo da terra.
-- **Lanterna:** intensidade 30, alcance 28, inclinada 9° para baixo do olhar. A sombra dela começa a 0,6 m da luz (`shadowNearPlane`): a pistola e os braços do corpo ficam na frente do peito e cortavam a luz ao meio.
+- **Lanterna:** intensidade 34, alcance 28, abertura 62° (52° por dentro), com um cookie gerado por código (o centro forte, um anel leve do refletor e a borda mais fraca e quente). A sombra dela começa a 0,6 m da luz (`shadowNearPlane`): a pistola e os braços do corpo ficam na frente do peito e cortavam a luz ao meio.
+  - **O facho converge na mira:** um raio sai do olho (sem os jogadores, os braços, os corpos, a cápsula do zumbi de perto e os gatilhos), e a luz aponta do peito para onde ele bateu (de 1,2 a 30 m). Antes ela apontava 9° abaixo do olhar e seguia com atraso: o centro caía uns 2 m abaixo da mira a 10 m, e ela se arrastava ao virar.
+  - O dono usa a câmera dele, sem atraso (o `Pitch` da rede só muda a cada 0,5°). Os outros usam o `Pitch`, suavizado (`atraso`).
+  - Ao ligar, ela falha duas vezes em 0,22 s antes de firmar.
 - **Como testar:** em Play, Page Up / Page Down mudam a hora. Por código, `typeof(CicloDoDia).GetProperty("Hora").GetSetMethod(true).Invoke(null, new object[] { 12f })`.
 - **Luz em tempo real (decidido na Parte 8):** a cidade não tem luz assada. Os 28 postes são spots sem sombra (Forward+), a lanterna tem sombra e o SSAO do `PC_Renderer` dá o sombreado de contato.
   - O ciclo do dia é contínuo, e os postes acendem, apagam e piscam: lightmap ou APV não acompanham. Seriam dois cenários de APV misturados pela hora, só para ganhar a luz rebatida.
@@ -264,12 +283,12 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
       - Acertou uma `Hitbox`: sangue na hora, a marca de acerto na mira (vermelha na cabeça) e o acerto vai para o anfitrião (`JogadorRede.AcertarZumbi`).
       - **O tiro atravessa até dois braços ou antebraços:** o braço leva o acerto (e pode cair), e a bala segue para o que estiver atrás. Numa multidão, as mãos de quem ataca ficam na frente da mira.
       - No cenário: faíscas e a marca do tiro (decal).
-    - `LanternaJogador`: luz no peito que segue o olhar com atraso; F liga e desliga. Ela fica desligada só enquanto a câmera dos braços desenha (os braços não recebem a luz dela).
+    - `LanternaJogador`: luz no peito cujo facho converge no ponto da mira; F liga e desliga. Ela fica desligada só enquanto a câmera dos braços desenha (os braços não recebem a luz dela).
   - **A arma no corpo do dono fica desligada** (o renderer, nem sombra): a ponta do rifle e da espingarda passa dos 60 cm em que a sombra da lanterna começa, e a sombra do cano aparecia no facho. O corpo continua só como sombra.
     - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Depois de 8 s sem apanhar, recupera 2 por segundo (provisório, até o saque da Parte 7).
   - **"Corpo":** `Jogador.fbx` com o `Jogador_TP.controller`. Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
   - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (os braços de primeira pessoa de cada arma, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
-  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a arma de luz. Ela segue o olhar 9° mais baixo (`inclinacao`).
+  - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a arma de luz. O facho aponta do peito para o ponto da mira (veja "Lanterna" em "Clima e ciclo do dia").
   - **"Bracos"** tem um filho por arma (`Bracos_<Arma>`, o FBX de primeira pessoa com o controlador ou o override dele), só o da arma da mão ligado.
   - Só o dono liga as câmeras, o ouvido, os braços, o movimento e a arma.
 - **O que vai pela rede:**

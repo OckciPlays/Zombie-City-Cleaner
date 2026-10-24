@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.EditorTools
@@ -75,6 +76,9 @@ namespace ZombieCityCleaner.EditorTools
             Arvores(Grupo(raiz, "Árvores"));
             Barricadas(Grupo(raiz, "Barricadas"));
             ObjetosDeRua(Grupo(raiz, "Objetos de rua"));
+            Abandono(Grupo(raiz, "Abandono"));
+            MarcasNoChao(Grupo(raiz, "Marcas no chão"));
+            SinaisDeVida(raiz);
             Pinheiros(Grupo(raiz, "Pinheiros"));
             Barreira(Grupo(raiz, "Barreira invisível"));
             Chao(raiz);   // por último: precisa do buraco da escada do bunker, que a casa da família marca
@@ -82,6 +86,7 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var t in raiz.GetComponentsInChildren<Transform>(true))
             {
                 if (t.GetComponent<Light>() != null || t.GetComponent<PosteDeLuz>() != null || t.name == "Cone de luz") continue;
+                if (t.GetComponentInParent<SinalDeVida>() != null) continue;   // as lanternas do pisca-alerta mudam em Play
                 var flags = StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic;
                 if (EscondeOQueEstaAtras(t)) flags |= StaticEditorFlags.OccluderStatic;
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
@@ -640,9 +645,11 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Carro abandonado: um dos modelos (Carro_Sedan_Azul, Carro_Pickup_Bege...), com uma caixa de colisão.</summary>
-        static void Carro(Transform pai, Vector3 pos, float yaw, string modelo)
+        static GameObject Carro(Transform pai, Vector3 pos, float yaw, string modelo)
         {
-            ColisorDaMalha(Modelo(pai, modelo, pos, yaw, "Carro"));
+            var go = Modelo(pai, modelo, pos, yaw, "Carro");
+            ColisorDaMalha(go);
+            return go;
         }
 
         static void Carros(Transform g)
@@ -766,6 +773,368 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var (pos, yaw) in new[] { (new Vector3(32.5f, 0f, 16.3f), 20f), (new Vector3(-6.9f, 0f, 32.4f), 110f), (new Vector3(6.2f, 0.12f, -10.6f), 300f),
                                                (new Vector3(-31.2f, 0f, 7.4f), 45f), (new Vector3(29.4f, 0.12f, -5.5f), 160f) })
                 ColisorDaMalha(Modelo(g, "Sacos", pos, yaw));
+        }
+
+        // ------------------------------------------------------------------ abandono (ambientação, fatia 1)
+
+        /// <summary>
+        /// O começo do apocalipse na rua: a fila de carros de quem tentou fugir nas saídas norte e leste, batidas no
+        /// meio da cidade (dois carros que se chocaram no cruzamento, um capotado, um no poste), uma blitz abandonada
+        /// na avenida sul e lixo pelas calçadas.
+        /// - Só peças que já existem nos FBX, com o material da cidade: entram no batching estático e na oclusão como
+        ///   o resto (a marcação de estático, no fim da montagem, vale para tudo dentro da "Cidade").
+        /// - Sacos, caixas e cones não fazem sombra: são baixos, quase não se vê a sombra deles, e cada um custaria
+        ///   desenhos a mais nas duas cascatas da sombra do sol e da lua.
+        /// - Os carros ficam no grupo "Carros abandonados", com o nome "Carro": no futuro, podem virar fonte de peças.
+        /// - Os lugares fogem das portas das casas, do portão da casa da família e da saída do bunker. A colisão
+        ///   entra no NavMesh, que a montagem refaz no fim.
+        /// </summary>
+        static void Abandono(Transform g)
+        {
+            var carros = Grupo(g, "Carros abandonados");
+            // saída norte: a fila de quem tentou fugir, parada na barricada (dois carros se tocaram na traseira)
+            Carro(carros, new Vector3(-1.9f, 0f, 52.0f), 4f, "Carro_Sedan_Cinza");
+            Carro(carros, new Vector3(2.0f, 0f, 50.0f), 352f, "Carro_Pickup_Bege");
+            Carro(carros, new Vector3(-2.0f, 0f, 45.6f), 3f, "Carro_Sedan_Verde");
+            PiscaAlerta(Carro(carros, new Vector3(1.8f, 0f, 45.0f), 12f, "Carro_Sedan_Azul"));
+            // saída leste: a mesma fila, com um carro atravessado
+            Carro(carros, new Vector3(51.5f, 0f, 1.9f), 93f, "Carro_Pickup_Azul");
+            Carro(carros, new Vector3(49.0f, 0f, -1.9f), 86f, "Carro_Sedan_Vinho");
+            Carro(carros, new Vector3(45.2f, 0f, 1.6f), 118f, "Carro_Sedan_Cinza");
+            // cruzamento do meio: a picape bateu de frente no lado do sedã
+            PiscaAlerta(Carro(carros, new Vector3(-1.0f, 0f, 0.6f), 80f, "Carro_Sedan_Azul"));
+            Carro(carros, new Vector3(0.23f, 0f, 4.17f), 200f, "Carro_Pickup_Branco");
+            // rua oeste: um capotado; avenida norte: um que subiu na calçada e parou no poste
+            CarroCapotado(carros, new Vector3(-17f, 0f, -1.0f), 70f, "Carro_Sedan_Verde");
+            CarroInclinado(carros, new Vector3(2.93f, 0f, 24.33f), new Vector3(-2.5f, 52f, 1.5f), "Carro_Sedan_Cinza");
+
+            // avenida sul: a blitz que não segurou ninguém (barreiras abertas no meio, cavalete e cones derrubados)
+            var blitz = Grupo(g, "Blitz abandonada");
+            ColisorDaMalha(Modelo(blitz, "Barreira", new Vector3(-2.4f, 0f, -32.6f), 8f));
+            ColisorDaMalha(Modelo(blitz, "Barreira", new Vector3(2.5f, 0f, -33.4f), 346f));
+            ColisorDaMalha(Peca(blitz, "Cavalete", new Vector3(0.4f, 0f, -31.0f), new Vector3(90f, 25f, 0f)));
+            ColisorDaMalha(Peca(blitz, "Cone", new Vector3(-3.3f, 0f, -30.4f), new Vector3(0f, 20f, 0f), false));
+            ColisorDaMalha(Peca(blitz, "Cone", new Vector3(1.0f, 0f, -30.0f), new Vector3(0f, 40f, 90f), false));
+            ColisorDaMalha(Peca(blitz, "Cone", new Vector3(3.3f, 0f, -31.2f), new Vector3(0f, 130f, 90f), false));
+            ColisorDaMalha(Peca(blitz, "Cone", new Vector3(-0.9f, 0f, -34.8f), new Vector3(0f, 70f, 0f), false));
+            CarroInclinado(carros, new Vector3(2.2f, 0f, -27.6f), new Vector3(0f, 150f, 0f), "Carro_Pickup_Branco");
+
+            // lixo nas calçadas (y = 0,12) e na grama (y = 0): sacos, caixas, tambores e lixeiras caídas
+            var lixo = Grupo(g, "Lixo");
+            foreach (var (malha, pos, yaw, deitado) in new[] {
+                // frente do prédio
+                ("Sacos", new Vector3(26.2f, 0.12f, 5.7f), 20f, false), ("Sacos", new Vector3(27.3f, 0.12f, 5.5f), 200f, false),
+                ("Caixas", new Vector3(25.2f, 0.12f, 5.9f), 5f, false),
+                // atrás do prédio
+                ("Tambor", new Vector3(24.0f, 0f, 30.0f), 0f, false), ("Tambor", new Vector3(25.1f, 0f, 30.5f), 15f, true),
+                ("Caixas", new Vector3(22.9f, 0f, 30.6f), 80f, false),
+                // rua oeste, lado norte
+                ("Sacos", new Vector3(-9.6f, 0.12f, 5.6f), 60f, false), ("Sacos", new Vector3(-10.6f, 0.12f, 5.3f), 250f, false),
+                // avenida norte, calçada oeste
+                ("Caixas", new Vector3(-5.5f, 0.12f, 22.0f), 95f, false), ("Sacos", new Vector3(-5.6f, 0.12f, 23.2f), 10f, false),
+                // perto da casa 4 e da praça
+                ("Sacos", new Vector3(19.6f, 0.12f, -5.4f), 140f, false), ("Caixas", new Vector3(20.6f, 0.12f, -5.6f), 170f, false),
+                // avenida sul, calçada leste
+                ("Sacos", new Vector3(5.4f, 0.12f, -19.5f), 300f, false), ("Tambor", new Vector3(5.6f, 0.12f, -20.8f), 10f, true),
+                // leste, perto da casa 5; sudoeste, longe do portão da casa da família
+                ("Sacos", new Vector3(34.9f, 0.12f, -14.0f), 35f, false),
+                ("Caixas", new Vector3(-29.0f, 0.12f, -5.4f), 15f, false), ("Sacos", new Vector3(-28.0f, 0.12f, -5.6f), 280f, false),
+                // saída norte: o que caiu dos carros
+                ("Caixas", new Vector3(0.2f, 0f, 48.6f), 30f, false), ("Sacos", new Vector3(-0.4f, 0f, 55.6f), 120f, false) })
+            {
+                bool sombra = malha == "Tambor";
+                ColisorDaMalha(Peca(lixo, malha, pos, new Vector3(deitado ? 90f : 0f, yaw, 0f), sombra));
+            }
+            Lixeira(lixo, new Vector3(-8.5f, 0.12f, 5.7f), 120f, true);
+        }
+
+        /// <summary>
+        /// Uma peça girada em qualquer eixo (deitada, tombada), posta no chão: depois do giro, o ponto mais baixo da malha
+        /// fica na altura de <paramref name="pos"/>.y. Sem colisor; sombra opcional.
+        /// </summary>
+        static GameObject Peca(Transform pai, string malha, Vector3 pos, Vector3 giro, bool sombra = true)
+        {
+            var go = Modelo(pai, malha, pos);
+            go.transform.localRotation = Quaternion.Euler(giro);
+            NoChao(go, pos.y);
+            if (!sombra) go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+            return go;
+        }
+
+        /// <summary>Sobe ou desce a peça até o ponto mais baixo da malha (já girada) tocar a altura y.</summary>
+        static void NoChao(GameObject go, float y)
+        {
+            var b = go.GetComponent<MeshFilter>().sharedMesh.bounds;
+            var m = Matrix4x4.TRS(Vector3.zero, go.transform.localRotation, go.transform.localScale);
+            float menor = float.MaxValue;
+            for (int i = 0; i < 8; i++)
+            {
+                var canto = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                menor = Mathf.Min(menor, m.MultiplyPoint3x4(canto).y);
+            }
+            var p = go.transform.localPosition;
+            go.transform.localPosition = new Vector3(p.x, y - menor, p.z);
+        }
+
+        /// <summary>Carro de rodas para cima, com o teto no chão.</summary>
+        static void CarroCapotado(Transform pai, Vector3 pos, float yaw, string modelo)
+        {
+            ColisorDaMalha(Peca(pai, modelo, pos, new Vector3(0f, yaw, 180f))).gameObject.name = "Carro";
+        }
+
+        /// <summary>Carro girado nos três eixos (com uma roda na calçada, batido), apoiado no chão.</summary>
+        static void CarroInclinado(Transform pai, Vector3 pos, Vector3 giro, string modelo)
+        {
+            ColisorDaMalha(Peca(pai, modelo, pos, giro)).gameObject.name = "Carro";
+        }
+
+        // ------------------------------------------------------------------ ambientação, fatia 2: marcas e sinais de vida
+
+        const string PastaDecals = "Assets/_Game/Art/Materials/Decals";
+
+        /// <summary>
+        /// Marcas no chão (ambientação, fatia 2): freadas atrás das batidas, óleo embaixo dos carros batidos, sangue seco
+        /// arrastado e papéis espalhados. São decals (o recurso "Decals" do renderizador, técnica de tela, até 60 m),
+        /// todos com um material só (`Decal_Rua`): a textura tem os 4 desenhos, um em cada quarto, e cada decal escolhe
+        /// o seu pelo deslocamento do UV. A caixa de cada um tem 0,6 m de altura, para pegar só o chão (e o pé de quem
+        /// passar por cima).
+        /// </summary>
+        static void MarcasNoChao(Transform g)
+        {
+            var material = MaterialDasMarcas();
+            const int Sangue = 0, Pneu = 1, Oleo = 2, Papel = 3;
+            // (x, y, z, yaw, largura, comprimento, desenho, força); o fim do desenho (o +V) fica para a frente do yaw
+            foreach (var (x, y, z, yaw, w, l, desenho, forca) in new[] {
+                // freadas: a picape antes de bater no sedã, o carro que subiu no poste e o que capotou (dois trechos)
+                (1.75f, 0f, 8.6f, 200f, 1.8f, 7.5f, Pneu, 0.9f),
+                (1.1f, 0f, 22.9f, 52f, 1.8f, 6f, Pneu, 0.85f),
+                (-23.5f, 0f, -1.6f, 80f, 1.8f, 7f, Pneu, 0.8f),
+                (-29.5f, 0f, -2.4f, 72f, 1.8f, 6f, Pneu, 0.55f),
+                // óleo embaixo e em volta dos carros batidos
+                (-0.4f, 0f, 1.9f, 30f, 2.2f, 2.2f, Oleo, 0.85f),
+                (-17.6f, 0f, -2.2f, 110f, 2.6f, 2.6f, Oleo, 0.8f),
+                (3.3f, 0.12f, 25.2f, 0f, 1.6f, 1.6f, Oleo, 0.7f),
+                (49.2f, 0f, -1.2f, 200f, 1.5f, 1.5f, Oleo, 0.6f),
+                // sangue seco, arrastado: a blitz, a fila da saída norte, a praça e as calçadas
+                (-1.6f, 0f, -29.4f, 30f, 1.2f, 2.6f, Sangue, 0.95f),
+                (1.5f, 0f, -35.6f, 300f, 1.0f, 1.8f, Sangue, 0.8f),
+                (0.4f, 0f, 47.3f, 100f, 1.0f, 2.4f, Sangue, 0.9f),
+                (26.7f, 0.08f, -9.3f, 220f, 1.2f, 2.0f, Sangue, 0.85f),
+                (-24.5f, 0.12f, 5.3f, 90f, 1.0f, 2.2f, Sangue, 0.8f),
+                (18.4f, 0.12f, 5.3f, 75f, 1.0f, 1.8f, Sangue, 0.75f),
+                (-5.3f, 0.12f, -14.0f, 0f, 1.0f, 2.0f, Sangue, 0.8f),
+                // papéis espalhados (os da praça ficam fora do coreto, que é mais alto que a caixa do decal)
+                (21.1f, 0.08f, -14.4f, 0f, 2.2f, 2.2f, Papel, 1f),
+                (26.4f, 0.08f, -14.6f, 70f, 2.0f, 2.0f, Papel, 0.9f),
+                (21.6f, 0.12f, 5.2f, 20f, 2.0f, 2.0f, Papel, 1f),
+                (-0.6f, 0f, -28.4f, 140f, 2.5f, 2.5f, Papel, 1f),
+                (-12.0f, 0f, -1.4f, 200f, 2.0f, 2.0f, Papel, 0.9f),
+                (1.2f, 0f, 51.6f, 45f, 2.0f, 2.0f, Papel, 1f),
+                (-1.6f, 0f, 14.0f, 300f, 2.0f, 2.0f, Papel, 0.85f),
+                (12.0f, 0f, 2.0f, 110f, 2.0f, 2.0f, Papel, 0.9f) })
+            {
+                var go = new GameObject(desenho switch { Sangue => "Sangue seco", Pneu => "Freada", Oleo => "Óleo", _ => "Papéis" });
+                go.transform.SetParent(g, false);
+                go.transform.localPosition = new Vector3(x, y + 0.05f, z);
+                go.transform.localRotation = Quaternion.Euler(90f, yaw, 0f);
+                var d = go.AddComponent<DecalProjector>();
+                d.material = material;
+                d.size = new Vector3(w, l, 0.6f);
+                d.pivot = Vector3.zero;
+                d.uvScale = new Vector2(0.5f, 0.5f);
+                d.uvBias = new Vector2(desenho % 2 * 0.5f, desenho / 2 * 0.5f);
+                d.fadeFactor = forca;
+                d.drawDistance = 40f;
+                d.fadeScale = 0.85f;
+            }
+        }
+
+        static Material MaterialDasMarcas()
+        {
+            Directory.CreateDirectory(PastaDecals);
+            const string caminhoTextura = PastaDecals + "/Rua.png";
+            const int n = 512, q = n / 2;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            var px = new Color[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    int desenho = (x / q) + (y / q) * 2;
+                    float u = (x % q + 0.5f) / q * 2f - 1f, v = (y % q + 0.5f) / q * 2f - 1f;
+                    px[y * n + x] = desenho switch { 0 => SangueSeco(u, v), 1 => Freada(u, v), 2 => Oleo(u, v), _ => Papeis(u, v) };
+                }
+            t.SetPixels(px);
+            File.WriteAllBytes(caminhoTextura, t.EncodeToPNG());
+            Object.DestroyImmediate(t);
+            AssetDatabase.ImportAsset(caminhoTextura);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(caminhoTextura);
+            imp.alphaIsTransparency = true; imp.wrapMode = TextureWrapMode.Clamp; imp.mipmapEnabled = true;
+            imp.SaveAndReimport();
+
+            const string caminho = PastaDecals + "/Decal_Rua.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            if (m == null) { m = new Material(Shader.Find("Shader Graphs/Decal")); AssetDatabase.CreateAsset(m, caminho); }
+            m.SetTexture("Base_Map", AssetDatabase.LoadAssetAtPath<Texture2D>(caminhoTextura));
+            m.SetFloat("Normal_Blend", 0f);
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        // os desenhos ficam dentro de |u|, |v| < 0,9: a borda de cada quarto é vazia, para os mipmaps não misturarem
+        static float Borda(float u, float v) => Mathf.Clamp01((0.92f - Mathf.Max(Mathf.Abs(u), Mathf.Abs(v))) * 20f);
+
+        // uma mancha comprida, arrastada para +V, com riscos de arrasto e a borda irregular; vermelho escuro de sangue velho
+        // (marrom puro, de noite e com a gradação fria, virava cinza e parecia sombra)
+        static Color SangueSeco(float u, float v)
+        {
+            float largura = 0.42f * (1f - 0.35f * Mathf.Clamp01(v)) + 0.1f * (Mathf.PerlinNoise(v * 3f + 2f, 4.1f) - 0.5f);
+            float forma = Mathf.Clamp01((largura - Mathf.Abs(u + 0.06f * Mathf.Sin(v * 2.5f))) * 12f) * Mathf.Clamp01((0.85f - Mathf.Abs(v)) * 6f);
+            float poca = Mathf.Clamp01((0.38f - new Vector2(u * 0.9f, (v + 0.45f) * 1.2f).magnitude) * 8f);
+            float riscos = 0.55f + 0.45f * Mathf.PerlinNoise(u * 14f, v * 1.5f + 9f);
+            float a = Mathf.Max(poca, forma * riscos * (0.95f - 0.45f * Mathf.Clamp01(v)));
+            float tom = 0.75f + 0.25f * Mathf.PerlinNoise(u * 5f + 3f, v * 5f);
+            return new Color(0.27f * tom, 0.035f * tom, 0.025f, a * 0.92f * Borda(u, v));
+        }
+
+        // duas faixas pretas de pneu, quase retas, que vão escurecendo até onde o carro parou (+V)
+        static Color Freada(float u, float v)
+        {
+            float curva = 0.12f * v * v;
+            float a = 0f;
+            foreach (float c in new[] { -0.5f, 0.5f })
+            {
+                float faixa = Mathf.Clamp01((0.16f - Mathf.Abs(u - c - curva)) * 40f);
+                a = Mathf.Max(a, faixa * (0.6f + 0.4f * Mathf.PerlinNoise(v * 9f + c * 7f, u * 4f)));
+            }
+            a *= Mathf.SmoothStep(0f, 1f, (v + 0.9f) / 0.9f) * Mathf.Clamp01((0.9f - v) * 30f);
+            return new Color(0.012f, 0.012f, 0.012f, a * Borda(u, v));
+        }
+
+        // uma poça escura e irregular, com dois pingos em volta
+        static Color Oleo(float u, float v)
+        {
+            float ang = Mathf.Atan2(v, u), d = Mathf.Sqrt(u * u + v * v);
+            float raio = 0.5f + 0.16f * Mathf.PerlinNoise(Mathf.Cos(ang) * 1.8f + 3f, Mathf.Sin(ang) * 1.8f + 3f) + 0.05f * Mathf.Sin(ang * 5f);
+            float a = Mathf.Clamp01((raio - d) * 10f) * (0.75f + 0.25f * Mathf.PerlinNoise(u * 4f, v * 4f));
+            a = Mathf.Max(a, Mathf.Clamp01((0.07f - new Vector2(u - 0.66f, v - 0.25f).magnitude) * 40f));
+            a = Mathf.Max(a, Mathf.Clamp01((0.05f - new Vector2(u + 0.2f, v + 0.72f).magnitude) * 40f));
+            return new Color(0.025f, 0.025f, 0.03f, a * 0.8f * Borda(u, v));
+        }
+
+        // folhas de papel jogadas, com linhas de texto
+        static readonly (float x, float y, float giro, float w, float h, float tom)[] Folhas = {
+            (-0.45f, -0.4f, 20f, 0.2f, 0.27f, 0.8f), (0.3f, -0.5f, 75f, 0.18f, 0.25f, 0.72f), (0.45f, 0.35f, 130f, 0.2f, 0.27f, 0.78f),
+            (-0.35f, 0.45f, 200f, 0.16f, 0.22f, 0.68f), (0.0f, 0.0f, 300f, 0.2f, 0.27f, 0.82f), (-0.62f, 0.05f, 95f, 0.12f, 0.16f, 0.6f) };
+
+        static Color Papeis(float u, float v)
+        {
+            foreach (var f in Folhas)
+            {
+                float c = Mathf.Cos(f.giro * Mathf.Deg2Rad), s = Mathf.Sin(f.giro * Mathf.Deg2Rad);
+                float lu = (u - f.x) * c + (v - f.y) * s, lv = -(u - f.x) * s + (v - f.y) * c;
+                if (Mathf.Abs(lu) > f.w || Mathf.Abs(lv) > f.h) continue;
+                bool linha = Mathf.Abs(lu) < f.w * 0.75f && lv < f.h * 0.75f && lv > -f.h * 0.8f && Mathf.Repeat(lv * 40f, 1f) < 0.3f;
+                float tom = f.tom * (linha ? 0.55f : 1f) * (0.9f + 0.1f * Mathf.PerlinNoise(u * 8f, v * 8f));
+                return new Color(tom, tom * 0.97f, tom * 0.9f, 0.95f * Borda(u, v));
+            }
+            return new Color(0f, 0f, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Sinais de vida (ambientação, fatia 2): o que ficou ligado quando as pessoas fugiram. Duas TVs (a casa 2 e um
+        /// apartamento do 2º andar, de frente para a rua) e duas lâmpadas esquecidas (a sala da casa 4 e um apartamento do
+        /// 3º andar). Cada uma é uma luz pequena, sem sombra, que o `SinalDeVida` faz tremer; ela sai pelas janelas.
+        /// </summary>
+        static void SinaisDeVida(Transform raiz)
+        {
+            var g = Grupo(raiz, "Sinais de vida");
+            Transform Achar(string caminho) => raiz.Find(caminho) ?? throw new System.Exception($"Sinais de vida: não achei {caminho}.");
+            // a TV fica em cima do rack, e a luz sai da tela para a frente dele
+            void TV(string rack)
+            {
+                var r = Achar(rack);
+                LuzDeSinal(g, "TV ligada", r.position + Vector3.up * 0.95f + r.forward * 0.55f, SinalDeVida.Tipo.TV, new Color(0.62f, 0.74f, 1f), 4f, 7f);
+            }
+            TV("Casa 2/Móveis/Rack_TV");
+            TV("Prédio/Andar 2/Apartamento leste/Rack_TV");
+            // a lâmpada fica perto do forro, no meio da sala
+            var casa4 = Achar("Casa 4");
+            LuzDeSinal(g, "Lâmpada acesa", casa4.TransformPoint(new Vector3(1.2f, 2.55f, -2.0f)), SinalDeVida.Tipo.Lampada, new Color(1f, 0.76f, 0.48f), 3.2f, 7f);
+            var rackDoAndar3 = Achar("Prédio/Andar 3/Apartamento oeste/Rack_TV");
+            LuzDeSinal(g, "Lâmpada acesa", rackDoAndar3.position + Vector3.up * 2.45f + rackDoAndar3.forward * 1.3f, SinalDeVida.Tipo.Lampada, new Color(1f, 0.8f, 0.55f), 3f, 7f);
+        }
+
+        static SinalDeVida LuzDeSinal(Transform pai, string nome, Vector3 pos, SinalDeVida.Tipo tipo, Color cor, float intensidade, float alcance)
+        {
+            var go = new GameObject(nome);
+            go.transform.SetParent(pai, true);
+            go.transform.position = pos;
+            var luz = go.AddComponent<Light>();
+            luz.type = LightType.Point; luz.color = cor; luz.intensity = intensidade; luz.range = alcance; luz.shadows = LightShadows.None;
+            var s = go.AddComponent<SinalDeVida>();
+            s.tipo = tipo; s.luz = luz;
+            return s;
+        }
+
+        /// <summary>
+        /// Pisca-alerta ligado num carro abandonado: as 4 lanternas (caixinhas com o material `PiscaAlerta`, que brilha)
+        /// nos cantos, na altura dos faróis, e uma luz laranja pequena que pisca junto.
+        /// </summary>
+        static void PiscaAlerta(GameObject carro)
+        {
+            var b = carro.GetComponent<MeshFilter>().sharedMesh.bounds;
+            var raiz = new GameObject("Pisca-alerta").transform;
+            raiz.SetParent(carro.transform, false);
+            var cubo = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            var material = MaterialDoPisca();
+            float y = b.min.y + b.size.y * 0.5f, x = b.extents.x - 0.22f;
+            // o carro não é uma caixa: na altura das lanternas a lataria fica para dentro do limite da malha (o para-choque
+            // vai mais longe). Um raio na malha (um colisor temporário) acha a lataria de verdade, e a lanterna encosta nela.
+            var medidor = new GameObject("Medidor temporário").AddComponent<MeshCollider>();
+            medidor.sharedMesh = carro.GetComponent<MeshFilter>().sharedMesh;
+            var lanternas = new List<Renderer>();
+            foreach (float lado in new[] { 1f, -1f })
+                foreach (float lx in new[] { b.center.x - x, b.center.x + x })
+                {
+                    float borda = lado > 0 ? b.max.z : b.min.z;
+                    var raio = new Ray(new Vector3(lx, y, borda + lado), new Vector3(0f, 0f, -lado));
+                    float lz = medidor.Raycast(raio, out var acerto, 3f) ? acerto.point.z + lado * 0.025f : borda;
+                    var l = new GameObject("Lanterna");
+                    l.transform.SetParent(raiz, false);
+                    l.transform.localPosition = new Vector3(lx, y, lz);
+                    l.transform.localScale = new Vector3(0.26f, 0.1f, 0.07f);
+                    l.AddComponent<MeshFilter>().sharedMesh = cubo;
+                    var r = l.AddComponent<MeshRenderer>();
+                    r.sharedMaterial = material; r.shadowCastingMode = ShadowCastingMode.Off;
+                    lanternas.Add(r);
+                }
+            Object.DestroyImmediate(medidor.gameObject);
+            // o SinalDeVida fica na raiz do pisca (o pai das lanternas): a marcação de estático pula tudo o que está dentro dele
+            var luz = new GameObject("Luz do pisca").AddComponent<Light>();
+            luz.transform.SetParent(raiz, false);
+            luz.transform.localPosition = new Vector3(b.center.x, b.max.y + 0.15f, b.center.z);
+            luz.type = LightType.Point; luz.color = new Color(1f, 0.55f, 0.12f); luz.intensity = 3f; luz.range = 5f; luz.shadows = LightShadows.None;
+            var s = raiz.gameObject.AddComponent<SinalDeVida>();
+            s.tipo = SinalDeVida.Tipo.PiscaAlerta; s.luz = luz; s.lanternas = lanternas.ToArray();
+        }
+
+        /// <summary>
+        /// Unlit com a cor acima de 1 (HDR): brilha e o bloom espalha, sem depender da palavra-chave _EMISSION do Lit
+        /// (ela some do material depois de carregado; o mesmo acontece com a `Lampada`).
+        /// </summary>
+        static Material MaterialDoPisca()
+        {
+            string caminho = $"{PastaMateriais}/PiscaAlerta.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            if (m == null) { m = new Material(unlit); AssetDatabase.CreateAsset(m, caminho); }
+            m.shader = unlit;
+            m.shaderKeywords = new string[0];
+            m.SetColor("_BaseColor", new Color(1f, 0.38f, 0.03f) * 1.5f);   // mais forte, a gradação (ACES) deixa quase branco
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static readonly string[] TiposDePinheiro = { "Pinheiro_A", "Pinheiro_B", "Pinheiro_C" };

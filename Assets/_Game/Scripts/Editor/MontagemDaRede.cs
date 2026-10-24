@@ -166,7 +166,8 @@ namespace ZombieCityCleaner.EditorTools
             luzGo.transform.localPosition = lanterna.posicaoNoPeito;
             var luz = luzGo.AddComponent<Light>();
             luz.type = LightType.Spot; luz.color = new Color(1f, 0.94f, 0.82f);
-            luz.intensity = 30f; luz.range = 28f; luz.spotAngle = 55f; luz.innerSpotAngle = 24f;
+            // a intensidade, a abertura e o cookie do facho vêm do LanternaJogador (Awake)
+            luz.intensity = lanterna.intensidade; luz.range = 28f; luz.spotAngle = lanterna.abertura; luz.innerSpotAngle = lanterna.aberturaInterna;
             // a sombra ignora o que está a menos de 0,6 m da luz: a pistola e os braços do corpo (que o dono vê só como
             // sombra) ficam bem na frente do peito e cortavam a luz ao meio
             luz.shadows = LightShadows.Soft; luz.shadowNearPlane = 0.6f;
