@@ -124,6 +124,8 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 
 ## Fases depois da demo
 
+As ideias novas do Pedro para depois da demo (o Dia 0, as escolhas com vários finais, o carro, a floresta e os dois acampamentos) estão no [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md), divididas em frentes de trabalho. Os dois ainda vão decidir como elas se encaixam nas fases abaixo.
+
 1. **Família:** criar os membros; quem não é jogado fica no bunker fazendo tarefas; os amigos assumem membros ao entrar.
 2. **Sobrevivência que se renova:** água da chuva, plantações e criação de itens; fome e sede.
 3. **Base:** do bunker para a casa (barricadas e defesas) e depois para a comunidade; hordas tentam invadir a cidade.

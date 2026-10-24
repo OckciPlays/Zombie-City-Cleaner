@@ -25,7 +25,8 @@
 
 - São lentos e desistem de seguir quando os jogadores se afastam.
 - O tiro na cabeça explode a cabeça. Morto, o corpo cai com física (ragdoll).
-- O desmembramento (braços e pernas caindo, zumbi rastejando) chegou a ser feito na Parte 6, mas saiu por enquanto, a pedido.
+- O desmembramento: braços e pernas caem com tiros; sem uma perna o zumbi manca, sem as duas ele rasteja.
+- As ideias para depois da demo (o modo história) estão no [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md).
 - O jogo quer muitos zumbis ao mesmo tempo. Por isso os modelos têm poucos polígonos, e a IA tem LOD no estilo Dead Rising (os zumbis longe quase não custam nada). Hoje são 258 na cidade.
 - Há 4 modelos cartoon, sujos de sangue: um garoto de camiseta branca, um homem de camiseta vermelha e bermuda, uma mulher de cabelo castanho e uma loira de camiseta preta.
 
