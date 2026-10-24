@@ -9,6 +9,7 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.Combat;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.World;
 using P = ZombieCityCleaner.EditorTools.PlantaDoBunker;
 
@@ -52,6 +53,8 @@ namespace ZombieCityCleaner.EditorTools
             Directory.CreateDirectory(PastaMalhas);
             _rng = new System.Random(1987);
             _rngSaque = new System.Random(2077);   // à parte, para não mudar o sorteio dos móveis
+            _rngMunicao = new System.Random(1999);   // e a munição à parte da comida
+            _sacoDeMunicao.Clear();
             Materiais();
             Malhas();
             ArteDaCidade();
@@ -745,8 +748,12 @@ namespace ZombieCityCleaner.EditorTools
             var comoda = Movel(g, "Comoda", 0.36f, y, z1 - 1.0f, 90f);
             // a comida e a água: a casa da família já foi saqueada (o que sobrou está no bunker)
             if (!bunker)
+            {
                 Saque(g.parent, 4, mesa, balcao, criado, comoda, mesa, balcao,
                       g.TransformPoint(new Vector3(-1.2f, y, z1 - 0.9f)), g.TransformPoint(new Vector3(x1 - 2.2f, y, zDiv + 1.0f)));
+                // a munição: 2 caixas por casa, na cômoda, no criado-mudo, no balcão ou no chão do quarto
+                Municoes(g.parent, 2, comoda, criado, balcao, comoda, g.TransformPoint(new Vector3(x1 - 2.0f, y, zDiv + 0.7f)));
+            }
         }
 
         // ------------------------------------------------------------------ comida e água (Parte 7)
@@ -793,11 +800,71 @@ namespace ZombieCityCleaner.EditorTools
             }
         }
 
-        static void MarcarItem(Transform g, Vector3 ponto, string item)
+        static void MarcarItem(Transform g, Vector3 ponto, string item, System.Random rng = null)
         {
             var marca = new GameObject($"Lugar de item ({item})").transform;
             marca.SetParent(g, false);
-            marca.SetPositionAndRotation(ponto, Quaternion.Euler(0f, (float)_rngSaque.NextDouble() * 360f, 0f));
+            marca.SetPositionAndRotation(ponto, Quaternion.Euler(0f, (float)(rng ?? _rngSaque).NextDouble() * 360f, 0f));
+        }
+
+        static System.Random _rngMunicao;
+        // o saco das caixas: a cada 15, 5 de 9mm, 4 de 5,56, 3 de calibre 12 e 3 de 7,62, embaralhadas (assim todo calibre
+        // aparece, e o 9mm é o mais comum)
+        static readonly List<Item> _sacoDeMunicao = new List<Item>();
+
+        static Item ProximaCaixa()
+        {
+            if (_sacoDeMunicao.Count == 0)
+            {
+                foreach (var (caixa, n) in new[] { (Item.Municao9mm, 5), (Item.Municao556, 4), (Item.Municao12, 3), (Item.Municao762, 3) })
+                    for (int i = 0; i < n; i++) _sacoDeMunicao.Add(caixa);
+                for (int i = _sacoDeMunicao.Count - 1; i > 0; i--)
+                {
+                    int j = _rngMunicao.Next(i + 1);
+                    (_sacoDeMunicao[i], _sacoDeMunicao[j]) = (_sacoDeMunicao[j], _sacoDeMunicao[i]);
+                }
+            }
+            var c = _sacoDeMunicao[_sacoDeMunicao.Count - 1];
+            _sacoDeMunicao.RemoveAt(_sacoDeMunicao.Count - 1);
+            return c;
+        }
+
+        /// <summary>
+        /// As caixas de munição (Parte 7): sorteia 'quantos' lugares entre os candidatos, como o <see cref="Saque"/>, e marca
+        /// cada um com "Lugar de item (Municao9mm)" e afins, num grupo "Munição". O calibre sai de um saco embaralhado
+        /// (<see cref="ProximaCaixa"/>); as balas de cada caixa, o anfitrião sorteia no começo da partida.
+        /// </summary>
+        static void Municoes(Transform pai, int quantos, params object[] candidatos)
+        {
+            var g = pai.Find("Munição") ?? Grupo(pai, "Munição");
+            // os lugares já marcados (a comida, a água e as outras caixas): a caixa nova fica longe deles
+            var ocupados = pai.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("Lugar de item")).Select(t => t.position).ToList();
+            var lista = candidatos.ToList();
+            int postas = 0;
+            while (postas < quantos && lista.Count > 0)
+            {
+                int i = _rngMunicao.Next(lista.Count);
+                var c = lista[i];
+                lista.RemoveAt(i);
+                // até 8 tentativas no mesmo lugar (um ponto sorteado no tampo, ou perto do ponto do chão)
+                Vector3? achado = null;
+                for (int t = 0; t < 8 && achado == null; t++)
+                {
+                    Vector3 ponto;
+                    if (c is GameObject movel && Tampos.TryGetValue(movel.name, out var tampo))
+                    {
+                        var a = tampo.area;
+                        ponto = movel.transform.TransformPoint(new Vector3(a.x + a.width * (float)_rngMunicao.NextDouble(), tampo.topo, a.y + a.height * (float)_rngMunicao.NextDouble()));
+                    }
+                    else if (c is Vector3 chao) ponto = chao + new Vector3((float)_rngMunicao.NextDouble() - 0.5f, 0f, (float)_rngMunicao.NextDouble() - 0.5f) * 0.6f;
+                    else break;
+                    if (ocupados.All(o => (o - ponto).sqrMagnitude > 0.2f * 0.2f)) achado = ponto;
+                }
+                if (achado == null) continue;
+                ocupados.Add(achado.Value);
+                MarcarItem(g, achado.Value, ProximaCaixa().ToString(), _rngMunicao);
+                postas++;
+            }
         }
 
         /// <summary>
@@ -823,6 +890,7 @@ namespace ZombieCityCleaner.EditorTools
             Movel(g, _rng.NextDouble() < 0.5 ? "Armario" : "Armario_Aberto", 2.5f * lado, y, 0.93f, 0f);
             var comoda = Movel(g, "Comoda", 4.0f * lado, y, z1 - 0.35f, 180f);
             Saque(g, 2, mesa, balcao, criado, comoda, g.TransformPoint(new Vector3(3.0f * lado, y, -0.9f)));
+            Municoes(g, 1, comoda, criado, mesa);
         }
 
         // ------------------------------------------------------------------ resto da cidade

@@ -172,6 +172,24 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **1.000 zumbis na cidade** (eram 258): a maior parte na rua, na praça e no estacionamento, com os grupos mais abertos. Todos nascem; no Editor, o quadro médio ficou em 6,0 ms.
 - **Girar na mochila:** segurando um item, R gira ele 90° (a largura e a altura trocam), e ele fica girado onde for solto. O que é pego entra girado se só couber assim. Testado: girar, desgirar, recusar onde não cabe e o rifle pego entrando em pé numa coluna livre. Embaixo da grade, a dica "R: girar item" entrou abaixo da "G: largar o escolhido".
 
+## Bolsos, mochilas e o porte de armas, fatia 1: as regras e a tela (24/10/2026, a pedido; branch `feature/mochilas`)
+
+- **O jogador começa sem mochila**, só com os bolsos (4 × 2), e acha (no futuro, compra) as mochilas: a pequena (6 × 4), a média (8 × 5) e a grande (10 × 7, maior que a grade de antes). A mochila e o coldre se vestem: pegar veste, uma mochila nova troca a vestida (a velha cai no chão), e tirar (G ou arrastar para fora da janela) larga no chão. Trocar ou tirar a mochila arruma a grade: o que não cabe mais cai no chão.
+- **O porte de armas:** a primeira arma vai pela alça, no ombro, de qualquer tamanho e fora da grade. As outras ocupam a grade e precisam de um lugar no corpo: a mochila prende uma nas costas e o coldre (só estético, sem espaço) leva uma curta (pistola ou submetralhadora). Sem mochila e sem coldre, só uma arma; no máximo 3. A dica diz o que falta ("Para levar outra arma, ache uma mochila").
+- **A tela do TAB:** a grade muda de tamanho com a mochila, embaixo dela a alça (arrastar uma arma para lá pendura), os lugares da Mochila e do Coldre ao lado do boneco (com os detalhes: o espaço e as armas que leva) e a contagem "Armas: 2 de 3".
+- **Os modelos** das 3 mochilas e do coldre, os ícones e as fotos saíram de um script do Blender no repositório (`Blender/equipamentos.py`), no estilo dos itens do Gustavo. O F1 cria os 4.
+- **Testado no Editor, com um jogador:** começar com a pistola na alça; recusar o rifle e a segunda pistola sem mochila; vestir o coldre e pegar a submetralhadora; vestir a pequena e pegar o rifle (nas costas); recusar a sniper com as 3 vagas cheias; trocar a pequena pela grande (a pequena no chão); tirar a grande (o rifle e as garrafas caíram, a submetralhadora e as latas ficaram nos bolsos). O teste com dois jogadores ficou para depois.
+- **Falta:** as armas penduradas e a mochila vestida no corpo (fatia 2) e as mochilas e coldres espalhados pela cidade (fatia 3).
+
+## O boneco equipado, a munição e o retrato (24/10/2026, a pedido; branch `feature/mochilas`)
+
+- **O boneco de teste (F1 > "Boneco equipado"):** uma cópia do corpo, 2 m à frente, com 5 combinações de mochila, coldre e armas, para ver como fica (o próprio jogador ainda não se vê). O `Player/EquipamentoNoCorpo` põe as peças presas aos ossos, medidas no corpo em repouso; vai servir à fatia 2. Depois das fotos, o Pedro pediu as armas nas laterais da mochila em vez do X nas costas.
+- **A munição:** um calibre por arma (9mm na pistola e na submetralhadora, 5,56 no rifle, calibre 12 na espingarda, 7,62 na sniper) e as caixas de até 60 balas (1 × 1). A recarga gasta as caixas da mochila (a espingarda, cartucho a cartucho, até acabarem); sem munição, não recarrega. Pegar completa as caixas que já estão na mochila, e arrastar uma caixa em cima de outra junta as duas. O HUD mostra o pente, as balas que sobram nas caixas e o calibre.
+- **O pente vai com a arma:** largada, guardada no painel ou devolvida quando o jogador sai, ela leva as balas que tinha (antes, voltava cheia). O jogador nasce só com o pente da pistola.
+- **As caixas:** modelos e ícones pelo `Blender/municao.py` (papelão claro com faixa azul, verde-oliva com faixa amarela, vermelha com os cartuchos, marrom com faixa preta). A montagem da cidade espalha 16 (2 por casa, 1 por apartamento, longe da comida), e o anfitrião sorteia as balas de cada uma no começo da partida. O F1 cria caixas cheias.
+- **O retrato do inventário (pedido depois das fotos):** o Pedro não gostou de como o boneco segurava a pistola no TAB e pediu para ver nele o que ele leva. A pose agora é feita no código: o braço esquerdo solto e o direito baixo, segurando a pistola com o cano para baixo e para a frente (a comida e a água do mesmo jeito; a mão vazia, solta). As armas de coronha usam o parado delas, com as duas mãos, porque numa mão só a coronha entrava no corpo. A mochila, o coldre e as outras armas aparecem no retrato, pelo mesmo `EquipamentoNoCorpo` do boneco.
+- **Testado no Editor, com um jogador:** sem caixa, a reserva é 0; uma caixa de 30 recarregou a pistola (2 → 12, sobraram 20); +50 completou a caixa (60) e abriu outra (10); gastar 15 tirou da mais vazia (a de 10 sumiu); juntar 25 em 50 deu 60 e 15; a pistola largada com 7 voltou com 7; a espingarda com 1 e 3 cartuchos ficou com 4 e a caixa sumiu; o painel começa com os pentes cheios. O teste com dois jogadores ficou para depois.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
@@ -184,7 +202,7 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 
 ## Pendências e observações conhecidas
 
-- **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A munição de reserva é infinita. A comida e a água no chão não são salvas: cada partida começa com as 34 do começo.
+- **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A comida, a água e a munição no chão não são salvas: cada partida começa com os 50 itens do começo (as balas das caixas são sorteadas de novo).
 - **A mochila não empilha os itens** (de propósito, por enquanto), e a armadura e a aba de criar ainda estão vazias.
 - **Os outros não veem comer e beber:** o corpo segura a lata ou a garrafa na guarda dos punhos, e só quem come ou bebe ouve o som.
 - **O painel de armas, a porta e as luzes do bunker não são salvos:** ao recomeçar a partida, o painel volta ao conteúdo inicial, a porta fecha e as luzes acendem.

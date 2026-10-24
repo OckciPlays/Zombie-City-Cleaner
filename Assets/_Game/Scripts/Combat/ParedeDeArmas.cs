@@ -12,7 +12,8 @@ namespace ZombieCityCleaner.Combat
     /// dica avisa). Mirando uma vaga vazia com a arma dela na mão, E guarda a arma.
     /// Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e muda as vagas e o inventário. Quem sai
     /// da partida devolve as armas.
-    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas.
+    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas; o
+    /// pente de cada arma guardada, em outro (8 bits por vaga): a arma volta com as balas que tinha. No começo, cheias.
     /// </summary>
     public class ParedeDeArmas : NetworkBehaviour
     {
@@ -27,6 +28,8 @@ namespace ZombieCityCleaner.Combat
         public float distanciaMaxima = 3.5f;
 
         readonly NetworkVariable<long> _conteudo = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // as balas no pente da arma de cada vaga (8 bits por vaga), só para o anfitrião saber o que entregar
+        readonly NetworkVariable<long> _pentes = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         public static ParedeDeArmas Instancia { get; private set; }
 
@@ -44,7 +47,13 @@ namespace ZombieCityCleaner.Combat
 
         public override void OnNetworkSpawn()
         {
-            if (IsServer) _conteudo.Value = Codificar(inicio);
+            if (IsServer)
+            {
+                _conteudo.Value = Codificar(inicio);
+                long pentes = 0;
+                for (int i = 0; i < inicio.Length && i < 8; i++) pentes = GravarPente(pentes, i, Armas.Dados(inicio[i]).capacidade);
+                _pentes.Value = pentes;
+            }
             _conteudo.OnValueChanged += AoMudar;
             Aplicar(_conteudo.Value);
         }
@@ -65,6 +74,7 @@ namespace ZombieCityCleaner.Combat
         {
             if (!IsSpawned || indice < 0 || indice >= vagas.Length) return;
             quem.AvisarQuePegou();
+            quem.GuardarPenteDaMao();   // guardando a arma da mão, ela vai com o pente que tem agora
             VagaRpc((byte)indice);
         }
 
@@ -81,21 +91,33 @@ namespace ZombieCityCleaner.Combat
             {
                 // guardar: só a arma desta vaga
                 if (!Itens.EhArma(naMao) || Itens.Arma(naMao) != vagas[indice].dono) return;
+                inventario.Achar(inventario.IdNaMao, out var arma);
                 inventario.Tirar(inventario.IdNaMao);
+                _pentes.Value = GravarPente(_pentes.Value, indice, arma.qtd);
                 _conteudo.Value = Gravar(_conteudo.Value, indice, Itens.Arma(naMao));
                 return;
             }
             // pegar: só se couber na mochila (sem espaço, nada; a dica avisa)
-            if (inventario.Receber(Itens.DaArma(naVaga.Value))) _conteudo.Value = Gravar(_conteudo.Value, indice, null);
+            if (inventario.Receber(Itens.DaArma(naVaga.Value), LerPente(_pentes.Value, indice))) _conteudo.Value = Gravar(_conteudo.Value, indice, null);
         }
 
-        /// <summary>No anfitrião: a arma de quem saiu da partida volta para uma vaga livre do tipo dela (se houver).</summary>
-        public void Devolver(TipoDeArma arma)
+        /// <summary>
+        /// No anfitrião: a arma de quem saiu da partida volta para uma vaga livre do tipo dela (se houver), com o pente que
+        /// tinha.
+        /// </summary>
+        public void Devolver(TipoDeArma arma, int pente)
         {
             if (!IsSpawned || !IsServer) return;
             int casa = VagaLivre(_conteudo.Value, arma);
-            if (casa >= 0) _conteudo.Value = Gravar(_conteudo.Value, casa, arma);
+            if (casa < 0) return;
+            _pentes.Value = GravarPente(_pentes.Value, casa, pente);
+            _conteudo.Value = Gravar(_conteudo.Value, casa, arma);
         }
+
+        static long GravarPente(long pentes, int indice, int balas) =>
+            (pentes & ~(0xFFL << (8 * indice))) | ((long)Mathf.Clamp(balas, 0, 255) << (8 * indice));
+
+        static int LerPente(long pentes, int indice) => (int)((pentes >> (8 * indice)) & 0xFF);
 
         int VagaLivre(long conteudo, TipoDeArma tipo)
         {

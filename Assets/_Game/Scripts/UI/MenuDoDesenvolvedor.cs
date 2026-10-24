@@ -8,8 +8,8 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.UI
 {
     /// <summary>
-    /// O menu do desenvolvedor (F1; só no Editor e nas builds de desenvolvimento): criar itens (as armas, a lata e a
-    /// garrafa) na mochila ou no chão à frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
+    /// O menu do desenvolvedor (F1; só no Editor e nas builds de desenvolvimento): criar itens (as armas, a lata, a
+    /// garrafa, as mochilas, o coldre e as caixas de munição cheias) na mochila ou no chão à frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
     /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz.
     /// </summary>
     public class MenuDoDesenvolvedor : NetworkBehaviour
@@ -19,8 +19,25 @@ namespace ZombieCityCleaner.UI
         /// <summary>A janela na tela (vazia, fechada): a tela do inventário não pega cliques nela.</summary>
         public static Rect Area { get; private set; }
 
-        static readonly Item[] ItensDoMenu = { Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Comida, Item.Agua };
+        static readonly Item[] ItensDoMenu =
+        {
+            Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Comida, Item.Agua,
+            Item.Coldre, Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
+            Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
+        };
         static readonly string[] Destinos = { "Na mochila", "No chão" };
+
+        // o boneco de teste: uma cópia do corpo com a mochila, o coldre e as armas penduradas (só visual, só aqui)
+        static readonly (string nome, Item mochila, bool coldre, Item alca, Item costas, Item cintura)[] Bonecos =
+        {
+            ("sem mochila, a pistola no cós", Item.Nada, false, Item.Pistola, Item.Nada, Item.Nada),
+            ("sem mochila, a espingarda na alça", Item.Nada, false, Item.Espingarda, Item.Nada, Item.Nada),
+            ("mochila pequena, coldre: pistola, submetralhadora", Item.MochilaPequena, true, Item.Pistola, Item.Submetralhadora, Item.Nada),
+            ("mochila média: rifle, espingarda e pistola", Item.MochilaMedia, true, Item.Rifle, Item.Espingarda, Item.Pistola),
+            ("mochila grande: sniper, rifle e submetralhadora", Item.MochilaGrande, true, Item.Sniper, Item.Rifle, Item.Submetralhadora),
+        };
+        GameObject _boneco;
+        int _qualBoneco = -1;
 
         bool _aberto;
         int _destino;
@@ -37,6 +54,7 @@ namespace ZombieCityCleaner.UI
         public override void OnNetworkDespawn()
         {
             MenuOnline.FecharTelas -= Fechar;
+            if (_boneco != null) Destroy(_boneco);
             if (_aberto) Abrir(false);
         }
 
@@ -82,7 +100,7 @@ namespace ZombieCityCleaner.UI
             GUI.depth = -10;   // por cima da tela do inventário
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
-            var area = new Rect(12 * u, 40 * u, 300 * u, 404 * u);
+            var area = new Rect(12 * u, 40 * u, 300 * u, 624 * u);
             Area = area;
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
@@ -141,15 +159,78 @@ namespace ZombieCityCleaner.UI
                 string nome = Itens.Nome(item);
                 if (!GUI.Button(r, char.ToUpper(nome[0]) + nome.Substring(1), _botao)) continue;
                 bool noChao = _destino == 1;
-                if (!noChao && inventario != null && !inventario.TemEspaco(item))
+                if (!noChao && inventario != null && !inventario.PodeReceber(item, out var motivo))
                 {
                     noChao = true;
-                    Avisar($"Sem espaço na mochila: {Itens.NomeComArtigo(item)} foi para o chão.");
+                    Avisar($"{motivo}: {Itens.NomeComArtigo(item)} foi para o chão.");
                 }
                 CriarItemRpc(item, noChao);
             }
-            y += 4 * 32 * u + 4 * u;
+            y += (ItensDoMenu.Length + 1) / 2 * 32 * u + 4 * u;
+
+            // o boneco de teste
+            GUI.Label(new Rect(x, y, w, 22 * u), "Boneco equipado (teste)", _titulo);
+            y += 26 * u;
+            if (GUI.Button(new Rect(x, y, bw, 26 * u), _boneco == null ? "Pôr o boneco" : "Próximo", _botao)) TrocarBoneco();
+            if (GUI.Button(new Rect(x + bw + 8 * u, y, bw, 26 * u), "Tirar", _botao) && _boneco != null)
+            {
+                Destroy(_boneco);
+                _boneco = null;
+                _qualBoneco = -1;
+            }
+            y += 32 * u;
+            if (_boneco != null) GUI.Label(new Rect(x, y, w, 22 * u), Bonecos[_qualBoneco].nome, _texto);
+            y += 26 * u;
             if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
+        }
+
+        /// <summary>
+        /// Põe (ou troca) o boneco 2 m à frente, de costas para o jogador, com a próxima combinação de equipamento.
+        /// É uma cópia do "Corpo" do prefab do jogador (em repouso), com a animação de parado dos punhos.
+        /// </summary>
+        void TrocarBoneco()
+        {
+            var rede = GetComponent<JogadorRede>();
+            var prefab = NetworkManager.Singleton != null ? NetworkManager.Singleton.NetworkConfig.PlayerPrefab : null;
+            var referencia = prefab != null ? prefab.transform.Find("Corpo") : null;
+            if (rede == null || referencia == null) return;
+            _qualBoneco = (_qualBoneco + 1) % Bonecos.Length;
+            if (_boneco == null)
+            {
+                Vector3 frente = transform.forward;
+                frente.y = 0f;
+                frente.Normalize();
+                Vector3 pe = transform.position + frente * 2f;
+                if (Physics.Raycast(pe + Vector3.up * 1.5f, Vector3.down, out var chao, 4f, ~((1 << 2) | (1 << JogadorRede.CamadaJogador)), QueryTriggerInteraction.Ignore))
+                    pe = chao.point;
+                _boneco = new GameObject("Boneco equipado (teste)");
+                _boneco.transform.SetPositionAndRotation(pe, Quaternion.LookRotation(frente));
+                var corpo = Instantiate(referencia.gameObject, _boneco.transform, false);
+                corpo.name = "Corpo";
+                corpo.transform.localPosition = Vector3.zero;
+                corpo.transform.localRotation = Quaternion.identity;
+                foreach (var t in corpo.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 0;
+                foreach (var a in rede.naMaoCorpo)
+                {
+                    var igual = corpo.transform.GetComponentsInChildren<Transform>(true);
+                    foreach (var t in igual) if (t.name == a.name) t.gameObject.SetActive(false);
+                }
+                foreach (var r in corpo.GetComponentsInChildren<Renderer>(true))
+                {
+                    r.enabled = true;
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                    if (r is SkinnedMeshRenderer pele) pele.updateWhenOffscreen = true;
+                }
+                var animador = corpo.GetComponent<Animator>();
+                if (animador != null)
+                {
+                    if (rede.controladorDasMaos != null) animador.runtimeAnimatorController = rede.controladorDasMaos;
+                    animador.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                }
+                corpo.AddComponent<EquipamentoNoCorpo>();
+            }
+            var b = Bonecos[_qualBoneco];
+            _boneco.GetComponentInChildren<EquipamentoNoCorpo>().Vestir(referencia, b.mochila, b.coldre, b.alca, b.costas, b.cintura);
         }
 
         // ------------------------------------------------------------------ no anfitrião

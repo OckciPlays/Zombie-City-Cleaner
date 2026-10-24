@@ -27,6 +27,10 @@ namespace ZombieCityCleaner.EditorTools
         const string ControladorTP = Arte + "/Jogador_TP.controller";
         const string FbxArmas = Arte + "/Armas.fbx";
         const string FbxItens = Arte + "/Itens.fbx";
+        /// <summary>As 3 mochilas e o coldre (Blender/equipamentos.py, no repositório).</summary>
+        const string FbxEquipamentos = Arte + "/Equipamentos.fbx";
+        /// <summary>As caixas de munição, uma por calibre (Blender/municao.py, no repositório).</summary>
+        const string FbxMunicao = Arte + "/Municao.fbx";
         const string PastaIcones = "Assets/_Game/Art/UI/Icones";
         const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
@@ -62,6 +66,14 @@ namespace ZombieCityCleaner.EditorTools
         public static string IconeDo(int modelo) => $"{PastaIcones}/Icone_{Itens.Modelos[modelo]}.png";
         /// <summary>A foto do item, para os detalhes da tela do inventário (itens.py).</summary>
         public static string FotoDo(int modelo) => $"{PastaIcones}/Foto_{Itens.Modelos[modelo]}.png";
+        /// <summary>A malha de um equipamento (as mochilas e o coldre, na ordem do enum Item): Equip_&lt;modelo&gt;.</summary>
+        public static string MalhaDoEquipamento(int k) => $"{Malhas}/Equip_{Itens.ModeloDoEquipamento(k)}.asset";
+        public static string IconeDoEquipamento(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDoEquipamento(k)}.png";
+        public static string FotoDoEquipamento(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDoEquipamento(k)}.png";
+        /// <summary>A malha de uma caixa de munição (na ordem de Calibre): Mun_&lt;modelo&gt;.</summary>
+        public static string MalhaDaMunicao(int k) => $"{Malhas}/Mun_{Itens.ModeloDaMunicao(k)}.asset";
+        public static string IconeDaMunicao(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaMunicao(k)}.png";
+        public static string FotoDaMunicao(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaMunicao(k)}.png";
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
         /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
@@ -92,6 +104,8 @@ namespace ZombieCityCleaner.EditorTools
             ImportarCorpo();
             ImportarArmas();
             for (int i = 0; i < Itens.QuantosModelos; i++) MontarMalha(i);
+            for (int k = 0; k < Itens.QuantosEquipamentos; k++) Juntar(FbxEquipamentos, Itens.ModeloDoEquipamento(k) + "_", MalhaDoEquipamento(k));
+            for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
             ImportarIcones();
             MontarControladorFP();
             // a mão vazia: o soco direito no lugar do tiro e o esquerdo no do gatilho sem bala (o código alterna); no
@@ -117,7 +131,9 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>
         static void ImportarIcones()
         {
-            foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) }))
+            foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) })
+                         .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
+                         .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) })))
             {
                 if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
                 {
@@ -182,6 +198,8 @@ namespace ZombieCityCleaner.EditorTools
         {
             ImportarAvulsas(FbxArmas);
             ImportarAvulsas(FbxItens);
+            ImportarAvulsas(FbxEquipamentos);
+            ImportarAvulsas(FbxMunicao);
             for (int i = 0; i < Armas.Quantas; i++)
                 if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
         }
@@ -203,12 +221,16 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static void MontarMalha(int modelo)
         {
-            string prefixo = Itens.Modelos[modelo] + "_";
             string fbx = modelo >= Armas.Quantas ? FbxItens : File.Exists(FbxAvulsaDa(modelo)) ? FbxAvulsaDa(modelo) : FbxArmas;
+            Juntar(fbx, Itens.Modelos[modelo] + "_", MalhaDo(modelo));
+        }
+
+        /// <summary>As peças &lt;prefixo&gt;* do FBX numa malha só, gravada no caminho.</summary>
+        static void Juntar(string fbx, string prefixo, string caminho)
+        {
             var pecas = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
             if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {fbx}.");
             var juntas = pecas.Select(m => new CombineInstance { mesh = m, transform = Matrix4x4.identity }).ToArray();
-            string caminho = MalhaDo(modelo);
             var malha = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
             bool nova = malha == null;
             if (nova) malha = new Mesh();
@@ -336,8 +358,9 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>
         /// "Itens no mundo": um NetworkObject da cena com o <see cref="ItensNoMundo"/>, as malhas de tudo o que pode ficar
-        /// no chão (as armas largadas, a lata e a garrafa) e os itens do começo, um em cada marca "Lugar de item (...)" que
-        /// a montagem da cidade põe nos móveis das casas, dos apartamentos e do depósito do bunker.
+        /// no chão (as armas largadas, a lata, a garrafa, as mochilas, o coldre e as caixas de munição) e os itens do começo,
+        /// um em cada marca "Lugar de item (...)" que a montagem da cidade põe nos móveis das casas, dos apartamentos e do
+        /// depósito do bunker.
         /// </summary>
         public static void MontarItensNoMundo(UnityEngine.SceneManagement.Scene cena)
         {
@@ -355,11 +378,15 @@ namespace ZombieCityCleaner.EditorTools
             go.AddComponent<NetworkObject>();
             var mundo = go.AddComponent<ItensNoMundo>();
             mundo.malhas = malhas;
+            mundo.malhasDeEquipamento = Enumerable.Range(0, Itens.QuantosEquipamentos).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDoEquipamento(k))).ToArray();
+            mundo.malhasDeMunicao = Enumerable.Range(0, Itens.QuantasMunicoes).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaMunicao(k))).ToArray();
             mundo.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
             mundo.lugares = marcas.Select(t => t.position).ToArray();
-            mundo.itensDosLugares = marcas.Select(t => t.name.Contains("(Agua)") ? Item.Agua : Item.Comida).ToArray();
+            // o item vem no nome da marca: "Lugar de item (Comida)", "(Agua)", "(Municao9mm)"...
+            mundo.itensDosLugares = marcas.Select(t => System.Enum.TryParse<Item>(t.name.Substring(t.name.IndexOf('(') + 1).TrimEnd(')'), out var item) ? item : Item.Comida).ToArray();
             mundo.girosDosLugares = marcas.Select(t => t.eulerAngles.y).ToArray();
-            Debug.Log($"Itens no mundo: {marcas.Count} lugares de comida e água.");
+            int municao = mundo.itensDosLugares.Count(Itens.EhMunicao);
+            Debug.Log($"Itens no mundo: {marcas.Count - municao} lugares de comida e água e {municao} de munição.");
         }
     }
 }

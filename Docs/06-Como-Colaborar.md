@@ -51,6 +51,7 @@
   4. confira no Editor (os jogadores em `JogadorRede.Todos`, os tiros recebidos) e no log da build;
   5. ao terminar, feche a build e tire o `InputSystem_Actions` dos Preloaded Assets.
 - **Com um amigo de verdade:** um hospeda pelo menu ("Hospedar partida"), o outro digita o código e clica em "Entrar".
+- **Depois de puxar mudanças do GitHub com o Unity aberto,** os controladores de animação podem ficar na memória sem os clipes: o personagem fica parado numa pose só, e o boneco da mochila (TAB) fica com a cabeça torta, congelado no olhar de quando a tela abriu. O arquivo está certo; **reinicie o Unity.** Já aconteceu com os zumbis (pose T) e com o corpo do jogador (24/10/2026).
 - **Desempenho:** F9 no anfitrião roda o benchmark dos zumbis e grava o resultado em `Benchmarks/Benchmark_Zumbis.md`. Para comparar duas rodadas, use a mesma vista e a mesma hora do dia. F3 mostra os zumbis por nível e a rede.
 
 ## Checklist antes do commit
