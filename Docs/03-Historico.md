@@ -158,6 +158,20 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - As prévias dos sons (passos de cada piso, comer, beber, largar, os socos e a porta) se gravam de novo pelo menu Zombie City Cleaner > Gravar prévias dos sons.
 - **Testado no Editor:** o piso de cada cômodo das 5 casas e dos quartos do bunker, o som depois de comer e beber (sem NaN, e o tiro logo depois soando normal) e 3 socos num zumbi (3 recuos, e ele parte para o ataque).
 
+## A mochila em grade e o menu do desenvolvedor (24/10/2026, a pedido)
+
+- Antes, o que foi testado e aprovado ganhou um commit (`53a6004`).
+- **A mochila (TAB),** pelo esboço do usuário: uma grade de 9 × 6 espaços, e cada coisa ocupa os seus (a pistola 2 × 1, o rifle 5 × 2, a sniper 7 × 2, a lata 1, a garrafa 1 × 2). Sem pilhas. O que é pego entra no primeiro espaço que couber; sem espaço, fica onde está (a troca com a arma da mão saiu).
+- **Os 3 lugares viraram atalhos:** cada um aponta para um item da mochila, que continua nela. A arma pega vai para um atalho livre e para a mão, como antes. Cada arma guarda o pente dela.
+- **A tela:** o fundo é o concreto do chão do bunker, com a borda escura e os rebites. À esquerda, o boneco do jogador em 3D (uma cópia do corpo com uma câmera própria; gira arrastando), os lugares da armadura (ainda vazios) e a barra de atalhos embaixo dos pés. No meio, a mochila e a aba de criar (ainda vazia). À direita, o nome, a foto e poucos números do item escolhido. Passando o mouse, o nome aparece ao lado.
+- **Arrastar** move na grade, põe num atalho ou, para fora da janela, larga no chão; G larga o escolhido; 1, 2 e 3 com o mouse em cima põem no atalho. Com a tela aberta, o jogador fica parado.
+- **Os ícones coloridos:** renderizados de novo no Blender com as cores da paleta, na proporção dos espaços de cada item, e uma foto de 3/4 para os detalhes. A barra do HUD também usa os coloridos, com o fundo claro (as armas são escuras).
+- **O menu do desenvolvedor (F1),** só no Editor e nas builds de desenvolvimento: criar as armas, a lata e a garrafa (na mochila ou no chão), ver quantos zumbis há, matar todos e criar N em volta do jogador.
+- **Testado no Editor, com um jogador:** pegar do painel, a dica sem espaço, os arrastos (para um atalho, mover, onde não cabe, para fora, trocar e tirar atalhos), o clique e o G, o pente por arma, comer pelo atalho, o G no jogo e o F1 (criar 10 e matar os 268). O teste com dois jogadores ficou para depois.
+- **Depois do primeiro olhar do usuário:** saíram as legendas da tela (girar, arrastar, a contagem dos espaços) e o atalho nos detalhes, e o friso amarelo da borda da janela; a roda passa pelos 3 atalhos, vazios ou não.
+- **1.000 zumbis na cidade** (eram 258): a maior parte na rua, na praça e no estacionamento, com os grupos mais abertos. Todos nascem; no Editor, o quadro médio ficou em 6,0 ms.
+- **Girar na mochila:** segurando um item, R gira ele 90° (a largura e a altura trocam), e ele fica girado onde for solto. O que é pego entra girado se só couber assim. Testado: girar, desgirar, recusar onde não cabe e o rifle pego entrando em pé numa coluna livre. Embaixo da grade, a dica "R: girar item" entrou abaixo da "G: largar o escolhido".
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
@@ -171,6 +185,7 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 ## Pendências e observações conhecidas
 
 - **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A munição de reserva é infinita. A comida e a água no chão não são salvas: cada partida começa com as 34 do começo.
+- **A mochila não empilha os itens** (de propósito, por enquanto), e a armadura e a aba de criar ainda estão vazias.
 - **Os outros não veem comer e beber:** o corpo segura a lata ou a garrafa na guarda dos punhos, e só quem come ou bebe ouve o som.
 - **O painel de armas, a porta e as luzes do bunker não são salvos:** ao recomeçar a partida, o painel volta ao conteúdo inicial, a porta fecha e as luzes acendem.
 - **Atirar dentro do bunker com a porta aberta atrai os zumbis próximos** (o barulho do tiro chama até 35 m). Com a porta fechada, não. Defender a base é assunto de depois.

@@ -21,13 +21,27 @@ namespace ZombieCityCleaner.UI
         public static bool Bot { get; private set; }
 
         /// <summary>
-        /// O jogador local recebe comandos: na partida, com o menu fechado e o mouse preso no jogo. O mouse é preso
-        /// sozinho quando a partida começa e quando o menu fecha. Se ele se soltar (a janela perdeu o foco), um clique o
-        /// prende de novo, e esse clique não vale como tiro: os comandos só voltam depois de soltar os botões do mouse.
-        /// O estado do mouse é lido na hora, para não depender da ordem dos scripts no quadro do clique.
+        /// O jogador local recebe comandos: na partida, com o menu e as telas do jogo fechados e o mouse preso no jogo. O
+        /// mouse é preso sozinho quando a partida começa e quando o menu ou a tela fecha. Se ele se soltar (a janela perdeu
+        /// o foco), um clique o prende de novo, e esse clique não vale como tiro: os comandos só voltam depois de soltar os
+        /// botões do mouse. O estado do mouse é lido na hora, para não depender da ordem dos scripts no quadro do clique.
         /// </summary>
-        public static bool Controla => !Aberto && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar;
+        public static bool Controla => !Aberto && _telas.Count == 0 && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar;
 
+        /// <summary>
+        /// Uma tela do jogo aberta por cima da partida (o inventário, o menu do desenvolvedor): o mouse fica solto e o
+        /// jogador não recebe comandos, mas o HUD continua. ESC fecha as telas (<see cref="FecharTelas"/>) em vez de abrir o menu.
+        /// </summary>
+        public static bool ComTela => _telas.Count > 0;
+        public static event Action FecharTelas;
+
+        public static void Tela(object dona, bool aberta)
+        {
+            if (aberta) _telas.Add(dona);
+            else _telas.Remove(dona);
+        }
+
+        static readonly System.Collections.Generic.HashSet<object> _telas = new System.Collections.Generic.HashSet<object>();
         static bool _esperarSoltar;
         SessaoOnline _sessao;
         string _codigo = "", _ip = "127.0.0.1";
@@ -56,19 +70,21 @@ namespace ZombieCityCleaner.UI
             bool naPartida = _sessao.Atual == SessaoOnline.Estado.Conectado;
             var teclado = Keyboard.current;
             bool esc = teclado != null && teclado.escapeKey.wasPressedThisFrame;
-            // ESC nas opções volta para o menu; na partida, abre e fecha o menu
+            // ESC nas opções volta para o menu; com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
             if (esc && _opcoes) _opcoes = false;
+            else if (naPartida && esc && ComTela) FecharTelas?.Invoke();
             else if (naPartida && esc) _pausa = !_pausa;
             if (naPartida && !_pausa) _opcoes = false;
             if (!naPartida) _pausa = false;
             Aberto = !naPartida || _pausa;
-            if (Aberto && !Bot)
+            bool solto = Aberto || ComTela;
+            if (solto && !Bot)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
-            else if (!Aberto && !Bot) PrenderOMouse();
-            _estavaAberto = Aberto;
+            else if (!solto && !Bot) PrenderOMouse();
+            _estavaAberto = solto;
             if (Bot && naPartida && Time.time >= _proximoRelatorio) Relatorio();
         }
 

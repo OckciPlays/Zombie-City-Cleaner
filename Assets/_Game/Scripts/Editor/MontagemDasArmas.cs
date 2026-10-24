@@ -58,8 +58,10 @@ namespace ZombieCityCleaner.EditorTools
         public static string ControladorTPDa(int arma) => arma == 0 ? ControladorTP : $"{Arte}/Jogador_TP_{Armas.Modelos[arma]}.overrideController";
         /// <summary>O corpo com a mão vazia (a guarda e o soco) ou com comida e água na mão.</summary>
         public static string ControladorTPDasMaos => $"{Arte}/Jogador_TP_Maos.overrideController";
-        /// <summary>O ícone do inventário (renderizado no Blender pelo itens.py).</summary>
+        /// <summary>O ícone do inventário, colorido, na proporção das células do item (renderizado no Blender pelo itens.py).</summary>
         public static string IconeDo(int modelo) => $"{PastaIcones}/Icone_{Itens.Modelos[modelo]}.png";
+        /// <summary>A foto do item, para os detalhes da tela do inventário (itens.py).</summary>
+        public static string FotoDo(int modelo) => $"{PastaIcones}/Foto_{Itens.Modelos[modelo]}.png";
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
         /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
@@ -112,20 +114,22 @@ namespace ZombieCityCleaner.EditorTools
             AssetDatabase.SaveAssets();
         }
 
-        /// <summary>Os ícones: transparentes, sem mipmap e sem compressão (são pequenos e vão direto para a tela).</summary>
+        /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>
         static void ImportarIcones()
         {
-            for (int i = 0; i < Itens.QuantosModelos; i++)
+            foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) }))
             {
-                if (!(AssetImporter.GetAtPath(IconeDo(i)) is TextureImporter imp))
+                if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
                 {
-                    Debug.LogWarning($"O ícone {IconeDo(i)} não existe (copie de Modelo 3D/Jogador/Icones).");
+                    Debug.LogWarning($"A imagem {caminho} não existe (copie de Modelo 3D/Jogador/Icones).");
                     continue;
                 }
-                if (imp.alphaIsTransparency && !imp.mipmapEnabled && imp.textureCompression == TextureImporterCompression.Uncompressed) continue;
+                if (imp.alphaIsTransparency && !imp.mipmapEnabled && imp.textureCompression == TextureImporterCompression.Uncompressed
+                    && imp.npotScale == TextureImporterNPOTScale.None) continue;
                 imp.textureType = TextureImporterType.Default;
                 imp.alphaIsTransparency = true;
                 imp.mipmapEnabled = false;
+                imp.npotScale = TextureImporterNPOTScale.None;   // o tamanho de cada um é a proporção das células do item
                 imp.wrapMode = TextureWrapMode.Clamp;
                 imp.textureCompression = TextureImporterCompression.Uncompressed;
                 imp.SaveAndReimport();

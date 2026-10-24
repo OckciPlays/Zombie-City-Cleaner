@@ -112,7 +112,9 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 
 ### 🔎 O começo do saque (a pedido, 24/10/2026; esperando o teste do usuário)
 
-- **Inventário de 3 lugares**, embaixo, no meio da tela, com o ícone de cada coisa: até 3 armas, latas ou garrafas. A roda do mouse passa pelos lugares, 1, 2 e 3 escolhem, G larga e E pega.
+- **Mochila em grade (TAB)** de 9 × 6 espaços, e cada coisa ocupa os seus (a sniper 7 × 2, a lata 1). À esquerda, o boneco do jogador (gira com o mouse), a armadura (ainda vazia) e a barra de 3 atalhos; à direita, o nome, a foto e os detalhes do item; e uma aba de criar, ainda vazia. Arrastar move, põe num atalho ou larga (para fora); os ícones são coloridos.
+- **A barra de 3 atalhos**, embaixo, no meio da tela: o atalho aponta para um item da mochila, que continua nela. A roda do mouse passa pelos atalhos, 1, 2 e 3 escolhem, G larga e E pega.
+- **Menu do desenvolvedor (F1):** criar itens, contar, criar e matar zumbis.
 - **Comida e água:** latas de comida e garrafas de água nas mesas, balcões, cômodas e criados-mudos das casas e dos apartamentos (34, e 2 na mesa do depósito do bunker). Com o item na mão, o clique come ou bebe (com a animação e o som).
 - **Fome e sede:** duas barras que esvaziam com o tempo (mais rápido correndo); com pouca, a vida não volta sozinha; vazias, tiram vida.
 - **Passos** com som de concreto, madeira, carpete ou grama (o piso de cada cômodo das casas), e o **menu de opções** no ESC (volume, limite de FPS e o FPS na tela).

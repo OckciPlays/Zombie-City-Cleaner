@@ -83,7 +83,9 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 - **Raiz:** CharacterController, NetworkObject e NetworkTransform com autoridade do dono (cada um controla o próprio movimento).
   - `JogadorRede`: as câmeras, o corpo, a cor da família, o que está na mão (no corpo) e o tiro pela rede.
   - `MovimentoPrimeiraPessoa`: andar (2,0 m/s), correr (4,2 m/s), mirando (1,3 m/s) e pular.
-  - `InventarioJogador`: os 3 lugares (armas, latas, garrafas), o da mão, a roda e 1–3 para trocar, G para largar e os 3 lugares na tela. O conteúdo é do anfitrião; o lugar escolhido, do dono.
+  - `InventarioJogador`: a mochila em grade (9 × 6; cada item ocupa os seus espaços) e os 3 atalhos (o do escolhido fica na mão), a roda e 1–3 para trocar, G para largar e a barra no HUD. A mochila é do anfitrião; os atalhos e o escolhido, do dono.
+  - `TelaDoInventario` (TAB): a tela da mochila, com o retrato do jogador (`RetratoDoJogador`, uma cópia do corpo com câmera própria), a grade, os atalhos, os detalhes e o arrastar e soltar.
+  - `MenuDoDesenvolvedor` (F1, só no Editor e nas builds de desenvolvimento): criar itens, contar, criar e matar zumbis, pelo anfitrião.
   - `ArmaJogador`: o que está na mão: com arma, o tiro, a recarga e a mira (e a luneta da sniper), com o pente guardado por lugar; com comida ou água, comer ou beber no clique; com a mão vazia, o soco (uma esfera curta da câmera; no zumbi, pouco dano e o recuo). E o E: mirando de perto uma coisa que se usa (`Interagivel`: um item no chão, uma arma do painel, a porta do bunker, um interruptor), mostra a dica e usa.
   - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
   - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker. Ela volta sozinha só sem fome e sem sede.
@@ -162,7 +164,9 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 | posição e giro do jogador | NetworkTransform | o dono |
 | para onde olha, se está mirando, a lanterna | NetworkVariables | o dono |
 | a cor da família | NetworkVariable | o anfitrião |
-| o inventário (os 3 lugares) e o lugar da mão | NetworkVariables | o anfitrião (o conteúdo) e o dono (o lugar) |
+| a mochila (Id, item e posição de cada um) e o pedido de mover | `NetworkList` e `MoverRpc` | o anfitrião |
+| os 3 atalhos e o da mão | NetworkVariables | o dono |
+| o menu do desenvolvedor (criar itens e zumbis, matar todos) | `CriarItemRpc`, `CriarZumbisRpc`, `MatarZumbisRpc` | o anfitrião faz |
 | largar e comer | `LargarRpc` e `ConsumirRpc`, para o anfitrião | o dono (o anfitrião confere) |
 | os itens no chão e o pedido de pegar | `NetworkList` e `PegarRpc` | o anfitrião |
 | a fome e a sede | NetworkVariables (uma vez por segundo) | o anfitrião |

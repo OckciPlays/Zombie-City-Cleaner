@@ -47,7 +47,8 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>O campo de visão normal da câmera do mundo (o aumento da luneta conta a partir dele).</summary>
         const float FovNormal = 70f;
 
-        public const int MaxZumbis = 1024;
+        // o Id vai pela rede em 16 bits; 2.048 dá folga para os 1.000 das hordas e os criados pelo menu do desenvolvedor
+        public const int MaxZumbis = 2048;
         // só o cenário (camada Default) tapa a visão; as cápsulas e hitboxes dos zumbis ficam em outras camadas
         const int MascaraDaVisao = 1 << 0;
 
@@ -411,13 +412,61 @@ namespace ZombieCityCleaner.Zombies
             Povoar(posicoes);
         }
 
-        bool Sortear(Vector3 centro, float raio, out Vector3 ponto)
+        /// <summary>Zumbis de pé: no anfitrião, os da cidade; nos clientes, as cópias recebidas (só os de perto).</summary>
+        public int Vivos
+        {
+            get
+            {
+                int n = 0;
+                foreach (var z in IsServer ? _ativos : _copias)
+                    if (!z.Morto) n++;
+                return n;
+            }
+        }
+
+        /// <summary>Só no anfitrião (o menu do desenvolvedor): todos os zumbis de pé caem mortos, como com um tiro no corpo.</summary>
+        public void MatarTodos()
+        {
+            if (!IsServer || !IsSpawned) return;
+            float agora = Time.time;
+            foreach (var z in _ativos)
+                if (!z.Morto) z.LevarTiro(RegiaoDoCorpo.Tronco, Membro.Nenhum, 1000f, z.transform.position + Vector3.up, -z.transform.forward, false, null, agora);
+        }
+
+        /// <summary>
+        /// Só no anfitrião (o menu do desenvolvedor): mais zumbis, de 6 a 14 m em volta do ponto, sem tirar os que já
+        /// estão (até nas áreas livres, como o bunker). Devolve quantos lugares achou no NavMesh.
+        /// </summary>
+        public int CriarPerto(Vector3 centro, int quantidade)
+        {
+            if (!IsServer || !IsSpawned) return 0;
+            var posicoes = new List<Vector3>();
+            for (int t = 0; t < quantidade * 8 && posicoes.Count < quantidade; t++)
+            {
+                Vector2 d = Random.insideUnitCircle.normalized * Random.Range(6f, 14f);
+                if (Sortear(centro + new Vector3(d.x, 0f, d.y), 1.5f, out var p, false)) posicoes.Add(p);
+            }
+            StartCoroutine(Acrescentar(posicoes));
+            return posicoes.Count;
+        }
+
+        IEnumerator Acrescentar(List<Vector3> posicoes)
+        {
+            for (int i = 0; i < posicoes.Count; i++)
+            {
+                Nascer(posicoes[i]);
+                if ((i + 1) % criadosPorQuadro == 0) yield return null;
+            }
+        }
+
+        bool Sortear(Vector3 centro, float raio, out Vector3 ponto, bool foraDasAreasLivres = true)
         {
             for (int t = 0; t < 8; t++)
             {
                 Vector2 r = Random.insideUnitCircle * raio;
                 var tentativa = centro + new Vector3(r.x, 0f, r.y);
-                if (NavMesh.SamplePosition(tentativa, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - centro.y) < 1.2f && !EmAreaLivre(hit.position))
+                if (NavMesh.SamplePosition(tentativa, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - centro.y) < 1.2f
+                    && !(foraDasAreasLivres && EmAreaLivre(hit.position)))
                 {
                     ponto = hit.position;
                     return true;

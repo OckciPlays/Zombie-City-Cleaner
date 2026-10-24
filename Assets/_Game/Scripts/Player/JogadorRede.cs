@@ -22,6 +22,8 @@ namespace ZombieCityCleaner.Player
         public const int CamadaBracos = 6;
         /// <summary>A raiz do jogador (o CharacterController): os pedaços dos zumbis não param em cima de ninguém.</summary>
         public const int CamadaJogador = 9;
+        /// <summary>O retrato do jogador na tela do inventário (<see cref="RetratoDoJogador"/>): só a câmera dele desenha.</summary>
+        public const int CamadaRetrato = 10;
 
         [Header("Primeira pessoa (só o dono)")]
         public Camera cameraMundo;
@@ -68,7 +70,7 @@ namespace ZombieCityCleaner.Player
         public LanternaJogador Lanterna { get; private set; }
         public VidaJogador Vida { get; private set; }
         public InventarioJogador Inventario { get; private set; }
-        /// <summary>O que está na mão (o item do lugar escolhido do inventário).</summary>
+        /// <summary>O que está na mão (o item do atalho escolhido do inventário).</summary>
         public Item NaMao => Inventario != null ? Inventario.NaMao : Item.Nada;
         /// <summary>A arma da mão; sem arma, a pistola (para quem pergunta pela luneta, por exemplo).</summary>
         public TipoDeArma ArmaNaMao => Itens.EhArma(NaMao) ? Itens.Arma(NaMao) : TipoDeArma.Pistola;
@@ -84,7 +86,7 @@ namespace ZombieCityCleaner.Player
         Vector3 _posJanela;
         float _velocidade, _medidaRemota, _janela;
         Item _naMaoAplicado = (Item)255;
-        int _lugarAplicado = -1;
+        ushort _idAplicado;
 
         public override void OnNetworkSpawn()
         {
@@ -165,21 +167,21 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// O que está na mão: o modelo no corpo, as animações do corpo (as da pistola, as de arma longa ou, sem arma, as
-        /// dos punhos) e, no dono, o
-        /// de primeira pessoa (que também muda quando o lugar muda com a mesma arma: cada lugar tem o seu pente).
+        /// dos punhos) e, no dono, o de primeira pessoa (que também muda quando a mão passa para outra arma do mesmo
+        /// tipo: cada arma da mochila tem o seu pente).
         /// </summary>
         void AplicarNaMao()
         {
             var item = Inventario.NaMao;
-            int lugar = Inventario.Escolhido.Value;
-            if (item == _naMaoAplicado && (lugar == _lugarAplicado || !IsOwner)) return;
+            ushort id = Inventario.IdNaMao;
+            if (item == _naMaoAplicado && (id == _idAplicado || !IsOwner)) return;
             _naMaoAplicado = item;
-            _lugarAplicado = lugar;
+            _idAplicado = id;
             int m = Itens.Modelo(item);
             for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m);
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)] : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
             if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
-            if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, lugar);
+            if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, id);
         }
 
         void Update()

@@ -25,7 +25,7 @@ Este documento junta as ideias do Pedro para o jogo depois da demo e as divide e
 
 ## O que já existe e ajuda
 
-- **A cidade da demo** (5 casas, o prédio, a praça e o bunker), com 258 zumbis leves (LOD estilo Dead Rising: os de longe quase não custam).
+- **A cidade da demo** (5 casas, o prédio, a praça e o bunker), com 1.000 zumbis leves (LOD estilo Dead Rising: os de longe quase não custam).
 - **12 carros abandonados** na rua, já pensados para virar fonte de peças.
 - **As 5 armas** (pistola, submetralhadora, rifle, espingarda e sniper), o desmembramento e o ciclo de dia e noite.
 - **O online** com até 4 jogadores (um é o anfitrião).

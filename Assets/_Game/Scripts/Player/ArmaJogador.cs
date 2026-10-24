@@ -10,9 +10,9 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// O que o jogador local tem na mão: o item do lugar escolhido do <see cref="InventarioJogador"/> (uma arma, a lata de
-    /// comida, a garrafa de água ou nada). Os números de cada arma estão em <see cref="Armas"/>; cada lugar guarda o pente
-    /// da arma dele (trocar de arma não recarrega).
+    /// O que o jogador local tem na mão: o item do atalho escolhido do <see cref="InventarioJogador"/> (uma arma, a lata
+    /// de comida, a garrafa de água ou nada). Os números de cada arma estão em <see cref="Armas"/>; cada arma da mochila
+    /// guarda o pente dela (trocar de arma não recarrega).
     /// Com arma: clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta
     /// vários chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira
     /// (aproxima a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique.
@@ -101,10 +101,9 @@ namespace ZombieCityCleaner.Player
         static Texture2D _texturaDaLuneta;
         Interagivel _alvo;
         string _dica;
-        // o pente de cada lugar do inventário, com a arma a que ele pertence (outra arma no lugar chega cheia)
-        readonly int[] _municaoDoLugar = { -1, -1, -1 };
-        readonly Item[] _armaDoLugar = new Item[InventarioJogador.Lugares];
-        int _lugar = -1, _ultimoLugarDeArma = -1;
+        // o pente de cada arma da mochila, pelo Id dela (a que nunca esteve na mão está cheia)
+        readonly System.Collections.Generic.Dictionary<ushort, int> _pentes = new System.Collections.Generic.Dictionary<ushort, int>();
+        ushort _id, _ultimaArma;
 
         void Awake()
         {
@@ -135,33 +134,38 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// O que está na mão mudou (no começo, trocando de lugar, pegando ou largando): mostra o modelo dele, sacando. A
-        /// arma que sai guarda o pente no lugar dela; a que entra volta com o pente que tinha (ou cheia, se é outra arma).
+        /// O que está na mão mudou (no começo, trocando de atalho, pegando ou largando): mostra o modelo dele, sacando. A
+        /// arma que sai guarda o pente; a que entra volta com o pente que tinha (ou cheia, se nunca esteve na mão).
         /// </summary>
-        public void Trocar(Item novo, int lugar)
+        public void Trocar(Item novo, ushort id)
         {
-            if (ComArma && _lugar >= 0)
-            {
-                _municaoDoLugar[_lugar] = Municao;
-                _armaDoLugar[_lugar] = NaMao;
-            }
+            if (ComArma && _id != 0) _pentes[_id] = Municao;
             StopAllCoroutines();
             Recarregando = false;
             Usando = false;
             _recarga = null;
             SairDaLuneta();
             NaMao = novo;
-            _lugar = lugar;
+            _id = id;
             int m = Itens.ModeloNaMao(novo);   // a mão vazia mostra os punhos
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m);
             if (ComArma)
             {
                 Atual = Itens.Arma(novo);
-                _ultimoLugarDeArma = lugar;
-                Municao = _armaDoLugar[lugar] == novo && _municaoDoLugar[lugar] >= 0 ? Mathf.Min(_municaoDoLugar[lugar], Dados.capacidade) : Dados.capacidade;
+                _ultimaArma = id;
+                Municao = _pentes.TryGetValue(id, out int pente) ? Mathf.Min(pente, Dados.capacidade) : Dados.capacidade;
             }
             if (m >= 0) Acao(SacarId);
             _proximoTiro = Time.time + 0.4f;
+        }
+
+        /// <summary>As balas no pente de uma arma da mochila (cheia, se ela nunca esteve na mão).</summary>
+        public int MunicaoDe(ushort id, Item arma)
+        {
+            if (!Itens.EhArma(arma)) return 0;
+            if (id == _id && ComArma) return Municao;
+            int cap = Armas.Dados(Itens.Arma(arma)).capacidade;
+            return _pentes.TryGetValue(id, out int pente) ? Mathf.Min(pente, cap) : cap;
         }
 
         void Update()
@@ -308,7 +312,7 @@ namespace ZombieCityCleaner.Player
         {
             Usando = true;
             var item = NaMao;
-            int lugar = _lugar;
+            ushort id = _id;
             bool lata = item == Item.Comida;
             float inicio = Time.time;
             Acao(FireId);   // o estado do tiro toca o clipe Usar (o override do item)
@@ -321,7 +325,7 @@ namespace ZombieCityCleaner.Player
             }
             yield return new WaitForSeconds(Mathf.Max(0f, Itens.Consumivel(item).tempoDeUso - (Time.time - inicio)));
             Usando = false;
-            if (NaMao == item && _lugar == lugar) Inventario.Consumir(lugar, _ultimoLugarDeArma);
+            if (NaMao == item && _id == id) Inventario.Consumir(id, _ultimaArma);
         }
 
         void Atirar()
@@ -585,7 +589,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (MenuOnline.Aberto) return;
+            if (MenuOnline.Aberto || MenuOnline.ComTela) return;   // com o inventário ou o menu do desenvolvedor, sem mira
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
             float t = Mathf.Max(1f, Mathf.Round(2 * u));
             if (NaLuneta) Luneta(cx, cy, u);

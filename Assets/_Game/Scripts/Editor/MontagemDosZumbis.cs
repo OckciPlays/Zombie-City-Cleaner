@@ -43,39 +43,40 @@ namespace ZombieCityCleaner.EditorTools
         const string PastaDecals = "Assets/_Game/Art/Materials/Decals";
         const string RendererPrincipal = "Assets/Settings/PC_Renderer.asset";
 
-        // nome, centro, raio, quantidade (~260 zumbis, o dobro da Parte 5; nenhum perto da casa da família). Na rua o raio
-        // cresceu 1 m com o dobro, para os grupos não ficarem amontoados; nas casas e nos andares do prédio ficou o mesmo
+        // nome, centro, raio, quantidade: 1.000 zumbis (a pedido, 24/10/2026; eram 258, o dobro da Parte 5), nenhum perto
+        // da casa da família. A maior parte foi para a rua, a praça e o estacionamento, com o raio maior para os grupos
+        // não ficarem amontoados; nas casas e nos andares do prédio, pouco mais que o dobro (são lugares pequenos)
         static readonly (string nome, Vector3 centro, float raio, int quantidade)[] Hordas =
         {
-            ("Cruzamento central", new Vector3(0f, 0f, 0f), 7f, 16),
-            ("Rua norte", new Vector3(0f, 0f, 22f), 6f, 12),
-            ("Rua sul", new Vector3(0f, 0f, -24f), 6f, 10),
-            ("Rua leste", new Vector3(22f, 0f, 0f), 7f, 14),
-            ("Rua oeste", new Vector3(-40f, 0f, 12f), 6f, 10),
-            ("Praça", new Vector3(24f, 0f, -12f), 7f, 16),
-            ("Estacionamento", new Vector3(10f, 0f, 33f), 7f, 14),
-            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 4f, 8),
-            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 5f, 8),
-            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 5f, 6),
-            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 5f, 6),
-            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 2.5f, 6),
-            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 2.5f, 6),
-            ("Casa 4", new Vector3(13f, 0.15f, -14f), 2.5f, 6),
-            ("Casa 5", new Vector3(28f, 0.15f, -26f), 2.5f, 6),
-            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 6f, 10),
-            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 6f, 10),
-            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 6f, 10),
-            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 6f, 8),
-            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 6f, 8),
-            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 6f, 10),
-            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 6f, 8),
-            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 6f, 8),
-            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 6f, 8),
-            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 6f, 6),
-            ("Saída norte", new Vector3(0f, 0f, 54f), 5f, 8),
-            ("Saída leste", new Vector3(54f, 0f, 0f), 5f, 8),
-            ("Saída sul", new Vector3(0f, 0f, -54f), 5f, 6),
-            ("Saída oeste", new Vector3(-54f, 0f, 0f), 5f, 6),
+            ("Cruzamento central", new Vector3(0f, 0f, 0f), 12f, 70),
+            ("Rua norte", new Vector3(0f, 0f, 22f), 10f, 55),
+            ("Rua sul", new Vector3(0f, 0f, -24f), 10f, 50),
+            ("Rua leste", new Vector3(22f, 0f, 0f), 11f, 60),
+            ("Rua oeste", new Vector3(-40f, 0f, 12f), 10f, 50),
+            ("Praça", new Vector3(24f, 0f, -12f), 12f, 70),
+            ("Estacionamento", new Vector3(10f, 0f, 33f), 12f, 65),
+            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 5f, 20),
+            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 6f, 18),
+            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 6f, 16),
+            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 6f, 16),
+            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 3f, 10),
+            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 3f, 10),
+            ("Casa 4", new Vector3(13f, 0.15f, -14f), 3f, 10),
+            ("Casa 5", new Vector3(28f, 0.15f, -26f), 3f, 10),
+            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 10f, 45),
+            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 10f, 40),
+            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 10f, 40),
+            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 10f, 35),
+            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 10f, 35),
+            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 10f, 45),
+            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 10f, 35),
+            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 9f, 30),
+            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 9f, 30),
+            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 9f, 25),
+            ("Saída norte", new Vector3(0f, 0f, 54f), 8f, 30),
+            ("Saída leste", new Vector3(54f, 0f, 0f), 8f, 30),
+            ("Saída sul", new Vector3(0f, 0f, -54f), 8f, 25),
+            ("Saída oeste", new Vector3(-54f, 0f, 0f), 8f, 25),
         };
 
         // clipe (take do Blender "Zombie_Rig|Zombie_X"), em loop?

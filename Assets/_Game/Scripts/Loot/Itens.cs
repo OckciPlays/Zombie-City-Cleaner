@@ -3,7 +3,7 @@ using ZombieCityCleaner.Combat;
 namespace ZombieCityCleaner.Loot
 {
     /// <summary>
-    /// O que cabe num lugar do inventário: uma arma (o tipo + 1) ou a comida e a água. Vai pela rede num byte.
+    /// O que vai na mochila (e na mão): uma arma (o tipo + 1) ou a comida e a água. Vai pela rede num byte.
     /// </summary>
     public enum Item : byte { Nada = 0, Pistola, Rifle, Submetralhadora, Espingarda, Sniper, Comida = 16, Agua }
 
@@ -53,16 +53,35 @@ namespace ZombieCityCleaner.Loot
         /// <summary>O índice do modelo do item (na mão, no chão e no ícone), ou -1 (nada).</summary>
         public static int Modelo(Item i) => EhArma(i) ? (int)Arma(i) : i == Item.Comida ? Armas.Quantas : i == Item.Agua ? Armas.Quantas + 1 : -1;
 
+        // as células que cada modelo ocupa na mochila (largura × altura), na ordem de Modelos: pelo tamanho da malha, uns
+        // 17 cm por célula (o ícone tem esta proporção)
+        static readonly UnityEngine.Vector2Int[] _tamanhos =
+        {
+            new(2, 1), new(5, 2), new(3, 2), new(6, 1), new(7, 2),   // pistola, rifle, submetralhadora, espingarda, sniper
+            new(1, 1), new(1, 2),                                   // lata, garrafa
+        };
+
+        /// <summary>As células que o item ocupa na mochila (largura × altura).</summary>
+        public static UnityEngine.Vector2Int Tamanho(Item i)
+        {
+            int m = Modelo(i);
+            return m >= 0 ? _tamanhos[m] : UnityEngine.Vector2Int.zero;
+        }
+
+        // uma linha sobre cada modelo, para os detalhes da tela do inventário (curta: os números vêm em seguida)
+        static readonly string[] _resumos =
+        {
+            "Semiautomática. Leve e precisa.", "Automático. Bom de longe.", "Automática. Rápida, de perto.",
+            "De bomba. Arrasa de perto.", "De ferrolho, com luneta.", "Conserva. Mata a fome.", "Água. Mata a sede.",
+        };
+
+        public static string Resumo(Item i)
+        {
+            int m = Modelo(i);
+            return m >= 0 ? _resumos[m] : "";
+        }
+
         public static string Nome(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nome : EhConsumivel(i) ? Consumivel(i).nome : "";
         public static string NomeComArtigo(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nomeComArtigo : EhConsumivel(i) ? Consumivel(i).nomeComArtigo : "";
-
-        /// <summary>"por" com o artigo: "pelo rifle", "pela lata de comida".</summary>
-        public static string Pelo(Item i)
-        {
-            string nome = NomeComArtigo(i);
-            if (nome.StartsWith("a ")) return "pela " + nome.Substring(2);
-            if (nome.StartsWith("o ")) return "pelo " + nome.Substring(2);
-            return "por " + nome;
-        }
     }
 }

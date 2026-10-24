@@ -51,6 +51,32 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = camada;
         }
 
+        /// <summary>Dá nome a uma camada (Project Settings > Tags and Layers), se ela ainda não tiver.</summary>
+        static void NomearCamada(int camada, string nome)
+        {
+            var tags = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var camadas = tags.FindProperty("layers");
+            var item = camadas.GetArrayElementAtIndex(camada);
+            if (item.stringValue == nome) return;
+            if (!string.IsNullOrEmpty(item.stringValue)) Debug.LogWarning($"A camada {camada} já se chama {item.stringValue}; o retrato do jogador usa ela.");
+            else
+            {
+                item.stringValue = nome;
+                tags.ApplyModifiedProperties();
+            }
+        }
+
+        /// <summary>O material do retrato do jogador na tela do inventário (criado na primeira vez).</summary>
+        static Material MaterialDoRetrato()
+        {
+            string caminho = Materiais + "/Retrato.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            if (m != null) return m;
+            m = new Material(Shader.Find("ZombieCityCleaner/Retrato")) { name = "Retrato" };
+            AssetDatabase.CreateAsset(m, caminho);
+            return m;
+        }
+
         /// <summary>
         /// Só o prefab do jogador (a montagem dos zumbis usa isto para dar a vida ao jogador). Precisa das armas preparadas
         /// (<see cref="MontagemDasArmas.Preparar"/>): os braços de cada arma, as malhas e os controladores.
@@ -72,8 +98,10 @@ namespace ZombieCityCleaner.EditorTools
             var lanterna = raiz.AddComponent<LanternaJogador>();
             raiz.AddComponent<VidaJogador>();
             var inventario = raiz.AddComponent<InventarioJogador>();
+            var tela = raiz.AddComponent<TelaDoInventario>();
             raiz.AddComponent<FomeESede>();
             var passos = raiz.AddComponent<PassosJogador>();
+            raiz.AddComponent<MenuDoDesenvolvedor>();
 
             // corpo (o que os outros veem; para o dono vira só sombra)
             var corpo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador.fbx"));
@@ -94,7 +122,7 @@ namespace ZombieCityCleaner.EditorTools
             var cam = camGo.AddComponent<Camera>();
             cam.fieldOfView = 70f; cam.nearClipPlane = 0.05f; cam.farClipPlane = 150f;
             cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = RenderSettings.fogColor;
-            cam.cullingMask = ~(1 << JogadorRede.CamadaBracos);
+            cam.cullingMask = ~((1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaRetrato));
             var dadosCam = camGo.AddComponent<UniversalAdditionalCameraData>();
             dadosCam.renderPostProcessing = true;
             dadosCam.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
@@ -198,6 +226,10 @@ namespace ZombieCityCleaner.EditorTools
             arma.modelos = modelosFP; arma.animadores = animadoresFP; arma.bocas = bocasFP;
             lanterna.rede = rede; lanterna.luz = luz;
             inventario.icones = Enumerable.Range(0, n).Select(i => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDo(i))).ToArray();
+            inventario.fotos = Enumerable.Range(0, n).Select(i => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDo(i))).ToArray();
+            tela.rede = rede; tela.inventario = inventario; tela.arma = arma;
+            tela.materialDoRetrato = MaterialDoRetrato();
+            NomearCamada(JogadorRede.CamadaRetrato, "Retrato");
             passos.rede = rede;
 
             var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, PrefabJogador);

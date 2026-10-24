@@ -23,8 +23,7 @@ namespace ZombieCityCleaner.Loot
     /// Os itens soltos pelo mundo: a comida e a água espalhadas pelas casas e pelo prédio, e o que os jogadores largam
     /// (armas também). Uma lista só na rede (o anfitrião manda), e cada cópia monta os objetos dela: a malha do item, em
     /// pé (a lata e a garrafa) ou deitada de lado (as armas), e o colisor que a mira procura (<see cref="ItemNoChaoNaMira"/>).
-    /// Pegar (E) vai para o anfitrião, que confere a distância e põe o item no inventário (com tudo cheio, troca pelo da
-    /// mão, que fica no lugar dele).
+    /// Pegar (E) vai para o anfitrião, que confere a distância e põe o item na mochila (sem espaço, ele fica no chão).
     /// Os lugares do começo vêm da montagem da cidade (os tampos das mesas, balcões, cômodas e criados-mudos, e o chão),
     /// cada um já com o item dele.
     /// </summary>
@@ -103,17 +102,8 @@ namespace ZombieCityCleaner.Loot
             if (inventario == null || k < 0) return;
             var it = _itens[k];
             if ((cliente.PlayerObject.transform.position - it.apoio).sqrMagnitude > distanciaMaxima * distanciaMaxima) return;
-            int lugar = inventario.LugarParaReceber();
-            if (lugar >= 0)
-            {
-                inventario.Por(lugar, it.item);
-                _itens.RemoveAt(k);
-                return;
-            }
-            // tudo cheio: o da mão fica no lugar do que foi pego
-            var naMao = inventario.NaMao;
-            inventario.Por(inventario.Escolhido.Value, it.item);
-            _itens[k] = new ItemNoChao { id = it.id, item = naMao, apoio = it.apoio, giro = it.giro };
+            // sem espaço na mochila, ele fica no chão (a dica avisa)
+            if (inventario.Receber(it.item)) _itens.RemoveAt(k);
         }
 
         int Indice(ushort id)
@@ -217,8 +207,7 @@ namespace ZombieCityCleaner.Loot
         {
             var inventario = quem.Inventario;
             if (inventario == null || mundo.Do(id) == Item.Nada) return null;
-            if (inventario.LugarParaReceber() >= 0) return $"[E] Pegar {Itens.NomeComArtigo(item)}";
-            return $"[E] Trocar {Itens.NomeComArtigo(inventario.NaMao)} {Itens.Pelo(item)}";
+            return inventario.TemEspaco(item) ? $"[E] Pegar {Itens.NomeComArtigo(item)}" : $"Sem espaço na mochila para {Itens.NomeComArtigo(item)}";
         }
 
         public override void Usar(ArmaJogador quem) => mundo.PedirPegar(id, quem.Inventario);

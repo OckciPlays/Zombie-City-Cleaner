@@ -99,8 +99,9 @@ namespace ZombieCityCleaner.World
             }
             if (volumeDia != null) volumeDia.weight = 1f - n;
             if (volumeNoite != null) volumeNoite.weight = n;
+            // o fundo das câmeras do mundo é a neblina (as que desenham numa textura, como o retrato do inventário, não)
             foreach (var cam in Camera.allCameras)
-                if (cam.clearFlags == CameraClearFlags.SolidColor) cam.backgroundColor = neblina;
+                if (cam.clearFlags == CameraClearFlags.SolidColor && cam.targetTexture == null) cam.backgroundColor = neblina;
 
             float alturaFixa = Mathf.Lerp(dia.neblinaDeAltura, noite.neblinaDeAltura, n) * neblinaAqui;
             Shader.SetGlobalColor(CorId, new Color(neblina.r * 1.05f, neblina.g * 1.05f, neblina.b * 1.08f, 1f));

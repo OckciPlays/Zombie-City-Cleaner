@@ -1,114 +1,202 @@
+using System;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using Random = UnityEngine.Random;
 
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// O inventário do jogador: 3 lugares, cada um com uma arma, uma lata de comida ou uma garrafa de água. O do lugar
-    /// escolhido fica na mão. A roda do mouse passa pelos lugares ocupados e pela mão vazia, se houver um lugar vazio
-    /// (para baixo, o próximo), e 1, 2 e 3 escolhem um lugar (um vazio deixa as mãos vazias). G larga o que está na mão: no tampo para onde a mira aponta, se estiver
-    /// perto (a mesa do depósito do bunker, por exemplo), senão no chão à frente.
-    /// Pegar (E, num item do chão ou numa arma do painel) põe o item na mão, se ela estiver vazia, ou no primeiro lugar
-    /// livre; com tudo cheio, ele troca de lugar com o da mão. A arma pega vai para a mão.
-    /// O conteúdo é do anfitrião (pegar, largar, comer e o painel passam por ele); o lugar escolhido é do dono.
-    /// Na tela: os 3 lugares embaixo, no meio, com o ícone de cada coisa.
+    /// Um item na mochila: o Id (único na mochila), o que é, a célula de cima, à esquerda, que ele ocupa e se está girado
+    /// (90°: a largura e a altura trocam).
+    /// </summary>
+    public struct ItemNaMochila : INetworkSerializeByMemcpy, IEquatable<ItemNaMochila>
+    {
+        public ushort id;
+        public Item item;
+        public byte x, y;
+        public bool girado;
+
+        /// <summary>As células que ele ocupa, com o giro.</summary>
+        public Vector2Int Tamanho => InventarioJogador.TamanhoNaGrade(item, girado);
+
+        public bool Equals(ItemNaMochila o) => id == o.id && item == o.item && x == o.x && y == o.y && girado == o.girado;
+    }
+
+    /// <summary>
+    /// O inventário do jogador:
+    /// - a mochila: uma grade de <see cref="Colunas"/> × <see cref="Linhas"/> células, e cada item ocupa as dele
+    ///   (<see cref="Itens.Tamanho"/>: a sniper 7 × 2, a lata 1), deitado ou girado 90° (a tela gira com R). Sem pilhas.
+    ///   O que é pego entra na primeira posição em que couber (de cima para baixo, da esquerda para a direita; se não
+    ///   couber deitado, girado); sem espaço, não entra;
+    /// - a barra de atalhos: 3 lugares, cada um apontando para um item da mochila (o item continua nela). O do lugar
+    ///   escolhido fica na mão; um lugar vazio deixa a mão vazia (os punhos). A roda passa pelos 3, vazios ou não, 1, 2 e
+    ///   3 escolhem, G larga o da mão.
+    /// A arma pega vai para um atalho livre e para a mão; o que é pego com a mão vazia vai para a mão.
+    /// A mochila é do anfitrião (pegar, largar, comer, mover e o painel de armas passam por ele); os atalhos e o lugar
+    /// escolhido são do dono. A tela da mochila (TAB) é a <see cref="TelaDoInventario"/>; aqui fica a barra do HUD.
     /// </summary>
     public class InventarioJogador : NetworkBehaviour
     {
-        public const int Lugares = 3;
+        public const int Atalhos = 3, Colunas = 9, Linhas = 6;
 
-        [Tooltip("Os ícones, na ordem de Itens.Modelos (as armas, a lata e a garrafa).")]
+        [Tooltip("Os ícones coloridos, na ordem de Itens.Modelos (as armas, a lata e a garrafa).")]
         public Texture2D[] icones;
+        [Tooltip("A foto de cada modelo, na mesma ordem (os detalhes da tela do inventário).")]
+        public Texture2D[] fotos;
 
-        /// <summary>Os 3 lugares, um byte cada (<see cref="Item"/>). O jogador nasce com a pistola no primeiro.</summary>
-        public readonly NetworkVariable<int> Conteudo = new((int)Item.Pistola, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        /// <summary>O lugar da mão (0 a 2).</summary>
+        /// <summary>A mochila (escrita pelo anfitrião). O jogador nasce com a pistola, no primeiro atalho.</summary>
+        public NetworkList<ItemNaMochila> Mochila { get; private set; }
+        // os 3 atalhos, 16 bits cada (o Id do item na mochila; 0 = vazio), escritos pelo dono
+        readonly NetworkVariable<long> _atalhos = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>O atalho da mão (0 a 2).</summary>
         public readonly NetworkVariable<byte> Escolhido = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-        public Item this[int lugar] => Ler(Conteudo.Value, lugar);
-        public Item NaMao => this[Escolhido.Value];
+        /// <summary>O Id do item de um atalho (0, vazio; pode apontar para um item que acabou de sair da mochila).</summary>
+        public ushort Atalho(int lugar) => Ler(_atalhos.Value, lugar);
+        /// <summary>O item de um atalho (Nada, vazio).</summary>
+        public Item this[int lugar] => Do(Atalho(lugar));
+        public Item NaMao => Do(Atalho(Escolhido.Value));
+        /// <summary>O Id do item da mão (0, a mão vazia).</summary>
+        public ushort IdNaMao => NaMao == Item.Nada ? (ushort)0 : Atalho(Escolhido.Value);
 
-        /// <summary>O conteúdo ou o lugar da mão mudou (em todas as cópias).</summary>
-        public event System.Action Mudou;
+        /// <summary>A mochila, os atalhos ou o atalho da mão mudaram (em todas as cópias).</summary>
+        public event Action Mudou;
 
         // o raio de largar não vê o próprio jogador, os braços, os zumbis, os corpos e o Ignore Raycast
         const int MascaraDoCenario = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
 
         ArmaJogador _arma;
         JogadorRede _rede;
+        TelaDoInventario _tela;
         float _pegouAte, _nomeAte;
-        int _consumindo = -1, _voltarPara = -1;
+        ushort _proximoId = 1, _consumindo, _voltarPara;
+
+        void Awake() => Mochila = new NetworkList<ItemNaMochila>();
 
         public override void OnNetworkSpawn()
         {
             _arma = GetComponent<ArmaJogador>();
             _rede = GetComponent<JogadorRede>();
-            Conteudo.OnValueChanged += AoMudarConteudo;
+            _tela = GetComponent<TelaDoInventario>();
+            Mochila.OnListChanged += AoMudarMochila;
+            _atalhos.OnValueChanged += AoMudarAtalhos;
             Escolhido.OnValueChanged += AoMudarEscolhido;
+            if (IsServer)
+            {
+                Mochila.Clear();
+                Receber(Item.Pistola);
+            }
+            // a pistola do começo no primeiro atalho
+            if (IsOwner && _atalhos.Value == 0 && Mochila.Count > 0) _atalhos.Value = Mochila[0].id;
+            Mudou?.Invoke();
         }
 
         public override void OnNetworkDespawn()
         {
-            Conteudo.OnValueChanged -= AoMudarConteudo;
+            Mochila.OnListChanged -= AoMudarMochila;
+            _atalhos.OnValueChanged -= AoMudarAtalhos;
             Escolhido.OnValueChanged -= AoMudarEscolhido;
         }
 
-        static Item Ler(int conteudo, int lugar) => (Item)((conteudo >> (8 * lugar)) & 0xFF);
-        static int Gravar(int conteudo, int lugar, Item item) => (conteudo & ~(0xFF << (8 * lugar))) | ((int)item << (8 * lugar));
+        static ushort Ler(long atalhos, int lugar) => (ushort)((atalhos >> (16 * lugar)) & 0xFFFF);
+        static long Gravar(long atalhos, int lugar, ushort id) => (atalhos & ~(0xFFFFL << (16 * lugar))) | ((long)id << (16 * lugar));
 
-        void AoMudarConteudo(int antes, int depois)
+        /// <summary>O item da mochila com este Id (Nada, se não está nela).</summary>
+        public Item Do(ushort id) => id != 0 && Achar(id, out var it) ? it.item : Item.Nada;
+
+        public bool Achar(ushort id, out ItemNaMochila item)
         {
-            if (IsOwner)
-            {
-                int ir = -1;
-                for (int i = 0; i < Lugares; i++)
-                {
-                    Item a = Ler(antes, i), d = Ler(depois, i);
-                    if (a == d) continue;
-                    // o que o jogador acabou de pegar vai para a mão se for uma arma, ou se a mão estava vazia
-                    if (a == Item.Nada && d != Item.Nada && Time.time < _pegouAte && (Itens.EhArma(d) || Ler(antes, Escolhido.Value) == Item.Nada))
-                        ir = i;
-                    // acabou de comer ou beber: a mão volta para a última arma
-                    if (i == _consumindo && d == Item.Nada)
-                    {
-                        if (Escolhido.Value == i && _voltarPara >= 0 && Itens.EhArma(Ler(depois, _voltarPara))) ir = _voltarPara;
-                        _consumindo = -1;
-                    }
-                }
-                if (ir >= 0 && ir != Escolhido.Value) Escolhido.Value = (byte)ir;   // avisa (Mudou) já com o lugar novo
-            }
-            Mudou?.Invoke();
+            int k = Indice(id);
+            item = k >= 0 ? Mochila[k] : default;
+            return k >= 0;
         }
 
-        void AoMudarEscolhido(byte antes, byte depois)
+        int Indice(ushort id)
         {
-            _nomeAte = Time.time + 1.6f;
-            Mudou?.Invoke();
-        }
-
-        /// <summary>O dono vai pedir para pegar algo: o que chegar logo depois pode ir para a mão.</summary>
-        public void AvisarQuePegou() => _pegouAte = Time.time + 2f;
-
-        /// <summary>
-        /// O lugar onde entra o que o jogador pegar: o da mão, se estiver vazio; senão, o primeiro livre; -1 com tudo
-        /// cheio.
-        /// </summary>
-        public int LugarParaReceber()
-        {
-            if (NaMao == Item.Nada) return Escolhido.Value;
-            for (int i = 0; i < Lugares; i++)
-                if (this[i] == Item.Nada) return i;
+            for (int i = 0; i < Mochila.Count; i++)
+                if (Mochila[i].id == id) return i;
             return -1;
         }
 
-        /// <summary>Só no anfitrião: põe um item num lugar (Nada esvazia).</summary>
-        public void Por(int lugar, Item item)
+        /// <summary>O atalho que aponta para o item (-1, nenhum).</summary>
+        public int LugarDoAtalho(ushort id)
         {
-            if (IsServer && lugar >= 0 && lugar < Lugares) Conteudo.Value = Gravar(Conteudo.Value, lugar, item);
+            for (int i = 0; id != 0 && i < Atalhos; i++)
+                if (Atalho(i) == id) return i;
+            return -1;
+        }
+
+        // ------------------------------------------------------------------ a grade
+
+        /// <summary>As células que o item ocupa na grade: as dele, ou trocadas, girado.</summary>
+        public static Vector2Int TamanhoNaGrade(Item item, bool girado)
+        {
+            var t = Itens.Tamanho(item);
+            return girado ? new Vector2Int(t.y, t.x) : t;
+        }
+
+        /// <summary>
+        /// O item cabe (girado ou não) com o canto de cima, à esquerda, nesta célula, sem contar o item 'ignorar' (o que
+        /// se move).
+        /// </summary>
+        public bool Cabe(Item item, bool girado, int x, int y, ushort ignorar = 0)
+        {
+            var t = TamanhoNaGrade(item, girado);
+            if (t.x <= 0 || x < 0 || y < 0 || x + t.x > Colunas || y + t.y > Linhas) return false;
+            for (int i = 0; i < Mochila.Count; i++)
+            {
+                var o = Mochila[i];
+                if (o.id == ignorar) continue;
+                var s = o.Tamanho;
+                if (x < o.x + s.x && o.x < x + t.x && y < o.y + s.y && o.y < y + t.y) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// A primeira posição em que o item cabe (de cima para baixo, da esquerda para a direita), deitado; se não houver,
+        /// girado.
+        /// </summary>
+        public bool Espaco(Item item, out int x, out int y, out bool girado)
+        {
+            var t = Itens.Tamanho(item);
+            for (int g = 0; g < (t.x != t.y ? 2 : 1); g++)
+            {
+                girado = g == 1;
+                for (y = 0; y < Linhas; y++)
+                    for (x = 0; x < Colunas; x++)
+                        if (Cabe(item, girado, x, y)) return true;
+            }
+            x = y = -1;
+            girado = false;
+            return false;
+        }
+
+        public bool TemEspaco(Item item) => Espaco(item, out _, out _, out _);
+
+        // ------------------------------------------------------------------ no anfitrião
+
+        /// <summary>Só no anfitrião: o item entra na primeira posição em que cabe (deitado, ou girado). Sem espaço, devolve false.</summary>
+        public bool Receber(Item item)
+        {
+            if (!IsServer || item == Item.Nada || !Espaco(item, out int x, out int y, out bool girado)) return false;
+            Mochila.Add(new ItemNaMochila { id = _proximoId, item = item, x = (byte)x, y = (byte)y, girado = girado });
+            _proximoId = (ushort)(_proximoId == ushort.MaxValue ? 1 : _proximoId + 1);
+            return true;
+        }
+
+        /// <summary>Só no anfitrião: tira o item da mochila e devolve o que ele era (Nada, se não estava).</summary>
+        public Item Tirar(ushort id)
+        {
+            int k = IsServer ? Indice(id) : -1;
+            if (k < 0) return Item.Nada;
+            var item = Mochila[k].item;
+            Mochila.RemoveAt(k);
+            return item;
         }
 
         /// <summary>
@@ -117,45 +205,146 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public void Esvaziar()
         {
-            for (int i = 0; i < Lugares; i++)
+            for (int i = 0; i < Mochila.Count; i++)
             {
-                var item = this[i];
+                var item = Mochila[i].item;
                 if (Itens.EhArma(item)) ParedeDeArmas.Instancia?.Devolver(Itens.Arma(item));
                 else if (Itens.EhConsumivel(item) && ItensNoMundo.Instancia != null)
-                    ItensNoMundo.Instancia.Criar(item, transform.position + Quaternion.Euler(0f, i * 120f, 0f) * Vector3.forward * 0.3f, i * 90f);
+                    ItensNoMundo.Instancia.Criar(item, transform.position + Quaternion.Euler(0f, i * 75f, 0f) * Vector3.forward * 0.35f, i * 90f);
             }
         }
 
-        /// <summary>
-        /// O dono terminou de comer ou beber o item do lugar: ele acaba, e a fome e a sede caem. Depois, a mão volta para
-        /// o lugar da última arma (se ela ainda estiver lá).
-        /// </summary>
-        public void Consumir(int lugar, int voltarPara)
+        [Rpc(SendTo.Server)]
+        void MoverRpc(ushort id, byte x, byte y, bool girado, RpcParams parametros = default)
         {
-            _consumindo = lugar;
-            _voltarPara = voltarPara;
-            ConsumirRpc((byte)lugar);
+            int k = Indice(id);
+            if (parametros.Receive.SenderClientId != OwnerClientId || k < 0) return;
+            var it = Mochila[k];
+            if ((it.x == x && it.y == y && it.girado == girado) || !Cabe(it.item, girado, x, y, id)) return;
+            it.x = x;
+            it.y = y;
+            it.girado = girado;
+            Mochila[k] = it;
         }
 
         [Rpc(SendTo.Server)]
-        void ConsumirRpc(byte lugar, RpcParams parametros = default)
+        void ConsumirRpc(ushort id, RpcParams parametros = default)
         {
-            if (parametros.Receive.SenderClientId != OwnerClientId || lugar >= Lugares) return;
-            var item = this[lugar];
-            if (!Itens.EhConsumivel(item)) return;
-            Por(lugar, Item.Nada);
+            if (parametros.Receive.SenderClientId != OwnerClientId || !Itens.EhConsumivel(Do(id))) return;
+            var item = Tirar(id);
             GetComponent<FomeESede>().Consumir(Itens.Consumivel(item));
         }
 
         [Rpc(SendTo.Server)]
-        void LargarRpc(byte lugar, Vector3 ponto, float giro, RpcParams parametros = default)
+        void LargarRpc(ushort id, Vector3 ponto, float giro, RpcParams parametros = default)
         {
-            if (parametros.Receive.SenderClientId != OwnerClientId || lugar >= Lugares) return;
-            var item = this[lugar];
-            if (item == Item.Nada || ItensNoMundo.Instancia == null) return;
+            if (parametros.Receive.SenderClientId != OwnerClientId || ItensNoMundo.Instancia == null) return;
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
-            Por(lugar, Item.Nada);
-            ItensNoMundo.Instancia.Criar(item, ponto, giro);
+            var item = Tirar(id);
+            if (item != Item.Nada) ItensNoMundo.Instancia.Criar(item, ponto, giro);
+        }
+
+        // ------------------------------------------------------------------ no dono
+
+        /// <summary>O dono vai pedir para pegar algo: o que chegar logo depois pode ir para a mão.</summary>
+        public void AvisarQuePegou() => _pegouAte = Time.time + 2f;
+
+        /// <summary>Move o item para outra posição da grade, girado ou não (o anfitrião confere se cabe).</summary>
+        public void Mover(ushort id, int x, int y, bool girado)
+        {
+            if (x >= 0 && y >= 0 && x < Colunas && y < Linhas) MoverRpc(id, (byte)x, (byte)y, girado);
+        }
+
+        /// <summary>Põe o item num atalho (se ele já estava em outro, sai de lá).</summary>
+        public void PorNoAtalho(int lugar, ushort id)
+        {
+            if (lugar < 0 || lugar >= Atalhos || Do(id) == Item.Nada || _arma.Usando) return;
+            long a = _atalhos.Value;
+            for (int i = 0; i < Atalhos; i++)
+                if (Ler(a, i) == id) a = Gravar(a, i, 0);
+            _atalhos.Value = Gravar(a, lugar, id);
+        }
+
+        public void TirarDoAtalho(int lugar)
+        {
+            if (lugar >= 0 && lugar < Atalhos && !_arma.Usando) _atalhos.Value = Gravar(_atalhos.Value, lugar, 0);
+        }
+
+        public void TrocarAtalhos(int de, int para)
+        {
+            if (de == para || de < 0 || para < 0 || de >= Atalhos || para >= Atalhos || _arma.Usando) return;
+            long a = _atalhos.Value;
+            ushort x = Ler(a, de), y = Ler(a, para);
+            _atalhos.Value = Gravar(Gravar(a, de, y), para, x);
+        }
+
+        /// <summary>Larga o item: no tampo para onde a mira aponta, se estiver perto, senão no chão à frente.</summary>
+        public void Largar(ushort id)
+        {
+            if (Do(id) == Item.Nada || (_arma.Usando && id == IdNaMao)) return;
+            LargarRpc(id, PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
+        }
+
+        /// <summary>
+        /// O dono terminou de comer ou beber o item: ele acaba, e a fome e a sede caem. Depois, a mão volta para o
+        /// atalho da última arma (se ela ainda estiver num).
+        /// </summary>
+        public void Consumir(ushort id, ushort voltarPara)
+        {
+            _consumindo = id;
+            _voltarPara = voltarPara;
+            ConsumirRpc(id);
+        }
+
+        void AoMudarMochila(NetworkListEvent<ItemNaMochila> e)
+        {
+            if (IsOwner)
+            {
+                long a = _atalhos.Value;
+                int escolher = -1;
+                // o atalho de um item que saiu da mochila fica vazio; se era o que acabou de ser comido, a mão volta
+                // para a última arma
+                for (int i = 0; i < Atalhos; i++)
+                {
+                    ushort id = Ler(a, i);
+                    if (id == 0 || Do(id) != Item.Nada) continue;
+                    a = Gravar(a, i, 0);
+                    if (id == _consumindo && i == Escolhido.Value)
+                    {
+                        for (int k = 0; k < Atalhos; k++)
+                            if (_voltarPara != 0 && Ler(a, k) == _voltarPara) escolher = k;
+                        _consumindo = 0;
+                    }
+                }
+                // o que o jogador acabou de pegar: com a mão vazia, vai para a mão; uma arma vai para um atalho livre
+                // (e para a mão)
+                if (e.Type == NetworkListEvent<ItemNaMochila>.EventType.Add && Time.time < _pegouAte)
+                {
+                    _pegouAte = 0f;
+                    int lugar = -1;
+                    if (Ler(a, Escolhido.Value) == 0) lugar = Escolhido.Value;
+                    else if (Itens.EhArma(e.Value.item))
+                        for (int i = Atalhos - 1; i >= 0; i--)
+                            if (Ler(a, i) == 0) lugar = i;
+                    if (lugar >= 0)
+                    {
+                        a = Gravar(a, lugar, e.Value.id);
+                        escolher = lugar;
+                    }
+                }
+                if (a != _atalhos.Value) _atalhos.Value = a;
+                if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
+            }
+            Mudou?.Invoke();
+        }
+
+        void AoMudarAtalhos(long antes, long depois) => Mudou?.Invoke();
+
+        void AoMudarEscolhido(byte antes, byte depois)
+        {
+            _nomeAte = Time.time + 1.6f;
+            Mudou?.Invoke();
         }
 
         void Update()
@@ -177,30 +366,11 @@ namespace ZombieCityCleaner.Player
                 if (roda != 0f) escolher = Proximo(roda < 0f ? 1 : -1);
             }
             if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
-            if (teclado != null && teclado.gKey.wasPressedThisFrame) Largar();
+            if (teclado != null && teclado.gKey.wasPressedThisFrame) Largar(IdNaMao);
         }
 
-        // o próximo lugar naquele sentido (-1 se não há outro): os ocupados e um vazio só, a mão vazia (o da mão, se ele
-        // estiver vazio, senão o primeiro vazio; com tudo cheio, não tem)
-        int Proximo(int sentido)
-        {
-            int vazio = NaMao == Item.Nada ? Escolhido.Value : -1;
-            for (int i = 0; i < Lugares && vazio < 0; i++)
-                if (this[i] == Item.Nada) vazio = i;
-            for (int k = 1; k < Lugares; k++)
-            {
-                int i = ((Escolhido.Value + sentido * k) % Lugares + Lugares) % Lugares;
-                if (this[i] != Item.Nada || i == vazio) return i;
-            }
-            return -1;
-        }
-
-        void Largar()
-        {
-            if (NaMao == Item.Nada) return;
-            LargarRpc(Escolhido.Value, PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
-            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
-        }
+        // o próximo atalho naquele sentido, vazio ou não (um vazio deixa a mão vazia)
+        int Proximo(int sentido) => ((Escolhido.Value + sentido) % Atalhos + Atalhos) % Atalhos;
 
         // olhando para um tampo perto (uma mesa, um balcão, o chão logo ali): ali mesmo. Senão, no chão à frente, sem
         // atravessar a parede
@@ -216,18 +386,33 @@ namespace ZombieCityCleaner.Player
             return transform.position;
         }
 
+        /// <summary>O ícone colorido do item (null, nada).</summary>
+        public Texture2D IconeDe(Item item)
+        {
+            int m = Itens.Modelo(item);
+            return m >= 0 && icones != null && m < icones.Length ? icones[m] : null;
+        }
+
+        public Texture2D FotoDe(Item item)
+        {
+            int m = Itens.Modelo(item);
+            return m >= 0 && fotos != null && m < fotos.Length ? fotos[m] : null;
+        }
+
+        // a barra de atalhos, embaixo, no meio (com a tela do inventário aberta, ela fica lá dentro)
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || (_tela != null && _tela.Aberta)) return;
             float u = Screen.height / 720f;
             float w = 112 * u, h = 56 * u, vao = 8 * u;
-            float x0 = (Screen.width - (w * Lugares + vao * (Lugares - 1))) / 2f, y = Screen.height - h - 16 * u;
+            float x0 = (Screen.width - (w * Atalhos + vao * (Atalhos - 1))) / 2f, y = Screen.height - h - 16 * u;
             var numero = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(12 * u), fontStyle = FontStyle.Bold };
-            for (int i = 0; i < Lugares; i++)
+            for (int i = 0; i < Atalhos; i++)
             {
                 float x = x0 + i * (w + vao);
                 bool escolhido = i == Escolhido.Value;
-                Retangulo(x, y, w, h, escolhido ? new Color(0.17f, 0.16f, 0.14f, 0.78f) : new Color(0f, 0f, 0f, 0.45f));
+                // o fundo claro: as armas do ícone são escuras
+                Retangulo(x, y, w, h, escolhido ? new Color(0.5f, 0.5f, 0.47f, 0.82f) : new Color(0.36f, 0.36f, 0.34f, 0.6f));
                 if (escolhido)
                 {
                     float b = Mathf.Max(1f, Mathf.Round(2 * u));
@@ -235,12 +420,12 @@ namespace ZombieCityCleaner.Player
                     Retangulo(x, y, w, b, cor); Retangulo(x, y + h - b, w, b, cor);
                     Retangulo(x, y, b, h, cor); Retangulo(x + w - b, y, b, h, cor);
                 }
-                int m = Itens.Modelo(this[i]);
-                if (m >= 0 && icones != null && m < icones.Length && icones[m] != null)
+                var icone = IconeDe(this[i]);
+                if (icone != null)
                 {
                     var antes = GUI.color;
-                    GUI.color = new Color(1f, 1f, 1f, escolhido ? 1f : 0.55f);
-                    GUI.DrawTexture(new Rect(x + 6 * u, y + 5 * u, w - 12 * u, h - 10 * u), icones[m], ScaleMode.ScaleToFit);
+                    GUI.color = new Color(1f, 1f, 1f, escolhido ? 1f : 0.8f);
+                    GUI.DrawTexture(new Rect(x + 6 * u, y + 5 * u, w - 12 * u, h - 10 * u), icone, ScaleMode.ScaleToFit);
                     GUI.color = antes;
                 }
                 numero.normal.textColor = escolhido ? new Color(0.95f, 0.92f, 0.8f) : new Color(0.7f, 0.68f, 0.62f, 0.8f);

@@ -7,10 +7,9 @@ namespace ZombieCityCleaner.Combat
 {
     /// <summary>
     /// O painel de armas do salão do bunker: cada arma tem o seu lugar (as 4 longas e 4 pistolas), em pé, com o lado
-    /// esquerdo para fora. Quem mira uma arma de perto e aperta E pega ela: vai para a mão, se estiver vazia, ou para um
-    /// lugar livre do inventário (<see cref="InventarioJogador"/>). Com o inventário cheio, ela troca pela arma da mão,
-    /// que volta para uma vaga livre do tipo dela (se não houver, fica no lugar da que foi pega). Mirando uma vaga vazia
-    /// com a arma dela na mão, E guarda a arma.
+    /// esquerdo para fora. Quem mira uma arma de perto e aperta E pega ela: vai para a mochila
+    /// (<see cref="InventarioJogador"/>), se couber, e para um atalho livre e a mão. Sem espaço na mochila, ela fica (a
+    /// dica avisa). Mirando uma vaga vazia com a arma dela na mão, E guarda a arma.
     /// Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e muda as vagas e o inventário. Quem sai
     /// da partida devolve as armas.
     /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas.
@@ -82,27 +81,12 @@ namespace ZombieCityCleaner.Combat
             {
                 // guardar: só a arma desta vaga
                 if (!Itens.EhArma(naMao) || Itens.Arma(naMao) != vagas[indice].dono) return;
+                inventario.Tirar(inventario.IdNaMao);
                 _conteudo.Value = Gravar(_conteudo.Value, indice, Itens.Arma(naMao));
-                inventario.Por(inventario.Escolhido.Value, Item.Nada);
                 return;
             }
-            var nova = Itens.DaArma(naVaga.Value);
-            long c = Gravar(_conteudo.Value, indice, null);
-            int lugar = inventario.LugarParaReceber();
-            if (lugar >= 0)
-            {
-                _conteudo.Value = c;
-                inventario.Por(lugar, nova);
-            }
-            else if (Itens.EhArma(naMao))
-            {
-                // tudo cheio: a arma da mão volta para uma vaga do tipo dela (ou fica no lugar desta)
-                var tipo = Itens.Arma(naMao);
-                int casa = VagaLivre(c, tipo);
-                _conteudo.Value = Gravar(c, casa >= 0 ? casa : indice, tipo);
-                inventario.Por(inventario.Escolhido.Value, nova);
-            }
-            // tudo cheio e comida ou água na mão: nada (a dica avisa)
+            // pegar: só se couber na mochila (sem espaço, nada; a dica avisa)
+            if (inventario.Receber(Itens.DaArma(naVaga.Value))) _conteudo.Value = Gravar(_conteudo.Value, indice, null);
         }
 
         /// <summary>No anfitrião: a arma de quem saiu da partida volta para uma vaga livre do tipo dela (se houver).</summary>
