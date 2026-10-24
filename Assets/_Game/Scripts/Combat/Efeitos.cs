@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
     /// Efeitos de tiro compartilhados: clarão do cano (luz rápida + brilho), faíscas no impacto e sons gerados por
-    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna). O tiro de cada arma vem do
-    /// <see cref="SomDeTiro"/>, em variações.
+    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna, e a porta e os interruptores
+    /// do bunker). O tiro de cada arma vem do <see cref="SomDeTiro"/>, em variações.
+    /// Com a porta do bunker fechada, o som de um lado não chega do outro (<see cref="BunkerRede.Isolado"/>).
     /// Fica num objeto da cena, com os materiais das partículas.
     /// </summary>
     public class Efeitos : MonoBehaviour
@@ -18,6 +20,11 @@ namespace ZombieCityCleaner.Combat
         /// <summary>As variações do tiro de cada arma (na ordem de <see cref="TipoDeArma"/>).</summary>
         public static AudioClip[][] Tiros;
         public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna, Ferrolho, LunetaEntra, LunetaSai;
+        /// <summary>
+        /// A porta do bunker (<see cref="SomDaPorta"/>): o volante e as trancas soltando, a folha abrindo, a folha fechando
+        /// e a batida no batente com a tranca; e o interruptor.
+        /// </summary>
+        public static AudioClip PortaDestranca, PortaAbrindo, PortaFechando, PortaBatida, Chave;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
         ParticleSystem _faiscas, _poeira;
@@ -44,6 +51,11 @@ namespace ZombieCityCleaner.Combat
             // a luneta: o pano da manga roçando e a borracha da ocular encostando no rosto; ao sair, só um roçar curto
             LunetaEntra = Gerar("Luneta entra", 0.22f, (t, r) => Arrasto(t, r, 0f, 0.14f) * 0.8f + Golpe(t, r, 0.15f, 0.25f));
             LunetaSai = Gerar("Luneta sai", 0.14f, (t, r) => Arrasto(t, r, 0f, 0.1f) * 0.6f + Golpe(t, r, 0.02f, 0.12f));
+            PortaDestranca = SomDaPorta.Clip("Porta destranca", SomDaPorta.Destranca(11));
+            PortaAbrindo = SomDaPorta.Clip("Porta abrindo", SomDaPorta.Abrindo(12));
+            PortaFechando = SomDaPorta.Clip("Porta fechando", SomDaPorta.Fechando(13));
+            PortaBatida = SomDaPorta.Clip("Porta bate", SomDaPorta.Batida(14));
+            Chave = Gerar("Interruptor", 0.07f, (t, r) => Golpe(t, r, 0f, 0.45f) + Golpe(t, r, 0.012f, 0.3f));
             for (int i = 0; i < 24; i++)
             {
                 var go = new GameObject("Som");
@@ -114,11 +126,13 @@ namespace ZombieCityCleaner.Combat
         public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f)
         {
             if (_instancia == null || clip == null) return;
+            var cam = Camera.main;
+            // a porta do bunker fechada separa quem ouve do som
+            if (espacial && cam != null && BunkerRede.Isolado(cam.transform.position, posicao)) return;
             var s = _instancia._fontes.Dequeue(); _instancia._fontes.Enqueue(s);
             s.transform.position = posicao;
             s.spatialBlend = espacial ? 1f : 0f;
             s.maxDistance = alcance;
-            var cam = Camera.main;
             float longe = espacial && cam != null ? Mathf.Clamp01(Vector3.Distance(cam.transform.position, posicao) / alcance) : 0f;
             s.GetComponent<AudioLowPassFilter>().cutoffFrequency = 22000f * Mathf.Pow(0.08f, longe);
             s.pitch = Random.Range(0.94f, 1.06f);

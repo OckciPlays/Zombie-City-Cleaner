@@ -299,7 +299,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
                 float d2 = (z.transform.position - ponto).sqrMagnitude;
-                if (d2 > raio2) continue;
+                if (d2 > raio2 || BunkerRede.Isolado(ponto, z.transform.position)) continue;   // a porta do bunker fechada
                 if (d2 < direto2 && autor != null) z.ComecarPerseguicao(autor, agora);
                 else
                 {
@@ -527,10 +527,14 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        /// <summary>Só geme quem está perto de quem escuta, e no máximo três vozes novas por segundo.</summary>
+        /// <summary>
+        /// Só geme quem está perto de quem escuta (e do mesmo lado da porta do bunker, se ela está fechada), e no máximo
+        /// três vozes novas por segundo.
+        /// </summary>
         internal bool PodeGemer(Vector3 ponto)
         {
-            if ((ponto - PontoDeVista()).sqrMagnitude > 25f * 25f) return false;
+            var ouvido = PontoDeVista();
+            if ((ponto - ouvido).sqrMagnitude > 25f * 25f || BunkerRede.Isolado(ouvido, ponto)) return false;
             if (Time.time - _segundoDosGemidos > 1f)
             {
                 _segundoDosGemidos = Time.time;

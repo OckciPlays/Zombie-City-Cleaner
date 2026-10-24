@@ -13,9 +13,9 @@ namespace ZombieCityCleaner.EditorTools
     /// <summary>
     /// As armas (ajustes antes da Parte 7, fatia 3): a importação dos braços de primeira pessoa de cada arma, das
     /// animações de arma longa do corpo e das armas avulsas; as malhas das armas; o Animator dos braços e os override de
-    /// cada arma; o prefab do jogador (pela <see cref="MontagemDaRede"/>) e o suporte de armas do bunker na cena.
-    /// Menu: Zombie City Cleaner > Montar armas. Pode rodar de novo (o suporte precisa da cidade montada, com o móvel
-    /// "Suporte_Armas" no bunker).
+    /// cada arma; o prefab do jogador (pela <see cref="MontagemDaRede"/>) e o painel de armas do bunker na cena.
+    /// Menu: Zombie City Cleaner > Montar armas. Pode rodar de novo (o painel precisa da cidade montada, com o móvel
+    /// "Painel_Armas" no salão do bunker).
     /// </summary>
     public static class MontagemDasArmas
     {
@@ -30,10 +30,18 @@ namespace ZombieCityCleaner.EditorTools
         static readonly string[] ClipesFP = { "Idle", "Walk", "Run", "Fire", "DryFire", "Reload", "Sacar" };
         static readonly string[] ClipesTP = { "Idle", "Walk", "Run", "Aim", "Fire" };
         static readonly string[] EmLaco = { "Idle", "Walk", "Run", "Aim" };
-        /// <summary>O topo de cada prateleira do suporte, do chão (o ALTURAS_DO_SUPORTE do cidade_moveis.py).</summary>
-        static readonly float[] AlturasDoSuporte = { 0.62f, 0.97f, 1.32f, 1.67f };
-        /// <summary>A frente do painel do suporte, a partir da parede.</summary>
-        const float FrenteDoSuporte = 0.03f;
+        /// <summary>
+        /// As vagas do painel de armas (o VAGAS_DO_PAINEL do cidade_moveis.py): a arma de cada uma, o x (do painel, na
+        /// Unity) e a altura do apoio, do chão. As longas de cima para baixo, à esquerda; as pistolas numa coluna.
+        /// </summary>
+        static readonly (TipoDeArma dono, float x, float y)[] VagasDoPainel =
+        {
+            (TipoDeArma.Sniper, -0.6f, 2.75f), (TipoDeArma.Rifle, -0.6f, 2.27f), (TipoDeArma.Espingarda, -0.6f, 1.85f),
+            (TipoDeArma.Submetralhadora, -0.6f, 1.35f), (TipoDeArma.Pistola, 0.85f, 2.7f), (TipoDeArma.Pistola, 0.85f, 2.25f),
+            (TipoDeArma.Pistola, 0.85f, 1.8f), (TipoDeArma.Pistola, 0.85f, 1.35f),
+        };
+        /// <summary>A frente das ripas do painel, a partir da parede (a arma encosta nela).</summary>
+        const float FrenteDoPainel = 0.04f;
 
         public static string FbxFP(int arma) => $"{Arte}/Jogador_FP_{Armas.Modelos[arma]}.fbx";
         public static string MalhaDaArma(int arma) => $"{Malhas}/Arma_{Armas.Modelos[arma]}.asset";
@@ -227,18 +235,18 @@ namespace ZombieCityCleaner.EditorTools
         // ------------------------------------------------------------------ o suporte na cena
 
         /// <summary>
-        /// "Parede de armas": um NetworkObject da cena no lugar do móvel "Suporte_Armas" (posto pela montagem da cidade no
-        /// bunker), com as 4 vagas (de baixo para cima), cada uma com o colisor que a mira procura e a arma deitada, e a 5ª
-        /// em cima da "Mesa_Grande" da sala comum: a sniper, deitada de lado, ao longo da mesa.
+        /// "Parede de armas": um NetworkObject da cena no lugar do móvel "Painel_Armas" (posto pela montagem da cidade na
+        /// parede do fundo do salão do bunker), com as 8 vagas do painel, cada uma de um tipo de arma, com o colisor que a
+        /// mira procura (do tamanho da arma dela) e a arma em pé no apoio.
         /// </summary>
         public static void MontarSuporte(UnityEngine.SceneManagement.Scene cena)
         {
             var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Parede de armas");
             if (velho != null) Object.DestroyImmediate(velho);
-            var movel = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Suporte_Armas");
+            var movel = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Painel_Armas");
             if (movel == null)
             {
-                Debug.LogWarning("O móvel Suporte_Armas não está na cena: rode a montagem da cidade antes.");
+                Debug.LogWarning("O móvel Painel_Armas não está na cena: rode a montagem da cidade antes.");
                 return;
             }
             var raiz = new GameObject("Parede de armas");
@@ -247,27 +255,19 @@ namespace ZombieCityCleaner.EditorTools
             var parede = raiz.AddComponent<ParedeDeArmas>();
             parede.malhas = Enumerable.Range(0, Armas.Quantas).Select(i => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaArma(i))).ToArray();
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
-            var mesa = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Mesa_Grande");
-            int vagas = AlturasDoSuporte.Length + (mesa != null ? 1 : 0);
-            if (mesa == null) Debug.LogWarning("A Mesa_Grande do bunker não está na cena: a sniper fica sem vaga.");
-            parede.vagas = new VagaDeArma[vagas];
-            for (int k = 0; k < vagas; k++)
+            parede.vagas = new VagaDeArma[VagasDoPainel.Length];
+            for (int k = 0; k < VagasDoPainel.Length; k++)
             {
-                var go = new GameObject(k < AlturasDoSuporte.Length ? $"Vaga {k + 1}" : "Vaga da mesa");
+                var (dono, x, y) = VagasDoPainel[k];
+                var go = new GameObject($"Vaga {k + 1} ({Armas.Dados(dono).nome})");
                 go.transform.SetParent(raiz.transform, false);
-                if (k < AlturasDoSuporte.Length) go.transform.localPosition = new Vector3(0f, AlturasDoSuporte[k], FrenteDoSuporte);
-                else
-                {
-                    // em cima da mesa, do lado de lá do rádio: o "alto" da vaga (+Z) aponta para cima, então a arma fica
-                    // deitada de lado, com o cano ao longo da mesa
-                    var limites = mesa.GetComponentInChildren<Renderer>().bounds;
-                    go.transform.SetPositionAndRotation(new Vector3(limites.center.x + 0.1f, limites.max.y, limites.center.z + 0.12f),
-                                                        Quaternion.LookRotation(Vector3.up, Vector3.back));
-                }
+                go.transform.localPosition = new Vector3(x, y, FrenteDoPainel);
+                // o colisor cobre a arma da vaga, em pé no apoio (o comprimento dela ao longo do painel)
+                var b = parede.malhas[(int)dono].bounds;
                 var col = go.AddComponent<BoxCollider>();
                 col.isTrigger = true;
-                col.center = new Vector3(0f, 0.14f, 0.05f);
-                col.size = new Vector3(1.3f, 0.28f, 0.12f);
+                col.center = new Vector3(0f, b.size.y / 2f, 0.06f);
+                col.size = new Vector3(b.size.z + 0.06f, b.size.y + 0.04f, 0.12f);
                 var arma = new GameObject("Arma");
                 arma.transform.SetParent(go.transform, false);
                 var filtro = arma.AddComponent<MeshFilter>();
@@ -275,7 +275,7 @@ namespace ZombieCityCleaner.EditorTools
                 r.sharedMaterial = material;
                 r.shadowCastingMode = ShadowCastingMode.On;
                 var vaga = go.AddComponent<VagaDeArma>();
-                vaga.parede = parede; vaga.indice = k; vaga.filtro = filtro;
+                vaga.parede = parede; vaga.indice = k; vaga.dono = dono; vaga.filtro = filtro;
                 parede.vagas[k] = vaga;
             }
         }

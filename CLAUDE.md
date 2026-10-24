@@ -13,6 +13,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - A Parte 8 está feita, nas 6 fatias do `Plano_Demo.md`: 1 (a paleta da cidade, o material único e os objetos de rua), 2 (as casas), 3 (o prédio), 4 (o bunker e os móveis), 5 (o chão) e 6 (oclusão, neblina dentro de casa e benchmark; a luz ficou em tempo real e não houve LOD, veja "Clima e ciclo do dia").
   - Depois dela, os "ajustes antes da Parte 7", em 3 fatias, todas feitas: 1 (o tiro novo, sem som ambiente, nascer no bunker), 2 (os 4 modelos de zumbi, só a cabeça explode, morte com ragdoll) e 3 (as 4 armas, os braços de luva e o suporte de armas no bunker).
   - Depois, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`, a partir da `feature/ambientacao-teste`), veja "Combate e morte".
+  - Depois, a pedido (24/10/2026), o bunker maior: o salão alto, 4 quartos e o depósito, o painel de armas com um lugar para cada arma, a porta que abre e fecha e isola o som, os interruptores e nada de neblina lá dentro (veja "Bunker").
   - Depois, a Parte 7 (o bunker, o saque e o dia).
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
@@ -50,7 +51,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Art/Characters/Zombie/`: os 4 modelos de zumbi e, de cada um, o `<modelo>_Extra.fbx` (as animações do desmembramento: cair, rastejar e mancar, feitas pelos scripts de `Blender/`).
   - `Art/Characters/Jogador/`: o jogador (corpo, os braços de primeira pessoa de cada arma, as armas avulsas e as malhas delas). A sniper tem os braços em `Jogador_FP_Sniper.fbx` e a arma avulsa num FBX próprio, `Armas_Sniper.fbx` (os dois feitos pelos scripts de `Blender/`).
   - `Art/Paleta.png`: a paleta de cores 16×16 dos personagens (linhas 0 a 4) e da cidade (linhas 5 a 10). O alfa das linhas da cidade é a suavidade.
-  - `Art/Cidade/`: a arte final (Parte 8), exportada de `Modelo 3D/Cidade/Cidade.blend`: `Cidade_Rua.fbx` (objetos de rua), `Cidade_Moveis.fbx` (móveis), `Cidade_Chao.fbx` (o chão, em 25 pedaços "Chao_i_j"), e `Cidade_Casas.fbx` (as 5 casas), `Cidade_Predio.fbx` (o prédio) e `Cidade_Bunker.fbx` (o bunker), estas três com o seu `_Colisao.fbx` (legível).
+  - `Art/Cidade/`: a arte final (Parte 8), exportada de `Modelo 3D/Cidade/Cidade.blend`: `Cidade_Rua.fbx` (objetos de rua), `Cidade_Moveis.fbx` (móveis), `Cidade_Chao.fbx` (o chão, em 25 pedaços "Chao_i_j"), e `Cidade_Casas.fbx` (as 5 casas), `Cidade_Predio.fbx` (o prédio) e `Cidade_Bunker.fbx` (o bunker, com a folha da porta e a lâmpada à parte), estas três com o seu `_Colisao.fbx` (legível).
   - `Art/Materials/Cidade.mat`: o material único da arte final (URP Lit com a paleta e a suavidade vinda do alfa).
   - `Art/Materials/Blocos/`: o que sobrou dos blocos: `Lampada.mat` (a lente dos postes, que acende) e `ConeDeLuz.mat` (o cone falso, aditivo, com o degradê `DegradeCone.png`). Também o `PiscaAlerta.mat` (as lanternas do pisca-alerta dos carros, ambientação).
   - `Art/Materials/`: também `NeblinaDeAltura.mat`, `Particulas.mat` e `Clarao.mat`. Os `Teste_*` são da fundação.
@@ -64,14 +65,14 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 ## Cena `Demo_Cidade`
 
-- **Raízes:** "Cidade", "Navegação" (o NavMesh), "Zumbis", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento", "Parede de armas" e "Câmera de teste".
+- **Raízes:** "Cidade", "Bunker (rede)" (a porta, as luzes e os interruptores do bunker), "Navegação" (o NavMesh), "Zumbis", "Clima", "Sol e lua", "Pós-processamento (noite)" e "(dia)", "Rede", "Efeitos", "Pontos de nascimento", "Parede de armas" e "Câmera de teste".
 - **Os scripts de montagem**, no menu Zombie City Cleaner, refazem partes da cena. Mudanças feitas à mão nessas partes se perdem; mude o script e rode de novo.
   - **Controlador apagado e recriado:** as montagens dos zumbis e das armas apagam o controlador de animação e criam outro (que fica com o mesmo GUID). Ao ser apagado, os prefabs que usam o controlador são reimportados sem ele. Se depois são salvos iguais, a Unity não os importa de novo, e o personagem nascia sem animação (pose T). Por isso, as duas montagens forçam a reimportação dos prefabs no fim.
-  - Montar cidade em blocos: "Cidade", os pontos de nascimento e o NavMesh.
+  - Montar cidade em blocos: "Cidade", "Bunker (rede)", os pontos de nascimento, o NavMesh e a oclusão.
   - Montar clima e ciclo do dia: "Clima" e os volumes.
   - Montar jogador e rede: o prefab do jogador, "Rede", "Efeitos" e "Pontos de nascimento".
   - Montar zumbis: a importação do zumbi, a camada, as malhas, o Animator, o prefab do zumbi, o prefab do jogador, "Zumbis", o sangue no "Efeitos", os decals e o NavMesh.
-  - Montar armas: a importação dos braços de cada arma, do corpo e das armas avulsas, as malhas das armas, os Animators dos braços e os override de cada arma, o prefab do jogador e o "Parede de armas" (o suporte do bunker, que precisa da cidade montada).
+  - Montar armas: a importação dos braços de cada arma, do corpo e das armas avulsas, as malhas das armas, os Animators dos braços e os override de cada arma, o prefab do jogador e o "Parede de armas" (o painel de armas do bunker, que precisa da cidade montada). Depois de montar a cidade, rode esta também: a cidade refaz o móvel do painel.
 - Os valores de neblina e luz guardados na cena (densidade 0,05, ambiente azulado) são só os do Editor parado. Em Play, o `AmbienteDoDia` reescreve tudo a cada quadro.
 
 ## A cidade em blocos (Parte 4)
@@ -86,14 +87,14 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - O modelo foi feito no Blender com a mesma planta (`cidade_casas.py`): o W × D e as aberturas têm de bater com o `CASAS` de lá.
     - A montagem ainda põe os móveis em blocos, o eco, o bunker (blocos) e abre no chão de grama o buraco da escada.
     - Conferido: NavMesh na sala e no quarto das 5 casas, caminho completo da rua até o quarto e da cozinha da família até o bunker, e o buraco da escada aberto na colisão.
-  - **Bunker:** `Bunker()` põe o modelo "Bunker" e um "Colisão" com `Bunker_Colisao` (no grupo da casa da família, nas coordenadas dela), os móveis, a lâmpada (a única luz lá embaixo) e o eco.
+  - **Bunker:** `Bunker()` põe o modelo "Bunker" e um "Colisão" com `Bunker_Colisao` (no grupo da casa da família, nas coordenadas dela), os móveis e o eco (de salão no salão, de corredor de pedra na escada). A porta, as luzes e os interruptores ficam no "Bunker (rede)" (`MontarRedeDoBunker`), fora da cidade, porque mudam em Play. A planta está em `Editor/PlantaDoBunker` (veja "Bunker").
   - **Móveis:** `Movel(pai, "Geladeira", x, y, z, yaw)` põe um móvel do `Cidade_Moveis.fbx` com uma caixa de colisão do tamanho da malha. O objeto leva o nome da malha (a Parte 7 vai achar os de saque por ele).
     - `MoveisDaCasa`: sala (tapete, sofá ou poltrona, TV, mesa com cadeiras), cozinha (geladeira e fogão na divisória, balcão sob a janela) e quarto (cama, criado-mudo, armário e cômoda).
       - O sofá acaba antes da porta da frente; se não couber, vira poltrona (casas de 9 m). O rack fica antes da porta da cozinha.
       - Na casa da família, a boca da escada do bunker fica livre: o balcão vai para a parede da sala, depois da porta.
     - `MoveisDoApartamento`: sofá contra a fachada, TV, mesa com cadeiras e a cozinha americana na parede do quarto; no quarto, cama, criado-mudo, armário e cômoda.
-    - Bunker: mesa grande com rádio e 4 cadeiras, 2 beliches, 3 prateleiras cheias na despensa, tambores, caixas e o `Suporte_Armas` na parede da esquerda da sala comum, logo depois da porta (as armas dele são o "Parede de armas", da montagem das armas).
-    - Conferido com os 187 móveis: caminho completo da rua até a sala, a cozinha e o quarto das 5 casas, da cozinha da família até as 3 salas do bunker e da rua até os apartamentos dos 4 andares.
+    - Bunker: no salão, o `Painel_Armas` e a `Bancada` na parede do fundo (de frente para a porta; as armas do painel são o "Parede de armas", da montagem das armas), a `Mesa_Comprida` com 6 cadeiras e o rádio, o sofá com o tapete (perto da porta, à direita), a poltrona no canto do fundo, 2 prateleiras cheias, caixas e um tambor. Em cada quarto, a cama de solteiro (um cobertor de cada cor) com a cabeceira na parede do fundo, o criado-mudo, o armário, a cômoda e o tapete. No depósito, 3 armários de aço, 2 prateleiras, a `Mesa_Grande`, tambores e caixas.
+    - Conferido com os 187 móveis: caminho completo da rua até a sala, a cozinha e o quarto das 5 casas e da rua até os apartamentos dos 4 andares. Com o bunker maior: da cozinha da família até o vestíbulo, o salão, o painel, os 4 quartos e o depósito.
   - **Prédio:** `Predio()` põe o modelo "Predio" e um "Colisão" com a malha `Predio_Colisao`, mais os móveis de cada apartamento e o eco.
     - Escada, patamares, muretas, guarda-corpo do último andar, degraus da entrada e portas estão na colisão. A escada de incêndio, a marquise e a cobertura são só visuais.
     - Conferido: caminho completo da rua até o corredor e os dois apartamentos dos 4 andares.
@@ -121,7 +122,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Custo medido da fatia 2 com a lanterna nova (2 rodadas limpas, mesma vista, noite, contra a fatia 1): draw calls iguais, 2 a 3 SetPass a mais, a GPU dentro da variação (8,5 a 9,4 ms contra 8,3 a 9,1 ms).
   - **Cuidado com `_EMISSION` no Lit:** a palavra-chave some do material depois de carregado (o arquivo ainda a tem). O `PiscaAlerta` usa Unlit por isso; a `Lampada` dos postes não brilha pela emissão (pendente).
   - A calçada fica 12 cm acima da rua: o que fica em cima dela usa y = 0,12.
-  - No fim, ela põe os 4 pontos de nascimento na sala comum do bunker (`PontosNoBunker`), olhando para a mesa.
+  - No fim, ela põe os 4 pontos de nascimento no salão do bunker (`PontosNoBunker`), dois de cada lado da mesa comprida, olhando para ela.
 - **Planta (metros, +Z = norte):**
   - Ruas em grade nas linhas x e z = −40, 0 e 40, com 8 m de largura, faixa amarela tracejada e calçadas de 2,5 m em volta dos 4 quarteirões. As 4 saídas, em ±60, têm barricadas. (O chão de arte, `cidade_chao.py`, repete esta planta: ao mudá-la, mude lá também.)
   - **Prédio** em (20, 0, 21), 22 × 14 m, 4 andares de 3 m: escada em U no fundo, corredor no meio e 2 apartamentos por andar, com eco (reverb) dentro.
@@ -130,11 +131,29 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Praça em (24, 0, −12), estacionamento em (10, 0, 33), 8 carros, cercas e árvores.
   - Um anel de 320 pinheiros (raio 64 a 98) e a barreira invisível de 48 lados no raio 63.
   - O chão é uma laje de 220 × 220 m feita por último, com um buraco na escada do bunker.
-- **Bunker** (embaixo do quintal da casa da família):
-  - a escada começa no meio do cômodo de trás, com grade em volta do buraco, e desce para os fundos (19 degraus, do piso a −3,2 m);
-  - um patamar de 1,2 m e a porta blindada (1,2 × 2,3 m) levam às salas: sala comum (mesa e rádio), quarto (2 beliches) e despensa (prateleiras e tambores);
-  - uma lâmpada quente (intensidade 5, alcance 9) e eco de corredor de pedra;
-  - lá embaixo a luz do dia não chega (veja "Clima e ciclo do dia").
+- **Bunker** (embaixo do quintal da casa da família; aumentado a pedido em 24/10/2026). A planta é a `Editor/PlantaDoBunker`, a mesma do `cidade_bunker.py`, nas coordenadas da casa (x à direita, z para os fundos):
+  - a escada começa no meio da cozinha, com grade em volta do buraco, e desce para os fundos em dois lances de 15 degraus, com um patamar no meio, do piso (0,15) até −5,85 m, passando por baixo do quintal e de parte da rua;
+  - o vestíbulo e a porta blindada (1,2 × 2,3 m) levam ao **salão** (10 × 14 m, 5,3 m de pé-direito), com 2 quartos de cada lado e o depósito à esquerda de quem entra, perto da porta, cada um no fim de um corredor curto (2,4 m de altura). Quartos e depósito têm 3 m de pé-direito;
+  - lá embaixo a luz do dia não chega e não há neblina nem partículas (veja "Clima e ciclo do dia").
+- **"Bunker (rede)"** (`World/BunkerRede`, um NetworkObject nas coordenadas da casa da família, montado pela montagem da cidade): o que muda em Play no bunker.
+  - **A porta** (`World/PortaDoBunker`, a folha `Bunker_Porta` com a origem no eixo das dobradiças): E abre ou fecha.
+    - Para abrir, o volante gira e as trancas soltam (0,75 s, ainda isolada); depois ela gira 100° para dentro do salão em 1,8 s, devagar no começo e no fim (SmoothStep).
+    - Para fechar, ela ganha velocidade até o batente (1,5 s, o ângulo cai com o quadrado do tempo), bate e o volante tranca. Mudou de ideia no meio, o movimento novo corta o som do anterior e leva a parte proporcional do tempo.
+    - Os tempos são constantes do `Combat/SomDaPorta` (`Destrancar`, `TempoAbrir`, `TempoFechar`), feitos junto com os sons.
+    - **O som** sai de uma fonte própria na folha (os dois lados ouvem), gerado por código em `Combat/SomDaPorta` (refeito a pedido depois do primeiro teste; o antigo era um zumbido grave e um baque):
+      - o metal é físico: bancos de ressonadores com os modos de uma folha de aço grossa (graves de 48 a 2.050 Hz, os graves durando até 0,55 s) e das peças da tranca e do batente (o "clanc", de 310 a 3.320 Hz), tocados por impulsos de ruído;
+      - o rangido das dobradiças é atrito de gruda e solta: pulsos de 30 a 120 por segundo, conforme a velocidade da folha, em ressonâncias curtas, mais um ou dois guinchos curtos de metal e o ronco grave do peso;
+      - os 4 sons: `Efeitos.PortaDestranca` (a catraca do volante e as duas trancas soltando), `PortaAbrindo`, `PortaFechando` e `PortaBatida` (o tranco grave, o "bum" da folha e o "clanc" do batente, com dois quiques, e depois o volante e as trancas entrando);
+      - prévias em WAV, como se ouve no jogo: `Sons/Previas/Porta_abrindo.wav` e `Porta_fechando.wav`, na pasta de arte (`SomDaPorta.AbrirInteiro` e `FecharInteiro`).
+    - O anfitrião manda (`_aberta`, pelo `PortaRpc`): confere a distância (3 m) e, para fechar, que ninguém está no caminho da folha (`CaminhoLivre`).
+    - Começa a partida fechada. Na cena ela fica aberta, para o NavMesh passar por ela; o `NavMeshObstacle` (com carving) fecha a passagem quando ela está fechada. Ela tem um Rigidbody cinemático (é um colisor que se mexe).
+  - **O isolamento:** com a folha encostada (`Fechada`), o lado de dentro (a caixa `dentro`: salão, corredores e cômodos; a escada e o vestíbulo ficam do lado de fora) fica separado do resto (`BunkerRede.Isolado(a, b)`):
+    - `Efeitos.Som` não toca um som 3D do outro lado de quem escuta, e os zumbis não gemem para quem está do outro lado;
+    - o tiro (`ZombieManager.Barulho`) não chama zumbi do outro lado, e o zumbi não sente (contato e passos correndo) nem vê quem está do outro lado.
+  - **As luzes** (`luzes`, `lampadas`, `grupoDaLuz`): 3 pendentes no salão (intensidade 9, alcance 12), uma em cada cômodo (4, alcance 7) e 2 na escada (1,4, alcance 6), sem sombra, em 7 grupos: 0 salão, 1 a 4 quartos, 5 depósito, 6 escada. Acesa, a lâmpada (`Bunker_Lampada`) usa o `LampadaBunker.mat` (Unlit com a cor em HDR, brilha no bloom); apagada, o material da cidade.
+    - O estado é um `byte` (um bit por grupo, `_luzes`), escrito pelo anfitrião (`LuzRpc`, 3 m do interruptor). Começa tudo aceso.
+  - **Os interruptores** (`World/Interruptor`, a caixa `Interruptor` com a `Interruptor_Alavanca`): o do salão do lado da porta, o de cada cômodo por dentro, à direita de quem entra, e os da escada no vestíbulo e no poste da grade da boca da escada, na cozinha. E vira o grupo; a alavanca fica para cima com a luz acesa, e o estalo é o `Efeitos.Chave`.
+  - Sem a partida (no menu), a porta fica fechada e as luzes acesas.
 - **Postes (`World/PosteDeLuz`):** 28 postes com luz de sódio (spot, intensidade 95, alcance 16, ângulo 105°, sem sombra) e um cone falso de luz.
   - Eles acendem com a noite, cada um com um atraso próprio. Alguns piscam (`i % 7 == 3`) e alguns estão quebrados (`i % 11 == 5`).
   - O cone e a lâmpada mudam por MaterialPropertyBlock. A luz só fica ligada quando o poste está aceso.
@@ -149,13 +168,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - Teste: o anfitrião avança ou volta 1 hora com Page Up / Page Down. `-hora N` na linha de comando muda a hora inicial.
   - **`World/AmbienteDoDia`:** troca os tons de dia e de noite (neblina, luz ambiente, cor, força e altura de "Sol e lua", o peso dos dois volumes e o fundo das câmeras) e passa os valores da neblina de altura ao shader.
     - Dia: neblina pesada e clara (cinza, densidade 0,032). Noite: neblina escura e azulada (densidade 0,042) e luar frio. Neblina clara à noite apagaria as poças de luz dos postes.
-    - **Subsolo:** quando a câmera desce de −0,3 m para −1,5 m (a escada do bunker), a luz ambiente, o sol e as duas neblinas caem para 15%. Lá embaixo só a lâmpada e a lanterna iluminam.
+    - **Subsolo:** quando a câmera desce de −0,3 m para −1,5 m (a escada do bunker), a luz ambiente e o sol caem para 15% e as duas neblinas somem (a pedido: no bunker não tem neblina). Lá embaixo só as lâmpadas e a lanterna iluminam.
     - **Dentro das casas e do prédio** (Parte 8): com a câmera numa `World/AreaInterna`, as duas neblinas caem para 40% (`neblinaDentro`), em 0,6 s (`trocaDentro`). A luz não muda, porque ela entra pelas janelas.
     - **Na luneta da sniper:** só na máquina de quem mira, as duas neblinas caem para 35% (`neblinaNaLuneta`; quem liga é a `ArmaJogador`, por `AmbienteDoDia.NaLuneta`). Sem isso, a neblina escondia tudo a mais de ~40 m, e a luneta não servia.
       - A montagem da cidade põe uma área em cada casa (do piso ao forro, W × D) e uma no prédio (os 4 andares). O bunker usa a regra do subsolo.
       - Sem isso, a neblina de fora enchia as salas.
   - **Sem som ambiente:** o vento, os gemidos distantes e a sirene saíram a pedido (o `SomAmbiente` foi apagado). O que se ouve é a voz dos zumbis, o tiro e os sons da arma e da lanterna, com o eco das construções.
-  - **"Partículas no ar" (`Atmosphere/ParticulasNoAr`):** uma caixa de 26 × 12 × 26 m que segue a câmera, com cinza de dia e poeira à noite.
+  - **"Partículas no ar" (`Atmosphere/ParticulasNoAr`):** uma caixa de 26 × 12 × 26 m que segue a câmera, com cinza de dia e poeira à noite. Com a câmera abaixo de −0,3 m (a escada e o bunker), elas somem e param.
 - **Neblina de altura (`Shaders/NeblinaDeAltura.shader`):** um passe de tela cheia antes dos transparentes (os cones e as partículas ficam por cima).
   - A densidade cai com a altura (exponencial, calculada exata ao longo do raio) e tem manchas de ruído arrastadas pelo vento.
   - Abaixo da altura base a conta usa a base, para a neblina não engrossar debaixo da terra.
@@ -258,6 +277,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - telas de hospedar, entrar com código e modo local;
   - na partida, o código e o número de jogadores ficam no canto, e ESC abre o menu (o mundo continua rodando);
   - `MenuOnline.Aberto` bloqueia os comandos do jogador.
+  - **O menu é o dono do mouse:** solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha (sem precisar clicar). Se ele se soltar (a janela perdeu o foco), um clique o prende de novo.
+    - `MenuOnline.Controla` diz se o jogador local recebe comandos (o movimento, a arma, a lanterna e o E usam ele): na partida, com o menu fechado, o mouse preso e os botões já soltos depois de prendê-lo. Assim o clique que devolve o foco não atira nem mira.
+    - Ele lê o estado do mouse na hora, para não depender da ordem dos scripts no quadro do clique. Antes, o `MovimentoPrimeiraPessoa` prendia o mouse no clique, e a arma atirava no mesmo quadro.
 - **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot` e `-hora N`.
   - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s e troca a lanterna a cada 5 s.
     - Com um zumbi vivo a até 18 m, ele mira no peito desse zumbi e recua devagar (o acerto vai ao anfitrião como o de um jogador).
@@ -281,7 +303,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
       - O rifle e a submetralhadora atiram com o gatilho apertado; o próximo tiro conta do anterior, sem perder a cadência com o tempo do quadro. A espingarda solta 8 chumbos, cada um com o seu raio, e bombeia sozinha.
       - A dispersão é um círculo em volta do olhar, girada com a câmera.
       - A espingarda recarrega cartucho a cartucho (R enche o tubo), e atirar interrompe a recarga. As outras trocam o pente inteiro, com o som do carregador saindo e entrando.
-      - Mirando uma arma do suporte do bunker a até 2,2 m, aparece "[E] Pegar … (deixa …)", e E pede a troca (`ParedeDeArmas.PedirTroca`).
+      - **O que se usa com E** (`Player/Interagivel`: a mira procura, a até 2,2 m, o colisor de uma coisa que se usa): uma arma do painel ("[E] Pegar … (deixa …)", `VagaDeArma`), a porta do bunker ("[E] Abrir/Fechar a porta", `PortaDoBunker`) e os interruptores ("[E] Acender/Apagar a luz do …", `Interruptor`). A dica aparece embaixo da mira, com sombra, e E chama o `Usar` dela.
       - **A luneta (a sniper):** mirando, a câmera fecha de 70° para 12° (~6,7× de aumento); quando ela já fechou, os braços somem (a câmera dos braços desliga) e a tela mostra a luneta (OnGUI: o círculo da altura da tela, preto em volta, e o retículo com as linhas grossas da borda e um ponto vermelho no meio). O mouse fica mais lento na proporção do aumento (`MovimentoPrimeiraPessoa.MultiplicadorDoOlhar`). Entrar e sair tocam sons gerados por código (`Efeitos.LunetaEntra`, `LunetaSai`). Recarregando, ela sai da luneta. A `JogadorRede.Luneta` (rede) avisa o anfitrião.
       - Antes do raio, `Physics.SyncTransforms()` (as hitboxes andam com a animação).
       - O raio ignora a camada Ignore Raycast (a cápsula do zumbi de perto) e os pedaços (camada 8).
@@ -308,7 +330,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Cor` e `Arma` (escritas pelo servidor). Quando a `Arma` muda, todos trocam a arma do corpo e o controlador dele; o dono troca também a de primeira pessoa;
   - o tiro, por `TiroRpc` (`SendTo.NotMe`), com um `Impacto` por chumbo (um só nas armas de bala): o ponto e o que ele acertou (`TipoDeAcerto`: nada, cenário, carne ou outro). Quem recebe toca a animação de tiro do corpo, o clarão e o som 3D da arma dele (e a bomba da espingarda), e o efeito certo de cada impacto (sangue, ou faíscas e o furo).
   - o acerto num zumbi, por `AcertoRpc` (`SendTo.Server`): Id, geração, um byte com a região (bits 0 a 2), o membro (bits 3 a 6) e o arremesso (bit 7), o dano e o ponto; um por zumbi atingido (na espingarda) ou por pedaço atingido (nas outras). O anfitrião confere quem mandou (só o dono atira com o jogador dele).
-  - **o suporte de armas** (`Combat/ParedeDeArmas`, no NetworkObject da cena "Parede de armas"): o conteúdo das 5 vagas num `NetworkVariable<long>` (8 bits por vaga: 0 vazia, senão o tipo + 1), escrito pelo servidor. O pedido de troca vai por `TrocarRpc` (`SendTo.Server`); o anfitrião confere a distância (3 m dos pés ao meio da vaga) e troca a vaga e a `Arma` do jogador.
+  - **o painel de armas** (`Combat/ParedeDeArmas`, no NetworkObject da cena "Parede de armas"): o conteúdo das 8 vagas num `NetworkVariable<long>` (8 bits por vaga: 0 vazia, senão o tipo + 1), escrito pelo servidor. O pedido de troca vai por `TrocarRpc` (`SendTo.Server`); o anfitrião confere a distância (3,5 m dos pés ao meio da vaga), esvazia a vaga, põe a arma da mão numa vaga livre do tipo dela e troca a `Arma` do jogador. Quando um jogador sai, o anfitrião devolve a arma dele (`Devolver`, no `OnNetworkDespawn` do `JogadorRede`);
+  - **o bunker** (`World/BunkerRede`, no "Bunker (rede)"): a porta (`bool`) e as luzes (`byte`, um bit por grupo), escritas pelo servidor; os pedidos vão por `PortaRpc` e `LuzRpc` (`SendTo.Server`). Cada máquina anima a folha e toca os sons ao receber a mudança.
   - A velocidade dos outros, usada pela animação, é medida pela posição recebida a cada 0,1 s.
 - **Ações de input do projeto** (`InputSystem_Actions`, mapa Player): as do modelo da Unity, mais `Aim` (botão direito / gatilho esquerdo), `Reload` (R / X) e `Flashlight` (F / direcional para cima). O tiro no controle foi para o gatilho direito.
 - **`Combat/Efeitos`** (objeto "Efeitos" na cena): sons gerados por código (tiro, clique, recarga, lanterna), o clarão do cano e as faíscas e poeira do impacto.
@@ -321,13 +344,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Os materiais `Particulas` e `Clarao` ficam em `Art/Materials/`. O mesmo objeto tem o `Combat/Sangue` (veja "Combate e morte").
   - O brilho do clarão é um Quad primitivo. O colisor dele é apagado na hora (`DestroyImmediate`): com `Destroy`, ele só sumiria no fim do quadro, e o raio do tiro, feito logo depois, podia batê-lo.
 - **Cena:**
-  - **"Pontos de nascimento":** 4 pontos na sala comum do bunker, postos pela montagem da cidade. É também onde o jogador volta quando cai.
+  - **"Pontos de nascimento":** 4 pontos no salão do bunker, em volta da mesa comprida, postos pela montagem da cidade. É também onde o jogador volta quando cai.
   - **"Câmera de teste":** com `CameraDoMenu`, aparece no menu e some quando o jogador local nasce.
 - **Peças das armas nos modelos:** a "Boca" de cada arma do corpo e o `Boca_FP_<Arma>` (filho de `gun` nos braços) marcam a ponta do cano.
-- **O suporte de armas ("Parede de armas"):** montado pela montagem das armas no lugar do móvel `Suporte_Armas` do bunker, mais a "Vaga da mesa", em cima da `Mesa_Grande` da sala comum (a sniper, deitada de lado ao longo da mesa: o "alto" da vaga aponta para cima).
-  - 4 vagas ("Vaga 1" a "Vaga 4", de baixo para cima, no topo de cada prateleira), cada uma com um BoxCollider gatilho (o que a mira procura), o `VagaDeArma` e a arma deitada ("Arma": a malha muda com o que está na vaga).
-  - A arma fica com o cano ao longo da parede, o lado esquerdo para fora e a parte de baixo encostada na prateleira, centrada pelo tamanho da malha.
-  - Começa com pistola, submetralhadora, rifle e espingarda (de baixo para cima) e a sniper na mesa. A arma pega vem cheia, e a munição de reserva é infinita até o saque da Parte 7.
+- **O painel de armas ("Parede de armas"):** montado pela montagem das armas no lugar do móvel `Painel_Armas`, na parede do fundo do salão do bunker, de frente para a porta (pedido junto com o bunker maior; substituiu o suporte de 4 prateleiras e a vaga da sniper na mesa).
+  - **Cada arma tem o seu lugar** (`VagasDoPainel`, o `VAGAS_DO_PAINEL` do `cidade_moveis.py`): sniper, rifle, espingarda e submetralhadora uma embaixo da outra, e uma coluna de 4 vagas de pistola. Cada vaga ("Vaga N (arma)") tem o tipo dela (`VagaDeArma.dono`), um BoxCollider gatilho do tamanho da arma dela (o que a mira procura) e a arma em pé no apoio ("Arma": a malha muda com o que está na vaga).
+  - A arma fica com o cano ao longo do painel, o lado esquerdo para fora e a parte de baixo no apoio, centrada pelo tamanho da malha.
+  - Começa com as 4 longas; as vagas de pistola começam vazias, porque cada jogador nasce com a dele. Pegar uma arma põe a da mão numa vaga livre do tipo dela (se não houver, ela fica no lugar da que foi pega). A arma pega vem cheia, e a munição de reserva é infinita até o saque da Parte 7.
 
 ## Os zumbis na cidade (Parte 5, `Assets/_Game/Scripts/Zombies/`)
 

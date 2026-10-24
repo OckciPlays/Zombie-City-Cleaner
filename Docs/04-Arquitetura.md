@@ -35,6 +35,7 @@ Docs/                     esta documentação
 | Raiz | O que é |
 |---|---|
 | Cidade | a cidade inteira: chão, casas, prédio, bunker, móveis, objetos de rua, postes |
+| Bunker (rede) | a porta, as luzes e os interruptores do bunker (objeto de rede) |
 | Navegação | o NavMesh (um `NavMeshSurface` pelos colisores, só dentro da cidade) |
 | Zumbis | o `ZombieManager` (objeto de rede) com os 29 pontos de horda |
 | Clima | o ciclo do dia e o ambiente (objeto de rede), com as partículas no ar |
@@ -42,8 +43,8 @@ Docs/                     esta documentação
 | Pós-processamento (noite) e (dia) | os dois volumes, misturados pela hora |
 | Rede | o NetworkManager, o transporte, a sessão e o menu |
 | Efeitos | sons, clarão do cano, faíscas e sangue (os sons, as faíscas e o sangue em pools) |
-| Pontos de nascimento | 4 pontos na sala comum do bunker |
-| Parede de armas | o suporte de armas do bunker (objeto de rede) |
+| Pontos de nascimento | 4 pontos no salão do bunker, em volta da mesa |
+| Parede de armas | o painel de armas do bunker (objeto de rede) |
 | Câmera de teste | a câmera do menu (some quando o jogador nasce) |
 
 ## Os scripts de montagem
@@ -52,7 +53,7 @@ Quase tudo na cena e nos prefabs é **gerado por código**, pelos scripts de `Sc
 
 | Menu | O que monta |
 |---|---|
-| Montar cidade em blocos (`MontagemDaCidade`) | a raiz "Cidade" com a arte final, os colisores, os móveis e os postes, o NavMesh e a oclusão; e move os pontos de nascimento (se já existem) para o bunker |
+| Montar cidade em blocos (`MontagemDaCidade`) | a raiz "Cidade" com a arte final, os colisores, os móveis e os postes, o "Bunker (rede)", o NavMesh e a oclusão; e move os pontos de nascimento (se já existem) para o bunker |
 | Montar clima e ciclo do dia (`MontagemDoClima`) | o "Clima", os volumes, a neblina de altura no renderizador e o renderizador dos braços |
 | Montar jogador e rede (`MontagemDaRede`) | o prefab do jogador, a "Rede", os "Efeitos" e os pontos de nascimento |
 | Montar zumbis (`MontagemDosZumbis`) | a importação dos 4 zumbis, as malhas, o Animator, os prefabs, os "Zumbis" com as hordas, os decals e o NavMesh |
@@ -60,7 +61,7 @@ Quase tudo na cena e nos prefabs é **gerado por código**, pelos scripts de `Sc
 
 A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 
-- A montagem das armas precisa do móvel do suporte, que a cidade põe no bunker.
+- A montagem das armas precisa do móvel do painel de armas, que a cidade põe no bunker.
 - O prefab do jogador (refeito pelas montagens das armas, da rede e dos zumbis) precisa das armas já preparadas.
 - A de jogador e rede cria os pontos de nascimento e os põe no bunker, que a cidade monta. A da cidade só move os pontos que já existem.
 - A de jogador e rede apaga e recria o objeto "Efeitos", e o sangue (`Sangue`) é posto nele pela dos zumbis. **Rodou "Montar jogador e rede" sozinha? Rode "Montar zumbis" depois**, senão o jogo fica sem sangue.
@@ -71,7 +72,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 ### Sessão e menu (`Network/`, `UI/`)
 
 - **`SessaoOnline`:** `Hospedar()` cria uma partida privada de até 4 jogadores pelo Relay e guarda o código; `Entrar(codigo)` entra por ele. `HospedarLocal()` e `EntrarLocal(ip)` usam IP direto (porta 7777), sem Relay. Os serviços da Unity entram com um perfil anônimo sorteado (duas cópias no mesmo PC não podem usar a mesma conta).
-- **`MenuOnline`** (OnGUI): as telas de hospedar, entrar e modo local; ESC abre o menu durante a partida (o mundo continua).
+- **`MenuOnline`** (OnGUI): as telas de hospedar, entrar e modo local; ESC abre o menu durante a partida (o mundo continua). Também é o dono do mouse: preso no jogo assim que a partida começa ou o menu fecha; `MenuOnline.Controla` diz quando o jogador recebe comandos (o clique que devolve o foco à janela não atira).
 - **Linha de comando** (para testes com a build): `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot`, `-hora N`, e `-benchmark -resultado caminho.md` (com `-hospedar-local`: roda o benchmark e grava o resultado).
 
 ### O jogador (`Player/`, prefab `Jogador.prefab`)
@@ -79,7 +80,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 - **Raiz:** CharacterController, NetworkObject e NetworkTransform com autoridade do dono (cada um controla o próprio movimento).
   - `JogadorRede`: as câmeras, o corpo, a cor da família, a arma da mão e o tiro pela rede.
   - `MovimentoPrimeiraPessoa`: andar (2,0 m/s), correr (4,2 m/s), mirando (1,3 m/s) e pular.
-  - `ArmaJogador`: o tiro, a recarga, a mira (e a luneta da sniper) e a troca no suporte.
+  - `ArmaJogador`: o tiro, a recarga, a mira (e a luneta da sniper) e o E: mirando de perto uma coisa que se usa (`Interagivel`: uma arma do painel, a porta do bunker, um interruptor), mostra a dica e usa.
   - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
   - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker.
 - **"Corpo":** o modelo que os outros veem. Para o próprio jogador, ele só faz sombra.
@@ -101,7 +102,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 - **O tiro:** um raio do centro da tela (um por chumbo na espingarda), com dispersão em volta do olhar. O raio atravessa até dois braços (numa multidão, as mãos de quem ataca ficam na frente; o mesmo braço não conta duas vezes) e confere os primeiros 35 cm à parte (à queima-roupa).
 - **Quem decide:** quem atira vê o acerto na hora (sangue, a marca na mira) e manda o acerto para o anfitrião (a região, o membro, o dano da distância e se o corpo é arremessado), que confere e aplica o dano.
 - **A luneta da sniper:** o botão direito fecha a câmera para 12° (~6,7×), esconde os braços e desenha a luneta na tela; o mouse fica mais lento e a neblina afina, só para quem mira. O anfitrião sabe quem está na luneta (`JogadorRede.Luneta`) e, na linha dela, trata os zumbis de longe como de perto (veja o LOD).
-- **O suporte de armas** (`ParedeDeArmas`, um objeto de rede da cena): 4 vagas na parede e a 5ª na mesa da sala comum (a sniper), com uma arma deitada em cada. Mirando uma arma de perto, E pede a troca; o anfitrião confere a distância e troca a vaga e a arma do jogador. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
+- **O painel de armas** (`ParedeDeArmas`, um objeto de rede da cena): na parede do fundo do salão do bunker, com um lugar para cada arma (as 4 longas e 4 pistolas; `VagaDeArma.dono`). Mirando uma arma de perto, E pede a troca; o anfitrião confere a distância, põe a arma da mão numa vaga livre do tipo dela e troca a arma do jogador. Quem sai da partida devolve a arma. O conteúdo das vagas vai pela rede num número só (8 bits por vaga).
 - **As animações:** cada arma tem os seus braços de primeira pessoa (um FBX por arma) com o mesmo Animator, trocando os clipes por um override. O corpo usa outro override para as armas longas (a sniper usa o do rifle).
 
 ### Os zumbis (`Zombies/`)
@@ -134,9 +135,10 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 ### A cidade, o clima e o dia (`World/`, `Atmosphere/`)
 
 - **`CicloDoDia`:** o anfitrião manda na hora (começa às 21 h; um dia leva 24 minutos). `CicloDoDia.Noite` (0 a 1) é lido por quem precisa.
-- **`AmbienteDoDia`:** troca a neblina, a luz e os volumes entre o dia e a noite. Embaixo da terra (o bunker) a luz de fora some; dentro das casas (`AreaInterna`) a neblina fica rala.
+- **`AmbienteDoDia`:** troca a neblina, a luz e os volumes entre o dia e a noite. Embaixo da terra (o bunker) a luz de fora some e não há neblina; dentro das casas (`AreaInterna`) a neblina fica rala.
 - **`PosteDeLuz`:** os 28 postes acendem com a noite, alguns piscam e alguns estão quebrados.
-- **`ParticulasNoAr`:** cinza de dia e poeira à noite em volta da câmera.
+- **`ParticulasNoAr`:** cinza de dia e poeira à noite em volta da câmera; embaixo da terra, elas somem.
+- **`BunkerRede`** (no "Bunker (rede)"): a porta blindada (`PortaDoBunker`) e as luzes do bunker, em 7 grupos com os seus interruptores (`Interruptor`). O anfitrião decide. Com a porta fechada, o lado de dentro fica isolado (`BunkerRede.Isolado`): o som não passa (`Efeitos.Som` e a voz dos zumbis), e os zumbis de fora não ouvem os tiros nem sentem quem está dentro.
 - **`NeblinaDeAltura.shader`:** uma neblina que engrossa perto do chão, com manchas arrastadas pelo vento, num passe de tela cheia.
 - **A colisão do chão** são caixas invisíveis; o que se vê são os 25 pedaços de chão do Blender.
 
@@ -151,7 +153,8 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
 | o acerto num zumbi | `AcertoRpc`, para o anfitrião | o dono (o anfitrião confere) |
 | os zumbis perto de cada jogador | mensagem nomeada `ZCC.Zumbis` | o anfitrião |
 | a hora do dia | a cada 1 s | o anfitrião |
-| o suporte de armas e o pedido de troca | NetworkVariable e `TrocarRpc` | o anfitrião |
+| o painel de armas e o pedido de troca | NetworkVariable e `TrocarRpc` | o anfitrião |
+| a porta e as luzes do bunker | NetworkVariables, `PortaRpc` e `LuzRpc` | o anfitrião |
 | a vida do jogador, o golpe e a queda | NetworkVariable `Vida`, `GolpeRpc` e `CaiuRpc` para o dono | o anfitrião |
 
 ## Camadas

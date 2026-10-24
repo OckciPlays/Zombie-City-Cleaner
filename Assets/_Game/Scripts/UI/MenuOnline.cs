@@ -8,6 +8,7 @@ namespace ZombieCityCleaner.UI
     /// <summary>
     /// Menu simples (OnGUI): hospedar, entrar com código ou testar em modo local. Na partida, mostra o código no
     /// canto e ESC abre o menu (o mundo continua rodando, porque é online).
+    /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
     /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip] e -bot (o jogador anda e
     /// atira sozinho).
     /// </summary>
@@ -18,10 +19,21 @@ namespace ZombieCityCleaner.UI
         /// <summary>Teste automático: o jogador local anda em círculo, atira e liga a lanterna sozinho.</summary>
         public static bool Bot { get; private set; }
 
+        /// <summary>
+        /// O jogador local recebe comandos: na partida, com o menu fechado e o mouse preso no jogo. O mouse é preso
+        /// sozinho quando a partida começa e quando o menu fecha. Se ele se soltar (a janela perdeu o foco), um clique o
+        /// prende de novo, e esse clique não vale como tiro: os comandos só voltam depois de soltar os botões do mouse.
+        /// O estado do mouse é lido na hora, para não depender da ordem dos scripts no quadro do clique.
+        /// </summary>
+        public static bool Controla => !Aberto && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar;
+
+        static bool _esperarSoltar;
         SessaoOnline _sessao;
         string _codigo = "", _ip = "127.0.0.1";
-        bool _pausa;
+        bool _pausa, _estavaAberto = true;
         GUIStyle _titulo, _texto, _botao, _campo, _erro;
+
+        void OnEnable() => _esperarSoltar = true;
 
         void Start()
         {
@@ -48,7 +60,28 @@ namespace ZombieCityCleaner.UI
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
+            else if (!Aberto && !Bot) PrenderOMouse();
+            _estavaAberto = Aberto;
             if (Bot && naPartida && Time.time >= _proximoRelatorio) Relatorio();
+        }
+
+        // no jogo, o mouse fica preso: sozinho quando o menu acabou de fechar (ou a partida começou); com um clique, se
+        // ele se soltou (a janela perdeu o foco). Enquanto ele está solto, e até os botões serem soltos, nada de comandos
+        // (o clique que prende o mouse não atira nem mira)
+        void PrenderOMouse()
+        {
+            var mouse = Mouse.current;
+            if (Cursor.lockState != CursorLockMode.Locked)
+            {
+                _esperarSoltar = true;
+                bool clicou = mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame);
+                if (Application.isFocused && (_estavaAberto || clicou))
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+            }
+            else if (mouse == null || (!mouse.leftButton.isPressed && !mouse.rightButton.isPressed)) _esperarSoltar = false;
         }
 
         // No modo robô, registra no log o que esta cópia enxerga dos outros jogadores (para testes sem tela).

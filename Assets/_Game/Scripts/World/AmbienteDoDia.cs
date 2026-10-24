@@ -41,7 +41,7 @@ namespace ZombieCityCleaner.World
         [Header("Debaixo da terra")]
         [Tooltip("Altura da câmera (m) em que o subsolo começa e em que ele fica completo (descendo a escada do bunker).")]
         public Vector2 subsolo = new Vector2(-0.3f, -1.5f);
-        [Tooltip("Quanto da luz ambiente, do sol e da neblina sobra lá embaixo.")]
+        [Tooltip("Quanto da luz ambiente e do sol sobra lá embaixo. A neblina some toda: no bunker não tem neblina.")]
         [Range(0f, 1f)] public float sobraNoSubsolo = 0.15f;
         [Header("Dentro das casas e do prédio (AreaInterna)")]
         [Tooltip("Quanto da neblina sobra lá dentro (a luz não muda: ela entra pelas janelas).")]
@@ -71,7 +71,8 @@ namespace ZombieCityCleaner.World
         void LateUpdate()
         {
             float n = CicloDoDia.Noite;
-            // no bunker a luz do dia e a neblina de fora não chegam: só a lâmpada e a lanterna iluminam
+            // no bunker a luz do dia e a neblina de fora não chegam: só as lâmpadas e a lanterna iluminam, e não há
+            // neblina nenhuma
             var olho = Camera.main;
             float fundo = olho != null ? Mathf.InverseLerp(subsolo.x, subsolo.y, olho.transform.position.y) : 0f;
             float fora = Mathf.Lerp(1f, sobraNoSubsolo, fundo);
@@ -80,7 +81,7 @@ namespace ZombieCityCleaner.World
             _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
             // pela luneta a neblina afina (rápido: a luneta já fecha em ~0,2 s)
             _luneta = Mathf.MoveTowards(_luneta, NaLuneta ? 1f : 0f, Time.deltaTime * 8f);
-            float neblinaAqui = fora * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta);
+            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;

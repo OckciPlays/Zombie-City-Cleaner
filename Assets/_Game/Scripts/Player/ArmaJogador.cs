@@ -13,7 +13,8 @@ namespace ZombieCityCleaner.Player
     /// do bunker (<see cref="ParedeDeArmas"/>); os números de cada uma estão em <see cref="Armas"/>.
     /// Clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta vários
     /// chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira (aproxima
-    /// a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique. Mirando uma arma do suporte, E troca.
+    /// a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique. Mirando de perto uma coisa que se usa
+    /// (<see cref="Interagivel"/>: uma arma do painel, a porta do bunker, um interruptor), a dica aparece e E usa.
     /// A sniper tem luneta: mirando, a câmera fecha até o campo de visão dela, os braços somem e a tela mostra a luneta
     /// (o preto em volta e o retículo); o mouse fica mais lento na proporção do aumento. Sem a luneta, ela espalha muito.
     /// Acertar um zumbi: o sangue sai na hora aqui, e o acerto (zumbi, região e ponto) vai para o anfitrião, que tira a
@@ -33,7 +34,7 @@ namespace ZombieCityCleaner.Player
         [Header("Mira")]
         public float fovNormal = 70f;
         public float fovMirando = 58f;
-        [Tooltip("Até onde a mira pega uma arma do suporte (m).")]
+        [Tooltip("Até onde a mira pega o que se usa com E: uma arma do painel, a porta, um interruptor (m).")]
         public float alcanceDaMao = 2.2f;
 
         public int Municao { get; private set; }
@@ -65,7 +66,8 @@ namespace ZombieCityCleaner.Player
         float _proximoTiro, _marcaAte;
         bool _marcaNaCabeca, _mirandoAntes;
         static Texture2D _texturaDaLuneta;
-        VagaDeArma _vagaMirada;
+        Interagivel _alvo;
+        string _dica;
 
         void Awake()
         {
@@ -109,7 +111,7 @@ namespace ZombieCityCleaner.Player
         void Update()
         {
             bool bot = MenuOnline.Bot;
-            bool controla = bot || (!MenuOnline.Aberto && Cursor.lockState == CursorLockMode.Locked);
+            bool controla = bot || MenuOnline.Controla;
             var dados = Dados;
             bool luneta = dados.fovLuneta > 0f;
             // recarregando, a sniper sai da luneta (a mão está no carregador). O robô de teste, com a sniper, fica na luneta
@@ -133,7 +135,7 @@ namespace ZombieCityCleaner.Player
             movimento.MultiplicadorDoOlhar = luneta && mirar
                 ? Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(fovNormal * 0.5f * Mathf.Deg2Rad) : 1f;
             Animador.SetFloat(SpeedId, rede.Velocidade);
-            ProcurarVaga(cam.transform);
+            ProcurarAlvo(cam.transform);
             if (!controla) return;
 
             var d = Dados;
@@ -154,8 +156,7 @@ namespace ZombieCityCleaner.Player
                     Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
                 }
             }
-            if (_vagaMirada != null && !bot && _interagir.WasPressedThisFrame())
-                _vagaMirada.parede.PedirTroca(_vagaMirada.indice);
+            if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
         }
 
         void Atirar()
@@ -397,27 +398,24 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(clip, Boca.position, volume, false);
         }
 
-        // a mira numa arma do suporte, de perto: o que estiver mais perto na linha do olhar (gatilhos de outras coisas,
+        // a mira numa coisa que se usa, de perto: o que estiver mais perto na linha do olhar (gatilhos de outras coisas,
         // como as áreas internas, não contam)
-        void ProcurarVaga(Transform cam)
+        void ProcurarAlvo(Transform cam)
         {
-            _vagaMirada = null;
+            _alvo = null;
             int n = Physics.RaycastNonAlloc(cam.position, cam.forward, _acertos, alcanceDaMao, ~0, QueryTriggerInteraction.Collide);
             float menor = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
                 var hit = _acertos[i];
                 if (hit.collider == _corpo || hit.distance >= menor) continue;
-                var vaga = hit.collider.GetComponent<VagaDeArma>();
-                if (hit.collider.isTrigger && vaga == null) continue;
+                var alvo = hit.collider.GetComponent<Interagivel>();
+                if (hit.collider.isTrigger && alvo == null) continue;
                 menor = hit.distance;
-                _vagaMirada = vaga;
+                _alvo = alvo;
             }
-            if (_vagaMirada != null)
-            {
-                var naVaga = _vagaMirada.parede.Vaga(_vagaMirada.indice);
-                if (naVaga == null || naVaga.Value == Atual) _vagaMirada = null;
-            }
+            _dica = _alvo != null ? _alvo.Dica(this) : null;
+            if (_dica == null) _alvo = null;
         }
 
         void OnGUI()
@@ -454,17 +452,16 @@ namespace ZombieCityCleaner.Player
             var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
             nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
             GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u), d.nome.ToUpperInvariant(), nome);
-            // a troca no suporte
-            if (_vagaMirada != null)
+            // o que se usa com E (pegar uma arma do painel, abrir a porta, acender a luz)
+            if (_dica != null)
             {
-                var naVaga = _vagaMirada.parede.Vaga(_vagaMirada.indice);
-                if (naVaga != null)
-                {
-                    var dica = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * u), alignment = TextAnchor.UpperCenter };
-                    dica.normal.textColor = new Color(0.95f, 0.93f, 0.85f);
-                    GUI.Label(new Rect(cx - 300 * u, cy + 40 * u, 600 * u, 30 * u),
-                              $"[E] Pegar {Armas.Dados(naVaga.Value).nomeComArtigo} (deixa {d.nomeComArtigo})", dica);
-                }
+                // com uma sombra embaixo, para ler na frente de coisa clara (a porta na luz da lanterna)
+                var dica = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * u), alignment = TextAnchor.UpperCenter };
+                dica.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
+                float s = Mathf.Max(1f, Mathf.Round(1.5f * u));
+                GUI.Label(new Rect(cx - 300 * u + s, cy + 40 * u + s, 600 * u, 30 * u), _dica, dica);
+                dica.normal.textColor = new Color(0.95f, 0.93f, 0.85f);
+                GUI.Label(new Rect(cx - 300 * u, cy + 40 * u, 600 * u, 30 * u), _dica, dica);
             }
         }
 

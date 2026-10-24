@@ -8,7 +8,7 @@ O projeto é grande, então é feito em partes, com calma. Cada parte termina co
 
 - **Online desde já, com o Relay da Unity:** até 4 jogadores. Um hospeda e os amigos entram com um código.
 - **A cidade:** pequena, com um prédio de 4 andares e 5 casas onde dá para entrar, cercada de pinheiros. Uma das casas é a da família, com o bunker embaixo.
-- **O bunker:** pequeno, e dá para andar por ele (quarto, despensa e sala comum).
+- **O bunker:** dá para andar por ele: o salão alto, 4 quartos (um para cada um da família) e o depósito. Foi aumentado a pedido (veja abaixo).
 - **Um dia completo:** sair do bunker, explorar, saquear lugares que não se renovam, matar zumbis, voltar, guardar tudo na despensa e dormir para passar ao próximo dia.
 - **Dia e noite:** dia com neblina e noite com a vantagem da furtividade.
 - **Zumbis:** lentos, desistem de seguir quando o jogador se afasta, e o tiro na cabeça explode a cabeça.
@@ -31,7 +31,7 @@ A família controlada pelo jogo, água da chuva, plantações, criação de iten
 
 ## As partes, em ordem
 
-Legenda: ✅ feita · ⏭️ próxima · ⬜ por fazer. Os detalhes do que foi feito estão no [histórico](03-Historico.md).
+Legenda: ✅ feita · 🔎 feita, esperando a aprovação · ⏭️ próxima · ⬜ por fazer. Os detalhes do que foi feito estão no [histórico](03-Historico.md).
 
 ### ✅ Parte 0: fundação do projeto Unity
 
@@ -98,20 +98,28 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 ### ✅ Armas, sniper e desmembramento (antes da Parte 7, a pedido)
 
 - **Armas rebalanceadas:** dano no tronco e nos membros por arma; a submetralhadora ficou igual à pistola por tiro (e mais rápida), o rifle um grau acima, e a espingarda muda com a distância (de perto mata com um tiro e arremessa o corpo; na média, dois).
-- **A sniper:** de ferrolho, com luneta (12°), som do ferrolho e da luneta; um tiro no corpo mata e arranca um membro. Fica na mesa da sala comum do bunker.
+- **A sniper:** de ferrolho, com luneta (12°), som do ferrolho e da luneta; um tiro no corpo mata e arranca um membro. Fica no painel de armas do bunker.
 - **Desmembramento nos 4 modelos novos:** cada braço e cada perna cai (no cotovelo/joelho ou inteiro); sem uma perna o zumbi manca, sem as duas cai e rasteja.
 - **Pronto quando:** as armas se comportam como pedido, a sniper acerta de longe pela luneta e os membros caem em todas as máquinas, sem perder desempenho.
 
+### 🔎 O bunker maior (a pedido, antes da Parte 7; esperando a aprovação)
+
+- **Planta:** o salão de 10 × 14 m com o pé-direito dobrado (5,3 m), 4 quartos e o depósito no fim de corredores curtos (3 m de pé-direito); a escada mais funda, em dois lances.
+- **Painel de armas:** um lugar fixo para cada arma (as 4 longas e 4 pistolas), na parede do fundo do salão, com a bancada embaixo.
+- **Porta blindada:** abre e fecha com E; fechada, isola o som nos dois sentidos, e os zumbis de fora não ouvem os tiros de dentro.
+- **Luzes:** interruptores em cada cômodo, no salão e na escada. **Sem neblina e sem partículas** lá dentro.
+- **Pronto quando:** o usuário aprova, e o teste com dois jogadores mostra a porta e as luzes iguais nas duas máquinas.
+
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
-- **Bunker:** quarto (camas para dormir e passar o dia), despensa (o estoque da família) e sala comum.
+- **Bunker:** os quartos (camas para dormir e passar o dia), o depósito (o estoque da família, com a mesa para empilhar a comida) e o salão.
 - **Saque:** armários, geladeiras, gavetas e carros com itens (munição, comida, água, remédio e materiais).
   - O que foi saqueado fica vazio para sempre.
   - A cidade é dividida em áreas, para o jogo saber o que já foi limpo.
   - Os móveis de saque já existem na cena, com o nome da malha (armário, cômoda, criado-mudo, geladeira, balcão e prateleiras).
 - **Inventário:** espaço limitado na mochila de cada jogador e a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
 - **Dia:** sair, explorar, voltar antes de escurecer (ou arriscar a noite) e dormir. Dormir passa o dia e salva.
-- **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do suporte de armas, que hoje volta ao inicial a cada partida.
+- **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do painel de armas, a porta e as luzes do bunker, que hoje voltam ao inicial a cada partida.
 - **Pronto quando:** dá para jogar vários dias seguidos, sair do jogo, voltar e encontrar tudo como estava.
 
 ### ⬜ Parte 9: o fechamento da demo

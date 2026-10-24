@@ -87,12 +87,8 @@ namespace ZombieCityCleaner.Player
         {
             float dt = Time.deltaTime;
             bool bot = MenuOnline.Bot;
-            if (!MenuOnline.Aberto && !bot && Cursor.lockState != CursorLockMode.Locked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-            }
-            bool controla = bot || (!MenuOnline.Aberto && Cursor.lockState == CursorLockMode.Locked);
+            // quem prende o mouse no jogo é o menu (MenuOnline.Controla)
+            bool controla = bot || MenuOnline.Controla;
 
             Vector2 olhar = Vector2.zero, mover = Vector2.zero;
             bool correr = false, pular = false;

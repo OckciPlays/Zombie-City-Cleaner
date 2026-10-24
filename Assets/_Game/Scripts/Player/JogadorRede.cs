@@ -116,6 +116,9 @@ namespace ZombieCityCleaner.Player
         public override void OnNetworkDespawn()
         {
             Todos.Remove(this);
+            // quem sai da partida devolve a arma ao painel do bunker (a pistola, a uma vaga de pistola livre)
+            if (IsServer && !NetworkManager.ShutdownInProgress && ParedeDeArmas.Instancia != null)
+                ParedeDeArmas.Instancia.Devolver((TipoDeArma)Arma.Value);
             Cor.OnValueChanged -= AoMudarCor;
             Arma.OnValueChanged -= AoMudarArma;
             if (Local == this)

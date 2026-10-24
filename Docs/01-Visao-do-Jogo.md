@@ -3,7 +3,7 @@
 ## O conceito
 
 - **Começo:** você e sua família vivem na cidade quando começa o apocalipse zumbi. Quando a notícia chega, todos se escondem no bunker embaixo de casa.
-- **O bunker:** é o primeiro abrigo, com quartos, despensa e sala comum. Dá para andar por ele e gerenciar as coisas.
+- **O bunker:** é o primeiro abrigo, com o salão, um quarto para cada um da família e o depósito. Dá para andar por ele e gerenciar as coisas.
 - **Explorar:** você sai do bunker para explorar a cidade infestada, coletar recursos, matar zumbis e limpar a cidade.
 - **Recursos finitos:** o que foi saqueado não volta, então cada dia é preciso ir mais longe.
   - Com o tempo, entram fontes que se renovam: água da chuva, plantações e criação de itens.

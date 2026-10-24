@@ -101,7 +101,7 @@ namespace ZombieCityCleaner.Player
             if (!IsSpawned) return;
             if (IsOwner)
             {
-                bool controla = !MenuOnline.Aberto && Cursor.lockState == CursorLockMode.Locked;
+                bool controla = MenuOnline.Controla;
                 bool trocar = MenuOnline.Bot ? Time.time >= _proximaTrocaBot : controla && _alternar.WasPressedThisFrame();
                 if (MenuOnline.Bot && trocar) _proximaTrocaBot = Time.time + 5f;
                 if (trocar)

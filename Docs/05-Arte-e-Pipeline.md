@@ -79,8 +79,9 @@ Feitas depois, num PC sem a pasta de arte: os scripts ficam no próprio reposit�
 ### A cidade (`Modelo 3D/Cidade/`)
 
 - `cidade_kit.py`: o kit de modelagem (caixas, cilindros, tubos, perfis), a paleta e o export.
-- `cidade_rua.py` (objetos de rua), `cidade_casas.py` (as 5 casas), `cidade_predio.py` (o prédio), `cidade_bunker.py` (o bunker), `cidade_moveis.py` (os móveis e o suporte de armas) e `cidade_chao.py` (o chão em 25 pedaços).
-- **As casas, o prédio e o bunker usam a mesma planta da montagem da cidade na Unity** (`MontagemDaCidade`). Ao mudar uma planta, mude nos dois lugares.
+- `cidade_rua.py` (objetos de rua), `cidade_casas.py` (as 5 casas), `cidade_predio.py` (o prédio), `cidade_bunker.py` (o bunker), `cidade_moveis.py` (os móveis, o painel de armas e o interruptor) e `cidade_chao.py` (o chão em 25 pedaços).
+- **As casas, o prédio e o bunker usam a mesma planta da montagem da cidade na Unity** (`MontagemDaCidade`; a do bunker fica em `Editor/PlantaDoBunker`). Ao mudar uma planta, mude nos dois lugares.
+- O bunker exporta à parte, no mesmo FBX, a folha da porta (`Bunker_Porta`) e a lâmpada (`Bunker_Lampada`), que a Unity mexe em Play.
 - Cada construção sai com uma malha de colisão à parte (`_Colisao`), só com o que é sólido.
 
 ## Do Blender para a Unity

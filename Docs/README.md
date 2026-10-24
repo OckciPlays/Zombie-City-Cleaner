@@ -18,14 +18,14 @@ A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz d
 
 ## Estado atual (23/10/2026)
 
-- **Feito:** as Partes 0 a 6, a Parte 8 (a arte final, que veio antes da 7 a pedido), os "ajustes antes da Parte 7" (tiro novo, 4 modelos de zumbi com ragdoll, 4 armas e o suporte de armas no bunker), a ambientação da cidade e, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`).
+- **Feito:** as Partes 0 a 6, a Parte 8 (a arte final, que veio antes da 7 a pedido), os "ajustes antes da Parte 7" (tiro novo, 4 modelos de zumbi com ragdoll, 4 armas e o suporte de armas no bunker), a ambientação da cidade e, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`) e o bunker maior (o salão alto, 4 quartos, o depósito, o painel de armas, a porta que isola o som e os interruptores; esperando a aprovação).
 - **Próximo:** a Parte 7 (o bunker, o saque e o dia). Depois, a Parte 9 (o fechamento da demo).
 - **O que dá para fazer hoje:**
   - hospedar uma partida (pelo Relay da Unity, com código, ou em rede local) e jogar com até 4 pessoas;
   - nascer no bunker embaixo da casa da família e sair para a cidade (5 casas e um prédio de 4 andares, onde dá para entrar);
   - viver o ciclo de dia e noite (um dia inteiro leva 24 minutos);
   - enfrentar 258 zumbis que vagam, percebem, perseguem, atacam e desistem;
-  - usar 5 armas (pistola, rifle, submetralhadora, espingarda e sniper com luneta), trocadas no suporte do bunker, e arrancar braços e pernas dos zumbis.
+  - usar 5 armas (pistola, rifle, submetralhadora, espingarda e sniper com luneta), trocadas no painel de armas do bunker, e arrancar braços e pernas dos zumbis.
 
 ## Começando
 
@@ -60,7 +60,7 @@ A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz d
 | Botão direito | mirar (aproxima a câmera) |
 | R | recarregar (a espingarda põe um cartucho por vez) |
 | F | lanterna |
-| E | pegar a arma do suporte do bunker (olhando para ela, de perto) |
+| E | olhando de perto: pegar uma arma do painel do bunker, abrir ou fechar a porta do bunker, acender ou apagar a luz no interruptor |
 | ESC | menu (o mundo continua rodando, é online) |
 
 Controle (gamepad) também funciona: as ações estão em `Assets/InputSystem_Actions.inputactions`.

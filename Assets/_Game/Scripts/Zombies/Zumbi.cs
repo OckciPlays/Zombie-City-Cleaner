@@ -3,12 +3,14 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Zombies
 {
     /// <summary>
     /// Um zumbi. No anfitrião ele pensa: vaga devagar, percebe os jogadores (visão que depende da luz, contato, passos
-    /// correndo e tiros), persegue devagar, ataca de perto e desiste quando o alvo se afasta ou some de vista. Quem chama
+    /// correndo e tiros; nada passa pela porta fechada do bunker), persegue devagar, ataca de perto e desiste quando o
+    /// alvo se afasta ou some de vista. Quem chama
     /// Pensar() é o ZombieManager, em fatias e no ritmo do nível de detalhe de cada um.
     /// Também leva tiro (só no anfitrião): a cabeça explode com um tiro e ele morre; no resto, o corpo perde vida (nos
     /// braços e nas pernas, menos). Morto, ele some e um corpo com física (CorpoDeZumbi) cai no lugar.
@@ -400,6 +402,7 @@ namespace ZombieCityCleaner.Zombies
             for (int i = 0; i < _m.QuantosJogadores; i++)
             {
                 ref readonly var p = ref _m.Jogadores[i];
+                if (BunkerRede.Isolado(p.peito, olho)) continue;
                 Vector3 para = p.peito - olho;
                 float d = para.magnitude;
                 float forca;

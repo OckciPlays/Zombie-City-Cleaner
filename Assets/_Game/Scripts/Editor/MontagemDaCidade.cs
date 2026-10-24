@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Unity.Netcode;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.World;
+using P = ZombieCityCleaner.EditorTools.PlantaDoBunker;
 
 namespace ZombieCityCleaner.EditorTools
 {
@@ -52,7 +55,7 @@ namespace ZombieCityCleaner.EditorTools
             ArteDaCidade();
 
             var cena = EditorSceneManager.GetActiveScene();
-            foreach (var nome in new[] { "Cidade", "Teste (temporário)" })
+            foreach (var nome in new[] { "Cidade", "Teste (temporário)", "Bunker (rede)" })
             {
                 var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == nome);
                 if (velho != null) Object.DestroyImmediate(velho);
@@ -91,6 +94,7 @@ namespace ZombieCityCleaner.EditorTools
                 if (EscondeOQueEstaAtras(t)) flags |= StaticEditorFlags.OccluderStatic;
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, flags);
             }
+            MontarRedeDoBunker(raiz.Find("Casa da família"));
             PontosNoBunker(cena);
             MontagemDosZumbis.AssarNavegacao(cena);   // a cidade mudou: o NavMesh dos zumbis precisa ser refeito
             AssarOclusao();
@@ -146,6 +150,14 @@ namespace ZombieCityCleaner.EditorTools
             lampada.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
             EditorUtility.SetDirty(lampada);
             _m["Lampada"] = lampada;
+            // a lâmpada acesa do bunker: Unlit com a cor em HDR (brilha no bloom); apagada, ela usa o material da cidade
+            string caminhoLampadaBunker = $"{PastaMateriais}/LampadaBunker.mat";
+            var lampadaBunker = AssetDatabase.LoadAssetAtPath<Material>(caminhoLampadaBunker);
+            if (lampadaBunker == null) { lampadaBunker = new Material(Shader.Find("Universal Render Pipeline/Unlit")); AssetDatabase.CreateAsset(lampadaBunker, caminhoLampadaBunker); }
+            lampadaBunker.SetColor("_BaseColor", new Color(1f, 0.82f, 0.55f) * 3.5f);
+            lampadaBunker.enableInstancing = true;
+            EditorUtility.SetDirty(lampadaBunker);
+            _m["LampadaBunker"] = lampadaBunker;
             // cone de luz dos postes: aditivo, dos dois lados, mais forte perto da lâmpada
             string caminhoCone = $"{PastaMateriais}/ConeDeLuz.mat";
             var cone = AssetDatabase.LoadAssetAtPath<Material>(caminhoCone);
@@ -427,7 +439,6 @@ namespace ZombieCityCleaner.EditorTools
         static void Casa(Transform g, string modelo, Vector3 centro, float yaw, float W, float D, bool bunker)
         {
             g.localPosition = centro; g.localRotation = Quaternion.Euler(0f, yaw, 0f);
-            const float piso = 0.15f;
             float x0 = -W / 2f, x1 = W / 2f, z0 = -D / 2f, z1 = D / 2f;
             float zDiv = z0 + D * 0.55f;
             // buraco no piso para a escada do bunker: do meio do cômodo de trás (à esquerda) até a borda da laje (o
@@ -447,7 +458,7 @@ namespace ZombieCityCleaner.EditorTools
             eco.reverbPreset = AudioReverbPreset.Room; eco.minDistance = Mathf.Min(W, D) * 0.4f; eco.maxDistance = Mathf.Max(W, D) * 0.6f;
             if (bunker)
             {
-                Bunker(g, x0, zDiv, z1, piso);
+                Bunker(g);
                 // o chão de grama passa por baixo da casa: abre nele o mesmo buraco da escada
                 var b = buraco.Value;
                 var cantos = new[] { new Vector3(b.xMin, 0f, b.yMin), new Vector3(b.xMax, 0f, b.yMin), new Vector3(b.xMin, 0f, b.yMax), new Vector3(b.xMax, 0f, b.yMax) }.Select(g.TransformPoint).ToArray();
@@ -457,55 +468,154 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// O bunker da família, embaixo do quintal: a escada começa no meio do cômodo de trás, desce para os fundos
-        /// (passando por baixo da parede) e chega à porta do bunker, com sala comum, quarto e despensa.
-        /// Escada, poço, grades, salas, porta blindada, canos e luminárias vêm do modelo "Bunker" do Blender
-        /// (`cidade_bunker.py`, mesma planta, nas coordenadas da casa); a colisão é `Bunker_Colisao`. Aqui ficam os
-        /// móveis, a luz e o eco.
+        /// O bunker da família, embaixo do quintal (a planta é a <see cref="PlantaDoBunker"/>): a escada começa no meio
+        /// da cozinha e desce para os fundos em dois lances até o vestíbulo e a porta blindada; depois dela, o salão alto,
+        /// com dois quartos de cada lado e o depósito, no fim de corredores curtos.
+        /// Escada, poço, grades, salas, canos e luminárias vêm do modelo "Bunker" do Blender (`cidade_bunker.py`, mesma
+        /// planta, nas coordenadas da casa); a colisão é `Bunker_Colisao`. Aqui ficam os móveis e o eco. A porta, as luzes
+        /// e os interruptores mudam em Play: ficam fora da cidade, no "Bunker (rede)" (<see cref="MontarRedeDoBunker"/>).
         /// </summary>
-        static void Bunker(Transform casa, float x0, float zDiv, float z1, float piso)
+        static void Bunker(Transform casa)
         {
             var g = Grupo(casa, "Bunker");
-            const float fundo = -3.2f, teto = -0.55f;
-            float xEsc = x0 + 1.0f, zTopo = EscadaDoBunkerInicio(zDiv);
-            float zPorta = zTopo + 0.26f * 19 + 1.2f;                          // pé da escada e o patamar antes da porta
-            float bx0 = xEsc - 0.7f, bx1 = bx0 + 9.5f, bz0 = zPorta, bz1 = zPorta + 7.5f;
-            float xDiv = bx0 + 5.5f, zMeio = (bz0 + bz1) / 2f;
             Modelo(g, "Bunker", Vector3.zero, 0f);
             var colisor = new GameObject("Colisão");
             colisor.transform.SetParent(g, false);
             colisor.AddComponent<MeshCollider>().sharedMesh = _malhas["Bunker_Colisao"];
-            // sala comum: mesa com rádio e quatro cadeiras; tambor e caixas no canto
             var m = Grupo(g, "Móveis");
-            float mx = bx0 + 2.8f, mz = zMeio + 0.5f;
-            Movel(m, "Mesa_Grande", mx, fundo, mz, 0f);
-            foreach (float dx in new[] { -0.5f, 0.5f })
+            const float f = P.Fundo, x = P.XEsc, parede = P.Esp / 2f;
+            // salão: o painel de armas e a bancada na parede do fundo, de frente para a porta (as armas, a montagem das
+            // armas põe no painel: "Parede de armas")
+            Movel(m, "Painel_Armas", x, f, P.SZ1 - parede, 180f, false);
+            Movel(m, "Bancada", x, f, P.SZ1 - parede - 0.41f, 180f);
+            // a mesa comprida no meio, com 6 cadeiras e o rádio
+            float mz = P.SZ0 + 6.85f;
+            Movel(m, "Mesa_Comprida", x, f, mz, 90f);
+            foreach (float dz in new[] { -0.75f, 0.75f })
             {
-                Movel(m, "Cadeira", mx + dx, fundo, mz - 0.75f, 0f);
-                Movel(m, "Cadeira", mx + dx, fundo, mz + 0.75f, 180f);
+                Movel(m, "Cadeira", x - 0.85f, f, mz + dz, 90f);
+                Movel(m, "Cadeira", x + 0.85f, f, mz + dz, 270f);
             }
-            Movel(m, "Radio", mx - 0.3f, fundo + 0.76f, mz - 0.1f, 15f, false);
-            Movel(m, "Caixas", bx0 + 0.55f, fundo, bz1 - 0.6f, 10f);
-            Movel(m, "Tambor", bx0 + 0.45f, fundo, bz1 - 1.5f, 0f);
-            // o suporte de armas na parede da esquerda, logo depois da porta (as costas na parede, de 20 cm, e na faixa
-            // verde pintada nela); as armas, a montagem das armas põe em cima ("Parede de armas")
-            Movel(m, "Suporte_Armas", bx0 + 0.12f, fundo, bz0 + 1.8f, 90f);
-            // quarto: dois beliches (a família tem quatro)
-            Movel(m, "Beliche", bx1 - 0.6f, fundo, bz0 + 1.4f, 0f);
-            Movel(m, "Beliche", bx1 - 2.0f, fundo, bz0 + 1.4f, 0f);
-            // despensa: prateleiras cheias na parede da direita e no fundo, tambores de água perto da porta
-            Movel(m, "Prateleira_Cheia", bx1 - 0.37f, fundo, bz1 - 0.95f, 270f);
-            Movel(m, "Prateleira_Cheia", bx1 - 0.37f, fundo, bz1 - 2.35f, 270f);
-            Movel(m, "Prateleira_Cheia", xDiv + 1.6f, fundo, bz1 - 0.37f, 180f);
-            Movel(m, "Tambor", xDiv + 0.55f, fundo, bz1 - 0.5f, 0f);
-            Movel(m, "Tambor", xDiv + 0.6f, fundo, bz1 - 1.2f, 30f);
-            var lampada = new GameObject("Lâmpada do bunker").AddComponent<Light>();
-            // a luz do dia não chega aqui (AmbienteDoDia apaga o ambiente no subsolo): a lâmpada ilumina a sala sozinha
-            lampada.transform.SetParent(g, false); lampada.transform.localPosition = new Vector3(bx0 + 2.7f, teto - 0.45f, zMeio);
-            lampada.type = LightType.Point; lampada.color = new Color(1f, 0.85f, 0.6f); lampada.intensity = 5f; lampada.range = 9f;
+            Movel(m, "Cadeira", x, f, mz - 1.85f, 0f);
+            Movel(m, "Cadeira", x, f, mz + 1.85f, 180f);
+            Movel(m, "Radio", x + 0.2f, f + 0.76f, mz - 0.4f, 75f, false);
+            // perto da porta, o sofá na parede da direita (embaixo do mapa) com o tapete; a poltrona no canto do fundo
+            Movel(m, "Sofa_Marrom", P.SX1 - parede - 0.45f, f, P.SZ0 + 1.85f, 270f);
+            Movel(m, "Tapete", P.SX1 - 1.75f, f, P.SZ0 + 1.85f, 90f, false);
+            Movel(m, "Poltrona_Vinho", P.SX0 + parede + 0.5f, f, P.SZ0 + 13.2f, 100f);
+            // as prateleiras na parede da esquerda (entre a pilastra e o corredor do quarto 2), caixas e um tambor no canto
+            Movel(m, "Prateleira_Cheia", P.SX0 + parede + 0.27f, f, P.SZ0 + 4.6f, 90f);
+            Movel(m, "Prateleira_Cheia", P.SX0 + parede + 0.27f, f, P.SZ0 + 5.95f, 90f);
+            Movel(m, "Caixas", P.SX0 + 0.75f, f, P.SZ0 + 0.55f, 10f);
+            Movel(m, "Tambor", P.SX0 + 0.5f, f, P.SZ0 + 1.35f, 0f);
+            // os quartos, um para cada um da família (cada cama com o cobertor de uma cor): a cama com a cabeceira na
+            // parede do fundo do quarto (a oposta à entrada), o criado-mudo, o armário no canto, a cômoda e o tapete.
+            // a = a distância da parede do fundo, d = o sentido de lá para a entrada
+            string[] camas = { "Cama_Solteiro", "Cama_Solteiro_Verde", "Cama_Solteiro_Vinho", "Cama_Solteiro_Marrom" };
+            for (int i = 0; i < 4; i++)
+            {
+                var c = P.Comodos[i];
+                float d = -c.ParaDentro, xf = (c.lado < 0 ? c.X0 : c.X1) + d * parede, yaw = d > 0 ? 90f : 270f;
+                float A(float a) => xf + d * a;
+                Movel(m, camas[i], A(1.0f), f, c.Z0 + 0.65f, yaw);
+                Movel(m, "Criado_Mudo", A(0.22f), f, c.Z0 + 1.45f, yaw);
+                Movel(m, "Armario", A(0.3f), f, c.Z1 - 0.65f, yaw);
+                Movel(m, "Comoda", A(1.9f), f, c.Z1 - 0.36f, 180f);
+                Movel(m, "Tapete", A(2.3f), f, c.ZMeio + 0.1f, 0f, false);
+            }
+            // o depósito: os armários de aço na parede do fundo, as prateleiras, a mesa (para a comida, na Parte 7), os
+            // tambores de água e caixas perto da entrada
+            {
+                var c = P.Comodos[4];
+                float xf = c.X0 + parede;
+                foreach (float dz in new[] { -1f, 0f, 1f }) Movel(m, "Armario_Metal", xf + 0.27f, f, c.ZMeio + dz, 90f);
+                Movel(m, "Prateleira_Cheia", xf + 1.35f, f, c.Z1 - 0.37f, 180f);
+                Movel(m, "Prateleira_Cheia", xf + 2.7f, f, c.Z1 - 0.37f, 180f);
+                Movel(m, "Mesa_Grande", xf + 2.6f, f, c.ZMeio - 0.35f, 90f);
+                Movel(m, "Tambor", xf + 1.1f, f, c.Z0 + 0.45f, 0f);
+                Movel(m, "Tambor", xf + 1.75f, f, c.Z0 + 0.45f, 40f);
+                Movel(m, "Caixas", xf + 3.9f, f, c.Z0 + 0.55f, 15f);
+            }
+            // o eco: de salão grande de concreto, e de corredor de pedra na escada
             var eco = new GameObject("Eco do bunker").AddComponent<AudioReverbZone>();
-            eco.transform.SetParent(g, false); eco.transform.localPosition = new Vector3((bx0 + bx1) / 2f, fundo + 1.3f, zMeio);
-            eco.reverbPreset = AudioReverbPreset.StoneCorridor; eco.minDistance = 3f; eco.maxDistance = 7f;
+            eco.transform.SetParent(g, false); eco.transform.localPosition = new Vector3(x, f + 2f, P.SZ0 + 7f);
+            eco.reverbPreset = AudioReverbPreset.Hallway; eco.minDistance = 7f; eco.maxDistance = 11f;
+            var ecoEscada = new GameObject("Eco da escada").AddComponent<AudioReverbZone>();
+            ecoEscada.transform.SetParent(g, false); ecoEscada.transform.localPosition = new Vector3(x, P.YPatamar + 1f, P.ZLance2);
+            ecoEscada.reverbPreset = AudioReverbPreset.StoneCorridor; ecoEscada.minDistance = 2.5f; ecoEscada.maxDistance = 5.5f;
+        }
+
+        /// <summary>
+        /// O que muda em Play no bunker fica fora da cidade (que é estática): o "Bunker (rede)", um NetworkObject com o
+        /// <see cref="BunkerRede"/>, nas coordenadas da casa da família. Dentro, a folha da porta (aberta, para o NavMesh
+        /// passar por ela; em Play ela começa fechada e o obstáculo dela fecha a passagem), as luzes com as lâmpadas e os
+        /// interruptores.
+        /// </summary>
+        static void MontarRedeDoBunker(Transform casa)
+        {
+            var raiz = new GameObject("Bunker (rede)");
+            raiz.transform.SetPositionAndRotation(casa.position, casa.rotation);
+            raiz.AddComponent<NetworkObject>();
+            var bunker = raiz.AddComponent<BunkerRede>();
+            // o lado de dentro da porta: o salão, os corredores e os cômodos
+            var min = new Vector3(P.Comodos.Min(c => c.X0) - 0.3f, P.Fundo - 0.5f, P.SZ0 + 0.12f);
+            var max = new Vector3(P.Comodos.Max(c => c.X1) + 0.3f, P.Teto + 0.2f, P.SZ1 + 0.3f);
+            bunker.dentro = new Bounds((min + max) / 2f, max - min);
+
+            var porta = Modelo(raiz.transform, "Bunker_Porta", P.Dobradica, 100f, "Porta");
+            var caixa = porta.AddComponent<BoxCollider>();
+            caixa.center = new Vector3(-0.67f, 1.21f, 0f); caixa.size = new Vector3(1.3f, 2.4f, 0.12f);
+            var corpo = porta.AddComponent<Rigidbody>();
+            corpo.isKinematic = true; corpo.useGravity = false;
+            var obstaculo = porta.AddComponent<NavMeshObstacle>();
+            obstaculo.shape = NavMeshObstacleShape.Box; obstaculo.center = caixa.center; obstaculo.size = caixa.size;
+            obstaculo.carving = true; obstaculo.carveOnlyStationary = true;
+            var som = porta.AddComponent<AudioSource>();
+            som.playOnAwake = false; som.spatialBlend = 1f; som.rolloffMode = AudioRolloffMode.Linear; som.minDistance = 2f; som.maxDistance = 30f;
+            var folha = porta.AddComponent<PortaDoBunker>();
+            folha.bunker = bunker; folha.som = som;
+            bunker.porta = folha;
+
+            // as luzes: uma lâmpada (que brilha acesa) e a luz, sem sombra, em cada luminária do modelo
+            var luzes = Grupo(raiz.transform, "Luzes");
+            var lista = P.Luzes().ToList();
+            bunker.luzes = new Light[lista.Count];
+            bunker.lampadas = new MeshRenderer[lista.Count];
+            bunker.grupoDaLuz = new int[lista.Count];
+            for (int i = 0; i < lista.Count; i++)
+            {
+                var (grupo, pos) = lista[i];
+                var lampada = Modelo(luzes, "Bunker_Lampada", pos, 0f, $"Lâmpada {i + 1} (grupo {grupo})");
+                var r = lampada.GetComponent<MeshRenderer>();
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                var luz = new GameObject("Luz").AddComponent<Light>();
+                luz.transform.SetParent(lampada.transform, false);
+                luz.transform.localPosition = new Vector3(0f, -0.12f, 0f);
+                luz.type = LightType.Point; luz.color = new Color(1f, 0.85f, 0.6f); luz.shadows = LightShadows.None;
+                // as da escada ficam na parede, perto do concreto: mais fracas, senão estouram a parede
+                (luz.intensity, luz.range) = grupo == 0 ? (9f, 12f) : grupo == 6 ? (1.4f, 6f) : (4f, 7f);
+                bunker.luzes[i] = luz; bunker.lampadas[i] = r; bunker.grupoDaLuz[i] = grupo;
+            }
+            bunker.lampadaAcesa = _m["LampadaBunker"];
+            bunker.lampadaApagada = _m["Cidade"];
+
+            // os interruptores: a caixa com o colisor que a mira procura e a alavanca
+            var chaves = Grupo(raiz.transform, "Interruptores");
+            var lugares = P.Interruptores().ToList();
+            bunker.interruptores = new Interruptor[lugares.Count];
+            for (int i = 0; i < lugares.Count; i++)
+            {
+                var (pos, yaw, grupo, oQue) = lugares[i];
+                var go = Modelo(chaves, "Interruptor", pos, yaw, $"Interruptor ({oQue})");
+                go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+                var gatilho = go.AddComponent<BoxCollider>();
+                gatilho.isTrigger = true; gatilho.center = new Vector3(0f, 0f, 0.05f); gatilho.size = new Vector3(0.22f, 0.26f, 0.1f);
+                var alavanca = Modelo(go.transform, "Interruptor_Alavanca", new Vector3(0f, 0f, 0.054f), 0f, "Alavanca");
+                alavanca.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+                var chave = go.AddComponent<Interruptor>();
+                chave.bunker = bunker; chave.indice = i; chave.grupo = grupo; chave.oQue = oQue; chave.alavanca = alavanca.transform;
+                bunker.interruptores[i] = chave;
+            }
         }
 
         static float EscadaDoBunkerInicio(float zDiv) => zDiv + 0.7f;
@@ -1170,8 +1280,8 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// Os 4 pontos de nascimento vão para a sala comum do bunker (nas coordenadas da casa da família, como o
-        /// <see cref="Bunker"/>): dois entre a porta blindada e a mesa, dois dos lados da mesa, todos olhando para ela.
+        /// Os 4 pontos de nascimento vão para o salão do bunker (nas coordenadas da casa da família, como o
+        /// <see cref="Bunker"/>): dois de cada lado da mesa comprida, atrás das cadeiras, todos olhando para ela.
         /// </summary>
         internal static void PontosNoBunker(UnityEngine.SceneManagement.Scene cena)
         {
@@ -1179,9 +1289,9 @@ namespace ZombieCityCleaner.EditorTools
             var bunker = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true))
                 .FirstOrDefault(t => t.name == "Bunker" && t.parent != null && t.parent.name == "Casa da família");
             if (pontos == null || bunker == null) return;
-            const float fundo = -3.2f;
-            var mesa = new Vector3(-2.9f, fundo, 11.6f);
-            var lugares = new[] { new Vector3(-3.4f, fundo, 8.7f), new Vector3(-1.5f, fundo, 8.7f), new Vector3(-4.8f, fundo, 10.2f), new Vector3(-1.1f, fundo, 10.6f) };
+            var mesa = new Vector3(P.XEsc, P.Fundo, P.SZ0 + 6.85f);
+            var lugares = new[] { new Vector3(-1.6f, 0f, -1.25f), new Vector3(1.6f, 0f, -1.25f), new Vector3(-1.6f, 0f, 1.25f), new Vector3(1.6f, 0f, 1.25f) }
+                .Select(d => mesa + d).ToArray();
             for (int i = 0; i < pontos.transform.childCount && i < lugares.Length; i++)
             {
                 var p = pontos.transform.GetChild(i);
