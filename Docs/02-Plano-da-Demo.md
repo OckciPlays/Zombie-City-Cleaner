@@ -139,6 +139,13 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 - O jogador nasce só com o pente da pistola (12). O pente vai junto com a arma (no chão, no painel do bunker e de volta).
 - 16 caixas pela cidade (2 por casa e 1 por apartamento; 9mm é a mais comum), com as balas sorteadas a cada partida.
 
+### 🔎 O carro que se dirige (a pedido, 24/10/2026; branch `feature/carro`; esperando o teste)
+
+- Uma perua (4 lugares) na rua em frente à casa da família: E na porta entra (a porta abre, ele senta, a porta bate), E dentro sai.
+- A partida é com a chave: olhar para a ignição (à direita do volante), clicar para pôr a chave e de novo para pegá-la, arrastar o mouse até a partida (ela pesa) e, com o motor de arranque girando, um quick time event num mostrador redondo: clicar quando o ponteiro passa nas marcas (a pequena liga na hora; as 3 grandes, todas acertadas). Só anda com o motor ligado. No volante: WASD, Espaço (freio de mão), L (faróis), B (buzina), V (câmera de trás), R (desvirar); F liga a lanterna também dentro do carro. Atropela zumbis. O painel acende com a ignição (velocímetro e gasolina), e a luz de teto acende com as portas.
+- Na rede: quem dirige simula o carro; os outros veem.
+- Depois: os zumbis atacarem quem está no carro (hoje eles alcançam o jogador através da lataria), o barulho do motor chamar zumbis, buzina, combustível, mais carros (e os carros abandonados com colisão melhor).
+
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
 - **Bunker:** os quartos (camas para dormir e passar o dia), o depósito (o estoque da família, com a mesa para empilhar a comida) e o salão.

@@ -102,6 +102,7 @@ namespace ZombieCityCleaner.EditorTools
             raiz.AddComponent<FomeESede>();
             var passos = raiz.AddComponent<PassosJogador>();
             raiz.AddComponent<MenuDoDesenvolvedor>();
+            raiz.AddComponent<PassageiroDoCarro>();
 
             // corpo (o que os outros veem; para o dono vira só sombra)
             var corpo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador.fbx"));

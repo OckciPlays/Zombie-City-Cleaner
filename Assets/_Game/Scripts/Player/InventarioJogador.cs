@@ -831,7 +831,8 @@ namespace ZombieCityCleaner.Player
                 if (roda != 0f) escolher = Proximo(roda < 0f ? 1 : -1);
             }
             if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
-            if (teclado != null && teclado.gKey.wasPressedThisFrame) Largar(IdNaMao);
+            // dentro do carro, não larga nada
+            if (teclado != null && teclado.gKey.wasPressedThisFrame && !(_rede.Passageiro != null && _rede.Passageiro.NoCarro)) Largar(IdNaMao);
         }
 
         // o próximo atalho naquele sentido, vazio ou não (um vazio deixa a mão vazia)

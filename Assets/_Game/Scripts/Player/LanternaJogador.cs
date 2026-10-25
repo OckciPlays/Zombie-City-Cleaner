@@ -2,13 +2,14 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.UI;
 
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// Lanterna presa no peito, no estilo Silent Hill; liga e desliga com F.
+    /// Lanterna presa no peito, no estilo Silent Hill; liga e desliga com F (também dentro do carro).
     /// Fica abaixo e à frente dos olhos, longe da arma (colada na câmera, ela estourava a arma de luz).
     /// O facho converge no ponto da mira: um raio sai do olho, e a luz aponta do peito para onde ele bateu. Assim o centro
     /// da luz fica sempre na mira, perto ou longe (antes ela apontava 9° abaixo do olhar e com atraso, e o centro caía
@@ -18,6 +19,9 @@ namespace ZombieCityCleaner.Player
     /// O facho tem um cookie gerado por código: o centro forte, o anel do refletor e a borda mais fraca e quente.
     /// Ela não ilumina os braços de primeira pessoa do dono: de tão perto, deixava a arma e as mangas brancas. Só durante o
     /// desenho da câmera dos braços ela fica desligada.
+    /// No carro, ela sai do olho (do peito, ela ficava a 25 cm do volante e estourava o painel de branco), mais fraca
+    /// (<see cref="fatorNoCarro"/>), com a sombra começando perto (o painel e o volante fazem sombra) e a mira passando
+    /// pela lataria do carro.
     /// </summary>
     public class LanternaJogador : NetworkBehaviour
     {
@@ -36,6 +40,8 @@ namespace ZombieCityCleaner.Player
         public float intensidade = 34f;
         public float abertura = 62f;
         public float aberturaInterna = 52f;
+        [Tooltip("A força da luz dentro do carro (o painel fica perto).")]
+        public float fatorNoCarro = 0.3f;
 
         [Header("Ao ligar")]
         [Tooltip("Por quanto tempo a luz pisca quando liga (s).")]
@@ -46,12 +52,13 @@ namespace ZombieCityCleaner.Player
         const float AlturaDoOlho = 1.62f;
         // o raio da mira não vê os jogadores, os braços, os corpos e a cápsula do zumbi de perto (Ignore Raycast)
         const int MascaraDaMira = ~((1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos) | (1 << 8) | (1 << 2));
+        const int MascaraNoCarro = MascaraDaMira & ~(1 << Vehicles.Carro.CamadaVeiculo);
 
         static Texture2D _cookie;
 
         InputAction _alternar;
         float _pitch, _distancia;
-        float _proximaTrocaBot, _ligouEm = -10f;
+        float _proximaTrocaBot, _ligouEm = -10f, _sombraPerto;
         bool _desligadaNosBracos, _estavaLigada;
 
         void Awake()
@@ -62,6 +69,7 @@ namespace ZombieCityCleaner.Player
             luz.intensity = intensidade;
             luz.spotAngle = abertura;
             luz.innerSpotAngle = aberturaInterna;
+            _sombraPerto = luz.shadowNearPlane;
         }
 
         void OnEnable()
@@ -80,6 +88,11 @@ namespace ZombieCityCleaner.Player
         {
             _pitch = rede.Pitch.Value;
             _estavaLigada = Ligada.Value;
+            // a lanterna do dono não faz sombra do corpo dele (invisível na primeira pessoa: as mãos e os braços faziam
+            // sombra no facho, sobretudo mirando e dentro do carro); a dos outros, nesta máquina, faz sombra de tudo
+            var dados = luz.GetUniversalAdditionalLightData();
+            dados.customShadowLayers = true;
+            dados.shadowRenderingLayers = IsOwner ? ~JogadorRede.MascaraDoDono : uint.MaxValue;
         }
 
         void AntesDaCamera(ScriptableRenderContext contexto, Camera camera)
@@ -116,14 +129,17 @@ namespace ZombieCityCleaner.Player
             _estavaLigada = ligada;
             luz.enabled = ligada;
             if (!ligada) return;
-            luz.intensity = intensidade * Piscada(Time.time - _ligouEm);
+            bool noCarro = rede.Passageiro != null && rede.Passageiro.NoCarro;
+            luz.intensity = intensidade * Piscada(Time.time - _ligouEm) * (noCarro ? fatorNoCarro : 1f);
+            luz.shadowNearPlane = noCarro ? 0.1f : _sombraPerto;
 
             // de onde o jogador olha, e para onde
             Vector3 olho;
             Quaternion olhar;
             if (IsOwner)
             {
-                var cam = rede.cameraMundo.transform;
+                // no carro, a cabeça (com a câmera de trás, a câmera fica longe dela)
+                var cam = noCarro ? rede.cameraMundo.transform.parent : rede.cameraMundo.transform;
                 olho = cam.position;
                 olhar = cam.rotation;
             }
@@ -136,11 +152,11 @@ namespace ZombieCityCleaner.Player
             Vector3 frente = olhar * Vector3.forward;
 
             // até onde a mira vai; a distância é suavizada (rápido) para o facho não pular ao passar por uma quina
-            float alvo = Physics.Raycast(olho, frente, out var acerto, alcanceDaMira, MascaraDaMira, QueryTriggerInteraction.Ignore)
+            float alvo = Physics.Raycast(olho, frente, out var acerto, alcanceDaMira, noCarro ? MascaraNoCarro : MascaraDaMira, QueryTriggerInteraction.Ignore)
                 ? Mathf.Max(acerto.distance, minimoDaMira) : alcanceDaMira;
             _distancia = Mathf.Lerp(_distancia, alvo, 1f - Mathf.Exp(-18f * Time.deltaTime));
 
-            Vector3 peito = transform.TransformPoint(posicaoNoPeito);
+            Vector3 peito = noCarro ? olho + olhar * new Vector3(0f, -0.06f, 0.1f) : transform.TransformPoint(posicaoNoPeito);
             Vector3 ponto = olho + frente * _distancia;
             luz.transform.SetPositionAndRotation(peito, Quaternion.LookRotation(ponto - peito, olhar * Vector3.up));
         }
