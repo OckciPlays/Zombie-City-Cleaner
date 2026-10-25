@@ -82,6 +82,17 @@ namespace ZombieCityCleaner.Player
         public readonly NetworkVariable<Item> MochilaVestida = new(Item.Nada, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>Se ele usa o coldre (leva mais uma arma curta). Escrito pelo anfitrião.</summary>
         public readonly NetworkVariable<bool> ComColdre = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>
+        /// O pneu que ele carrega nas mãos (o estado; <see cref="SemPneu"/>, nenhum), quando ele não coube na mochila.
+        /// Escrito pelo anfitrião. Com ele, as mãos ficam ocupadas (sem arma) e o jogador anda devagar, sem correr nem pular.
+        /// </summary>
+        public readonly NetworkVariable<byte> PneuNasMaos = new(SemPneu, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        public const byte SemPneu = 255;
+        /// <summary>Carregando um pneu nas mãos, o jogador anda nesta fração da velocidade (e não corre nem pula).</summary>
+        public const float LentidaoDoPneu = 0.55f;
+        public bool CarregandoPneu => IsSpawned && PneuNasMaos.Value != SemPneu;
+        /// <summary>O estado do pneu das mãos (%), ou -1 sem ele.</summary>
+        public int EstadoDoPneuNasMaos => CarregandoPneu ? PneuNasMaos.Value : -1;
 
         /// <summary>O tamanho da grade agora: os bolsos ou a mochila vestida.</summary>
         public Vector2Int TamanhoDaGrade => Itens.EspacoDa(MochilaVestida.Value);
@@ -139,11 +150,13 @@ namespace ZombieCityCleaner.Player
             Escolhido.OnValueChanged += AoMudarEscolhido;
             MochilaVestida.OnValueChanged += AoMudarEquipamento;
             ComColdre.OnValueChanged += AoMudarColdre;
+            PneuNasMaos.OnValueChanged += AoMudarPneu;
             if (IsServer)
             {
                 Mochila.Clear();
                 MochilaVestida.Value = Item.Nada;
                 ComColdre.Value = false;
+                PneuNasMaos.Value = SemPneu;
                 Receber(Item.Pistola);
             }
             // a pistola do começo no primeiro atalho
@@ -158,9 +171,13 @@ namespace ZombieCityCleaner.Player
             Escolhido.OnValueChanged -= AoMudarEscolhido;
             MochilaVestida.OnValueChanged -= AoMudarEquipamento;
             ComColdre.OnValueChanged -= AoMudarColdre;
+            PneuNasMaos.OnValueChanged -= AoMudarPneu;
+            if (_pneuNoCorpo != null) Destroy(_pneuNoCorpo);
+            if (_pneuNoOlho != null) Destroy(_pneuNoOlho);
         }
 
         void AoMudarEquipamento(Item antes, Item depois) => Mudou?.Invoke();
+        void AoMudarPneu(byte antes, byte depois) => Mudou?.Invoke();
         void AoMudarColdre(bool antes, bool depois) => Mudou?.Invoke();
 
         static ushort Ler(long atalhos, int lugar) => (ushort)((atalhos >> (16 * lugar)) & 0xFFFF);
@@ -337,9 +354,15 @@ namespace ZombieCityCleaner.Player
             // a caixa de munição completa primeiro as do mesmo calibre
             if (Itens.EhMunicao(item) && FaltaNasCaixas(Itens.CalibreDa(item)) > 0) return true;
             if (TemEspaco(item)) return true;
-            motivo = $"Sem espaço {(mochila ? "na mochila" : "nos bolsos")} para {Itens.NomeComArtigo(item)}";
+            // o pneu que não cabe vai para as mãos (pesado)
+            if (item == Item.Pneu && !CarregandoPneu) return true;
+            motivo = item == Item.Pneu ? "Você já carrega um pneu nas mãos"
+                : $"Sem espaço {(mochila ? "na mochila" : "nos bolsos")} para {Itens.NomeComArtigo(item)}";
             return false;
         }
+
+        /// <summary>O pneu vai para as mãos (não cabe na mochila e as mãos estão livres).</summary>
+        public bool PneuVaiParaAsMaos => !TemEspaco(Item.Pneu) && !CarregandoPneu;
 
         /// <summary>
         /// A dica de pegar o item ("[E] Pegar a lata de comida", "[E] Pegar a caixa de 9mm (24 balas)"), ou o motivo de não
@@ -350,6 +373,7 @@ namespace ZombieCityCleaner.Player
             if (!PodeReceber(item, out var motivo)) return motivo;
             if (Itens.EhMochila(item) && MochilaVestida.Value != Item.Nada)
                 return $"[E] Trocar a sua {Itens.Nome(MochilaVestida.Value)} pela {Itens.Nome(item)}";
+            if (item == Item.Pneu && PneuVaiParaAsMaos) return $"[E] Carregar o pneu{(qtd >= 0 ? $" ({qtd}%)" : "")} nas mãos (pesado)";
             string balas = qtd < 0 ? "" : Itens.EhMunicao(item) ? $" ({qtd} {(qtd == 1 ? "bala" : "balas")})"
                 : Itens.EhArma(item) ? $" ({qtd}/{Itens.QuantidadePadrao(item)})" : Itens.ComEstado(item) ? $" ({qtd}%)" : "";
             return $"[E] {(Itens.EhEquipamento(item) ? "Vestir" : "Pegar")} {Itens.NomeComArtigo(item)}{balas}";
@@ -440,7 +464,13 @@ namespace ZombieCityCleaner.Player
                 return true;
             }
             if (Itens.EhArma(item) && !ArmaCabeNaGrade(item)) return false;
-            if (!Espaco(item, out int x, out int y, out bool girado)) return false;
+            if (!Espaco(item, out int x, out int y, out bool girado))
+            {
+                // o pneu que não cabe vai para as mãos, se elas estão livres
+                if (item != Item.Pneu || PneuNasMaos.Value != SemPneu) return false;
+                PneuNasMaos.Value = (byte)Mathf.Clamp(qtd, 0, 100);
+                return true;
+            }
             Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)qtd });
             return true;
         }
@@ -487,6 +517,15 @@ namespace ZombieCityCleaner.Player
             MochilaVestida.Value = item;
             if (antes != Item.Nada) ItensNoMundo.Instancia?.Criar(antes, PontoAosPes(0), transform.eulerAngles.y + 90f, 0);
             Arrumar(transform.position);
+            return true;
+        }
+
+        /// <summary>Só no anfitrião: o pneu sai das mãos (para uma roda ou o porta-malas). Devolve o estado dele.</summary>
+        public bool TirarPneuDasMaos(out int estado)
+        {
+            estado = PneuNasMaos.Value;
+            if (!IsServer || PneuNasMaos.Value == SemPneu) return false;
+            PneuNasMaos.Value = SemPneu;
             return true;
         }
 
@@ -575,6 +614,7 @@ namespace ZombieCityCleaner.Player
             }
             if (MochilaVestida.Value != Item.Nada) ItensNoMundo.Instancia?.Criar(MochilaVestida.Value, PontoAosPes(++k), k * 90f, 0);
             if (ComColdre.Value) ItensNoMundo.Instancia?.Criar(Item.Coldre, PontoAosPes(++k), k * 90f, 0);
+            if (TirarPneuDasMaos(out int pneu)) ItensNoMundo.Instancia?.Criar(Item.Pneu, PontoAosPes(++k), k * 90f, pneu);
         }
 
         [Rpc(SendTo.Server)]
@@ -637,6 +677,14 @@ namespace ZombieCityCleaner.Player
             if (!Achar(id, out var it)) return;
             Tirar(id);
             ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd);
+        }
+
+        [Rpc(SendTo.Server)]
+        void LargarPneuRpc(Vector3 ponto, float giro, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || ItensNoMundo.Instancia == null) return;
+            if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
+            if (TirarPneuDasMaos(out int estado)) ItensNoMundo.Instancia.Criar(Item.Pneu, ponto, giro, estado);
         }
 
         [Rpc(SendTo.Server)]
@@ -742,6 +790,14 @@ namespace ZombieCityCleaner.Player
             _atalhos.Value = Gravar(Gravar(a, de, y), para, x);
         }
 
+        /// <summary>Larga o pneu das mãos no chão à frente (G).</summary>
+        public void LargarPneu()
+        {
+            if (!CarregandoPneu) return;
+            LargarPneuRpc(PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.7f, false);
+        }
+
         /// <summary>Larga o item: no tampo para onde a mira aponta, se estiver perto, senão no chão à frente.</summary>
         public void Largar(ushort id)
         {
@@ -816,6 +872,7 @@ namespace ZombieCityCleaner.Player
 
         void Update()
         {
+            if (IsSpawned) PneuQueSeVe();
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
             if (_arma.Usando) return;   // comendo ou bebendo: nem troca nem larga
             var teclado = Keyboard.current;
@@ -833,8 +890,67 @@ namespace ZombieCityCleaner.Player
                 if (roda != 0f) escolher = Proximo(roda < 0f ? 1 : -1);
             }
             if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
-            // dentro do carro, não larga nada
-            if (teclado != null && teclado.gKey.wasPressedThisFrame && !(_rede.Passageiro != null && _rede.Passageiro.NoCarro)) Largar(IdNaMao);
+            // dentro do carro, não larga nada; com o pneu nas mãos, G larga o pneu
+            if (teclado != null && teclado.gKey.wasPressedThisFrame && !(_rede.Passageiro != null && _rede.Passageiro.NoCarro))
+            {
+                if (CarregandoPneu) LargarPneu();
+                else Largar(IdNaMao);
+            }
+        }
+
+        // ------------------------------------------------------------------ o pneu nas mãos, o que se vê
+
+        GameObject _pneuNoCorpo, _pneuNoOlho;
+
+        // em todas as cópias: o pneu em pé na frente do peito (o dono vê só a sombra dele), e, só no dono, o mesmo pneu
+        // na frente da câmera, embaixo, na camada dos braços. O que estava na mão do corpo some
+        void PneuQueSeVe()
+        {
+            bool carrega = CarregandoPneu && !(_rede.Passageiro != null && _rede.Passageiro.NoCarro);
+            if (carrega && _pneuNoCorpo == null && !CriarPneus()) return;
+            if (_pneuNoCorpo == null) return;
+            if (_pneuNoCorpo.activeSelf != carrega)
+            {
+                _pneuNoCorpo.SetActive(carrega);
+                if (_rede.Passageiro == null || !_rede.Passageiro.NoCarro) _rede.EsconderNaMao(carrega);
+            }
+            if (_pneuNoOlho != null && _pneuNoOlho.activeSelf != carrega) _pneuNoOlho.SetActive(carrega);
+        }
+
+        bool CriarPneus()
+        {
+            var mundo = ItensNoMundo.Instancia;
+            int pc = Itens.IndiceDaPeca(Item.Pneu);
+            if (mundo == null || mundo.malhasDePeca == null || pc < 0 || pc >= mundo.malhasDePeca.Length || mundo.malhasDePeca[pc] == null) return false;
+            var malha = mundo.malhasDePeca[pc];
+            // a malha é o pneu deitado (o eixo em +Y, a origem embaixo, no meio): de pé, com o eixo para a frente
+            var emPe = Quaternion.Euler(90f, 0f, 0f);
+            _pneuNoCorpo = Peca("Pneu nas mãos", transform, new Vector3(0f, 0.98f, 0.30f), emPe, malha, mundo.material, gameObject.layer);
+            var r = _pneuNoCorpo.GetComponent<MeshRenderer>();
+            if (IsOwner)
+            {
+                // como o corpo do dono: só a sombra, fora da sombra da lanterna dele
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+                r.renderingLayerMask = JogadorRede.MascaraDoDono;
+                if (_rede.cameraMundo != null)
+                {
+                    _pneuNoOlho = Peca("Pneu nas mãos (primeira pessoa)", _rede.cameraMundo.transform, new Vector3(0f, -0.50f, 0.48f),
+                        Quaternion.Euler(72f, 0f, 0f), malha, mundo.material, JogadorRede.CamadaBracos);
+                    _pneuNoOlho.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+            }
+            return true;
+        }
+
+        static GameObject Peca(string nome, Transform pai, Vector3 pos, Quaternion giro, Mesh malha, Material material, int camada)
+        {
+            var go = new GameObject(nome) { layer = camada };
+            go.transform.SetParent(pai, false);
+            go.transform.SetLocalPositionAndRotation(pos, giro);
+            go.AddComponent<MeshFilter>().sharedMesh = malha;
+            go.AddComponent<MeshRenderer>().sharedMaterial = material;
+            go.SetActive(false);
+            return go;
         }
 
         // o próximo atalho naquele sentido, vazio ou não (um vazio deixa a mão vazia)

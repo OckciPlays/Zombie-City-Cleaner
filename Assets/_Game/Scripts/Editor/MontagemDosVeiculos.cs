@@ -338,10 +338,14 @@ namespace ZombieCityCleaner.EditorTools
             bcm.size = new Vector3(1.22f, 0.86f, 0.16f);
             gatilhoDasMalas.AddComponent<PortaMalasDoCarro>().carro = carro;
 
-            // o macaco: a peça que aparece apoiada embaixo do carro (o Carro a põe no lugar e a estica) e um gatilho do lado
-            // de fora de cada roda (fora da caixa de colisão de baixo; embaixo do das portas), com o RodaDoCarro
+            // o macaco: a peça que aparece apoiada embaixo do carro (o Carro a põe no lugar e a estica, com o gatilho dela,
+            // o MacacoApoiado) e um gatilho do lado de fora de cada roda (fora da caixa de colisão de baixo), com o RodaDoCarro
             carro.macacoApoiado = NoPortaMalas(raiz.transform, "Macaco (apoiado)", 4, Vector3.zero, m);
             carro.macacoApoiado.enabled = false;
+            var miraDoMacaco = carro.macacoApoiado.gameObject.AddComponent<BoxCollider>();
+            miraDoMacaco.isTrigger = true;
+            miraDoMacaco.enabled = false;
+            carro.macacoApoiado.gameObject.AddComponent<MacacoApoiado>().carro = carro;
             var gatilhosDasRodas = new GameObject("Rodas (mira)") { layer = Carro.CamadaVeiculo }.transform;
             gatilhosDasRodas.SetParent(raiz.transform, false);
             string[] nomesDasRodas = { "DE", "DD", "TE", "TD" };
@@ -352,8 +356,9 @@ namespace ZombieCityCleaner.EditorTools
                 g.transform.SetParent(gatilhosDasRodas, false);
                 var bc = g.AddComponent<BoxCollider>();
                 bc.isTrigger = true;
-                bc.center = new Vector3(lado * 0.95f, 0.27f, frente * 1.30f);
-                bc.size = new Vector3(0.16f, 0.54f, 1.40f);
+                // do tamanho da roda (0,30 m de raio): não encosta nos gatilhos das portas nem no do macaco
+                bc.center = new Vector3(lado * 0.95f, 0.31f, frente * 1.36f);
+                bc.size = new Vector3(0.16f, 0.62f, 0.76f);
                 var r = g.AddComponent<RodaDoCarro>();
                 r.carro = carro;
                 r.roda = i;
@@ -700,7 +705,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var mf in cidade.GetComponentsInChildren<MeshFilter>(true).Where(f => f.name == "Carro").ToArray())
             {
                 foreach (var velho in mf.GetComponentsInChildren<CapoDaCidade>(true)) Object.DestroyImmediate(velho.gameObject);
-                foreach (Transform velho in mf.transform.Cast<Transform>().Where(x => x.name == "Capô aberto").ToArray()) Object.DestroyImmediate(velho.gameObject);
+                foreach (Transform velho in mf.transform.Cast<Transform>().Where(x => x.name == "Capô aberto" || x.name == "Rodas (mira)" || x.name == "Macaco (apoiado)").ToArray())
+                    Object.DestroyImmediate(velho.gameObject);
                 var fechado = mf.GetComponent<MeshRenderer>();
                 if (fechado != null) fechado.enabled = true;
                 var t = mf.transform;

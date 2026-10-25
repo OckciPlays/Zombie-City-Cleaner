@@ -256,6 +256,7 @@ namespace ZombieCityCleaner.Vehicles
         Quaternion _giroBase;
         float _ergueu, _erguidoMudouEm = -99f, _alturaDoMacacoFechado = 0.118f;
         bool _erguidoVisto;
+        BoxCollider _miraDoMacaco;
 
         /// <summary>A velocidade (m/s): a da física no dono, a medida pela posição nos outros.</summary>
         public float Velocidade => Simula ? _corpo.linearVelocity.magnitude : _velocidadeMedida.magnitude;
@@ -310,7 +311,7 @@ namespace ZombieCityCleaner.Vehicles
         public Vector3 PontoDoMacaco(int roda)
         {
             var w = rodas[roda].transform.localPosition;
-            return new Vector3(Mathf.Sign(w.x) * MacacoX, BaseDaLataria, w.z - Mathf.Sign(w.z) * 0.5f);
+            return new Vector3(Mathf.Sign(w.x) * MacacoX, BaseDaLataria, w.z - Mathf.Sign(w.z) * 0.55f);
         }
         /// <summary>O macaco fica embaixo da soleira (x) e encosta embaixo da carroceria (y; o Y_BASE do carro.py).</summary>
         public const float MacacoX = 0.78f, BaseDaLataria = 0.22f;
@@ -339,6 +340,7 @@ namespace ZombieCityCleaner.Vehicles
             {
                 var mf = macacoApoiado.GetComponent<MeshFilter>();
                 if (mf != null && mf.sharedMesh != null) _alturaDoMacacoFechado = Mathf.Max(0.02f, mf.sharedMesh.bounds.size.y);
+                _miraDoMacaco = macacoApoiado.GetComponent<BoxCollider>();
             }
             if (carroceria != null)
             {
@@ -444,6 +446,8 @@ namespace ZombieCityCleaner.Vehicles
             var jogador = Jogador(cliente);
             if (jogador == null || jogador.Passageiro == null || jogador.Passageiro.Sentado) return;
             if (jogador.Vida != null && jogador.Vida.Vida.Value <= 0f) return;
+            var mochila = jogador.GetComponent<InventarioJogador>();
+            if (mochila != null && mochila.CarregandoPneu) return;   // com o pneu nas mãos, não entra
             if (Velocidade > VelocidadeParaEntrar) return;
             if (Vector3.Distance(jogador.transform.position, portas[lugar].transform.position) > 3.5f) return;
             foreach (var outro in Todos)
@@ -884,6 +888,13 @@ namespace ZombieCityCleaner.Vehicles
         void GuardarNoPortaMalasRpc(byte qual, ushort id, RpcParams parametros = default)
         {
             if (!_malasAberto.Value || !PertoDoPortaMalas(parametros.Receive.SenderClientId, out var inventario)) return;
+            // o Id 0: o pneu das mãos
+            if (id == 0)
+            {
+                if (qual == PortaMalasDoCarro.Estepe && _estepe.Value == PneusDoCarro.Vazio && inventario.TirarPneuDasMaos(out int estado))
+                    _estepe.Value = (byte)Mathf.Clamp(estado, 0, 100);
+                return;
+            }
             if (!inventario.Achar(id, out var it)) return;
             if (qual == PortaMalasDoCarro.Macaco && !_macaco.Value && it.item == Loot.Item.Macaco)
             {
@@ -1008,9 +1019,20 @@ namespace ZombieCityCleaner.Vehicles
         {
             if (!_erguido.Value || _ergueu < 0.98f || !NoLadoErguido(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
             var p = _pneus.Value;
-            if (p.Tem(roda) || !inventario.Achar(id, out var it) || it.item != Loot.Item.Pneu) return;
-            inventario.Tirar(id);
-            p[roda] = (byte)Mathf.Clamp(it.qtd, 0, 100);
+            if (p.Tem(roda)) return;
+            int estado;
+            // o Id 0: o pneu das mãos
+            if (id == 0)
+            {
+                if (!inventario.TirarPneuDasMaos(out estado)) return;
+            }
+            else
+            {
+                if (!inventario.Achar(id, out var it) || it.item != Loot.Item.Pneu) return;
+                inventario.Tirar(id);
+                estado = it.qtd;
+            }
+            p[roda] = (byte)Mathf.Clamp(estado, 0, 100);
             _pneus.Value = p;
             SomDoMacacoRpc(2, rodas[roda].transform.position);
         }
@@ -1062,6 +1084,7 @@ namespace ZombieCityCleaner.Vehicles
             int roda = MacacoNaRoda;
             bool ver = roda >= 0 && rodas != null && roda < rodas.Length;
             if (macacoApoiado.enabled != ver) macacoApoiado.enabled = ver;
+            if (_miraDoMacaco != null && _miraDoMacaco.enabled != ver) _miraDoMacaco.enabled = ver;
             if (!ver) return;
             Vector3 topo = transform.TransformPoint(PontoDoMacaco(roda));
             Vector3 chao = topo - Vector3.up * BaseDaLataria;
@@ -1077,6 +1100,14 @@ namespace ZombieCityCleaner.Vehicles
             var t = macacoApoiado.transform;
             t.SetPositionAndRotation(chao, Quaternion.LookRotation(frente.normalized) * Quaternion.Euler(0f, -90f, 0f));
             t.localScale = new Vector3(1f, altura / _alturaDoMacacoFechado, 1f);
+            // o gatilho do macaco (MacacoApoiado) passa para fora da lateral, onde a mira chega: o z da malha é o lado
+            // esquerdo do carro
+            if (_miraDoMacaco != null)
+            {
+                float lado = Mathf.Sign(rodas[roda].transform.localPosition.x);
+                _miraDoMacaco.center = new Vector3(0f, _alturaDoMacacoFechado * 0.5f, -lado * 0.09f);
+                _miraDoMacaco.size = new Vector3(0.44f, _alturaDoMacacoFechado * 1.1f, 0.34f);
+            }
         }
 
         // ------------------------------------------------------------------------------------------ o tiro no pneu

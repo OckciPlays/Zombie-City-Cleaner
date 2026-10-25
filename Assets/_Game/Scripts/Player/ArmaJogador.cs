@@ -68,6 +68,9 @@ namespace ZombieCityCleaner.Player
         /// <summary>Comendo ou bebendo (o clipe Usar).</summary>
         public bool Usando { get; private set; }
         public InventarioJogador Inventario { get; private set; }
+        /// <summary>As mãos estão ocupadas com um pneu: sem arma, sem soco, sem comer (o E ainda funciona).</summary>
+        public bool MaosOcupadas => Inventario != null && Inventario.CarregandoPneu;
+        bool _ocupadasAntes;
 
         Animator Animador
         {
@@ -157,7 +160,8 @@ namespace ZombieCityCleaner.Player
             NaMao = novo;
             _id = id;
             int m = Itens.ModeloNaMao(novo);   // a mão vazia mostra os punhos
-            for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m);
+            bool ocupadas = MaosOcupadas;   // com o pneu nas mãos, os braços somem
+            for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
             if (ComArma)
             {
                 Atual = Itens.Arma(novo);
@@ -198,7 +202,23 @@ namespace ZombieCityCleaner.Player
         {
             bool bot = MenuOnline.Bot;
             bool controla = bot || MenuOnline.Controla;
-            bool comArma = ComArma;
+            // o pneu nas mãos: os braços somem (e voltam sacando quando ele sai)
+            bool ocupadas = MaosOcupadas;
+            if (ocupadas != _ocupadasAntes)
+            {
+                _ocupadasAntes = ocupadas;
+                if (ocupadas)
+                {
+                    if (ComArma && _id != 0) _pentes[_id] = Municao;
+                    StopAllCoroutines();
+                    Recarregando = false;
+                    Usando = false;
+                    _recarga = null;
+                    foreach (var mo in modelos) mo.SetActive(false);
+                }
+                else Trocar(NaMao, _id);
+            }
+            bool comArma = ComArma && !ocupadas;
             var dados = Dados;
             bool luneta = comArma && dados.fovLuneta > 0f;
             // recarregando, a sniper sai da luneta (a mão está no carregador). O robô de teste, com a sniper, fica na luneta
@@ -229,6 +249,11 @@ namespace ZombieCityCleaner.Player
             }
             ProcurarAlvo(cam.transform);
             if (!controla) return;
+            if (ocupadas)
+            {
+                if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+                return;
+            }
 
             if (comArma)
             {
@@ -627,24 +652,46 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(clip, Boca.position, volume, false);
         }
 
-        // a mira numa coisa que se usa, de perto: o que estiver mais perto na linha do olhar (gatilhos de outras coisas,
-        // como as áreas internas, não contam)
+        // a mira numa coisa que se usa, de perto: a mais perto na linha do olhar que tem o que fazer agora (um gatilho sem
+        // dica, como o da roda sem o macaco, deixa a mira passar para a porta atrás dele; gatilhos de outras coisas, como
+        // as áreas internas, não contam). Um colisor sólido para a busca.
         void ProcurarAlvo(Transform cam)
         {
             _alvo = null;
+            _dica = null;
             int n = Physics.RaycastNonAlloc(cam.position, cam.forward, _acertos, alcanceDaMao, ~0, QueryTriggerInteraction.Collide);
-            float menor = float.MaxValue;
+            // em ordem de distância (o RaycastNonAlloc não ordena)
+            for (int i = 1; i < n; i++)
+            {
+                var h = _acertos[i];
+                int j = i - 1;
+                while (j >= 0 && _acertos[j].distance > h.distance)
+                {
+                    _acertos[j + 1] = _acertos[j];
+                    j--;
+                }
+                _acertos[j + 1] = h;
+            }
             for (int i = 0; i < n; i++)
             {
                 var hit = _acertos[i];
-                if (hit.collider == _corpo || hit.distance >= menor) continue;
+                if (hit.collider == _corpo) continue;
                 var alvo = hit.collider.GetComponent<Interagivel>();
-                if (hit.collider.isTrigger && alvo == null) continue;
-                menor = hit.distance;
+                if (alvo == null)
+                {
+                    if (hit.collider.isTrigger) continue;
+                    return;
+                }
+                string dica = alvo.Dica(this);
+                if (dica == null)
+                {
+                    if (hit.collider.isTrigger) continue;
+                    return;
+                }
                 _alvo = alvo;
+                _dica = dica;
+                return;
             }
-            _dica = _alvo != null ? _alvo.Dica(this) : null;
-            if (_dica == null) _alvo = null;
         }
 
         void OnGUI()
@@ -673,7 +720,14 @@ namespace ZombieCityCleaner.Player
                 Retangulo(cx - t / 2, cy - m - ml, t, ml, marca); Retangulo(cx - t / 2, cy + m, t, ml, marca);
                 GUI.matrix = antes;
             }
-            if (ComArma)
+            if (MaosOcupadas)
+            {
+                var pesado = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
+                pesado.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
+                GUI.Label(new Rect(Screen.width - 420 * u, Screen.height - 50 * u, 400 * u, 30 * u),
+                    $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR", pesado);
+            }
+            else if (ComArma)
             {
                 var d = Dados;
                 var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };

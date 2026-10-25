@@ -165,9 +165,11 @@ namespace ZombieCityCleaner.EditorTools
 
         class Recorte
         {
-            public Mesh semCapo, tampa, caixa;
+            public Mesh semCapo, tampa, caixa, roda;
             public Vector3 dobradica;
-            public float zTras, zFrente, yFrente, piso;
+            public float zTras, zFrente, yFrente, piso, raio;
+            // as 4 rodas (o meio de cada uma, na ordem DE, DD, TE, TD) e onde o macaco encosta ao lado de cada uma
+            public Vector3[] centros, pontosDoMacaco;
         }
 
         static readonly Dictionary<Mesh, Recorte> _recortes = new Dictionary<Mesh, Recorte>();
@@ -192,6 +194,54 @@ namespace ZombieCityCleaner.EditorTools
             capo.carroFechado = mr;
             capo.aberto = aberto;
             capo.tampa = tampa.transform;
+
+            // as 4 rodas à parte (as da direita são a da esquerda espelhada), no "Capô aberto", que aparece também quando
+            // falta uma roda ou o macaco está apoiado
+            string[] nomes = { "DE", "DD", "TE", "TD" };
+            capo.rodas = new Transform[4];
+            for (int i = 0; i < 4; i++)
+            {
+                var roda = Malha(aberto.transform, "Roda " + nomes[i], r.roda, m.cidade, r.centros[i], Quaternion.identity, 0);
+                roda.shadowCastingMode = mr.shadowCastingMode;
+                if (r.centros[i].x > 0f) roda.transform.localScale = new Vector3(-1f, 1f, 1f);
+                capo.rodas[i] = roda.transform;
+            }
+            capo.centrosDasRodas = r.centros;
+            capo.pontosDoMacaco = r.pontosDoMacaco;
+            capo.raioDaRoda = r.raio;
+
+            // o macaco apoiado (escondido; o CapoDaCidade o põe no lugar e o estica) e o gatilho dele, e um gatilho do
+            // lado de fora de cada roda (Ignore Raycast, fora do NavMesh, para fora da caixa de colisão do carro)
+            string caminho = MontagemDasArmas.MalhaDaPeca(4);
+            var malhaDoMacaco = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
+            if (malhaDoMacaco == null) throw new FileNotFoundException("Rode a montagem das armas antes (as malhas das peças).", caminho);
+            var macaco = Malha(carro.transform, "Macaco (apoiado)", malhaDoMacaco, m.cidade, Vector3.zero, Quaternion.identity, 2);
+            macaco.enabled = false;
+            macaco.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>();
+            macaco.GetComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+            var miraDoMacaco = macaco.gameObject.AddComponent<BoxCollider>();
+            miraDoMacaco.isTrigger = true;
+            miraDoMacaco.enabled = false;
+            macaco.gameObject.AddComponent<MacacoDaCidade>().capo = capo;
+            capo.macaco = macaco;
+
+            var b = carro.sharedMesh.bounds;
+            var miras = new GameObject("Rodas (mira)") { layer = 2 }.transform;
+            miras.SetParent(carro.transform, false);
+            miras.gameObject.AddComponent<Unity.AI.Navigation.NavMeshModifier>().ignoreFromBuild = true;
+            for (int i = 0; i < 4; i++)
+            {
+                var g = new GameObject("Roda " + nomes[i] + " (mira)") { layer = 2 };
+                g.transform.SetParent(miras, false);
+                var bc = g.AddComponent<BoxCollider>();
+                bc.isTrigger = true;
+                float lado = Mathf.Sign(r.centros[i].x);
+                bc.center = new Vector3(b.center.x + lado * (b.extents.x + 0.07f), r.centros[i].y, r.centros[i].z);
+                bc.size = new Vector3(0.16f, r.raio * 2f + 0.06f, r.raio * 2f + 0.16f);
+                var rc = g.AddComponent<RodaDaCidade>();
+                rc.capo = capo;
+                rc.roda = i;
+            }
             aberto.SetActive(false);
             return true;
         }
@@ -243,6 +293,8 @@ namespace ZombieCityCleaner.EditorTools
             var sem = Object.Instantiate(malha);
             sem.name = malha.name + "_SemCapo";
             sem.SetTriangles(resto, 0);
+            // as rodas: saem da carroceria, e a da frente, à esquerda, vira a malha da roda (as outras são a mesma)
+            if (!RecortarRodas(r, sem, malha.name)) return null;
             r.semCapo = PainelDoCarro.Salvar(sem, $"{PastaMalhas}/{sem.name}.asset");
 
             // o capô: as faces de cima e as de baixo (as mesmas, ao contrário), em volta da dobradiça
@@ -294,6 +346,101 @@ namespace ZombieCityCleaner.EditorTools
             }
             r.caixa = PainelDoCarro.Salvar(cx.Malha(malha.name + "_Cofre"), $"{PastaMalhas}/{malha.name}_Cofre.asset");
             return r;
+        }
+
+        /// <summary>
+        /// Tira as 4 rodas da carroceria (a malha <paramref name="sem"/>, já sem o capô): o pneu é a cor do triângulo mais
+        /// baixo da malha, e a roda de cada canto é a caixa dos vértices do pneu daquele canto; o que fica todo dentro
+        /// dela (o pneu e o aro) sai. A roda da frente, à esquerda, é gravada à parte (`_Roda`, a origem no meio dela; as
+        /// da direita são ela espelhada). Também acha onde o macaco encosta: embaixo da soleira, 0,55 m da roda para o
+        /// meio, por um raio de baixo para cima na carroceria.
+        /// </summary>
+        static bool RecortarRodas(Recorte r, Mesh sem, string nome)
+        {
+            var v = sem.vertices;
+            var uv = sem.uv;
+            var t = sem.GetTriangles(0);
+            System.Func<int, Vector2Int> cela = i => new Vector2Int(Mathf.FloorToInt(uv[i].x * 16f), Mathf.FloorToInt(uv[i].y * 16f));
+            // a cor do pneu: a do triângulo mais baixo
+            int maisBaixo = 0;
+            float yMin = float.MaxValue;
+            for (int i = 0; i < t.Length; i += 3)
+            {
+                float y = (v[t[i]].y + v[t[i + 1]].y + v[t[i + 2]].y) / 3f;
+                if (y < yMin) { yMin = y; maisBaixo = i; }
+            }
+            var pneu = cela(t[maisBaixo]);
+            // a caixa do pneu de cada canto (0 frente esquerda, 1 frente direita, 2 trás esquerda, 3 trás direita)
+            var caixas = new Bounds[4];
+            var tem = new bool[4];
+            for (int i = 0; i < t.Length; i += 3)
+            {
+                if (cela(t[i]) != pneu) continue;
+                for (int k = 0; k < 3; k++)
+                {
+                    var p = v[t[i + k]];
+                    int q = (p.x < 0f ? 0 : 1) + (p.z > 0f ? 0 : 2);
+                    if (!tem[q]) { caixas[q] = new Bounds(p, Vector3.zero); tem[q] = true; }
+                    else caixas[q].Encapsulate(p);
+                }
+            }
+            if (!tem[0] || !tem[1] || !tem[2] || !tem[3])
+            {
+                Debug.LogWarning($"Não achei as 4 rodas na malha {nome}.");
+                return false;
+            }
+            // a parte de cima de alguns pneus não existe (fica escondida no para-lama): o raio vem do comprimento do pneu
+            // (sempre inteiro) e o meio fica um raio acima do ponto que encosta no chão
+            r.centros = new Vector3[4];
+            for (int q = 0; q < 4; q++)
+            {
+                var b = caixas[q];
+                float raio = (b.max.z - b.min.z) / 2f;
+                var c = new Vector3(b.center.x, b.min.y + raio, b.center.z);
+                r.centros[q] = c;
+                caixas[q] = new Bounds(c, new Vector3(b.size.x, 2f * raio, 2f * raio));
+                caixas[q].Expand(0.012f);
+                if (q == 0) r.raio = raio;
+            }
+            // o que fica todo dentro da caixa de uma roda sai da carroceria
+            var corpo = new List<int>();
+            var daRoda = new List<int>();
+            var porRoda = new int[4];
+            for (int i = 0; i < t.Length; i += 3)
+            {
+                int q = -1;
+                for (int c = 0; c < 4 && q < 0; c++)
+                    if (caixas[c].Contains(v[t[i]]) && caixas[c].Contains(v[t[i + 1]]) && caixas[c].Contains(v[t[i + 2]])) q = c;
+                if (q < 0)
+                {
+                    corpo.AddRange(new[] { t[i], t[i + 1], t[i + 2] });
+                    continue;
+                }
+                porRoda[q]++;
+                if (q == 0) daRoda.AddRange(new[] { t[i], t[i + 1], t[i + 2] });
+            }
+            sem.SetTriangles(corpo, 0);
+            var mr = new Construtor();
+            for (int i = 0; i < daRoda.Count; i += 3)
+                mr.Triangulo(v[daRoda[i]] - r.centros[0], v[daRoda[i + 1]] - r.centros[0], v[daRoda[i + 2]] - r.centros[0], uv[daRoda[i]]);
+            r.roda = PainelDoCarro.Salvar(mr.Malha(nome + "_Roda"), $"{PastaMalhas}/{nome}_Roda.asset");
+            Debug.Log($"{nome}: rodas recortadas ({string.Join(", ", porRoda)} triângulos), raio {r.raio:F2} m.");
+
+            // onde o macaco encosta: embaixo da soleira, ao lado de cada roda, para o meio do carro
+            var medidor = new GameObject("Medidor temporário").AddComponent<MeshCollider>();
+            medidor.sharedMesh = sem;
+            float meia = sem.bounds.extents.x;
+            r.pontosDoMacaco = new Vector3[4];
+            for (int q = 0; q < 4; q++)
+            {
+                var c = r.centros[q];
+                float x = Mathf.Sign(c.x) * (meia - 0.12f), z = c.z - Mathf.Sign(c.z) * 0.55f;
+                float y = medidor.Raycast(new Ray(new Vector3(x, -1f, z), Vector3.up), out var acerto, 3f) && acerto.point.y < c.y + 0.25f
+                    ? acerto.point.y : c.y - 0.08f;
+                r.pontosDoMacaco[q] = new Vector3(x, y, z);
+            }
+            Object.DestroyImmediate(medidor.gameObject);
+            return true;
         }
 
         /// <summary>Uma malha de faces planas, cada uma com uma cor da paleta (o UV), virada para o lado pedido.</summary>

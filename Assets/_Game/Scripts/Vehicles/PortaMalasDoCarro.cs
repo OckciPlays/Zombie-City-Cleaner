@@ -30,8 +30,9 @@ namespace ZombieCityCleaner.Vehicles
             else if (alvo == Estepe)
             {
                 int e = carro.Estepe;
-                if (e >= 0) return inv.PodeReceber(Item.Pneu, out var motivo) ? $"[E] Pegar o estepe ({e}%)" : motivo;
-                if (Achar(inv, Item.Pneu, out var pneu)) return $"[E] Guardar o pneu ({pneu.qtd}%)";
+                if (e >= 0) return inv.PodeReceber(Item.Pneu, out var motivo)
+                    ? $"[E] Pegar o estepe ({e}%){(inv.PneuVaiParaAsMaos ? " nas mãos (pesado)" : "")}" : motivo;
+                if (AcharPneu(inv, out int estado, out _)) return $"[E] Guardar o pneu ({estado}%)";
             }
             return "[E] Fechar o porta-malas";
         }
@@ -54,7 +55,7 @@ namespace ZombieCityCleaner.Vehicles
             else if (alvo == Estepe)
             {
                 if (carro.Estepe >= 0) { carro.PedirDoPortaMalas(Estepe); return; }
-                if (Achar(inv, Item.Pneu, out var p)) { carro.PedirGuardar(Estepe, p.id); return; }
+                if (AcharPneu(inv, out _, out ushort id)) { carro.PedirGuardar(Estepe, id); return; }
             }
             carro.PedirPortaMalas(false);
         }
@@ -91,6 +92,20 @@ namespace ZombieCityCleaner.Vehicles
             var caixa = mf.sharedMesh.bounds;
             caixa.Expand(0.08f);
             return caixa.IntersectRay(local, out t) && t < 3f;
+        }
+
+        /// <summary>
+        /// O pneu para pôr numa roda ou no porta-malas: primeiro o das mãos (o Id 0), senão o melhor da mochila.
+        /// </summary>
+        internal static bool AcharPneu(InventarioJogador inv, out int estado, out ushort id)
+        {
+            id = 0;
+            estado = inv.EstadoDoPneuNasMaos;
+            if (estado >= 0) return true;
+            if (!Achar(inv, Item.Pneu, out var it)) return false;
+            id = it.id;
+            estado = it.qtd;
+            return true;
         }
 
         /// <summary>A peça desse tipo na mochila (o pneu: o melhor).</summary>
