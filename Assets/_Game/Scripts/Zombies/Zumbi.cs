@@ -3,15 +3,19 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Zombies
 {
     /// <summary>
     /// Um zumbi. No anfitrião ele pensa: vaga devagar, percebe os jogadores (visão que depende da luz, contato, passos
-    /// correndo e tiros), persegue devagar, ataca de perto e desiste quando o alvo se afasta ou some de vista. Quem chama
+    /// correndo e tiros; nada passa pela porta fechada do bunker), persegue devagar, ataca de perto e desiste quando o
+    /// alvo se afasta ou some de vista. Quem chama
     /// Pensar() é o ZombieManager, em fatias e no ritmo do nível de detalhe de cada um.
     /// Também leva tiro (só no anfitrião): a cabeça explode com um tiro e ele morre; no resto, o corpo perde vida (nos
     /// braços e nas pernas, menos). Morto, ele some e um corpo com física (CorpoDeZumbi) cai no lugar.
+    /// Os membros também têm vida: acabou, o membro cai (desmembramento, veja <see cref="Membros"/>). Sem uma perna ele
+    /// manca; sem as duas, cai e passa a rastejar.
     /// Nos outros jogadores o zumbi é uma cópia: segue as posições que chegam pela rede, com interpolação, e mostra o
     /// estado recebido (morte, golpes e reações).
     /// Não tem Update próprio (com centenas de zumbis, o ZombieManager faz um laço só).
@@ -40,10 +44,15 @@ namespace ZombieCityCleaner.Zombies
         public Transform[] esqueleto;
         [Tooltip("Os ossos das partes do corpo com física, na ordem de CorpoDeZumbi.Partes.")]
         public Transform[] partes;
+        [Tooltip("A malha inteira (a base dos cortes) e os materiais da pele e da carne (as tampas dos cortes).")]
+        public Mesh malhaInteira;
+        public Material materialPele, materialCarne;
 
         static readonly int SpeedId = Animator.StringToHash("Speed");
         static readonly int AtacarId = Animator.StringToHash("Atacar");
         static readonly int TiroId = Animator.StringToHash("Tiro");
+        static readonly int PernasId = Animator.StringToHash("Pernas");
+        const int CamadaAcoes = 1;
 
         public int Id { get; private set; }
         /// <summary>Muda cada vez que o Id volta do pool: a cópia sabe que é outro zumbi.</summary>
@@ -60,11 +69,15 @@ namespace ZombieCityCleaner.Zombies
         public bool Morto => Atual == Estado.Morto;
         /// <summary>Morreu com a cabeça explodida.</summary>
         public bool SemCabeca { get; private set; }
+        /// <summary>Os membros perdidos, 2 bits por membro (veja <see cref="Membros"/>). Vai pela rede.</summary>
+        public byte Cortes { get; private set; }
+        /// <summary>Como ele anda: 0 normal, 1 mancando sem a perna esquerda, 2 sem a direita, 3 caindo, 4 rastejando.</summary>
+        public int Pernas => _pernas;
         /// <summary>
-        /// Como ele morreu, num byte (vai pela rede): bit 0 sem cabeça, bits 1 a 4 a parte do corpo que levou o tiro.
-        /// A direção do empurrão vai no lugar da velocidade (morto não anda).
+        /// Como ele morreu, num byte (vai pela rede): bit 0 sem cabeça, bits 1 a 4 a parte do corpo que levou o tiro e
+        /// bit 5 arremessado (a espingarda de perto). A direção do empurrão vai no lugar da velocidade (morto não anda).
         /// </summary>
-        internal byte InfoDaMorte => (byte)((SemCabeca ? 1 : 0) | (_parteDaMorte << 1));
+        internal byte InfoDaMorte => (byte)((SemCabeca ? 1 : 0) | (_parteDaMorte << 1) | (_arremessado ? 32 : 0));
         internal float DirecaoDaMorte { get; private set; }
         /// <summary>Perseguindo, atacando ou levou tiro há pouco: nunca cai de nível.</summary>
         public bool Engajado => Atual == Estado.Perseguindo || Atual == Estado.Atacando || Time.time < _engajadoAte;
@@ -73,7 +86,11 @@ namespace ZombieCityCleaner.Zombies
         ZombieManager _m;
         bool _visivel = true;
         float _velAnimacao;
+        int _pernas;
+        float _rastejaEm, _velocidadeBase = -1f, _alturaDaCapsula = -1f, _alturaDoAgente;
+        Material[] _soPele, _peleECarne;
         int _parteDaMorte;
+        bool _arremessado;
 
         // ------------------------------------------------------------------ comum
 
@@ -83,6 +100,7 @@ namespace ZombieCityCleaner.Zombies
             NivelAtual = n;
             bool perto = n == Nivel.Perto, longe = n == Nivel.Longe;
             animador.enabled = !longe && !Morto;
+            if (animador.enabled) AplicarPernasNoAnimador();
             animador.cullingMode = perto ? AnimatorCullingMode.CullUpdateTransforms : AnimatorCullingMode.CullCompletely;
             capsula.gameObject.layer = perto ? CamadaSoBloqueio : CamadaZumbi;
             AtualizarColisores();
@@ -106,11 +124,11 @@ namespace ZombieCityCleaner.Zombies
             foreach (var r in renderers) r.enabled = ligado;
         }
 
-        // hitboxes só no nível Perto; morto, nada leva tiro
+        // hitboxes só no nível Perto; morto, nada leva tiro; um membro que caiu não leva mais
         void AtualizarColisores()
         {
             bool perto = NivelAtual == Nivel.Perto;
-            foreach (var h in hitboxes) h.colisor.enabled = perto && !Morto;
+            foreach (var h in hitboxes) h.colisor.enabled = perto && !Morto && !Membros.Perdeu(Cortes, h.membro);
             capsula.enabled = NivelAtual != Nivel.Longe && !Morto;
         }
 
@@ -121,15 +139,101 @@ namespace ZombieCityCleaner.Zombies
             if (animador.enabled) animador.SetFloat(SpeedId, _velAnimacao);
         }
 
-        // o golpe: a animação de ataque (só o tronco)
+        // o golpe: a animação de ataque (só o tronco; caído, não: o tronco de pé por cima do rastejar ficava torto)
         void MostrarGolpe()
         {
-            if (animador.isActiveAndEnabled) animador.SetTrigger(AtacarId);
+            if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(AtacarId);
         }
 
         void MostrarReacao()
         {
-            if (animador.isActiveAndEnabled) animador.SetTrigger(TiroId);
+            if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(TiroId);
+        }
+
+        // ------------------------------------------------------------------ desmembramento
+
+        /// <summary>
+        /// Os membros mudaram (no anfitrião pelo tiro, nas cópias pela rede): a malha cortada, as hitboxes e o jeito de
+        /// andar. Com efeito, cada membro que caiu agora solta o pedaço (voando para trás) e o toco jorra sangue.
+        /// </summary>
+        internal void MudarCortes(byte novos, bool comEfeito, Vector3 direcao)
+        {
+            byte antes = Cortes;
+            if (novos == antes) return;
+            Cortes = novos;
+            var pele = renderers[0] as SkinnedMeshRenderer;
+            if (_soPele == null)
+            {
+                _soPele = new[] { materialPele };
+                _peleECarne = new[] { materialPele, materialCarne };
+            }
+            if (comEfeito && _m != null && !Morto)
+            {
+                Vector3 velocidade = Copia ? transform.forward * Velocidade : agente.enabled ? agente.velocity : Vector3.zero;
+                if (direcao.sqrMagnitude < 0.01f) direcao = -transform.forward;
+                for (int l = 0; l < Membros.Quantos; l++)
+                {
+                    int velho = Membros.Estado(antes, l), novo = Membros.Estado(novos, l);
+                    if (novo <= velho) continue;
+                    int indice = Membros.IndiceDoOsso(esqueleto, Membros.OssoDoCorte(l, novo));
+                    if (indice < 0) continue;
+                    var osso = esqueleto[indice];
+                    var malha = Membros.Pedaco(malhaInteira, esqueleto, Membros.ComEstado(antes, l, velho), Membros.ComEstado(antes, l, novo), indice);
+                    _m.SoltarPedaco(malha, _peleECarne, osso, direcao, velocidade);
+                    int seguinte = Membros.IndiceDoOsso(esqueleto, Membros.OssoDepoisDoCorte(l, novo));
+                    Vector3 rumo = seguinte >= 0 ? esqueleto[seguinte].position - osso.position : Vector3.down;
+                    Sangue.Jorro(osso, rumo, 2.5f);
+                    Sangue.Respingo(osso.position, rumo.normalized, 28);
+                    Sangue.Mancha(osso.position, 0.7f);
+                }
+            }
+            if (pele != null)
+            {
+                pele.sharedMesh = Membros.Variante(malhaInteira, esqueleto, novos);
+                pele.sharedMaterials = novos == 0 ? _soPele : _peleECarne;
+            }
+            AtualizarColisores();
+            // as pernas: sem uma, manca; sem as duas, cai (com efeito) e depois rasteja
+            bool semE = Membros.SemPerna(novos, 0), semD = Membros.SemPerna(novos, 1);
+            int pernas = semE && semD ? (comEfeito && _pernas < 3 ? 3 : _pernas == 3 ? 3 : 4) : semE ? 1 : semD ? 2 : 0;
+            if (pernas == 3 && _pernas != 3) _rastejaEm = Time.time + 0.8f;
+            DefinirPernas(pernas);
+        }
+
+        float FatorDasPernas => _pernas == 0 ? 1f : _pernas == 3 ? 0f : _pernas == 4 ? _m.ajustes.fatorRastejando : _m.ajustes.fatorMancando;
+
+        void DefinirPernas(int p)
+        {
+            _pernas = p;
+            if (_alturaDaCapsula < 0f)
+            {
+                _alturaDaCapsula = capsula.height;
+                _alturaDoAgente = agente.height;
+            }
+            // no chão: a cápsula e o agente baixos (o jogador passa por cima e o tiro de cima pega)
+            float altura = p >= 3 ? 0.7f : _alturaDaCapsula;
+            capsula.height = altura;
+            capsula.center = new Vector3(0f, altura / 2f, 0f);
+            agente.height = p >= 3 ? 0.7f : _alturaDoAgente;
+            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas;
+            AplicarPernasNoAnimador();
+        }
+
+        void AplicarPernasNoAnimador()
+        {
+            if (!animador.isActiveAndEnabled) return;
+            animador.SetInteger(PernasId, _pernas);
+            animador.SetLayerWeight(CamadaAcoes, _pernas >= 3 ? 0f : 1f);
+        }
+
+        // caindo: quando a queda acaba, passa a rastejar
+        void PassarDoTempoDasPernas()
+        {
+            if (_rastejaEm > 0f && Time.time >= _rastejaEm)
+            {
+                _rastejaEm = 0f;
+                DefinirPernas(4);
+            }
         }
 
         /// <summary>
@@ -142,7 +246,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 Vector3 direcao = Quaternion.Euler(0f, DirecaoDaMorte, 0f) * Vector3.forward;
                 Vector3 velocidade = Copia ? transform.forward * Velocidade : agente.enabled ? agente.velocity : Vector3.zero;
-                _m.Cair(this, velocidade, SemCabeca, _parteDaMorte, direcao);
+                _m.Cair(this, velocidade, SemCabeca, _parteDaMorte, direcao, _arremessado, Cortes);
                 if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
                 Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
             }
@@ -167,7 +271,16 @@ namespace ZombieCityCleaner.Zombies
         internal void Zerar()
         {
             _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f;
-            _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f;
+            _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f; _arremessado = false;
+            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? _m.ajustes.vidaDoMembro : 3f;
+            if (Cortes != 0)
+            {
+                Cortes = 0;
+                var pele = renderers[0] as SkinnedMeshRenderer;
+                if (pele != null) { pele.sharedMesh = malhaInteira; pele.sharedMaterials = new[] { materialPele }; }
+            }
+            _rastejaEm = 0f;
+            if (_pernas != 0) DefinirPernas(0);
             Golpes = 0; Reacoes = 0; Velocidade = 0f; _velAnimacao = 0f; _qtd = 0;
             Atual = Estado.Parado;
             if (agente.enabled)
@@ -186,6 +299,7 @@ namespace ZombieCityCleaner.Zombies
         Vector3 _casa, _ultimaPosicao, _olharPara;
         float _fimDaPausa, _alerta, _ultimoVisto, _proximoGolpe, _proximoCaminho, _engajadoAte, _preguica, _giro, _golpeEm;
         float _danoNoCorpo;
+        readonly float[] _vidaDosMembros = { 3f, 3f, 3f, 3f };
         bool _girando;
 
         bool NoNavMesh => agente.enabled && agente.isOnNavMesh;
@@ -194,6 +308,7 @@ namespace ZombieCityCleaner.Zombies
         internal void PrepararNoServidor(int id, byte geracao, Vector3 posicao, float yaw, ZombieManager m)
         {
             Id = id; Geracao = geracao; Copia = false; _m = m;
+            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = m.ajustes.vidaDoMembro;
             transform.SetPositionAndRotation(posicao, Quaternion.Euler(0f, yaw, 0f));
             _casa = posicao;
             _preguica = Random.value < 0.33f ? 3f : 1f;
@@ -233,6 +348,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>A cada quadro (níveis Perto e Médio): velocidade, giro e animação.</summary>
         internal void QuadroNoServidor(float dt)
         {
+            PassarDoTempoDasPernas();
             Velocidade = agente.enabled ? agente.velocity.magnitude : 0f;
             if (_girando && !Morto)
             {
@@ -286,6 +402,7 @@ namespace ZombieCityCleaner.Zombies
             for (int i = 0; i < _m.QuantosJogadores; i++)
             {
                 ref readonly var p = ref _m.Jogadores[i];
+                if (BunkerRede.Isolado(p.peito, olho)) continue;
                 Vector3 para = p.peito - olho;
                 float d = para.magnitude;
                 float forca;
@@ -342,7 +459,8 @@ namespace ZombieCityCleaner.Zombies
 
         void Ir(Vector3 destino, float velocidade, float parada)
         {
-            agente.speed = velocidade;
+            _velocidadeBase = velocidade;
+            agente.speed = velocidade * FatorDasPernas;   // mancando ou rastejando, mais devagar (caindo, parado)
             agente.stoppingDistance = parada;
             agente.isStopped = false;
             agente.SetDestination(destino);
@@ -458,7 +576,7 @@ namespace ZombieCityCleaner.Zombies
             _ultimoVisto = agora;
             _ultimaPosicao = pos;
             OlharPara(pos);
-            if (agora >= _proximoGolpe)
+            if (agora >= _proximoGolpe && _pernas != 3)
             {
                 _proximoGolpe = agora + a.intervaloDoGolpe;
                 _golpeEm = agora + a.atrasoDoDano;   // o dano sai quando a animação agarra
@@ -487,21 +605,38 @@ namespace ZombieCityCleaner.Zombies
 
         /// <summary>
         /// Um tiro confirmado pelo anfitrião. Na cabeça, ela explode e ele morre; no resto, o corpo perde vida (nos braços
-        /// e nas pernas, só uma parte do dano) e cai morto quando ela acaba. A direção do tiro empurra o corpo que cai.
+        /// e nas pernas, só uma parte do dano) e cai morto quando ela acaba. A direção do tiro empurra o corpo que cai, e o
+        /// arremesso (a espingarda de perto) joga o corpo inteiro para trás.
         /// </summary>
-        internal void LevarTiro(RegiaoDoCorpo regiao, float dano, Vector3 ponto, Vector3 direcao, JogadorRede autor, float agora)
+        internal void LevarTiro(RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, Vector3 direcao, bool arremesso, JogadorRede autor, float agora)
         {
             if (Morto) return;
             var a = _m.ajustes;
             if (regiao == RegiaoDoCorpo.Cabeca)
             {
-                Morrer(agora, true, ponto, direcao);
+                Morrer(agora, true, ponto, direcao, arremesso);
                 return;
             }
-            _danoNoCorpo += regiao == RegiaoDoCorpo.Braco || regiao == RegiaoDoCorpo.Perna ? dano * a.danoNosMembros : dano;
+            bool noMembro = regiao == RegiaoDoCorpo.Braco || regiao == RegiaoDoCorpo.Perna;
+            _danoNoCorpo += noMembro ? dano * a.danoNosMembros : dano;
+            // a vida do membro: acabou, ele cai no pedaço que levou o tiro (o de baixo, ou o membro todo)
+            int limbo = Membros.Limbo(membro);
+            if (noMembro && limbo >= 0 && !Membros.Perdeu(Cortes, membro))
+            {
+                _vidaDosMembros[limbo] -= dano;
+                if (_vidaDosMembros[limbo] <= 0.001f)
+                {
+                    int novo = Membros.DeBaixo(membro) ? 1 : 2;
+                    if (novo > Membros.Estado(Cortes, limbo))
+                    {
+                        _vidaDosMembros[limbo] = a.vidaDoMembro;   // o que sobrou do membro (o braço ou a coxa) tem vida nova
+                        MudarCortes(Membros.ComEstado(Cortes, limbo, novo), true, direcao);
+                    }
+                }
+            }
             if (_danoNoCorpo >= a.vidaDoCorpo)
             {
-                Morrer(agora, false, ponto, direcao);
+                Morrer(agora, false, ponto, direcao, arremesso);
                 return;
             }
             Reacoes++;
@@ -523,10 +658,11 @@ namespace ZombieCityCleaner.Zombies
             return melhor;
         }
 
-        void Morrer(float agora, bool semCabeca, Vector3 ponto, Vector3 direcao)
+        void Morrer(float agora, bool semCabeca, Vector3 ponto, Vector3 direcao, bool arremesso)
         {
             if (Morto) return;
             SemCabeca = semCabeca;
+            _arremessado = arremesso;
             _parteDaMorte = semCabeca ? CorpoDeZumbi.ParteCabeca : ParteMaisPerto(ponto);
             direcao.y = 0f;
             DirecaoDaMorte = direcao.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(direcao).eulerAngles.y : transform.eulerAngles.y + 180f;
@@ -567,7 +703,7 @@ namespace ZombieCityCleaner.Zombies
             AplicarNivel(Nivel.Medio, true);
         }
 
-        internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade)
+        internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade, byte cortes)
         {
             ultimoRecebido = Time.unscaledTime;
             bool primeira = _qtd == 0;
@@ -588,13 +724,16 @@ namespace ZombieCityCleaner.Zombies
             if (!primeira && estado == Estado.Perseguindo && Atual != Estado.Perseguindo && Atual != Estado.Atacando) Gemer(1.05f);
             if (!primeira && golpes != (Golpes & 3)) MostrarGolpe();
             if (!primeira && reacoes != (Reacoes & 3)) MostrarReacao();
+            // os membros antes da morte: o corpo que cai já sai cortado
+            if (cortes != Cortes && Atual != Estado.Morto) MudarCortes(cortes, !primeira, -transform.forward);
             bool morreu = estado == Estado.Morto && Atual != Estado.Morto;
             if (morreu)
             {
                 // morto, o byte da velocidade traz a direção do tiro (a velocidade fica a do último pacote vivo: o corpo
                 // cai andando), e o da morte traz a cabeça e a parte atingida
                 SemCabeca = (morte & 1) != 0;
-                _parteDaMorte = Mathf.Clamp(morte >> 1, 0, CorpoDeZumbi.Partes.Length - 1);
+                _parteDaMorte = Mathf.Clamp((morte >> 1) & 15, 0, CorpoDeZumbi.Partes.Length - 1);
+                _arremessado = (morte & 32) != 0;
                 DirecaoDaMorte = velocidade;
             }
             else if (estado != Estado.Morto) Velocidade = velocidade;
@@ -628,6 +767,7 @@ namespace ZombieCityCleaner.Zombies
             }
             float k = b.tempo > a.tempo ? Mathf.Clamp01((float)((t - a.tempo) / (b.tempo - a.tempo))) : 1f;
             transform.SetPositionAndRotation(Vector3.Lerp(a.posicao, b.posicao, k), Quaternion.Euler(0f, Mathf.LerpAngle(a.yaw, b.yaw, k), 0f));
+            PassarDoTempoDasPernas();
             Animar(dt);
         }
     }

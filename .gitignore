@@ -112,3 +112,7 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# o zumbi antigo, tirado do histórico só para gerar as animações do desmembramento (veja Blender/README.md)
+/Blender/NovoZombie_antigo.fbx
+/Blender/__pycache__/

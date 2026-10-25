@@ -7,7 +7,9 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// Menu simples (OnGUI): hospedar, entrar com código ou testar em modo local. Na partida, mostra o código no
-    /// canto e ESC abre o menu (o mundo continua rodando, porque é online).
+    /// canto e ESC abre o menu (o mundo continua rodando, porque é online). Nos dois, as <see cref="Opcoes"/> (volume,
+    /// limite de FPS e o contador de FPS, que este menu desenha em cima de tudo).
+    /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
     /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip] e -bot (o jogador anda e
     /// atira sozinho).
     /// </summary>
@@ -18,14 +20,40 @@ namespace ZombieCityCleaner.UI
         /// <summary>Teste automático: o jogador local anda em círculo, atira e liga a lanterna sozinho.</summary>
         public static bool Bot { get; private set; }
 
+        /// <summary>
+        /// O jogador local recebe comandos: na partida, com o menu e as telas do jogo fechados e o mouse preso no jogo. O
+        /// mouse é preso sozinho quando a partida começa e quando o menu ou a tela fecha. Se ele se soltar (a janela perdeu
+        /// o foco), um clique o prende de novo, e esse clique não vale como tiro: os comandos só voltam depois de soltar os
+        /// botões do mouse. O estado do mouse é lido na hora, para não depender da ordem dos scripts no quadro do clique.
+        /// </summary>
+        public static bool Controla => !Aberto && _telas.Count == 0 && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar;
+
+        /// <summary>
+        /// Uma tela do jogo aberta por cima da partida (o inventário, o menu do desenvolvedor): o mouse fica solto e o
+        /// jogador não recebe comandos, mas o HUD continua. ESC fecha as telas (<see cref="FecharTelas"/>) em vez de abrir o menu.
+        /// </summary>
+        public static bool ComTela => _telas.Count > 0;
+        public static event Action FecharTelas;
+
+        public static void Tela(object dona, bool aberta)
+        {
+            if (aberta) _telas.Add(dona);
+            else _telas.Remove(dona);
+        }
+
+        static readonly System.Collections.Generic.HashSet<object> _telas = new System.Collections.Generic.HashSet<object>();
+        static bool _esperarSoltar;
         SessaoOnline _sessao;
         string _codigo = "", _ip = "127.0.0.1";
-        bool _pausa;
+        bool _pausa, _opcoes, _estavaAberto = true;
         GUIStyle _titulo, _texto, _botao, _campo, _erro;
+
+        void OnEnable() => _esperarSoltar = true;
 
         void Start()
         {
             _sessao = SessaoOnline.Instancia;
+            Opcoes.Carregar();   // antes da linha de comando: o robô de teste fica em 60 FPS
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length; i++)
             {
@@ -38,17 +66,45 @@ namespace ZombieCityCleaner.UI
 
         void Update()
         {
+            Opcoes.Medir(Time.unscaledDeltaTime);
             bool naPartida = _sessao.Atual == SessaoOnline.Estado.Conectado;
             var teclado = Keyboard.current;
-            if (naPartida && teclado != null && teclado.escapeKey.wasPressedThisFrame) _pausa = !_pausa;
+            bool esc = teclado != null && teclado.escapeKey.wasPressedThisFrame;
+            // ESC nas opções volta para o menu; com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
+            if (esc && _opcoes) _opcoes = false;
+            else if (naPartida && esc && ComTela) FecharTelas?.Invoke();
+            else if (naPartida && esc) _pausa = !_pausa;
+            if (naPartida && !_pausa) _opcoes = false;
             if (!naPartida) _pausa = false;
             Aberto = !naPartida || _pausa;
-            if (Aberto && !Bot)
+            bool solto = Aberto || ComTela;
+            if (solto && !Bot)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
+            else if (!solto && !Bot) PrenderOMouse();
+            _estavaAberto = solto;
             if (Bot && naPartida && Time.time >= _proximoRelatorio) Relatorio();
+        }
+
+        // no jogo, o mouse fica preso: sozinho quando o menu acabou de fechar (ou a partida começou); com um clique, se
+        // ele se soltou (a janela perdeu o foco). Enquanto ele está solto, e até os botões serem soltos, nada de comandos
+        // (o clique que prende o mouse não atira nem mira)
+        void PrenderOMouse()
+        {
+            var mouse = Mouse.current;
+            if (Cursor.lockState != CursorLockMode.Locked)
+            {
+                _esperarSoltar = true;
+                bool clicou = mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame);
+                if (Application.isFocused && (_estavaAberto || clicou))
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
+            }
+            else if (mouse == null || (!mouse.leftButton.isPressed && !mouse.rightButton.isPressed)) _esperarSoltar = false;
         }
 
         // No modo robô, registra no log o que esta cópia enxerga dos outros jogadores (para testes sem tela).
@@ -59,15 +115,21 @@ namespace ZombieCityCleaner.UI
             var zumbis = Zombies.ZombieManager.Instancia;
             int perto = 0, medio = 0;
             if (zumbis != null && zumbis.IsSpawned) zumbis.ContarNiveis(out perto, out medio, out _);
-            int semCabeca = 0, mortos = 0;
+            int semCabeca = 0, mortos = 0, cortados = 0, mancando = 0, rastejando = 0;
             foreach (var z in FindObjectsByType<Zombies.Zumbi>())
             {
+                if (!z.isActiveAndEnabled) continue;
                 if (z.Morto) mortos++;
                 if (z.SemCabeca) semCabeca++;
+                if (z.Cortes != 0) cortados++;
+                if (z.Pernas == 1 || z.Pernas == 2) mancando++;
+                if (z.Pernas >= 3) rastejando++;
             }
-            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}; caídos {mortos}, sem cabeça {semCabeca}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
+            Debug.Log($"[robô] hora {World.CicloDoDia.Relogio()}, zumbis {(zumbis != null && zumbis.IsSpawned ? zumbis.Quantos : 0)} (perto {perto}, médio {medio}; caídos {mortos}, sem cabeça {semCabeca}; " +
+                      $"sem membros {cortados}, mancando {mancando}, rastejando {rastejando}), vida {Player.JogadorRede.Local?.Vida?.Vida.Value ?? 0f:F0}");
             foreach (var j in Player.JogadorRede.Todos)
-                Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}");
+                Debug.Log($"[robô] jogador {j.OwnerClientId}{(j.IsOwner ? " (eu)" : "")}: posição {j.transform.position}, olhar {j.Pitch.Value:F0}°, tiros recebidos {j.TirosRecebidos}, " +
+                          $"lanterna {j.GetComponent<Player.LanternaJogador>().Ligada.Value}, na mão {j.NaMao}{(j.Luneta.Value ? " (na luneta)" : "")}");
         }
 
         void Estilos()
@@ -88,6 +150,13 @@ namespace ZombieCityCleaner.UI
         {
             Estilos();
             float u = Screen.height / 720f;
+            Menu(u);
+            // o contador de FPS por cima do menu (o OnGUI do jogador não usa o canto de cima, à direita)
+            if (Event.current.type == EventType.Repaint) Opcoes.Contador(u);
+        }
+
+        void Menu(float u)
+        {
             var estado = _sessao.Atual;
             if (estado == SessaoOnline.Estado.Conectado)
             {
@@ -100,6 +169,11 @@ namespace ZombieCityCleaner.UI
             GUI.color = new Color(0, 0, 0, 0.6f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            if (_opcoes)
+            {
+                if (Opcoes.Painel(u, Screen.height * 0.3f, _titulo, _botao)) _opcoes = false;
+                return;
+            }
             float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.18f;
             GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
             GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Demo · até 4 jogadores", _texto);
@@ -123,6 +197,7 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao)) _sessao.EntrarLocal(_ip);
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
+            if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Opções", _botao)) _opcoes = true;
         }
 
         void Pausa(float u)
@@ -130,6 +205,11 @@ namespace ZombieCityCleaner.UI
             GUI.color = new Color(0, 0, 0, 0.55f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+            if (_opcoes)
+            {
+                if (Opcoes.Painel(u, Screen.height * 0.3f, _titulo, _botao)) _opcoes = false;
+                return;
+            }
             float w = 320 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.35f;
             GUI.Label(new Rect(0, y - 60 * u, Screen.width, 40 * u), "MENU", _titulo);
             if (!_sessao.Local)
@@ -138,7 +218,8 @@ namespace ZombieCityCleaner.UI
                 if (GUI.Button(new Rect(x, y + 12 * u, w, 36 * u), "Copiar código", _botao)) GUIUtility.systemCopyBuffer = _sessao.Codigo;
             }
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
-            if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Sair da partida", _botao)) { _pausa = false; _sessao.Sair(); }
+            if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Opções", _botao)) _opcoes = true;
+            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), "Sair da partida", _botao)) { _pausa = false; _sessao.Sair(); }
         }
     }
 }

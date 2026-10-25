@@ -7,9 +7,11 @@ using ZombieCityCleaner.UI;
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// A vida do jogador. Só o anfitrião muda (os golpes dos zumbis). O dono vê a barra, o clarão vermelho e o tranco de
-    /// cada golpe; se a vida acaba, ele cai e volta na frente da casa da família com a vida cheia.
-    /// Depois de um tempo sem apanhar a vida volta devagar (provisório: remédio e comida chegam com o saque, na Parte 7).
+    /// A vida do jogador. Só o anfitrião muda (os golpes dos zumbis, e a fome e a sede quando acabam). O dono vê a barra,
+    /// o clarão vermelho e o tranco de cada golpe; se a vida acaba, ele cai e volta na frente da casa da família com a
+    /// vida cheia.
+    /// Depois de um tempo sem apanhar a vida volta devagar, se o jogador não estiver com fome nem com sede
+    /// (<see cref="FomeESede"/>).
     /// </summary>
     public class VidaJogador : NetworkBehaviour
     {
@@ -22,26 +24,36 @@ namespace ZombieCityCleaner.Player
 
         static AudioClip _somDoGolpe;
         float _ultimoGolpe, _proximaRecuperacao, _clarao, _caiuAte;
+        FomeESede _fomeESede;
 
         public override void OnNetworkSpawn()
         {
+            _fomeESede = GetComponent<FomeESede>();
             if (IsServer) Vida.Value = vidaMaxima;
             if (_somDoGolpe == null) _somDoGolpe = GerarSom();
         }
 
-        /// <summary>Só no anfitrião: tira vida. Se acabar, o jogador cai e volta para casa.</summary>
+        /// <summary>Só no anfitrião: um golpe tira vida. Se acabar, o jogador cai e volta para casa.</summary>
         public void Dano(float valor, Vector3 de)
         {
             if (!IsServer || !IsSpawned) return;
             _ultimoGolpe = Time.time;
+            Perder(valor);
+            GolpeRpc(de);
+        }
+
+        /// <summary>Só no anfitrião: tira vida sem golpe (a fome e a sede). Se acabar, o jogador cai e volta para casa.</summary>
+        public void Perder(float valor)
+        {
+            if (!IsServer || !IsSpawned) return;
             float nova = Vida.Value - valor;
             if (nova <= 0f)
             {
                 Vida.Value = vidaMaxima;
+                if (_fomeESede != null) _fomeESede.AoCair();
                 CaiuRpc();
             }
             else Vida.Value = nova;
-            GolpeRpc(de);
         }
 
         [Rpc(SendTo.Owner)]
@@ -64,7 +76,8 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsSpawned) return;
             _clarao = Mathf.Max(0f, _clarao - Time.deltaTime * 2.5f);
-            if (IsServer && Vida.Value < vidaMaxima && Time.time - _ultimoGolpe > esperaParaRecuperar && Time.time >= _proximaRecuperacao)
+            if (IsServer && Vida.Value < vidaMaxima && Time.time - _ultimoGolpe > esperaParaRecuperar && Time.time >= _proximaRecuperacao
+                && (_fomeESede == null || _fomeESede.Bem))
             {
                 _proximaRecuperacao = Time.time + 1f;
                 Vida.Value = Mathf.Min(vidaMaxima, Vida.Value + recuperacao);
@@ -115,9 +128,7 @@ namespace ZombieCityCleaner.Player
                 filtro = Mathf.Lerp(filtro, (float)(r.NextDouble() * 2 - 1), 0.12f);
                 dados[i] = (filtro * 1.6f + Mathf.Sin(t * 2f * Mathf.PI * 85f) * 0.5f) * Mathf.Exp(-t * 14f);
             }
-            var clip = AudioClip.Create("Golpe", n, 1, taxa, false);
-            clip.SetData(dados, 0);
-            return clip;
+            return SomGerado.Clip("Golpe", dados, taxa);
         }
     }
 }

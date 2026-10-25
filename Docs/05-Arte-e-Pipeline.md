@@ -9,11 +9,11 @@ Projeto Zombie City Cleaner/
   Plano_Demo.md           o plano original (resumido em Docs/02)
   CLAUDE.md               as convenções da arte, em detalhe
   Imgs/                   imagens de referência; Renders/ tem os renders de conferência
-  Sons/                   SomZombie1.mp3 (a voz do zumbi); Previas/ tem os tiros gerados em WAV
+  Sons/                   SomZombie1.mp3 (a voz do zumbi); Previas/ tem os sons gerados em WAV (tiros, passos, comer e beber, socos)
   Modelos 3D/             os 4 zumbis como vieram do gerador (Tripo), sem modificações
   Modelo 3D/
     Zumbis/               Zumbis.blend, zumbis.py e os FBX dos 4 zumbis
-    Jogador/              Jogador.blend, armas.py, armas_anim.py, jogador_tp.py e os FBX do jogador e das armas
+    Jogador/              Jogador.blend, armas.py, armas_anim.py, jogador_tp.py, itens.py, maos.py, os FBX do jogador, das armas e dos itens, e Icones/
     Cidade/               Cidade.blend, cidade_kit.py e os scripts de cada parte da cidade, e os FBX
     NovoZombie_Anim/      o zumbi antigo (fonte do esqueleto e das animações dos zumbis atuais)
 ```
@@ -65,14 +65,26 @@ Para mexer na arte, peça essa pasta ao autor (ou combine de colocá-la num repo
 - **Primeira pessoa:** cada arma tem o seu esqueleto e os seus braços (`FP_Rig_<Arma>` e `FP_Bracos_<Arma>`), com a origem no olho.
   - A arma fica quase paralela ao olhar, para o cano apontar para a mira.
   - A mão direita fecha no cabo. Nas armas longas, a esquerda pega o guarda-mão por baixo, com os dedos subindo pelo lado e as pontas aparecendo em cima.
-- **As animações de primeira pessoa** (`armas_anim.py`): parado, andando, correndo, tiro, gatilho sem bala, recarga e sacar. Cada clipe descreve o movimento da arma e de onde vai a mão esquerda; os braços saem por IK a cada quadro.
+- **As animações de primeira pessoa** (`armas_anim.py`): parado, andando, correndo, tiro, gatilho sem bala, recarga e sacar. Cada clipe descreve o movimento da arma e de onde vai a mão esquerda; os braços saem por IK a cada quadro. Correndo, as armas longas ficam com o cano um pouco para cima, atravessadas no meio de baixo da tela.
 - **As animações de arma longa do corpo** (`jogador_tp.py`): as pernas vêm das animações da pistola, o tronco gira 30° para a direita e a arma fica numa pose fixa em relação ao peito, com os braços por IK.
+- **A comida e a água** (`itens.py`): a lata de conserva e a garrafa de água, no espaço da arma (a origem onde a mão segura), avulsas (`Itens.fbx`) e na mão (`Jogador_FP_Lata.fbx`, `Jogador_FP_Garrafa.fbx`). Os braços usam o mesmo esqueleto das armas (`_rig_fp`, no `armas.py`): a mão direita abraça o item (os dedos pela frente, o polegar por trás) e a esquerda fica fora da tela. Clipes: parado, andando, correndo, sacar e usar (comer ou beber: o item vem até a boca e deita).
+- **Os punhos** (`maos.py`, a mão vazia): os dois punhos fechados em guarda na frente do rosto, com o mesmo esqueleto (`Jogador_FP_Maos.fbx`; clipes parado, andando, correndo, sacar e o soco de direita e de esquerda, com o punho no alvo no quadro 3). No corpo, as animações `<clipe>_Maos` (o jab de direita no lugar do tiro), feitas sobre as poses da pistola parada para o soco sair reto.
+- **Os ícones e as fotos do inventário** (`itens.py`, `icones()` e `fotos()`): cada arma e item com as cores da paleta (o Workbench com a textura), a cavidade, o contorno e o fundo transparente, em `Modelo 3D/Jogador/Icones/`. O ícone é quase de lado, na proporção dos espaços que o item ocupa na mochila (128 px por espaço); a foto é de 3/4, em perspectiva (600 × 500). A sniper é importada do `Armas_Sniper.fbx` da Unity só para isso.
+
+### A sniper e as animações do desmembramento (`Blender/`, no repositório)
+
+Feitas depois, num PC sem a pasta de arte: os scripts ficam no próprio repositório, em `Blender/`, e partem dos FBX que já estão em `Assets/` (o README de lá tem o passo a passo).
+
+- **A sniper** (`sniper_modelo.py`, `sniper_tiro.py`, `sniper_construir.py`): o modelo no espaço da arma do rifle, os braços do rifle com a sniper no lugar e a animação do tiro com o ferrolho. Sai `Jogador_FP_Sniper.fbx` e `Armas_Sniper.fbx`.
+- **Os zumbis** (`zumbi_extras.py`): cair, rastejar e mancar para cada modelo, num `<modelo>_Extra.fbx`. Cair e rastejar vêm do zumbi antigo da Parte 6, tirado do histórico do git.
+- **O export que reproduz os FBX do projeto:** escala "FBX_SCALE_ALL", sem ossos-folha e um take por faixa de NLA. Uma ida e volta de um FBX do projeto por esse caminho não muda nada (conferido). Um FBX com um nó só no topo perde esse nó na Unity (ele vira a raiz), e os caminhos dos ossos nos clipes mudam: por isso os `_Extra` levam a malha junto.
 
 ### A cidade (`Modelo 3D/Cidade/`)
 
 - `cidade_kit.py`: o kit de modelagem (caixas, cilindros, tubos, perfis), a paleta e o export.
-- `cidade_rua.py` (objetos de rua), `cidade_casas.py` (as 5 casas), `cidade_predio.py` (o prédio), `cidade_bunker.py` (o bunker), `cidade_moveis.py` (os móveis e o suporte de armas) e `cidade_chao.py` (o chão em 25 pedaços).
-- **As casas, o prédio e o bunker usam a mesma planta da montagem da cidade na Unity** (`MontagemDaCidade`). Ao mudar uma planta, mude nos dois lugares.
+- `cidade_rua.py` (objetos de rua), `cidade_casas.py` (as 5 casas), `cidade_predio.py` (o prédio), `cidade_bunker.py` (o bunker), `cidade_moveis.py` (os móveis, o painel de armas e o interruptor) e `cidade_chao.py` (o chão em 25 pedaços).
+- **As casas, o prédio e o bunker usam a mesma planta da montagem da cidade na Unity** (`MontagemDaCidade`; a do bunker fica em `Editor/PlantaDoBunker`). Ao mudar uma planta, mude nos dois lugares.
+- O bunker exporta à parte, no mesmo FBX, a folha da porta (`Bunker_Porta`) e a lâmpada (`Bunker_Lampada`), que a Unity mexe em Play.
 - Cada construção sai com uma malha de colisão à parte (`_Colisao`), só com o que é sólido.
 
 ## Do Blender para a Unity
@@ -80,7 +92,10 @@ Para mexer na arte, peça essa pasta ao autor (ou combine de colocá-la num repo
 | O que mudou | Para onde copiar | O que rodar na Unity |
 |---|---|---|
 | Um zumbi (`Modelo 3D/Zumbis/<Modelo>.fbx` + a textura de `Texturas/`) | `Assets/_Game/Art/Characters/Zombie/` | Montar zumbis |
-| O jogador ou as armas (`Jogador.fbx`, `Jogador_FP_<Arma>.fbx`, `Armas.fbx`) | `Assets/_Game/Art/Characters/Jogador/` | Montar armas |
+| O jogador, as armas ou os itens (`Jogador.fbx`, `Jogador_FP_<Arma ou Item>.fbx`, `Armas.fbx`, `Armas_Sniper.fbx`, `Itens.fbx`) | `Assets/_Game/Art/Characters/Jogador/` | Montar armas |
+| Os ícones (`Modelo 3D/Jogador/Icones/Icone_<modelo>.png`) | `Assets/_Game/Art/UI/Icones/` | Montar armas |
+| O rifle de primeira pessoa (a sniper usa as animações dele) | depois de copiar o `Jogador_FP_Rifle.fbx`, refaça a sniper pelos scripts de `Blender/` | Montar armas |
+| As animações do desmembramento (`<Modelo>_Extra.fbx`, pelos scripts de `Blender/`) | `Assets/_Game/Art/Characters/Zombie/` (o script já salva lá) | Montar zumbis |
 | A cidade (`Cidade_*.fbx`) | `Assets/_Game/Art/Cidade/` | Montar cidade em blocos |
 | A paleta (`Modelo 3D/Jogador/Paleta.png`) | `Assets/_Game/Art/Paleta.png` | — (a Unity reimporta sozinha) |
 

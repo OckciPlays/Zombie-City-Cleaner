@@ -61,14 +61,27 @@ namespace ZombieCityCleaner.Combat
             saturacao = 3.2f,
         };
 
+        /// <summary>
+        /// A sniper: o estalo mais seco e agudo de todos, um soco grave e uma cauda longa, com três rebatimentos (o tiro
+        /// rola pela cidade). Sem ferrolho no tiro: ele é puxado depois, à mão (um som à parte).
+        /// </summary>
+        public static readonly Perfil Sniper = new Perfil
+        {
+            duracao = 2.4f, estalo = 0.7f, estaloDecai = 0.004f, estaloFreq = 4200f, estaloQ = 0.9f,
+            soco = 0.6f, socoDe = 150f, socoPara = 45f, socoQueda = 0.018f, socoDecai = 0.07f,
+            corpo = 0.55f, corpoFreq = 850f, corpoQ = 0.55f, corpoDecai = 0.05f,
+            mecanismo = new float[0], mecanismoVolume = 0f,
+            cauda = 0.65f, caudaDecai = 0.8f, caudaCorte = 1100f, ecos = new[] { 0.18f, 0.42f, 0.8f }, ecosVolume = new[] { 0.3f, 0.16f, 0.07f },
+            saturacao = 3.4f,
+        };
+
         public static AudioClip[] Gerar(string nome, Perfil p, int variacoes = 3)
         {
             var clips = new AudioClip[variacoes];
             for (int v = 0; v < variacoes; v++)
             {
                 var dados = Amostras(p, nome.GetHashCode() + v * 7919);
-                clips[v] = AudioClip.Create($"{nome} {v + 1}", dados.Length, 1, Taxa, false);
-                clips[v].SetData(dados, 0);
+                clips[v] = SomGerado.Clip($"{nome} {v + 1}", dados, Taxa);
             }
             return clips;
         }

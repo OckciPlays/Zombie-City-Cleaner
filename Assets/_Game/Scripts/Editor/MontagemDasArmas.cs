@@ -7,15 +7,17 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
+using ZombieCityCleaner.Loot;
 
 namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
-    /// As armas (ajustes antes da Parte 7, fatia 3): a importação dos braços de primeira pessoa de cada arma, das
-    /// animações de arma longa do corpo e das armas avulsas; as malhas das armas; o Animator dos braços e os override de
-    /// cada arma; o prefab do jogador (pela <see cref="MontagemDaRede"/>) e o suporte de armas do bunker na cena.
-    /// Menu: Zombie City Cleaner > Montar armas. Pode rodar de novo (o suporte precisa da cidade montada, com o móvel
-    /// "Suporte_Armas" no bunker).
+    /// As armas e os itens (a comida e a água, da Parte 7): a importação dos braços de primeira pessoa de cada um, das
+    /// animações de arma longa do corpo, das armas e dos itens avulsos e dos ícones do inventário; as malhas; o Animator
+    /// dos braços e os override de cada arma e item; o prefab do jogador (pela <see cref="MontagemDaRede"/>); e, na
+    /// cena, o painel de armas do bunker e o "Itens no mundo".
+    /// Menu: Zombie City Cleaner > Montar armas. Pode rodar de novo (o painel e os itens precisam da cidade montada, com
+    /// o móvel "Painel_Armas" no salão do bunker e as marcas "Lugar de item").
     /// </summary>
     public static class MontagemDasArmas
     {
@@ -24,21 +26,58 @@ namespace ZombieCityCleaner.EditorTools
         const string ControladorFP = Arte + "/Jogador_FP.controller";
         const string ControladorTP = Arte + "/Jogador_TP.controller";
         const string FbxArmas = Arte + "/Armas.fbx";
+        const string FbxItens = Arte + "/Itens.fbx";
+        /// <summary>As 3 mochilas e o coldre (Blender/equipamentos.py, no repositório).</summary>
+        const string FbxEquipamentos = Arte + "/Equipamentos.fbx";
+        /// <summary>As caixas de munição, uma por calibre (Blender/municao.py, no repositório).</summary>
+        const string FbxMunicao = Arte + "/Municao.fbx";
+        const string PastaIcones = "Assets/_Game/Art/UI/Icones";
         const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
 
         static readonly string[] ClipesFP = { "Idle", "Walk", "Run", "Fire", "DryFire", "Reload", "Sacar" };
         static readonly string[] ClipesTP = { "Idle", "Walk", "Run", "Aim", "Fire" };
         static readonly string[] EmLaco = { "Idle", "Walk", "Run", "Aim" };
-        /// <summary>O topo de cada prateleira do suporte, do chão (o ALTURAS_DO_SUPORTE do cidade_moveis.py).</summary>
-        static readonly float[] AlturasDoSuporte = { 0.62f, 0.97f, 1.32f, 1.67f };
-        /// <summary>A frente do painel do suporte, a partir da parede.</summary>
-        const float FrenteDoSuporte = 0.03f;
+        /// <summary>
+        /// As vagas do painel de armas (o VAGAS_DO_PAINEL do cidade_moveis.py): a arma de cada uma, o x (do painel, na
+        /// Unity) e a altura do apoio, do chão. As longas de cima para baixo, à esquerda; as pistolas numa coluna.
+        /// </summary>
+        static readonly (TipoDeArma dono, float x, float y)[] VagasDoPainel =
+        {
+            (TipoDeArma.Sniper, -0.6f, 2.75f), (TipoDeArma.Rifle, -0.6f, 2.27f), (TipoDeArma.Espingarda, -0.6f, 1.85f),
+            (TipoDeArma.Submetralhadora, -0.6f, 1.35f), (TipoDeArma.Pistola, 0.85f, 2.7f), (TipoDeArma.Pistola, 0.85f, 2.25f),
+            (TipoDeArma.Pistola, 0.85f, 1.8f), (TipoDeArma.Pistola, 0.85f, 1.35f),
+        };
+        /// <summary>A frente das ripas do painel, a partir da parede (a arma encosta nela).</summary>
+        const float FrenteDoPainel = 0.04f;
 
-        public static string FbxFP(int arma) => $"{Arte}/Jogador_FP_{Armas.Modelos[arma]}.fbx";
-        public static string MalhaDaArma(int arma) => $"{Malhas}/Arma_{Armas.Modelos[arma]}.asset";
-        public static string ControladorFPDa(int arma) => arma == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Armas.Modelos[arma]}.overrideController";
+        /// <summary>
+        /// Os braços de primeira pessoa de um modelo (na ordem de Itens.Modelos: as armas, a lata e a garrafa; depois, os
+        /// punhos da mão vazia, Itens.Punhos).
+        /// </summary>
+        public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.fbx";
+        /// <summary>A malha avulsa de um modelo: Arma_&lt;nome&gt; ou Item_&lt;nome&gt; (origem onde a mão segura, topo em +Y).</summary>
+        public static string MalhaDo(int modelo) => $"{Malhas}/{(modelo < Armas.Quantas ? "Arma" : "Item")}_{Itens.Modelos[modelo]}.asset";
+        public static string ControladorFPDa(int modelo) => modelo == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.overrideController";
         public static string ControladorTPDa(int arma) => arma == 0 ? ControladorTP : $"{Arte}/Jogador_TP_{Armas.Modelos[arma]}.overrideController";
+        /// <summary>O corpo com a mão vazia (a guarda e o soco) ou com comida e água na mão.</summary>
+        public static string ControladorTPDasMaos => $"{Arte}/Jogador_TP_Maos.overrideController";
+        /// <summary>O ícone do inventário, colorido, na proporção das células do item (renderizado no Blender pelo itens.py).</summary>
+        public static string IconeDo(int modelo) => $"{PastaIcones}/Icone_{Itens.Modelos[modelo]}.png";
+        /// <summary>A foto do item, para os detalhes da tela do inventário (itens.py).</summary>
+        public static string FotoDo(int modelo) => $"{PastaIcones}/Foto_{Itens.Modelos[modelo]}.png";
+        /// <summary>A malha de um equipamento (as mochilas e o coldre, na ordem do enum Item): Equip_&lt;modelo&gt;.</summary>
+        public static string MalhaDoEquipamento(int k) => $"{Malhas}/Equip_{Itens.ModeloDoEquipamento(k)}.asset";
+        public static string IconeDoEquipamento(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDoEquipamento(k)}.png";
+        public static string FotoDoEquipamento(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDoEquipamento(k)}.png";
+        /// <summary>A malha de uma caixa de munição (na ordem de Calibre): Mun_&lt;modelo&gt;.</summary>
+        public static string MalhaDaMunicao(int k) => $"{Malhas}/Mun_{Itens.ModeloDaMunicao(k)}.asset";
+        public static string IconeDaMunicao(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaMunicao(k)}.png";
+        public static string FotoDaMunicao(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaMunicao(k)}.png";
+        /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
+        static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
+        /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
+        static int CorpoDa(int arma) => (int)(Armas.Todas[arma].corpoComo ?? (TipoDeArma)arma);
 
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
@@ -47,31 +86,70 @@ namespace ZombieCityCleaner.EditorTools
             MontagemDaRede.MontarPrefab();
             var cena = EditorSceneManager.GetActiveScene();
             MontarSuporte(cena);
+            MontarItensNoMundo(cena);
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             AssetDatabase.SaveAssets();
             // o Jogador_FP.controller é apagado e criado de novo: o prefab salvo igual não seria reimportado e ficaria
             // com a referência vazia (veja a montagem dos zumbis)
             AssetDatabase.ImportAsset("Assets/_Game/Prefabs/Jogador.prefab", ImportAssetOptions.ForceUpdate);
-            Debug.Log("Armas montadas: braços, animações, malhas, prefab do jogador e o suporte do bunker.");
+            Debug.Log("Armas montadas: braços, animações, malhas, ícones, prefab do jogador, o suporte do bunker e os itens no mundo.");
         }
 
-        /// <summary>Tudo menos o prefab e a cena: importações, malhas e controladores.</summary>
+        /// <summary>Tudo menos o prefab e a cena: importações, malhas, ícones e controladores.</summary>
         public static void Preparar()
         {
             Directory.CreateDirectory(Malhas);
-            for (int i = 0; i < Armas.Quantas; i++) ImportarFP(FbxFP(i));
+            for (int i = 0; i < Itens.QuantosModelosFP; i++) ImportarFP(FbxFP(i));
             ImportarCorpo();
             ImportarArmas();
-            for (int i = 0; i < Armas.Quantas; i++) MontarMalha(i);
+            for (int i = 0; i < Itens.QuantosModelos; i++) MontarMalha(i);
+            for (int k = 0; k < Itens.QuantosEquipamentos; k++) Juntar(FbxEquipamentos, Itens.ModeloDoEquipamento(k) + "_", MalhaDoEquipamento(k));
+            for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
+            ImportarIcones();
             MontarControladorFP();
-            for (int i = 1; i < Armas.Quantas; i++)
+            // a mão vazia: o soco direito no lugar do tiro e o esquerdo no do gatilho sem bala (o código alterna); no
+            // corpo, a guarda e o soco (as animações TP_<clipe>_Maos)
+            MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.Punhos), ClipesFP,
+                           c => c == "Fire" ? "SocoDireito" : c == "DryFire" ? "SocoEsquerdo" : c == "Reload" ? "Idle" : c, ControladorFPDa(Itens.Punhos));
+            MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_Maos", ControladorTPDasMaos);
+            for (int i = 1; i < Itens.QuantosModelos; i++)
             {
+                if (i >= Armas.Quantas)
+                {
+                    // os itens: o Usar (comer ou beber) no lugar do tiro; o gatilho sem bala e a recarga nunca tocam
+                    MontarOverride(ControladorFP, FbxFP(0), FbxFP(i), ClipesFP, c => c == "Fire" ? "Usar" : c == "DryFire" || c == "Reload" ? "Idle" : c, ControladorFPDa(i));
+                    continue;
+                }
                 MontarOverride(ControladorFP, FbxFP(0), FbxFP(i), ClipesFP, c => c, ControladorFPDa(i));
-                string modelo = Armas.Modelos[i];
+                string modelo = Armas.Modelos[CorpoDa(i)];
                 MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_{modelo}", ControladorTPDa(i));
             }
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>
+        static void ImportarIcones()
+        {
+            foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) })
+                         .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
+                         .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) })))
+            {
+                if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
+                {
+                    Debug.LogWarning($"A imagem {caminho} não existe (copie de Modelo 3D/Jogador/Icones).");
+                    continue;
+                }
+                if (imp.alphaIsTransparency && !imp.mipmapEnabled && imp.textureCompression == TextureImporterCompression.Uncompressed
+                    && imp.npotScale == TextureImporterNPOTScale.None) continue;
+                imp.textureType = TextureImporterType.Default;
+                imp.alphaIsTransparency = true;
+                imp.mipmapEnabled = false;
+                imp.npotScale = TextureImporterNPOTScale.None;   // o tamanho de cada um é a proporção das células do item
+                imp.wrapMode = TextureWrapMode.Clamp;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.SaveAndReimport();
+            }
         }
 
         // ------------------------------------------------------------------ importação
@@ -118,7 +196,17 @@ namespace ZombieCityCleaner.EditorTools
 
         static void ImportarArmas()
         {
-            var imp = Importador(FbxArmas);
+            ImportarAvulsas(FbxArmas);
+            ImportarAvulsas(FbxItens);
+            ImportarAvulsas(FbxEquipamentos);
+            ImportarAvulsas(FbxMunicao);
+            for (int i = 0; i < Armas.Quantas; i++)
+                if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
+        }
+
+        static void ImportarAvulsas(string fbx)
+        {
+            var imp = Importador(fbx);
             imp.animationType = ModelImporterAnimationType.None;
             imp.importAnimation = false;
             imp.isReadable = true;
@@ -127,19 +215,27 @@ namespace ZombieCityCleaner.EditorTools
             imp.SaveAndReimport();
         }
 
-        /// <summary>A arma avulsa numa malha só (as peças juntas), com a origem no cabo, o cano em +Z e o topo em +Y.</summary>
-        static void MontarMalha(int arma)
+        /// <summary>
+        /// A arma ou o item avulso numa malha só (as peças juntas), com a origem onde a mão segura, o cano (a frente) em +Z
+        /// e o topo em +Y.
+        /// </summary>
+        static void MontarMalha(int modelo)
         {
-            string prefixo = Armas.Modelos[arma] + "_";
-            var pecas = AssetDatabase.LoadAllAssetsAtPath(FbxArmas).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
-            if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {FbxArmas}.");
+            string fbx = modelo >= Armas.Quantas ? FbxItens : File.Exists(FbxAvulsaDa(modelo)) ? FbxAvulsaDa(modelo) : FbxArmas;
+            Juntar(fbx, Itens.Modelos[modelo] + "_", MalhaDo(modelo));
+        }
+
+        /// <summary>As peças &lt;prefixo&gt;* do FBX numa malha só, gravada no caminho.</summary>
+        static void Juntar(string fbx, string prefixo, string caminho)
+        {
+            var pecas = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
+            if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {fbx}.");
             var juntas = pecas.Select(m => new CombineInstance { mesh = m, transform = Matrix4x4.identity }).ToArray();
-            string caminho = MalhaDaArma(arma);
             var malha = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
             bool nova = malha == null;
             if (nova) malha = new Mesh();
             malha.Clear();
-            malha.name = "Arma_" + Armas.Modelos[arma];
+            malha.name = Path.GetFileNameWithoutExtension(caminho);
             malha.CombineMeshes(juntas, true, false);
             malha.RecalculateBounds();
             if (nova) AssetDatabase.CreateAsset(malha, caminho);
@@ -215,35 +311,39 @@ namespace ZombieCityCleaner.EditorTools
         // ------------------------------------------------------------------ o suporte na cena
 
         /// <summary>
-        /// "Parede de armas": um NetworkObject da cena no lugar do móvel "Suporte_Armas" (posto pela montagem da cidade no
-        /// bunker), com as 4 vagas (de baixo para cima), cada uma com o colisor que a mira procura e a arma deitada.
+        /// "Parede de armas": um NetworkObject da cena no lugar do móvel "Painel_Armas" (posto pela montagem da cidade na
+        /// parede do fundo do salão do bunker), com as 8 vagas do painel, cada uma de um tipo de arma, com o colisor que a
+        /// mira procura (do tamanho da arma dela) e a arma em pé no apoio.
         /// </summary>
         public static void MontarSuporte(UnityEngine.SceneManagement.Scene cena)
         {
             var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Parede de armas");
             if (velho != null) Object.DestroyImmediate(velho);
-            var movel = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Suporte_Armas");
+            var movel = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "Painel_Armas");
             if (movel == null)
             {
-                Debug.LogWarning("O móvel Suporte_Armas não está na cena: rode a montagem da cidade antes.");
+                Debug.LogWarning("O móvel Painel_Armas não está na cena: rode a montagem da cidade antes.");
                 return;
             }
             var raiz = new GameObject("Parede de armas");
             raiz.transform.SetPositionAndRotation(movel.position, movel.rotation);
             raiz.AddComponent<NetworkObject>();
             var parede = raiz.AddComponent<ParedeDeArmas>();
-            parede.malhas = Enumerable.Range(0, Armas.Quantas).Select(i => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaArma(i))).ToArray();
+            parede.malhas = Enumerable.Range(0, Armas.Quantas).Select(i => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDo(i))).ToArray();
             var material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
-            parede.vagas = new VagaDeArma[AlturasDoSuporte.Length];
-            for (int k = 0; k < AlturasDoSuporte.Length; k++)
+            parede.vagas = new VagaDeArma[VagasDoPainel.Length];
+            for (int k = 0; k < VagasDoPainel.Length; k++)
             {
-                var go = new GameObject($"Vaga {k + 1}");
+                var (dono, x, y) = VagasDoPainel[k];
+                var go = new GameObject($"Vaga {k + 1} ({Armas.Dados(dono).nome})");
                 go.transform.SetParent(raiz.transform, false);
-                go.transform.localPosition = new Vector3(0f, AlturasDoSuporte[k], FrenteDoSuporte);
+                go.transform.localPosition = new Vector3(x, y, FrenteDoPainel);
+                // o colisor cobre a arma da vaga, em pé no apoio (o comprimento dela ao longo do painel)
+                var b = parede.malhas[(int)dono].bounds;
                 var col = go.AddComponent<BoxCollider>();
                 col.isTrigger = true;
-                col.center = new Vector3(0f, 0.14f, 0.05f);
-                col.size = new Vector3(1.3f, 0.28f, 0.12f);
+                col.center = new Vector3(0f, b.size.y / 2f, 0.06f);
+                col.size = new Vector3(b.size.z + 0.06f, b.size.y + 0.04f, 0.12f);
                 var arma = new GameObject("Arma");
                 arma.transform.SetParent(go.transform, false);
                 var filtro = arma.AddComponent<MeshFilter>();
@@ -251,9 +351,42 @@ namespace ZombieCityCleaner.EditorTools
                 r.sharedMaterial = material;
                 r.shadowCastingMode = ShadowCastingMode.On;
                 var vaga = go.AddComponent<VagaDeArma>();
-                vaga.parede = parede; vaga.indice = k; vaga.filtro = filtro;
+                vaga.parede = parede; vaga.indice = k; vaga.dono = dono; vaga.filtro = filtro;
                 parede.vagas[k] = vaga;
             }
+        }
+
+        /// <summary>
+        /// "Itens no mundo": um NetworkObject da cena com o <see cref="ItensNoMundo"/>, as malhas de tudo o que pode ficar
+        /// no chão (as armas largadas, a lata, a garrafa, as mochilas, o coldre e as caixas de munição) e os itens do começo,
+        /// um em cada marca "Lugar de item (...)" que a montagem da cidade põe nos móveis das casas, dos apartamentos e do
+        /// depósito do bunker.
+        /// </summary>
+        public static void MontarItensNoMundo(UnityEngine.SceneManagement.Scene cena)
+        {
+            var malhas = Enumerable.Range(0, Itens.QuantosModelos).Select(i => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDo(i))).ToArray();
+            if (malhas.Any(m => m == null))
+            {
+                Debug.LogWarning("As malhas dos itens ainda não existem: rode a montagem das armas.");
+                return;
+            }
+            var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Itens no mundo");
+            if (velho != null) Object.DestroyImmediate(velho);
+            var marcas = cena.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true))
+                .Where(t => t.name.StartsWith("Lugar de item")).ToList();
+            var go = new GameObject("Itens no mundo");
+            go.AddComponent<NetworkObject>();
+            var mundo = go.AddComponent<ItensNoMundo>();
+            mundo.malhas = malhas;
+            mundo.malhasDeEquipamento = Enumerable.Range(0, Itens.QuantosEquipamentos).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDoEquipamento(k))).ToArray();
+            mundo.malhasDeMunicao = Enumerable.Range(0, Itens.QuantasMunicoes).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaMunicao(k))).ToArray();
+            mundo.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
+            mundo.lugares = marcas.Select(t => t.position).ToArray();
+            // o item vem no nome da marca: "Lugar de item (Comida)", "(Agua)", "(Municao9mm)"...
+            mundo.itensDosLugares = marcas.Select(t => System.Enum.TryParse<Item>(t.name.Substring(t.name.IndexOf('(') + 1).TrimEnd(')'), out var item) ? item : Item.Comida).ToArray();
+            mundo.girosDosLugares = marcas.Select(t => t.eulerAngles.y).ToArray();
+            int municao = mundo.itensDosLugares.Count(Itens.EhMunicao);
+            Debug.Log($"Itens no mundo: {marcas.Count - municao} lugares de comida e água e {municao} de munição.");
         }
     }
 }

@@ -43,45 +43,53 @@ namespace ZombieCityCleaner.EditorTools
         const string PastaDecals = "Assets/_Game/Art/Materials/Decals";
         const string RendererPrincipal = "Assets/Settings/PC_Renderer.asset";
 
-        // nome, centro, raio, quantidade (~260 zumbis, o dobro da Parte 5; nenhum perto da casa da família). Na rua o raio
-        // cresceu 1 m com o dobro, para os grupos não ficarem amontoados; nas casas e nos andares do prédio ficou o mesmo
+        // nome, centro, raio, quantidade: 1.000 zumbis (a pedido, 24/10/2026; eram 258, o dobro da Parte 5), nenhum perto
+        // da casa da família. A maior parte foi para a rua, a praça e o estacionamento, com o raio maior para os grupos
+        // não ficarem amontoados; nas casas e nos andares do prédio, pouco mais que o dobro (são lugares pequenos)
         static readonly (string nome, Vector3 centro, float raio, int quantidade)[] Hordas =
         {
-            ("Cruzamento central", new Vector3(0f, 0f, 0f), 7f, 16),
-            ("Rua norte", new Vector3(0f, 0f, 22f), 6f, 12),
-            ("Rua sul", new Vector3(0f, 0f, -24f), 6f, 10),
-            ("Rua leste", new Vector3(22f, 0f, 0f), 7f, 14),
-            ("Rua oeste", new Vector3(-40f, 0f, 12f), 6f, 10),
-            ("Praça", new Vector3(24f, 0f, -12f), 7f, 16),
-            ("Estacionamento", new Vector3(10f, 0f, 33f), 7f, 14),
-            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 4f, 8),
-            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 5f, 8),
-            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 5f, 6),
-            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 5f, 6),
-            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 2.5f, 6),
-            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 2.5f, 6),
-            ("Casa 4", new Vector3(13f, 0.15f, -14f), 2.5f, 6),
-            ("Casa 5", new Vector3(28f, 0.15f, -26f), 2.5f, 6),
-            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 6f, 10),
-            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 6f, 10),
-            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 6f, 10),
-            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 6f, 8),
-            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 6f, 8),
-            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 6f, 10),
-            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 6f, 8),
-            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 6f, 8),
-            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 6f, 8),
-            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 6f, 6),
-            ("Saída norte", new Vector3(0f, 0f, 54f), 5f, 8),
-            ("Saída leste", new Vector3(54f, 0f, 0f), 5f, 8),
-            ("Saída sul", new Vector3(0f, 0f, -54f), 5f, 6),
-            ("Saída oeste", new Vector3(-54f, 0f, 0f), 5f, 6),
+            ("Cruzamento central", new Vector3(0f, 0f, 0f), 12f, 70),
+            ("Rua norte", new Vector3(0f, 0f, 22f), 10f, 55),
+            ("Rua sul", new Vector3(0f, 0f, -24f), 10f, 50),
+            ("Rua leste", new Vector3(22f, 0f, 0f), 11f, 60),
+            ("Rua oeste", new Vector3(-40f, 0f, 12f), 10f, 50),
+            ("Praça", new Vector3(24f, 0f, -12f), 12f, 70),
+            ("Estacionamento", new Vector3(10f, 0f, 33f), 12f, 65),
+            ("Prédio, térreo", new Vector3(20f, 0.15f, 19f), 5f, 20),
+            ("Prédio, 1º andar", new Vector3(20f, 3.15f, 21f), 6f, 18),
+            ("Prédio, 2º andar", new Vector3(20f, 6.15f, 21f), 6f, 16),
+            ("Prédio, 3º andar", new Vector3(20f, 9.15f, 21f), 6f, 16),
+            ("Casa 1", new Vector3(-27f, 0.15f, 19f), 3f, 10),
+            ("Casa 2", new Vector3(-12f, 0.15f, 23f), 3f, 10),
+            ("Casa 4", new Vector3(13f, 0.15f, -14f), 3f, 10),
+            ("Casa 5", new Vector3(28f, 0.15f, -26f), 3f, 10),
+            ("Rua (40, 20)", new Vector3(40f, 0f, 20f), 10f, 45),
+            ("Rua (40, -20)", new Vector3(40f, 0f, -20f), 10f, 40),
+            ("Rua (20, 40)", new Vector3(20f, 0f, 40f), 10f, 40),
+            ("Rua (-20, 40)", new Vector3(-20f, 0f, 40f), 10f, 35),
+            ("Rua (-40, 32)", new Vector3(-40f, 0f, 32f), 10f, 35),
+            ("Rua (20, -40)", new Vector3(20f, 0f, -40f), 10f, 45),
+            ("Rua (-12, -40)", new Vector3(-12f, 0f, -40f), 10f, 35),
+            ("Esquina nordeste", new Vector3(40f, 0f, 40f), 9f, 30),
+            ("Esquina sudeste", new Vector3(40f, 0f, -40f), 9f, 30),
+            ("Esquina sudoeste", new Vector3(-40f, 0f, -40f), 9f, 25),
+            ("Saída norte", new Vector3(0f, 0f, 54f), 8f, 30),
+            ("Saída leste", new Vector3(54f, 0f, 0f), 8f, 30),
+            ("Saída sul", new Vector3(0f, 0f, -54f), 8f, 25),
+            ("Saída oeste", new Vector3(-54f, 0f, 0f), 8f, 25),
         };
 
         // clipe (take do Blender "Zombie_Rig|Zombie_X"), em loop?
         static readonly (string nome, bool loop)[] Clipes =
         {
             ("Idle", true), ("Walk", true), ("Chase", true), ("Attack", false), ("HitReact", false),
+        };
+
+        // os clipes do desmembramento, no <modelo>_Extra.fbx (feito pelo zumbi_extras.py da pasta Arte-Sniper): cair,
+        // rastejar (andando e parado) e mancar sem a perna esquerda ou sem a direita
+        static readonly (string nome, bool loop)[] ClipesExtra =
+        {
+            ("Cair", false), ("Rastejar", true), ("RastejarParado", true), ("MancarE", true), ("MancarD", true),
         };
 
         // as partes do corpo com física: osso, osso onde a cápsula termina, massa (kg)
@@ -183,6 +191,26 @@ namespace ZombieCityCleaner.EditorTools
             }).ToArray();
             importador.SaveAndReimport();
             m.clipes = AssetDatabase.LoadAllAssetsAtPath(m.fbx).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")).ToDictionary(c => c.name);
+            // os clipes do desmembramento: só o esqueleto, com os mesmos caminhos de osso do modelo
+            string extra = $"{Arte}/{nome}_Extra.fbx";
+            var ie = (ModelImporter)AssetImporter.GetAtPath(extra);
+            if (ie == null) throw new FileNotFoundException("Faltam as animações do desmembramento", extra);
+            ie.animationType = ModelImporterAnimationType.Generic;
+            ie.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            ie.bakeAxisConversion = false;
+            ie.importAnimation = true;
+            ie.materialImportMode = ModelImporterMaterialImportMode.None;
+            var padraoExtra = ie.defaultClipAnimations;
+            ie.clipAnimations = ClipesExtra.Select(c =>
+            {
+                var clipe = padraoExtra.First(p => p.takeName.EndsWith("|Zombie_" + c.nome));
+                clipe.name = c.nome;
+                clipe.loopTime = c.loop;
+                return clipe;
+            }).ToArray();
+            ie.SaveAndReimport();
+            foreach (var c in AssetDatabase.LoadAllAssetsAtPath(extra).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")))
+                m.clipes[c.name] = c;
 
             var smr = Carregar<GameObject>(m.fbx).GetComponentInChildren<SkinnedMeshRenderer>();
             var original = smr.sharedMesh;
@@ -214,10 +242,17 @@ namespace ZombieCityCleaner.EditorTools
             if (existente == null)
             {
                 AssetDatabase.CreateAsset(nova, caminho);
-                return nova;
+                existente = nova;
             }
-            EditorUtility.CopySerialized(nova, existente);
-            Object.DestroyImmediate(nova);
+            else
+            {
+                EditorUtility.CopySerialized(nova, existente);
+                Object.DestroyImmediate(nova);
+            }
+            // legível no jogo: o desmembramento corta a malha na hora (Zombies/Membros)
+            var so = new SerializedObject(existente);
+            so.FindProperty("m_IsReadable").boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
             return existente;
         }
 
@@ -254,8 +289,9 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// Camada base: Andar (Idle/Walk/Chase pela Speed). Camada "Ações" (só do tronco para cima): Ataque e Tiro
-        /// (reação), disparados por trigger, voltando ao vazio. Write Defaults desligado em todos os estados.
+        /// Camada base: Andar (Idle/Walk/Chase pela Speed) e, pelo inteiro "Pernas" (o desmembramento), Mancando sem a
+        /// perna esquerda (1) ou sem a direita (2), Caindo (3) e Rastejando (4). Camada "Ações" (só do tronco para cima):
+        /// Ataque e Tiro (reação), disparados por trigger, voltando ao vazio. Write Defaults desligado em todos os estados.
         /// A morte não tem estado: o zumbi some e o corpo com física cai no lugar.
         /// </summary>
         static AnimatorController ControladorDoZumbi(Dictionary<string, AnimationClip> c, AvatarMask tronco)
@@ -265,10 +301,25 @@ namespace ZombieCityCleaner.EditorTools
             ctrl.AddParameter("Speed", AnimatorControllerParameterType.Float);
             ctrl.AddParameter("Atacar", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Tiro", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("Pernas", AnimatorControllerParameterType.Int);
 
             var baseSm = ctrl.layers[0].stateMachine;
             var andar = Arvore(ctrl, "Andar", (c["Idle"], 0f), (c["Walk"], 0.6f), (c["Chase"], 1.12f));
             baseSm.defaultState = andar;
+            // o desmembramento: cada valor de "Pernas" leva ao seu estado, de qualquer um (sem voltar para si mesmo)
+            var mancarE = Arvore(ctrl, "Mancando sem a esquerda", (c["Idle"], 0f), (c["MancarE"], 0.45f));
+            var mancarD = Arvore(ctrl, "Mancando sem a direita", (c["Idle"], 0f), (c["MancarD"], 0.45f));
+            var caindo = Estado(baseSm, "Caindo", c["Cair"]);
+            var rastejando = Arvore(ctrl, "Rastejando", (c["RastejarParado"], 0f), (c["Rastejar"], 0.35f));
+            int valor = 0;
+            foreach (var destino in new[] { andar, mancarE, mancarD, caindo, rastejando })
+            {
+                var ida = baseSm.AddAnyStateTransition(destino);
+                ida.AddCondition(AnimatorConditionMode.Equals, valor++, "Pernas");
+                ida.canTransitionToSelf = false;
+                ida.hasExitTime = false;
+                ida.duration = destino == caindo ? 0.1f : 0.2f;
+            }
 
             ctrl.AddLayer("Ações");
             var camadas = ctrl.layers;
@@ -301,7 +352,7 @@ namespace ZombieCityCleaner.EditorTools
             string caminho = $"{Arte}/Zombie_{m.nome}.overrideController";
             AssetDatabase.DeleteAsset(caminho);
             var aoc = new AnimatorOverrideController(baseCtrl) { name = "Zombie_" + m.nome };
-            aoc.ApplyOverrides(Clipes.Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
+            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
             AssetDatabase.CreateAsset(aoc, caminho);
             return aoc;
         }
@@ -442,13 +493,14 @@ namespace ZombieCityCleaner.EditorTools
             hitboxes.Add(Capsula(z, Osso("chest"), P("chest"), P("neck"), Raio(smr, P("chest"), P("neck"), 0.6f, "chest"), RegiaoDoCorpo.Tronco));
             foreach (var lado in new[] { "L", "R" })
             {
+                bool e = lado == "L";
                 Vector3 ombro = P($"upper_arm.{lado}"), cotovelo = P($"forearm.{lado}"), mao = P($"hand.{lado}");
                 Vector3 dedos = mao + (mao - cotovelo).normalized * 0.12f;
-                hitboxes.Add(Capsula(z, Osso($"upper_arm.{lado}"), ombro, cotovelo, Raio(smr, ombro, cotovelo, 0.75f, $"upper_arm.{lado}"), RegiaoDoCorpo.Braco));
-                hitboxes.Add(Capsula(z, Osso($"forearm.{lado}"), cotovelo, dedos, Raio(smr, cotovelo, dedos, 0.75f, $"forearm.{lado}", $"hand.{lado}"), RegiaoDoCorpo.Braco));
+                hitboxes.Add(Capsula(z, Osso($"upper_arm.{lado}"), ombro, cotovelo, Raio(smr, ombro, cotovelo, 0.75f, $"upper_arm.{lado}"), RegiaoDoCorpo.Braco, e ? Membro.BracoE : Membro.BracoD));
+                hitboxes.Add(Capsula(z, Osso($"forearm.{lado}"), cotovelo, dedos, Raio(smr, cotovelo, dedos, 0.75f, $"forearm.{lado}", $"hand.{lado}"), RegiaoDoCorpo.Braco, e ? Membro.AntebracoE : Membro.AntebracoD));
                 Vector3 quadril = P($"thigh.{lado}"), joelho = P($"shin.{lado}"), pe = P($"foot.{lado}");
-                hitboxes.Add(Capsula(z, Osso($"thigh.{lado}"), quadril, joelho, Raio(smr, quadril, joelho, 0.7f, $"thigh.{lado}"), RegiaoDoCorpo.Perna));
-                hitboxes.Add(Capsula(z, Osso($"shin.{lado}"), joelho, pe, Raio(smr, joelho, pe, 0.7f, $"shin.{lado}"), RegiaoDoCorpo.Perna));
+                hitboxes.Add(Capsula(z, Osso($"thigh.{lado}"), quadril, joelho, Raio(smr, quadril, joelho, 0.7f, $"thigh.{lado}"), RegiaoDoCorpo.Perna, e ? Membro.CoxaE : Membro.CoxaD));
+                hitboxes.Add(Capsula(z, Osso($"shin.{lado}"), joelho, pe, Raio(smr, joelho, pe, 0.7f, $"shin.{lado}"), RegiaoDoCorpo.Perna, e ? Membro.CanelaE : Membro.CanelaD));
             }
 
             smr.sharedMesh = m.inteira;
@@ -466,6 +518,9 @@ namespace ZombieCityCleaner.EditorTools
             z.raizDoModelo = modelo.transform;
             z.esqueleto = smr.bones;
             z.partes = CorpoDeZumbi.Partes.Select(Osso).ToArray();
+            z.malhaInteira = m.inteira;
+            z.materialPele = m.material;
+            z.materialCarne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
 
             var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, $"{Prefabs}/Zumbi_{m.nome}.prefab");
             Object.DestroyImmediate(raiz);
@@ -483,9 +538,10 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Uma cápsula entre dois pontos (na pose de repouso), presa ao osso que a move.</summary>
-        static Hitbox Capsula(Zumbi z, Transform osso, Vector3 de, Vector3 ate, float raio, RegiaoDoCorpo regiao)
+        static Hitbox Capsula(Zumbi z, Transform osso, Vector3 de, Vector3 ate, float raio, RegiaoDoCorpo regiao, Membro membro = Membro.Nenhum)
         {
             var h = NovaHitbox(z, osso, $"{regiao} ({osso.name})", regiao, out var go);
+            h.membro = membro;
             go.transform.SetPositionAndRotation((de + ate) * 0.5f, Quaternion.FromToRotation(Vector3.up, ate - de));
             float escala = Mathf.Max(0.0001f, go.transform.lossyScale.x);
             var c = go.AddComponent<CapsuleCollider>();

@@ -1,27 +1,44 @@
 using Unity.Netcode;
 using UnityEngine;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
 
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// O suporte de armas na parede do bunker: 4 vagas, cada uma com uma arma deitada na prateleira. Quem mira uma arma
-    /// de perto e aperta E troca com a da mão (a da mão fica no lugar). Quem manda é o anfitrião: o pedido vai para ele,
-    /// que confere a distância e troca as duas (a vaga e a <see cref="JogadorRede.Arma"/> do jogador).
-    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1).
+    /// O painel de armas do salão do bunker: cada arma tem o seu lugar (as 4 longas e 4 pistolas), em pé, com o lado
+    /// esquerdo para fora. Quem mira uma arma de perto e aperta E pega ela: vai para a mochila
+    /// (<see cref="InventarioJogador"/>), se couber, e para um atalho livre e a mão. Sem espaço na mochila, ela fica (a
+    /// dica avisa). Mirando uma vaga vazia com a arma dela na mão, E guarda a arma.
+    /// Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e muda as vagas e o inventário. Quem sai
+    /// da partida devolve as armas.
+    /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas; o
+    /// pente de cada arma guardada, em outro (8 bits por vaga): a arma volta com as balas que tinha. No começo, cheias.
     /// </summary>
     public class ParedeDeArmas : NetworkBehaviour
     {
-        [Tooltip("As vagas, de baixo para cima.")]
+        [Tooltip("As vagas, na ordem do painel (as longas de cima para baixo e as pistolas).")]
         public VagaDeArma[] vagas;
         [Tooltip("A malha de cada arma, na ordem de TipoDeArma (origem no cabo, cano em +Z, topo em +Y).")]
         public Mesh[] malhas;
-        [Tooltip("O que cada vaga tem no começo da partida.")]
-        public TipoDeArma[] inicio = { TipoDeArma.Pistola, TipoDeArma.Submetralhadora, TipoDeArma.Rifle, TipoDeArma.Espingarda };
+        [Tooltip("O que cada vaga tem no começo da partida, na ordem das vagas (as que faltam começam vazias: os " +
+                 "jogadores nascem com a pistola).")]
+        public TipoDeArma[] inicio = { TipoDeArma.Sniper, TipoDeArma.Rifle, TipoDeArma.Espingarda, TipoDeArma.Submetralhadora };
         [Tooltip("Até onde o anfitrião aceita o pedido de troca (m, dos pés do jogador ao meio da vaga).")]
-        public float distanciaMaxima = 3f;
+        public float distanciaMaxima = 3.5f;
 
-        readonly NetworkVariable<int> _conteudo = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<long> _conteudo = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        // as balas no pente da arma de cada vaga (8 bits por vaga), só para o anfitrião saber o que entregar
+        readonly NetworkVariable<long> _pentes = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public static ParedeDeArmas Instancia { get; private set; }
+
+        void OnEnable() => Instancia = this;
+
+        void OnDisable()
+        {
+            if (Instancia == this) Instancia = null;
+        }
 
         void Start()
         {
@@ -30,7 +47,13 @@ namespace ZombieCityCleaner.Combat
 
         public override void OnNetworkSpawn()
         {
-            if (IsServer) _conteudo.Value = Codificar(inicio);
+            if (IsServer)
+            {
+                _conteudo.Value = Codificar(inicio);
+                long pentes = 0;
+                for (int i = 0; i < inicio.Length && i < 8; i++) pentes = GravarPente(pentes, i, Armas.Dados(inicio[i]).capacidade);
+                _pentes.Value = pentes;
+            }
             _conteudo.OnValueChanged += AoMudar;
             Aplicar(_conteudo.Value);
         }
@@ -41,49 +64,87 @@ namespace ZombieCityCleaner.Combat
             Aplicar(Codificar(inicio));
         }
 
-        void AoMudar(int antes, int depois) => Aplicar(depois);
+        void AoMudar(long antes, long depois) => Aplicar(depois);
 
         /// <summary>A arma de uma vaga (ou null, vazia).</summary>
         public TipoDeArma? Vaga(int indice) => Ler(IsSpawned ? _conteudo.Value : Codificar(inicio), indice);
 
-        /// <summary>O jogador local pede para trocar a arma da mão pela da vaga.</summary>
-        public void PedirTroca(int indice)
+        /// <summary>O jogador local usou a vaga: pega a arma dela (ou troca pela da mão), ou guarda a da mão nela.</summary>
+        public void PedirVaga(int indice, InventarioJogador quem)
         {
-            if (IsSpawned && indice >= 0 && indice < vagas.Length) TrocarRpc((byte)indice);
+            if (!IsSpawned || indice < 0 || indice >= vagas.Length) return;
+            quem.AvisarQuePegou();
+            quem.GuardarPenteDaMao();   // guardando a arma da mão, ela vai com o pente que tem agora
+            VagaRpc((byte)indice);
         }
 
         [Rpc(SendTo.Server)]
-        void TrocarRpc(byte indice, RpcParams parametros = default)
+        void VagaRpc(byte indice, RpcParams parametros = default)
         {
             if (indice >= vagas.Length) return;
             if (!NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var cliente) || cliente.PlayerObject == null) return;
-            var jogador = cliente.PlayerObject.GetComponent<JogadorRede>();
-            if (jogador == null || Vector3.Distance(jogador.transform.position, vagas[indice].transform.position) > distanciaMaxima) return;
+            var inventario = cliente.PlayerObject.GetComponent<InventarioJogador>();
+            if (inventario == null || Vector3.Distance(cliente.PlayerObject.transform.position, vagas[indice].transform.position) > distanciaMaxima) return;
             var naVaga = Ler(_conteudo.Value, indice);
-            var naMao = (TipoDeArma)jogador.Arma.Value;
-            if (naVaga == null || naVaga.Value == naMao) return;
-            _conteudo.Value = Gravar(_conteudo.Value, indice, naMao);
-            jogador.Arma.Value = (byte)naVaga.Value;
+            var naMao = inventario.NaMao;
+            if (naVaga == null)
+            {
+                // guardar: só a arma desta vaga
+                if (!Itens.EhArma(naMao) || Itens.Arma(naMao) != vagas[indice].dono) return;
+                inventario.Achar(inventario.IdNaMao, out var arma);
+                inventario.Tirar(inventario.IdNaMao);
+                _pentes.Value = GravarPente(_pentes.Value, indice, arma.qtd);
+                _conteudo.Value = Gravar(_conteudo.Value, indice, Itens.Arma(naMao));
+                return;
+            }
+            // pegar: só se couber na mochila (sem espaço, nada; a dica avisa)
+            if (inventario.Receber(Itens.DaArma(naVaga.Value), LerPente(_pentes.Value, indice))) _conteudo.Value = Gravar(_conteudo.Value, indice, null);
         }
 
-        static int Codificar(TipoDeArma[] armas)
+        /// <summary>
+        /// No anfitrião: a arma de quem saiu da partida volta para uma vaga livre do tipo dela (se houver), com o pente que
+        /// tinha.
+        /// </summary>
+        public void Devolver(TipoDeArma arma, int pente)
         {
-            int v = 0;
-            for (int i = 0; i < armas.Length && i < 4; i++) v = Gravar(v, i, armas[i]);
+            if (!IsSpawned || !IsServer) return;
+            int casa = VagaLivre(_conteudo.Value, arma);
+            if (casa < 0) return;
+            _pentes.Value = GravarPente(_pentes.Value, casa, pente);
+            _conteudo.Value = Gravar(_conteudo.Value, casa, arma);
+        }
+
+        static long GravarPente(long pentes, int indice, int balas) =>
+            (pentes & ~(0xFFL << (8 * indice))) | ((long)Mathf.Clamp(balas, 0, 255) << (8 * indice));
+
+        static int LerPente(long pentes, int indice) => (int)((pentes >> (8 * indice)) & 0xFF);
+
+        int VagaLivre(long conteudo, TipoDeArma tipo)
+        {
+            for (int i = 0; i < vagas.Length; i++)
+                if (vagas[i] != null && vagas[i].dono == tipo && Ler(conteudo, i) == null) return i;
+            return -1;
+        }
+
+        static long Codificar(TipoDeArma[] armas)
+        {
+            long v = 0;
+            for (int i = 0; i < armas.Length && i < 8; i++) v = Gravar(v, i, armas[i]);
             return v;
         }
 
-        static int Gravar(int conteudo, int indice, TipoDeArma arma) => (conteudo & ~(0xFF << (8 * indice))) | (((int)arma + 1) << (8 * indice));
+        static long Gravar(long conteudo, int indice, TipoDeArma? arma) =>
+            (conteudo & ~(0xFFL << (8 * indice))) | ((arma == null ? 0L : (long)arma.Value + 1) << (8 * indice));
 
-        static TipoDeArma? Ler(int conteudo, int indice)
+        static TipoDeArma? Ler(long conteudo, int indice)
         {
-            int v = (conteudo >> (8 * indice)) & 0xFF;
+            int v = (int)((conteudo >> (8 * indice)) & 0xFF);
             return v == 0 ? null : (TipoDeArma)(v - 1);
         }
 
-        // cada arma deitada na prateleira da vaga: o cano ao longo da parede, o lado esquerdo para fora, a parte de baixo
-        // (o carregador ou o cabo) encostada na prateleira e o meio dela no meio da vaga
-        void Aplicar(int conteudo)
+        // cada arma em pé no apoio da vaga: o cano ao longo do painel, o lado esquerdo para fora, a parte de baixo (o
+        // carregador ou o cabo) no apoio e o meio dela no meio da vaga
+        void Aplicar(long conteudo)
         {
             if (vagas == null) return;
             for (int i = 0; i < vagas.Length; i++)

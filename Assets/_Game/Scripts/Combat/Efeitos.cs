@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
     /// Efeitos de tiro compartilhados: clarão do cano (luz rápida + brilho), faíscas no impacto e sons gerados por
-    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna). O tiro de cada arma vem do
-    /// <see cref="SomDeTiro"/>, em variações.
+    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna, e a porta e os interruptores
+    /// do bunker). O tiro de cada arma vem do <see cref="SomDeTiro"/>, em variações.
+    /// Com a porta do bunker fechada, o som de um lado não chega do outro (<see cref="BunkerRede.Isolado"/>).
     /// Fica num objeto da cena, com os materiais das partículas.
     /// </summary>
     public class Efeitos : MonoBehaviour
@@ -17,7 +19,17 @@ namespace ZombieCityCleaner.Combat
         static Efeitos _instancia;
         /// <summary>As variações do tiro de cada arma (na ordem de <see cref="TipoDeArma"/>).</summary>
         public static AudioClip[][] Tiros;
-        public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna;
+        public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna, Ferrolho, LunetaEntra, LunetaSai;
+        /// <summary>O interruptor do bunker.</summary>
+        public static AudioClip Chave;
+        /// <summary>A comida e a água (<see cref="SomDosItens"/>): abrir, as mordidas, os goles e largar no chão.</summary>
+        public static AudioClip AbrirLata, AbrirTampa, Largar;
+        public static AudioClip[] Mastigar, Gole;
+        /// <summary>Os passos (<see cref="SomDePasso"/>): [superfície][correndo ? 1 : 0][variação].</summary>
+        public static AudioClip[][][] Passos;
+        /// <summary>O soco (<see cref="SomDoSoco"/>): o vento do braço, a pancada num zumbi e a batida numa parede.</summary>
+        public static AudioClip[] SocoVento, SocoCarne;
+        public static AudioClip SocoParede;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
         ParticleSystem _faiscas, _poeira;
@@ -37,6 +49,33 @@ namespace ZombieCityCleaner.Combat
             Bomba = Gerar("Bomba", 0.45f, (t, r) => Golpe(t, r, 0f, 1f) + Golpe(t, r, 0.3f, 1.2f));
             // o cartucho entrando no tubo: um clique curto
             Cartucho = Gerar("Cartucho", 0.08f, (t, r) => Golpe(t, r, 0f, 0.6f));
+            // o ferrolho da sniper, puxado à mão: a alavanca sobe, vai para trás, volta e desce (tocado 0,42 s depois do
+            // tiro, junto da animação)
+            Ferrolho = Gerar("Ferrolho", 0.5f, (t, r) => Golpe(t, r, 0.04f, 0.5f) + Arrasto(t, r, 0.07f, 0.09f) + Golpe(t, r, 0.165f, 0.9f)
+                                                       + Arrasto(t, r, 0.2f, 0.08f) + Golpe(t, r, 0.29f, 1.0f) + Golpe(t, r, 0.37f, 0.55f));
+            // a luneta: o pano da manga roçando e a borracha da ocular encostando no rosto; ao sair, só um roçar curto
+            LunetaEntra = Gerar("Luneta entra", 0.22f, (t, r) => Arrasto(t, r, 0f, 0.14f) * 0.8f + Golpe(t, r, 0.15f, 0.25f));
+            LunetaSai = Gerar("Luneta sai", 0.14f, (t, r) => Arrasto(t, r, 0f, 0.1f) * 0.6f + Golpe(t, r, 0.02f, 0.12f));
+            Chave = Gerar("Interruptor", 0.07f, (t, r) => Golpe(t, r, 0f, 0.45f) + Golpe(t, r, 0.012f, 0.3f));
+            AbrirLata = SomDosItens.Clip("Abrir lata", SomDosItens.AbrirLata(21));
+            AbrirTampa = SomDosItens.Clip("Abrir tampa", SomDosItens.AbrirTampa(22));
+            Largar = SomDosItens.Clip("Largar", SomDosItens.Largar(23));
+            Mastigar = new AudioClip[3];
+            Gole = new AudioClip[3];
+            for (int i = 0; i < 3; i++)
+            {
+                Mastigar[i] = SomDosItens.Clip($"Mastigar {i + 1}", SomDosItens.Mastigar(30 + i));
+                Gole[i] = SomDosItens.Clip($"Gole {i + 1}", SomDosItens.Gole(40 + i));
+            }
+            Passos = SomDePasso.Gerar();
+            SocoVento = new AudioClip[3];
+            SocoCarne = new AudioClip[3];
+            for (int i = 0; i < 3; i++)
+            {
+                SocoVento[i] = SomGerado.Clip($"Soco vento {i + 1}", SomDoSoco.Vento(51 + i));
+                SocoCarne[i] = SomGerado.Clip($"Soco na carne {i + 1}", SomDoSoco.NaCarne(61 + i));
+            }
+            SocoParede = SomGerado.Clip("Soco na parede", SomDoSoco.NaParede(71));
             for (int i = 0; i < 24; i++)
             {
                 var go = new GameObject("Som");
@@ -62,9 +101,7 @@ namespace ZombieCityCleaner.Combat
                 filtro = Mathf.Lerp(filtro, onda(i / (float)taxa, r), 0.35f);   // passa-baixa simples: som mais grave
                 dados[i] = filtro;
             }
-            var clip = AudioClip.Create(nome, n, 1, taxa, false);
-            clip.SetData(dados, 0);
-            return clip;
+            return SomGerado.Clip(nome, dados, taxa);
         }
 
         // um golpe de metal: ruído que some rápido e um tilintar
@@ -73,6 +110,14 @@ namespace ZombieCityCleaner.Combat
             float d = t - em;
             if (d < 0f) return 0f;
             return ((float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-d * 120f) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1700f * d) * Mathf.Exp(-d * 60f) * 0.25f) * forca;
+        }
+
+        // um arrasto: ruído que sobe e desce durante a duração (metal deslizando, pano roçando)
+        static float Arrasto(float t, System.Random r, float em, float duracao)
+        {
+            float d = t - em;
+            if (d < 0f || d > duracao) return 0f;
+            return (float)(r.NextDouble() * 2 - 1) * Mathf.Sin(Mathf.PI * d / duracao) * 0.22f;
         }
 
         ParticleSystem Particulas(string nome, Color cor, float tamanho, float vida, float velocidade)
@@ -99,11 +144,13 @@ namespace ZombieCityCleaner.Combat
         public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f)
         {
             if (_instancia == null || clip == null) return;
+            var cam = Camera.main;
+            // a porta do bunker fechada separa quem ouve do som
+            if (espacial && cam != null && BunkerRede.Isolado(cam.transform.position, posicao)) return;
             var s = _instancia._fontes.Dequeue(); _instancia._fontes.Enqueue(s);
             s.transform.position = posicao;
             s.spatialBlend = espacial ? 1f : 0f;
             s.maxDistance = alcance;
-            var cam = Camera.main;
             float longe = espacial && cam != null ? Mathf.Clamp01(Vector3.Distance(cam.transform.position, posicao) / alcance) : 0f;
             s.GetComponent<AudioLowPassFilter>().cutoffFrequency = 22000f * Mathf.Pow(0.08f, longe);
             s.pitch = Random.Range(0.94f, 1.06f);

@@ -42,6 +42,8 @@ namespace ZombieCityCleaner.Zombies
             {
                 p.isKinematic = true;
                 p.detectCollisions = false;
+                var c = p.GetComponent<Collider>();
+                if (c != null) c.enabled = true;
             }
             pele.enabled = false;
             enabled = false;
@@ -49,9 +51,10 @@ namespace ZombieCityCleaner.Zombies
 
         /// <summary>
         /// Toma o lugar do zumbi: a mesma pose (osso a osso), a velocidade dele em todas as partes e o empurrão do tiro
-        /// na parte atingida. Sem cabeça, troca a malha (a tampa de carne no pescoço) e o pescoço jorra.
+        /// na parte atingida. Sem cabeça, troca a malha (a tampa de carne no pescoço) e o pescoço jorra. Com membros
+        /// perdidos, a malha é a cortada e as partes que caíram não colidem (seguem invisíveis, presas às juntas).
         /// </summary>
-        internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao)
+        internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes)
         {
             emUso = true;
             _parado = false;
@@ -59,8 +62,16 @@ namespace ZombieCityCleaner.Zombies
             transform.SetPositionAndRotation(modelo.position, modelo.rotation);
             for (int i = 0; i < esqueleto.Length && i < pose.Length; i++)
                 esqueleto[i].SetLocalPositionAndRotation(pose[i].localPosition, pose[i].localRotation);
-            pele.sharedMesh = semCabeca ? malhaSemCabeca : malhaInteira;
-            pele.sharedMaterials = semCabeca ? materiaisSemCabeca : materiaisInteira;
+            pele.sharedMesh = Membros.Variante(semCabeca ? malhaSemCabeca : malhaInteira, esqueleto, cortes);
+            pele.sharedMaterials = semCabeca || cortes != 0 ? materiaisSemCabeca : materiaisInteira;   // a carne é o 2º material
+            for (int l = 0; l < Membros.Quantos; l++)
+            {
+                int e = Membros.Estado(cortes, l);
+                // as partes de cada membro: braço e antebraço (3/4 e 5/6), coxa e canela (7/8 e 9/10)
+                int cima = 3 + l * 2, baixo = cima + 1;
+                Colidir(baixo, e < 1);
+                Colidir(cima, e < 2);
+            }
             pele.enabled = true;
             foreach (var p in partes)
             {
@@ -80,6 +91,11 @@ namespace ZombieCityCleaner.Zombies
             if (semCabeca) Sangue.Jorro(pescoco, pescoco.up, 4f);
             _passosSemInterpolar = 2;
             enabled = true;
+        }
+
+        void Colidir(int parte, bool sim)
+        {
+            if (parte < partes.Length && partes[parte].TryGetComponent<Collider>(out var c)) c.enabled = sim;
         }
 
         // um passo de física já rodou na pose nova: a interpolação volta (o corpo cai liso, mesmo com mais quadros que

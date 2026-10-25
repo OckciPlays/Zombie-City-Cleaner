@@ -5,6 +5,7 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.InputSystem;
+using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.UI;
 using ZombieCityCleaner.World;
@@ -31,15 +32,23 @@ namespace ZombieCityCleaner.Zombies
             public float raio;
         }
 
-        /// <summary>O que um zumbi precisa saber de cada jogador, montado uma vez por quadro.</summary>
+        /// <summary>
+        /// O que um zumbi precisa saber de cada jogador, montado uma vez por quadro. Olhando pela luneta, o jogador tem um
+        /// aumento: na linha dela (o cone do meio ângulo), a distância dos zumbis conta dividida pelo aumento.
+        /// </summary>
         internal struct Alvo
         {
             public JogadorRede jogador;
-            public Vector3 pes, peito, olhar;
+            public Vector3 pes, peito, olho, olhar;
             public bool lanterna, correndo, iluminado;
+            public float aumento, meioCone;
         }
 
-        public const int MaxZumbis = 1024;
+        /// <summary>O campo de visão normal da câmera do mundo (o aumento da luneta conta a partir dele).</summary>
+        const float FovNormal = 70f;
+
+        // o Id vai pela rede em 16 bits; 2.048 dá folga para os 1.000 das hordas e os criados pelo menu do desenvolvedor
+        public const int MaxZumbis = 2048;
         // só o cenário (camada Default) tapa a visão; as cápsulas e hitboxes dos zumbis ficam em outras camadas
         const int MascaraDaVisao = 1 << 0;
 
@@ -110,6 +119,7 @@ namespace ZombieCityCleaner.Zombies
         {
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
             PrepararCorpos();
+            StartCoroutine(PreaquecerCortes());
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += AoSairCliente;
@@ -133,6 +143,7 @@ namespace ZombieCityCleaner.Zombies
             Limpar();
             LimparCopias();
             GuardarCorpos();
+            GuardarPedacos();
             _niveisPorCliente.Clear();
         }
 
@@ -158,6 +169,7 @@ namespace ZombieCityCleaner.Zombies
             }
             else AtualizarCopias();
             AtualizarCorpos(Time.time, Time.deltaTime);
+            AtualizarPedacos(Time.time, Time.deltaTime);
             GemidosAoAcaso();
         }
 
@@ -170,19 +182,55 @@ namespace ZombieCityCleaner.Zombies
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null || !j.IsSpawned || n == Jogadores.Length) continue;
-                Vector3 pes = j.transform.position;
-                Jogadores[n++] = new Alvo
-                {
-                    jogador = j,
-                    pes = pes,
-                    peito = pes + Vector3.up * 1.3f,
-                    olhar = Quaternion.Euler(j.Pitch.Value, j.transform.eulerAngles.y, 0f) * Vector3.forward,
-                    lanterna = j.Lanterna != null && j.Lanterna.Ligada.Value,
-                    correndo = j.Velocidade > 3f,
-                    iluminado = noite && PosteDeLuz.Ilumina(pes),
-                };
+                Jogadores[n++] = AlvoDe(j, noite, Quaternion.Euler(j.Pitch.Value, j.transform.eulerAngles.y, 0f) * Vector3.forward);
             }
             QuantosJogadores = n;
+        }
+
+        static Alvo AlvoDe(JogadorRede j, bool noite, Vector3 olhar)
+        {
+            Vector3 pes = j.transform.position;
+            var a = new Alvo
+            {
+                jogador = j,
+                pes = pes,
+                peito = pes + Vector3.up * 1.3f,
+                olho = pes + Vector3.up * 1.62f,
+                olhar = olhar,
+                lanterna = j.Lanterna != null && j.Lanterna.Ligada.Value,
+                correndo = j.Velocidade > 3f,
+                iluminado = noite && PosteDeLuz.Ilumina(pes),
+                aumento = 1f,
+            };
+            var dados = Armas.Dados(j.ArmaNaMao);
+            if (j.Luneta.Value && dados.fovLuneta > 0f)
+            {
+                a.aumento = Mathf.Tan(FovNormal * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(dados.fovLuneta * 0.5f * Mathf.Deg2Rad);
+                a.meioCone = dados.fovLuneta * 0.5f + 2f;
+            }
+            return a;
+        }
+
+        /// <summary>
+        /// A distância de um zumbi a um jogador, para o nível de detalhe. Na linha da luneta (até o alcance da sniper) ela
+        /// conta dividida pelo aumento: o zumbi de longe que aparece grande na luneta é tratado como um de perto (é
+        /// desenhado, tem hitboxes e vai pela rede).
+        /// </summary>
+        internal static float Distancia(in Alvo p, Vector3 ponto)
+        {
+            float d = Vector3.Distance(p.pes, ponto);
+            if (p.aumento > 1f && d > 2f && d < AlcanceDaLuneta && Vector3.Angle(p.olhar, ponto + Vector3.up - p.olho) < p.meioCone) d /= p.aumento;
+            return d;
+        }
+
+        const float AlcanceDaLuneta = 160f;
+
+        /// <summary>O jogador desta máquina como alvo (o olhar é o da câmera, sem esperar a rede).</summary>
+        internal Alvo AlvoLocal()
+        {
+            var j = JogadorRede.Local;
+            if (j == null || !j.IsSpawned) return new Alvo { pes = PontoDeVista(), aumento = 1f };
+            return AlvoDe(j, false, j.cameraMundo != null ? j.cameraMundo.transform.forward : j.transform.forward);
         }
 
         /// <summary>Até onde um zumbi enxerga este jogador: de dia longe; à noite pouco, a não ser com luz nele.</summary>
@@ -224,7 +272,7 @@ namespace ZombieCityCleaner.Zombies
         /// atrasada, então a conferência é tolerante (é co-op): o zumbi tem que existir (mesmo Id e geração), estar
         /// vivo e perto do ponto do acerto.
         /// </summary>
-        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, float dano, Vector3 ponto, JogadorRede autor)
+        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
@@ -233,7 +281,7 @@ namespace ZombieCityCleaner.Zombies
             if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
             // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
-            z.LevarTiro(regiao, Mathf.Clamp(dano, 0f, 10f), ponto, direcao, autor, Time.time);
+            z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 10f), ponto, direcao, arremesso, autor, Time.time);
         }
 
         internal void Golpear(JogadorRede alvo, float dano, Vector3 de)
@@ -252,7 +300,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
                 float d2 = (z.transform.position - ponto).sqrMagnitude;
-                if (d2 > raio2) continue;
+                if (d2 > raio2 || BunkerRede.Isolado(ponto, z.transform.position)) continue;   // a porta do bunker fechada
                 if (d2 < direto2 && autor != null) z.ComecarPerseguicao(autor, agora);
                 else
                 {
@@ -282,8 +330,7 @@ namespace ZombieCityCleaner.Zombies
         {
             using (MarcaLOD.Auto())
             {
-                Vector3 local = PontoDeVista();
-                float desenho2 = distanciaDeDesenho * distanciaDeDesenho;
+                var local = AlvoLocal();
                 for (int i = 0; i < _ativos.Count; i++)
                 {
                     var z = _ativos[i];
@@ -292,12 +339,12 @@ namespace ZombieCityCleaner.Zombies
                     if (QuantosJogadores > 0)
                     {
                         float menor = float.MaxValue;
-                        for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, (Jogadores[k].pes - p).sqrMagnitude);
-                        nivel = NivelPara(Mathf.Sqrt(menor), z.NivelAtual);
+                        for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, Distancia(Jogadores[k], p));
+                        nivel = NivelPara(menor, z.NivelAtual);
                     }
                     if (z.Engajado) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
-                    z.DefinirVisivel((local - p).sqrMagnitude < desenho2);
+                    z.DefinirVisivel(Distancia(local, p) < distanciaDeDesenho);
                 }
             }
         }
@@ -365,13 +412,61 @@ namespace ZombieCityCleaner.Zombies
             Povoar(posicoes);
         }
 
-        bool Sortear(Vector3 centro, float raio, out Vector3 ponto)
+        /// <summary>Zumbis de pé: no anfitrião, os da cidade; nos clientes, as cópias recebidas (só os de perto).</summary>
+        public int Vivos
+        {
+            get
+            {
+                int n = 0;
+                foreach (var z in IsServer ? _ativos : _copias)
+                    if (!z.Morto) n++;
+                return n;
+            }
+        }
+
+        /// <summary>Só no anfitrião (o menu do desenvolvedor): todos os zumbis de pé caem mortos, como com um tiro no corpo.</summary>
+        public void MatarTodos()
+        {
+            if (!IsServer || !IsSpawned) return;
+            float agora = Time.time;
+            foreach (var z in _ativos)
+                if (!z.Morto) z.LevarTiro(RegiaoDoCorpo.Tronco, Membro.Nenhum, 1000f, z.transform.position + Vector3.up, -z.transform.forward, false, null, agora);
+        }
+
+        /// <summary>
+        /// Só no anfitrião (o menu do desenvolvedor): mais zumbis, de 6 a 14 m em volta do ponto, sem tirar os que já
+        /// estão (até nas áreas livres, como o bunker). Devolve quantos lugares achou no NavMesh.
+        /// </summary>
+        public int CriarPerto(Vector3 centro, int quantidade)
+        {
+            if (!IsServer || !IsSpawned) return 0;
+            var posicoes = new List<Vector3>();
+            for (int t = 0; t < quantidade * 8 && posicoes.Count < quantidade; t++)
+            {
+                Vector2 d = Random.insideUnitCircle.normalized * Random.Range(6f, 14f);
+                if (Sortear(centro + new Vector3(d.x, 0f, d.y), 1.5f, out var p, false)) posicoes.Add(p);
+            }
+            StartCoroutine(Acrescentar(posicoes));
+            return posicoes.Count;
+        }
+
+        IEnumerator Acrescentar(List<Vector3> posicoes)
+        {
+            for (int i = 0; i < posicoes.Count; i++)
+            {
+                Nascer(posicoes[i]);
+                if ((i + 1) % criadosPorQuadro == 0) yield return null;
+            }
+        }
+
+        bool Sortear(Vector3 centro, float raio, out Vector3 ponto, bool foraDasAreasLivres = true)
         {
             for (int t = 0; t < 8; t++)
             {
                 Vector2 r = Random.insideUnitCircle * raio;
                 var tentativa = centro + new Vector3(r.x, 0f, r.y);
-                if (NavMesh.SamplePosition(tentativa, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - centro.y) < 1.2f && !EmAreaLivre(hit.position))
+                if (NavMesh.SamplePosition(tentativa, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - centro.y) < 1.2f
+                    && !(foraDasAreasLivres && EmAreaLivre(hit.position)))
                 {
                     ponto = hit.position;
                     return true;
@@ -481,10 +576,14 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        /// <summary>Só geme quem está perto de quem escuta, e no máximo três vozes novas por segundo.</summary>
+        /// <summary>
+        /// Só geme quem está perto de quem escuta (e do mesmo lado da porta do bunker, se ela está fechada), e no máximo
+        /// três vozes novas por segundo.
+        /// </summary>
         internal bool PodeGemer(Vector3 ponto)
         {
-            if ((ponto - PontoDeVista()).sqrMagnitude > 25f * 25f) return false;
+            var ouvido = PontoDeVista();
+            if ((ponto - ouvido).sqrMagnitude > 25f * 25f || BunkerRede.Isolado(ouvido, ponto)) return false;
             if (Time.time - _segundoDosGemidos > 1f)
             {
                 _segundoDosGemidos = Time.time;

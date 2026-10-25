@@ -3,7 +3,7 @@
 ## O conceito
 
 - **Começo:** você e sua família vivem na cidade quando começa o apocalipse zumbi. Quando a notícia chega, todos se escondem no bunker embaixo de casa.
-- **O bunker:** é o primeiro abrigo, com quartos, despensa e sala comum. Dá para andar por ele e gerenciar as coisas.
+- **O bunker:** é o primeiro abrigo, com o salão, um quarto para cada um da família e o depósito. Dá para andar por ele e gerenciar as coisas.
 - **Explorar:** você sai do bunker para explorar a cidade infestada, coletar recursos, matar zumbis e limpar a cidade.
 - **Recursos finitos:** o que foi saqueado não volta, então cada dia é preciso ir mais longe.
   - Com o tempo, entram fontes que se renovam: água da chuva, plantações e criação de itens.
@@ -25,8 +25,9 @@
 
 - São lentos e desistem de seguir quando os jogadores se afastam.
 - O tiro na cabeça explode a cabeça. Morto, o corpo cai com física (ragdoll).
-- O desmembramento (braços e pernas caindo, zumbi rastejando) chegou a ser feito na Parte 6, mas saiu por enquanto, a pedido.
-- O jogo quer muitos zumbis ao mesmo tempo. Por isso os modelos têm poucos polígonos, e a IA tem LOD no estilo Dead Rising (os zumbis longe quase não custam nada). Hoje são 258 na cidade.
+- O desmembramento: braços e pernas caem com tiros; sem uma perna o zumbi manca, sem as duas ele rasteja.
+- As ideias para depois da demo (o modo história) estão no [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md).
+- O jogo quer muitos zumbis ao mesmo tempo. Por isso os modelos têm poucos polígonos, e a IA tem LOD no estilo Dead Rising (os zumbis longe quase não custam nada). Hoje são 1.000 na cidade.
 - Há 4 modelos cartoon, sujos de sangue: um garoto de camiseta branca, um homem de camiseta vermelha e bermuda, uma mulher de cabelo castanho e uma loira de camiseta preta.
 
 ## Decisões já tomadas

@@ -9,18 +9,18 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// Os zumbis na rede. Não são NetworkObjects (seriam centenas): o anfitrião manda, para cada cliente, um pacote
     /// próprio só com os zumbis perto dele. Os que estão a menos de 15 m vão 10 vezes por segundo, os de 15 a 40 m a cada
-    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 13 bytes: posição em centímetros, giro, estado (com as
-    /// contagens de golpes e de tiros levados), velocidade e como ele morreu (morto, a velocidade dá lugar à direção do
-    /// tiro que o derrubou). As mensagens são não confiáveis e em
+    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 14 bytes: posição em centímetros, giro, estado (com as
+    /// contagens de golpes e de tiros levados), velocidade, como ele morreu (morto, a velocidade dá lugar à direção do
+    /// tiro que o derrubou) e os membros perdidos (2 bits por membro). As mensagens são não confiáveis e em
     /// ordem: um pacote perdido é coberto pelo próximo, e como o estado inteiro vai em todos, nada se perde de vez.
     /// No cliente, cada zumbi recebido vira uma cópia (do mesmo pool), que some se ficar sem notícias.
     /// </summary>
     public partial class ZombieManager
     {
         const string NomeDaMensagem = "ZCC.Zumbis";
-        // ~1,2 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
+        // ~1,1 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
         const int PorPacote = 80;
-        const int BytesPorZumbi = 13;
+        const int BytesPorZumbi = 14;
 
         [Header("Rede")]
         [Tooltip("Intervalo entre envios (s). Os zumbis perto de cada cliente vão em todos.")]
@@ -75,11 +75,11 @@ namespace ZombieCityCleaner.Zombies
                         for (int k = 0; k < niveis.Length; k++) niveis[k] = (byte)Zumbi.Nivel.Longe;
                         _niveisPorCliente[cliente] = niveis;
                     }
-                    Vector3 referencia = Jogadores[j].pes;
                     _envio.Clear();
                     foreach (var z in _ativos)
                     {
-                        var n = NivelPara(Vector3.Distance(referencia, z.transform.position), (Zumbi.Nivel)niveis[z.Id]);
+                        // a distância conta a luneta: na linha dela, os zumbis de longe vão como se estivessem perto
+                        var n = NivelPara(Distancia(Jogadores[j], z.transform.position), (Zumbi.Nivel)niveis[z.Id]);
                         niveis[z.Id] = (byte)n;
                         // os do nível médio se revezam (pelo Id), para não irem todos no mesmo envio
                         if (n == Zumbi.Nivel.Perto || (n == Zumbi.Nivel.Medio && (_tick + z.Id) % divisorMedio == 0)) _envio.Add(z);
@@ -113,6 +113,7 @@ namespace ZombieCityCleaner.Zombies
                     w.WriteValueSafe(z.Morto ? (byte)(Mathf.RoundToInt(z.DirecaoDaMorte * (256f / 360f)) & 255)
                                              : (byte)Mathf.Clamp(Mathf.RoundToInt(z.Velocidade * 40f), 0, 255));
                     w.WriteValueSafe(z.InfoDaMorte);
+                    w.WriteValueSafe(z.Cortes);
                 }
                 NetworkManager.CustomMessagingManager.SendNamedMessage(NomeDaMensagem, cliente, w, NetworkDelivery.UnreliableSequenced);
                 BytesEnviados += w.Length;
@@ -140,6 +141,7 @@ namespace ZombieCityCleaner.Zombies
                     r.ReadValueSafe(out byte estado);
                     r.ReadValueSafe(out byte velocidade);
                     r.ReadValueSafe(out byte morte);
+                    r.ReadValueSafe(out byte cortes);
                     if (id >= MaxZumbis) continue;
                     var c = _porId[id];
                     if (c == null || c.Geracao != geracao)
@@ -150,7 +152,7 @@ namespace ZombieCityCleaner.Zombies
                     }
                     var e = (Zumbi.Estado)(estado & 15);
                     c.Receber(tempo, new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
-                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f);
+                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes);
                 }
             }
         }
@@ -182,7 +184,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 double agora = NetworkManager.ServerTime.Time;
                 float dt = Time.deltaTime, limite = Time.unscaledTime - tempoParaSumir;
-                Vector3 local = PontoDeVista();
+                var local = AlvoLocal();
                 for (int i = _copias.Count - 1; i >= 0; i--)
                 {
                     var c = _copias[i];
@@ -192,8 +194,8 @@ namespace ZombieCityCleaner.Zombies
                         continue;
                     }
                     c.QuadroDaCopia(agora, dt);
-                    // hitboxes e sombra pela distância de quem joga aqui (a cópia só existe até ~40 m)
-                    var n = NivelPara(Vector3.Distance(local, c.transform.position), c.NivelAtual);
+                    // hitboxes e sombra pela distância de quem joga aqui (a cópia só existe até ~40 m, ou mais na luneta)
+                    var n = NivelPara(Distancia(local, c.transform.position), c.NivelAtual);
                     c.AplicarNivel(n == Zumbi.Nivel.Longe ? Zumbi.Nivel.Medio : n);
                 }
             }

@@ -47,6 +47,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 4
+  membro: 7
   colisor: {fileID: 8925166715884921731}
 --- !u!136 &8925166715884921731
 CapsuleCollider:
@@ -118,6 +119,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 4
+  membro: 8
   colisor: {fileID: 7478813965930875214}
 --- !u!136 &7478813965930875214
 CapsuleCollider:
@@ -189,6 +191,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 3
+  membro: 3
   colisor: {fileID: 6570753386087095129}
 --- !u!136 &6570753386087095129
 CapsuleCollider:
@@ -260,6 +263,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 4
+  membro: 6
   colisor: {fileID: 713270504871340334}
 --- !u!136 &713270504871340334
 CapsuleCollider:
@@ -331,6 +335,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 3
+  membro: 2
   colisor: {fileID: 7119744710879959684}
 --- !u!136 &7119744710879959684
 CapsuleCollider:
@@ -402,6 +407,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 3
+  membro: 1
   colisor: {fileID: 3478536321494220213}
 --- !u!136 &3478536321494220213
 CapsuleCollider:
@@ -473,6 +479,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 2
+  membro: 0
   colisor: {fileID: 8903242157368593853}
 --- !u!136 &8903242157368593853
 CapsuleCollider:
@@ -602,6 +609,9 @@ MonoBehaviour:
   - {fileID: 896430168249239679}
   - {fileID: 3483486098192987151}
   - {fileID: 6830269574562982474}
+  malhaInteira: {fileID: 4300000, guid: 2016d2c3b27f5e947a6c955e2bd0e039, type: 2}
+  materialPele: {fileID: 2100000, guid: 133f28ce7d940134e8238303e365ac8c, type: 2}
+  materialCarne: {fileID: 2100000, guid: 28e0176e515c0204980ce17958acf480, type: 2}
 --- !u!195 &5337763972366032386
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -661,6 +671,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 0
+  membro: 0
   colisor: {fileID: 6691062396150399541}
 --- !u!54 &7814754624206563132
 Rigidbody:
@@ -833,6 +844,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 1
+  membro: 0
   colisor: {fileID: 5144945965447019490}
 --- !u!135 &5144945965447019490
 SphereCollider:
@@ -902,6 +914,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 4
+  membro: 5
   colisor: {fileID: 7663780631777178215}
 --- !u!136 &7663780631777178215
 CapsuleCollider:
@@ -973,6 +986,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 3
+  membro: 4
   colisor: {fileID: 4934879106890904104}
 --- !u!136 &4934879106890904104
 CapsuleCollider:
@@ -1044,6 +1058,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.Hitbox
   zumbi: {fileID: 788619851583357865}
   regiao: 2
+  membro: 0
   colisor: {fileID: 4793719398933981135}
 --- !u!136 &4793719398933981135
 CapsuleCollider:

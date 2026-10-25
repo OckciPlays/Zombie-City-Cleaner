@@ -48,5 +48,13 @@ namespace ZombieCityCleaner.Zombies
         public float vidaDoCorpo = 6f;
         [Tooltip("Quanto de cada tiro nos braços e nas pernas conta para o corpo.")]
         public float danoNosMembros = 0.5f;
+        [Tooltip("A vida de cada braço e de cada perna: acabou, o membro cai (3 tiros de pistola; 1 de sniper).")]
+        public float vidaDoMembro = 3f;
+
+        [Header("Sem pernas")]
+        [Tooltip("A velocidade mancando (sem uma perna), em proporção da normal.")]
+        public float fatorMancando = 0.55f;
+        [Tooltip("A velocidade rastejando (sem as duas pernas), em proporção da normal.")]
+        public float fatorRastejando = 0.35f;
     }
 }

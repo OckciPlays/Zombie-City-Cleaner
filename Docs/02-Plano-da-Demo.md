@@ -8,7 +8,7 @@ O projeto é grande, então é feito em partes, com calma. Cada parte termina co
 
 - **Online desde já, com o Relay da Unity:** até 4 jogadores. Um hospeda e os amigos entram com um código.
 - **A cidade:** pequena, com um prédio de 4 andares e 5 casas onde dá para entrar, cercada de pinheiros. Uma das casas é a da família, com o bunker embaixo.
-- **O bunker:** pequeno, e dá para andar por ele (quarto, despensa e sala comum).
+- **O bunker:** dá para andar por ele: o salão alto, 4 quartos (um para cada um da família) e o depósito. Foi aumentado a pedido (veja abaixo).
 - **Um dia completo:** sair do bunker, explorar, saquear lugares que não se renovam, matar zumbis, voltar, guardar tudo na despensa e dormir para passar ao próximo dia.
 - **Dia e noite:** dia com neblina e noite com a vantagem da furtividade.
 - **Zumbis:** lentos, desistem de seguir quando o jogador se afasta, e o tiro na cabeça explode a cabeça.
@@ -31,7 +31,7 @@ A família controlada pelo jogo, água da chuva, plantações, criação de iten
 
 ## As partes, em ordem
 
-Legenda: ✅ feita · ⏭️ próxima · ⬜ por fazer. Os detalhes do que foi feito estão no [histórico](03-Historico.md).
+Legenda: ✅ feita · 🔎 feita, esperando a aprovação · ⏭️ próxima · ⬜ por fazer. Os detalhes do que foi feito estão no [histórico](03-Historico.md).
 
 ### ✅ Parte 0: fundação do projeto Unity
 
@@ -95,16 +95,61 @@ Pedidos depois da Parte 8, em 3 fatias:
 
 Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura mais os braços e o número de zumbis dobrou (258).
 
+### ✅ Armas, sniper e desmembramento (antes da Parte 7, a pedido)
+
+- **Armas rebalanceadas:** dano no tronco e nos membros por arma; a submetralhadora ficou igual à pistola por tiro (e mais rápida), o rifle um grau acima, e a espingarda muda com a distância (de perto mata com um tiro e arremessa o corpo; na média, dois).
+- **A sniper:** de ferrolho, com luneta (12°), som do ferrolho e da luneta; um tiro no corpo mata e arranca um membro. Fica no painel de armas do bunker.
+- **Desmembramento nos 4 modelos novos:** cada braço e cada perna cai (no cotovelo/joelho ou inteiro); sem uma perna o zumbi manca, sem as duas cai e rasteja.
+- **Pronto quando:** as armas se comportam como pedido, a sniper acerta de longe pela luneta e os membros caem em todas as máquinas, sem perder desempenho.
+
+### ✅ O bunker maior (a pedido, antes da Parte 7)
+
+- **Planta:** o salão de 10 × 14 m com o pé-direito dobrado (5,3 m), 4 quartos e o depósito no fim de corredores curtos (3 m de pé-direito); a escada mais funda, em dois lances.
+- **Painel de armas:** um lugar fixo para cada arma (as 4 longas e 4 pistolas), na parede do fundo do salão, com a bancada embaixo.
+- **Porta blindada:** abre e fecha com E; fechada, isola o som nos dois sentidos, e os zumbis de fora não ouvem os tiros de dentro.
+- **Luzes:** interruptores em cada cômodo, no salão e na escada. **Sem neblina e sem partículas** lá dentro.
+- **Pronto quando:** o usuário aprova, e o teste com dois jogadores mostra a porta e as luzes iguais nas duas máquinas.
+
+### 🔎 O começo do saque (a pedido, 24/10/2026; esperando o teste do usuário)
+
+- **Mochila em grade (TAB)** de 9 × 6 espaços, e cada coisa ocupa os seus (a sniper 7 × 2, a lata 1). À esquerda, o boneco do jogador (gira com o mouse), a armadura (ainda vazia) e a barra de 3 atalhos; à direita, o nome, a foto e os detalhes do item; e uma aba de criar, ainda vazia. Arrastar move, põe num atalho ou larga (para fora); os ícones são coloridos.
+- **A barra de 3 atalhos**, embaixo, no meio da tela: o atalho aponta para um item da mochila, que continua nela. A roda do mouse passa pelos atalhos, 1, 2 e 3 escolhem, G larga e E pega.
+- **Menu do desenvolvedor (F1):** criar itens, contar, criar e matar zumbis.
+- **Comida e água:** latas de comida e garrafas de água nas mesas, balcões, cômodas e criados-mudos das casas e dos apartamentos (34, e 2 na mesa do depósito do bunker). Com o item na mão, o clique come ou bebe (com a animação e o som).
+- **Fome e sede:** duas barras que esvaziam com o tempo (mais rápido correndo); com pouca, a vida não volta sozinha; vazias, tiram vida.
+- **Passos** com som de concreto, madeira, carpete ou grama (o piso de cada cômodo das casas), e o **menu de opções** no ESC (volume, limite de FPS e o FPS na tela).
+- **Soco:** com a mão vazia, o clique soca (direita e esquerda); o zumbi recua a cada soco.
+- **Correção:** correndo, a arma longa não mostra mais só uma ponta no meio de baixo da tela (e os braços voltaram a respirar, balançar andando e baixar correndo: estavam congelados no fim do sacar).
+- **Depois do primeiro teste:** a porta do bunker não faz mais som (nem abrindo nem fechando), a roda do mouse passa pela mão vazia, os passos das casas foram refeitos por cômodo, o jogo não fica mais mudo depois de comer ou beber (e a mastigada foi refeita) e entrou o soco.
+- **Pronto quando:** o usuário testa e aprova.
+
+### 🔎 Bolsos, mochilas e o porte de armas (a pedido, 24/10/2026; branch `feature/mochilas`)
+
+- **Fatia 1 (feita, esperando o teste):** começar só com os bolsos (4 × 2); as mochilas pequena (6 × 4), média (8 × 5) e grande (10 × 7) e o coldre, vestidos; a primeira arma pela alça (fora da grade), mais uma nas costas com mochila e uma curta no coldre; a tela do TAB com a alça e os lugares da mochila e do coldre.
+- **Fatia 2:** no corpo, para todos (e no boneco do TAB): a mochila vestida, o coldre e as armas penduradas (a da alça no ombro, a das costas presa na mochila, a curta no coldre), menos a que está na mão.
+- **Fatia 3:** mochilas e coldres espalhados pela cidade (a grande nos lugares mais perigosos).
+- **Prévia da fatia 2 (feita):** o boneco de teste do F1 ("Boneco equipado"), com o `EquipamentoNoCorpo`: sem mochila, a arma da alça na diagonal das costas e a pistola no cós; com mochila, as armas presas nas laterais dela (a pedido, em vez do X nas costas); a curta no coldre do quadril direito.
+- **O boneco do TAB (feito):** o retrato do inventário já mostra a mochila, o coldre e as outras armas, e a pose foi refeita (a pistola baixa numa mão; as armas de coronha no parado delas, com as duas mãos).
+
+### 🔎 A munição (a pedido, 24/10/2026; branch `feature/mochilas`; esperando o teste)
+
+- Cada arma usa um calibre: a pistola e a submetralhadora **9mm**, o rifle **5,56**, a espingarda **calibre 12** e a sniper **7,62**.
+- As balas vêm em **caixas de até 60** (1 × 1 na grade, uma cor por calibre). A recarga tira as balas direto das caixas da mochila; sem caixa, não recarrega ("SEM MUNIÇÃO 9MM"). A caixa vazia some.
+- Pegar uma caixa completa primeiro as do mesmo calibre; arrastar uma caixa em cima de outra junta as duas.
+- O jogador nasce só com o pente da pistola (12). O pente vai junto com a arma (no chão, no painel do bunker e de volta).
+- 16 caixas pela cidade (2 por casa e 1 por apartamento; 9mm é a mais comum), com as balas sorteadas a cada partida.
+
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
-- **Bunker:** quarto (camas para dormir e passar o dia), despensa (o estoque da família) e sala comum.
+- **Bunker:** os quartos (camas para dormir e passar o dia), o depósito (o estoque da família, com a mesa para empilhar a comida) e o salão.
 - **Saque:** armários, geladeiras, gavetas e carros com itens (munição, comida, água, remédio e materiais).
   - O que foi saqueado fica vazio para sempre.
   - A cidade é dividida em áreas, para o jogo saber o que já foi limpo.
   - Os móveis de saque já existem na cena, com o nome da malha (armário, cômoda, criado-mudo, geladeira, balcão e prateleiras).
-- **Inventário:** espaço limitado na mochila de cada jogador e a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
+  - Já feito (acima): a comida e a água soltas pelos tampos, que se pegam, largam e consomem.
+- **Inventário:** a mochila de 3 lugares já existe (acima); falta a despensa compartilhada. A munição já vem das caixas espalhadas pela cidade (veja "A munição"); a despensa vai guardá-las também.
 - **Dia:** sair, explorar, voltar antes de escurecer (ou arriscar a noite) e dormir. Dormir passa o dia e salva.
-- **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do suporte de armas, que hoje volta ao inicial a cada partida.
+- **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do painel de armas, a porta e as luzes do bunker, que hoje voltam ao inicial a cada partida.
 - **Pronto quando:** dá para jogar vários dias seguidos, sair do jogo, voltar e encontrar tudo como estava.
 
 ### ⬜ Parte 9: o fechamento da demo
@@ -116,6 +161,8 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 - **Ajuste final de desempenho e de rede**, medido com o benchmark.
 
 ## Fases depois da demo
+
+As ideias novas do Pedro para depois da demo (o Dia 0, as escolhas com vários finais, o carro, a floresta e os dois acampamentos) estão no [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md), divididas em frentes de trabalho. Os dois ainda vão decidir como elas se encaixam nas fases abaixo.
 
 1. **Família:** criar os membros; quem não é jogado fica no bunker fazendo tarefas; os amigos assumem membros ao entrar.
 2. **Sobrevivência que se renova:** água da chuva, plantações e criação de itens; fome e sede.
