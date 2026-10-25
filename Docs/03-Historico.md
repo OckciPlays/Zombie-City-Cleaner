@@ -172,6 +172,44 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **1.000 zumbis na cidade** (eram 258): a maior parte na rua, na praça e no estacionamento, com os grupos mais abertos. Todos nascem; no Editor, o quadro médio ficou em 6,0 ms.
 - **Girar na mochila:** segurando um item, R gira ele 90° (a largura e a altura trocam), e ele fica girado onde for solto. O que é pego entra girado se só couber assim. Testado: girar, desgirar, recusar onde não cabe e o rifle pego entrando em pé numa coluna livre. Embaixo da grade, a dica "R: girar item" entrou abaixo da "G: largar o escolhido".
 
+## A cena dos vídeos de divulgação, parte 1: a base (24/10/2026, a pedido)
+
+- Para os vídeos curtos do Instagram (o plano está em [08 – Vídeos de divulgação](08-Videos-de-Divulgacao.md)): a cena `Video.unity`, montada por script a partir de uma cópia da Demo_Cidade, sem nada estático (as peças vão se mexer nas tomadas) e sem a oclusão assada.
+- **O diretor do vídeo** abre uma partida local sozinho, espera o jogador e os zumbis e roda a tomada com a câmera dele. **O modo vídeo** tira toda a HUD, faz o jogador nascer de mãos vazias e sem levar dano, esvazia o painel de armas, afina a neblina e clareia a imagem por tomada, e faz os zumbis aparecerem e andarem longe da câmera (e com sombra).
+- **A gravação** é pelo Unity Recorder (instalado, 5.1.7): MP4 vertical de 1080 × 1920, a 60 fps constantes, com o som do jogo, em `Recordings/`. O Play para sozinho no fim da tomada.
+- **Testado:** a tomada de teste gravou 5 s (300 quadros) em 1080 × 1920 a 60 fps, com áudio, sem HUD, com os 1.000 zumbis e o jogador sem a pistola.
+
+## A cena dos vídeos, parte 2: o mapa se montando (24/10/2026, a pedido)
+
+- **A tomada `Mapa`** (13,5 s): numa planície de grama, o chão da cidade cai numa onda do meio para fora; as casas e o prédio caem do céu, amassam e levantam poeira; os carros e as coisas da rua caem; os postes, as cercas e as árvores brotam do chão; o anel de pinheiros cresce em volta. No fim anoitece, e os postes acendem um por um, do meio para fora.
+- **Para a vista do alto:** sombras até 320 m, neblina linear só no horizonte, a imagem mais clara e a planície de grama por baixo de tudo. Nada de zumbis nem do bunker nesta tomada.
+- **Gravada três vezes**, conferindo os quadros: na primeira, a neblina deixava tudo cinza, a borda do mundo aparecia em cima, a poeira parecia bolas brancas e o fim ficava escuro demais; na segunda, sem a neblina, o dia ficou escuro; a terceira ficou certa. Aprovada.
+
+## A cena dos vídeos, parte 3: o bunker em corte (24/10/2026, a pedido)
+
+- **A tomada `Bunker`** (9 s): à noite, sobre a casa da família, um corte de raio-X desce do telhado até abaixo do teto dos cômodos, e o bunker aparece apagado, como uma casa de boneca. As luzes acendem uma a uma com o estalo do interruptor (a escada, o salão, os quartos e o depósito), e a porta blindada abre.
+- **O corte** é o plano perto da câmera virado num plano horizontal (a matriz oblíqua dos reflexos na água): a câmera olha inclinada e o corte fica reto. A luz é a do subsolo, mesmo com a câmera no alto.
+- **Na primeira gravação,** o poste da rua iluminava o depósito por cima do corte, e o bunker ficou pequeno na tela. Com o corte abaixo do chão, as luzes de fora apagam; a câmera chegou mais perto e o ritmo ficou mais rápido, para caber nos ~7 s do roteiro.
+- **Depois do primeiro olhar do usuário:** a câmera passou a mergulhar no bunker pelo corte até a altura dos olhos e a mostrar cada cômodo em primeira pessoa (os quatro quartos e o depósito, com corte seco entre eles). A tomada foi de 9 s para 14,5 s.
+- **A folha de conferência:** o diretor salva 12 quadros de cada tomada numa imagem, junto com o vídeo. Ler o MP4 com o VideoPlayer da Unity travou depois de uma leitura interrompida.
+- **Um erro no caminho:** os scripts foram recompilados com o Play do usuário rodando (a prévia do mapa), e a partida dele caiu. Agora a recompilação confere o Play antes.
+- Aprovada.
+
+## A cena dos vídeos, parte 4: os zumbis surgindo (24/10/2026, a pedido)
+
+- **A tomada `Zumbis`** (8 s): à noite, os 1.000 zumbis sobem do chão em ondas, horda por horda, a partir do cruzamento do meio, com poeira nos pés. No fim, um corte para o rosto de um deles, com a luz de uma lanterna e o gemido.
+- **Só o modelo afunda** (o filho da raiz): a raiz continua no NavMesh, então a IA, a navegação e o nível de detalhe não mudam.
+- **Na primeira gravação,** de 55 m os zumbis eram pontinhos e a lanterna estourou o rosto. A câmera chegou perto do cruzamento (30 m a 22 m) e ficou mais clara, e a lanterna ficou 20 vezes mais fraca.
+- Aprovada.
+
+## A cena dos vídeos, parte 5: o jogador entre os zumbis (24/10/2026, a pedido)
+
+- **A tomada `Jogador`** (10 s): à noite, na avenida sul, o jogador anda de punhos em guarda e com a lanterna acesa, visto de trás do ombro; a lanterna o denuncia, e as hordas da frente e de trás vêm devagar. Ele para perto da blitz, e a câmera sobe e mostra ele cercado, sem arma.
+- **O diretor anda com o jogador** (o `MovimentoPrimeiraPessoa` fica desligado, e ele move o `CharacterController`), e o corpo do jogador aparece (para o dono, ele era só sombra).
+- **O fim mudou do plano:** a câmera subindo e mostrando o jogador cercado, no lugar de um zumbi chegando na câmera.
+- **Ajustes depois da primeira gravação:** a câmera mais afastada no começo, o brilho caindo no fim (os zumbis colados na lanterna estouravam) e a subida mais baixa (de 12 m, o jogador sumia no meio das cabeças).
+- **Você no controle (a pedido do usuário):** com "Jogador No Controle", quem grava anda com o teclado e o mouse, e a câmera segue atrás do ombro (com o olhar e encostando nas paredes); Enter faz o final e termina a tomada. Testado com o W e o Enter simulados: o jogador andou 9 m com a câmera atrás, e o Enter parou, subiu a câmera e fechou o vídeo (20 s).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

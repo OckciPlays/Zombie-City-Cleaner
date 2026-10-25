@@ -7,6 +7,7 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.Zombies
 {
@@ -204,7 +205,7 @@ namespace ZombieCityCleaner.Zombies
 
         void OnGUI()
         {
-            if (!Rodando && Time.unscaledTime > _statusAte) return;
+            if (ModoVideo.Ligado || (!Rodando && Time.unscaledTime > _statusAte)) return;
             float u = Screen.height / 720f;
             var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(18 * u), alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
             estilo.normal.textColor = new Color(0.95f, 0.85f, 0.5f);

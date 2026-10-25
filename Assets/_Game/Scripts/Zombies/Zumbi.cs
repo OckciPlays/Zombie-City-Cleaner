@@ -3,6 +3,7 @@ using UnityEngine.AI;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Video;
 using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Zombies
@@ -18,6 +19,8 @@ namespace ZombieCityCleaner.Zombies
     /// manca; sem as duas, cai e passa a rastejar.
     /// Nos outros jogadores o zumbi é uma cópia: segue as posições que chegam pela rede, com interpolação, e mostra o
     /// estado recebido (morte, golpes e reações).
+    /// Nos zumbis leves, a aparência (cores, sangue, sujeira e machucados) sai do Id e da geração (<see cref="Aparencia"/>),
+    /// igual em todas as máquinas, e o rosto muda de expressão com o estado.
     /// Não tem Update próprio (com centenas de zumbis, o ZombieManager faz um laço só).
     /// </summary>
     public class Zumbi : MonoBehaviour
@@ -91,6 +94,14 @@ namespace ZombieCityCleaner.Zombies
         Material[] _soPele, _peleECarne;
         int _parteDaMorte;
         bool _arremessado;
+        // os zumbis leves: a cópia do material (cores, camadas e rosto deste zumbi) e a expressão mostrada
+        Material _material;
+        Aparencia.Variacao _variacao;
+        Aparencia.Expressao _expressao;
+        float _dorAte, _ataqueAte;
+
+        /// <summary>O material da pele deste zumbi (a cópia dele, nos zumbis leves): o corpo que cai e os pedaços copiam.</summary>
+        internal Material MaterialDaPele => _material != null ? _material : materialPele;
 
         // ------------------------------------------------------------------ comum
 
@@ -104,7 +115,8 @@ namespace ZombieCityCleaner.Zombies
             animador.cullingMode = perto ? AnimatorCullingMode.CullUpdateTransforms : AnimatorCullingMode.CullCompletely;
             capsula.gameObject.layer = perto ? CamadaSoBloqueio : CamadaZumbi;
             AtualizarColisores();
-            var sombra = perto ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            // na cena de vídeo, todos fazem sombra: vistos de longe, sem ela, eles pareciam flutuar
+            var sombra = perto || ModoVideo.Ligado ? ShadowCastingMode.On : ShadowCastingMode.Off;
             foreach (var r in renderers) r.shadowCastingMode = sombra;
             AtualizarRenderers();
         }
@@ -142,12 +154,72 @@ namespace ZombieCityCleaner.Zombies
         // o golpe: a animação de ataque (só o tronco; caído, não: o tronco de pé por cima do rastejar ficava torto)
         void MostrarGolpe()
         {
+            _ataqueAte = Time.time + 0.9f;
             if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(AtacarId);
         }
 
         void MostrarReacao()
         {
+            _dorAte = Time.time + 0.6f;
             if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(TiroId);
+        }
+
+        // ------------------------------------------------------------------ aparência (zumbis leves)
+
+        /// <summary>
+        /// Os materiais da pele (só ela, e ela com a carne das tampas dos cortes). Nos zumbis leves, a pele é uma cópia
+        /// do material, deste zumbi: as cores, as camadas e o rosto são dele.
+        /// </summary>
+        void GarantirMateriais()
+        {
+            if (_soPele != null) return;
+            var pele = materialPele;
+            if (Aparencia.Leve(materialPele))
+            {
+                _material = new Material(materialPele) { name = materialPele.name + " (zumbi)" };
+                pele = _material;
+            }
+            _soPele = new[] { pele };
+            _peleECarne = new[] { pele, materialCarne };
+            if (Cortes == 0 && renderers.Length > 0 && renderers[0] is SkinnedMeshRenderer smr) smr.sharedMaterials = _soPele;
+        }
+
+        /// <summary>Nasceu (ou voltou do pool) com outro Id: a aparência sorteada por ele, igual em todas as máquinas.</summary>
+        void AplicarAparencia()
+        {
+            GarantirMateriais();
+            if (_material == null) return;
+            _variacao = Aparencia.Sortear(Id, Geracao);
+            _expressao = ExpressaoAgora();
+            Aparencia.Aplicar(_material, _variacao, _expressao);
+        }
+
+        Aparencia.Expressao ExpressaoAgora()
+        {
+            if (Morto) return Aparencia.Expressao.Morto;
+            float t = Time.time;
+            if (t < _dorAte) return Aparencia.Expressao.Dor;
+            if (Atual == Estado.Atacando || t < _ataqueAte) return Aparencia.Expressao.Ataque;
+            switch (Atual)
+            {
+                case Estado.Perseguindo: return Aparencia.Expressao.Furia;
+                case Estado.Investigando:
+                case Estado.Procurando: return Aparencia.Expressao.Alerta;
+                case Estado.Parado:
+                    // desconfiado (no anfitrião), ele abre os olhos; senão, alguns "dormem" em pé
+                    return _alerta > 0.05f ? Aparencia.Expressao.Alerta : _variacao.dorme ? Aparencia.Expressao.Parado : Aparencia.Expressao.Vagando;
+                default: return Aparencia.Expressao.Vagando;
+            }
+        }
+
+        /// <summary>O rosto acompanha o estado (a cada quadro, nos níveis Perto e Médio; só troca o material quando muda).</summary>
+        void AtualizarRosto()
+        {
+            if (_material == null) return;
+            var e = ExpressaoAgora();
+            if (e == _expressao) return;
+            _expressao = e;
+            _material.SetVector(Aparencia.QuadrosId, Aparencia.QuadrosDe(e, _variacao));
         }
 
         // ------------------------------------------------------------------ desmembramento
@@ -162,11 +234,7 @@ namespace ZombieCityCleaner.Zombies
             if (novos == antes) return;
             Cortes = novos;
             var pele = renderers[0] as SkinnedMeshRenderer;
-            if (_soPele == null)
-            {
-                _soPele = new[] { materialPele };
-                _peleECarne = new[] { materialPele, materialCarne };
-            }
+            GarantirMateriais();
             if (comEfeito && _m != null && !Morto)
             {
                 Vector3 velocidade = Copia ? transform.forward * Velocidade : agente.enabled ? agente.velocity : Vector3.zero;
@@ -277,10 +345,12 @@ namespace ZombieCityCleaner.Zombies
             {
                 Cortes = 0;
                 var pele = renderers[0] as SkinnedMeshRenderer;
-                if (pele != null) { pele.sharedMesh = malhaInteira; pele.sharedMaterials = new[] { materialPele }; }
+                GarantirMateriais();
+                if (pele != null) { pele.sharedMesh = malhaInteira; pele.sharedMaterials = _soPele; }
             }
             _rastejaEm = 0f;
             if (_pernas != 0) DefinirPernas(0);
+            _dorAte = _ataqueAte = 0f;
             Golpes = 0; Reacoes = 0; Velocidade = 0f; _velAnimacao = 0f; _qtd = 0;
             Atual = Estado.Parado;
             if (agente.enabled)
@@ -316,6 +386,7 @@ namespace ZombieCityCleaner.Zombies
             _fimDaPausa = Time.time + Random.Range(0f, 4f);
             proximaDecisao = ultimaDecisao = Time.time;
             _visivel = true;
+            AplicarAparencia();
             AplicarNivel(Nivel.Longe, true);
         }
 
@@ -358,6 +429,7 @@ namespace ZombieCityCleaner.Zombies
             }
             else if (Atual == Estado.Procurando) transform.Rotate(0f, _giro * dt, 0f);
             Animar(dt);
+            AtualizarRosto();
         }
 
         /// <summary>Uma decisão. No nível Médio ele só vaga e responde a tiros; a percepção é só no Perto.</summary>
@@ -700,6 +772,7 @@ namespace ZombieCityCleaner.Zombies
             agente.enabled = false;
             _qtd = 0; _intervalo = 0.1f; _atraso = 0.2f;
             _visivel = true;
+            AplicarAparencia();
             AplicarNivel(Nivel.Medio, true);
         }
 
@@ -769,6 +842,7 @@ namespace ZombieCityCleaner.Zombies
             transform.SetPositionAndRotation(Vector3.Lerp(a.posicao, b.posicao, k), Quaternion.Euler(0f, Mathf.LerpAngle(a.yaw, b.yaw, k), 0f));
             PassarDoTempoDasPernas();
             Animar(dt);
+            AtualizarRosto();
         }
     }
 }

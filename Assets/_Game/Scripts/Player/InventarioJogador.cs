@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 using Random = UnityEngine.Random;
 
 namespace ZombieCityCleaner.Player
@@ -88,7 +89,7 @@ namespace ZombieCityCleaner.Player
             if (IsServer)
             {
                 Mochila.Clear();
-                Receber(Item.Pistola);
+                if (!ModoVideo.SemArma) Receber(Item.Pistola);   // na cena de vídeo, de mãos vazias
             }
             // a pistola do começo no primeiro atalho
             if (IsOwner && _atalhos.Value == 0 && Mochila.Count > 0) _atalhos.Value = Mochila[0].id;
@@ -402,7 +403,7 @@ namespace ZombieCityCleaner.Player
         // a barra de atalhos, embaixo, no meio (com a tela do inventário aberta, ela fica lá dentro)
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || (_tela != null && _tela.Aberta)) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado || (_tela != null && _tela.Aberta)) return;
             float u = Screen.height / 720f;
             float w = 112 * u, h = 56 * u, vao = 8 * u;
             float x0 = (Screen.width - (w * Atalhos + vao * (Atalhos - 1))) / 2f, y = Screen.height - h - 16 * u;

@@ -3,6 +3,7 @@ using UnityEngine;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.Player
 {
@@ -86,7 +87,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
             float u = Screen.height / 720f;
             float fracao = Mathf.Clamp01(Vida.Value / vidaMaxima);
             // golpe: a tela pisca vermelho; com pouca vida, fica um vermelho fraco

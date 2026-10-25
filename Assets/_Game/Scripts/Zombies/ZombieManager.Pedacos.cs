@@ -25,6 +25,9 @@ namespace ZombieCityCleaner.Zombies
             public BoxCollider caixa;
             public float caiuEm;
             public bool emUso, parado;
+            // os zumbis leves: a cópia do material do zumbi (o pedaço não muda se o zumbi voltar do pool com outra cara)
+            public Material material;
+            public Material[] materiais;
         }
 
         readonly List<Pedaco> _pedacos = new List<Pedaco>();
@@ -73,6 +76,18 @@ namespace ZombieCityCleaner.Zombies
             var p = PegarPedaco();
             p.go.SetActive(false);
             p.filtro.sharedMesh = malha;
+            if (materiais.Length > 1 && Aparencia.Leve(materiais[0]))
+            {
+                if (p.material == null)
+                {
+                    p.material = new Material(materiais[0]) { name = materiais[0].name + " (pedaço)" };
+                    p.materiais = new Material[2];
+                }
+                p.material.CopyPropertiesFromMaterial(materiais[0]);
+                p.materiais[0] = p.material;
+                p.materiais[1] = materiais[1];
+                materiais = p.materiais;
+            }
             p.pele.sharedMaterials = materiais;
             var b = malha.bounds;
             p.caixa.center = b.center;

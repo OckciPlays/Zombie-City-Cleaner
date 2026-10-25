@@ -2,6 +2,7 @@ using Unity.Netcode;
 using UnityEngine;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.Player
 {
@@ -95,7 +96,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
             float u = Screen.height / 720f;
             // em cima da barra da vida (VidaJogador): a sede logo acima, a fome acima dela
             float yVida = Screen.height - 44 * u;

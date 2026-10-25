@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 using ZombieCityCleaner.World;
 using ZombieCityCleaner.Zombies;
 
@@ -589,7 +590,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (MenuOnline.Aberto || MenuOnline.ComTela) return;   // com o inventário ou o menu do desenvolvedor, sem mira
+            if (MenuOnline.Aberto || MenuOnline.ComTela || ModoVideo.Ligado) return;   // com o inventário ou o menu do desenvolvedor, sem mira
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
             float t = Mathf.Max(1f, Mathf.Round(2 * u));
             if (NaLuneta) Luneta(cx, cy, u);

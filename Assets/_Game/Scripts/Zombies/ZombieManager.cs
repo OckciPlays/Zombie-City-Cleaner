@@ -8,6 +8,7 @@ using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Zombies
@@ -331,20 +332,20 @@ namespace ZombieCityCleaner.Zombies
             using (MarcaLOD.Auto())
             {
                 var local = AlvoLocal();
+                // a câmera da cena de vídeo também conta, com o alcance dela: vista do alto, os zumbis aparecem e andam de longe
+                var olhoDoVideo = ModoVideo.Olho;
+                float alcanceDoVideo = Mathf.Max(1f, ModoVideo.AlcanceDosZumbis);
                 for (int i = 0; i < _ativos.Count; i++)
                 {
                     var z = _ativos[i];
                     Vector3 p = z.transform.position;
-                    var nivel = Zumbi.Nivel.Longe;
-                    if (QuantosJogadores > 0)
-                    {
-                        float menor = float.MaxValue;
-                        for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, Distancia(Jogadores[k], p));
-                        nivel = NivelPara(menor, z.NivelAtual);
-                    }
+                    float doVideo = olhoDoVideo.HasValue ? Vector3.Distance(olhoDoVideo.Value, p) / alcanceDoVideo : float.MaxValue;
+                    float menor = doVideo;
+                    for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, Distancia(Jogadores[k], p));
+                    var nivel = menor < float.MaxValue ? NivelPara(menor, z.NivelAtual) : Zumbi.Nivel.Longe;
                     if (z.Engajado) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
-                    z.DefinirVisivel(Distancia(local, p) < distanciaDeDesenho);
+                    z.DefinirVisivel(Mathf.Min(Distancia(local, p), doVideo) < distanciaDeDesenho);
                 }
             }
         }
@@ -371,6 +372,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>De onde quem joga nesta máquina está olhando (para desenhar e para os gemidos).</summary>
         Vector3 PontoDeVista()
         {
+            if (ModoVideo.Olho is Vector3 olhoDoVideo) return olhoDoVideo;   // a câmera da cena de vídeo (e o ouvido dela)
             if (JogadorRede.Local != null) return JogadorRede.Local.transform.position;
             var cam = Camera.main;
             return cam != null ? cam.transform.position : Vector3.zero;
@@ -598,7 +600,7 @@ namespace ZombieCityCleaner.Zombies
 
         void OnGUI()
         {
-            if (!_info || !IsSpawned || MenuOnline.Aberto) return;
+            if (!_info || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado) return;
             ContarNiveis(out int perto, out int medio, out int longe);
             float u = Screen.height / 720f;
             var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u) };

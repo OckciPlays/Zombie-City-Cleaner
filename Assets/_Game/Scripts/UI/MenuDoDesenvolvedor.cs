@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Video;
 using ZombieCityCleaner.Zombies;
 
 namespace ZombieCityCleaner.UI
@@ -78,7 +79,7 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
-            if (!_aberto || !IsSpawned || !IsOwner || MenuOnline.Aberto) return;
+            if (!_aberto || !IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
             GUI.depth = -10;   // por cima da tela do inventário
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);

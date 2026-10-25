@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Network;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.UI
 {
@@ -148,6 +149,7 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
+            if (ModoVideo.Ligado) return;   // gravando um vídeo: nem o menu, nem o código da partida, nem o FPS
             Estilos();
             float u = Screen.height / 720f;
             Menu(u);

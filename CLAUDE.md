@@ -15,6 +15,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Depois, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`, a partir da `feature/ambientacao-teste`), veja "Combate e morte".
   - Depois, a pedido (24/10/2026), o bunker maior: o salão alto, 4 quartos e o depósito, o painel de armas com um lugar para cada arma, a porta que abre e fecha e isola o som, os interruptores e nada de neblina lá dentro (veja "Bunker").
   - Depois, a pedido (24/10/2026), o começo do saque da Parte 7: o inventário de 3 lugares, a lata de comida e a garrafa de água espalhadas pelas casas, a fome e a sede, os passos e o menu de opções; e a correção da arma na corrida (veja "Inventário, comida e água"). Em seguida, a mochila em grade com a tela do TAB (os 3 lugares viraram atalhos) e o menu do desenvolvedor no F1.
+  - Depois, a pedido (24/10/2026), fora do plano da demo: a cena dos vídeos de divulgação, parte 1 (a base; veja "Cena de vídeo").
   - Depois, o resto da Parte 7 (o bunker, o saque e o dia).
 - `feature/prototipo-fps-zumbis`: o protótipo antigo, com visual de PS1 e elevador infinito. Fica só como referência; nada dele é usado aqui.
 
@@ -47,9 +48,10 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 - `Assets/_Game/` é tudo da demo:
   - `Scenes/Demo_Cidade.unity`: a cena principal, a única nas Build Settings. `Scenes/Demo_Cidade/NavMesh da cidade.asset` é o NavMesh dela.
+  - `Scenes/Video.unity`: a cena dos vídeos de divulgação, uma cópia da Demo_Cidade feita por script (veja "Cena de vídeo"). Fora das Build Settings.
   - `Prefabs/`: `Jogador.prefab` e, em `Prefabs/Zumbis/`, um `Zumbi_<modelo>.prefab` e um `Corpo_<modelo>.prefab` para cada zumbi, todos montados por scripts de editor.
   - `Settings/Demo_Volume.asset` (noite) e `Settings/Demo_Volume_Dia.asset` (dia): o pós-processamento (ACES, cores dessaturadas, vinheta, granulado, bloom).
-  - `Art/Characters/Zombie/`: os 4 modelos de zumbi e, de cada um, o `<modelo>_Extra.fbx` (as animações do desmembramento: cair, rastejar e mancar, feitas pelos scripts de `Blender/`).
+  - `Art/Characters/Zombie/`: os modelos de zumbi (o leve `ZombieGaroto`, com as camadas de textura dele e a folha de rostos `Rosto.png`, e os 4 de antes) e, de cada um, o `<modelo>_Extra.fbx` (as animações do desmembramento: cair, rastejar e mancar, feitas pelos scripts de `Blender/`).
   - `Art/Characters/Jogador/`: o jogador (corpo, os braços de primeira pessoa de cada arma e item, as armas e os itens avulsos e as malhas deles). A sniper tem os braços em `Jogador_FP_Sniper.fbx` e a arma avulsa num FBX próprio, `Armas_Sniper.fbx` (os dois feitos pelos scripts de `Blender/`). A lata e a garrafa: `Itens.fbx` (avulsas) e `Jogador_FP_Lata.fbx` / `Jogador_FP_Garrafa.fbx` (na mão).
   - `Art/UI/Icones/`: os ícones do inventário (`Icone_<modelo>.png`, coloridos, na proporção das células do item) e as fotos dos detalhes (`Foto_<modelo>.png`, 600 × 500), com fundo transparente, renderizados no Blender pelo `itens.py`.
   - `Shaders/Retrato.shader` e `Art/Materials/Retrato.mat`: o retrato do jogador na tela do inventário (o material é criado pela montagem do jogador).
@@ -62,7 +64,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - `Art/Meshes/`: malhas geradas pela montagem da cidade (`ConeDeLuz`).
   - `Shaders/NeblinaDeAltura.shader`: a neblina de altura em tela cheia.
   - `Audio/SomZombie1.mp3`: a voz do zumbi (mono, descomprimida ao carregar), tocada em trechos.
-- Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI).
+- Os scripts vão para `Assets/_Game/Scripts/`, separados por sistema (Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI, Video).
+- `Recordings/` (fora de `Assets`, ignorada pelo git): as tomadas gravadas dos vídeos, em `Recordings/<vídeo>/`.
 - `Blender/` (fora de `Assets`): os scripts do Blender da sniper e das animações do desmembramento dos zumbis, com o passo a passo no README de lá. O zumbi antigo que eles leem (`NovoZombie_antigo.fbx`) sai do histórico do git e fica fora do git.
 - `Docs/` (fora de `Assets`): a documentação para quem colabora no projeto, em português: visão do jogo, plano da demo com o estado de cada parte, histórico, arquitetura, arte e como colaborar. O `README.md` da raiz aponta para ela. Ao terminar uma parte ou mudar algo importante, atualize também o `Docs/` (sobretudo o histórico e o plano).
 
@@ -76,7 +79,78 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Montar jogador e rede: o prefab do jogador, "Rede", "Efeitos" e "Pontos de nascimento".
   - Montar zumbis: a importação do zumbi, a camada, as malhas, o Animator, o prefab do zumbi, o prefab do jogador, "Zumbis", o sangue no "Efeitos", os decals e o NavMesh.
   - Montar armas: a importação dos braços de cada arma e item (e dos punhos), do corpo, das armas e dos itens avulsos e dos ícones, as malhas, os Animators dos braços e os override de cada arma e item, o prefab do jogador, o "Parede de armas" (o painel de armas do bunker, que precisa da cidade montada) e o "Itens no mundo". Depois de montar a cidade, rode esta também: a cidade refaz o móvel do painel.
+  - Montar cena de vídeo: a `Video.unity` inteira, copiada da Demo_Cidade salva (veja "Cena de vídeo"). Rode por último, depois das outras.
 - Os valores de neblina e luz guardados na cena (densidade 0,05, ambiente azulado) são só os do Editor parado. Em Play, o `AmbienteDoDia` reescreve tudo a cada quadro.
+
+## Cena de vídeo (`Scenes/Video.unity`; divulgação, a pedido em 24/10/2026)
+
+- Para os vídeos curtos do Instagram (a construção do jogo, com a voz do usuário por cima). O plano, com o roteiro de ~40 s do primeiro vídeo e as 5 partes, está em `Docs/08-Videos-de-Divulgacao.md`. Siga as partes em ordem, cada uma aprovada antes da próxima. As partes 1 (a base), 2 (a tomada do mapa), 3 (o bunker em corte) e 4 (os zumbis surgindo) estão feitas e aprovadas; a 5 (o jogador entre os zumbis), a última, espera o olhar do usuário.
+- **Montada por `Editor/MontagemDoVideo`** (menu Zombie City Cleaner > Montar cena de vídeo):
+  - copia a `Demo_Cidade.unity` (o arquivo salvo) para `Video.unity` e tira, no texto da cópia, a referência à oclusão assada (`m_OcclusionCullingData`), porque as peças vão se mexer;
+  - abre a cópia, tira o estático de tudo (sem static batching, as peças podem se mexer em Play) e troca a "Câmera de teste" pelo "Diretor do vídeo";
+  - apaga e refaz a cena inteira: mudou a Demo_Cidade, rode de novo (mudanças feitas à mão na `Video.unity` se perdem).
+- **O "Diretor do vídeo" (`Video/DiretorDoVideo`):** a `tomada` (o enum `Tomada`; hoje só `Teste`), o `video` (o nome da pasta), `gravar`, `jogadorComArma`, `armasNoPainel` e `preparo` (1,5 s). O filho "Câmera do vídeo" (tag MainCamera, os ajustes da câmera do mundo do jogador, far 400, sem oclusão) tem o AudioListener da cena.
+  - **No Play:** liga o `ModoVideo`; no Awake, antes do Start do painel, esvazia o `inicio` do `ParedeDeArmas`; chama `HospedarLocal()`; espera o `JogadorRede.Local` e o `ZombieManager` povoado; liga o `SemDano`; chama `Preparar()` (a hora pelo `CicloDoDia.MudarHora`, a neblina, o brilho e a câmera da tomada); espera o `preparo`; e roda a tomada (`Rodando`, depois `Terminou`).
+  - **A cada LateUpdate:** desliga a câmera do mundo, a dos braços e o ouvido do jogador local (o `JogadorRede` liga os três quando ele nasce) e põe o `ModoVideo.Olho` na câmera do vídeo.
+  - **O brilho:** um Volume global próprio (prioridade 100, perfil criado na hora), só com o `postExposure`. O valor é o dos volumes do dia e da noite (misturados pela `CicloDoDia.Noite`) mais o extra da tomada. O resto da gradação continua a dos volumes do jogo.
+  - **Uma tomada nova:** um valor no `Tomada` e um `case` no `Preparar()`, com o clima, a posição e o IEnumerator do movimento (`Travelling` vai de um ponto a outro com SmoothStep; `Orbitar` põe a câmera em volta de um alvo pelo giro, pela inclinação e pela distância). As tomadas grandes ficam num arquivo próprio da classe parcial (`DiretorDoVideo.<Tomada>.cs`, como o `ZombieManager`). `ComZumbis` diz se a tomada tem zumbis (no Awake, antes da partida, o diretor acerta o `povoarAoComecar` do `ZombieManager`).
+  - **Os ajustes por tomada:** `Clima(hora, neblina, brilho, brilhoDeNoite)` (o brilho a mais vai do de dia ao de noite pela `CicloDoDia.Noite`) e `Sombras(distância)`, que muda o `shadowDistance` do asset do URP (o mesmo do jogo; o OnDisable do diretor devolve o valor, conferido: volta a 40).
+- **A tomada `Mapa` (`DiretorDoVideo.Mapa.cs`, 13,5 s):** o mapa se montando, visto do alto. Os tempos estão no `Docs/08-Videos-de-Divulgacao.md`.
+  - **As peças** (`Peca`): um ou mais objetos que se mexem juntos (o modelo "Casa" com os "Móveis"; o "Prédio" com os 4 andares). Só o visual se mexe: a "Colisão" das casas, o bunker e o chão de colisão ficam parados (o jogador continua no bunker).
+    - Antes da hora, cada peça fica guardada 1 km abaixo (fora da câmera e das sombras), sem mexer nos renderers (o `PosteDeLuz` e o `SinalDeVida` ligam e desligam os deles).
+    - `Cai`: do alto, acelerando, esticada; ao bater, amassa e balança (só nas que têm a origem embaixo, no meio: as casas, o prédio e os carros; os pedaços do chão têm a origem no meio do mundo) e solta a poeira (`Poeira`: nuvens saindo da borda da caixa, com uma textura de nuvem feita na hora). `Brota`: sobe do chão e passa um pouco (`SaidaComSobra`).
+    - O tempo de cada peça sai da distância dela ao meio (o chão, a rua) ou da volta em torno da cidade (os pinheiros, com um sorteio fixo).
+  - **O que sai da tomada:** os renderers e as luzes do bunker (`Casa da família/Bunker`, "Bunker (rede)"), da "Parede de armas" e dos "Itens no mundo"; os "Sinais de vida" (ligam aos 6 s); as marcas no chão (o `fadeFactor` dos decals vai de 0 a 1 depois do chão). Sem zumbis.
+  - **A vista do alto:** a neblina vira linear (`RenderSettings.fogMode`; começa 40 m depois da distância da câmera e acaba 260 m depois), a neblina de altura fica em 10%, as sombras vão a 320 m, a câmera tem 55° de campo, o plano perto em 1 m e o longe em 1.100 m, e o brilho a mais é de 0,9 de dia e 1,25 de noite (sem a neblina, as cores da cidade vistas do alto são escuras).
+  - **O chão de fora:** uma planície de 2 km (um retângulo só, com o material da cidade e o UV na cor "Grama" da paleta, a coluna 9 da linha 5), 15 cm abaixo da grama do chão do Blender. É o "vazio" do começo, e o mundo não termina na borda da tela.
+  - **Os postes acendem do meio para fora:** o diretor muda o `PosteDeLuz.Atraso` (no jogo, sorteado de 0 a 0,15) para 0 a 0,42 em ordem de distância; a hora vai das 16h36 às 20h, entre 7 e 12,8 s.
+  - **No fim, fica no último quadro** (desfazer mudaria a imagem antes de o gravador fechar o arquivo); tudo volta ao sair do Play (`DesfazerMapa`, no OnDisable).
+- **A tomada `Bunker` (`DiretorDoVideo.Bunker.cs`, 14,5 s):** o bunker em corte, visto do alto, o mergulho até os olhos e cada cômodo em primeira pessoa. Os tempos estão no `Docs/08-Videos-de-Divulgacao.md`.
+  - **O corte de raio-X** (`_corte` e `AplicarCorte`, no diretor, a cada LateUpdate): a matriz oblíqua (`Camera.CalculateObliqueMatrix`) troca o plano perto da câmera pelo plano horizontal na altura do corte, com a normal para baixo (fica o que está embaixo). A câmera olha inclinada e o corte fica reto; nada acima dele é desenhado, a cidade inteira. Ele desce de 9 m a -2,95 m (abaixo do teto dos cômodos, -2,85; o salão fica com 2,9 m de parede e o painel quase inteiro). NaN = sem corte (a projeção normal).
+  - **A luz do subsolo do alto:** `ModoVideo.Subsolo` (0 a 1) entra no `AmbienteDoDia` como se a câmera descesse a escada (a luz ambiente e a do sol a 15% e nenhuma neblina).
+  - **As luzes de fora apagam** quando o corte passa do chão (`ApagarAsDeFora`: as luzes acima de -0,3 m, menos a direcional, e os `PosteDeLuz` e `SinalDeVida` delas desligados, senão as ligariam de novo). Elas não são cortadas: o poste da rua iluminava o depósito por cima.
+  - **As luzes e a porta** vão pelo `BunkerRede.Definir(acesas, aberta)` (no anfitrião, sem pedido nem distância): começa apagado e fechado; a escada (grupo 6), o salão (0), os quartos 2, 1, 3 e 4 e o depósito (5), de 2,5 a 4,4 s, e a porta abre aos 2,7 s. Cada luz toca o `Efeitos.Chave` perto do ouvido (o do interruptor, 3D, só se ouve a 12 m).
+  - A lanterna do jogador (que nasce no salão, ligada) é desligada. Sem zumbis (`ComZumbis`).
+  - **A câmera, em três partes** (os lugares nas coordenadas da casa da família, as da `PlantaDoBunker`, repetidas no script porque ela é do Editor; os olhos em -4,2, 1,65 m acima do chão):
+    - até 3 s, a volta em torno do bunker (`VoltaNoBunker`): o alvo sai da casa para (-5; -4,4; 16,5), com o giro de 172° a 180°, a inclinação de 52° a 58° e a distância de 54 m a 40 m, parando no começo do mergulho; 60° de campo;
+    - de 3 a 7,8 s, o mergulho (`Percorrer`, o caminho por pontos-chave do diretor: Catmull-Rom com o tempo de cada trecho): de cima do bunker, pela abertura do corte, até a porta do salão, olhando a mais de 40° para baixo ao passar da altura do corte (com o campo de 60°, nada acima da câmera aparece, e o que estava cortado volta sem ser visto); depois o olhar levanta até o painel do fundo, e o campo vai a 70°;
+    - de 7,8 s em diante, os cômodos (`Comodos`: a entrada em x, para onde fica o fundo, o fundo e o meio em z), 1,35 s cada, com corte seco: da porta para dentro (0,15 a 1,1 m), olhando o fundo de um lado ao outro, com 75° de campo.
+  - Debaixo da terra, o plano perto vai a 0,05 m (dentro dos cômodos, as paredes ficam a 1 ou 2 m). O brilho a mais é 1,4.
+- **A tomada `Zumbis` (`DiretorDoVideo.Zumbis.cs`, 8 s):** os zumbis surgindo pela cidade, à noite. Os tempos estão no `Docs/08-Videos-de-Divulgacao.md`.
+  - **Subir do chão:** só o `raizDoModelo` (o "Modelo", filho da raiz, com o Animator; sem root motion) desce 2 m e sobe em 1,1 s (SmoothStep). A raiz continua no NavMesh: a IA, o agente e o nível de detalhe seguem como no jogo. Debaixo do chão, o modelo fica escondido pelo próprio chão.
+  - **As ondas:** cada zumbi sobe com a horda mais perto dele (os `PontoDeHorda`), na ordem da distância da horda ao meio da vista (o cruzamento, (2; 0; 1)): de 0,4 a 4,4 s, mais um sorteio fixo de até 0,8 s. Cada um solta uma poeira pequena nos pés (a `Poeira` do mapa; à noite, a cor dela escurece, porque ela não recebe luz).
+  - **A vista:** em volta do cruzamento, de 30 m e 38° para 22 m e 30°, com 55° de campo; neblina em 25%, sombras até 150 m, o brilho a mais 1,6 e `ModoVideo.AlcanceDosZumbis` = 3 (de 30 m, os zumbis do jogo sumiriam a 65 m e parariam a 40 m).
+  - **O close** (de 6 s em diante, `Close`): o zumbi vagando (`Estado.Vagando`, com cabeça, no chão da rua) mais perto do cruzamento. A câmera fica na frente dele, pelo `forward` da raiz, a 1,5 m da cabeça, e recua 12 cm por segundo enquanto ele vem andando; ela olha a cabeça (`partes[CorpoDeZumbi.ParteCabeca]`) suavizada. Campo de 40°, o `Gemer` dele, a "Lanterna do vídeo" (um spot na câmera, intensidade 1,2: com 25, o rosto estourava) e o brilho a mais em 0,5.
+  - Com zumbis (`ComZumbis`); o jogador continua no bunker.
+- **A tomada `Jogador` (`DiretorDoVideo.Jogador.cs`, 10 s):** o jogador andando entre os zumbis, à noite. Os tempos estão no `Docs/08-Videos-de-Divulgacao.md`.
+  - **O diretor anda com o jogador:** `Teleportar` para (1,5; 0,05; -44) (a pista da direita da avenida sul, entre a horda da saída sul e a da rua sul), olhando para o norte; o `MovimentoPrimeiraPessoa` fica desligado, e o diretor move o `CharacterController` (1,6 m/s até os 5,5 s, com a gravidade; no meio dos zumbis, ele escorrega em volta das cápsulas). A cabeça (o `cabeca` do movimento, pai da câmera do mundo, que guia o facho da lanterna) e o `Pitch` ficam em 8° para baixo.
+  - **O corpo aparece:** os `renderersCorpo` voltam a ter sombra e desenho (`ShadowCastingMode.On`; para o dono, eram só sombra), e os braços de primeira pessoa (`bracos`) desligam. A lanterna fica acesa: com ela, os zumbis enxergam a 26 m, e as duas hordas vêm. O jogador não leva dano (`SemDano`).
+  - **A câmera:** atrás do ombro direito, a (0,8; 2,3; -4,2) do jogador, olhando 7 m à frente, seguindo suavizada; depois de parar, sobe e gira 35° até (0; 7,5; -2,8), quase em cima, olhando o peito (de 12 m, as cabeças dos zumbis escondiam a dele). 55° de campo, neblina em 35%, sombras até 60 m, o brilho a mais de 1,2 caindo para 1 na subida (os zumbis colados na lanterna estouravam).
+  - **Cada gravação sai um pouco diferente:** a IA dos zumbis usa o `Random` (para onde vagam, quando param).
+  - **Com `jogadorNoControle`** (`AnimarJogadorNoControle`): o `MovimentoPrimeiraPessoa` fica ligado (quem grava anda com o teclado e o mouse, pelo `MenuOnline.Controla`), e a câmera segue atrás do ombro (`SeguirNoOmbro`): o giro do corpo e a inclinação do `cabeca` (olhando para baixo, a câmera sobe por trás: 12° + 0,6 × a inclinação, de -15° a 55°), a (0,8; 0; -4,4) da cabeça mais 0,4 m para cima, com um SphereCast de 25 cm no cenário (a camada Default) puxando a câmera para a frente das paredes. Enter (`Keyboard.enterKey`) desliga o movimento e sobe a câmera do lugar em que estava até o mesmo fim do caminho de sempre, em 4,5 s; aí a tomada termina. Parar o Play no meio também fecha o vídeo (o jogador sai da rede antes do diretor: a tomada confere se ele ainda existe). Sem folha de conferência (sem duração certa).
+  - **Os braços de primeira pessoa** ficam ligados com os renderers desligados (`forceRenderingOff`): o soco, no clique, toca a animação deles, e com o objeto desligado ela enchia o Console de "Game object with animator is inactive".
+- **A folha de conferência** (`folhaDeConferencia`, ligada; `Conferir`): durante a tomada, 12 quadros de 270 × 480, do começo ao fim, desenhados pela câmera do vídeo no fim do quadro, numa folha de 6 × 2, em `Recordings/<vídeo>/<n>_<Tomada>_folha.png`. É o jeito de conferir uma gravação (com o tempo do Recorder, o tempo do jogo é o do vídeo).
+- **`Video/ModoVideo`** (estático; volta ao normal em `SubsystemRegistration` a cada Play e no OnDisable do diretor): o que muda nos scripts do jogo.
+  - `Ligado`: todos os OnGUI saem logo no começo (o `MenuOnline`, com o FPS; o `ArmaJogador`, com a mira, a dica e a luneta; o `VidaJogador`, o `FomeESede`, o `InventarioJogador`, a `TelaDoInventario`, o `MenuDoDesenvolvedor`, o F3 do `ZombieManager` e o `BenchmarkDeZumbis`). Também faz todos os zumbis visíveis terem sombra (`Zumbi.AplicarNivel`; no nível Médio, eles não tinham).
+  - `SemArma`: o `InventarioJogador` não dá a pistola do começo.
+  - `Neblina`: multiplica as duas neblinas no `AmbienteDoDia`.
+  - `Olho` e `AlcanceDosZumbis`: o `ZombieManager.VarrerNiveis` conta também a distância até a câmera do vídeo, dividida pelo alcance, para o nível e para desenhar (`DefinirVisivel`). O `PontoDeVista` (o dos gemidos) usa o olho.
+- **A gravação (`Editor/GravadorDoVideo`, `[InitializeOnLoad]`):**
+  - Com `gravar` ligado, quando o diretor fica `Rodando`, um `RecorderController` (o Unity Recorder 5.1.7) grava um MP4 (H.264, qualidade alta) da Game view, com o áudio, em `Recordings/<vídeo>/<n>_<Tomada>_<data>.mp4`.
+  - O formato é 1080 × 1920 a 60 fps constantes (`FrameRatePlayback.Constant`: o tempo do jogo anda 1/60 s por quadro, por mais que o quadro demore).
+  - No `Terminou`, ele fecha o arquivo e sai do Play. Parar o Play no meio fecha o arquivo com o que deu para gravar.
+  - A Game view fica em 1080 × 1920 depois da primeira gravação.
+- **Testado (parte 1):**
+  - a tomada `Teste` gravou 5 s (300 quadros) em 1080 × 1920 a 60 fps, com áudio, sem HUD;
+  - os 1.000 zumbis apareceram, com sombra; o jogador nasceu sem a pistola; o painel ficou vazio;
+  - a câmera do vídeo foi a `Camera.main` (a neblina e as partículas seguem ela).
+- **Observações:**
+  - "There are 2 audio listeners" aparece uma vez no começo (o ouvido do jogador liga quando ele nasce, antes do LateUpdate do diretor). É inofensivo.
+  - As sombras do URP vão só até 40 m da câmera: vista do alto, elas somem. A tomada que precisa chama o `Sombras(distância)`.
+  - **Para conferir um MP4 sem ffmpeg:**
+    - o tamanho, os fps e a duração saem das propriedades do arquivo no Shell do Windows (`Shell.Application`, `GetDetailsOf`);
+    - os quadros saem da folha de conferência do diretor. Um `VideoPlayer` no Editor parado também solta quadros (com `EditorApplication.QueuePlayerLoopUpdate()` a cada update), mas depois de uma leitura interrompida ele parou de preparar qualquer arquivo.
+  - **Não recompile com o Play rodando** (a regra do projeto): um `AssetDatabase.Refresh` com a prévia do usuário rodando recompilou no meio e derrubou a partida dele (a rede e o modo vídeo caíram). Confira o `EditorApplication.isPlaying` antes, e espere o `Assembly-CSharp.dll` ficar mais novo que o script antes de dar Play.
 
 ## A cidade em blocos (Parte 4)
 
@@ -194,7 +268,17 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 ## Os zumbis (`Art/Characters/Zombie/`)
 
-- **Os 4 modelos:** `Zombie1` (o garoto, 1,75 m), `ZombieHomem2` (1,80 m), `ZombieMulher` (1,68 m) e `ZombieMulherLoira` (1,70 m).
+- **Os zumbis leves (24/10/2026, a pedido: os modelos de ~3.100 vértices eram pesados para hordas grandes):** hoje a lista da montagem (`MontagemDosZumbis.Modelos`) tem só o `ZombieGaroto` (1,75 m, 2.195 triângulos, do Tripo, sem rosto, sangue nem sujeira). Os 4 modelos de baixo continuam na pasta e voltam se entrarem na lista.
+  - Vem de `Modelo 3D/Zumbis/` na pasta de arte (`zumbis_leves.py`, `texturas_leves.py` e `rostos_leves.py`). Ao atualizar, copie o `<modelo>.fbx`, `Texturas/<modelo>_Base.png`, `_Mascaras.png`, `_Sujeiras.png` e `Texturas/Rosto.png` para cá, refaça o `<modelo>_Extra.fbx` (`Blender/zumbi_extras.py`) e rode a montagem dos zumbis.
+  - **A aparência varia por zumbi**, no shader `Shaders/Zumbi.shader` (`ZombieCityCleaner/Zumbi`, PBR da URP como o Lit, com SRP Batcher). As camadas, todas no material `Materials/<modelo>.mat`:
+    - `_BaseMap` (a textura do Tripo com a pele, a roupa de cima, a de baixo e o cabelo em cinza) e `_Mascaras` (RGBA = essas 4 regiões): cada região pega a cor do zumbi;
+    - `_Sujeiras`: Texture2DArray de 10 camadas (o PNG é uma folha 5 × 2, importada como 2D Array), RGBA = sangue, sujeira, ferida e sangue seco. Uma camada dá o sangue e outra a sujeira, cada uma com a sua força (`_Camadas`);
+    - `_Rosto`: a folha de rostos (8 × 8 quadros de 256 px; linha 0 os olhos, 1 as bocas, 2 e 3 as marcas), no segundo UV (o "Rosto", só na frente da cabeça). O shader junta olhos, boca e duas marcas (`_Quadros`; -1 = nada). O verde puro da folha vira a cor dos olhos e o magenta puro a do cabelo (as sobrancelhas).
+  - **`Zombies/Aparencia`:** cada zumbi faz uma cópia do material (`Zumbi.GarantirMateriais`) e sorteia, pelo Id e pela geração (um xorshift, igual em todas as máquinas, nada pela rede), as cores da pele, das roupas, do cabelo e dos olhos (de listas, com um tom a mais ou a menos), as camadas de sangue e sujeira, uma marca no rosto (60%) e o olho faltando (16%). As listas e os quadros são os mesmos da prévia do Blender (`previa_leves.py`).
+  - **As expressões** (`Zumbi.AtualizarRosto`, a cada quadro nos níveis Perto e Médio; só mexe no material quando muda): vagando, olhos pesados e boca fechada; parado, 30% dos zumbis "dormem" de olhos fechados (desconfiado, no anfitrião, abre os olhos); investigando e procurando, alerta e gemendo; perseguindo, fúria (sobrancelhas em V, rosnando); atacando (e 0,9 s depois de um golpe), arregalado mordendo; 0,6 s depois de um tiro, dor; o corpo que cai, morto (olhos virados, boca caída), com as mesmas marcas.
+  - O corpo que cai (`CorpoDeZumbi.Cair`) e os pedaços dos membros copiam o material do zumbi (cada um tem a sua cópia: o zumbi pode voltar do pool com outra cara). O corte dos membros (`Membros`) leva o UV do rosto junto.
+  - Os corpos no total continuam 48 (`corposPorModelo` = 48 ÷ o número de modelos).
+- **Os 4 modelos de antes:** `Zombie1` (o garoto, 1,75 m), `ZombieHomem2` (1,80 m), `ZombieMulher` (1,68 m) e `ZombieMulherLoira` (1,70 m), com o URP Lit e a textura deles (sem variação).
   - Vêm de `Modelo 3D/Zumbis/` na pasta de arte (`Zumbis.blend` e o script `zumbis.py`). Ao atualizar, copie de novo os `<modelo>.fbx` e as texturas `Texturas/<modelo>_basecolor.jpg` para cá e rode a montagem dos zumbis.
   - Os 4 têm o mesmo esqueleto (os 22 ossos do zumbi antigo, com os mesmos nomes) e a mesma hierarquia (`Zombie_Body`, `Zombie_Rig`), cada um com as juntas nas medidas dele.
   - O antigo `NovoZombie` (com desmembramento e os pedaços soltos) saiu do projeto.
@@ -556,6 +640,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - os triângulos vão de ~0,5 milhão (50 zumbis) a ~1,3 milhão (500): quase tudo são zumbis.
     - A oclusão cortou 4 a 5% dos draw calls e 8% dos triângulos dessa vista aberta; ela rende mais dentro das casas e atrás dos prédios.
   - **Com os 4 modelos e o ragdoll** (mesma vista, às 23 h): 617 a 695 draw calls, quadro de 3,7 a 4,9 ms, GPU 2,1 a 2,5 ms, 265 a 784 mil triângulos. Não piorou; a queda em relação à Parte 8 pode ser em parte da hora da noite (os postes acesos mudam as sombras), então não é uma comparação limpa.
+  - **Zumbis leves contra os 4 de antes** (24/10/2026, a mesma vista às 22 h, 1918×887, Ryzen 7 5700X e RX 9060 XT, uma rodada logo depois da outra): com 500 zumbis, 659 mil triângulos contra 1,245 milhão (com 250, 571 mil contra 857 mil). O quadro ficou igual ou um pouco pior (5,6 a 7,8 ms contra 5,5 a 7,2), a GPU igual (2,6 a 2,9 ms) e o SetPass subiu de 87 para 90 (o shader novo). Aqui o Editor está preso na CPU, então os triângulos a menos não aparecem no tempo; devem aparecer numa placa mais fraca ou com mais zumbis na tela. Uma 2ª rodada dos leves saiu com 49 zumbis perto (eles foram atrás do jogador) e não serve para comparar.
 
 ## Combate e morte (Parte 6, refeita nos ajustes antes da Parte 7)
 

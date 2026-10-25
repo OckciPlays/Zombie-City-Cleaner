@@ -17,11 +17,13 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
-    /// Monta os zumbis (Partes 5 e 6, e os modelos novos dos ajustes antes da Parte 7):
-    /// - a importação dos 4 modelos (Zombie1, ZombieHomem2, ZombieMulher, ZombieMulherLoira), com os 5 clipes de cada;
+    /// Monta os zumbis (Partes 5 e 6, os modelos dos ajustes antes da Parte 7 e os zumbis leves de 24/10/2026):
+    /// - a importação dos modelos da lista (hoje o ZombieGaroto, leve; os 4 de ~3.100 vértices, Zombie1, ZombieHomem2,
+    ///   ZombieMulher e ZombieMulherLoira, continuam na pasta e voltam se entrarem na lista), com os 5 clipes de cada;
     /// - as camadas "Zumbi" (7, que não colide com ela mesma nem com os braços de primeira pessoa) e "Corpos" (8);
     /// - de cada modelo, as duas malhas (inteira, um draw call; e sem cabeça, com a tampa de carne no pescoço) e o
-    ///   material com a textura dele;
+    ///   material com a textura dele (nos zumbis leves, o shader ZombieCityCleaner/Zumbi com as camadas: a base, as
+    ///   máscaras das cores, as 10 sujeiras e a folha de rostos; cada zumbi faz a cópia dele no jogo, veja Aparencia);
     /// - o Animator (andar e, só no tronco, atacar e reagir ao tiro), do primeiro modelo; os outros usam um override com
     ///   os clipes deles;
     /// - de cada modelo, o prefab do zumbi (agente, cápsula, corpo cinemático, voz e hitboxes nos ossos, medidas na
@@ -34,7 +36,14 @@ namespace ZombieCityCleaner.EditorTools
     public static class MontagemDosZumbis
     {
         const string Arte = "Assets/_Game/Art/Characters/Zombie";
-        static readonly string[] Modelos = { "Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira" };
+        // os zumbis leves (24/10/2026, ~1.300 faces, a aparência variando por zumbi) no lugar dos 4 modelos de ~3.100
+        // vértices ("Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira"), que ficam na pasta
+        static readonly string[] Modelos = { "ZombieGaroto" };
+        // a pasta de arte dos zumbis leves: <modelo>_Base.png, <modelo>_Mascaras.png, <modelo>_Sujeiras.png (as 10
+        // camadas numa folha de 5 × 2) e a folha de rostos de todos (Rosto.png)
+        const int ColunasDasSujeiras = 5, LinhasDasSujeiras = 2;
+        // os corpos (ragdoll) no total, divididos entre os modelos (eram 12 de cada um dos 4)
+        const int CorposNoTotal = 48;
         const string Controlador = Arte + "/Zombie.controller";
         const string MascaraTronco = Arte + "/Zombie_Tronco.mask";
         const string Malhas = Arte + "/Malhas";
@@ -178,6 +187,7 @@ namespace ZombieCityCleaner.EditorTools
         {
             var m = new Modelo { indice = indice, nome = nome, fbx = $"{Arte}/{nome}.fbx" };
             var importador = (ModelImporter)AssetImporter.GetAtPath(m.fbx);
+            importador.generateSecondaryUV = false;   // o segundo UV é o do rosto (zumbis leves)
             importador.animationType = ModelImporterAnimationType.Generic;
             importador.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importador.importAnimation = true;
@@ -256,10 +266,14 @@ namespace ZombieCityCleaner.EditorTools
             return existente;
         }
 
-        /// <summary>URP Lit com a textura do modelo, pouco brilho e sem o passe de motion vectors (como o zumbi antigo).</summary>
+        /// <summary>
+        /// URP Lit com a textura do modelo, pouco brilho e sem o passe de motion vectors (como o zumbi antigo). Os zumbis
+        /// leves (com <modelo>_Base.png na pasta) usam o shader ZombieCityCleaner/Zumbi com as camadas deles.
+        /// </summary>
         static Material MaterialDoModelo(string nome)
         {
             string caminho = $"{Arte}/Materials/{nome}.mat";
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>($"{Arte}/{nome}_Base.png") != null) return MaterialLeve(nome, caminho);
             var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
             if (m == null)
             {
@@ -274,6 +288,57 @@ namespace ZombieCityCleaner.EditorTools
             m.SetShaderPassEnabled("MotionVectors", false);
             EditorUtility.SetDirty(m);
             return m;
+        }
+
+        /// <summary>
+        /// O material de um zumbi leve: as quatro texturas (importadas aqui: as cores em sRGB, as máscaras e as sujeiras
+        /// lineares, as sujeiras como Texture2DArray de 10 camadas) e as cores do modelo como vieram do Tripo. Cada zumbi
+        /// faz a cópia dele no jogo e sorteia as cores e as camadas (Aparencia).
+        /// </summary>
+        static Material MaterialLeve(string nome, string caminho)
+        {
+            var shader = Shader.Find("ZombieCityCleaner/Zumbi");
+            if (shader == null) throw new System.Exception("Falta o shader ZombieCityCleaner/Zumbi (Assets/_Game/Shaders/Zumbi.shader).");
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            if (m == null)
+            {
+                m = new Material(shader);
+                AssetDatabase.CreateAsset(m, caminho);
+            }
+            m.shader = shader;
+            m.SetTexture("_BaseMap", TexturaLeve<Texture2D>($"{nome}_Base.png", true, 2048));
+            m.SetTexture("_Mascaras", TexturaLeve<Texture2D>($"{nome}_Mascaras.png", false, 1024));
+            m.SetTexture("_Sujeiras", TexturaLeve<Texture2DArray>($"{nome}_Sujeiras.png", false, 8192, true));
+            m.SetTexture("_Rosto", TexturaLeve<Texture2D>("Rosto.png", true, 2048));
+            m.enableInstancing = false;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        static T TexturaLeve<T>(string arquivo, bool srgb, int tamanho, bool camadas = false) where T : Texture
+        {
+            string caminho = $"{Arte}/{arquivo}";
+            var imp = (TextureImporter)AssetImporter.GetAtPath(caminho);
+            if (imp == null) throw new FileNotFoundException("Falta a textura do zumbi leve (veja Modelo 3D/Zumbis/texturas_leves.py)", caminho);
+            var s = new TextureImporterSettings();
+            imp.ReadTextureSettings(s);
+            s.textureType = TextureImporterType.Default;
+            s.textureShape = camadas ? TextureImporterShape.Texture2DArray : TextureImporterShape.Texture2D;
+            if (camadas)
+            {
+                s.flipbookColumns = ColunasDasSujeiras;
+                s.flipbookRows = LinhasDasSujeiras;
+            }
+            s.sRGBTexture = srgb;
+            s.alphaSource = TextureImporterAlphaSource.FromInput;
+            s.alphaIsTransparency = false;   // o fundo transparente da folha de rostos já tem a cor do traço vizinho
+            s.mipmapEnabled = true;
+            s.wrapMode = TextureWrapMode.Clamp;
+            imp.SetTextureSettings(s);
+            imp.maxTextureSize = tamanho;
+            imp.textureCompression = TextureImporterCompression.CompressedHQ;   // BC7: as chaves de cor do rosto ficam limpas
+            imp.SaveAndReimport();
+            return Carregar<T>(caminho);
         }
 
         // ------------------------------------------------------------------ Animator
@@ -775,6 +840,7 @@ namespace ZombieCityCleaner.EditorTools
             go.AddComponent<BenchmarkDeZumbis>();
             m.modelos = prefabs;
             m.corpos = corpos;
+            m.corposPorModelo = Mathf.Max(12, CorposNoTotal / prefabs.Length);
             m.vozDoZumbi = Carregar<AudioClip>("Assets/_Game/Audio/SomZombie1.mp3");
             m.areasLivres = new[]
             {

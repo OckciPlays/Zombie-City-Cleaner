@@ -39,6 +39,7 @@ Como rodar:
 
    (o arquivo fica fora do git: não o commite.)
 2. Importe `NovoZombie_antigo.fbx` numa cena e mude o nome do esqueleto dele para `Antigo_Rig`.
-3. Carregue `zumbi_extras.py` e chame `construir(modelo, bpy.data.objects["Antigo_Rig"])` para `Zombie1`,
-   `ZombieHomem2`, `ZombieMulher` e `ZombieMulherLoira`.
+3. Carregue `zumbi_extras.py` e chame `construir(modelo, bpy.data.objects["Antigo_Rig"])` para cada modelo: o leve
+   `ZombieGaroto` (o da lista da montagem) e, se voltarem, `Zombie1`, `ZombieHomem2`, `ZombieMulher` e
+   `ZombieMulherLoira`.
 4. Na Unity, rode Zombie City Cleaner > Montar zumbis.

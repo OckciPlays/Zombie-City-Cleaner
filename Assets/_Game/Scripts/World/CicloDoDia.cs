@@ -75,6 +75,9 @@ namespace ZombieCityCleaner.World
             return h > 17f ? Mathf.SmoothStep(0f, 1f, (h - 17f) / 3f) : Mathf.SmoothStep(1f, 0f, (h - 5f) / 3f);
         }
 
+        /// <summary>Muda a hora (no anfitrião; a cena de vídeo usa para cada tomada). Ela vai para os clientes no próximo envio.</summary>
+        public static void MudarHora(float hora) => Hora = Mathf.Repeat(hora, 24f);
+
         public static string Relogio() => $"{Mathf.FloorToInt(Hora):00}:{Mathf.FloorToInt(Hora % 1f * 60f):00}";
     }
 }

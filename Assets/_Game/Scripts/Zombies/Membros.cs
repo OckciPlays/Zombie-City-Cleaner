@@ -121,6 +121,8 @@ namespace ZombieCityCleaner.Zombies
             return m;
         }
 
+        static readonly Vector2 ForaDoRosto = new Vector2(-1f, -1f);
+
         // aresta sem direção, pelos índices soldados (vértices na mesma posição viram um só: as costuras de UV)
         static long Aresta(int a, int b) => a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
 
@@ -136,6 +138,9 @@ namespace ZombieCityCleaner.Zombies
             var uv = baseMesh.uv;
             var pesos = baseMesh.boneWeights;
             int n = v.Length;
+            // o UV do rosto (zumbis leves): vai junto; as tampas ficam fora do rosto
+            var uvRosto = baseMesh.uv2;
+            bool temRosto = uvRosto.Length == n;
             var pDepois = new float[n];
             var pAntes = new float[n];
             for (int i = 0; i < n; i++)
@@ -215,6 +220,7 @@ namespace ZombieCityCleaner.Zombies
             var vs = new List<Vector3>(v);
             var ns = new List<Vector3>(nrm);
             var us = new List<Vector2>(uv);
+            var usRosto = temRosto ? new List<Vector2>(uvRosto) : null;
             var ws = new List<BoneWeight>(pesos);
             var tampa = new List<int>();
             foreach (var lista in grupos.Values)
@@ -233,14 +239,14 @@ namespace ZombieCityCleaner.Zombies
                 var ossoDaTampa = OssoQueFica(lista, pesos, pedaco ? perdidosAntes : perdidosDepois, pedaco);
                 // o meio da tampa fica um pouco para dentro (o toco fica côncavo)
                 int centro = vs.Count;
-                vs.Add(meio - normal * 0.012f); ns.Add(normal); us.Add(new Vector2(0.5f, 0.5f));
+                vs.Add(meio - normal * 0.012f); ns.Add(normal); us.Add(new Vector2(0.5f, 0.5f)); usRosto?.Add(ForaDoRosto);
                 ws.Add(new BoneWeight { boneIndex0 = ossoDaTampa, weight0 = 1f });
                 var copia = new Dictionary<int, int>();
                 int Copia(int i)
                 {
                     if (copia.TryGetValue(i, out int c)) return c;
                     c = vs.Count;
-                    vs.Add(v[i]); ns.Add(normal); us.Add(new Vector2(0.5f, 0.5f)); ws.Add(pesos[i]);
+                    vs.Add(v[i]); ns.Add(normal); us.Add(new Vector2(0.5f, 0.5f)); usRosto?.Add(ForaDoRosto); ws.Add(pesos[i]);
                     copia[i] = c;
                     return c;
                 }
@@ -261,8 +267,9 @@ namespace ZombieCityCleaner.Zombies
                     ns[i] = bind.MultiplyVector(ns[i]).normalized;
                 }
                 // tira os vértices que nenhum triângulo usa (a malha do pedaço fica pequena)
-                Compactar(vs, ns, us, dentro[0], dentro[1], tampa, out var v2, out var n2, out var u2, out var pele2, out var carne2);
+                Compactar(vs, ns, us, usRosto, dentro[0], dentro[1], tampa, out var v2, out var n2, out var u2, out var u2Rosto, out var pele2, out var carne2);
                 m.SetVertices(v2); m.SetNormals(n2); m.SetUVs(0, u2);
+                if (u2Rosto != null) m.SetUVs(1, u2Rosto);
                 m.subMeshCount = 2;
                 m.SetTriangles(pele2, 0);
                 m.SetTriangles(carne2, 1);
@@ -270,6 +277,7 @@ namespace ZombieCityCleaner.Zombies
             else
             {
                 m.SetVertices(vs); m.SetNormals(ns); m.SetUVs(0, us);
+                if (usRosto != null) m.SetUVs(1, usRosto);
                 m.boneWeights = ws.ToArray();
                 m.bindposes = baseMesh.bindposes;
                 m.subMeshCount = 2;
@@ -316,16 +324,18 @@ namespace ZombieCityCleaner.Zombies
             return melhor;
         }
 
-        static void Compactar(List<Vector3> vs, List<Vector3> ns, List<Vector2> us, List<int> pele, List<int> carne, List<int> tampa,
-                              out List<Vector3> v2, out List<Vector3> n2, out List<Vector2> u2, out List<int> pele2, out List<int> carne2)
+        static void Compactar(List<Vector3> vs, List<Vector3> ns, List<Vector2> us, List<Vector2> usRosto, List<int> pele, List<int> carne, List<int> tampa,
+                              out List<Vector3> v2, out List<Vector3> n2, out List<Vector2> u2, out List<Vector2> u2Rosto, out List<int> pele2, out List<int> carne2)
         {
             var novo = new Dictionary<int, int>();
             v2 = new List<Vector3>(); n2 = new List<Vector3>(); u2 = new List<Vector2>();
+            u2Rosto = usRosto != null ? new List<Vector2>() : null;
+            var rosto = u2Rosto;
             int Indice(int i, List<Vector3> v, List<Vector3> n, List<Vector2> u)
             {
                 if (novo.TryGetValue(i, out int j)) return j;
                 j = v.Count;
-                v.Add(vs[i]); n.Add(ns[i]); u.Add(us[i]);
+                v.Add(vs[i]); n.Add(ns[i]); u.Add(us[i]); rosto?.Add(usRosto[i]);
                 novo[i] = j;
                 return j;
             }

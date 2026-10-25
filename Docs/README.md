@@ -13,12 +13,13 @@ Esta pasta explica o que o jogo vai ser, o que já está pronto e como trabalhar
 | [05 – Arte e pipeline](05-Arte-e-Pipeline.md) | os modelos do Blender (feitos por script) e como eles chegam na Unity |
 | [06 – Como colaborar](06-Como-Colaborar.md) | o git, as regras do projeto, como testar (inclusive online) e o checklist antes do commit |
 | [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md) | as ideias para depois da demo (Dia 0, escolhas e finais, o carro, a floresta e os dois acampamentos), divididas em frentes de trabalho |
+| [08 – Vídeos de divulgação](08-Videos-de-Divulgacao.md) | os vídeos curtos do Instagram: o roteiro do primeiro, as tomadas em partes e como gravar pela cena `Video.unity` |
 
 A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz do repositório. Ele é escrito para o assistente de IA que trabalha no projeto, mas é um texto comum, em português, e descreve cada sistema em detalhe. Esta pasta é o resumo para gente.
 
 ## Estado atual (24/10/2026)
 
-- **Feito:** as Partes 0 a 6, a Parte 8 (a arte final, que veio antes da 7 a pedido), os "ajustes antes da Parte 7" (tiro novo, 4 modelos de zumbi com ragdoll, 4 armas e o suporte de armas no bunker), a ambientação da cidade e, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`), o bunker maior (o salão alto, 4 quartos, o depósito, o painel de armas, a porta que isola o som e os interruptores) e o começo do saque: o inventário, a comida e a água pelas casas, a fome e a sede, os passos e o menu de opções. Por último, a mochila em grade (TAB) com a barra de 3 atalhos e o menu do desenvolvedor (F1), esperando o teste do usuário.
+- **Feito:** as Partes 0 a 6, a Parte 8 (a arte final, que veio antes da 7 a pedido), os "ajustes antes da Parte 7" (tiro novo, 4 modelos de zumbi com ragdoll, 4 armas e o suporte de armas no bunker), a ambientação da cidade e, a pedido, as armas rebalanceadas, a sniper com luneta e o desmembramento (branch `feature/armas-sniper`), o bunker maior (o salão alto, 4 quartos, o depósito, o painel de armas, a porta que isola o som e os interruptores) e o começo do saque: o inventário, a comida e a água pelas casas, a fome e a sede, os passos e o menu de opções. Por último, a mochila em grade (TAB) com a barra de 3 atalhos e o menu do desenvolvedor (F1), esperando o teste do usuário. Fora do jogo, a base da cena dos vídeos de divulgação (veja o [08](08-Videos-de-Divulgacao.md)).
 - **Próximo:** o resto da Parte 7 (o saque nos móveis, a munição, dormir e salvar). Depois, a Parte 9 (o fechamento da demo).
 - **O que dá para fazer hoje:**
   - hospedar uma partida (pelo Relay da Unity, com código, ou em rede local) e jogar com até 4 pessoas;
