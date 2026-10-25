@@ -398,8 +398,9 @@ namespace ZombieCityCleaner.EditorTools
                 float raio = (b.max.z - b.min.z) / 2f;
                 var c = new Vector3(b.center.x, b.min.y + raio, b.center.z);
                 r.centros[q] = c;
+                // o aro passa um pouco para fora do pneu, de lado
                 caixas[q] = new Bounds(c, new Vector3(b.size.x, 2f * raio, 2f * raio));
-                caixas[q].Expand(0.012f);
+                caixas[q].Expand(new Vector3(0.10f, 0.024f, 0.024f));
                 if (q == 0) r.raio = raio;
             }
             // o que fica todo dentro da caixa de uma roda sai da carroceria
