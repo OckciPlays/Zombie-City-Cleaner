@@ -494,9 +494,17 @@ namespace ZombieCityCleaner.Player
             // comiam o tiro que era do zumbi de trás
             int n = Physics.RaycastNonAlloc(origem, direcao, _acertos, d.alcance, MascaraDoTiro, QueryTriggerInteraction.Ignore);
             System.Array.Sort(_acertos, 0, n, PorDistancia);
+            // as rodas dos carros não têm colisor: o raio é conferido contra elas à parte
+            float naRoda = Vehicles.Carro.TiroNasRodas(origem, direcao, d.alcance, out var carroDaRoda, out int roda, out var normalDaRoda);
+            bool parou = false;
             for (int i = 0; i < n; i++)
             {
                 var hit = _acertos[i];
+                // a roda antes do que o raio pegou (ou logo atrás da lataria do mesmo carro: a caixa de colisão de baixo
+                // passa um pouco da roda)
+                if (carroDaRoda != null && (naRoda < hit.distance
+                    || (hit.rigidbody != null && hit.rigidbody.gameObject == carroDaRoda.gameObject && naRoda - hit.distance < 0.35f)))
+                    return NaRoda(carroDaRoda, roda, origem + direcao * naRoda, normalDaRoda);
                 // o olho fica bem no topo da cápsula do próprio jogador: o tiro para baixo (na cabeça de um zumbi perto,
                 // por exemplo) batia nela, a distância zero, e soltava faíscas em cima da cabeça
                 if (hit.collider == _corpo) continue;
@@ -511,6 +519,7 @@ namespace ZombieCityCleaner.Player
                     Carne(hitbox, hit.point, hit.normal, hit.distance);
                     impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
                     if (EhBraco(hitbox.regiao) && ++bracos <= 2) continue;
+                    parou = true;
                     break;
                 }
                 // furo só no cenário (em gente e em coisas que se mexem, só as faíscas)
@@ -518,9 +527,19 @@ namespace ZombieCityCleaner.Player
                 impacto = new JogadorRede.Impacto { tipo = tipo, ponto = hit.point, normal = hit.normal };
                 Efeitos.Impacto(hit.point, hit.normal);
                 if (tipo == JogadorRede.TipoDeAcerto.Cenario) Sangue.FuroDeTiro(hit.point, hit.normal);
+                parou = true;
                 break;
             }
+            if (!parou && carroDaRoda != null) return NaRoda(carroDaRoda, roda, origem + direcao * naRoda, normalDaRoda);
             return impacto;
+        }
+
+        // o tiro pegou o pneu: as faíscas (o aro) e o pedido de furar ao anfitrião
+        JogadorRede.Impacto NaRoda(Vehicles.Carro carro, int roda, Vector3 ponto, Vector3 normal)
+        {
+            Efeitos.Impacto(ponto, normal);
+            carro.Furar(roda);
+            return new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Outro, ponto = ponto, normal = normal };
         }
 
         // folgado: com o buffer cheio, o Unity não garante que vieram os acertos mais perto (numa multidão, o raio cruza

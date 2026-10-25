@@ -31,6 +31,8 @@ namespace ZombieCityCleaner.EditorTools
         const string FbxEquipamentos = Arte + "/Equipamentos.fbx";
         /// <summary>As caixas de munição, uma por calibre (Blender/municao.py, no repositório).</summary>
         const string FbxMunicao = Arte + "/Municao.fbx";
+        /// <summary>As peças do motor: a vela, a bateria e o radiador (Blender/pecas.py, no repositório).</summary>
+        const string FbxPecas = Arte + "/Pecas.fbx";
         const string PastaIcones = "Assets/_Game/Art/UI/Icones";
         const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
@@ -74,6 +76,10 @@ namespace ZombieCityCleaner.EditorTools
         public static string MalhaDaMunicao(int k) => $"{Malhas}/Mun_{Itens.ModeloDaMunicao(k)}.asset";
         public static string IconeDaMunicao(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaMunicao(k)}.png";
         public static string FotoDaMunicao(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaMunicao(k)}.png";
+        /// <summary>A malha de uma peça do motor (na ordem do enum Item): Peca_&lt;modelo&gt;.</summary>
+        public static string MalhaDaPeca(int k) => $"{Malhas}/Peca_{Itens.ModeloDaPeca(k)}.asset";
+        public static string IconeDaPeca(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaPeca(k)}.png";
+        public static string FotoDaPeca(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaPeca(k)}.png";
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
         /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
@@ -106,6 +112,7 @@ namespace ZombieCityCleaner.EditorTools
             for (int i = 0; i < Itens.QuantosModelos; i++) MontarMalha(i);
             for (int k = 0; k < Itens.QuantosEquipamentos; k++) Juntar(FbxEquipamentos, Itens.ModeloDoEquipamento(k) + "_", MalhaDoEquipamento(k));
             for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
+            for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
             ImportarIcones();
             MontarControladorFP();
             // a mão vazia: o soco direito no lugar do tiro e o esquerdo no do gatilho sem bala (o código alterna); no
@@ -133,7 +140,8 @@ namespace ZombieCityCleaner.EditorTools
         {
             foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) })
                          .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
-                         .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) })))
+                         .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) }))
+                         .Concat(Enumerable.Range(0, Itens.QuantasPecas).SelectMany(k => new[] { IconeDaPeca(k), FotoDaPeca(k) })))
             {
                 if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
                 {
@@ -200,6 +208,7 @@ namespace ZombieCityCleaner.EditorTools
             ImportarAvulsas(FbxItens);
             ImportarAvulsas(FbxEquipamentos);
             ImportarAvulsas(FbxMunicao);
+            ImportarAvulsas(FbxPecas);
             for (int i = 0; i < Armas.Quantas; i++)
                 if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
         }
@@ -380,6 +389,7 @@ namespace ZombieCityCleaner.EditorTools
             mundo.malhas = malhas;
             mundo.malhasDeEquipamento = Enumerable.Range(0, Itens.QuantosEquipamentos).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDoEquipamento(k))).ToArray();
             mundo.malhasDeMunicao = Enumerable.Range(0, Itens.QuantasMunicoes).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaMunicao(k))).ToArray();
+            mundo.malhasDePeca = Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaPeca(k))).ToArray();
             mundo.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
             mundo.lugares = marcas.Select(t => t.position).ToArray();
             // o item vem no nome da marca: "Lugar de item (Comida)", "(Agua)", "(Municao9mm)"...

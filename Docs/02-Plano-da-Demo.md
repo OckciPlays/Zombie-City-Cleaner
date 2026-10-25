@@ -143,6 +143,8 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 
 - Uma perua (4 lugares) na rua em frente à casa da família: E na porta entra (a porta abre, ele senta, a porta bate), E dentro sai.
 - A partida é com a chave: olhar para a ignição (à direita do volante), clicar para pôr a chave e de novo para pegá-la, arrastar o mouse até a partida (ela pesa) e, com o motor de arranque girando, um quick time event num mostrador redondo: clicar quando o ponteiro passa nas marcas (a pequena liga na hora; as 3 grandes, todas acertadas). Só anda com o motor ligado. No volante: WASD, Espaço (freio de mão), L (faróis), B (buzina), V (câmera de trás), R (desvirar); F liga a lanterna também dentro do carro. Atropela zumbis. O painel acende com a ignição (velocímetro e gasolina), e a luz de teto acende com as portas.
+- O capô: E leva a cabeça para dentro do capô, com o motor em 3D (a vela, a bateria e o radiador nos lugares delas, cada um com o estado em %; clique para tirar ou pôr). O carro da família começa quebrado (a vela queimada, a bateria fraca e o radiador ruim), e as peças se acham no capô dos carros da cidade (21, cada um com o que sobrou, sorteado a cada partida).
+- As rodas (em etapas): o estado de cada pneu (furado, o carro puxa e anda mal; sem a roda, quase não anda) o pneu como item, o tiro que fura o pneu, o porta-malas com o macaco e o estepe e o macaco levantando o carro para trocar a roda (feito). Falta: as rodas dos carros da cidade.
 - Na rede: quem dirige simula o carro; os outros veem.
 - Depois: os zumbis atacarem quem está no carro (hoje eles alcançam o jogador através da lataria), o barulho do motor chamar zumbis, buzina, combustível, mais carros (e os carros abandonados com colisão melhor).
 

@@ -19,10 +19,11 @@ namespace ZombieCityCleaner.EditorTools
     /// Monta o carro que se dirige: a importação do `Art/Veiculos/Carro.fbx` (feito pelo `Blender/carro.py`), os
     /// materiais (o vidro, os faróis e as lanternas acesos), o prefab `Prefabs/Veiculos/Carro.prefab` (a física, as
     /// rodas, as portas, os lugares, os faróis e o motor), a camada "Veiculo" e o carro na cena (a raiz "Carro", na rua
-    /// em frente à casa da família). Também refaz o prefab do jogador, que ganha o <see cref="PassageiroDoCarro"/>.
+    /// em frente à casa da família). Também põe o capô nos carros da cidade (<see cref="CapoDaCidade"/> e o "Peças dos
+    /// carros") e refaz o prefab do jogador, que ganha o <see cref="PassageiroDoCarro"/> e a <see cref="TelaDoCapo"/>.
     /// Menu: Zombie City Cleaner > Montar veículos. Pode rodar de novo: apaga e refaz a raiz "Carro".
     /// </summary>
-    public static class MontagemDosVeiculos
+    public static partial class MontagemDosVeiculos
     {
         const string Fbx = "Assets/_Game/Art/Veiculos/Carro.fbx";
         const string PastaMateriais = "Assets/_Game/Art/Veiculos/Materials";
@@ -57,8 +58,10 @@ namespace ZombieCityCleaner.EditorTools
             Camada();
             var mats = Materiais();
             Importar(mats);
+            ImportarCofre();
             var prefab = MontarPrefab(mats);
             PorNaCena(prefab);
+            CaposDaCidade(mats);
             // o jogador ganha o PassageiroDoCarro (o prefab é todo refeito pela montagem da rede)
             MontagemDaRede.MontarPrefab();
             AssetDatabase.SaveAssets();
@@ -93,6 +96,7 @@ namespace ZombieCityCleaner.EditorTools
             public Material painelApagado, painelAceso, ponteiroApagado, ponteiroAceso, indicador, tetoApagado, tetoAceso;
             public Material chaveMetal, chavePlastico, chaveiro, miolo, anelApagado, anelAceso, marca;
             public Mesh quadro, icone, ponteiroVel, ponteiroGas;
+            public Material fantasma;
         }
 
         static Material Material(string nome, string shader)
@@ -150,6 +154,7 @@ namespace ZombieCityCleaner.EditorTools
             r.lanternaAcesa.SetColor("_BaseColor", new Color(1f, 0.08f, 0.05f) * 2.2f);
             r.lanternaAcesa.enableInstancing = true;
             EditorUtility.SetDirty(r.lanternaAcesa);
+            r.fantasma = Fantasma();
 
             // o painel: o quadro dos mostradores aceso (Unlit, a textura com um pouco de brilho) e apagado (Lit, para a
             // lanterna clarear), os ponteiros laranja, o ícone verde do farol e a lente da luz de teto
@@ -306,6 +311,53 @@ namespace ZombieCityCleaner.EditorTools
             carro.volante = Visual(raiz.transform, "Volante", "Carro_Volante", new Vector3(-0.37f, 0.86f, 0.50f), Quaternion.Euler(25f, 0f, 0f), false).transform;
 
             Painel(raiz.transform, carro, m);
+
+            // o capô (a origem na dobradiça, atrás, em cima) e o gatilho em cima dele, que a mira procura. Ele fica acima da
+            // caixa de colisão de baixo (o topo dela passa um pouco do capô), para a mira achar o gatilho antes
+            carro.capo = Visual(raiz.transform, "Capô", "Carro_Capo", new Vector3(0f, AlturaDoCapo(ZCapo), ZCapo), Quaternion.identity).transform;
+            var gatilhoDoCapo = new GameObject("Capô (mira)") { layer = Carro.CamadaVeiculo };
+            gatilhoDoCapo.transform.SetParent(raiz.transform, false);
+            var bcc = gatilhoDoCapo.AddComponent<BoxCollider>();
+            bcc.isTrigger = true;
+            bcc.center = new Vector3(0f, 0.98f, 1.62f);
+            bcc.size = new Vector3(1.3f, 0.12f, 0.95f);
+            gatilhoDoCapo.AddComponent<CapoDoCarro>().carro = carro;
+            // o cofre do motor em 3D (o motor e as peças), o que se vê olhando dentro do capô
+            carro.cofre = CofreDaFamilia(raiz.transform, carro, m);
+
+            // o porta-malas: a tampa traseira (a origem na dobradiça, embaixo da borda do teto), o macaco e o estepe deitados
+            // no piso e o gatilho na frente da tampa (para fora da caixa de colisão de baixo, que tapava o que fica dentro)
+            carro.tampaTraseira = Visual(raiz.transform, "Tampa traseira", "Carro_Tampa", PivoDaTampa, Quaternion.identity).transform;
+            carro.estepeNoPortaMalas = NoPortaMalas(raiz.transform, "Estepe", 3, new Vector3(0f, PisoDasMalas, -1.50f), m);
+            carro.macacoNoPortaMalas = NoPortaMalas(raiz.transform, "Macaco", 4, new Vector3(0f, PisoDasMalas, -1.97f), m);
+            var gatilhoDasMalas = new GameObject("Porta-malas (mira)") { layer = Carro.CamadaVeiculo };
+            gatilhoDasMalas.transform.SetParent(raiz.transform, false);
+            var bcm = gatilhoDasMalas.AddComponent<BoxCollider>();
+            bcm.isTrigger = true;
+            bcm.center = new Vector3(0f, 1.03f, -2.27f);
+            bcm.size = new Vector3(1.22f, 0.86f, 0.16f);
+            gatilhoDasMalas.AddComponent<PortaMalasDoCarro>().carro = carro;
+
+            // o macaco: a peça que aparece apoiada embaixo do carro (o Carro a põe no lugar e a estica) e um gatilho do lado
+            // de fora de cada roda (fora da caixa de colisão de baixo; embaixo do das portas), com o RodaDoCarro
+            carro.macacoApoiado = NoPortaMalas(raiz.transform, "Macaco (apoiado)", 4, Vector3.zero, m);
+            carro.macacoApoiado.enabled = false;
+            var gatilhosDasRodas = new GameObject("Rodas (mira)") { layer = Carro.CamadaVeiculo }.transform;
+            gatilhosDasRodas.SetParent(raiz.transform, false);
+            string[] nomesDasRodas = { "DE", "DD", "TE", "TD" };
+            for (int i = 0; i < 4; i++)
+            {
+                float lado = i % 2 == 0 ? -1f : 1f, frente = i < 2 ? 1f : -1f;
+                var g = new GameObject("Roda " + nomesDasRodas[i] + " (mira)") { layer = Carro.CamadaVeiculo };
+                g.transform.SetParent(gatilhosDasRodas, false);
+                var bc = g.AddComponent<BoxCollider>();
+                bc.isTrigger = true;
+                bc.center = new Vector3(lado * 0.95f, 0.27f, frente * 1.30f);
+                bc.size = new Vector3(0.16f, 0.54f, 1.40f);
+                var r = g.AddComponent<RodaDoCarro>();
+                r.carro = carro;
+                r.roda = i;
+            }
 
             carro.portas = new PortaDoCarro[4];
             carro.assentos = new Transform[4];
@@ -584,6 +636,29 @@ namespace ZombieCityCleaner.EditorTools
             go.AddComponent<BoxCollider>().size = tamanho;
         }
 
+        /// <summary>A borda de trás do capô (a dobradiça) e a altura de cima dele em z: as do carro.py (Z_CAPO, _y_capo).</summary>
+        const float ZCapo = 1.145f;
+        static float AlturaDoCapo(float z) => 0.915f + (z - 1.10f) * (0.84f - 0.915f) / (2.02f - 1.10f);
+
+        /// <summary>A dobradiça da tampa traseira e o piso do porta-malas (em cima do carpete): os do carro.py (PIVO_TAMPA, Y_PISO_MALAS).</summary>
+        static readonly Vector3 PivoDaTampa = new Vector3(0f, 1.445f, -1.91f);
+        const float PisoDasMalas = 0.67f;
+
+        // uma peça do pecas.py (a malha da montagem das armas) deitada no porta-malas, sem colisor
+        static MeshRenderer NoPortaMalas(Transform pai, string nome, int peca, Vector3 pos, Mats m)
+        {
+            string caminho = MontagemDasArmas.MalhaDaPeca(peca);
+            var malha = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
+            if (malha == null) throw new FileNotFoundException("Rode a montagem das armas antes (as malhas das peças).", caminho);
+            var go = new GameObject(nome) { layer = Carro.CamadaVeiculo };
+            go.transform.SetParent(pai, false);
+            go.transform.SetLocalPositionAndRotation(pos, Quaternion.identity);
+            go.AddComponent<MeshFilter>().sharedMesh = malha;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = m.cidade;
+            return r;
+        }
+
         // ------------------------------------------------------------------------------------------ a cena
 
         static void PorNaCena(GameObject prefab)
@@ -597,6 +672,85 @@ namespace ZombieCityCleaner.EditorTools
             carro.transform.SetLocalPositionAndRotation(NaCidade, Quaternion.Euler(0f, YawNaCidade, 0f));
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
+        }
+
+        /// <summary>
+        /// O capô dos carros da cidade (os "Carro" dentro da raiz "Cidade", de pé e dentro da barreira): um gatilho em
+        /// volta da frente de cada um (na camada Ignore Raycast, fora do NavMesh), com o <see cref="CapoDaCidade"/>, o
+        /// "Capô aberto" (o capô recortado da malha e o cofre por dentro, <see cref="AbrirCarroDaCidade"/>) e o
+        /// NetworkObject "Peças dos carros" (<see cref="PecasDosCarros"/>), com o que sobrou em cada um. A montagem da
+        /// cidade apaga os gatilhos (refaz os carros): depois dela, rode esta de novo.
+        /// </summary>
+        static void CaposDaCidade(Mats m)
+        {
+            _recortes.Clear();
+            var cena = EditorSceneManager.GetActiveScene();
+            foreach (var velho in cena.GetRootGameObjects().Where(g => g.name == "Peças dos carros").ToArray())
+                Object.DestroyImmediate(velho);
+            var cidade = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Cidade");
+            if (cidade == null)
+            {
+                Debug.LogWarning("Sem a raiz \"Cidade\": os carros da cidade ficaram sem capô.");
+                return;
+            }
+            var raiz = new GameObject("Peças dos carros");
+            raiz.AddComponent<NetworkObject>();
+            var pecas = raiz.AddComponent<PecasDosCarros>();
+            var capos = new List<CapoDaCidade>();
+            foreach (var mf in cidade.GetComponentsInChildren<MeshFilter>(true).Where(f => f.name == "Carro").ToArray())
+            {
+                foreach (var velho in mf.GetComponentsInChildren<CapoDaCidade>(true)) Object.DestroyImmediate(velho.gameObject);
+                foreach (Transform velho in mf.transform.Cast<Transform>().Where(x => x.name == "Capô aberto").ToArray()) Object.DestroyImmediate(velho.gameObject);
+                var fechado = mf.GetComponent<MeshRenderer>();
+                if (fechado != null) fechado.enabled = true;
+                var t = mf.transform;
+                // o capotado não abre; os de fora da barreira (os das barricadas) não se alcançam
+                if (t.up.y < 0.5f || new Vector2(t.position.x, t.position.z).magnitude > 60f) continue;
+                var b = mf.sharedMesh.bounds;
+                // a altura do capô: um raio de cima na malha (um colisor temporário)
+                var medidor = new GameObject("Medidor temporário").AddComponent<MeshCollider>();
+                medidor.sharedMesh = mf.sharedMesh;
+                float zCapo = b.max.z - 0.6f;
+                float yCapo = medidor.Raycast(new Ray(new Vector3(b.center.x, b.max.y + 1f, zCapo), Vector3.down), out var acerto, 5f)
+                    ? acerto.point.y : b.center.y;
+                Object.DestroyImmediate(medidor.gameObject);
+                // o gatilho envolve a frente do carro (um pouco maior que a caixa de colisão dele, para a mira achar o
+                // gatilho antes dela); o ponto dele é o meio do capô
+                var g = new GameObject("Capô") { layer = 2 };
+                g.transform.SetParent(t, false);
+                g.transform.localPosition = new Vector3(b.center.x, yCapo, zCapo);
+                g.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
+                var bc = g.AddComponent<BoxCollider>();
+                bc.isTrigger = true;
+                float z0 = b.max.z - 1.25f, z1 = b.max.z + 0.08f;
+                bc.center = new Vector3(0f, (b.min.y + b.max.y + 0.08f) / 2f - yCapo, (z0 + z1) / 2f - zCapo);
+                bc.size = new Vector3(b.size.x + 0.1f, b.size.y + 0.08f, z1 - z0);
+                var capo = g.AddComponent<CapoDaCidade>();
+                capo.pecas = pecas;
+                capo.indice = capos.Count;
+                capo.nome = NomeDoCarro(mf.sharedMesh.name);
+                if (!AbrirCarroDaCidade(mf, capo, m))
+                {
+                    Object.DestroyImmediate(g);
+                    continue;
+                }
+                capos.Add(capo);
+            }
+            pecas.capos = capos.ToArray();
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log($"Capô em {capos.Count} carros da cidade.");
+        }
+
+        // "Carro_Sedan_Cinza" vira "Sedã cinza"; "Carro_Pickup_Branco", "Picape branca"
+        static string NomeDoCarro(string malha)
+        {
+            var partes = malha.Split('_');
+            if (partes.Length < 3) return "Carro";
+            bool picape = partes[1] == "Pickup";
+            string cor = partes[2].ToLowerInvariant();
+            if (picape && cor == "branco") cor = "branca";
+            return (picape ? "Picape " : partes[1] == "Sedan" ? "Sedã " : partes[1] + " ") + cor;
         }
     }
 }

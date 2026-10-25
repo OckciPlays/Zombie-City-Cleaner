@@ -70,6 +70,8 @@ namespace ZombieCityCleaner.Player
         public Texture2D[] iconesDeEquipamento, fotosDeEquipamento;
         [Tooltip("Os ícones e as fotos das caixas de munição, na ordem de Calibre.")]
         public Texture2D[] iconesDeMunicao, fotosDeMunicao;
+        [Tooltip("Os ícones e as fotos das peças do motor (a vela, a bateria e o radiador), na ordem do enum Item.")]
+        public Texture2D[] iconesDePeca, fotosDePeca;
 
         /// <summary>
         /// A mochila (a grade e a arma da alça; escrita pelo anfitrião). O jogador nasce sem mochila, com a pistola na alça,
@@ -349,7 +351,7 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhMochila(item) && MochilaVestida.Value != Item.Nada)
                 return $"[E] Trocar a sua {Itens.Nome(MochilaVestida.Value)} pela {Itens.Nome(item)}";
             string balas = qtd < 0 ? "" : Itens.EhMunicao(item) ? $" ({qtd} {(qtd == 1 ? "bala" : "balas")})"
-                : Itens.EhArma(item) ? $" ({qtd}/{Itens.QuantidadePadrao(item)})" : "";
+                : Itens.EhArma(item) ? $" ({qtd}/{Itens.QuantidadePadrao(item)})" : Itens.ComEstado(item) ? $" ({qtd}%)" : "";
             return $"[E] {(Itens.EhEquipamento(item) ? "Vestir" : "Pegar")} {Itens.NomeComArtigo(item)}{balas}";
         }
 
@@ -569,7 +571,7 @@ namespace ZombieCityCleaner.Player
             {
                 var it = Mochila[i];
                 if (Itens.EhArma(it.item)) ParedeDeArmas.Instancia?.Devolver(Itens.Arma(it.item), it.qtd);
-                else if (Itens.EhConsumivel(it.item) || Itens.EhMunicao(it.item)) ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd);
+                else if (Itens.EhConsumivel(it.item) || Itens.EhMunicao(it.item) || Itens.EhPeca(it.item)) ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd);
             }
             if (MochilaVestida.Value != Item.Nada) ItensNoMundo.Instancia?.Criar(MochilaVestida.Value, PontoAosPes(++k), k * 90f, 0);
             if (ComColdre.Value) ItensNoMundo.Instancia?.Criar(Item.Coldre, PontoAosPes(++k), k * 90f, 0);
@@ -719,8 +721,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>Põe o item num atalho (se ele já estava em outro, sai de lá).</summary>
         public void PorNoAtalho(int lugar, ushort id)
         {
-            // a munição não vai na mão (a recarga tira dela direto da mochila)
-            if (lugar < 0 || lugar >= Atalhos || Do(id) == Item.Nada || Itens.EhMunicao(Do(id)) || _arma.Usando) return;
+            // a munição e as peças do motor não vão na mão (a recarga tira a munição direto da mochila; as peças vão no capô)
+            if (lugar < 0 || lugar >= Atalhos || !Itens.VaiNaMao(Do(id)) || _arma.Usando) return;
             long a = _atalhos.Value;
             for (int i = 0; i < Atalhos; i++)
                 if (Ler(a, i) == id) a = Gravar(a, i, 0);
@@ -784,7 +786,7 @@ namespace ZombieCityCleaner.Player
                 }
                 // o que o jogador acabou de pegar: com a mão vazia, vai para a mão; uma arma vai para um atalho livre
                 // (e para a mão)
-                if (e.Type == NetworkListEvent<ItemNaMochila>.EventType.Add && Time.time < _pegouAte && !Itens.EhMunicao(e.Value.item))
+                if (e.Type == NetworkListEvent<ItemNaMochila>.EventType.Add && Time.time < _pegouAte && Itens.VaiNaMao(e.Value.item))
                 {
                     _pegouAte = 0f;
                     int lugar = -1;
@@ -855,6 +857,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>O ícone colorido do item (null, nada).</summary>
         public Texture2D IconeDe(Item item)
         {
+            int p = Itens.IndiceDaPeca(item);
+            if (p >= 0) return iconesDePeca != null && p < iconesDePeca.Length ? iconesDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
             if (c >= 0) return iconesDeMunicao != null && c < iconesDeMunicao.Length ? iconesDeMunicao[c] : null;
             int e = Itens.Equipamento(item);
@@ -865,6 +869,8 @@ namespace ZombieCityCleaner.Player
 
         public Texture2D FotoDe(Item item)
         {
+            int p = Itens.IndiceDaPeca(item);
+            if (p >= 0) return fotosDePeca != null && p < fotosDePeca.Length ? fotosDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
             if (c >= 0) return fotosDeMunicao != null && c < fotosDeMunicao.Length ? fotosDeMunicao[c] : null;
             int e = Itens.Equipamento(item);
