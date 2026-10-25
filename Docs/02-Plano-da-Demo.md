@@ -123,6 +123,29 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 - **Depois do primeiro teste:** a porta do bunker não faz mais som (nem abrindo nem fechando), a roda do mouse passa pela mão vazia, os passos das casas foram refeitos por cômodo, o jogo não fica mais mudo depois de comer ou beber (e a mastigada foi refeita) e entrou o soco.
 - **Pronto quando:** o usuário testa e aprova.
 
+### 🔎 Bolsos, mochilas e o porte de armas (a pedido, 24/10/2026; branch `feature/mochilas`)
+
+- **Fatia 1 (feita, esperando o teste):** começar só com os bolsos (4 × 2); as mochilas pequena (6 × 4), média (8 × 5) e grande (10 × 7) e o coldre, vestidos; a primeira arma pela alça (fora da grade), mais uma nas costas com mochila e uma curta no coldre; a tela do TAB com a alça e os lugares da mochila e do coldre.
+- **Fatia 2:** no corpo, para todos (e no boneco do TAB): a mochila vestida, o coldre e as armas penduradas (a da alça no ombro, a das costas presa na mochila, a curta no coldre), menos a que está na mão.
+- **Fatia 3:** mochilas e coldres espalhados pela cidade (a grande nos lugares mais perigosos).
+- **Prévia da fatia 2 (feita):** o boneco de teste do F1 ("Boneco equipado"), com o `EquipamentoNoCorpo`: sem mochila, a arma da alça na diagonal das costas e a pistola no cós; com mochila, as armas presas nas laterais dela (a pedido, em vez do X nas costas); a curta no coldre do quadril direito.
+- **O boneco do TAB (feito):** o retrato do inventário já mostra a mochila, o coldre e as outras armas, e a pose foi refeita (a pistola baixa numa mão; as armas de coronha no parado delas, com as duas mãos).
+
+### 🔎 A munição (a pedido, 24/10/2026; branch `feature/mochilas`; esperando o teste)
+
+- Cada arma usa um calibre: a pistola e a submetralhadora **9mm**, o rifle **5,56**, a espingarda **calibre 12** e a sniper **7,62**.
+- As balas vêm em **caixas de até 60** (1 × 1 na grade, uma cor por calibre). A recarga tira as balas direto das caixas da mochila; sem caixa, não recarrega ("SEM MUNIÇÃO 9MM"). A caixa vazia some.
+- Pegar uma caixa completa primeiro as do mesmo calibre; arrastar uma caixa em cima de outra junta as duas.
+- O jogador nasce só com o pente da pistola (12). O pente vai junto com a arma (no chão, no painel do bunker e de volta).
+- 16 caixas pela cidade (2 por casa e 1 por apartamento; 9mm é a mais comum), com as balas sorteadas a cada partida.
+
+### 🔎 O carro que se dirige (a pedido, 24/10/2026; branch `feature/carro`; esperando o teste)
+
+- Uma perua (4 lugares) na rua em frente à casa da família: E na porta entra (a porta abre, ele senta, a porta bate), E dentro sai.
+- A partida é com a chave: olhar para a ignição (à direita do volante), clicar para pôr a chave e de novo para pegá-la, arrastar o mouse até a partida (ela pesa) e, com o motor de arranque girando, um quick time event num mostrador redondo: clicar quando o ponteiro passa nas marcas (a pequena liga na hora; as 3 grandes, todas acertadas). Só anda com o motor ligado. No volante: WASD, Espaço (freio de mão), L (faróis), B (buzina), V (câmera de trás), R (desvirar); F liga a lanterna também dentro do carro. Atropela zumbis. O painel acende com a ignição (velocímetro e gasolina), e a luz de teto acende com as portas.
+- Na rede: quem dirige simula o carro; os outros veem.
+- Depois: os zumbis atacarem quem está no carro (hoje eles alcançam o jogador através da lataria), o barulho do motor chamar zumbis, buzina, combustível, mais carros (e os carros abandonados com colisão melhor).
+
 ### ⏭️ Parte 7: o bunker, o saque e o dia
 
 - **Bunker:** os quartos (camas para dormir e passar o dia), o depósito (o estoque da família, com a mesa para empilhar a comida) e o salão.
@@ -131,7 +154,7 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
   - A cidade é dividida em áreas, para o jogo saber o que já foi limpo.
   - Os móveis de saque já existem na cena, com o nome da malha (armário, cômoda, criado-mudo, geladeira, balcão e prateleiras).
   - Já feito (acima): a comida e a água soltas pelos tampos, que se pegam, largam e consomem.
-- **Inventário:** a mochila de 3 lugares já existe (acima); falta a despensa compartilhada. A munição de reserva das armas vem daqui (hoje ela é infinita).
+- **Inventário:** a mochila de 3 lugares já existe (acima); falta a despensa compartilhada. A munição já vem das caixas espalhadas pela cidade (veja "A munição"); a despensa vai guardá-las também.
 - **Dia:** sair, explorar, voltar antes de escurecer (ou arriscar a noite) e dormir. Dormir passa o dia e salva.
 - **Salvar:** o anfitrião guarda o mundo (o que foi saqueado, os zumbis de cada área, a despensa e o dia). Sugestão: guardar também o conteúdo do painel de armas, a porta e as luzes do bunker, que hoje voltam ao inicial a cada partida.
 - **Pronto quando:** dá para jogar vários dias seguidos, sair do jogo, voltar e encontrar tudo como estava.

@@ -6,6 +6,12 @@ namespace ZombieCityCleaner.Combat
     public enum TipoDeArma : byte { Pistola, Rifle, Submetralhadora, Espingarda, Sniper }
 
     /// <summary>
+    /// A munição de cada arma: a pistola e a submetralhadora usam 9mm, o rifle 5,56, a espingarda calibre 12 e a sniper
+    /// 7,62. As balas vêm em caixas (<see cref="ZombieCityCleaner.Loot.Itens.MaxPorCaixa"/>), que a recarga gasta.
+    /// </summary>
+    public enum Calibre : byte { Nove, Cinco56, Doze, Sete62 }
+
+    /// <summary>
     /// O dano de uma arma até uma distância: no tronco (a vida do corpo é 6) e num braço ou numa perna (a vida de cada
     /// membro é 3, e o membro cai quando ela acaba).
     /// </summary>
@@ -23,6 +29,8 @@ namespace ZombieCityCleaner.Combat
     {
         public string nome, nomeComArtigo;
         public int capacidade;
+        /// <summary>A munição que ela usa (a recarga tira as balas das caixas desse calibre).</summary>
+        public Calibre calibre;
         /// <summary>Tempo entre um tiro e o próximo (s). Na espingarda, inclui a bomba.</summary>
         public float intervalo;
         /// <summary>Atira enquanto o gatilho estiver apertado.</summary>
@@ -74,26 +82,26 @@ namespace ZombieCityCleaner.Combat
         {
             new DadosDaArma
             {
-                nome = "pistola", nomeComArtigo = "a pistola", capacidade = 12, intervalo = 0.18f, tempoRecarga = 40 / 24f,
+                nome = "pistola", nomeComArtigo = "a pistola", capacidade = 12, calibre = Calibre.Nove, intervalo = 0.18f, tempoRecarga = 40 / 24f,
                 carregadorSai = 5 / 24f, carregadorEntra = 27 / 24f, dano = 1f, danoNoMembro = 1f, dispersao = 0.3f, dispersaoAndando = 1.2f,
                 coiceGraus = 1.6f, alcance = 80f, som = SomDeTiro.Pistola, boca = new Vector3(0f, 0.093f, 0.188f),
             },
             new DadosDaArma
             {
-                nome = "rifle", nomeComArtigo = "o rifle", capacidade = 30, intervalo = 0.1f, automatica = true,
+                nome = "rifle", nomeComArtigo = "o rifle", capacidade = 30, calibre = Calibre.Cinco56, intervalo = 0.1f, automatica = true,
                 tempoRecarga = 46 / 24f, carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 1.5f, danoNoMembro = 1.5f, dispersao = 0.5f,
                 dispersaoAndando = 1.8f, coiceGraus = 0.9f, alcance = 120f, som = SomDeTiro.Rifle, boca = new Vector3(0f, 0.105f, 0.732f),
             },
             new DadosDaArma
             {
-                nome = "submetralhadora", nomeComArtigo = "a submetralhadora", capacidade = 25, intervalo = 0.075f,
+                nome = "submetralhadora", nomeComArtigo = "a submetralhadora", capacidade = 25, calibre = Calibre.Nove, intervalo = 0.075f,
                 automatica = true, tempoRecarga = 40 / 24f, carregadorSai = 10 / 24f, carregadorEntra = 31 / 24f, dano = 1f, danoNoMembro = 1f,
                 dispersao = 0.9f, dispersaoAndando = 1.6f, coiceGraus = 0.6f, alcance = 60f, som = SomDeTiro.Submetralhadora,
                 boca = new Vector3(0f, 0.105f, 0.291f),
             },
             new DadosDaArma
             {
-                nome = "espingarda", nomeComArtigo = "a espingarda", capacidade = 6, intervalo = 22 / 24f, tempoRecarga = 13 / 24f,
+                nome = "espingarda", nomeComArtigo = "a espingarda", capacidade = 6, calibre = Calibre.Doze, intervalo = 22 / 24f, tempoRecarga = 13 / 24f,
                 cartuchoACartucho = true, chumbos = 8, chumbosJuntos = true, arremessoAte = 5f,
                 // de perto (até 5 m) mata com um tiro no corpo e arranca um membro; na média (até 15 m), dois; de longe, pouco
                 faixas = new[] { new FaixaDeDano(5f, 7f, 3f), new FaixaDeDano(15f, 3f, 1.5f), new FaixaDeDano(float.MaxValue, 1f, 0.5f) },
@@ -104,7 +112,7 @@ namespace ZombieCityCleaner.Combat
             {
                 // de ferrolho, com luneta: um tiro no corpo mata e arranca um membro; cinco no pente; o tiro inclui puxar o
                 // ferrolho (a animação Fire tem 1,25 s). Sem a luneta, espalha muito.
-                nome = "sniper", nomeComArtigo = "a sniper", capacidade = 5, intervalo = 30 / 24f, tempoRecarga = 46 / 24f,
+                nome = "sniper", nomeComArtigo = "a sniper", capacidade = 5, calibre = Calibre.Sete62, intervalo = 30 / 24f, tempoRecarga = 46 / 24f,
                 carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 8f, danoNoMembro = 8f,
                 dispersao = 0f, dispersaoSemLuneta = 4f, dispersaoAndando = 2.5f, coiceGraus = 5f, alcance = 160f,
                 fovLuneta = 12f, ferrolho = true, corpoComo = TipoDeArma.Rifle,

@@ -102,6 +102,7 @@ namespace ZombieCityCleaner.EditorTools
             raiz.AddComponent<FomeESede>();
             var passos = raiz.AddComponent<PassosJogador>();
             raiz.AddComponent<MenuDoDesenvolvedor>();
+            raiz.AddComponent<PassageiroDoCarro>();
 
             // corpo (o que os outros veem; para o dono vira só sombra)
             var corpo = (GameObject)PrefabUtility.InstantiatePrefab(Carregar<GameObject>(Arte + "/Jogador.fbx"));
@@ -227,6 +228,12 @@ namespace ZombieCityCleaner.EditorTools
             lanterna.rede = rede; lanterna.luz = luz;
             inventario.icones = Enumerable.Range(0, n).Select(i => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDo(i))).ToArray();
             inventario.fotos = Enumerable.Range(0, n).Select(i => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDo(i))).ToArray();
+            int ne = Itens.QuantosEquipamentos;
+            inventario.iconesDeEquipamento = Enumerable.Range(0, ne).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDoEquipamento(k))).ToArray();
+            inventario.fotosDeEquipamento = Enumerable.Range(0, ne).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDoEquipamento(k))).ToArray();
+            int nm = Itens.QuantasMunicoes;
+            inventario.iconesDeMunicao = Enumerable.Range(0, nm).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaMunicao(k))).ToArray();
+            inventario.fotosDeMunicao = Enumerable.Range(0, nm).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaMunicao(k))).ToArray();
             tela.rede = rede; tela.inventario = inventario; tela.arma = arma;
             tela.materialDoRetrato = MaterialDoRetrato();
             NomearCamada(JogadorRede.CamadaRetrato, "Retrato");

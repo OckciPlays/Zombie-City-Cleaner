@@ -13,7 +13,10 @@ namespace ZombieCityCleaner.Player
     /// <summary>
     /// O que o jogador local tem na mão: o item do atalho escolhido do <see cref="InventarioJogador"/> (uma arma, a lata
     /// de comida, a garrafa de água ou nada). Os números de cada arma estão em <see cref="Armas"/>; cada arma da mochila
-    /// guarda o pente dela (trocar de arma não recarrega).
+    /// guarda o pente dela (trocar de arma não recarrega), e o anfitrião guarda uma cópia (largada ou guardada no painel,
+    /// ela leva as balas que tinha).
+    /// A recarga tira as balas das caixas de munição do calibre da arma que estão na mochila (<see cref="Calibre"/>); sem
+    /// caixa, não recarrega ("sem munição 9mm"). O robô de teste não gasta munição.
     /// Com arma: clique atira (raycast do centro da tela; as automáticas atiram com o gatilho apertado e a espingarda solta
     /// vários chumbos), R recarrega (a espingarda põe cartucho a cartucho, e atirar interrompe) e o botão direito mira
     /// (aproxima a câmera e os outros veem o corpo mirando). Sem bala, o gatilho só faz clique.
@@ -102,9 +105,11 @@ namespace ZombieCityCleaner.Player
         static Texture2D _texturaDaLuneta;
         Interagivel _alvo;
         string _dica;
-        // o pente de cada arma da mochila, pelo Id dela (a que nunca esteve na mão está cheia)
+        // o pente de cada arma da mochila, pelo Id dela (a que nunca esteve na mão: o que o anfitrião guardou)
         readonly System.Collections.Generic.Dictionary<ushort, int> _pentes = new System.Collections.Generic.Dictionary<ushort, int>();
         ushort _id, _ultimaArma;
+        // o aviso de sem munição, embaixo das balas
+        float _semMunicaoAte;
 
         void Awake()
         {
@@ -140,7 +145,11 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public void Trocar(Item novo, ushort id)
         {
-            if (ComArma && _id != 0) _pentes[_id] = Municao;
+            if (ComArma && _id != 0)
+            {
+                _pentes[_id] = Municao;
+                Inventario.GuardarPente(_id, Municao);   // a cópia do anfitrião (vai junto se ela for largada ou guardada)
+            }
             StopAllCoroutines();
             Recarregando = false;
             Usando = false;
@@ -154,19 +163,36 @@ namespace ZombieCityCleaner.Player
             {
                 Atual = Itens.Arma(novo);
                 _ultimaArma = id;
-                Municao = _pentes.TryGetValue(id, out int pente) ? Mathf.Min(pente, Dados.capacidade) : Dados.capacidade;
+                Municao = PenteGuardado(id, novo);
             }
             if (m >= 0) Acao(SacarId);
             _proximoTiro = Time.time + 0.4f;
         }
 
-        /// <summary>As balas no pente de uma arma da mochila (cheia, se ela nunca esteve na mão).</summary>
+        /// <summary>
+        /// As balas no pente de uma arma da mochila (a que nunca esteve na mão nesta máquina: o que o anfitrião guardou).
+        /// </summary>
         public int MunicaoDe(ushort id, Item arma)
         {
             if (!Itens.EhArma(arma)) return 0;
-            if (id == _id && ComArma) return Municao;
+            return id == _id && ComArma && NaMao == arma ? Municao : PenteGuardado(id, arma);
+        }
+
+        // o pente de uma arma que não está na mão: o que esta máquina guardou, ou a cópia do anfitrião
+        int PenteGuardado(ushort id, Item arma)
+        {
             int cap = Armas.Dados(Itens.Arma(arma)).capacidade;
-            return _pentes.TryGetValue(id, out int pente) ? Mathf.Min(pente, cap) : cap;
+            if (_pentes.TryGetValue(id, out int pente)) return Mathf.Min(pente, cap);
+            return Inventario != null && Inventario.Achar(id, out var it) ? Mathf.Min(it.qtd, cap) : cap;
+        }
+
+        /// <summary>As balas do calibre da arma da mão nas caixas da mochila (o robô de teste tem munição sem fim).</summary>
+        public int Reserva => MenuOnline.Bot ? 999 : Inventario != null ? Inventario.BalasDe(Dados.calibre) : 0;
+
+        // tira as balas das caixas (no anfitrião); o robô não gasta
+        void GastarDaReserva(int balas)
+        {
+            if (!MenuOnline.Bot && Inventario != null) Inventario.Gastar(Dados.calibre, balas);
         }
 
         void Update()
@@ -211,7 +237,15 @@ namespace ZombieCityCleaner.Player
                 bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame();
                 bool atirar = apertou || (!bot && d.automatica && _atirar.IsPressed());
                 bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame();
-                if (recarregar && !Recarregando && Municao < d.capacidade) _recarga = StartCoroutine(Recarregar());
+                if (recarregar && !Recarregando && Municao < d.capacidade)
+                {
+                    if (Reserva > 0) _recarga = StartCoroutine(Recarregar());
+                    else
+                    {
+                        _semMunicaoAte = Time.time + 1.8f;
+                        Efeitos.Som(Efeitos.Clique, Boca.position, 0.5f, false);
+                    }
+                }
                 // a espingarda para de pôr cartucho para atirar
                 if (atirar && Recarregando && d.cartuchoACartucho && Municao > 0) PararRecarga();
                 if (atirar && !Recarregando && Time.time >= _proximoTiro)
@@ -223,6 +257,7 @@ namespace ZombieCityCleaner.Player
                     {
                         Acao(DryFireId);
                         Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
+                        if (Reserva == 0) _semMunicaoAte = Time.time + 1.8f;
                     }
                 }
             }
@@ -531,13 +566,16 @@ namespace ZombieCityCleaner.Player
             var d = Dados;
             if (d.cartuchoACartucho)
             {
-                // um cartucho por vez; o cartucho entra perto do fim da animação (quadro 9 a 10 de 13)
-                while (Municao < d.capacidade)
+                // um cartucho por vez (cada um sai de uma caixa); o cartucho entra perto do fim da animação (quadro 9 a 10
+                // de 13). Acabaram os cartuchos, a recarga para
+                while (Municao < d.capacidade && Reserva > 0)
                 {
                     Acao(ReloadId);
                     yield return new WaitForSeconds(d.tempoRecarga * 0.72f);
+                    if (Reserva <= 0) break;
                     Efeitos.Som(Efeitos.Cartucho, Boca.position, 0.7f, false);
                     Municao++;
+                    GastarDaReserva(1);
                     yield return new WaitForSeconds(d.tempoRecarga * 0.28f);
                 }
             }
@@ -549,7 +587,10 @@ namespace ZombieCityCleaner.Player
                 yield return new WaitForSeconds(d.carregadorEntra - d.carregadorSai);
                 Efeitos.Som(Efeitos.Carregador, Boca.position, 0.8f, false);
                 yield return new WaitForSeconds(d.tempoRecarga - d.carregadorEntra);
-                Municao = d.capacidade;
+                // o pente é completado com o que houver nas caixas (o que sobrou nele continua)
+                int balas = Mathf.Min(d.capacidade - Municao, Reserva);
+                Municao += balas;
+                GastarDaReserva(balas);
             }
             Recarregando = false;
             _recarga = null;
@@ -619,11 +660,22 @@ namespace ZombieCityCleaner.Player
                 var d = Dados;
                 var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
                 estilo.normal.textColor = Municao == 0 ? new Color(1f, 0.45f, 0.4f) : new Color(0.9f, 0.88f, 0.8f);
-                string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO" : $"{Municao} / {d.capacidade}";
+                // o pente e, menor, as balas do calibre dela nas caixas da mochila
+                int reserva = Reserva;
+                string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO"
+                    : $"{Municao}<size={Mathf.RoundToInt(15 * u)}> / {(MenuOnline.Bot ? "∞" : reserva.ToString())}</size>";
+                estilo.richText = true;
                 GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
                 var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
                 nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
-                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u), d.nome.ToUpperInvariant(), nome);
+                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u),
+                    $"{d.nome.ToUpperInvariant()}  ·  {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}", nome);
+                if (Time.time < _semMunicaoAte)
+                {
+                    var aviso = new GUIStyle(nome) { fontSize = Mathf.RoundToInt(15 * u) };
+                    aviso.normal.textColor = new Color(1f, 0.5f, 0.42f);
+                    GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 98 * u, 340 * u, 24 * u), $"SEM MUNIÇÃO {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}", aviso);
+                }
             }
             // o que se usa com E (pegar um item ou uma arma do painel, abrir a porta, acender a luz)
             if (_dica != null)

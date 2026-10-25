@@ -52,6 +52,7 @@ namespace ZombieCityCleaner.Player
             {
                 Vida.Value = vidaMaxima;
                 if (_fomeESede != null) _fomeESede.AoCair();
+                Vehicles.Carro.TirarDeTodos(OwnerClientId);   // caiu dentro de um carro: o lugar fica vazio
                 CaiuRpc();
             }
             else Vida.Value = nova;
@@ -69,6 +70,7 @@ namespace ZombieCityCleaner.Player
         void CaiuRpc()
         {
             var ponto = PontosDeNascimento.Ponto(OwnerClientId);
+            GetComponent<PassageiroDoCarro>().Soltar();
             GetComponent<MovimentoPrimeiraPessoa>().Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
             _caiuAte = Time.time + 3f;
         }

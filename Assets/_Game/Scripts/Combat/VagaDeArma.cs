@@ -26,8 +26,7 @@ namespace ZombieCityCleaner.Combat
             var naMao = inventario.NaMao;
             if (naVaga == null)
                 return Itens.EhArma(naMao) && Itens.Arma(naMao) == dono ? $"[E] Guardar {Itens.NomeComArtigo(naMao)}" : null;
-            var nova = Itens.DaArma(naVaga.Value);
-            return inventario.TemEspaco(nova) ? $"[E] Pegar {Itens.NomeComArtigo(nova)}" : $"Sem espaço na mochila para {Itens.NomeComArtigo(nova)}";
+            return inventario.DicaDePegar(Itens.DaArma(naVaga.Value));
         }
 
         public override void Usar(ArmaJogador quem)
