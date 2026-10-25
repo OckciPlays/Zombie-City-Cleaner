@@ -75,6 +75,7 @@ namespace ZombieCityCleaner.Player
         static readonly Color FundoDoAtalho = new Color(0.4f, 0.41f, 0.41f, 0.9f);
         static readonly Color FundoDeEquipamento = new Color(0.52f, 0.5f, 0.44f, 0.95f);
         static readonly Color FundoDeMunicao = new Color(0.47f, 0.45f, 0.38f, 0.95f);
+        static readonly Color FundoDePeca = new Color(0.55f, 0.53f, 0.5f, 0.95f);
         static readonly Color CorDoTexto = new Color(0.94f, 0.92f, 0.86f);
         static readonly Color TextoApagado = new Color(0.8f, 0.78f, 0.72f, 0.85f);
         static readonly Color Destaque = new Color(0.98f, 0.82f, 0.36f);
@@ -563,7 +564,7 @@ namespace ZombieCityCleaner.Player
                 if (r.Contains(mouse) && !_arrastando)
                 {
                     _sobMouse = it.id;
-                    _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EhMunicao(it.item) ? $" ({it.qtd} de {Itens.MaxPorCaixa})" : "");
+                    _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EhMunicao(it.item) ? $" ({it.qtd} de {Itens.MaxPorCaixa})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)" : "");
                 }
             }
             // o tamanho da grade: os bolsos ou a mochila vestida
@@ -619,7 +620,8 @@ namespace ZombieCityCleaner.Player
         void DesenharItem(ItemNaMochila it, Rect r, bool girado, float alfa, bool escolhido, bool sobMouse)
         {
             float u = _u;
-            var fundo = Itens.EhArma(it.item) ? FundoDeArma : Itens.EhMunicao(it.item) ? FundoDeMunicao : it.item == Item.Comida ? FundoDeComida : FundoDeAgua;
+            var fundo = Itens.EhArma(it.item) ? FundoDeArma : Itens.EhMunicao(it.item) ? FundoDeMunicao : Itens.EhPeca(it.item) ? FundoDePeca
+                : it.item == Item.Comida ? FundoDeComida : FundoDeAgua;
             fundo.a *= alfa;
             Ret(r, fundo);
             if (sobMouse) Ret(r, new Color(1f, 1f, 1f, 0.07f));
@@ -663,6 +665,15 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(new Rect(r.x + 3 * u, r.y - 1 * u, r.width, 15 * u), cal == "calibre 12" ? "cal. 12" : cal, _pequeno);
                 Ret(new Rect(r.x, r.yMax - 15 * u, r.width, 15 * u), new Color(0f, 0f, 0f, 0.45f));
                 GUI.Label(new Rect(r.x, r.yMax - 17 * u, r.width - 4 * u, 16 * u), it.qtd.ToString(), _direita);
+            }
+            else if (Itens.ComEstado(it.item))
+            {
+                // o estado da peça embaixo, na cor dele
+                Ret(new Rect(r.x, r.yMax - 15 * u, r.width, 15 * u), new Color(0f, 0f, 0f, 0.45f));
+                var antes = _direita.normal.textColor;
+                _direita.normal.textColor = Vehicles.PecasDoMotor.CorDoEstado(it.qtd);
+                GUI.Label(new Rect(r.x, r.yMax - 17 * u, r.width - 4 * u, 16 * u), it.qtd + "%", _direita);
+                _direita.normal.textColor = antes;
             }
             if (escolhido) Moldura(r, Mathf.Max(1f, Mathf.Round(2 * u)), Destaque);
         }
@@ -729,6 +740,27 @@ namespace ZombieCityCleaner.Player
                 Linha("Calibre", Itens.NomeDoCalibre(cal));
                 Linha("Serve em", Itens.ArmasDoCalibre(cal));
                 Linha("Total na mochila", inventario.BalasDe(cal).ToString());
+            }
+            else if (Itens.EhPeca(item))
+            {
+                int k = Itens.IndiceDaPeca(item);
+                if (item == Item.Macaco)
+                {
+                    Linha("Serve para", "levantar o carro");
+                    Linha("Fica", "no porta-malas, com o estepe");
+                }
+                else if (item == Item.Pneu)
+                {
+                    Linha("Estado", $"{it.qtd}%");
+                    Linha("Vai em", "uma roda do carro");
+                    Linha("Efeito", Vehicles.PneusDoCarro.Efeito(it.qtd));
+                }
+                else
+                {
+                    Linha("Estado", $"{it.qtd}%");
+                    Linha("Vai no capô", Vehicles.PecasDoMotor.Lugares[k]);
+                    Linha("Efeito", Vehicles.PecasDoMotor.Efeito(k, it.qtd));
+                }
             }
             else if (Itens.EhConsumivel(item))
             {
@@ -818,12 +850,12 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ ajudantes
 
-        static string Maiuscula(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
+        internal static string Maiuscula(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
         static string Numero(float v) => v.ToString("0.#", Br);
 
-        static Rect Encolher(Rect r, float d) => new Rect(r.x + d, r.y + d, r.width - 2 * d, r.height - 2 * d);
+        internal static Rect Encolher(Rect r, float d) => new Rect(r.x + d, r.y + d, r.width - 2 * d, r.height - 2 * d);
 
-        static void Ret(Rect r, Color c)
+        internal static void Ret(Rect r, Color c)
         {
             var antes = GUI.color;
             GUI.color = c;
@@ -831,7 +863,7 @@ namespace ZombieCityCleaner.Player
             GUI.color = antes;
         }
 
-        static void Moldura(Rect r, float b, Color c)
+        internal static void Moldura(Rect r, float b, Color c)
         {
             Ret(new Rect(r.x, r.y, r.width, b), c);
             Ret(new Rect(r.x, r.yMax - b, r.width, b), c);
@@ -842,7 +874,7 @@ namespace ZombieCityCleaner.Player
         void Rotulo(Rect r, string texto, GUIStyle estilo) => GUI.Label(r, texto, estilo);
 
         // os rebites da borda: um em cada canto e outros ao longo dela, com um brilho em cima
-        void Rebites(Rect janela, float u)
+        internal static void Rebites(Rect janela, float u)
         {
             var circulo = Circulo();
             float raio = 3.2f * u, d = 4f * u;
@@ -873,7 +905,7 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        static Texture2D Circulo()
+        internal static Texture2D Circulo()
         {
             if (_circulo != null) return _circulo;
             const int n = 32;

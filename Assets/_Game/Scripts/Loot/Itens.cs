@@ -12,6 +12,17 @@ namespace ZombieCityCleaner.Loot
         Nada = 0, Pistola, Rifle, Submetralhadora, Espingarda, Sniper, Comida = 16, Agua,
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
         Municao9mm = 48, Municao556, Municao12, Municao762,
+        Vela = 64, Bateria, Radiador, Pneu, Macaco,
+    }
+
+    /// <summary>
+    /// Uma peça do carro (as do motor, achadas no capô dos carros da cidade, e o pneu): o nome do modelo (Pecas.fbx, Icone_ e Foto_), o tamanho
+    /// na mochila e o resumo. O estado dela (0 a 100%) vai no <c>qtd</c> do item.
+    /// </summary>
+    public class DadosDaPeca
+    {
+        public string modelo, nome, nomeComArtigo, resumo, funcao;
+        public UnityEngine.Vector2Int tamanho;
     }
 
     /// <summary>Uma caixa de munição: o nome do modelo, o nome do calibre e o resumo.</summary>
@@ -95,6 +106,38 @@ namespace ZombieCityCleaner.Loot
             new DadosDaMunicao { modelo = "Municao762", calibre = "7,62", resumo = "Para a sniper.", achadaMin = 4, achadaMax = 12 },
         };
         public static int QuantasMunicoes => _municoes.Length;
+
+        /// <summary>
+        /// As peças do motor, na ordem do enum (de Vela em diante) e de <see cref="Vehicles.PecasDoMotor"/>: Pecas.fbx
+        /// (&lt;modelo&gt;_*), Icone_&lt;modelo&gt; e Foto_&lt;modelo&gt;, feitos pelo Blender/pecas.py.
+        /// </summary>
+        static readonly DadosDaPeca[] _pecas =
+        {
+            new DadosDaPeca { modelo = "Vela", nome = "vela de ignição", nomeComArtigo = "a vela de ignição", resumo = "Faz o motor pegar.", funcao = "Motor", tamanho = new(1, 1) },
+            new DadosDaPeca { modelo = "Bateria", nome = "bateria", nomeComArtigo = "a bateria", resumo = "Gira o motor de arranque e acende o painel.", funcao = "Bateria", tamanho = new(2, 2) },
+            new DadosDaPeca { modelo = "Radiador", nome = "radiador", nomeComArtigo = "o radiador", resumo = "Esfria o motor.", funcao = "Radiador", tamanho = new(3, 2) },
+            // a roda inteira (o aro com o pneu): vai numa das 4 rodas do carro, não no capô
+            new DadosDaPeca { modelo = "Pneu", nome = "pneu", nomeComArtigo = "o pneu", resumo = "Uma roda com o pneu, para trocar a de um carro.", funcao = "Roda", tamanho = new(3, 3) },
+            // a ferramenta (sem estado): fica no porta-malas, com o estepe
+            new DadosDaPeca { modelo = "Macaco", nome = "macaco", nomeComArtigo = "o macaco", resumo = "Levanta o carro para trocar a roda.", funcao = "Ferramenta", tamanho = new(3, 1) },
+        };
+        public static int QuantasPecas => _pecas.Length;
+        /// <summary>Uma peça do carro (as 3 do motor, o pneu e o macaco), feita pelo pecas.py.</summary>
+        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.Macaco;
+        /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco.</summary>
+        public static bool ComEstado(Item i) => EhPeca(i) && i != Item.Macaco;
+        /// <summary>Uma peça do capô (a vela, a bateria e o radiador; o pneu, não).</summary>
+        public static bool EhPecaDoMotor(Item i) => i >= Item.Vela && i <= Item.Radiador;
+        /// <summary>O índice da peça (0 a 2 as do motor, a ordem de <see cref="Vehicles.PecasDoMotor"/>; 3 o pneu), ou -1.</summary>
+        public static int IndiceDaPeca(Item i) => EhPeca(i) ? i - Item.Vela : -1;
+        public static Item DaPeca(int k) => (Item)((int)Item.Vela + k);
+        public static DadosDaPeca Peca(int k) => _pecas[k];
+        public static string ModeloDaPeca(int k) => _pecas[k].modelo;
+        /// <summary>
+        /// Vai para a mão e para os atalhos? As caixas de munição e as peças, não (só ficam na mochila); o que se veste
+        /// também não.
+        /// </summary>
+        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i);
         public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.Municao762;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;
@@ -109,7 +152,7 @@ namespace ZombieCityCleaner.Loot
         /// <summary>
         /// As balas que o item leva quando aparece sem dizer quantas: a arma, o pente cheio; a caixa, cheia. Os outros, 0.
         /// </summary>
-        public static int QuantidadePadrao(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).capacidade : EhMunicao(i) ? MaxPorCaixa : 0;
+        public static int QuantidadePadrao(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).capacidade : EhMunicao(i) ? MaxPorCaixa : EhPeca(i) ? 100 : 0;
         /// <summary>As armas que usam o calibre ("a pistola e a submetralhadora").</summary>
         public static string ArmasDoCalibre(Calibre c)
         {
@@ -155,6 +198,7 @@ namespace ZombieCityCleaner.Loot
         public static UnityEngine.Vector2Int Tamanho(Item i)
         {
             if (EhMunicao(i)) return new UnityEngine.Vector2Int(1, 1);
+            if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
             int m = Modelo(i);
             return m >= 0 ? _tamanhos[m] : UnityEngine.Vector2Int.zero;
         }
@@ -170,13 +214,14 @@ namespace ZombieCityCleaner.Loot
         {
             if (EhEquipamento(i)) return DadosDe(i).resumo;
             if (EhMunicao(i)) return _municoes[IndiceDaMunicao(i)].resumo;
+            if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].resumo;
             int m = Modelo(i);
             return m >= 0 ? _resumos[m] : "";
         }
 
         public static string Nome(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nome : EhConsumivel(i) ? Consumivel(i).nome : EhEquipamento(i) ? DadosDe(i).nome
-            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : "";
+            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : "";
         public static string NomeComArtigo(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nomeComArtigo : EhConsumivel(i) ? Consumivel(i).nomeComArtigo : EhEquipamento(i) ? DadosDe(i).nomeComArtigo
-            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : "";
+            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : "";
     }
 }
