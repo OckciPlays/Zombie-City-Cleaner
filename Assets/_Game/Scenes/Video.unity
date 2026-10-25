@@ -57800,7 +57800,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Video.DiretorDoVideo
   video: Video01
   tomada: 4
-  gravar: 0
+  gravar: 1
   jogadorNoControle: 1
   jogadorComArma: 0
   armasNoPainel: 0
@@ -110965,6 +110965,8 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
   - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
   - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
+  malhasDeEquipamento: []
+  malhasDeMunicao: []
   material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
   lugares:
   - {x: 16.899118, y: 0.155, z: 20.126432}
