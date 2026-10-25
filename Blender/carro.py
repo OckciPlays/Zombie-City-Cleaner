@@ -19,6 +19,12 @@
 #   porta, por fora), com o vidro da janela (material Vidro). Abrem girando em Y.
 # - Carro_Roda: uma roda, a origem no meio, o eixo em X e a calota para +X (as da esquerda giram 180° em Y).
 # - Carro_Volante: a origem no meio, o aro no plano XY, a coluna para +Z.
+# - Carro_Capo: o capô, a origem na dobradiça (atrás, em cima, no meio). Abre girando em X. Embaixo dele, na carroceria,
+#   o cofre do motor aberto por cima, entre os para-lamas (o que fica dentro é o Cofre.fbx, do cofre.py).
+# - Carro_Tampa: a tampa traseira (o porta-malas: a chapa de baixo com a placa e o vidro de trás), a origem na dobradiça
+#   (PIVO_TAMPA, embaixo da borda do teto). Abre girando em X (a borda de baixo sobe e vai para trás). Atrás dela, o
+#   porta-malas: o piso (Y_PISO_MALAS), as caixas das rodas e o forro das laterais (o macaco e o estepe são as malhas do
+#   pecas.py, postas pela Unity).
 # Cores: blocos sólidos pela Paleta.png, só cores que já existem nela (as da linha 8 são as dos carros da cidade).
 
 import math
@@ -50,6 +56,15 @@ CORES = {
     "carpete": (8, 14),
     "placa": (9, 10),
     "grade": (10, 14),
+    # o cofre do motor
+    "motor": (10, 3),
+    "tampa_valvulas": (13, 3),
+    "bateria": (11, 5),
+    "polo_mais": (6, 0),
+    "etiqueta": (10, 6),
+    "aleta": (8, 1),
+    "reservatorio": (13, 5),
+    "azul": (13, 2),
 }
 
 MATERIAIS = ["Carro", "Vidro", "Farol", "Lanterna"]
@@ -69,6 +84,19 @@ Z_PORTA_T = -0.16        # a dobradiça da porta de trás
 Z_COLUNA_C = -0.94       # o fim da porta de trás
 PARABRISA = ((1.00, Y_CINTURA), (0.30, 1.43))     # (z, y) de baixo e de cima
 VIDRO_TRAS = ((-2.10, 0.97), (-1.92, 1.43))
+PIVO_TAMPA = (0, 1.445, -1.91)   # a dobradiça da tampa traseira (MontagemDosVeiculos.PivoDaTampa)
+# o capô: a dobradiça atrás (perto do para-brisa), a largura entre os para-lamas e o fundo do cofre do motor
+X_CAPO = 0.575           # meia largura do capô (os para-lamas vão de 0,58 a W)
+Z_CAPO = 1.145           # a borda de trás do capô (a dobradiça)
+Y_COFRE = 0.48           # o fundo do cofre
+X_MALAS = 0.60           # meia largura do porta-malas (e da tampa traseira); dali para fora, as laterais
+Y_PISO_MALAS = 0.66      # o piso do porta-malas (logo acima das rodas de trás)
+Y_SOLEIRA = 0.62         # a borda de baixo da tampa traseira
+
+
+def _y_capo(z):
+    """A altura de cima do capô (e dos para-lamas) em z: a linha de (1,10; 0,915) a (2,02; 0,84)."""
+    return 0.915 + (z - 1.10) * (0.84 - 0.915) / (2.02 - 1.10)
 
 # onde ficam os bancos (para a Unity: o ponto do quadril de quem senta), só para conferência
 BANCOS = [(-0.37, 0.58, 0.06), (0.37, 0.58, 0.06), (-0.38, 0.60, -0.68), (0.38, 0.60, -0.68)]
@@ -215,18 +243,38 @@ def _carroceria(cena):
               (2.14, 0.52), (2.10, 0.24)]
     # embaixo, de volta para trás, passando pelo arco da roda
     frente += _arco(EIXO, True)
-    m.perfil("pintura", _sem_repetidos(frente), -W, W)
-    # o fundo do vão da roda (sem ele, dava para ver de um lado ao outro)
+    # os para-lamas (dos lados do capô até a lateral), com o recorte da roda
     for s in (-1, 1):
-        m.caixa("plastico", (0.04, 0.46, 0.74), (s * 0.52, 0.45, EIXO), chanfro=0)
+        m.perfil("pintura", _sem_repetidos(frente), s * (X_CAPO + 0.005), s * W)
+    # o meio, entre os para-lamas: a base do para-brisa (onde o capô se apoia), o cofre do motor aberto por cima e a
+    # frente (a travessa do radiador, a grade e o para-choque). O capô é outra peça (Carro_Capo)
+    meio = [(Z_PORTA_D, Y_BASE), (Z_PORTA_D, Y_CINTURA), (1.00, Y_CINTURA), (1.10, 0.915), (Z_CAPO, _y_capo(Z_CAPO) - 0.026),
+            (Z_CAPO, Y_COFRE), (2.03, Y_COFRE), (2.03, 0.80), (2.11, 0.79), (2.14, 0.52), (2.10, 0.24), (2.10, Y_BASE)]
+    m.perfil("pintura", _sem_repetidos(meio), -(X_CAPO + 0.005), X_CAPO + 0.005)
+    # o fundo do vão da roda, escuro (a parede do cofre)
+    for s in (-1, 1):
+        m.caixa("plastico", (0.01, 0.46, 0.74), (s * (X_CAPO + 0.012), 0.45, EIXO), chanfro=0)
+    _cofre(m)
     # ---------------------------------------------------------------- trás: o porta-malas da perua e os para-lamas
+    # as laterais (de X_MALAS até a lateral) sobem até a linha das janelas, com o recorte da roda; o meio fica baixo, no
+    # piso do porta-malas, e a tampa traseira (Carro_Tampa, outra peça) fecha a abertura, da soleira até o teto
     tras = [(-0.96, Y_BASE), (-0.96, Y_CINTURA), (-2.08, 0.95), (-2.15, 0.93), (-2.16, 0.50), (-2.12, 0.24)]
     tras += _arco(-EIXO, False)
-    m.perfil("pintura", _sem_repetidos(tras), -W, W)
     for s in (-1, 1):
-        m.caixa("plastico", (0.04, 0.46, 0.74), (s * 0.52, 0.45, -EIXO), chanfro=0)
-    # a tampa do porta-malas por dentro (no lugar da lataria, por cima)
-    m.caixa("carpete", (1.56, 0.02, 1.12), (0, Y_CINTURA + 0.01, -1.52), chanfro=0)
+        m.perfil("pintura", _sem_repetidos(tras), s * X_MALAS, s * W)
+    meio_tras = [(-0.96, Y_BASE), (-0.96, Y_PISO_MALAS), (-2.12, Y_PISO_MALAS), (-2.12, Y_SOLEIRA), (-2.158, Y_SOLEIRA),
+                 (-2.16, 0.50), (-2.12, 0.24)]
+    m.perfil("pintura", meio_tras, -X_MALAS, X_MALAS)
+    for s in (-1, 1):
+        # o fundo do vão da roda, escuro
+        m.caixa("plastico", (0.01, 0.46, 0.74), (s * (X_MALAS + 0.007), 0.45, -EIXO), chanfro=0)
+        # dentro do porta-malas: o forro das laterais e a caixa da roda
+        m.caixa("interior", (0.01, Y_CINTURA - Y_PISO_MALAS, 1.12), (s * (X_MALAS - 0.006), (Y_CINTURA + Y_PISO_MALAS) / 2, -1.54), chanfro=0)
+        m.caixa("interior", (0.18, 0.14, 0.72), (s * (X_MALAS - 0.10), Y_PISO_MALAS + 0.07, -EIXO), chanfro=0.02)
+        # o canto de trás, entre a tampa e a coluna D (acima da lanterna)
+        m.ripa("pintura", (s * (X_MALAS + 0.09), 0.95, -2.09), (s * (X_MALAS + 0.09), 1.43, -1.91), 0.18, 0.03)
+    # o piso (o carpete)
+    m.caixa("carpete", (2 * X_MALAS - 0.02, 0.02, 1.14), (0, Y_PISO_MALAS + 0.01, -1.54), chanfro=0)
     # ---------------------------------------------------------------- o meio: assoalho, soleiras, túnel
     m.caixa("carpete", (1.60, 0.10, 1.92), (0, 0.27, -0.02), chanfro=0)
     for s in (-1, 1):
@@ -248,14 +296,17 @@ def _carroceria(cena):
         # coluna A (na borda do para-brisa), B (preta, entre as portas), C e D (nos vidros de trás)
         m.ripa("pintura", (s * 0.80, yb, zb + 0.01), (s * 0.78, yt, zt), 0.05, 0.08)
         m.caixa("plastico", (0.05, Y_TETO - Y_CINTURA - 0.06, 0.07), (s * 0.81, (Y_TETO + Y_CINTURA) / 2 - 0.03, (Z_COLUNA_B + Z_PORTA_T) / 2))
+        # a coluna B embaixo da linha das janelas, da soleira até a cintura: fecha o vão entre as duas portas (sem ela,
+        # via-se o interior pela fresta). Pintada e 1 cm mais funda que a chapa das portas, para ler como uma emenda; não
+        # encosta nelas (3 mm de cada lado), para elas abrirem sem atravessar.
+        m.caixa("pintura", (0.05, Y_CINTURA - 0.30, Z_COLUNA_B - Z_PORTA_T - 0.006), (s * 0.825, (Y_CINTURA + 0.30) / 2, (Z_COLUNA_B + Z_PORTA_T) / 2), chanfro=0)
         m.caixa("pintura", (0.05, Y_TETO - Y_CINTURA - 0.06, 0.12), (s * 0.81, (Y_TETO + Y_CINTURA) / 2 - 0.03, Z_COLUNA_C - 0.06))
         m.ripa("pintura", (s * 0.80, 0.95, -2.08), (s * 0.79, Y_TETO - 0.04, -1.90), 0.05, 0.14)
         # o vidro de lado, atrás (entre as colunas C e D)
         lado = [(-1.06, 0.95), (-1.06, 1.40), (-1.88, 1.40), (-2.03, 0.95)]
         m.perfil("grade", lado, s * 0.798, s * 0.814, mat=VIDRO)
     m.ripa("grade", (0, yb, zb), (0, yt, zt), 1.58, 0.01, mat=VIDRO)
-    (zb2, yb2), (zt2, yt2) = VIDRO_TRAS
-    m.ripa("grade", (0, yb2, zb2), (0, yt2, zt2), 1.50, 0.01, mat=VIDRO)
+    # o vidro de trás é da tampa traseira (Carro_Tampa)
     # os limpadores e o retrovisor de dentro
     for x in (-0.36, 0.12):
         m.ripa("plastico", (x, yb + 0.03, zb - 0.03), (x + 0.38, yb + 0.06, zb - 0.06), 0.015, 0.015)
@@ -276,8 +327,7 @@ def _carroceria(cena):
     for s in (-1, 1):
         m.caixa("lanterna", (0.16, 0.36, 0.03), (s * 0.70, 0.72, -2.165), chanfro=0.008, mat=LANTERNA)
         m.caixa("pisca", (0.16, 0.06, 0.03), (s * 0.70, 0.51, -2.162), chanfro=0.005)
-    m.caixa("placa", (0.36, 0.12, 0.02), (0, 0.64, -2.168), chanfro=0)
-    m.caixa("plastico", (0.30, 0.035, 0.02), (0, 0.80, -2.17), chanfro=0)
+    # (a placa de trás e a maçaneta são da tampa traseira)
     m.cilindro("plastico", 0.03, 0.14, (-0.52, 0.25, -2.16), eixo="z", lados=8)
     # ---------------------------------------------------------------- o painel
     painel = [(0.62, 0.60), (0.62, 0.78), (0.70, 0.90), (1.00, 0.92), (1.00, 0.55), (0.80, 0.52)]
@@ -309,6 +359,52 @@ def _carroceria(cena):
     for s in (-1, 1):
         m.caixa("banco", (0.24, 0.14, 0.09), (s * 0.38, 1.14, -1.10), giro=(-16, 0, 0), chanfro=0.02)
     return m.objeto("Carro_Carroceria", cena)
+
+
+def _cofre(m):
+    """
+    O cofre do motor, aberto por cima: o fundo e a parede de trás (escuros). O que fica dentro (o motor e os suportes)
+    é o Cofre.fbx (Blender/cofre.py), e as peças que se trocam (a vela, a bateria e o radiador) são as do pecas.py: a
+    Unity põe tudo no lugar (MontagemDosVeiculos) e mostra cada peça pelo estado dela.
+    """
+    zf = 2.03 - Z_CAPO
+    m.caixa("grade", (2 * X_CAPO, 0.01, zf), (0, Y_COFRE + 0.006, (Z_CAPO + 2.03) / 2), chanfro=0)
+    m.caixa("interior", (2 * X_CAPO, _y_capo(Z_CAPO) - 0.03 - Y_COFRE, 0.01), (0, (_y_capo(Z_CAPO) - 0.03 + Y_COFRE) / 2, Z_CAPO + 0.006), chanfro=0)
+
+
+def _capo(cena):
+    """O capô: a chapa de cima (a mesma linha dos para-lamas) e a dobra da frente, a origem na dobradiça (atrás, em
+    cima, no meio). Abre girando em X (a frente sobe)."""
+    m = Malha()
+    zt, zf = Z_CAPO, 2.085
+    cima = [(zt, _y_capo(zt)), (2.02, 0.84), (zf, 0.805)]
+    baixo = [(zf - 0.012, 0.783), (2.02, 0.815), (zt, _y_capo(zt) - 0.025)]
+    m.perfil("pintura", cima + baixo, -X_CAPO, X_CAPO)
+    # o reforço por baixo (escuro), em X
+    yb = lambda z: _y_capo(z) - 0.03
+    m.ripa("interior", (-X_CAPO + 0.08, yb(zt + 0.08), zt + 0.08), (X_CAPO - 0.08, yb(1.95), 1.95), 0.05, 0.01)
+    m.ripa("interior", (X_CAPO - 0.08, yb(zt + 0.08), zt + 0.08), (-X_CAPO + 0.08, yb(1.95), 1.95), 0.05, 0.01)
+    return m.objeto("Carro_Capo", cena, pivo=(0, _y_capo(zt), zt))
+
+
+def _tampa(cena):
+    """A tampa traseira da perua (o porta-malas): a chapa de baixo, com a placa e a maçaneta, e o vidro de trás com a
+    moldura, a origem na dobradiça (em cima, embaixo da borda do teto). Abre girando em X: a borda de baixo sobe e vai
+    para trás (o giro positivo na Unity)."""
+    m = Malha()
+    x = X_MALAS - 0.005
+    (zb, yb), (zt, yt) = VIDRO_TRAS
+    chapa = [(-2.158, Y_SOLEIRA), (-2.15, 0.93), (zb + 0.01, yb + 0.005), (zb + 0.05, yb - 0.02), (-2.10, 0.92), (-2.115, Y_SOLEIRA)]
+    m.perfil("pintura", chapa, -x, x)
+    m.ripa("grade", (0, yb, zb), (0, yt, zt), 2 * x - 0.08, 0.01, mat=VIDRO)
+    for s in (-1, 1):
+        m.ripa("plastico", (s * (x - 0.025), yb, zb), (s * (x - 0.025), yt, zt), 0.05, 0.03)
+    m.caixa("pintura", (2 * x, 0.03, 0.08), (0, yt + 0.015, zt + 0.01), chanfro=0)
+    m.caixa("placa", (0.36, 0.12, 0.02), (0, 0.74, -2.165), chanfro=0)
+    m.caixa("plastico", (0.30, 0.035, 0.02), (0, 0.88, -2.160), chanfro=0)
+    # o forro de dentro
+    m.caixa("interior", (2 * x - 0.06, 0.26, 0.012), (0, 0.78, -2.092), chanfro=0)
+    return m.objeto("Carro_Tampa", cena, pivo=PIVO_TAMPA)
 
 
 def _sem_repetidos(pts):
@@ -388,7 +484,8 @@ def _volante(cena):
     return m.objeto("Carro_Volante", cena)
 
 
-NOMES = ["Carro_Carroceria", "Carro_Porta_DE", "Carro_Porta_DD", "Carro_Porta_TE", "Carro_Porta_TD", "Carro_Roda", "Carro_Volante"]
+NOMES = ["Carro_Carroceria", "Carro_Porta_DE", "Carro_Porta_DD", "Carro_Porta_TE", "Carro_Porta_TD", "Carro_Roda", "Carro_Volante",
+         "Carro_Capo", "Carro_Tampa"]
 
 
 def _cena():
@@ -427,6 +524,12 @@ def construir():
     vol.location = _para_blender((-0.37, 0.86, 0.50))
     vol.rotation_euler = (math.radians(90 + 25), 0, 0)
     objs.append(vol)
+    capo = _capo(cena)
+    capo.location = _para_blender((0, _y_capo(Z_CAPO), Z_CAPO))
+    objs.append(capo)
+    tampa = _tampa(cena)
+    tampa.location = _para_blender(PIVO_TAMPA)
+    objs.append(tampa)
     return objs
 
 

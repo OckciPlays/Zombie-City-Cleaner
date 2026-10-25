@@ -73,12 +73,14 @@ namespace ZombieCityCleaner.Vehicles
             if (carro == null || !carro.IsSpawned || carro.Ocupado(lugar) || carro.Velocidade > Carro.VelocidadeParaEntrar) return null;
             var p = quem.GetComponent<PassageiroDoCarro>();
             if (p != null && p.Sentado) return null;
+            if (carro.MacacoNaRoda >= 0) return "Tire o macaco para entrar no carro";
+            if (quem.Inventario != null && quem.Inventario.CarregandoPneu) return "Largue o pneu (G) para entrar no carro";
             return lugar == 0 ? "[E] Dirigir" : "[E] Entrar no carro";
         }
 
         public override void Usar(ArmaJogador quem)
         {
-            if (carro != null) carro.PedirEntrar(lugar);
+            if (carro != null && carro.MacacoNaRoda < 0 && !(quem.Inventario != null && quem.Inventario.CarregandoPneu)) carro.PedirEntrar(lugar);
         }
     }
 }

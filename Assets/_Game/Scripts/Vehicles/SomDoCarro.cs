@@ -26,6 +26,12 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>O motor tossindo (quase pegando): um acerto no mini-game da partida.</summary>
         public static AudioClip Tossida => _tossida != null ? _tossida : _tossida = SomGerado.Clip("Motor tossindo", GerarTossida(17));
         static AudioClip _tossida;
+        /// <summary>O pneu furado por um tiro: o estouro e o ar escapando.</summary>
+        public static AudioClip PneuFurando => _furando != null ? _furando : _furando = SomGerado.Clip("Pneu furando", GerarPneuFurando(18));
+        static AudioClip _furando;
+        /// <summary>O macaco sanfona girando (2,2 s, o tempoDoMacaco do carro): a catraca da manivela e o fuso rangendo.</summary>
+        public static AudioClip Macaco => _macaco != null ? _macaco : _macaco = SomGerado.Clip("Macaco do carro", GerarMacaco(19));
+        static AudioClip _macaco;
         public static AudioClip PortaAbrir => _abrir != null ? _abrir : _abrir = SomGerado.Clip("Porta do carro abrindo", GerarAbrir(9));
         public static AudioClip PortaFechar => _fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", GerarFechar(10));
         /// <summary>A buzina, em laço (1 s).</summary>
@@ -409,6 +415,68 @@ namespace ZombieCityCleaner.Vehicles
                 d[i] = lp.Passar(baque * 1.3f + chapas + trava + metal.Passar(chacoalho));
             }
             return Normalizar(d, 0.9f);
+        }
+
+        /// <summary>
+        /// O pneu furando: o estouro (um baque grave da borracha, um seno que cai de 140 para 60 Hz, e o estalo) e o ar
+        /// escapando, um chiado forte que perde força e escurece (de ~4,2 para ~1,8 kHz) em 1,8 s.
+        /// </summary>
+        static float[] GerarPneuFurando(int semente)
+        {
+            var r = new System.Random(semente);
+            int n = Mathf.RoundToInt(1.9f * Taxa);
+            var d = new float[n];
+            var ar = new SomDePasso.Faixa(4200f, 1.2f);
+            var estalo = new SomDePasso.Faixa(1800f, 1.5f);
+            var lp = new SomDePasso.PassaBaixa(9000f);
+            float fase = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Taxa;
+                float ruido = (float)(r.NextDouble() * 2 - 1);
+                fase += 2f * Mathf.PI * Mathf.Lerp(60f, 140f, Mathf.Exp(-t * 35f)) / Taxa;
+                float baque = Mathf.Sin(fase) * Mathf.Exp(-t * 22f) * Mathf.Clamp01(t / 0.0015f);
+                float golpe = estalo.Passar(ruido * Mathf.Exp(-t * 160f)) * 1.4f;
+                if (i % 64 == 0) ar.Centro(Mathf.Lerp(1800f, 4200f, Mathf.Exp(-t * 1.2f)));
+                float sopro = Mathf.Clamp01((t - 0.01f) / 0.04f) * Mathf.Exp(-t * 1.6f) * (0.85f + 0.15f * Mathf.Sin(t * 37f));
+                d[i] = lp.Passar(baque * 1.2f + golpe + ar.Passar(ruido) * sopro * 0.9f);
+            }
+            return Normalizar(d, 0.85f);
+        }
+
+        /// <summary>
+        /// O macaco: um estalo de catraca a cada meia volta da manivela (~0,17 s, desafinado), o metal tocando em dois modos
+        /// (1,87 e 3,15 kHz) e o fuso rangendo baixo, que sobe e desce com a volta.
+        /// </summary>
+        static float[] GerarMacaco(int semente)
+        {
+            var r = new System.Random(semente);
+            const float dura = 2.2f;
+            int n = Mathf.RoundToInt(dura * Taxa);
+            var d = new float[n];
+            var metal = new SomDePasso.Faixa(2600f, 3f);
+            var a = new SomDePasso.Ressonador(1870f, 0.02f, 1f);
+            var b = new SomDePasso.Ressonador(3150f, 0.012f, 1f);
+            var fuso = new SomDePasso.Faixa(700f, 2f);
+            float proximo = 0.03f, ultimo = -1f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Taxa;
+                float ruido = (float)(r.NextDouble() * 2 - 1);
+                if (t >= proximo)
+                {
+                    ultimo = t;
+                    proximo = t + 0.15f + (float)r.NextDouble() * 0.05f;
+                }
+                float desde = ultimo < 0f ? 1f : t - ultimo;
+                float golpe = ruido * Mathf.Exp(-desde * 900f);
+                float estalo = metal.Passar(golpe) + a.Passar(golpe) * 40f + b.Passar(golpe) * 30f;
+                float volta = 0.5f + 0.5f * Mathf.Sin(t * Mathf.PI * 2f / 0.34f);
+                float rangido = fuso.Passar(ruido) * 0.08f * volta;
+                float bordas = Mathf.Clamp01((dura - t) / 0.15f) * Mathf.Clamp01(t / 0.02f);
+                d[i] = (estalo + rangido) * bordas;
+            }
+            return Normalizar(d, 0.8f);
         }
 
         static float Degrau(float x) => x >= 0f ? 1f : 0f;

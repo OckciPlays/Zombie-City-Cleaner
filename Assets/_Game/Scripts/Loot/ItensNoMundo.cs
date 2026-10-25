@@ -39,6 +39,8 @@ namespace ZombieCityCleaner.Loot
         public Mesh[] malhasDeEquipamento;
         [Tooltip("A malha de cada caixa de munição, na ordem de Calibre (topo em +Y).")]
         public Mesh[] malhasDeMunicao;
+        [Tooltip("A malha de cada peça do motor (a vela, a bateria e o radiador), na ordem do enum Item (topo em +Y).")]
+        public Mesh[] malhasDePeca;
         public Material material;
         [Tooltip("Os itens do começo da partida: o ponto de apoio de cada um.")]
         public Vector3[] lugares;
@@ -211,9 +213,10 @@ namespace ZombieCityCleaner.Loot
         void Montar(ItemNoChaoNaMira o, ItemNoChao it)
         {
             o.item = it.item;
-            int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item);
+            int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item), pc = Itens.IndiceDaPeca(it.item);
             var malha = e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
                 : mun >= 0 ? (malhasDeMunicao != null && mun < malhasDeMunicao.Length ? malhasDeMunicao[mun] : null)
+                : pc >= 0 ? (malhasDePeca != null && pc < malhasDePeca.Length ? malhasDePeca[pc] : null)
                 : malhas != null && m >= 0 && m < malhas.Length ? malhas[m] : null;
             o.GetComponent<MeshFilter>().sharedMesh = malha;
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";
@@ -247,7 +250,7 @@ namespace ZombieCityCleaner.Loot
         {
             var inventario = quem.Inventario;
             if (inventario == null || mundo.Do(id) == Item.Nada) return null;
-            return inventario.DicaDePegar(item, Itens.EhMunicao(item) || Itens.EhArma(item) ? mundo.Quantidade(id) : -1);
+            return inventario.DicaDePegar(item, Itens.EhMunicao(item) || Itens.EhArma(item) || Itens.ComEstado(item) ? mundo.Quantidade(id) : -1);
         }
 
         public override void Usar(ArmaJogador quem) => mundo.PedirPegar(id, quem.Inventario);

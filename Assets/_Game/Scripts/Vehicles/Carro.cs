@@ -21,9 +21,28 @@ namespace ZombieCityCleaner.Vehicles
     /// Atropelar: o dono, acima de 3 m/s, procura zumbis na frente (ou atrás, de ré) e manda o acerto ao anfitrião pelo
     /// motorista, como um tiro no tronco (o dano cresce com a velocidade; rápido, o corpo voa).
     /// </para>
+    /// <para>
+    /// O capô (<see cref="ICapo"/>, aberto pela <see cref="CapoDoCarro"/>): as 3 peças do motor (<see cref="PecasDoMotor"/>,
+    /// do anfitrião). Sem uma vela boa o motor não pega; a bateria (a carga) acende o painel e gira o arranque, e gasta na
+    /// partida (o motor ligado carrega); o radiador ruim deixa o motor ferver, e ele apaga até esfriar. O capô sobe
+    /// enquanto alguém olha o motor.
+    /// </para>
+    /// <para>
+    /// O porta-malas (<see cref="PortaMalasDoCarro"/>, do anfitrião): a tampa traseira abre e fecha, e dentro ficam o
+    /// macaco e o estepe, que se pegam e se guardam.
+    /// </para>
+    /// <para>
+    /// O macaco (<see cref="RodaDoCarro"/>, do anfitrião): apoiado ao lado de uma roda, com o carro vazio e parado, ele
+    /// levanta aquele lado (o carro fica cinemático e gira em volta das rodas do outro lado), e as rodas do lado erguido
+    /// saem e entram.
+    /// </para>
+    /// <para>
+    /// As rodas (<see cref="PneusDoCarro"/>, do anfitrião): o pneu furado baixa a roda, segura menos e arrasta (o carro
+    /// puxa para aquele lado); o gasto escorrega mais; sem a roda, o cubo arrasta no chão.
+    /// </para>
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public class Carro : NetworkBehaviour
+    public class Carro : NetworkBehaviour, ICapo
     {
         public const int Lugares = 4;
         /// <summary>A camada do carro: não bate nos zumbis (eles são atropelados por código) nem na cápsula de perto deles.</summary>
@@ -92,6 +111,40 @@ namespace ZombieCityCleaner.Vehicles
         [Tooltip("Quanto o ponteiro da gasolina mostra (ainda não gasta: o jogo não tem combustível).")]
         [Range(0f, 1f)] public float combustivel = 0.68f;
 
+        [Header("O capô e as peças do motor")]
+        [Tooltip("O capô (a origem na dobradiça, atrás): abre girando em X.")]
+        public Transform capo;
+        public float aberturaDoCapo = 62f;
+        [Tooltip("O cofre do motor em 3D (o motor e as peças nos lugares delas), o que se vê com o capô aberto.")]
+        public CofreDoMotor cofre;
+        [Tooltip("Como as peças começam a partida (%; -1, sem a peça). A família achou o carro com a vela queimada.")]
+        public int velaInicial = 0, bateriaInicial = 30, radiadorInicial = 25;
+        [Tooltip("Quanto a partida gasta da bateria (% por segundo de arranque) e quanto o motor ligado carrega.")]
+        public float gastoDaPartida = 1.5f, cargaDoMotor = 0.4f;
+        [Tooltip("Quanto tempo (s) a temperatura leva para chegar perto do alvo, ligado, e para esfriar, desligado.")]
+        public float esquentar = 40f, esfriar = 60f;
+
+        [Header("As rodas")]
+        [Tooltip("Como os pneus começam a partida (%, na ordem das rodas; -1, sem a roda). A família achou o carro com o da frente esquerda furado.")]
+        public int[] pneusIniciais = { 0, 80, 70, 75 };
+
+        [Header("O porta-malas")]
+        [Tooltip("A tampa traseira (a origem na dobradiça, em cima): abre girando em X (a borda de baixo sobe).")]
+        public Transform tampaTraseira;
+        public float aberturaDaTampa = 78f;
+        [Tooltip("O macaco e o estepe deitados no piso do porta-malas: aparecem quando estão lá.")]
+        public MeshRenderer macacoNoPortaMalas, estepeNoPortaMalas;
+        [Tooltip("Como o porta-malas começa a partida: com o macaco, e o estepe (%; -1, sem ele).")]
+        public bool macacoInicial = true;
+        public int estepeInicial = 85;
+
+        [Header("O macaco")]
+        [Tooltip("O macaco apoiado embaixo do carro (a malha do pecas.py): aparece com ele apoiado, esticado do chão até a lataria.")]
+        public MeshRenderer macacoApoiado;
+        [Tooltip("Quanto o lado do macaco sobe (m, na roda) e em quanto tempo (s).")]
+        public float alturaDoMacaco = 0.25f;
+        public float tempoDoMacaco = 2.2f;
+
         [Header("Direção")]
         [Tooltip("Torque em cada roda da frente (N·m), com o acelerador no fundo e o carro parado.")]
         public float torque = 700f;
@@ -130,6 +183,22 @@ namespace ZombieCityCleaner.Vehicles
         readonly NetworkVariable<bool> _buzina = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>A chave e o motor (<see cref="EstadoDoMotor"/>), escritos pelo dono (o motorista).</summary>
         readonly NetworkVariable<byte> _motorRede = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>As peças do motor (a vela, a carga da bateria e o radiador), escritas pelo anfitrião.</summary>
+        readonly NetworkVariable<PecasDoMotor> _pecas = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>A temperatura do motor (0 a 1,25, vezes 200) e se ele ferveu (até esfriar), do anfitrião.</summary>
+        readonly NetworkVariable<byte> _calor = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<bool> _fervendo = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>Alguém está com a tela do capô aberta: o capô fica levantado.</summary>
+        readonly NetworkVariable<bool> _capoAberto = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>O porta-malas: a tampa aberta, o macaco lá dentro e o estado do estepe (255, sem ele), do anfitrião.</summary>
+        readonly NetworkVariable<bool> _malasAberto = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<bool> _macaco = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<byte> _estepe = new(PneusDoCarro.Vazio, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>O macaco: a roda ao lado da qual ele está apoiado (255, sem ele) e se o carro está erguido, do anfitrião.</summary>
+        readonly NetworkVariable<byte> _macacoEm = new(PneusDoCarro.Vazio, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        readonly NetworkVariable<bool> _erguido = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>Os 4 pneus (o estado, ou sem a roda), escritos pelo anfitrião.</summary>
+        readonly NetworkVariable<PneusDoCarro> _pneus = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// A chave e o motor: sem a chave (ninguém no volante), a chave na ignição desligada, a ignição ligada (o painel
@@ -168,9 +237,26 @@ namespace ZombieCityCleaner.Vehicles
         // a chave e o motor: o estado e o ângulo da chave no dono; o que cada máquina já tocou e mostrou
         EstadoDoMotor _estadoLocal, _estadoOuvido;
         float _anguloDaChave, _anguloVisto, _chaveEntrouEm = -99f, _pegouEm = -99f, _puxando;
-        bool _presaNaPartida;
+        bool _presaNaPartida, _arranqueGirando;
         float _brilhoPainel, _brilhoTeto, _tetoAte = -99f, _ponteiroVel, _ponteiroComb;
-        Quaternion _volanteRepouso;
+        Quaternion _volanteRepouso, _capoRepouso;
+        // no anfitrião: a carga da bateria e a temperatura (as da rede são arredondadas) e quem está com o capô aberto
+        float _carga, _temperatura;
+        readonly HashSet<ulong> _olhandoOCapo = new HashSet<ulong>();
+        float _capoVisto;
+        // os pneus já postos nos WheelColliders (o raio e a aderência de cada roda)
+        PneusDoCarro _pneusAplicados;
+        bool _pneusFeitos;
+        readonly float[] _aderencia = { 1f, 1f, 1f, 1f };
+        Quaternion _tampaRepouso;
+        float _tampaVista;
+        // o macaco: no anfitrião, a pose do carro quando ele foi apoiado e quanto o carro já subiu (0 a 1); em todas, quando
+        // o carro começou a subir ou a descer (para as dicas) e a altura da malha do macaco fechado
+        Vector3 _poseBase;
+        Quaternion _giroBase;
+        float _ergueu, _erguidoMudouEm = -99f, _alturaDoMacacoFechado = 0.118f;
+        bool _erguidoVisto;
+        BoxCollider _miraDoMacaco;
 
         /// <summary>A velocidade (m/s): a da física no dono, a medida pela posição nos outros.</summary>
         public float Velocidade => Simula ? _corpo.linearVelocity.magnitude : _velocidadeMedida.magnitude;
@@ -190,6 +276,57 @@ namespace ZombieCityCleaner.Vehicles
         public float AnguloDaChave => IsSpawned && IsOwner ? _anguloDaChave : AnguloDe(Estado);
         /// <summary>Quando o motor pegou (Time.time; -99 se ele já estava ligado quando esta máquina viu).</summary>
         public float PegouEm => _pegouEm;
+        /// <summary>As peças do motor agora.</summary>
+        public PecasDoMotor Pecas => _pecas.Value;
+        /// <summary>As 4 rodas agora.</summary>
+        public PneusDoCarro Pneus => _pneus.Value;
+        public bool PortaMalasAberto => IsSpawned && _malasAberto.Value;
+        public bool TemMacaco => IsSpawned && _macaco.Value;
+        /// <summary>O estado do estepe no porta-malas (%), ou -1 sem ele.</summary>
+        public int Estepe => IsSpawned && _estepe.Value != PneusDoCarro.Vazio ? _estepe.Value : -1;
+        /// <summary>A roda ao lado da qual o macaco está apoiado, ou -1 sem ele.</summary>
+        public int MacacoNaRoda => IsSpawned && _macacoEm.Value != PneusDoCarro.Vazio ? _macacoEm.Value : -1;
+        /// <summary>O macaco está levantado (o carro sobe, ou já subiu).</summary>
+        public bool Erguido => IsSpawned && _erguido.Value;
+        /// <summary>O carro ainda está subindo ou descendo no macaco.</summary>
+        public bool MacacoMexendo => MacacoNaRoda >= 0 && Time.time - _erguidoMudouEm < tempoDoMacaco;
+        /// <summary>A roda fica do lado que o macaco levanta (as rodas pares são as da esquerda).</summary>
+        public bool NoLadoErguido(int roda)
+        {
+            int m = MacacoNaRoda;
+            return m >= 0 && roda >= 0 && roda < PneusDoCarro.Quantas && roda % 2 == m % 2;
+        }
+        /// <summary>Ninguém sentado no carro.</summary>
+        public bool Vazio
+        {
+            get
+            {
+                if (!IsSpawned) return true;
+                var o = _ocupantes.Value;
+                for (int i = 0; i < Lugares; i++) if (o[i] != 0) return false;
+                return true;
+            }
+        }
+        /// <summary>Onde o macaco encosta na lataria, ao lado da roda (embaixo da soleira, para o meio do carro): no espaço do carro.</summary>
+        public Vector3 PontoDoMacaco(int roda)
+        {
+            var w = rodas[roda].transform.localPosition;
+            return new Vector3(Mathf.Sign(w.x) * MacacoX, BaseDaLataria, w.z - Mathf.Sign(w.z) * 0.55f);
+        }
+        /// <summary>O macaco fica embaixo da soleira (x) e encosta embaixo da carroceria (y; o Y_BASE do carro.py).</summary>
+        public const float MacacoX = 0.78f, BaseDaLataria = 0.22f;
+        /// <summary>Acima disto (m/s) o macaco não se apoia.</summary>
+        public const float VelocidadeParaOMacaco = 0.4f;
+        /// <summary>Atrás do carro, na altura da tampa: os pedidos do porta-malas contam a distância daqui.</summary>
+        public Vector3 PontoDoPortaMalas => transform.TransformPoint(0f, 0.9f, -2.3f);
+        /// <summary>A temperatura do motor (0 frio, ~0,45 normal, 1 fervendo).</summary>
+        public float Temperatura => _calor.Value / 200f;
+        /// <summary>O motor ferveu e ainda não esfriou: apaga e não pega.</summary>
+        public bool Fervendo => IsSpawned && _fervendo.Value;
+        /// <summary>O motor de arranque está girando (a chave na partida e a bateria com força).</summary>
+        public bool ArranqueGira => Estado == EstadoDoMotor.Arranque && Pecas.BateriaGira;
+        /// <summary>A ignição acende o painel (a chave na ignição ou além, e a bateria viva).</summary>
+        public bool IgnicaoLigada => Estado >= EstadoDoMotor.Ignicao && Pecas.BateriaAcende;
 
         void Awake()
         {
@@ -197,6 +334,14 @@ namespace ZombieCityCleaner.Vehicles
             _corpo.centerOfMass = new Vector3(0f, 0.38f, 0.12f);
             if (rodas != null && rodas.Length > 0) rodas[0].ConfigureVehicleSubsteps(5f, 12, 15);
             if (volante != null) _volanteRepouso = volante.localRotation;
+            if (capo != null) _capoRepouso = capo.localRotation;
+            if (tampaTraseira != null) _tampaRepouso = tampaTraseira.localRotation;
+            if (macacoApoiado != null)
+            {
+                var mf = macacoApoiado.GetComponent<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null) _alturaDoMacacoFechado = Mathf.Max(0.02f, mf.sharedMesh.bounds.size.y);
+                _miraDoMacaco = macacoApoiado.GetComponent<BoxCollider>();
+            }
             if (carroceria != null)
             {
                 _matsApagados = carroceria.sharedMaterials;
@@ -214,6 +359,26 @@ namespace ZombieCityCleaner.Vehicles
         public override void OnNetworkSpawn()
         {
             _ocupantes.OnValueChanged += AoMudarOcupantes;
+            if (IsServer)
+            {
+                _pecas.Value = PecasDoMotor.Com(velaInicial, bateriaInicial, radiadorInicial);
+                _carga = _pecas.Value.Estado(PecasDoMotor.Bateria);
+                _temperatura = 0f;
+                _olhandoOCapo.Clear();
+                _capoAberto.Value = false;
+                _pneus.Value = PneusDoCarro.Com(pneusIniciais);
+                _malasAberto.Value = false;
+                _macaco.Value = macacoInicial;
+                _estepe.Value = estepeInicial < 0 ? PneusDoCarro.Vazio : (byte)Mathf.Clamp(estepeInicial, 0, 100);
+                _macacoEm.Value = PneusDoCarro.Vazio;
+                _erguido.Value = false;
+                _ergueu = 0f;
+            }
+            _erguidoVisto = _erguido.Value;
+            _erguidoMudouEm = -99f;
+            _tampaVista = _malasAberto.Value ? 1f : 0f;
+            _pneusFeitos = false;
+            _capoVisto = _capoAberto.Value ? 1f : 0f;
             // quem chega com o motor já ligado não ouve a partida
             _estadoOuvido = Estado;
             _anguloVisto = AnguloDe(_estadoOuvido);
@@ -275,12 +440,14 @@ namespace ZombieCityCleaner.Vehicles
         void EntrarRpc(byte lugar, RpcParams parametros = default)
         {
             ulong cliente = parametros.Receive.SenderClientId;
-            if (lugar >= Lugares) return;
+            if (lugar >= Lugares || MacacoNaRoda >= 0) return;   // no macaco, ninguém entra
             var o = _ocupantes.Value;
             if (o[lugar] != 0) return;
             var jogador = Jogador(cliente);
             if (jogador == null || jogador.Passageiro == null || jogador.Passageiro.Sentado) return;
             if (jogador.Vida != null && jogador.Vida.Vida.Value <= 0f) return;
+            var mochila = jogador.GetComponent<InventarioJogador>();
+            if (mochila != null && mochila.CarregandoPneu) return;   // com o pneu nas mãos, não entra
             if (Velocidade > VelocidadeParaEntrar) return;
             if (Vector3.Distance(jogador.transform.position, portas[lugar].transform.position) > 3.5f) return;
             foreach (var outro in Todos)
@@ -428,13 +595,26 @@ namespace ZombieCityCleaner.Vehicles
             _anguloDaChave = _anguloDaChave < ChaveDesliga ? 0f : ChaveLiga;
         }
 
-        /// <summary>O mini-game da partida deu certo: o motor pega na hora, e a chave volta para a ignição.</summary>
-        public void PegarAgora()
+        /// <summary>
+        /// O mini-game da partida deu certo: o motor pega na hora, e a chave volta para a ignição. Com a vela ruim (ou
+        /// sem ela), ou com o motor fervendo, ele só tosse: devolve false e o motivo.
+        /// </summary>
+        public bool PegarAgora(out string motivo)
         {
-            if (!IsSpawned || !IsOwner || _estadoLocal != EstadoDoMotor.Arranque) return;
+            motivo = null;
+            if (!IsSpawned || !IsOwner || _estadoLocal != EstadoDoMotor.Arranque) return false;
+            var p = Pecas;
+            if (!p.VelaBoa || Fervendo)
+            {
+                Tossir();
+                motivo = Fervendo ? "O motor está quente demais: espere esfriar"
+                    : p.Tem(PecasDoMotor.Vela) ? "O motor não pega: a vela está queimada (abra o capô)" : "O motor não pega: falta a vela (abra o capô)";
+                return false;
+            }
             _presaNaPartida = false;
             _anguloDaChave = ChaveLiga;
             MudarEstado(EstadoDoMotor.Ligado);
+            return true;
         }
 
         /// <summary>Um acerto no mini-game da partida: o motor tosse (quase pega). Só nesta máquina.</summary>
@@ -470,7 +650,8 @@ namespace ZombieCityCleaner.Vehicles
                 _anguloDaChave = Mathf.MoveTowards(_anguloDaChave, ChaveLiga, molaDaPartida * dt);
             EstadoDoMotor novo;
             if (_anguloDaChave < ChaveDesliga) novo = EstadoDoMotor.Desligado;
-            else if (e == EstadoDoMotor.Ligado) novo = EstadoDoMotor.Ligado;
+            // ferveu (ou tiraram a vela): o motor apaga, e a chave fica na ignição
+            else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
             else if (_presaNaPartida) novo = EstadoDoMotor.Arranque;
             else novo = EstadoDoMotor.Ignicao;
             if (novo != e) MudarEstado(novo);
@@ -489,8 +670,10 @@ namespace ZombieCityCleaner.Vehicles
                 _estadoOuvido = e;
                 Vector3 naChave = ignicao != null ? ignicao.position : transform.position;
                 Vector3 noMotor = motor != null ? motor.transform.position : transform.position;
-                bool girava = antes == EstadoDoMotor.Arranque;
-                bool gira = e == EstadoDoMotor.Arranque;
+                // o arranque só gira com a bateria forte; fraca, o solenoide estala sozinho; morta, nem isso
+                bool forca = Pecas.BateriaGira, viva = Pecas.BateriaAcende;
+                bool girava = antes == EstadoDoMotor.Arranque && _arranqueGirando;
+                bool gira = e == EstadoDoMotor.Arranque && forca;
                 if (antes == EstadoDoMotor.SemChave)
                 {
                     _chaveEntrouEm = Time.time;
@@ -498,8 +681,9 @@ namespace ZombieCityCleaner.Vehicles
                 }
                 else if (e != EstadoDoMotor.SemChave)
                     Efeitos.Som(SomDoCarro.CliqueDaChave, naChave, 0.5f, true, 6f);
-                if (gira && !girava) Efeitos.Som(SomDoCarro.Solenoide, noMotor, 0.6f, true, 30f);
+                if (e == EstadoDoMotor.Arranque && antes != EstadoDoMotor.Arranque && viva) Efeitos.Som(SomDoCarro.Solenoide, noMotor, 0.6f, true, 30f);
                 if (girava && !gira) Efeitos.Som(SomDoCarro.SoltarArranque, noMotor, 0.6f, true, 30f);
+                _arranqueGirando = gira;
                 if (antes == EstadoDoMotor.Arranque && e >= EstadoDoMotor.Ligado)
                 {
                     _pegouEm = Time.time;
@@ -507,11 +691,19 @@ namespace ZombieCityCleaner.Vehicles
                 }
             }
 
-            // o arranque em laço, enquanto a chave fica na partida
+            // a bateria acabou no meio da partida: o arranque para
+            if (_arranqueGirando && !ArranqueGira)
+            {
+                _arranqueGirando = false;
+                Efeitos.Som(SomDoCarro.SoltarArranque, motor != null ? motor.transform.position : transform.position, 0.6f, true, 30f);
+            }
+
+            // o arranque em laço, enquanto a chave fica na partida (mais lento com a bateria fraca)
             if (arranque != null)
             {
                 if (arranque.clip == null) arranque.clip = SomDoCarro.Arranque;
-                bool toca = e == EstadoDoMotor.Arranque;
+                bool toca = ArranqueGira;
+                arranque.pitch = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(PecasDoMotor.BateriaArranque, 40f, Pecas.Estado(PecasDoMotor.Bateria)));
                 arranque.volume = toca ? 0.6f : 0f;
                 if (toca && !arranque.isPlaying) arranque.Play();
                 else if (!toca && arranque.isPlaying) arranque.Stop();
@@ -552,6 +744,11 @@ namespace ZombieCityCleaner.Vehicles
 
         void FixedUpdate()
         {
+            if (IsSpawned && IsServer && IsOwner && MacacoNaRoda >= 0 && rodas != null && rodas.Length >= 4)
+            {
+                NoMacaco(Time.fixedDeltaTime);
+                return;
+            }
             if (!Simula || rodas == null || rodas.Length < 4) return;
             bool comMotorista = IsSpawned && _ocupantes.Value[0] != 0;
             float acelerar = comMotorista ? _acelerar : 0f, virar = comMotorista ? _virar : 0f, mao = comMotorista ? _maoPuxada : 1f;
@@ -570,6 +767,8 @@ namespace ZombieCityCleaner.Vehicles
             // freio funciona, e o carro rola devagar até parar)
             bool ligado = MotorLigado;
             float forca = 0f, frear = 0f;
+            // a vela gasta tira força do motor
+            float torque = this.torque * Pecas.FatorDeForca;
             if (acelerar > 0.05f)
             {
                 if (v < -0.8f) frear = freio * acelerar;
@@ -588,17 +787,18 @@ namespace ZombieCityCleaner.Vehicles
                 rodas[i].motorTorque = i < 2 ? forca : 0f;
                 rodas[i].brakeTorque = frear + (i >= 2 ? mao * freioDeMao : 0f);
             }
-            // freio de mão: a traseira escorrega
-            for (int i = 2; i < 4; i++)
+            // freio de mão: a traseira escorrega. O pneu gasto ou furado segura menos (de lado e para a frente)
+            for (int i = 0; i < 4; i++)
             {
                 var lado = rodas[i].sidewaysFriction;
-                float rigidez = mao > 0f && Mathf.Abs(v) > 3f ? 0.9f : 2f;
+                float rigidez = (i >= 2 && mao > 0f && Mathf.Abs(v) > 3f ? 0.9f : 2f) * _aderencia[i];
                 if (!Mathf.Approximately(lado.stiffness, rigidez))
                 {
                     lado.stiffness = rigidez;
                     rodas[i].sidewaysFriction = lado;
                 }
             }
+            Arrastar();
 
             Barra(rodas[0], rodas[1]);
             Barra(rodas[2], rodas[3]);
@@ -619,6 +819,414 @@ namespace ZombieCityCleaner.Vehicles
             }
 
             if (comMotorista) Atropelar(v);
+        }
+
+        // o pneu furado e o cubo sem a roda arrastam no chão: uma força contra o movimento daquele canto (o carro puxa
+        // para o lado dele e perde velocidade)
+        void Arrastar()
+        {
+            var p = Pneus;
+            for (int i = 0; i < 4; i++)
+            {
+                float forca = p.Arrasto(i);
+                if (forca <= 0f || !rodas[i].GetGroundHit(out var chao)) continue;
+                var vp = Vector3.ProjectOnPlane(_corpo.GetPointVelocity(chao.point), chao.normal);
+                float rapidez = vp.magnitude;
+                if (rapidez < 0.05f) continue;
+                _corpo.AddForceAtPosition(-vp / rapidez * forca * Mathf.Clamp01(rapidez), chao.point);
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------ o porta-malas
+
+        public void PedirPortaMalas(bool abrir)
+        {
+            if (IsSpawned) PortaMalasRpc(abrir);
+        }
+
+        /// <summary>Pega o macaco (<see cref="PortaMalasDoCarro.Macaco"/>) ou o estepe do porta-malas para a mochila.</summary>
+        public void PedirDoPortaMalas(int qual)
+        {
+            if (IsSpawned) PegarDoPortaMalasRpc((byte)qual);
+        }
+
+        /// <summary>Guarda no porta-malas o macaco ou um pneu da mochila (pelo Id), no lugar vazio dele.</summary>
+        public void PedirGuardar(int qual, ushort idNaMochila)
+        {
+            if (IsSpawned) GuardarNoPortaMalasRpc((byte)qual, idNaMochila);
+        }
+
+        bool PertoDoPortaMalas(ulong cliente, out InventarioJogador inventario)
+        {
+            inventario = null;
+            var j = Jogador(cliente);
+            if (j == null || Virado || (j.transform.position - PontoDoPortaMalas).sqrMagnitude > 3f * 3f) return false;
+            inventario = j.GetComponent<InventarioJogador>();
+            return inventario != null;
+        }
+
+        [Rpc(SendTo.Server)]
+        void PortaMalasRpc(bool abrir, RpcParams parametros = default)
+        {
+            if (!PertoDoPortaMalas(parametros.Receive.SenderClientId, out _) || (abrir && Velocidade > 1.5f)) return;
+            _malasAberto.Value = abrir;
+        }
+
+        [Rpc(SendTo.Server)]
+        void PegarDoPortaMalasRpc(byte qual, RpcParams parametros = default)
+        {
+            if (!_malasAberto.Value || !PertoDoPortaMalas(parametros.Receive.SenderClientId, out var inventario)) return;
+            if (qual == PortaMalasDoCarro.Macaco)
+            {
+                if (_macaco.Value && inventario.Receber(Loot.Item.Macaco, 1)) _macaco.Value = false;
+            }
+            else if (_estepe.Value != PneusDoCarro.Vazio && inventario.Receber(Loot.Item.Pneu, _estepe.Value))
+                _estepe.Value = PneusDoCarro.Vazio;
+        }
+
+        [Rpc(SendTo.Server)]
+        void GuardarNoPortaMalasRpc(byte qual, ushort id, RpcParams parametros = default)
+        {
+            if (!_malasAberto.Value || !PertoDoPortaMalas(parametros.Receive.SenderClientId, out var inventario)) return;
+            // o Id 0: o pneu das mãos
+            if (id == 0)
+            {
+                if (qual == PortaMalasDoCarro.Estepe && _estepe.Value == PneusDoCarro.Vazio && inventario.TirarPneuDasMaos(out int estado))
+                    _estepe.Value = (byte)Mathf.Clamp(estado, 0, 100);
+                return;
+            }
+            if (!inventario.Achar(id, out var it)) return;
+            if (qual == PortaMalasDoCarro.Macaco && !_macaco.Value && it.item == Loot.Item.Macaco)
+            {
+                inventario.Tirar(id);
+                _macaco.Value = true;
+            }
+            else if (qual == PortaMalasDoCarro.Estepe && _estepe.Value == PneusDoCarro.Vazio && it.item == Loot.Item.Pneu)
+            {
+                inventario.Tirar(id);
+                _estepe.Value = (byte)Mathf.Clamp(it.qtd, 0, 100);
+            }
+        }
+
+        // a tampa sobe e desce (a mesma conta do capô, girando para o outro lado), e o que está lá dentro aparece
+        void PortaMalas(float dt)
+        {
+            CofreDoMotor.AnimarCapo(tampaTraseira, _tampaRepouso, -aberturaDaTampa, ref _tampaVista, _malasAberto.Value, dt);
+            if (macacoNoPortaMalas != null && macacoNoPortaMalas.enabled != _macaco.Value) macacoNoPortaMalas.enabled = _macaco.Value;
+            bool estepe = _estepe.Value != PneusDoCarro.Vazio;
+            if (estepeNoPortaMalas != null && estepeNoPortaMalas.enabled != estepe) estepeNoPortaMalas.enabled = estepe;
+        }
+
+        // ------------------------------------------------------------------------------------------ o macaco
+
+        /// <summary>Apoia o macaco da mochila ao lado da roda (o carro vazio e parado).</summary>
+        public void PedirApoiarMacaco(int roda)
+        {
+            if (IsSpawned) ApoiarMacacoRpc((byte)roda);
+        }
+
+        /// <summary>Levanta (ou baixa) o lado do macaco.</summary>
+        public void PedirErguer(bool erguer)
+        {
+            if (IsSpawned) ErguerRpc(erguer);
+        }
+
+        /// <summary>O macaco volta para a mochila (o carro já baixado).</summary>
+        public void PedirTirarMacaco()
+        {
+            if (IsSpawned) TirarMacacoRpc();
+        }
+
+        /// <summary>A roda do lado erguido vai para a mochila, como um pneu com o estado dela.</summary>
+        public void PedirTirarRoda(int roda)
+        {
+            if (IsSpawned) TirarRodaRpc((byte)roda);
+        }
+
+        /// <summary>Um pneu da mochila (pelo Id) vai para a roda vazia do lado erguido.</summary>
+        public void PedirPorRoda(int roda, ushort idNaMochila)
+        {
+            if (IsSpawned) PorRodaRpc((byte)roda, idNaMochila);
+        }
+
+        bool PertoDaRoda(ulong cliente, int roda, out InventarioJogador inventario)
+        {
+            inventario = null;
+            if (roda < 0 || roda >= PneusDoCarro.Quantas || rodas == null || roda >= rodas.Length) return false;
+            var j = Jogador(cliente);
+            if (j == null || (j.Passageiro != null && j.Passageiro.Sentado)) return false;
+            if ((j.transform.position - rodas[roda].transform.position).sqrMagnitude > 3f * 3f) return false;
+            inventario = j.GetComponent<InventarioJogador>();
+            return inventario != null;
+        }
+
+        [Rpc(SendTo.Server)]
+        void ApoiarMacacoRpc(byte roda, RpcParams parametros = default)
+        {
+            if (!IsOwner || MacacoNaRoda >= 0 || !Vazio || Virado || Velocidade > VelocidadeParaOMacaco) return;
+            if (!PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            if (!PortaMalasDoCarro.Achar(inventario, Loot.Item.Macaco, out var macaco)) return;
+            inventario.Tirar(macaco.id);
+            _corpo.linearVelocity = Vector3.zero;
+            _corpo.angularVelocity = Vector3.zero;
+            _poseBase = _corpo.position;
+            _giroBase = _corpo.rotation;
+            _ergueu = 0f;
+            _corpo.isKinematic = true;
+            _erguido.Value = false;
+            _macacoEm.Value = roda;
+            SomDoMacacoRpc(0, transform.TransformPoint(PontoDoMacaco(roda)));
+        }
+
+        [Rpc(SendTo.Server)]
+        void ErguerRpc(bool erguer, RpcParams parametros = default)
+        {
+            int m = MacacoNaRoda;
+            if (m < 0 || _erguido.Value == erguer || !PertoDaRoda(parametros.Receive.SenderClientId, m, out _)) return;
+            _erguido.Value = erguer;
+            SomDoMacacoRpc(1, transform.TransformPoint(PontoDoMacaco(m)));
+        }
+
+        [Rpc(SendTo.Server)]
+        void TirarMacacoRpc(RpcParams parametros = default)
+        {
+            int m = MacacoNaRoda;
+            if (m < 0 || _erguido.Value || _ergueu > 0.001f || !PertoDaRoda(parametros.Receive.SenderClientId, m, out var inventario)) return;
+            if (!inventario.Receber(Loot.Item.Macaco, 1)) NoChao(Loot.Item.Macaco, m, 1);
+            SomDoMacacoRpc(0, transform.TransformPoint(PontoDoMacaco(m)));
+            _macacoEm.Value = PneusDoCarro.Vazio;
+            _ergueu = 0f;
+            _corpo.isKinematic = false;
+            _corpo.WakeUp();
+        }
+
+        [Rpc(SendTo.Server)]
+        void TirarRodaRpc(byte roda, RpcParams parametros = default)
+        {
+            if (!_erguido.Value || _ergueu < 0.98f || !NoLadoErguido(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            var p = _pneus.Value;
+            if (!p.Tem(roda)) return;
+            int estado = p.Estado(roda);
+            // sem espaço na mochila, a roda fica no chão, ao lado
+            if (!inventario.Receber(Loot.Item.Pneu, estado)) NoChao(Loot.Item.Pneu, roda, estado);
+            p[roda] = PneusDoCarro.Vazio;
+            _pneus.Value = p;
+            SomDoMacacoRpc(2, rodas[roda].transform.position);
+        }
+
+        [Rpc(SendTo.Server)]
+        void PorRodaRpc(byte roda, ushort id, RpcParams parametros = default)
+        {
+            if (!_erguido.Value || _ergueu < 0.98f || !NoLadoErguido(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            var p = _pneus.Value;
+            if (p.Tem(roda)) return;
+            int estado;
+            // o Id 0: o pneu das mãos
+            if (id == 0)
+            {
+                if (!inventario.TirarPneuDasMaos(out estado)) return;
+            }
+            else
+            {
+                if (!inventario.Achar(id, out var it) || it.item != Loot.Item.Pneu) return;
+                inventario.Tirar(id);
+                estado = it.qtd;
+            }
+            p[roda] = (byte)Mathf.Clamp(estado, 0, 100);
+            _pneus.Value = p;
+            SomDoMacacoRpc(2, rodas[roda].transform.position);
+        }
+
+        // no anfitrião: um item no chão, para fora da roda (o que não coube na mochila)
+        void NoChao(Loot.Item item, int roda, int qtd)
+        {
+            var mundo = Loot.ItensNoMundo.Instancia;
+            if (mundo == null) return;
+            var w = rodas[roda].transform;
+            Vector3 ponto = w.position + transform.right * Mathf.Sign(w.localPosition.x) * 0.8f;
+            if (Physics.Raycast(ponto + Vector3.up, Vector3.down, out var chao, 3f, 1, QueryTriggerInteraction.Ignore)) ponto = chao.point;
+            else ponto.y = transform.position.y;
+            mundo.Criar(item, ponto, transform.eulerAngles.y, qtd);
+        }
+
+        // 0: o macaco no chão (apoiar e tirar); 1: a manivela girando (subir e descer); 2: a roda saindo ou entrando
+        [Rpc(SendTo.Everyone)]
+        void SomDoMacacoRpc(byte qual, Vector3 ponto)
+        {
+            if (qual == 1) Efeitos.Som(SomDoCarro.Macaco, ponto, 0.75f, true, 18f);
+            else Efeitos.Som(Efeitos.Largar, ponto, qual == 2 ? 1f : 0.8f, true, 15f);
+        }
+
+        // no anfitrião (o dono do carro vazio): o carro fica cinemático e gira em volta da linha das rodas do outro lado, até
+        // o lado do macaco subir alturaDoMacaco na roda
+        void NoMacaco(float dt)
+        {
+            if (!_corpo.isKinematic) _corpo.isKinematic = true;
+            _ergueu = Mathf.MoveTowards(_ergueu, _erguido.Value ? 1f : 0f, dt / Mathf.Max(0.1f, tempoDoMacaco));
+            float x = rodas[MacacoNaRoda].transform.localPosition.x;
+            float largura = Mathf.Max(0.5f, 2f * Mathf.Abs(x));
+            float angulo = Mathf.Asin(Mathf.Clamp(alturaDoMacaco / largura, 0f, 0.5f)) * Mathf.Rad2Deg * Mathf.Sign(x) * _ergueu;
+            var pivo = new Vector3(-x, 0f, 0f);
+            var giro = _giroBase * Quaternion.AngleAxis(angulo, Vector3.forward);
+            _corpo.MovePosition(_poseBase + _giroBase * pivo - giro * pivo);
+            _corpo.MoveRotation(giro);
+        }
+
+        // em todas as máquinas: o macaco apoiado aparece, esticado do chão até a lataria (a malha cresce na altura)
+        void MacacoApoiado()
+        {
+            if (_erguidoVisto != _erguido.Value)
+            {
+                _erguidoVisto = _erguido.Value;
+                _erguidoMudouEm = Time.time;
+            }
+            if (macacoApoiado == null) return;
+            int roda = MacacoNaRoda;
+            bool ver = roda >= 0 && rodas != null && roda < rodas.Length;
+            if (macacoApoiado.enabled != ver) macacoApoiado.enabled = ver;
+            if (_miraDoMacaco != null && _miraDoMacaco.enabled != ver) _miraDoMacaco.enabled = ver;
+            if (!ver) return;
+            Vector3 topo = transform.TransformPoint(PontoDoMacaco(roda));
+            Vector3 chao = topo - Vector3.up * BaseDaLataria;
+            float altura = BaseDaLataria;
+            if (Physics.Raycast(topo + Vector3.up * 0.05f, Vector3.down, out var hit, 1.5f, 1, QueryTriggerInteraction.Ignore))
+            {
+                chao = hit.point;
+                altura = Mathf.Max(0.04f, topo.y - hit.point.y);
+            }
+            var frente = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            if (frente.sqrMagnitude < 1e-4f) frente = Vector3.forward;
+            // a malha é comprida em X: fica ao longo do carro
+            var t = macacoApoiado.transform;
+            t.SetPositionAndRotation(chao, Quaternion.LookRotation(frente.normalized) * Quaternion.Euler(0f, -90f, 0f));
+            t.localScale = new Vector3(1f, altura / _alturaDoMacacoFechado, 1f);
+            // o gatilho do macaco (MacacoApoiado) passa para fora da lateral, onde a mira chega: o z da malha é o lado
+            // esquerdo do carro
+            if (_miraDoMacaco != null)
+            {
+                float lado = Mathf.Sign(rodas[roda].transform.localPosition.x);
+                _miraDoMacaco.center = new Vector3(0f, _alturaDoMacacoFechado * 0.5f, -lado * 0.09f);
+                _miraDoMacaco.size = new Vector3(0.44f, _alturaDoMacacoFechado * 1.1f, 0.34f);
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------ o tiro no pneu
+
+        /// <summary>
+        /// A roda mais perto que um raio (o tiro) cruza, entre todos os carros: a distância (ou infinito), o carro, a roda
+        /// e a normal. A roda é um cilindro (o modelo dela, que gira e vira), sem colisor: um colisor preso ao carro
+        /// entraria na física dele.
+        /// </summary>
+        public static float TiroNasRodas(Vector3 origem, Vector3 direcao, float alcance, out Carro carro, out int roda, out Vector3 normal)
+        {
+            float melhor = float.PositiveInfinity;
+            carro = null;
+            roda = -1;
+            normal = -direcao;
+            foreach (var c in Todos)
+            {
+                if (c == null || !c.IsSpawned || c.rodasVisuais == null) continue;
+                // o raio passa longe do carro (mais de 3 m do meio dele): nem olha as rodas
+                Vector3 ate = c.transform.position - origem;
+                float ao = Vector3.Dot(ate, direcao);
+                if (ao < -3f || ao > alcance + 3f || (ate - ao * direcao).sqrMagnitude > 9f) continue;
+                var p = c.Pneus;
+                for (int i = 0; i < c.rodasVisuais.Length && i < PneusDoCarro.Quantas; i++)
+                {
+                    var v = c.rodasVisuais[i];
+                    if (v == null || !p.Tem(i)) continue;
+                    if (Cilindro(origem, direcao, v.position, v.right, PneusDoCarro.RaioDoModelo, PneusDoCarro.MeiaLargura, out float t, out var n)
+                        && t < melhor && t <= alcance)
+                    {
+                        melhor = t;
+                        carro = c;
+                        roda = i;
+                        normal = n;
+                    }
+                }
+            }
+            return melhor;
+        }
+
+        // um raio contra um cilindro fechado (o centro, o eixo, o raio e a metade da altura): a primeira entrada
+        static bool Cilindro(Vector3 o, Vector3 d, Vector3 centro, Vector3 eixo, float raio, float meia, out float t, out Vector3 normal)
+        {
+            t = float.PositiveInfinity;
+            normal = Vector3.zero;
+            Vector3 rel = o - centro;
+            float oa = Vector3.Dot(rel, eixo), da = Vector3.Dot(d, eixo);
+            Vector3 op = rel - oa * eixo, dp = d - da * eixo;
+            // a banda de rodagem
+            float a = dp.sqrMagnitude, b = 2f * Vector3.Dot(op, dp), c = op.sqrMagnitude - raio * raio;
+            if (a > 1e-8f)
+            {
+                float disc = b * b - 4f * a * c;
+                if (disc >= 0f)
+                {
+                    float t1 = (-b - Mathf.Sqrt(disc)) / (2f * a);
+                    if (t1 >= 0f && Mathf.Abs(oa + t1 * da) <= meia)
+                    {
+                        t = t1;
+                        normal = (op + t1 * dp).normalized;
+                    }
+                }
+            }
+            // as duas faces (a calota e o lado de dentro)
+            if (Mathf.Abs(da) > 1e-6f)
+                for (int lado = -1; lado <= 1; lado += 2)
+                {
+                    float tf = (lado * meia - oa) / da;
+                    if (tf < 0f || tf >= t) continue;
+                    if ((op + tf * dp).sqrMagnitude > raio * raio) continue;
+                    t = tf;
+                    normal = eixo * lado;
+                }
+            return !float.IsPositiveInfinity(t);
+        }
+
+        /// <summary>Um tiro pegou esta roda (quem atirou manda; o anfitrião fura, e todos ouvem o estouro e o ar).</summary>
+        public void Furar(int roda)
+        {
+            if (IsSpawned && roda >= 0 && roda < PneusDoCarro.Quantas) FurarRpc((byte)roda);
+        }
+
+        [Rpc(SendTo.Server)]
+        void FurarRpc(byte roda, RpcParams parametros = default)
+        {
+            var p = _pneus.Value;
+            if (roda >= PneusDoCarro.Quantas || !p.Tem(roda) || p.Furado(roda) || Jogador(parametros.Receive.SenderClientId) == null) return;
+            p[roda] = 0;
+            _pneus.Value = p;
+            FurouRpc(roda);
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void FurouRpc(byte roda)
+        {
+            if (rodasVisuais == null || roda >= rodasVisuais.Length || rodasVisuais[roda] == null) return;
+            Efeitos.Som(SomDoCarro.PneuFurando, rodasVisuais[roda].position, 1f, true, 60f);
+        }
+
+        // as rodas de acordo com os pneus: o raio (furada, ela baixa; sem ela, o cubo), a aderência e o modelo (sem a roda,
+        // some). Em todas as máquinas (o raio também conta para a roda dos outros descer até o chão)
+        void AplicarPneus()
+        {
+            var p = Pneus;
+            if (_pneusFeitos && p.Equals(_pneusAplicados)) return;
+            _pneusFeitos = true;
+            _pneusAplicados = p;
+            if (rodas == null) return;
+            for (int i = 0; i < rodas.Length && i < PneusDoCarro.Quantas; i++)
+            {
+                if (rodas[i] == null) continue;
+                rodas[i].radius = p.Raio(i);
+                _aderencia[i] = p.Aderencia(i);
+                var frente = rodas[i].forwardFriction;
+                frente.stiffness = 1.6f * _aderencia[i];
+                rodas[i].forwardFriction = frente;
+                if (rodasVisuais != null && i < rodasVisuais.Length && rodasVisuais[i] != null)
+                    rodasVisuais[i].gameObject.SetActive(p.Tem(i));
+            }
         }
 
         // a barra estabilizadora de um eixo: puxa para baixo o lado que a suspensão esticou
@@ -670,6 +1278,120 @@ namespace ZombieCityCleaner.Vehicles
             if (_atropelados.Count > 64) _atropelados.Clear();
         }
 
+        // ------------------------------------------------------------------------------------------ o capô e as peças
+
+        public string NomeDoCarro => "Perua da família";
+        public CofreDoMotor Cofre => cofre;
+        public Vector3 Ponto => transform.TransformPoint(0f, 0.9f, 1.6f);
+        public bool Aberto => IsSpawned && !Virado && Velocidade < 1.5f;
+        public string Impedimento => MotorLigado ? "Desligue o motor para mexer nas peças" : null;
+
+        public string Situacao
+        {
+            get
+            {
+                float t = Temperatura;
+                string motor = Fervendo ? "fervendo" : t < 0.3f ? "frio" : t < 0.75f ? "normal" : "quente";
+                return Pecas.Tem(PecasDoMotor.Bateria)
+                    ? $"Carga da bateria: {Pecas.Estado(PecasDoMotor.Bateria)}%   ·   Motor: {motor}"
+                    : $"Sem bateria   ·   Motor: {motor}";
+            }
+        }
+
+        public void PedirTirar(int peca) => TirarPecaRpc((byte)peca);
+        public void PedirPor(int peca, ushort idNaMochila) => PorPecaRpc((byte)peca, idNaMochila);
+        public void Olhando(bool olhando)
+        {
+            if (IsSpawned) CapoRpc(olhando);
+        }
+
+        // quem pediu está perto do capô, e o carro está parado
+        bool PertoDoCapo(ulong cliente, out InventarioJogador inventario)
+        {
+            inventario = null;
+            var j = Jogador(cliente);
+            if (j == null || !Aberto || (j.transform.position - Ponto).sqrMagnitude > 3.5f * 3.5f) return false;
+            inventario = j.GetComponent<InventarioJogador>();
+            return inventario != null;
+        }
+
+        [Rpc(SendTo.Server)]
+        void TirarPecaRpc(byte peca, RpcParams parametros = default)
+        {
+            if (MotorLigado || !PertoDoCapo(parametros.Receive.SenderClientId, out var inventario)) return;
+            var p = _pecas.Value;
+            if (!p.Tirar(peca, inventario)) return;
+            _pecas.Value = p;
+            if (peca == PecasDoMotor.Bateria) _carga = 0f;
+        }
+
+        [Rpc(SendTo.Server)]
+        void PorPecaRpc(byte peca, ushort id, RpcParams parametros = default)
+        {
+            if (MotorLigado || !PertoDoCapo(parametros.Receive.SenderClientId, out var inventario)) return;
+            var p = _pecas.Value;
+            if (!p.Por(peca, inventario, id)) return;
+            _pecas.Value = p;
+            if (peca == PecasDoMotor.Bateria) _carga = p.Estado(PecasDoMotor.Bateria);
+        }
+
+        [Rpc(SendTo.Server)]
+        void CapoRpc(bool olhando, RpcParams parametros = default)
+        {
+            ulong cliente = parametros.Receive.SenderClientId;
+            if (olhando && PertoDoCapo(cliente, out _)) _olhandoOCapo.Add(cliente);
+            else _olhandoOCapo.Remove(cliente);
+        }
+
+        /// <summary>
+        /// No anfitrião: a carga da bateria (a partida gasta; o motor ligado carrega; a ignição e os faróis com o motor
+        /// desligado gastam devagar) e a temperatura do motor (ligado, vai até o alvo do radiador; desligado, esfria).
+        /// Também fecha o capô de quem se afastou, saiu da partida ou com o carro andando.
+        /// </summary>
+        void Desgaste(float dt)
+        {
+            var p = _pecas.Value;
+            var e = Estado;
+            if (p.Tem(PecasDoMotor.Bateria))
+            {
+                float gasto = e == EstadoDoMotor.Arranque && p.BateriaGira ? gastoDaPartida
+                    : e == EstadoDoMotor.Ligado ? -cargaDoMotor
+                    : (e == EstadoDoMotor.Ignicao ? 0.05f : 0f) + (_farois.Value ? 0.15f : 0f);
+                _carga = Mathf.Clamp(_carga - gasto * dt, 0f, 100f);
+                int nova = Mathf.RoundToInt(_carga);
+                if (nova != p.bateria)
+                {
+                    p.bateria = (byte)nova;
+                    _pecas.Value = p;
+                }
+            }
+            bool ligado = e == EstadoDoMotor.Ligado;
+            _temperatura = ligado
+                ? Mathf.MoveTowards(_temperatura, p.TemperaturaAlvo, Mathf.Abs(p.TemperaturaAlvo - _temperatura) * dt / esquentar + 0.0005f * dt)
+                : Mathf.MoveTowards(_temperatura, 0f, _temperatura * dt / esfriar + 0.0005f * dt);
+            byte calor = (byte)Mathf.Clamp(Mathf.RoundToInt(_temperatura * 200f), 0, 255);
+            if (Mathf.Abs(calor - _calor.Value) >= 2) _calor.Value = calor;
+            if (!_fervendo.Value && _temperatura >= 1f) _fervendo.Value = true;
+            else if (_fervendo.Value && _temperatura < 0.7f) _fervendo.Value = false;
+
+            // quem se afastou (com folga), saiu da partida, ou o carro andou: o capô fecha
+            if (_olhandoOCapo.Count > 0)
+                _olhandoOCapo.RemoveWhere(c =>
+                {
+                    var j = Jogador(c);
+                    return j == null || !Aberto || (j.transform.position - Ponto).sqrMagnitude > 4.5f * 4.5f;
+                });
+            bool aberto = _olhandoOCapo.Count > 0;
+            if (_capoAberto.Value != aberto) _capoAberto.Value = aberto;
+        }
+
+        // o capô sobe enquanto alguém olha o motor (quem olha desta máquina já vê subir, sem esperar a rede), e desce batendo
+        void Capo(float dt)
+        {
+            bool aberto = _capoAberto.Value || (cofre != null && cofre.Inspecionando);
+            CofreDoMotor.AnimarCapo(capo, _capoRepouso, aberturaDoCapo, ref _capoVisto, aberto, dt);
+        }
+
         // ------------------------------------------------------------------------------------------ o que se vê e ouve
 
         void Update()
@@ -687,8 +1409,15 @@ namespace ZombieCityCleaner.Vehicles
             if (Virado) { if (_viradoDesde < 0f) _viradoDesde = Time.time; }
             else _viradoDesde = -1f;
 
+            AplicarPneus();
             Rodas(dt);
-            if (_faroisAplicados != _farois.Value) AplicarFarois(_farois.Value);
+            // os faróis precisam da bateria
+            bool farois = _farois.Value && Pecas.BateriaAcende;
+            if (_faroisAplicados != farois) AplicarFarois(farois);
+            if (IsServer) Desgaste(dt);
+            Capo(dt);
+            PortaMalas(dt);
+            MacacoApoiado();
             Ignicao(dt);
             Chave(dt);
             Motor(dt);
@@ -709,13 +1438,13 @@ namespace ZombieCityCleaner.Vehicles
                 var visual = rodasVisuais[i];
                 bool esquerda = i % 2 == 0;
                 var virar = Quaternion.Euler(0f, esquerda ? 180f : 0f, 0f);
-                if (IsOwner)
+                if (IsOwner && MacacoNaRoda < 0)
                 {
                     rodas[i].GetWorldPose(out var pos, out var rot);
                     visual.SetPositionAndRotation(pos, rot * virar);
                     continue;
                 }
-                // nos outros: a roda desce até o chão (dentro do curso da suspensão), vira e gira pela velocidade
+                // nos outros (e no macaco): a roda desce até o chão (dentro do curso da suspensão), vira e gira pela velocidade
                 var w = rodas[i];
                 Vector3 topo = w.transform.TransformPoint(w.center);
                 float desce = w.suspensionDistance;
@@ -754,7 +1483,7 @@ namespace ZombieCityCleaner.Vehicles
         {
             if (buzina == null) return;
             if (buzina.clip == null) buzina.clip = SomDoCarro.Buzina;
-            bool tocando = IsOwner ? _buzinaLocal : _buzina.Value;
+            bool tocando = (IsOwner ? _buzinaLocal : _buzina.Value) && Pecas.BateriaAcende;
             buzina.volume = Mathf.MoveTowards(buzina.volume, tocando ? 0.9f : 0f, dt * 25f);
             if (buzina.volume > 0.001f && !buzina.isPlaying) buzina.Play();
             else if (buzina.volume <= 0.001f && buzina.isPlaying) buzina.Stop();
@@ -768,8 +1497,9 @@ namespace ZombieCityCleaner.Vehicles
         void Painel(float dt)
         {
             var e = Estado;
-            bool ignicao = e >= EstadoDoMotor.Ignicao;
-            float alvo = !ignicao ? 0f : e == EstadoDoMotor.Arranque ? 0.6f : 1f;
+            bool ignicao = IgnicaoLigada;
+            // a bateria fraca acende o painel fraco; o arranque girando puxa a luz
+            float alvo = !ignicao ? 0f : ArranqueGira ? 0.6f : Pecas.BateriaGira || MotorLigado ? 1f : 0.35f;
             _brilhoPainel = Mathf.MoveTowards(_brilhoPainel, alvo, dt * 6f);
             bool aceso = _brilhoPainel > 0.05f;
             if (aceso != _painelAceso)
@@ -790,7 +1520,7 @@ namespace ZombieCityCleaner.Vehicles
             // o ponteiro aponta para +Y; o painel olha para o motorista (-Z): no sentido do relógio é o giro negativo em Z
             if (ponteiroVelocidade != null) ponteiroVelocidade.localRotation = Quaternion.Euler(0f, 0f, -AnguloDoVelocimetro(_ponteiroVel));
             if (ponteiroCombustivel != null) ponteiroCombustivel.localRotation = Quaternion.Euler(0f, 0f, -AnguloDoCombustivel(_ponteiroComb));
-            if (indicadorFarol != null) indicadorFarol.enabled = _farois.Value;
+            if (indicadorFarol != null) indicadorFarol.enabled = _farois.Value && Pecas.BateriaAcende;
 
             float teto = Mathf.Clamp01((_tetoAte - Time.time) / 1.2f);
             _brilhoTeto = Mathf.MoveTowards(_brilhoTeto, teto, dt * 5f);

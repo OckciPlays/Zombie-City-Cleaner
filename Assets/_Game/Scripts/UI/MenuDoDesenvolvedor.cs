@@ -10,7 +10,8 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// O menu do desenvolvedor (F1; só no Editor e nas builds de desenvolvimento): criar itens (as armas, a lata, a
-    /// garrafa, as mochilas, o coldre e as caixas de munição cheias) na mochila ou no chão à frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
+    /// garrafa, as mochilas, o coldre, as caixas de munição cheias e as peças do motor a 100%) na mochila ou no chão à
+    /// frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
     /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz.
     /// </summary>
     public class MenuDoDesenvolvedor : NetworkBehaviour
@@ -25,6 +26,7 @@ namespace ZombieCityCleaner.UI
             Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Comida, Item.Agua,
             Item.Coldre, Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
             Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
+            Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco,
         };
         static readonly string[] Destinos = { "Na mochila", "No chão" };
 

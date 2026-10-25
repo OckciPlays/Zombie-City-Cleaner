@@ -78,7 +78,8 @@ namespace ZombieCityCleaner.Player
         string _aviso;
         float _avisoAte;
         // a chave: pega (um clique nela), o mouse gira a chave e não olha; na partida, o mini-game
-        bool _segurandoChave, _naPartidaAntes;
+        bool _segurandoChave, _naPartidaAntes, _fervendoAntes;
+        float _semForcaDesde = -1f;
         /// <summary>Graus que a chave gira por pixel do mouse, arrastando para a direita (da ignição para a partida ela pesa: <see cref="Carro.pesoDaPartida"/>).</summary>
         const float GrausPorPixel = 0.35f;
         // o mini-game da partida: um ponteiro dá voltas no anel do mostrador, e o clique tem de pegar ele em cima das
@@ -305,6 +306,8 @@ namespace ZombieCityCleaner.Player
                 Vector2 m = controla ? _mover.ReadValue<Vector2>() : Vector2.zero;
                 Carro.Comandar(m.y, m.x, controla && _pular.IsPressed());
                 Chave(controla);
+                if (Carro.Fervendo && !_fervendoAntes) Avisar("O motor ferveu e apagou: espere esfriar e troque o radiador (capô)", 4f);
+                _fervendoAntes = Carro.Fervendo;
                 if (m.y > 0.3f && !Carro.MotorLigado && !_segurandoChave && Time.time > _avisoAte)
                     Avisar(Carro.Estado == Carro.EstadoDoMotor.SemChave ? "O motor está desligado: ponha a chave na ignição" : "O motor está desligado: gire a chave");
                 if (controla && teclado != null && teclado.lKey.wasPressedThisFrame) Carro.AlternarFarois();
@@ -359,7 +362,20 @@ namespace ZombieCityCleaner.Player
                 SoltarAChave();
                 return;
             }
-            bool partida = Carro.Estado == Carro.EstadoDoMotor.Arranque;
+            // a chave na partida sem a bateria ter força: o arranque não gira, e a chave volta para a ignição
+            if (Carro.Estado == Carro.EstadoDoMotor.Arranque && !Carro.ArranqueGira)
+            {
+                if (_semForcaDesde < 0f) _semForcaDesde = Time.time;
+                else if (Time.time - _semForcaDesde > 0.6f)
+                {
+                    _semForcaDesde = -1f;
+                    Carro.SoltarChave();
+                    Avisar(Carro.Pecas.BateriaAcende ? "A bateria está fraca: o motor de arranque não gira (abra o capô)"
+                        : Carro.Pecas.Tem(Vehicles.PecasDoMotor.Bateria) ? "A bateria está morta: nada acende (abra o capô)" : "Sem bateria: nada acende (abra o capô)", 3f);
+                }
+            }
+            else _semForcaDesde = -1f;
+            bool partida = Carro.ArranqueGira;
             if (partida != _naPartidaAntes)
             {
                 _naPartidaAntes = partida;
@@ -406,7 +422,8 @@ namespace ZombieCityCleaner.Player
             _marcas.Clear();
             for (int i = 0; i < 4; i++)
             {
-                float largura = i == 0 ? LarguraPequena : LarguraGrande;
+                // a vela gasta deixa as marcas menores
+                float largura = (i == 0 ? LarguraPequena : LarguraGrande) * Carro.Pecas.FatorDasMarcas;
                 float centro = 0f;
                 for (int tentativa = 0; tentativa < 80; tentativa++)
                 {
@@ -454,9 +471,15 @@ namespace ZombieCityCleaner.Player
 
         bool Ligou()
         {
-            Carro.PegarAgora();
             _segurandoChave = false;
             _naPartidaAntes = false;
+            if (!Carro.PegarAgora(out var motivo))
+            {
+                // a vela ruim (ou o motor quente): ele só tosse, e a chave volta para a ignição
+                Carro.SoltarChave();
+                Avisar(motivo, 3f);
+                return true;
+            }
             Avisar("Motor ligado");
             return true;
         }
@@ -521,10 +544,10 @@ namespace ZombieCityCleaner.Player
             _rede.CorpoDoDono(visivel);
         }
 
-        void Avisar(string texto)
+        void Avisar(string texto, float tempo = 1.6f)
         {
             _aviso = texto;
-            _avisoAte = Time.time + 1.6f;
+            _avisoAte = Time.time + tempo;
         }
 
         // ------------------------------------------------------------------------------------------ a pose sentada
@@ -579,10 +602,32 @@ namespace ZombieCityCleaner.Player
                 var vel = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(30 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight, richText = true };
                 string texto = $"{Mathf.RoundToInt(Carro.Velocidade * 3.6f)}<size={Mathf.RoundToInt(14 * u)}> km/h</size>";
                 Sombra(new Rect(Screen.width - 260 * u, Screen.height - 58 * u, 240 * u, 44 * u), texto, vel, new Color(0.9f, 0.88f, 0.8f));
-                if (Carro.FaroisLigados)
+                var f = new GUIStyle(vel) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Normal };
+                float ly = Screen.height - 80 * u;
+                if (Carro.FaroisLigados && Carro.Pecas.BateriaAcende)
                 {
-                    var f = new GUIStyle(vel) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Normal };
-                    Sombra(new Rect(Screen.width - 260 * u, Screen.height - 80 * u, 240 * u, 22 * u), "FARÓIS", f, new Color(0.95f, 0.85f, 0.5f));
+                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), "FARÓIS", f, new Color(0.95f, 0.85f, 0.5f));
+                    ly -= 20 * u;
+                }
+                // os avisos das peças: o motor quente (pisca fervendo) e a bateria fraca
+                if (Carro.Fervendo || (Carro.MotorLigado && Carro.Temperatura > 0.85f))
+                {
+                    if (!Carro.Fervendo || Mathf.Repeat(Time.time, 0.8f) < 0.5f)
+                        Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), Carro.Fervendo ? "MOTOR FERVENDO" : "MOTOR QUENTE", f, new Color(1f, 0.4f, 0.3f));
+                    ly -= 20 * u;
+                }
+                if (Carro.Pecas.Estado(Vehicles.PecasDoMotor.Bateria) < 20)
+                {
+                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), Carro.Pecas.Tem(Vehicles.PecasDoMotor.Bateria) ? "BATERIA FRACA" : "SEM BATERIA", f, new Color(1f, 0.75f, 0.3f));
+                    ly -= 20 * u;
+                }
+                // as rodas: furada ou faltando
+                var pneus = Carro.Pneus;
+                if (pneus.Ruins > 0)
+                {
+                    bool falta = false;
+                    for (int i = 0; i < Vehicles.PneusDoCarro.Quantas; i++) falta |= !pneus.Tem(i);
+                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), falta ? "FALTA UMA RODA" : pneus.Ruins > 1 ? "PNEUS FURADOS" : "PNEU FURADO", f, new Color(1f, 0.75f, 0.3f));
                 }
             }
             var dica = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14 * u), alignment = TextAnchor.LowerCenter };

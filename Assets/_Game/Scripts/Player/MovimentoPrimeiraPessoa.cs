@@ -39,6 +39,7 @@ namespace ZombieCityCleaner.Player
 
         CharacterController _controle;
         InputAction _mover, _olhar, _pular, _correr;
+        InventarioJogador _inventario;
         Vector3 _velocidade;
         float _yaw, _pitch, _coice;
 
@@ -132,8 +133,13 @@ namespace ZombieCityCleaner.Player
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
 
             if (mover.sqrMagnitude > 1f) mover.Normalize();
+            // com o pneu nas mãos (pesado): devagar, sem correr nem pular
+            if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
+            bool pesado = _inventario != null && _inventario.CarregandoPneu;
+            if (pesado) correr = pular = false;
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value;
             float alvo = rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
+            if (pesado) alvo *= InventarioJogador.LentidaoDoPneu;
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
             Vector3 horizontal = new Vector3(_velocidade.x, 0f, _velocidade.z);
             horizontal = Vector3.Lerp(horizontal, desejada, 1f - Mathf.Exp(-(_controle.isGrounded ? aceleracao : aceleracao * 0.2f) * dt));
