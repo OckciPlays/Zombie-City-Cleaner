@@ -82,6 +82,9 @@ namespace ZombieCityCleaner.Zombies
         public int orcamentoPorQuadro = 40;
         [Tooltip("Além disto o anfitrião nem desenha o zumbi: a neblina já esconde.")]
         public float distanciaDeDesenho = 65f;
+        [Tooltip("Até onde o zumbi usa a malha inteira (LOD0) e a do LOD1; depois, a do LOD2 (os zumbis em blocos).")]
+        public float distanciaDoLOD1 = 12f;
+        public float distanciaDoLOD2 = 26f;
 
         public AjustesDeZumbi ajustes = new AjustesDeZumbi();
 
@@ -345,7 +348,9 @@ namespace ZombieCityCleaner.Zombies
                     var nivel = menor < float.MaxValue ? NivelPara(menor, z.NivelAtual) : Zumbi.Nivel.Longe;
                     if (z.Engajado) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
-                    z.DefinirVisivel(Mathf.Min(Distancia(local, p), doVideo) < distanciaDeDesenho);
+                    float daqui = Mathf.Min(Distancia(local, p), doVideo);
+                    z.DefinirVisivel(daqui < distanciaDeDesenho);
+                    z.DefinirDetalhe(daqui, distanciaDoLOD1, distanciaDoLOD2);
                 }
             }
         }

@@ -15,7 +15,8 @@ namespace ZombieCityCleaner.EditorTools
     /// - nada fica estático (as peças da cidade vão se mexer nas tomadas) e a oclusão assada da Demo_Cidade sai;
     /// - a "Câmera de teste" do menu sai: quem filma é a câmera do vídeo.
     /// A cena não entra nas Build Settings. Mudou a Demo_Cidade (rodou a montagem da cidade, dos zumbis...), rode esta
-    /// de novo: ela apaga e refaz a Video.unity, então mudanças feitas à mão nela se perdem.
+    /// de novo: ela apaga e refaz a Video.unity, então mudanças feitas à mão nela se perdem. Só as escolhas do diretor (a
+    /// tomada, gravar, deitado...) passam da cena velha para a nova.
     /// Menu: Zombie City Cleaner > Montar cena de vídeo.
     /// </summary>
     public static class MontagemDoVideo
@@ -27,6 +28,7 @@ namespace ZombieCityCleaner.EditorTools
         public static void Montar()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            string escolhas = EscolhasDoDiretor();
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Destino) != null) AssetDatabase.DeleteAsset(Destino);
             if (!AssetDatabase.CopyAsset(Origem, Destino))
             {
@@ -54,17 +56,34 @@ namespace ZombieCityCleaner.EditorTools
                     soltos++;
                 }
             }
-            var diretor = Diretor();
+            var diretor = Diretor(escolhas);
             Selection.activeGameObject = diretor.gameObject;
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
-            Debug.Log($"[vídeo] cena montada em {Destino} ({soltos} objetos deixaram de ser estáticos)");
+            Debug.Log($"[vídeo] cena montada em {Destino} ({soltos} objetos deixaram de ser estáticos; tomada {diretor.tomada})");
+        }
+
+        /// <summary>As escolhas do diretor da Video.unity de antes (em JSON), ou null se ela não existe.</summary>
+        static string EscolhasDoDiretor()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Destino) == null) return null;
+            // as cenas abertas já foram salvas (ou o usuário não quis): a Video.unity vai ser aberta no lugar delas de qualquer jeito
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != Destino) cena = EditorSceneManager.OpenScene(Destino, OpenSceneMode.Single);
+            foreach (var raiz in cena.GetRootGameObjects())
+            {
+                var diretor = raiz.GetComponent<DiretorDoVideo>();
+                if (diretor != null) return EditorJsonUtility.ToJson(diretor);
+            }
+            return null;
         }
 
         // o diretor e a câmera do vídeo, com os ajustes da câmera do mundo do jogador (a mesma imagem), mais longe
-        static DiretorDoVideo Diretor()
+        static DiretorDoVideo Diretor(string escolhas)
         {
             var diretor = new GameObject("Diretor do vídeo").AddComponent<DiretorDoVideo>();
+            // as referências da cena velha não valem mais: a câmera e o ouvido são postos logo abaixo
+            if (escolhas != null) EditorJsonUtility.FromJsonOverwrite(escolhas, diretor);
             var objeto = new GameObject("Câmera do vídeo") { tag = "MainCamera" };
             objeto.transform.SetParent(diretor.transform, false);
             objeto.transform.SetPositionAndRotation(new Vector3(-14f, 9f, -28f), Quaternion.LookRotation(new Vector3(20f, -7.5f, 36f)));

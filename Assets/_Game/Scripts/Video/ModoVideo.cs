@@ -26,6 +26,12 @@ namespace ZombieCityCleaner.Video
         /// do bunker olha de fora, mas a luz tem que ser a de dentro.
         /// </summary>
         public static float Subsolo { get; set; }
+        /// <summary>A mira (com a munição, a dica e a luneta da sniper) aparece mesmo gravando: o vídeo das armas.</summary>
+        public static bool MostrarMira { get; set; }
+        /// <summary>A recarga não gasta as caixas, e o HUD mostra "∞" (como no robô de teste).</summary>
+        public static bool MunicaoInfinita { get; set; }
+        /// <summary>Quantas armas couberem na mochila, sem o limite das costas e do coldre.</summary>
+        public static bool ArmasSemLimite { get; set; }
 
         // sem Domain Reload, o estado estático sobrevive ao Play: tudo volta ao do jogo no começo de cada um
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -37,6 +43,9 @@ namespace ZombieCityCleaner.Video
             Olho = null;
             AlcanceDosZumbis = 1f;
             Subsolo = 0f;
+            MostrarMira = false;
+            MunicaoInfinita = false;
+            ArmasSemLimite = false;
         }
     }
 }

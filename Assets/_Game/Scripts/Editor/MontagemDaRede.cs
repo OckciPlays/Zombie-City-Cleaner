@@ -291,7 +291,7 @@ namespace ZombieCityCleaner.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(caminho);
         }
 
-        static void MontarCena(GameObject prefab)
+        internal static void MontarCena(GameObject prefab)
         {
             var cena = EditorSceneManager.GetActiveScene();
             foreach (var nome in new[] { "Rede", "Efeitos", "Pontos de nascimento" })

@@ -17,9 +17,11 @@ using ZombieCityCleaner.Zombies;
 namespace ZombieCityCleaner.EditorTools
 {
     /// <summary>
-    /// Monta os zumbis (Partes 5 e 6, os modelos dos ajustes antes da Parte 7 e os zumbis leves de 24/10/2026):
-    /// - a importação dos modelos da lista (hoje o ZombieGaroto, leve; os 4 de ~3.100 vértices, Zombie1, ZombieHomem2,
-    ///   ZombieMulher e ZombieMulherLoira, continuam na pasta e voltam se entrarem na lista), com os 5 clipes de cada;
+    /// Monta os zumbis (Partes 5 e 6, os modelos dos ajustes antes da Parte 7, os zumbis leves de 24/10/2026 e os em
+    /// blocos de 25/10/2026):
+    /// - a importação dos modelos da lista (hoje o ZombieGaroto, leve; os 6 em blocos, com os LODs, e os 4 de ~3.100
+    ///   vértices, Zombie1, ZombieHomem2, ZombieMulher e ZombieMulherLoira, continuam na pasta e voltam se entrarem na
+    ///   lista), com os 5 clipes de cada;
     /// - as camadas "Zumbi" (7, que não colide com ela mesma nem com os braços de primeira pessoa) e "Corpos" (8);
     /// - de cada modelo, as duas malhas (inteira, um draw call; e sem cabeça, com a tampa de carne no pescoço) e o
     ///   material com a textura dele (nos zumbis leves, o shader ZombieCityCleaner/Zumbi com as camadas: a base, as
@@ -36,12 +38,23 @@ namespace ZombieCityCleaner.EditorTools
     public static class MontagemDosZumbis
     {
         const string Arte = "Assets/_Game/Art/Characters/Zombie";
-        // os zumbis leves (24/10/2026, ~1.300 faces, a aparência variando por zumbi) no lugar dos 4 modelos de ~3.100
-        // vértices ("Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira"), que ficam na pasta
+        // o zumbi leve (24/10/2026, ~1.300 faces, a aparência variando por zumbi). Ficam na pasta e voltam se entrarem na
+        // lista: os em blocos de 25/10/2026, o garoto e a mulher com os 3 cabelos de cada (um modelo por corpo e cabelo,
+        // <corpo>_<cabelo>.fbx, com os LODs dentro: "ZombieBloco_Cuia", "_Espetado", "_Comprido",
+        // "ZombieBlocoMulher_Longo", "_Selvagem" e "_Chanel"; saíram a pedido, ainda não estavam bons), e os 4 modelos
+        // de ~3.100 vértices ("Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira")
         static readonly string[] Modelos = { "ZombieGaroto" };
-        // a pasta de arte dos zumbis leves: <modelo>_Base.png, <modelo>_Mascaras.png, <modelo>_Sujeiras.png (as 10
-        // camadas numa folha de 5 × 2) e a folha de rostos de todos (Rosto.png)
+        // a pasta de arte dos zumbis leves e em blocos: <texturas>_Base.png, <texturas>_Mascaras.png, <texturas>_Sujeiras.png
+        // (as 10 camadas numa folha de 5 × 2) e a folha de rostos (Rosto.png; a dos zumbis em blocos, Rosto_Bloco.png).
+        // Nos zumbis em blocos, as texturas são as do corpo (<corpo>_*.png), as mesmas para os 3 cabelos
         const int ColunasDasSujeiras = 5, LinhasDasSujeiras = 2;
+        static readonly Dictionary<string, string> FolhaDeRostos = new Dictionary<string, string>
+        {
+            { "ZombieBloco", "Rosto_Bloco.png" }, { "ZombieBlocoMulher", "Rosto_Bloco.png" },
+        };
+        // os LODs dos zumbis em blocos, no mesmo FBX e nos mesmos ossos da malha principal (Zombie_Body)
+        // (com outro nome que "_LOD1": esse é o jeito da Unity de criar um LOD Group sozinha)
+        static readonly string[] MalhasDeLonge = { "Zombie_Body_Longe1", "Zombie_Body_Longe2" };
         // os corpos (ragdoll) no total, divididos entre os modelos (eram 12 de cada um dos 4)
         const int CorposNoTotal = 48;
         const string Controlador = Arte + "/Zombie.controller";
@@ -115,7 +128,8 @@ namespace ZombieCityCleaner.EditorTools
             public int indice;
             public string nome, fbx;
             public Dictionary<string, AnimationClip> clipes;
-            public Mesh inteira, semCabeca;
+            public Mesh original, inteira, semCabeca;
+            public Mesh[] longe;
             public Material material;
             public int submeshCabeca, submeshCarne;
             public float altura;
@@ -222,8 +236,10 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var c in AssetDatabase.LoadAllAssetsAtPath(extra).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")))
                 m.clipes[c.name] = c;
 
-            var smr = Carregar<GameObject>(m.fbx).GetComponentInChildren<SkinnedMeshRenderer>();
+            var smrs = Carregar<GameObject>(m.fbx).GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var smr = Principal(smrs);
             var original = smr.sharedMesh;
+            m.original = original;
             int Sub(string fim) => System.Array.FindIndex(smr.sharedMaterials, x => x.name.EndsWith(fim));
             int corpo = Sub("_Corpo"), cabeca = Sub("_Cabeca"), carne = Sub("Zombie_Flesh");
             if (corpo < 0 || cabeca < 0 || carne < 0) throw new System.Exception($"{nome}: faltam os materiais _Corpo, _Cabeca ou Zombie_Flesh.");
@@ -233,14 +249,60 @@ namespace ZombieCityCleaner.EditorTools
             m.inteira = Malha(original, $"{nome}_Inteira", original.GetTriangles(corpo).Concat(original.GetTriangles(cabeca)));
             m.semCabeca = Malha(original, $"{nome}_SemCabeca", original.GetTriangles(corpo), original.GetTriangles(carne));
             m.altura = original.bounds.size.z;   // a malha do Blender tem o z para cima
+            m.longe = MalhasDeLonge.Select(n => smrs.FirstOrDefault(s => s.name == n)).Where(s => s != null)
+                                   .Select((s, i) => MalhaDeLonge(s, smr, $"{nome}_Inteira_LOD{i + 1}")).ToArray();
             m.material = MaterialDoModelo(nome);
             return m;
+        }
+
+        /// <summary>A malha principal do FBX: a "Zombie_Body" (os zumbis em blocos trazem também os LODs).</summary>
+        static SkinnedMeshRenderer Principal(SkinnedMeshRenderer[] smrs) => smrs.FirstOrDefault(s => s.name == "Zombie_Body") ?? smrs[0];
+
+        /// <summary>
+        /// Uma malha de LOD pronta para entrar no lugar da inteira, no mesmo SkinnedMeshRenderer: os pesos com os índices
+        /// dos ossos da malha principal (pelo nome) e as bindposes nessa ordem, e tudo num submesh só (um draw call).
+        /// </summary>
+        static Mesh MalhaDeLonge(SkinnedMeshRenderer lod, SkinnedMeshRenderer principal, string nome)
+        {
+            var original = lod.sharedMesh;
+            var malha = Object.Instantiate(original);
+            malha.name = nome;
+            var mapa = lod.bones.Select(b => System.Array.FindIndex(principal.bones, p => p.name == b.name)).ToArray();
+            if (mapa.Any(i => i < 0)) throw new System.Exception($"{nome}: o LOD tem ossos que a malha principal não tem.");
+            malha.boneWeights = original.boneWeights.Select(w => new BoneWeight
+            {
+                boneIndex0 = mapa[w.boneIndex0], weight0 = w.weight0, boneIndex1 = mapa[w.boneIndex1], weight1 = w.weight1,
+                boneIndex2 = mapa[w.boneIndex2], weight2 = w.weight2, boneIndex3 = mapa[w.boneIndex3], weight3 = w.weight3,
+            }).ToArray();
+            var binds = principal.sharedMesh.bindposes;
+            var bindsDoLod = original.bindposes;
+            for (int j = 0; j < mapa.Length; j++) binds[mapa[j]] = bindsDoLod[j];
+            malha.bindposes = binds;
+            var tris = Enumerable.Range(0, original.subMeshCount).SelectMany(i => original.GetTriangles(i)).ToList();
+            malha.subMeshCount = 1;
+            malha.SetTriangles(tris, 0, false);
+            return Salvar(malha, $"{Malhas}/{nome}.asset");
+        }
+
+        /// <summary>
+        /// O nome das texturas de um modelo: as dele (<modelo>_Base.png) ou, nos zumbis em blocos (<corpo>_<cabelo>),
+        /// as do corpo, que servem para todos os cabelos.
+        /// </summary>
+        static string NomeDasTexturas(string nome)
+        {
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>($"{Arte}/{nome}_Base.png") != null) return nome;
+            int i = nome.LastIndexOf('_');
+            if (i > 0 && AssetDatabase.LoadAssetAtPath<Texture2D>($"{Arte}/{nome.Substring(0, i)}_Base.png") != null) return nome.Substring(0, i);
+            return nome;
         }
 
         static Mesh Malha(Mesh original, string nome, params IEnumerable<int>[] submeshes)
         {
             var malha = Object.Instantiate(original);
             malha.name = nome;
+            // os pesos no formato de 4 por vértice, o mesmo das malhas cortadas (Membros) e dos LODs: com os ossos rígidos
+            // dos zumbis em blocos, o FBX vem com 1 osso por vértice, e o renderer parava de desenhar na troca de malha
+            malha.boneWeights = original.boneWeights;
             malha.subMeshCount = submeshes.Length;
             for (int i = 0; i < submeshes.Length; i++) malha.SetTriangles(submeshes[i].ToList(), i, false);
             return Salvar(malha, $"{Malhas}/{nome}.asset");
@@ -272,8 +334,10 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static Material MaterialDoModelo(string nome)
         {
+            string texturas = NomeDasTexturas(nome);
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>($"{Arte}/{texturas}_Base.png") != null)
+                return MaterialLeve(texturas, $"{Arte}/Materials/{texturas}.mat");
             string caminho = $"{Arte}/Materials/{nome}.mat";
-            if (AssetDatabase.LoadAssetAtPath<Texture2D>($"{Arte}/{nome}_Base.png") != null) return MaterialLeve(nome, caminho);
             var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
             if (m == null)
             {
@@ -309,7 +373,7 @@ namespace ZombieCityCleaner.EditorTools
             m.SetTexture("_BaseMap", TexturaLeve<Texture2D>($"{nome}_Base.png", true, 2048));
             m.SetTexture("_Mascaras", TexturaLeve<Texture2D>($"{nome}_Mascaras.png", false, 1024));
             m.SetTexture("_Sujeiras", TexturaLeve<Texture2DArray>($"{nome}_Sujeiras.png", false, 8192, true));
-            m.SetTexture("_Rosto", TexturaLeve<Texture2D>("Rosto.png", true, 2048));
+            m.SetTexture("_Rosto", TexturaLeve<Texture2D>(FolhaDeRostos.TryGetValue(nome, out var folha) ? folha : "Rosto.png", true, 2048));
             m.enableInstancing = false;
             EditorUtility.SetDirty(m);
             return m;
@@ -496,7 +560,7 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static (Vector3 centro, float raio) Cranio(Modelo m, Matrix4x4 malhaNoMundo)
         {
-            var malha = AssetDatabase.LoadAllAssetsAtPath(m.fbx).OfType<Mesh>().First();
+            var malha = m.original;
             var vertices = malha.vertices;
             float corte = malha.GetTriangles(m.submeshCarne).Average(i => malhaNoMundo.MultiplyPoint3x4(vertices[i]).y);
             var cranio = malha.GetTriangles(m.submeshCabeca).Distinct().Select(i => malhaNoMundo.MultiplyPoint3x4(vertices[i]))
@@ -540,7 +604,11 @@ namespace ZombieCityCleaner.EditorTools
             animador.applyRootMotion = false;
             animador.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             animador.keepAnimatorStateOnDisable = true;   // o nível Longe desliga o Animator; ao voltar, ele continua de onde estava
-            var smr = modelo.GetComponentInChildren<SkinnedMeshRenderer>();
+            var smrs = modelo.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var smr = Principal(smrs);
+            // os LODs entram no lugar da malha, no mesmo renderer (Zumbi.DefinirDetalhe): os renderers deles ficam desligados
+            foreach (var s in smrs)
+                if (s != smr) s.gameObject.SetActive(false);
             PoseDeRepouso(smr);
             Transform Osso(string nome) => smr.bones.First(t => t.name == nome);
 
@@ -584,6 +652,7 @@ namespace ZombieCityCleaner.EditorTools
             z.esqueleto = smr.bones;
             z.partes = CorpoDeZumbi.Partes.Select(Osso).ToArray();
             z.malhaInteira = m.inteira;
+            z.malhasDeLonge = m.longe;
             z.materialPele = m.material;
             z.materialCarne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
 
@@ -634,7 +703,10 @@ namespace ZombieCityCleaner.EditorTools
             modelo.transform.SetParent(raiz.transform, false);
             Object.DestroyImmediate(modelo.GetComponent<Animator>());
             foreach (var t in modelo.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = CorpoDeZumbi.Camada;
-            var smr = modelo.GetComponentInChildren<SkinnedMeshRenderer>();
+            var smrs = modelo.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var smr = Principal(smrs);
+            foreach (var s in smrs)
+                if (s != smr) Object.DestroyImmediate(s.gameObject);   // o corpo que cai é sempre o inteiro (LOD0)
             PoseDeRepouso(smr);
             Transform Osso(string nome) => smr.bones.First(t => t.name == nome);
             Vector3 P(string nome) => Osso(nome).position;
@@ -840,7 +912,7 @@ namespace ZombieCityCleaner.EditorTools
             go.AddComponent<BenchmarkDeZumbis>();
             m.modelos = prefabs;
             m.corpos = corpos;
-            m.corposPorModelo = Mathf.Max(12, CorposNoTotal / prefabs.Length);
+            m.corposPorModelo = Mathf.Max(8, CorposNoTotal / prefabs.Length);
             m.vozDoZumbi = Carregar<AudioClip>("Assets/_Game/Audio/SomZombie1.mp3");
             m.areasLivres = new[]
             {

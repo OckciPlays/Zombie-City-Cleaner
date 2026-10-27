@@ -50,6 +50,8 @@ namespace ZombieCityCleaner.Zombies
         [Tooltip("A malha inteira (a base dos cortes) e os materiais da pele e da carne (as tampas dos cortes).")]
         public Mesh malhaInteira;
         public Material materialPele, materialCarne;
+        [Tooltip("As malhas mais simples para longe (LOD1 e LOD2, nos mesmos ossos), dos zumbis em blocos; vazio = só a inteira.")]
+        public Mesh[] malhasDeLonge;
 
         static readonly int SpeedId = Animator.StringToHash("Speed");
         static readonly int AtacarId = Animator.StringToHash("Atacar");
@@ -128,6 +130,27 @@ namespace ZombieCityCleaner.Zombies
             _visivel = visivel;
             AtualizarRenderers();
         }
+
+        /// <summary>O LOD do desenho (0 perto, 1 e 2 mais longe), pela distância de quem joga nesta máquina.</summary>
+        public int Detalhe { get; private set; }
+
+        /// <summary>
+        /// A malha pela distância até quem joga aqui (com histerese de 2 m): a inteira perto e as mais simples longe, já
+        /// com os membros perdidos. O pedaço que cai sai sempre da inteira (só se vê de perto).
+        /// </summary>
+        internal void DefinirDetalhe(float distancia, float ate0, float ate1)
+        {
+            if (malhasDeLonge == null || malhasDeLonge.Length == 0) return;
+            // para chegar mais perto, 2 m a menos (não fica trocando na divisa)
+            int d = distancia < ate0 - (Detalhe > 0 ? 2f : 0f) ? 0 : distancia < ate1 - (Detalhe > 1 ? 2f : 0f) ? 1 : 2;
+            d = Mathf.Min(d, malhasDeLonge.Length);
+            if (d == Detalhe) return;
+            Detalhe = d;
+            if (renderers.Length > 0 && renderers[0] is SkinnedMeshRenderer pele) pele.sharedMesh = Membros.Variante(MalhaDoDetalhe, esqueleto, Cortes);
+        }
+
+        Mesh MalhaDoDetalhe => Detalhe == 0 || malhasDeLonge == null || Detalhe > malhasDeLonge.Length || malhasDeLonge[Detalhe - 1] == null
+            ? malhaInteira : malhasDeLonge[Detalhe - 1];
 
         // morto, o zumbi some: quem aparece é o corpo com física
         void AtualizarRenderers()
@@ -257,7 +280,7 @@ namespace ZombieCityCleaner.Zombies
             }
             if (pele != null)
             {
-                pele.sharedMesh = Membros.Variante(malhaInteira, esqueleto, novos);
+                pele.sharedMesh = Membros.Variante(MalhaDoDetalhe, esqueleto, novos);
                 pele.sharedMaterials = novos == 0 ? _soPele : _peleECarne;
             }
             AtualizarColisores();
@@ -346,7 +369,7 @@ namespace ZombieCityCleaner.Zombies
                 Cortes = 0;
                 var pele = renderers[0] as SkinnedMeshRenderer;
                 GarantirMateriais();
-                if (pele != null) { pele.sharedMesh = malhaInteira; pele.sharedMaterials = _soPele; }
+                if (pele != null) { pele.sharedMesh = MalhaDoDetalhe; pele.sharedMaterials = _soPele; }
             }
             _rastejaEm = 0f;
             if (_pernas != 0) DefinirPernas(0);

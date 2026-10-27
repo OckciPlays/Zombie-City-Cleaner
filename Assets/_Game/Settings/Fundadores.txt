@@ -1,0 +1,25 @@
+# Os fundadores: os nomes pintados na parede do salão do bunker, à direita do painel de armas.
+# Um nome por linha (até 26 letras). Linhas vazias e as que começam com # não contam.
+# Até 10 nomes por coluna (20 nomes = 2 colunas; 30 = 3).
+# Depois de mudar, rode na Unity: Zombie City Cleaner > Escrever os fundadores no bunker (com a Demo_Cidade aberta)
+# e, para a cena de vídeo, Zombie City Cleaner > Montar cena de vídeo.
+@marlosbryyan
+@pedro_ziquinatti
+@pegue_montkv
+Ezequias Benício Santos
+@a_bertanhaf
+JM SANTOS
+@menor_lopes_007
+@unik_bmv
+@lucca.hernandez00
+@Santozx
+@mateuskeiti
+SOME
+@n1ght2k
+@lipexx_061
+@thurmtt
+Yuri Oliveira
+@gbarbosa.16
+@moises_nobr
+ERICK VEIGA
+gz_games_dev

@@ -65,7 +65,10 @@ namespace ZombieCityCleaner.EditorTools
             };
             filme.CaptureAlpha = false;
             filme.CaptureAudio = true;
-            filme.ImageInputSettings = new GameViewInputSettings { OutputWidth = Largura, OutputHeight = Altura };
+            // em pé (o Reels) ou deitado (a tela do jogo)
+            filme.ImageInputSettings = diretor.deitado
+                ? new GameViewInputSettings { OutputWidth = Altura, OutputHeight = Largura }
+                : new GameViewInputSettings { OutputWidth = Largura, OutputHeight = Altura };
             filme.OutputFile = Path.Combine(pasta, $"{diretor.NomeDaTomada}_{DateTime.Now:yyyyMMdd_HHmmss}");
 
             var controle = ScriptableObject.CreateInstance<RecorderControllerSettings>();

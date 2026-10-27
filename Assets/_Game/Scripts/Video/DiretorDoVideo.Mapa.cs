@@ -269,7 +269,7 @@ namespace ZombieCityCleaner.Video
         {
             var cidade = GameObject.Find("Cidade").transform;
             Esconder(cidade.Find("Casa da família/Bunker"));
-            foreach (var nome in new[] { "Bunker (rede)", "Parede de armas", "Itens no mundo" })
+            foreach (var nome in new[] { "Bunker (rede)", "Parede de armas", "Itens no mundo", "Fundadores (bunker)" })
             {
                 var raiz = GameObject.Find(nome);
                 if (raiz != null) Esconder(raiz.transform);

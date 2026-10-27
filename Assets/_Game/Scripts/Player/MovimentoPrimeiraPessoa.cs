@@ -37,11 +37,33 @@ namespace ZombieCityCleaner.Player
 
         public bool Correndo { get; private set; }
 
+        [Header("Voar (o F1 do mundo grande)")]
+        public float velocidadeVoando = 25f;
+        [Tooltip("Quantas vezes mais rápido voando com o correr apertado.")]
+        public float multiplicadorVoandoRapido = 6f;
+
+        /// <summary>
+        /// Voando (o menu do desenvolvedor, na cena Mundo): sem gravidade nem colisão, para onde a câmera olha; Espaço
+        /// sobe, Ctrl (ou C) desce e o correr acelera.
+        /// </summary>
+        public bool Voando
+        {
+            get => _voando;
+            set
+            {
+                if (_voando == value) return;
+                _voando = value;
+                _controle.enabled = !value;
+                _velocidade = Vector3.zero;
+            }
+        }
+
         CharacterController _controle;
         InputAction _mover, _olhar, _pular, _correr;
         InventarioJogador _inventario;
         Vector3 _velocidade;
         float _yaw, _pitch, _coice;
+        bool _voando;
 
         void Awake()
         {
@@ -58,9 +80,16 @@ namespace ZombieCityCleaner.Player
         {
             _controle.enabled = false;
             transform.SetPositionAndRotation(posicao, Quaternion.Euler(0f, yaw, 0f));
-            _controle.enabled = true;
+            _controle.enabled = !_voando;
             _yaw = yaw;
             _velocidade = Vector3.zero;
+        }
+
+        /// <summary>Para onde o jogador olha (o giro e a inclinação, positiva para baixo), como se fosse o mouse.</summary>
+        public void Olhar(float yaw, float pitch)
+        {
+            _yaw = yaw;
+            _pitch = Mathf.Clamp(pitch, -pitchMaximo, pitchMaximo);
         }
 
         /// <summary>Coice do tiro: a mira sobe um pouco e volta sozinha.</summary>
@@ -133,6 +162,21 @@ namespace ZombieCityCleaner.Player
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
 
             if (mover.sqrMagnitude > 1f) mover.Normalize();
+            if (_voando)
+            {
+                // voando: para onde a câmera olha, atravessando tudo
+                var teclado = Keyboard.current;
+                float sobe = 0f;
+                if (controla && teclado != null)
+                {
+                    if (teclado.spaceKey.isPressed) sobe += 1f;
+                    if (teclado.leftCtrlKey.isPressed || teclado.cKey.isPressed) sobe -= 1f;
+                }
+                Vector3 direcao = cabeca.forward * mover.y + transform.right * mover.x + Vector3.up * sobe;
+                transform.position += direcao * (velocidadeVoando * (correr ? multiplicadorVoandoRapido : 1f) * dt);
+                Correndo = false;
+                return;
+            }
             // com o pneu nas mãos (pesado): devagar, sem correr nem pular
             if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
             bool pesado = _inventario != null && _inventario.CarregandoPneu;

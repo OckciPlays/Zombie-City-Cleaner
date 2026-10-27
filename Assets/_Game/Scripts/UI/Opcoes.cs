@@ -7,7 +7,9 @@ namespace ZombieCityCleaner.UI
     /// - o volume geral (o do ouvido, de 0 a 100%);
     /// - o limite de quadros por segundo: VSync (acompanha o monitor), 30, 60, 120, 144 ou sem limite. Com um número, o
     ///   VSync desliga (senão o limite não vale);
-    /// - mostrar o FPS no canto de cima, à direita (a média de meio segundo).
+    /// - mostrar o FPS no canto de cima, à direita (a média de meio segundo);
+    /// - o menu do desenvolvedor (F1) também no jogo compilado (no Editor e nas builds de desenvolvimento ele sempre está;
+    ///   numa partida, vale a opção do anfitrião, que é quem faz os pedidos do F1).
     /// O <see cref="MenuOnline"/> carrega, mede os quadros, desenha o painel e o contador.
     /// </summary>
     public static class Opcoes
@@ -20,6 +22,8 @@ namespace ZombieCityCleaner.UI
         public static float Volume { get; private set; } = 1f;
         public static int Limite { get; private set; }
         public static bool MostrarFps { get; private set; }
+        /// <summary>O menu do desenvolvedor (F1) ligado no jogo compilado.</summary>
+        public static bool LiberarF1 { get; private set; }
 
         static int _quadros;
         static float _tempo, _fps, _gravarEm = -1f;
@@ -29,6 +33,7 @@ namespace ZombieCityCleaner.UI
             Volume = Mathf.Clamp01(PlayerPrefs.GetFloat("opcoes.volume", 1f));
             Limite = Mathf.Clamp(PlayerPrefs.GetInt("opcoes.limite", ComVSync), 0, Limites.Length - 1);
             MostrarFps = PlayerPrefs.GetInt("opcoes.fps", 0) == 1;
+            LiberarF1 = PlayerPrefs.GetInt("opcoes.f1", 0) == 1;
             AudioListener.volume = Volume;
             AplicarLimite();
         }
@@ -44,6 +49,7 @@ namespace ZombieCityCleaner.UI
             PlayerPrefs.SetFloat("opcoes.volume", Volume);
             PlayerPrefs.SetInt("opcoes.limite", Limite);
             PlayerPrefs.SetInt("opcoes.fps", MostrarFps ? 1 : 0);
+            PlayerPrefs.SetInt("opcoes.f1", LiberarF1 ? 1 : 0);
             PlayerPrefs.Save();
             _gravarEm = -1f;
         }
@@ -119,6 +125,15 @@ namespace ZombieCityCleaner.UI
             if ((fps == 1) != MostrarFps)
             {
                 MostrarFps = fps == 1;
+                Gravar();
+            }
+            y += 66 * u;
+
+            GUI.Label(new Rect(x, y + 6 * u, w, 26 * u), "Menu do desenvolvedor (F1)", texto);
+            int f1 = GUI.SelectionGrid(new Rect(x + w - 200 * u, y, 200 * u, 36 * u), LiberarF1 ? 1 : 0, NaoSim, 2, opcao);
+            if ((f1 == 1) != LiberarF1)
+            {
+                LiberarF1 = f1 == 1;
                 Gravar();
             }
             y += 66 * u;

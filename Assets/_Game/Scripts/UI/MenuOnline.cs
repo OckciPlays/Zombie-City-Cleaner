@@ -1,8 +1,10 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.Video;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.UI
 {
@@ -12,7 +14,8 @@ namespace ZombieCityCleaner.UI
     /// limite de FPS e o contador de FPS, que este menu desenha em cima de tudo).
     /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
     /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip] e -bot (o jogador anda e
-    /// atira sozinho).
+    /// atira sozinho); na cena Mundo, também -semente N, -tamanho pequeno|medio|grande e -nome TEXTO (o mundo de quem hospeda).
+    /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o "Novo mundo": o nome, o tamanho e a semente.
     /// </summary>
     public class MenuOnline : MonoBehaviour
     {
@@ -48,6 +51,10 @@ namespace ZombieCityCleaner.UI
         string _codigo = "", _ip = "127.0.0.1";
         bool _pausa, _opcoes, _estavaAberto = true;
         GUIStyle _titulo, _texto, _botao, _campo, _erro;
+        // o "Novo mundo" da cena Mundo
+        string _nomeDoMundo = "Mundo novo", _semente = "";
+        TamanhoDoMundo _tamanho = TamanhoDoMundo.Grande;
+        static readonly string[] NomesDosTamanhos = { "Pequeno (3 km)", "Médio (5 km)", "Grande (8 km)" };
 
         void OnEnable() => _esperarSoltar = true;
 
@@ -56,6 +63,17 @@ namespace ZombieCityCleaner.UI
             _sessao = SessaoOnline.Instancia;
             Opcoes.Carregar();   // antes da linha de comando: o robô de teste fica em 60 FPS
             var args = Environment.GetCommandLineArgs();
+            // o mundo da cena Mundo antes de hospedar: -semente N, -tamanho pequeno|medio|grande e -nome TEXTO
+            for (int i = 0; i + 1 < args.Length; i++)
+            {
+                if (args[i] == "-semente" && int.TryParse(args[i + 1], out int semente)) MundoDaPartida.Pedido.semente = semente;
+                else if (args[i] == "-tamanho" && Tamanhos.Ler(args[i + 1], out var tamanho)) MundoDaPartida.Pedido.tamanho = tamanho;
+                else if (args[i] == "-nome") MundoDaPartida.Pedido.nome = args[i + 1];
+            }
+            // (o pedido fica de um Play para o outro no Editor; sem o nome, o campo de texto quebrava o menu)
+            _nomeDoMundo = string.IsNullOrEmpty(MundoDaPartida.Pedido.nome) ? PedidoDoMundo.Padrao.nome : MundoDaPartida.Pedido.nome;
+            _tamanho = MundoDaPartida.Pedido.tamanho;
+            _semente = MundoDaPartida.Pedido.semente > 0 ? MundoDaPartida.Pedido.semente.ToString() : "";
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-bot") { Bot = true; Application.targetFrameRate = 60; }
@@ -142,6 +160,9 @@ namespace ZombieCityCleaner.UI
             _texto = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(16 * u), alignment = TextAnchor.MiddleCenter, wordWrap = true };
             _texto.normal.textColor = new Color(0.8f, 0.8f, 0.78f);
             _botao = new GUIStyle(GUI.skin.button) { fontSize = Mathf.RoundToInt(18 * u) };
+            // o escolhido de um grupo (o tamanho do mundo) fica apertado e amarelo
+            _botao.onNormal.textColor = _botao.onHover.textColor = _botao.onActive.textColor = new Color(0.98f, 0.85f, 0.45f);
+            _botao.onNormal.background = _botao.active.background;
             _campo = new GUIStyle(GUI.skin.textField) { fontSize = Mathf.RoundToInt(20 * u), alignment = TextAnchor.MiddleCenter };
             _erro = new GUIStyle(_texto);
             _erro.normal.textColor = new Color(1f, 0.45f, 0.4f);
@@ -163,7 +184,10 @@ namespace ZombieCityCleaner.UI
             if (estado == SessaoOnline.Estado.Conectado)
             {
                 string codigo = _sessao.Local ? "partida local" : $"código {_sessao.Codigo}";
-                GUI.Label(new Rect(14 * u, 10 * u, 600 * u, 24 * u), $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores  ·  ESC: menu", new GUIStyle(_texto) { alignment = TextAnchor.UpperLeft });
+                // na cena Mundo, o nome, a semente e o tamanho do mundo
+                var m = MundoDaPartida.Instancia;
+                string mundo = m != null && m.Semente != 0 ? $"  ·  {m.Nome}: semente {m.Semente}, {Tamanhos.Lado(m.Tamanho) / 1000} km" : "";
+                GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}  ·  ESC: menu", new GUIStyle(_texto) { alignment = TextAnchor.UpperLeft });
                 if (_pausa) Pausa(u);
                 return;
             }
@@ -176,17 +200,23 @@ namespace ZombieCityCleaner.UI
                 if (Opcoes.Painel(u, Screen.height * 0.3f, _titulo, _botao)) _opcoes = false;
                 return;
             }
-            float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.18f;
+            // na cena Mundo, o "Novo mundo" (o nome, o tamanho e a semente) no lugar do "Hospedar partida"
+            bool doMundo = MundoDaPartida.Instancia != null;
+            float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * (doMundo ? 0.07f : 0.18f);
             GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
-            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Demo · até 4 jogadores", _texto);
-            y += 110 * u;
+            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), doMundo ? "Novo mundo · até 4 jogadores" : "Demo · até 4 jogadores", _texto);
+            y += (doMundo ? 84 : 110) * u;
             if (estado == SessaoOnline.Estado.Conectando)
             {
                 GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
                 return;
             }
-            if (GUI.Button(new Rect(x, y, w, 46 * u), "Hospedar partida", _botao)) _sessao.Hospedar();
-            y += 70 * u;
+            if (doMundo) y = NovoMundo(u, x, y, w);
+            else
+            {
+                if (GUI.Button(new Rect(x, y, w, 46 * u), "Hospedar partida", _botao)) _sessao.Hospedar();
+                y += 70 * u;
+            }
             GUI.Label(new Rect(x, y, w, 24 * u), "ou entre com o código de um amigo:", _texto);
             y += 28 * u;
             _codigo = GUI.TextField(new Rect(x, y, w * 0.62f, 40 * u), _codigo, 12, _campo);
@@ -194,12 +224,50 @@ namespace ZombieCityCleaner.UI
             y += 64 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "Teste sem internet (mesma rede):", _texto);
             y += 26 * u;
-            if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), "Hospedar local", _botao)) _sessao.HospedarLocal();
+            if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), doMundo ? "Criar local" : "Hospedar local", _botao))
+            {
+                if (doMundo) PedirOMundo();
+                _sessao.HospedarLocal();
+            }
             _ip = GUI.TextField(new Rect(x + w * 0.52f, y, w * 0.26f, 32 * u), _ip, 40, _campo);
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao)) _sessao.EntrarLocal(_ip);
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Opções", _botao)) _opcoes = true;
+        }
+
+        // o "Novo mundo": o nome, o tamanho e a semente, e o botão de criar (hospedar); devolve onde o menu continua
+        float NovoMundo(float u, float x, float y, float w)
+        {
+            GUI.Label(new Rect(x, y, w, 22 * u), "Nome do mundo:", _texto);
+            y += 24 * u;
+            _nomeDoMundo = GUI.TextField(new Rect(x, y, w, 36 * u), _nomeDoMundo, 30, _campo);
+            y += 46 * u;
+            GUI.Label(new Rect(x, y, w, 22 * u), "Tamanho do mapa:", _texto);
+            y += 24 * u;
+            _tamanho = (TamanhoDoMundo)GUI.SelectionGrid(new Rect(x, y, w, 34 * u), (int)_tamanho, NomesDosTamanhos, 3, _botao);
+            y += 44 * u;
+            GUI.Label(new Rect(x, y, w, 22 * u), "Semente (um número ou uma palavra; vazia, sorteada):", _texto);
+            y += 24 * u;
+            _semente = GUI.TextField(new Rect(x, y, w * 0.62f, 34 * u), _semente, 20, _campo);
+            if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 34 * u), "Sortear", _botao)) _semente = GeradorDoMundo.NovaSemente().ToString();
+            y += 46 * u;
+            if (GUI.Button(new Rect(x, y, w, 46 * u), "Criar o mundo", _botao))
+            {
+                PedirOMundo();
+                _sessao.Hospedar();
+            }
+            return y + 66 * u;
+        }
+
+        // o pedido do menu para o MundoDaPartida. Uma palavra vira um número (o mesmo para todos que digitarem ela)
+        void PedirOMundo()
+        {
+            string texto = _semente.Trim();
+            int semente = 0;
+            if (texto.Length > 0 && (!int.TryParse(texto, out semente) || semente <= 0))
+                semente = (int)(Sorteio.Fnv(texto.ToLowerInvariant()) % 999999UL) + 1;
+            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo };
         }
 
         void Pausa(float u)

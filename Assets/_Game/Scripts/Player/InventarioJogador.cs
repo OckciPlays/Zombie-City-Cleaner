@@ -262,6 +262,7 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         static bool ArmaCabeEm(List<ItemNaMochila> lista, bool mochila, bool coldre, Item arma, ushort ignorar)
         {
+            if (ModoVideo.ArmasSemLimite) return true;   // o vídeo das armas: só o espaço da mochila conta
             int m = mochila ? 1 : 0, c = coldre ? 1 : 0, todas = 0, longas = 0;
             foreach (var o in lista)
             {

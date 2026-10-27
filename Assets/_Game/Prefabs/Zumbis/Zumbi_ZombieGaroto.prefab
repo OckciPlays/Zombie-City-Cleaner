@@ -252,6 +252,7 @@ MonoBehaviour:
   malhaInteira: {fileID: 4300000, guid: 08167c0f9469f9d45b3b0ec70de2dac4, type: 2}
   materialPele: {fileID: 2100000, guid: 0a95bae38d5838c4cabc77500d46582a, type: 2}
   materialCarne: {fileID: 2100000, guid: 28e0176e515c0204980ce17958acf480, type: 2}
+  malhasDeLonge: []
 --- !u!195 &3091026744272646358
 NavMeshAgent:
   m_ObjectHideFlags: 0

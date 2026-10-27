@@ -23,11 +23,12 @@ namespace ZombieCityCleaner.Zombies
         public static readonly int CamadasId = Shader.PropertyToID("_Camadas");
         public static readonly int QuadrosId = Shader.PropertyToID("_Quadros");
 
-        // as cores (sRGB), as mesmas do previa_leves.py
+        // as cores (sRGB), as mesmas do previa_leves.py. A pele é sempre verde (a pedido, sem roxo, azul nem verde muito
+        // claro): do verde acinzentado ao escuro
         static readonly Color[] Peles =
         {
-            C(0.62f, 0.68f, 0.55f), C(0.58f, 0.62f, 0.66f), C(0.70f, 0.66f, 0.50f), C(0.52f, 0.50f, 0.44f),
-            C(0.40f, 0.36f, 0.30f), C(0.66f, 0.60f, 0.60f),
+            C(0.52f, 0.60f, 0.45f), C(0.46f, 0.56f, 0.40f), C(0.50f, 0.55f, 0.38f), C(0.42f, 0.50f, 0.38f),
+            C(0.38f, 0.47f, 0.33f), C(0.48f, 0.54f, 0.46f),
         };
         static readonly Color[] RoupasDeCima =
         {

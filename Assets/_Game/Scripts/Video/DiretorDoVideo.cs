@@ -20,7 +20,7 @@ namespace ZombieCityCleaner.Video
     public partial class DiretorDoVideo : MonoBehaviour
     {
         /// <summary>As tomadas do vídeo (as outras entram nas próximas partes do plano dos vídeos).</summary>
-        public enum Tomada { Teste, Mapa, Bunker, Zumbis, Jogador }
+        public enum Tomada { Teste, Mapa, Bunker, Zumbis, Jogador, Armas }
 
         [Header("O que gravar")]
         [Tooltip("O nome do vídeo: a pasta dele em Recordings/.")]
@@ -29,10 +29,17 @@ namespace ZombieCityCleaner.Video
         [Tooltip("Ligado, o Play grava a tomada (MP4 de 1080 × 1920, 60 fps, com o som do jogo, em Recordings/<vídeo>/) " +
                  "e para sozinho no fim. Desligado, o Play só mostra.")]
         public bool gravar;
+        [Tooltip("Grava deitado (1920 × 1080, como a tela do jogo) em vez de em pé (1080 × 1920). No vídeo das armas, deitado " +
+                 "a arma aparece como no jogo; em pé, a câmera dos braços se ajusta para ela caber.")]
+        public bool deitado;
         [Tooltip("Na tomada do jogador: você mesmo anda (WASD, mouse, Shift corre, F a lanterna, clique soca), com a câmera " +
                  "atrás do ombro. Enter faz o final (o jogador para e a câmera sobe) e termina a tomada; parar o Play também " +
                  "termina (e fecha o vídeo). Desligado, o diretor anda sozinho pelo caminho de sempre.")]
         public bool jogadorNoControle;
+        [Tooltip("Na tomada das armas: a mira, a munição, a dica do E e a luneta da sniper na tela (desligado: nada na tela).")]
+        public bool mostrarMira = true;
+        [Tooltip("Na tomada das armas: a hora do dia (21 = noite; 12 = meio-dia, com neblina). O dia anda no ritmo do jogo.")]
+        [Range(0f, 24f)] public float horaDasArmas = 21f;
 
         [Header("Como a partida começa")]
         [Tooltip("O jogador nasce com a pistola (desligado: de mãos vazias).")]
@@ -57,6 +64,8 @@ namespace ZombieCityCleaner.Video
         public string NomeDaTomada => $"{(int)tomada}_{tomada}";
         /// <summary>A tomada tem zumbis na cidade (no mapa se montando e no bunker, eles só chegam depois).</summary>
         bool ComZumbis => tomada != Tomada.Mapa && tomada != Tomada.Bunker;
+        /// <summary>Quem grava joga (a tomada não tem duração certa: termina no Enter ou parando o Play).</summary>
+        bool NoControle => tomada == Tomada.Armas || (tomada == Tomada.Jogador && jogadorNoControle);
 
         Volume _volume;
         ColorAdjustments _brilho;
@@ -70,9 +79,10 @@ namespace ZombieCityCleaner.Video
         {
             Instancia = this;
             ModoVideo.Ligado = true;
-            ModoVideo.SemArma = !jogadorComArma;
+            // no vídeo das armas, o jogador nasce com a pistola e o painel vem cheio, qualquer que seja a escolha de cima
+            ModoVideo.SemArma = !jogadorComArma && tomada != Tomada.Armas;
             // antes do Start do painel, que mostra o começo antes da partida
-            if (!armasNoPainel)
+            if (!armasNoPainel && tomada != Tomada.Armas)
                 foreach (var painel in FindObjectsByType<ParedeDeArmas>(FindObjectsInactive.Include)) painel.inicio = new TipoDeArma[0];
             // antes da partida abrir: o ZombieManager povoa as hordas quando nasce na rede
             var zumbis = FindAnyObjectByType<ZombieManager>();
@@ -114,7 +124,7 @@ namespace ZombieCityCleaner.Video
             Debug.Log($"[vídeo] tomada {NomeDaTomada}");
             Rodando = true;
             // (com você no controle, a tomada não tem duração certa: sem folha)
-            if (folhaDeConferencia && !(tomada == Tomada.Jogador && jogadorNoControle)) StartCoroutine(Conferir(Time.time));
+            if (folhaDeConferencia && !NoControle) StartCoroutine(Conferir(Time.time));
             yield return tomadaAtual;
             Rodando = false;
             Terminou = true;
@@ -123,18 +133,20 @@ namespace ZombieCityCleaner.Video
 
         void LateUpdate()
         {
-            // a câmera do vídeo filma no lugar da do jogador (que a liga quando nasce) e é o ouvido da cena
+            // a câmera do vídeo filma no lugar da do jogador (que a liga quando nasce) e é o ouvido da cena; no vídeo das
+            // armas, quem filma é a do jogador, e o jogo cuida dela (a luneta desliga a dos braços)
             var jogador = JogadorRede.Local;
-            if (jogador != null)
+            if (jogador != null && _comCamera)
             {
-                jogador.cameraMundo.enabled = !_comCamera;
-                jogador.cameraBracos.enabled = !_comCamera;
-                jogador.ouvido.enabled = !_comCamera;
+                jogador.cameraMundo.enabled = false;
+                jogador.cameraBracos.enabled = false;
+                jogador.ouvido.enabled = false;
             }
             cameraDoVideo.enabled = _comCamera;
             ouvidoDoVideo.enabled = _comCamera;
             ModoVideo.Olho = _comCamera ? cameraDoVideo.transform.position : (Vector3?)null;
             AplicarCorte();
+            if (tomada == Tomada.Armas && !_comCamera) BracosEmPe();
             // o brilho a mais por cima do pós-processamento do dia e da noite (no celular, a noite fica escura demais)
             float noite = CicloDoDia.Noite;
             _brilho.postExposure.value = Mathf.Lerp(_brilhoDoDia, _brilhoDaNoite, noite) + Mathf.Lerp(_brilhoExtra, _brilhoExtraDeNoite, noite);
@@ -155,6 +167,8 @@ namespace ZombieCityCleaner.Video
                     return PrepararZumbis();
                 case Tomada.Jogador:
                     return PrepararJogador();
+                case Tomada.Armas:
+                    return PrepararArmas();
                 default:
                     // o teste da gravação: fim de tarde, a câmera chegando devagar no cruzamento do meio, com o prédio no fundo
                     Clima(17.5f, 0.6f, 0.3f);

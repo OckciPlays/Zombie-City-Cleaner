@@ -90,8 +90,9 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// O chão de um colisor naquele ponto: o gramado ("Chão"), o cômodo de uma construção com <see cref="PisoPorZona"/>
-        /// (as casas, o bunker, e os móveis dentro delas) ou concreto.
+        /// O chão de um colisor naquele ponto: o gramado ("Chão"; no mundo gerado, concreto em cima das estradas asfaltadas
+        /// e do acostamento, que não têm colisor próprio), o cômodo de uma construção com <see cref="PisoPorZona"/> (as
+        /// casas, o bunker, e os móveis dentro delas) ou concreto.
         /// </summary>
         static Superficie Do(Collider c, Vector3 ponto)
         {
@@ -100,7 +101,20 @@ namespace ZombieCityCleaner.Player
                 chao = (c.name == "Chão" ? Superficie.Grama : Superficie.Concreto, c.name == "Chão" ? null : c.GetComponentInParent<PisoPorZona>());
                 _cache[c] = chao;
             }
-            return chao.zonas != null ? chao.zonas.Em(ponto) : chao.fixa;
+            if (chao.zonas != null) return chao.zonas.Em(ponto);
+            if (chao.fixa == Superficie.Grama && NaEstrada(ponto)) return Superficie.Concreto;
+            return chao.fixa;
+        }
+
+        static bool NaEstrada(Vector3 p)
+        {
+            var mundo = ZombieCityCleaner.World.MundoDaPartida.Instancia;
+            var dados = mundo != null ? mundo.Dados : null;
+            if (dados == null) return false;
+            // as ruas das cidades (o asfalto não tem colisor próprio: o pé fica no terreno, 5 cm abaixo)
+            if (dados.OcupadoPelaCidade(new Vector2(p.x, p.z), 0f)) return true;
+            var rede = dados.Rede;
+            return rede != null && rede.Acostado(p.x, p.z, out bool deTerra) > 0.5f && !deTerra;
         }
     }
 }

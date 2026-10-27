@@ -249,6 +249,16 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **Ajustes depois da primeira gravação:** a câmera mais afastada no começo, o brilho caindo no fim (os zumbis colados na lanterna estouravam) e a subida mais baixa (de 12 m, o jogador sumia no meio das cabeças).
 - **Você no controle (a pedido do usuário):** com "Jogador No Controle", quem grava anda com o teclado e o mouse, e a câmera segue atrás do ombro (com o olhar e encostando nas paredes); Enter faz o final e termina a tomada. Testado com o W e o Enter simulados: o jogador andou 9 m com a câmera atrás, e o Enter parou, subiu a câmera e fechou o vídeo (20 s).
 
+## A parede dos fundadores e o vídeo das armas (25/10/2026, a pedido)
+
+- O primeiro vídeo passou de 2.800 visualizações e 50 comentários. A promessa era pôr o nome de quem comentasse no jogo.
+- **A parede dos fundadores:** os nomes dos 20 primeiros comentários, pintados em spray na parede do fundo do salão do bunker, à direita do painel de armas ("FUNDADORES" em vermelho, os nomes em branco, em colunas, tortos, com as bordas ásperas e escorridos). Os nomes ficam num arquivo de texto (`Settings/Fundadores.txt`), e um menu pinta a imagem e põe a parede na Demo_Cidade. O usuário escreveu os 20 nomes (os @ do Instagram e nomes), e todos couberam.
+- **A montagem da cena de vídeo guarda as escolhas do diretor:** ela refazia o diretor do zero, e a cena voltava na tomada `Teste` (a do primeiro vídeo). Agora a tomada, o Gravar, o Deitado e o resto passam da cena velha para a nova.
+- **A tomada `Armas`** (o segundo vídeo): em primeira pessoa, com quem grava jogando. O jogador nasce no salão, de frente para o painel cheio, com a pistola, a mochila grande e o coldre; no vídeo, todas as armas cabem nele e a munição não acaba. A tela mostra só a mira e a munição. Enter termina.
+- **A arma na tela em pé:** a 1080 × 1920, a arma de primeira pessoa (feita para a tela deitada) ficava cortada. A câmera dos braços abre mais e anda 6 cm para a direita e 2,5 cm para cima para a arma caber, e a opção "Deitado" grava 1920 × 1080.
+  - A primeira versão deslocava a imagem da câmera dos braços, e o cano apontava à esquerda da mira (o usuário viu a arma torta). Mover a câmera mantém o cano na mira: conferido nas 5 armas.
+- Testado: as 4 armas longas cabendo juntas, a reserva infinita e um MP4 de teste de 15 s em pé, com a pistola, a mira e a parede dos fundadores no fundo, sem erros no Console.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

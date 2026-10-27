@@ -89,6 +89,7 @@ namespace ZombieCityCleaner.Zombies
         static readonly Dictionary<(Mesh, byte), Mesh> _variantes = new Dictionary<(Mesh, byte), Mesh>();
         static readonly Dictionary<(Mesh, byte, byte), Mesh> _pedacos = new Dictionary<(Mesh, byte, byte), Mesh>();
         static readonly HashSet<int> _perdidosDepois = new HashSet<int>(), _perdidosAntes = new HashSet<int>();
+        static readonly List<int> _juntas = new List<int>();
 
         /// <summary>A malha sem os membros perdidos, com as tampas de carne (no submesh 1). Inteira, é a própria base.</summary>
         public static Mesh Variante(Mesh baseMesh, Transform[] ossos, byte membros)
@@ -97,7 +98,13 @@ namespace ZombieCityCleaner.Zombies
             if (_variantes.TryGetValue((baseMesh, membros), out var pronta) && pronta != null) return pronta;
             Perdidos(membros, ossos, _perdidosDepois);
             _perdidosAntes.Clear();
-            var m = Cortar(baseMesh, _perdidosDepois, _perdidosAntes, false, -1);
+            _juntas.Clear();
+            for (int l = 0; l < Quantos; l++)
+            {
+                int e = Estado(membros, l);
+                if (e > 0) _juntas.Add(IndiceDoOsso(ossos, OssoDoCorte(l, e)));
+            }
+            var m = Cortar(baseMesh, _perdidosDepois, _perdidosAntes, false, -1, _juntas);
             m.name = $"{baseMesh.name} (cortada {membros})";
             m.UploadMeshData(true);   // a GPU guarda; os cortes seguintes partem sempre da malha inteira
             _variantes[(baseMesh, membros)] = m;
@@ -114,7 +121,9 @@ namespace ZombieCityCleaner.Zombies
             if (_pedacos.TryGetValue((baseMesh, antes, depois), out var pronto) && pronto != null) return pronto;
             Perdidos(depois, ossos, _perdidosDepois);
             Perdidos(antes, ossos, _perdidosAntes);
-            var m = Cortar(baseMesh, _perdidosDepois, _perdidosAntes, true, ossoDoCorte);
+            _juntas.Clear();
+            _juntas.Add(ossoDoCorte);
+            var m = Cortar(baseMesh, _perdidosDepois, _perdidosAntes, true, ossoDoCorte, _juntas);
             m.name = $"{baseMesh.name} (pedaço {antes}→{depois})";
             m.UploadMeshData(true);
             _pedacos[(baseMesh, antes, depois)] = m;
@@ -130,8 +139,9 @@ namespace ZombieCityCleaner.Zombies
         /// Corta a malha. Um triângulo sai quando a média, nos três vértices, do peso dos ossos perdidos passa de metade.
         /// Sem "pedaço", devolve a malha que fica (pele e carne, com as tampas). Com "pedaço", devolve só o que saiu agora
         /// (perdido depois e não antes), fechado com tampas viradas, no espaço do osso do corte e sem pesos (rígido).
+        /// As juntas são os ossos dos cortes: onde o corte não deixou buraco (os zumbis em blocos), a tampa é a da caixa.
         /// </summary>
-        static Mesh Cortar(Mesh baseMesh, HashSet<int> perdidosDepois, HashSet<int> perdidosAntes, bool pedaco, int ossoDoCorte)
+        static Mesh Cortar(Mesh baseMesh, HashSet<int> perdidosDepois, HashSet<int> perdidosAntes, bool pedaco, int ossoDoCorte, List<int> juntas)
         {
             var v = baseMesh.vertices;
             var nrm = baseMesh.normals;
@@ -223,9 +233,11 @@ namespace ZombieCityCleaner.Zombies
             var usRosto = temRosto ? new List<Vector2>(uvRosto) : null;
             var ws = new List<BoneWeight>(pesos);
             var tampa = new List<int>();
+            int buracos = 0;
             foreach (var lista in grupos.Values)
             {
                 if (lista.Count < 3) continue;
+                buracos++;
                 // o meio da borda e a direção da tampa (para fora do buraco)
                 Vector3 meio = Vector3.zero;
                 var unicos = new HashSet<int>();
@@ -255,6 +267,16 @@ namespace ZombieCityCleaner.Zombies
                     tampa.Add(Copia(b)); tampa.Add(Copia(a)); tampa.Add(centro);
                 }
             }
+
+            // os zumbis em blocos: cada pedaço é uma caixa fechada, o corte não deixa borda e não há buraco para tampar
+            // (nos outros modelos a malha é contínua, todo corte deixa buraco e as tampas são só as dos buracos)
+            if (juntas != null && buracos == 0)
+                foreach (int junta in juntas)
+                {
+                    if (junta < 0) continue;
+                    Vector3 j = baseMesh.bindposes[junta].inverse.MultiplyPoint3x4(Vector3.zero);
+                    TampaDeCaixa(v, pesos, j, junta, perdidosDepois, pedaco, vs, ns, us, usRosto, ws, tampa);
+                }
 
             var m = new Mesh { indexFormat = vs.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
             if (pedaco)
@@ -289,6 +311,93 @@ namespace ZombieCityCleaner.Zombies
             }
             if (pedaco) m.RecalculateBounds();
             return m;
+        }
+
+        /// <summary>
+        /// A tampa de um corte sem buraco (os zumbis em blocos): um retângulo de carne no plano da junta, do tamanho da
+        /// ponta da caixa que sai (os vértices do osso do corte perto da junta). Na malha que fica, ele vai logo depois do
+        /// fim do que ficou ali (o toco: a ponta do braço, o lado do peito, o pé da coxa), virado para fora e preso ao osso
+        /// que mais aparece nesse fim; no pedaço, logo antes da ponta dele, virado para trás.
+        /// </summary>
+        static void TampaDeCaixa(Vector3[] v, BoneWeight[] pesos, Vector3 j, int junta, HashSet<int> perdidos, bool pedaco,
+                                 List<Vector3> vs, List<Vector3> ns, List<Vector2> us, List<Vector2> usRosto, List<BoneWeight> ws, List<int> tampa)
+        {
+            // a direção do corte: da junta para o meio do que sai (os vértices presos ao osso do corte)
+            Vector3 soma = Vector3.zero;
+            int n = 0;
+            for (int i = 0; i < v.Length; i++)
+                if (pesos[i].boneIndex0 == junta && pesos[i].weight0 >= 0.5f) { soma += v[i]; n++; }
+            if (n == 0) return;
+            Vector3 dir = soma / n - j;
+            if (dir.sqrMagnitude < 1e-8f) return;
+            dir.Normalize();
+            Vector3 eu = Vector3.Cross(dir, Mathf.Abs(dir.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+            Vector3 ev = Vector3.Cross(dir, eu);
+            // a ponta da caixa que sai, perto do plano da junta
+            float uMin = float.MaxValue, uMax = float.MinValue, wMin = float.MaxValue, wMax = float.MinValue, ponta = float.MaxValue;
+            for (int i = 0; i < v.Length; i++)
+            {
+                if (pesos[i].boneIndex0 != junta || pesos[i].weight0 < 0.5f) continue;
+                Vector3 d = v[i] - j;
+                float t = Vector3.Dot(d, dir);
+                if (t < -0.04f || t > 0.04f) continue;
+                float a = Vector3.Dot(d, eu), b = Vector3.Dot(d, ev);
+                uMin = Mathf.Min(uMin, a); uMax = Mathf.Max(uMax, a);
+                wMin = Mathf.Min(wMin, b); wMax = Mathf.Max(wMax, b);
+                ponta = Mathf.Min(ponta, t);
+            }
+            if (uMin >= uMax || wMin >= wMax) return;
+            float onde;
+            int osso = junta;
+            Vector3 normal = dir;
+            if (pedaco)
+            {
+                onde = ponta - 0.002f;
+                normal = -dir;
+            }
+            else
+            {
+                // o fim do que fica, dentro da ponta: a tampa do toco vai logo depois dele
+                float fim = float.MinValue;
+                var conta = new Dictionary<int, int>();
+                for (int i = 0; i < v.Length; i++)
+                {
+                    var w = pesos[i];
+                    if (w.weight0 < 0.5f || perdidos.Contains(w.boneIndex0)) continue;
+                    Vector3 d = v[i] - j;
+                    float t = Vector3.Dot(d, dir);
+                    if (t < -0.06f || t > 0.06f) continue;
+                    float a = Vector3.Dot(d, eu), b = Vector3.Dot(d, ev);
+                    if (a < uMin - 0.01f || a > uMax + 0.01f || b < wMin - 0.01f || b > wMax + 0.01f) continue;
+                    fim = Mathf.Max(fim, t);
+                    conta.TryGetValue(w.boneIndex0, out int c);
+                    conta[w.boneIndex0] = c + 1;
+                }
+                if (conta.Count == 0) return;
+                int mais = -1;
+                foreach (var kv in conta)
+                    if (kv.Value > mais) { mais = kv.Value; osso = kv.Key; }
+                onde = fim + 0.002f;
+            }
+            float uc = (uMin + uMax) / 2f, wc = (wMin + wMax) / 2f, hu = (uMax - uMin) / 2f * 0.94f, hw = (wMax - wMin) / 2f * 0.94f;
+            int primeiro = vs.Count;
+            foreach (var (su, sw) in new[] { (-1f, -1f), (1f, -1f), (1f, 1f), (-1f, 1f) })
+            {
+                vs.Add(j + dir * onde + eu * (uc + su * hu) + ev * (wc + sw * hw));
+                ns.Add(normal); us.Add(new Vector2(0.5f, 0.5f)); usRosto?.Add(ForaDoRosto);
+                ws.Add(new BoneWeight { boneIndex0 = osso, weight0 = 1f });
+            }
+            // a frente do triângulo é a de Cross(b - a, c - a): virada para "normal"
+            if (pedaco)
+            {
+                tampa.Add(primeiro); tampa.Add(primeiro + 2); tampa.Add(primeiro + 1);
+                tampa.Add(primeiro); tampa.Add(primeiro + 3); tampa.Add(primeiro + 2);
+            }
+            else
+            {
+                tampa.Add(primeiro); tampa.Add(primeiro + 1); tampa.Add(primeiro + 2);
+                tampa.Add(primeiro); tampa.Add(primeiro + 2); tampa.Add(primeiro + 3);
+            }
         }
 
         static float Peso(BoneWeight w, HashSet<int> ossos)

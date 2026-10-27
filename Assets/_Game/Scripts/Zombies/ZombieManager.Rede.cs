@@ -195,8 +195,10 @@ namespace ZombieCityCleaner.Zombies
                     }
                     c.QuadroDaCopia(agora, dt);
                     // hitboxes e sombra pela distância de quem joga aqui (a cópia só existe até ~40 m, ou mais na luneta)
-                    var n = NivelPara(Distancia(local, c.transform.position), c.NivelAtual);
+                    float daqui = Distancia(local, c.transform.position);
+                    var n = NivelPara(daqui, c.NivelAtual);
                     c.AplicarNivel(n == Zumbi.Nivel.Longe ? Zumbi.Nivel.Medio : n);
+                    c.DefinirDetalhe(daqui, distanciaDoLOD1, distanciaDoLOD2);
                 }
             }
         }

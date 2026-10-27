@@ -106,6 +106,37 @@ A tomada `Jogador` tem 10 s; o roteiro usa uns 9 s dela.
   - Sem folha de conferência nesse modo (a tomada não tem duração certa).
 - **Na primeira gravação,** a câmera ficava perto demais (o jogador tomava metade da tela), os zumbis colados na lanterna estouravam de branco e, de 12 m, as cabeças dos zumbis escondiam a dele. A câmera recuou, o brilho cai no fim e a subida para a 7,5 m, quase em cima dele.
 
+## O segundo vídeo: as armas (25/10/2026)
+
+O primeiro vídeo passou de 2.800 visualizações e 50 comentários. O segundo mostra cada arma atirando, em primeira pessoa, com você jogando, e o bunker ganhou a parede com o nome dos 20 primeiros que comentaram.
+
+### A parede dos fundadores
+
+Os nomes ficam pintados na parede do fundo do salão do bunker, à direita do painel de armas: "FUNDADORES" em vermelho em cima e os nomes em branco embaixo, em 2 colunas de 10.
+
+1. Escreva os nomes em `Assets/_Game/Settings/Fundadores.txt`, um por linha, no lugar de "Nome 01" a "Nome 20" (até 26 letras cada; acentos servem, emojis não).
+2. Rode **Zombie City Cleaner > Escrever os fundadores no bunker** (com a `Demo_Cidade` ou a `Video.unity` aberta). A cena é salva sozinha.
+
+A imagem da parede é a mesma nas duas cenas: os nomes novos aparecem na `Demo_Cidade` e na `Video.unity` sem precisar montar a cena de vídeo de novo.
+
+Mais nomes depois (os próximos comentários)? Ponha na lista e rode o menu de novo: com 30, vão 3 colunas; cabem até 40.
+
+### A tomada `Armas`
+
+- **O começo:** você nasce no salão do bunker, de frente para o painel cheio, com a pistola na mão, a mochila grande e o coldre. À noite (21h, muda em **Hora Das Armas**), com os zumbis na cidade e sem levar dano.
+- **Jogando:** WASD anda, Shift corre, o mouse mira, o clique atira, R recarrega, o botão direito mira com a luneta da sniper, F liga a lanterna.
+  - **E** pega cada arma do painel. Todas cabem (no vídeo não tem o limite de armas no corpo, só o espaço da mochila).
+  - **1, 2, 3** e a roda do mouse trocam de arma. São 3 atalhos: com 5 armas, as que passam ficam só na mochila.
+  - **A munição não acaba** (a tela mostra "∞").
+- **Na tela:** a mira, o nome da arma e a munição, a dica do E e a luneta. Sem as barras de vida, fome e sede e sem os atalhos. Para gravar sem nada na tela, desligue **Mostrar Mira**.
+- **Enter** termina a tomada (o vídeo fecha e o Play para). Parar o Play também termina.
+- **Em pé ou deitado:** em pé (1080 × 1920, o Reels), a câmera dos braços se ajusta para a arma caber na tela, com o cano apontando para a mira. Ligue **Deitado** para gravar 1920 × 1080, com a arma como no jogo.
+  - Na primeira versão, em pé, a arma apontava à esquerda da mira (parecia torta). Corrigido: o ajuste agora move a câmera dos braços em vez de deslocar a imagem.
+- **Cuidado com o TAB e o ESC:** a tela do inventário e o menu abrem invisíveis no modo vídeo e prendem o mouse. Se apertar sem querer, aperte a mesma tecla de novo.
+- **A área segura:** em pé, o nome da arma e a munição ficam embaixo, à direita, onde o Instagram põe os botões. A mira e a arma ficam no meio.
+
+Para gravar: no "Diretor do vídeo", escolha a tomada **Armas** e ligue **Gravar** (e **Deitado**, se quiser), dê Play, clique no Game view para prender o mouse e jogue.
+
 ## Como gravar
 
 1. Abra `Assets/_Game/Scenes/Video.unity`.
@@ -119,7 +150,7 @@ Sem **Gravar**, o Play só mostra a tomada. Para ver como ela fica no celular, p
 
 **O Recorder grava com o tempo fixo:** cada quadro avança 1/60 s do jogo, por mais que demore. Se o jogo ficar lento (mil zumbis na tela), no Editor parece câmera lenta, mas o vídeo sai liso.
 
-**Mudou a cidade, os zumbis ou o clima da Demo_Cidade?** Rode de novo o menu **Zombie City Cleaner > Montar cena de vídeo**. Ela apaga e refaz a `Video.unity` a partir de uma cópia da Demo_Cidade (mudanças feitas à mão nela se perdem).
+**Mudou a cidade, os zumbis ou o clima da Demo_Cidade?** Rode de novo o menu **Zombie City Cleaner > Montar cena de vídeo**. Ela apaga e refaz a `Video.unity` a partir de uma cópia da Demo_Cidade (mudanças feitas à mão nela se perdem). As escolhas do "Diretor do vídeo" (a tomada, Gravar, Deitado...) ficam como estavam.
 
 ## Dicas para os vídeos
 
