@@ -13,7 +13,8 @@ namespace ZombieCityCleaner.Testes
     /// fundos dos quintais), na água e nos lugares do mapa (nem a grama), nenhuma árvore encostada nos objetos da beira, o
     /// pé no chão, o mapa com mata de verdade, plantios e todas as espécies, a mata chegando nas cidades e nas estradas,
     /// sem vazios no campo (a pedido: o mapa coberto de árvores, mato e grama), as malhas no Cidade_Arvores.fbx (com o
-    /// vento na cor do vértice) e o mato das frestas (Parte M9c) só nas ruas e nas calçadas das cidades.
+    /// vento na cor do vértice), o mato das frestas (Parte M9c) só nas ruas e nas calçadas das cidades e as lavouras das
+    /// fazendas (Parte M9d) nas faixas certas, com os fardos e o pátio vazio.
     /// </summary>
     public class FlorestaTestes
     {
@@ -107,12 +108,73 @@ namespace ZombieCityCleaner.Testes
                         erros.Add($"{onde}: na estrada (a {dist:0.0} m do meio)");
                     foreach (var l in d.Plano.Lugares)
                         if (!l.EhCidade && Vector2.Distance(l.Centro, new Vector2(x, z)) < l.Raio)
+                        {
+                            // nas fazendas, as lavouras (Parte M9d): só o pátio fica vazio
+                            if (l.Tipo == TipoDeLugar.Fazenda && !NoPatio(NoGiro(l, x, z))) continue;
                             erros.Add($"{onde}: dentro de {l.Tipo} {l.Nome}");
+                        }
                     if (erros.Count > 20) break;
                 }
             }
             Assert.IsEmpty(erros, string.Join("\n", erros.Take(20)));
             Assert.Greater(plantas, 20000, "quase nenhuma planta no mapa médio");
+        }
+
+        // o ponto no giro do lugar (u, v como no PintorDoMapa) e o pátio da fazenda
+        static Vector2 NoGiro(Lugar l, float x, float z)
+        {
+            float g = l.Giro * Mathf.Deg2Rad, rx = x - l.Centro.x, rz = z - l.Centro.y;
+            return new Vector2(rx * Mathf.Cos(g) + rz * Mathf.Sin(g), -rx * Mathf.Sin(g) + rz * Mathf.Cos(g));
+        }
+
+        static bool NoPatio(Vector2 local) => Mathf.Abs(local.x) < Floresta.MeioPatio.x && Mathf.Abs(local.y) < Floresta.MeioPatio.y;
+
+        [Test]
+        public void AsFazendasTemLavouras()
+        {
+            // Parte M9d: em cada fazenda, o milho nas faixas do milho e o trigo nas do trigo (as do mapa pintado), os
+            // fardos, e nada no pátio da casa
+            var d = Medio;
+            var fazendas = d.Plano.DoTipo(TipoDeLugar.Fazenda).ToList();
+            Assert.Greater(fazendas.Count, 3, "poucas fazendas no mapa médio");
+            var lista = new List<PlantaDaFloresta>();
+            var erros = new List<string>();
+            int fardos = 0, menor = int.MaxValue;
+            foreach (var l in fazendas)
+            {
+                int milho = 0, trigo = 0;
+                var min = d.BlocoDe(l.Centro.x - l.Raio, l.Centro.y - l.Raio);
+                var max = d.BlocoDe(l.Centro.x + l.Raio, l.Centro.y + l.Raio);
+                for (int bz = Mathf.Max(0, min.y); bz <= Mathf.Min(d.BlocosPorLado - 1, max.y); bz++)
+                for (int bx = Mathf.Max(0, min.x); bx <= Mathf.Min(d.BlocosPorLado - 1, max.x); bx++)
+                {
+                    d.Floresta.DoBloco(bx, bz, lista);
+                    foreach (var p in lista)
+                    {
+                        var local = NoGiro(l, p.Posicao.x, p.Posicao.z);
+                        if (local.magnitude > l.Raio) continue;
+                        string onde = $"{Floresta.Nomes[(int)p.Especie]} em {l.Nome} ({local.x:0.0}, {local.y:0.0})";
+                        if (NoPatio(local)) erros.Add($"{onde}: no pátio");
+                        if (p.Especie == Especie.MilhoA || p.Especie == Especie.MilhoB)
+                        {
+                            milho++;
+                            if (!Floresta.FaixaDeMilho(local.x)) erros.Add($"{onde}: o milho na faixa do trigo");
+                        }
+                        else if (p.Especie == Especie.TrigoA || p.Especie == Especie.TrigoB)
+                        {
+                            trigo++;
+                            if (Floresta.FaixaDeMilho(local.x)) erros.Add($"{onde}: o trigo na faixa do milho");
+                        }
+                        else if (p.Especie == Especie.Fardo) fardos++;
+                        if (erros.Count > 20) break;
+                    }
+                }
+                menor = Mathf.Min(menor, Mathf.Min(milho, trigo));
+                if (milho < 500 || trigo < 500) erros.Add($"{l.Nome}: pouca lavoura ({milho} touceiras de milho e {trigo} tufos de trigo)");
+            }
+            Debug.Log($"Médio 7: {fazendas.Count} fazendas, {fardos} fardos; a menor lavoura tem {menor} plantas de um tipo");
+            Assert.IsEmpty(erros, string.Join("\n", erros.Take(20)));
+            Assert.Greater(fardos, fazendas.Count, "quase nenhum fardo nas fazendas");
         }
 
         [Test]

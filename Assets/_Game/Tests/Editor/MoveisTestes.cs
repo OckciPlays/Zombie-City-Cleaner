@@ -264,8 +264,11 @@ namespace ZombieCityCleaner.Testes
             var regras = new (string contexto, string comodo, string[] tipos, float minimo)[]
             {
                 ("casa", "quarto", new[] { "cama", "cama de solteiro" }, 0.97f),
-                ("casa", "cozinha", new[] { "geladeira", "frigobar" }, 0.95f),
-                ("casa", "cozinha", new[] { "fogao" }, 0.95f),
+                // (com as folhas das portas bem abertas sólidas para quem anda, a mobília: 92% e 94%; eram 95%. Nas casas
+                // e nos apartamentos das lojas, todas; nos apartamentos dos prédios, 85% e 88%: a porta de entrada abre
+                // para dentro da cozinha pequena, e a folha toma o lugar da geladeira ou do fogão)
+                ("casa", "cozinha", new[] { "geladeira", "frigobar" }, 0.91f),
+                ("casa", "cozinha", new[] { "fogao" }, 0.93f),
                 ("casa", "banheiro", new[] { "vaso" }, 0.97f),
                 ("casa", "sala", new[] { "sofa", "poltrona" }, 0.95f),
                 ("hospital", "enfermaria", new[] { "cama de hospital" }, 0.95f),

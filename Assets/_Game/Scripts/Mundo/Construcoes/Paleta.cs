@@ -58,8 +58,11 @@ namespace ZombieCityCleaner.Mundo
             ["Carvalho"] = new Vector2Int(9, 13), ["Samambaia"] = new Vector2Int(10, 13), ["Capim"] = new Vector2Int(11, 13),
             ["CapimSeco"] = new Vector2Int(12, 13), ["Pedra"] = new Vector2Int(13, 13), ["PedraEscura"] = new Vector2Int(14, 13),
             ["Musgo"] = new Vector2Int(15, 13),
-            // linha 14: o abandono das cidades (Parte M9b)
+            // linha 14: o abandono das cidades (Parte M9b) e as lavouras das fazendas (Parte M9d)
             ["VidroSujo"] = new Vector2Int(0, 14), ["Compensado"] = new Vector2Int(1, 14),
+            ["MilhoSeco"] = new Vector2Int(2, 14), ["MilhoEscuro"] = new Vector2Int(3, 14), ["Palha"] = new Vector2Int(4, 14),
+            ["Trigo"] = new Vector2Int(5, 14), ["TrigoClaro"] = new Vector2Int(6, 14), ["Feno"] = new Vector2Int(7, 14),
+            ["FenoEscuro"] = new Vector2Int(8, 14),
         };
 
         /// <summary>O UV do meio do quadradinho da cor.</summary>

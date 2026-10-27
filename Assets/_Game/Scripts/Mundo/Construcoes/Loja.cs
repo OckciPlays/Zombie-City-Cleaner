@@ -477,6 +477,7 @@ namespace ZombieCityCleaner.Mundo
             {
                 Caixa(new Vector3(r.center.x, piso + 0.5f, r.center.y), new Vector3(r.width, 1.0f, r.height), Cor.PorNormal("Madeira", "Batente"), colide: true);
                 ocupado.Add((r, piso));
+                solidos.Add((r, piso));
             }
         }
 

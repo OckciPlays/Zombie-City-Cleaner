@@ -3270,6 +3270,7 @@ GameObject:
   - component: {fileID: 2005601264}
   - component: {fileID: 2005601262}
   - component: {fileID: 2005601269}
+  - component: {fileID: 2005601270}
   m_Layer: 0
   m_Name: Mundo
   m_TagString: Untagged
@@ -3414,6 +3415,7 @@ MonoBehaviour:
   materialDaHera: {fileID: 2100000, guid: 043aa4574443edd49a5bdab9c9d5bb0b, type: 2}
   materialDasPichacoes: {fileID: 2100000, guid: 6c3a2b345a585b54facbda1731d830ac, type: 2}
   raioDaHera: 70
+  raioDaMobilia: 60
   raioDeDesenho: 180
   raioDeDetalhe: 100
   raioDeColisao: 90
@@ -3555,16 +3557,101 @@ MonoBehaviour:
   - {fileID: 7773549489946395838, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
   - {fileID: -6766803512020364291, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
   - {fileID: 4847369775534895079, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -7633188687809263447, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 1823143611604184341, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 7823833525786348021, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -3832016081375868864, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 7137747103991794005, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -6285419746077826959, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 4594687931567003664, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -2717260825857265490, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -4486459642639168104, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -6296347953500959068, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -7081571071130108412, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 4919769444826075948, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: -7191136712625616600, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 5562048701869972281, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  - {fileID: 2110827194254422648, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
   raio: 165
   lod1: 55
   lod2: 100
   alcanceDoChao: 75
   alcanceDoCapim: 55
   alcanceDaGrama: 38
+  alcanceDoMilho: 90
+  alcanceDoTrigo: 70
   orcamentoMs: 1
   intervaloDeRevisao: 0.25
   forcaDoVento: 0.22
   direcaoDoVento: {x: 0.92, y: 0.38}
+  raioDoJogador: 0.8
+  raioDoCarro: 2.2
+  rastro: 0.9
+--- !u!114 &2005601270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20da806ac83e047478f5e2a801dcd262, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.MobiliaDoMundo
+  malhas:
+  - {fileID: 8528416999759544605, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 942068427948784734, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -8933658657673755615, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -309837627529331714, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -5106365684515876179, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 4075376429735726187, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 6045280290445059555, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 6254316550345550886, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -96729626092204263, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -7097515586456881482, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -7845622737475839410, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1652375521799733427, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1553122944588989087, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -8778862156198755627, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 477475527016986851, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -469766255549731027, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1582611336276479486, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -40728178572323079, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 4172571437761182066, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 8064714046239612751, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 6782194208069360827, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -3902044730728013207, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1043100848869589224, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 2605272893034796671, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -6012429991907064708, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -2493884377308875861, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 6499486948163515657, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -3046231071627608319, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1593413840459531692, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -4070811897780057603, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -2216671368996779349, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -9011660512443035979, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -185447317763182327, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 5368302500845690230, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -3101794883780484172, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 1318449971495045613, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 4875775230678014919, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1530855934666777335, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 44107947027932116, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -578410871520358237, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -6435838744368770787, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -6884126922903766769, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -2022194757324286162, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 1120702798618418036, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 141950375661992185, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -1954522100336267264, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -2834798497355048623, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 2778976287348421816, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -6943078836223588627, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 6008424420378179403, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: 8476567016535443079, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+  - {fileID: -136606356150907032, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
 --- !u!1 &2056384982
 GameObject:
   m_ObjectHideFlags: 0

@@ -378,6 +378,8 @@ namespace ZombieCityCleaner.Mundo
             float folhas = Geo.Suave(0.26f, 0.48f, Folhas.Fbm(x / 70f + 5.3f, z / 70f - 3.1f, 3));
             // as folhas que caem da mata e dos plantios (Parte M9a)
             if (Floresta != null) folhas = Mathf.Max(folhas, Floresta.Folhagem(x, z) * (0.55f + 0.45f * Folhas.Amostra01(x / 23f, z / 23f)));
+            // a terra das lavouras das fazendas (Parte M9d): entre as fileiras do milho e no pátio
+            if (Floresta != null) terra = Mathf.Max(terra, Floresta.TerraDaLavoura(x, z) * (0.6f + 0.4f * Manchas.Amostra01(x / 7f, z / 7f)));
             float cascalho = Geo.Suave(0.2f, 0.65f, Borda(x, z)) * (0.55f + 0.45f * Detalhe.Amostra01(x * 0.03f, z * 0.03f));
             if (Lago != null && Lago.Q(x, z) < 2.2f)
             {

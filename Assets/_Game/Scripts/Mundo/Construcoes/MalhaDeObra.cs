@@ -113,6 +113,20 @@ namespace ZombieCityCleaner.Mundo
                 if (estoque.Count < MaxNoEstoque[(int)m._tamanho]) estoque.Add(m);
         }
 
+        /// <summary>
+        /// Uma malha pronta (um modelo do Blender, como os móveis da mobília), fora do estoque: os vértices, as normais, o UV
+        /// (na Paleta) e os triângulos. Depois de feita, só é lida (por <see cref="Juntar"/>, em várias threads).
+        /// </summary>
+        public static MalhaDeObra De(Vector3[] vertices, Vector3[] normais, Vector2[] uv, int[] triangulos)
+        {
+            var m = new MalhaDeObra(vertices.Length);
+            m._v.AddRange(vertices);
+            m._n.AddRange(normais);
+            m._uv.AddRange(uv);
+            m._t.AddRange(triangulos);
+            return m;
+        }
+
         /// <summary>Um polígono plano e convexo, com os pontos em volta (em qualquer sentido); 'fora' diz para que lado ele olha.</summary>
         public void Face(IList<Vector3> p, Vector3 fora, Cor cor)
         {

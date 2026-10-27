@@ -711,7 +711,9 @@ namespace ZombieCityCleaner.Mundo
                                                        k.tipo == "consultorio" || k.tipo == "triagem" || k.tipo == "raiox" || k.tipo == "rouparia" || k.tipo == "enfermaria");
 
         // as folhas das portas: para dentro do quarto, do banheiro, da lavanderia e do depósito; a de entrada do
-        // apartamento, para dentro dele (nunca para o corredor); quase em ângulo reto
+        // apartamento, para dentro dele (nunca para o corredor); entre dois cômodos comuns (a sala e a cozinha), para o
+        // maior (para dentro da cozinha pequena, a folha tirava o lugar do fogão e da geladeira: a mobília desvia dela);
+        // quase em ângulo reto
         void Portas()
         {
             var comMoldura = new HashSet<Parede>();
@@ -720,7 +722,8 @@ namespace ZombieCityCleaner.Mundo
                 if (comMoldura.Add(pf.w)) Molduras(pf.w);
                 if (pf.l == null || pf.l.passagem) continue;
                 Comodo a = pf.l.a, b = pf.l.b;
-                Comodo alvo = Privado(b) ? b : Privado(a) ? a : a.tipo == "corredor" ? b : b.tipo == "corredor" ? a : b;
+                Comodo alvo = Privado(b) ? b : Privado(a) ? a : a.tipo == "corredor" ? b : b.tipo == "corredor" ? a
+                            : (a.x1 - a.x0) * (a.z1 - a.z0) >= (b.x1 - b.x0) * (b.z1 - b.z0) ? a : b;
                 FolhaDePorta(pf.w, pf.ab.ini, pf.ab.larg, pf.ab.alto, alvo == pf.i.LadoN ? 1 : -1,
                              a.tipo == "corredor" || b.tipo == "corredor" ? Um("Madeira", "Batente", "MadeiraVelha") : Um("Batente", "Madeira", "Batente"),
                              Faixa(85f, 100f));

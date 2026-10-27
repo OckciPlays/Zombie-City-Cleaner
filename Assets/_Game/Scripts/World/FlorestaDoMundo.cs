@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Vehicles;
 
 namespace ZombieCityCleaner.World
 {
@@ -16,7 +17,8 @@ namespace ZombieCityCleaner.World
     ///  - A cada quadro, os blocos na vista da câmera (e os de perto, para as sombras de trás) entram nas listas da espécie
     ///    e do LOD de cada planta. Cada tipo tem o seu alcance e as suas trocas de LOD, longe do jogador (a pedido: perto,
     ///    a troca aparecia): as árvores até o fim (o _Longe1 a <see cref="lod1"/> m e o _Longe2 a <see cref="lod2"/> m), o chão da mata até <see cref="alcanceDoChao"/> m, o capim
-    ///    até <see cref="alcanceDoCapim"/> m e a grama até <see cref="alcanceDaGrama"/> m. O que tem alcance curto encolhe
+    ///    até <see cref="alcanceDoCapim"/> m, a grama até <see cref="alcanceDaGrama"/> m e o milho e o trigo das fazendas
+    ///    até <see cref="alcanceDoMilho"/> e <see cref="alcanceDoTrigo"/> m. O que tem alcance curto encolhe
     ///    até sumir no último quarto dele (o _Some do shader), sem estalar; a grama, o capim e a taboa têm a luz do chão
     ///    (o _Cima). Fazem sombra as árvores de perto e o LOD0 do
     ///    chão da mata (os arbustos, as pedras, os tocos e os troncos); a grama, o capim, as samambaias e a taboa, não.
@@ -43,6 +45,8 @@ namespace ZombieCityCleaner.World
         public float alcanceDoCapim = 55f;
         [Tooltip("Até onde aparece a grama baixa (m); só os blocos até aí montam a grama.")]
         public float alcanceDaGrama = 38f;
+        [Tooltip("Até onde aparecem o milho e o trigo das lavouras das fazendas (m; Parte M9d).")]
+        public float alcanceDoMilho = 90f, alcanceDoTrigo = 70f;
         [Tooltip("Tempo máximo por quadro (ms) para a colisão dos troncos.")]
         [Min(0.2f)] public float orcamentoMs = 1f;
         public float intervaloDeRevisao = 0.25f;
@@ -51,6 +55,10 @@ namespace ZombieCityCleaner.World
         public float forcaDoVento = 0.22f;
         [Tooltip("A direção média do vento no chão (x, z); a mesma da neblina.")]
         public Vector2 direcaoDoVento = new Vector2(0.92f, 0.38f);
+        [Tooltip("O raio em volta do pé de quem passa em que a grama dobra (m), de um jogador e de um carro (Parte M9d).")]
+        public float raioDoJogador = 0.8f, raioDoCarro = 2.2f;
+        [Tooltip("Por quanto tempo a grama fica dobrada atrás de quem passou (s): o rastro, com o raio diminuindo.")]
+        public float rastro = 0.9f;
 
         public static FlorestaDoMundo Instancia { get; private set; }
         /// <summary>O maior tempo de um quadro da floresta desde a última leitura (ms; quem mede zera).</summary>
@@ -84,6 +92,22 @@ namespace ZombieCityCleaner.World
         static readonly int VentoId = Shader.PropertyToID("_ZccVento");
         static readonly int SomeId = Shader.PropertyToID("_Some");
         static readonly int CimaId = Shader.PropertyToID("_Cima");
+        static readonly int DobraId = Shader.PropertyToID("_Dobra");
+        static readonly int DobradoresId = Shader.PropertyToID("_ZccDobradores");
+        static readonly int QuantosDobradoresId = Shader.PropertyToID("_ZccDobradoresN");
+        // quem dobra a grama (no shader, até 24): os jogadores com o rastro (4 pontos, um a cada 0,2 s) e os carros
+        const int MaxDobradores = 24, PontosDoRastro = 4;
+        readonly Vector4[] _dobradores = new Vector4[MaxDobradores];
+        readonly Dictionary<JogadorRede, Rastro> _rastros = new Dictionary<JogadorRede, Rastro>();
+        readonly List<JogadorRede> _semRastro = new List<JogadorRede>();
+
+        sealed class Rastro
+        {
+            public readonly Vector3[] Pontos = new Vector3[PontosDoRastro];
+            public readonly float[] Horas = new float[PontosDoRastro];
+            public int Cursor;
+            public float Proximo;
+        }
         readonly Dictionary<Vector2Int, Bloco> _blocos = new Dictionary<Vector2Int, Bloco>();
         readonly List<Bloco> _prontos = new List<Bloco>();
         readonly List<Bloco> _sobra = new List<Bloco>();
@@ -105,6 +129,7 @@ namespace ZombieCityCleaner.World
         {
             Limpar();
             Shader.SetGlobalVector(VentoId, Vector4.zero);
+            Shader.SetGlobalFloat(QuantosDobradoresId, 0f);
             if (Instancia == this) Instancia = null;
         }
 
@@ -140,6 +165,7 @@ namespace ZombieCityCleaner.World
             Colidir();
             MaiorQuadroMs = Mathf.Max(MaiorQuadroMs, (float)_relogio.Elapsed.TotalMilliseconds);
             Ventar();
+            Dobrar();
         }
 
         void LateUpdate()
@@ -172,10 +198,21 @@ namespace ZombieCityCleaner.World
                     t1 = 25f; t2 = 45f;
                     sombra0 = sombra1 = false;
                 }
+                else if (Floresta.EhLavoura(esp))
+                {
+                    // o milho e o trigo das fazendas (Parte M9d): o milho com a sombra de perto, o trigo sem
+                    bool milho = esp == Especie.MilhoA || esp == Especie.MilhoB;
+                    alcance = milho ? alcanceDoMilho : alcanceDoTrigo;
+                    t1 = milho ? 30f : 25f;
+                    t2 = milho ? 60f : 45f;
+                    sombra0 = milho;
+                    sombra1 = false;
+                }
                 else if (!Floresta.EhArvore(esp))
                 {
-                    // os arbustos, os tocos, os troncos caídos e as pedras (a pedra grande vai até o fim)
-                    alcance = esp == Especie.PedraC || esp == Especie.TroncoCaidoA ? raio : alcanceDoChao;
+                    // os arbustos, os tocos, os troncos caídos, as pedras e os fardos (a pedra grande, o tronco caído novo
+                    // e o fardo vão até o fim)
+                    alcance = esp == Especie.PedraC || esp == Especie.TroncoCaidoA || esp == Especie.Fardo ? raio : alcanceDoChao;
                     t1 = 30f; t2 = 60f;
                     sombra1 = false;
                 }
@@ -185,13 +222,16 @@ namespace ZombieCityCleaner.World
                 _sombra[e, 0] = sombra0;
                 _sombra[e, 1] = sombra1;
                 _sombra[e, 2] = false;
-                if (alcance < raio)
+                float dobra = Floresta.Dobra(esp);
+                if (alcance < raio || dobra > 0f)
                 {
                     _blocosDoSome[e] = new MaterialPropertyBlock();
-                    _blocosDoSome[e].SetVector(SomeId, new Vector4(alcance * 0.75f, alcance, 0f, 0f));
-                    // a grama, o capim e a taboa com a luz do chão
-                    if (Floresta.EhGrama(esp) || esp == Especie.CapimA || esp == Especie.CapimB || esp == Especie.Taboa)
+                    _blocosDoSome[e].SetVector(SomeId, alcance < raio ? new Vector4(alcance * 0.75f, alcance, 0f, 0f) : Vector4.zero);
+                    // a grama, o capim, a taboa e o trigo com a luz do chão
+                    if (Floresta.EhGrama(esp) || esp == Especie.CapimA || esp == Especie.CapimB || esp == Especie.Taboa
+                        || esp == Especie.TrigoA || esp == Especie.TrigoB)
                         _blocosDoSome[e].SetFloat(CimaId, 0.8f);
+                    _blocosDoSome[e].SetFloat(DobraId, dobra);
                 }
             }
         }
@@ -446,6 +486,50 @@ namespace ZombieCityCleaner.World
                 n++;
             }
             return n;
+        }
+
+        // quem dobra a grama (Parte M9d): cada jogador no pé dele e nos 4 pontos do rastro (um a cada 0,2 s, o raio
+        // diminuindo até o fim do rastro: a grama volta aos poucos) e os carros; vai para o shader da vegetação
+        void Dobrar()
+        {
+            int n = 0;
+            float agora = Time.time;
+            foreach (var j in JogadorRede.Todos)
+            {
+                if (j == null) continue;
+                var pe = j.transform.position;
+                if (!_rastros.TryGetValue(j, out var r)) _rastros[j] = r = new Rastro();
+                if (agora >= r.Proximo)
+                {
+                    r.Pontos[r.Cursor] = pe;
+                    r.Horas[r.Cursor] = agora;
+                    r.Cursor = (r.Cursor + 1) % PontosDoRastro;
+                    r.Proximo = agora + rastro / PontosDoRastro;
+                }
+                if (n < MaxDobradores) _dobradores[n++] = new Vector4(pe.x, pe.y, pe.z, raioDoJogador);
+                for (int k = 0; k < PontosDoRastro && n < MaxDobradores; k++)
+                {
+                    float idade = agora - r.Horas[k];
+                    if (r.Horas[k] <= 0f || idade >= rastro || (r.Pontos[k] - pe).sqrMagnitude < 0.04f) continue;
+                    var q = r.Pontos[k];
+                    _dobradores[n++] = new Vector4(q.x, q.y, q.z, raioDoJogador * (1f - idade / rastro));
+                }
+            }
+            foreach (var c in Carro.Todos)
+            {
+                if (c == null || n >= MaxDobradores) continue;
+                var p = c.transform.position;
+                _dobradores[n++] = new Vector4(p.x, p.y, p.z, raioDoCarro);
+            }
+            // os rastros de quem saiu
+            if (_rastros.Count > JogadorRede.Todos.Count)
+            {
+                _semRastro.Clear();
+                foreach (var j in _rastros.Keys) if (j == null || !JogadorRede.Todos.Contains(j)) _semRastro.Add(j);
+                foreach (var j in _semRastro) _rastros.Remove(j);
+            }
+            Shader.SetGlobalVectorArray(DobradoresId, _dobradores);
+            Shader.SetGlobalFloat(QuantosDobradoresId, n);
         }
 
         // a direção vira devagar e as rajadas vêm e vão

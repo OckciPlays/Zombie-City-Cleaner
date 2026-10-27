@@ -30,6 +30,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _Balanco: 1
+    - _Cima: 0
+    - _Dobra: 0
     - _Suavidade: 0.6
     - _Tremor: 0.035
     m_Colors:

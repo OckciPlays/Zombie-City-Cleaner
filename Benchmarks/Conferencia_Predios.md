@@ -1364,3 +1364,34 @@ Os cômodos: 71; o zumbi chega em 71; o jogador andou até 29 (o térreo e o pri
 
 - 5 andares, hospital, 33,5 × 21,4 m em (-13, -949): zumbi em 71 de 71 cômodos e na cobertura; jogador no andar 0: 15 de 15; jogador no andar 1: 14 de 14; subiu até a cobertura
 
+## 27/10/2026 15:44 — Grande (8 km), semente 12345, um prédio de cada variação (10), os mais perto de (2962, 293)
+
+Os cômodos: 1907; o zumbi chega em 1893; o jogador andou até 551 (o térreo e o primeiro andar de cada prédio) e chegou em 551; subiu da calçada à cobertura em 10 de 10.
+
+- 7 andares, térreo com apartamentos, 37,9 × 18,6 m em (1620, 16): zumbi em 263 de 266 cômodos e na cobertura; jogador no andar 0: 37 de 37; jogador no andar 1: 38 de 38; subiu até a cobertura
+- 5 andares, térreo com lojas, poço aberto, 28,9 × 20,2 m em (1600, -15): zumbi em 135 de 138 cômodos e na cobertura; jogador no andar 0: 18 de 18; jogador no andar 1: 30 de 30; subiu até a cobertura
+- 8 andares, térreo com apartamentos, poço aberto, 40,2 × 20,5 m em (1591, 28): zumbi em 328 de 329 cômodos e na cobertura; jogador no andar 0: 35 de 35; jogador no andar 1: 42 de 42; subiu até a cobertura
+- 5 andares, térreo com apartamentos, espelhado, 44,0 × 23,0 m em (1568, 139): zumbi em 223 de 227 cômodos e na cobertura; jogador no andar 0: 43 de 43; jogador no andar 1: 44 de 44; subiu até a cobertura
+- 6 andares, térreo com apartamentos, poço aberto, espelhado, 25,9 × 19,6 m em (1572, -2): zumbi em 163 de 163 cômodos e na cobertura; jogador no andar 0: 23 de 23; jogador no andar 1: 28 de 28; subiu até a cobertura
+- 7 andares, térreo com lojas, 30,5 × 19,3 m em (1544, 16): zumbi em 197 de 198 cômodos e na cobertura; jogador no andar 0: 18 de 18; jogador no andar 1: 30 de 30; subiu até a cobertura
+- 8 andares, térreo com lojas, poço aberto, espelhado, 27,9 × 20,0 m em (1510, 34): zumbi em 209 de 211 cômodos e na cobertura; jogador no andar 0: 15 de 15; jogador no andar 1: 27 de 27; subiu até a cobertura
+- 6 andares, térreo com lojas, espelhado, 40,3 × 22,1 m em (1471, 194): zumbi em 233 de 233 cômodos e na cobertura; jogador no andar 0: 23 de 23; jogador no andar 1: 42 de 42; subiu até a cobertura
+- 4 andares, hospital, poço aberto, 34,4 × 22,9 m em (1279, 196): zumbi em 57 de 57 cômodos e na cobertura; jogador no andar 0: 15 de 15; jogador no andar 1: 14 de 14; subiu até a cobertura
+- 6 andares, hospital, 35,6 × 18,9 m em (2177, 2250): zumbi em 85 de 85 cômodos e na cobertura; jogador no andar 0: 15 de 15; jogador no andar 1: 14 de 14; subiu até a cobertura
+
+Falhas:
+- 7 andares, térreo com apartamentos: o zumbi não chega no banheiro do andar 0 (sem NavMesh)
+- 7 andares, térreo com apartamentos: o zumbi não chega no quarto do andar 3 (PathPartial)
+- 7 andares, térreo com apartamentos: o zumbi não chega no quarto do andar 6 (PathPartial)
+- 5 andares, térreo com lojas, poço aberto: o zumbi não chega no quarto do andar 2 (PathPartial)
+- 5 andares, térreo com lojas, poço aberto: o zumbi não chega no quarto do andar 3 (PathPartial)
+- 5 andares, térreo com lojas, poço aberto: o zumbi não chega no quarto do andar 3 (PathPartial)
+- 8 andares, térreo com apartamentos, poço aberto: o zumbi não chega no quarto do andar 4 (PathPartial)
+- 5 andares, térreo com apartamentos, espelhado: o zumbi não chega no quarto do andar 1 (PathPartial)
+- 5 andares, térreo com apartamentos, espelhado: o zumbi não chega no quarto do andar 1 (PathPartial)
+- 5 andares, térreo com apartamentos, espelhado: o zumbi não chega no quarto do andar 3 (PathPartial)
+- 5 andares, térreo com apartamentos, espelhado: o zumbi não chega no quarto do andar 3 (PathPartial)
+- 7 andares, térreo com lojas: o zumbi não chega no quarto do andar 4 (PathPartial)
+- 8 andares, térreo com lojas, poço aberto, espelhado: o zumbi não chega no quarto do andar 1 (PathPartial)
+- 8 andares, térreo com lojas, poço aberto, espelhado: o zumbi não chega no quarto do andar 4 (PathPartial)
+

@@ -12,6 +12,10 @@
 //   nunca some.
 // - _Cima (0 a 1): a normal vira para cima (a grama e o capim recebem a luz como o chão; com a normal das folhas finas,
 //   de lado, eles saíam quase pretos). Também por espécie, no mesmo bloco.
+// - _Dobra (0 a 1; Parte M9d, como o Grass.shader do Guardiões): quem passa empurra a planta para longe e para baixo,
+//   mais em cima (pela altura do vértice sobre o pé). Quem passa é global (_ZccDobradores: xyz o pé, w o raio; os
+//   primeiros _ZccDobradoresN valem), posto pelo FlorestaDoMundo: os jogadores, com o rastro, e os carros. Por espécie
+//   (a grama e o capim inteiros, os arbustos pouco, as árvores nada), no mesmo bloco.
 // Iluminação: a PBR da URP (UniversalFragmentPBR), como o shader do chão: o sol e as sombras, as luzes (Forward+), o SSAO
 // e a neblina. As passadas de sombra e de profundidade balançam igual. Compatível com o SRP Batcher e com instâncias.
 Shader "ZombieCityCleaner/Vegetacao"
@@ -24,6 +28,7 @@ Shader "ZombieCityCleaner/Vegetacao"
         _Suavidade("Suavidade (vezes o alfa da paleta)", Range(0, 1)) = 0.6
         _Some("Some de (m), até (m)", Vector) = (0, 0, 0, 0)
         _Cima("Normal para cima (a grama)", Range(0, 1)) = 0
+        _Dobra("Dobra com quem passa", Range(0, 1)) = 0
     }
 
     SubShader
@@ -40,14 +45,35 @@ Shader "ZombieCityCleaner/Vegetacao"
             half _Suavidade;
             float4 _Some;
             half _Cima;
+            half _Dobra;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_vegetacao_point_clamp);
 
         float4 _ZccVento;
+        float4 _ZccDobradores[24];
+        float _ZccDobradoresN;
 
-        // o vértice no mundo, encolhido no fim do alcance e com o vento
+        // quem passa empurra a planta para longe e para baixo, mais em cima
+        float3 Dobrar(float3 p, float3 pe)
+        {
+            if (_Dobra <= 0.0) return p;
+            float h = saturate((p.y - pe.y) * 1.6);
+            int n = (int)_ZccDobradoresN;
+            [loop] for (int i = 0; i < n; i++)
+            {
+                float4 b = _ZccDobradores[i];
+                float2 longe = p.xz - b.xz;
+                float d = length(longe);
+                float empurra = saturate(1.0 - d / b.w) * saturate(2.5 - abs(p.y - b.y)) * _Dobra * h;
+                p.xz += longe / max(d, 0.001) * empurra * 0.5;
+                p.y -= empurra * 0.35;
+            }
+            return p;
+        }
+
+        // o vértice no mundo, encolhido no fim do alcance, com o vento e com quem passa
         float3 Vento(float3 positionOS, half4 cor)
         {
             float3 p = TransformObjectToWorld(positionOS);
@@ -58,7 +84,7 @@ Shader "ZombieCityCleaner/Vegetacao"
                 p = pe + (p - pe) * saturate((_Some.y - d) / max(_Some.y - _Some.x, 0.01));
             }
             float forca = _ZccVento.z;
-            if (forca <= 0.0) return p;
+            if (forca <= 0.0) return Dobrar(p, pe);
             float fase = dot(pe.xz, float2(0.071, 0.053)) + cor.g * 6.2831853;
             float t = _Time.y;
             float balanco = sin(t * 0.9 + fase) * 0.6 + sin(t * 2.1 + fase * 1.7) * 0.25 + 0.35 + _ZccVento.w * 0.4;
@@ -67,7 +93,7 @@ Shader "ZombieCityCleaner/Vegetacao"
             p.y -= abs(b) * 0.15;
             float tremor = sin(t * 4.3 + dot(p, float3(1.7, 1.3, 1.9)) + fase) * _Tremor * cor.b * (0.4 + forca * 2.0);
             p += float3(0.6, 0.35, 0.5) * tremor;
-            return p;
+            return Dobrar(p, pe);
         }
 
         // a normal no mundo, virada para cima pelo _Cima

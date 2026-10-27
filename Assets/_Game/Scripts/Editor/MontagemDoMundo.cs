@@ -24,7 +24,8 @@ namespace ZombieCityCleaner.EditorTools
     ///    <see cref="TelaDeCarregamento"/>, o <see cref="MapaDoMundo"/> (o M), os <see cref="ObjetosDoMundo"/> (a beira das
     ///    estradas e as ruas das cidades, com os modelos do Cidade_Rua.fbx e o material das letras das placas) e a
     ///    <see cref="FlorestaDoMundo"/> (Parte M9a: as plantas do Cidade_Arvores.fbx e o material da vegetação, por
-    ///    <see cref="PorAFloresta"/>, que também põe a floresta numa cena já montada). Sem as luzes da cidade: anos depois do
+    ///    <see cref="PorAFloresta"/>, que também põe a floresta numa cena já montada) e a <see cref="MobiliaDoMundo"/> (os
+    ///    móveis do Cidade_Mobilia.fbx, por <see cref="PorAMobilia"/>). Sem as luzes da cidade: anos depois do
     ///    apocalipse, não há energia (os postes ficam apagados e as janelas escuras).
     /// A cena fica fora das Build Settings por enquanto (a demo continua sendo a Demo_Cidade).
     /// </summary>
@@ -116,6 +117,8 @@ namespace ZombieCityCleaner.EditorTools
             // a floresta (M9a) e o abandono (M9c: os materiais da cidade, a hera e as pichações)
             PorAFloresta(mundo);
             PorOAbandono(mundo);
+            // a mobília (os móveis nos pontos das casas, das lojas e dos prédios)
+            PorAMobilia(mundo);
 
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
@@ -168,6 +171,59 @@ namespace ZombieCityCleaner.EditorTools
             if (faltam > 0) Debug.LogWarning($"Faltam {faltam} malhas da floresta no {FbxDasArvores}.");
             EditorUtility.SetDirty(floresta);
             return floresta;
+        }
+
+        public const string FbxDaMobilia = "Assets/_Game/Art/Cidade/Cidade_Mobilia.fbx";
+
+        /// <summary>
+        /// A mobília no objeto "Mundo" ("A mobília", primeira fatia): a <see cref="MobiliaDoMundo"/> com os modelos do
+        /// Cidade_Mobilia.fbx, importado sem materiais, sem animação e legível (a malha de cada modelo é copiada para as obras
+        /// montadas em outra thread). Serve para a montagem da cena e para o menu Zombie City Cleaner > Mundo > Pôr a mobília
+        /// na cena (rode de novo quando os modelos mudarem de nome).
+        /// </summary>
+        public static MobiliaDoMundo PorAMobilia(GameObject mundo)
+        {
+            if (AssetImporter.GetAtPath(FbxDaMobilia) is ModelImporter imp &&
+                (imp.materialImportMode != ModelImporterMaterialImportMode.None || imp.importAnimation || imp.generateSecondaryUV || !imp.isReadable))
+            {
+                imp.materialImportMode = ModelImporterMaterialImportMode.None;
+                imp.importAnimation = false;
+                imp.importCameras = false;
+                imp.importLights = false;
+                imp.generateSecondaryUV = false;
+                imp.isReadable = true;
+                imp.SaveAndReimport();
+            }
+            var mobilia = mundo.GetComponent<MobiliaDoMundo>();
+            if (mobilia == null) mobilia = mundo.AddComponent<MobiliaDoMundo>();
+            mobilia.malhas = AssetDatabase.LoadAllAssetsAtPath(FbxDaMobilia).OfType<Mesh>()
+                .Where(m => ZombieCityCleaner.Mundo.Mobilia.Feitos.ContainsKey(m.name)).OrderBy(m => m.name).ToArray();
+            int faltam = ZombieCityCleaner.Mundo.Mobilia.Feitos.Keys.Count(n => mobilia.malhas.All(m => m.name != n));
+            if (faltam > 0) Debug.LogWarning($"Faltam {faltam} modelos da mobília no {FbxDaMobilia}.");
+            EditorUtility.SetDirty(mobilia);
+            return mobilia;
+        }
+
+        [MenuItem("Zombie City Cleaner/Mundo/Pôr a mobília na cena")]
+        public static void PorAMobiliaNaCena()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de mexer na cena do mundo.");
+                return;
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != Cena) cena = EditorSceneManager.OpenScene(Cena);
+            var mundo = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Mundo");
+            if (mundo == null)
+            {
+                Debug.LogWarning("A cena do mundo não tem o objeto \"Mundo\": monte a cena antes.");
+                return;
+            }
+            var m = PorAMobilia(mundo);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log($"Mobília posta na cena: {m.malhas.Length} modelos.");
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a floresta na cena")]

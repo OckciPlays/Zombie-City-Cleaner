@@ -18,6 +18,9 @@ namespace ZombieCityCleaner.Mundo
     /// tapadas entram no desenho; a hera e as pichações de todas as obras do bloco, em duas malhas à parte
     /// (<see cref="DoBloco.Hera"/>, <see cref="DoBloco.Pichacoes"/>). O desenho guarda a altura de cada vértice sobre o
     /// chão da obra (a umidade na base das paredes, no shader do abandono).
+    /// A mobília ("A mobília", primeira fatia; <see cref="Mobilia"/>): os móveis das casas e das lojas do bloco numa
+    /// malha à parte (<see cref="DoBloco.Mobilia"/>, que aparece só perto), e uma caixa por móvel na colisão de cada uma;
+    /// nos andares dos prédios, no desenho e na colisão do andar (que já carregam só perto).
     /// </summary>
     public static class MalhasDasCasas
     {
@@ -80,6 +83,8 @@ namespace ZombieCityCleaner.Mundo
             /// <summary>A hera e as pichações das obras do bloco, já no mapa (do estoque; <see cref="Devolver(DoBloco)"/>).</summary>
             public MalhaDaHera Hera;
             public MalhaDePichacao Pichacoes;
+            /// <summary>Os móveis das casas e das lojas do bloco, já no mapa (do estoque; null sem a <see cref="Mobilia"/>).</summary>
+            public MalhaDeObra Mobilia;
             public readonly List<CasaPronta> Casas = new List<CasaPronta>();
             public readonly List<PredioPronto> Predios = new List<PredioPronto>();
             public bool Vazio => Casas.Count == 0 && Predios.Count == 0;
@@ -119,8 +124,9 @@ namespace ZombieCityCleaner.Mundo
                     r.Desenho ??= MalhaDeObra.Emprestar(TamanhoDaMalha.Grande);
                     r.Hera ??= MalhaDaHera.Emprestar();
                     r.Pichacoes ??= MalhaDePichacao.Emprestar();
-                    if (l.Casa != null) r.Casas.Add(Montar(d, t, l, r.Desenho, r.Hera, r.Pichacoes));
-                    else if (l.Loja != null) r.Casas.Add(MontarLoja(d, t, l, r.Desenho, r.Hera, r.Pichacoes));
+                    if (Mobilia.Pronta && l.Predio == null) r.Mobilia ??= MalhaDeObra.Emprestar(TamanhoDaMalha.Media);
+                    if (l.Casa != null) r.Casas.Add(Montar(d, t, l, r.Desenho, r.Hera, r.Pichacoes, r.Mobilia));
+                    else if (l.Loja != null) r.Casas.Add(MontarLoja(d, t, l, r.Desenho, r.Hera, r.Pichacoes, r.Mobilia));
                     else r.Predios.Add(MontarPredio(d, t, l, r.Desenho, r.Hera, r.Pichacoes));
                 }
             }
@@ -134,8 +140,10 @@ namespace ZombieCityCleaner.Mundo
             r.Desenho = null;
             MalhaDaHera.Devolver(r.Hera);
             MalhaDePichacao.Devolver(r.Pichacoes);
+            MalhaDeObra.Devolver(r.Mobilia);
             r.Hera = null;
             r.Pichacoes = null;
+            r.Mobilia = null;
             foreach (var c in r.Casas)
             {
                 MalhaDeObra.Devolver(c.Colisao);
@@ -209,7 +217,7 @@ namespace ZombieCityCleaner.Mundo
         /// devolve a colisão, os pisos de cada cômodo, a caixa de dentro e o tamanho (para o eco).
         /// </summary>
         public static CasaPronta MontarLoja(DadosDoMundo d, TracadoDaCidade t, Lote l, MalhaDeObra desenho, MalhaDaHera hera = null,
-                                            MalhaDePichacao pichacoes = null)
+                                            MalhaDePichacao pichacoes = null, MalhaDeObra mobilia = null)
         {
             var p = l.Loja;
             float sx = p.espelhar ? -1f : 1f;
@@ -228,6 +236,7 @@ namespace ZombieCityCleaner.Mundo
             loja.Montar(Chao, maisBaixo);
             var matriz = t.MatrizDaCasa(l);
             Abandonar(loja, AbandonoDaObra.NoMundo, p.semente, 5f, matriz, p.espelhar, hera, pichacoes);
+            if (mobilia != null) Mobiliar(loja.moveis, p.semente, loja.col, mobilia, matriz, p.espelhar);
             var pronta = new CasaPronta
             {
                 Nome = PlantaDeLoja.Nome(p.tipo) + (p.andares > 1 ? $" de {p.andares} andares" : ""),
@@ -253,6 +262,7 @@ namespace ZombieCityCleaner.Mundo
         {
             var predio = new Predio(p, M, f);
             predio.MontarAndar();
+            Mobilia.Por(predio.Moveis, predio.vis, predio.col, p.semente * 31 + f);
             var r = new AndarPronto { Andar = f, Desenho = Espelhada(predio.vis, p.espelhar), Colisao = Espelhada(predio.col, p.espelhar) };
             foreach (var pm in predio.Moveis) r.Moveis.Add(p.espelhar ? pm.Espelhado() : pm);
             float sx = p.espelhar ? -1f : 1f;
@@ -274,6 +284,16 @@ namespace ZombieCityCleaner.Mundo
             if (pichacoes != null) AbandonoDaObra.Pichacoes(obra, k, semente, pichacoes);
         }
 
+        // os móveis da obra (antes de espelhar a colisão dela): o desenho numa malha de rascunho, levado para o lugar dela
+        // na malha da mobília do bloco (com a altura sobre o chão da obra, como o desenho das casas), e as caixas na colisão
+        static void Mobiliar(List<PontoDeMovel> pontos, int semente, MalhaDeObra colisao, MalhaDeObra mobilia, Matrix4x4 matriz, bool espelhar)
+        {
+            var desenho = MalhaDeObra.Emprestar(TamanhoDaMalha.Media);
+            Mobilia.Por(pontos, desenho, colisao, semente);
+            mobilia.Juntar(desenho, matriz, espelhar, altura: true);
+            MalhaDeObra.Devolver(desenho);
+        }
+
         // a montagem fica com a malha da obra (espelhada nela mesma, se precisar), em vez de copiá-la para outra do estoque:
         // a cópia da colisão de um prédio (uns 25 mil vértices) pegava uma malha pequena e crescia as listas de novo
         static MalhaDeObra Espelhada(MalhaDeObra m, bool espelhar)
@@ -290,13 +310,14 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>Uma casa do lote: o desenho dela vai para 'desenho' (no mapa); devolve o resto.</summary>
         public static CasaPronta Montar(DadosDoMundo d, TracadoDaCidade t, Lote l, MalhaDeObra desenho, MalhaDaHera hera = null,
-                                        MalhaDePichacao pichacoes = null)
+                                        MalhaDePichacao pichacoes = null, MalhaDeObra mobilia = null)
         {
             var p = l.Casa;
             var casa = new Casa(p, M);
             casa.Montar();
             var matriz = t.MatrizDaCasa(l);
             Abandonar(casa, l.Tipo == TipoDeLote.Familia ? AbandonoDaObra.NaFamilia : AbandonoDaObra.NoMundo, p.semente, 4f, matriz, p.espelhar, hera, pichacoes);
+            if (mobilia != null) Mobiliar(casa.moveis, p.semente, casa.col, mobilia, matriz, p.espelhar);
             var pronta = new CasaPronta
             {
                 Nome = (p.molde == "Terrea" ? "Casa térrea" : "Sobrado") + (p.porao ? " com porão" : "") + (l.Tipo == TipoDeLote.Familia ? " (a da família)" : ""),

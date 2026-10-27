@@ -638,9 +638,12 @@ namespace ZombieCityCleaner.Mundo
             foreach (var pf in _portasDeDentro)
             {
                 if (pf.l == null || pf.l.passagem) continue;
-                // abre para dentro do quarto ou do banheiro; nunca para o corredor (a folha aberta tapava a passagem)
+                // abre para dentro do quarto ou do banheiro; nunca para o corredor (a folha aberta tapava a passagem); entre
+                // dois cômodos comuns (a sala e a cozinha), para o maior (aberta para dentro da cozinha pequena, a folha
+                // tirava o lugar da geladeira e do fogão: a mobília desvia dela)
                 Comodo a = pf.l.a, b = pf.l.b;
-                Comodo alvo = Privado(b) ? b : Privado(a) ? a : b.tipo == "corredor" ? a : b;
+                Comodo alvo = Privado(b) ? b : Privado(a) ? a : b.tipo == "corredor" ? a : a.tipo == "corredor" ? b
+                            : (a.x1 - a.x0) * (a.z1 - a.z0) >= (b.x1 - b.x0) * (b.z1 - b.z0) ? a : b;
                 // aberta quase em ângulo reto: com 60°, a folha ficava atravessada na frente da passagem
                 Folha(pf, alvo == pf.i.LadoN ? 1 : -1, Um("Batente", "Madeira", "Batente"), Faixa(85f, 100f));
             }

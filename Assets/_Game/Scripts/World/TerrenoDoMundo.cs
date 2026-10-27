@@ -40,6 +40,8 @@ namespace ZombieCityCleaner.World
         public Material materialDaHera, materialDasPichacoes;
         [Tooltip("Até onde a hera das casas aparece em volta do jogador local (m): as folhas são pequenas, e longe só pesam.")]
         public float raioDaHera = 70f;
+        [Tooltip("Até onde os móveis das casas e das lojas aparecem em volta do jogador local (m; a mobília): dentro, no escuro, longe não se vê.")]
+        public float raioDaMobilia = 60f;
         [Tooltip("Até onde os blocos aparecem em volta do jogador local (m). A câmera corta a 150 m, na neblina.")]
         public float raioDeDesenho = 180f;
         [Tooltip("Até onde os blocos têm o detalhe máximo (m).")]
@@ -114,6 +116,10 @@ namespace ZombieCityCleaner.World
             public MalhaDaHera HeraPorFazer;
             public MeshRenderer Hera;
             public Mesh MalhaDaHera, MalhaDasPichacoes;
+            // os móveis das casas e das lojas (a mobília): só perto, como a hera (a malha sai depois, FazerDePerto)
+            public MalhaDeObra MobiliaPorFazer;
+            public MeshRenderer Mobilia;
+            public Mesh MalhaDaMobilia;
             public readonly List<(MeshCollider colisor, Mesh malha, Task cozimento)> ColisoesDasCasas = new List<(MeshCollider, Mesh, Task)>();
             // os prédios de verdade (Parte M6, segunda fatia): a casca está nas casas; os andares, em cada um
             public readonly List<AndaresDoPredio> Predios = new List<AndaresDoPredio>();
@@ -274,7 +280,7 @@ namespace ZombieCityCleaner.World
             }
             ComecarMontagens();
             EntregarProntas();
-            if (_relogio.Elapsed.TotalMilliseconds < orcamentoMs) FazerHera();
+            if (_relogio.Elapsed.TotalMilliseconds < orcamentoMs) FazerDePerto();
             MaiorQuadroMs = Mathf.Max(MaiorQuadroMs, (float)_relogio.Elapsed.TotalMilliseconds);
         }
 
@@ -336,16 +342,32 @@ namespace ZombieCityCleaner.World
                 else if (b.Casas != null && agora - b.CasasQueridasEm > 3f && !CozinhandoCasas(b)) TirarCasas(b);
             }
             foreach (var b in _blocos.Values)
-                if (b.Hera != null) b.Hera.enabled = HeraPerto(b);
+            {
+                if (b.Hera != null) b.Hera.enabled = Perto(b, raioDaHera);
+                if (b.Mobilia != null) b.Mobilia.enabled = Perto(b, raioDaMobilia);
+            }
         }
 
-        // a malha da hera de um bloco por quadro, e só dos que estão perto: no centro, um bloco tem até ~30 mil folhas
-        // (130 mil vértices), uns 2 a 4 ms para virar Mesh; junto com a das casas, no mesmo quadro, dava picos
-        void FazerHera()
+        // a malha da hera ou da mobília de um bloco por quadro, e só dos que estão perto: no centro, um bloco tem até ~30
+        // mil folhas (130 mil vértices), uns 2 a 4 ms para virar Mesh; junto com a das casas, no mesmo quadro, dava picos
+        void FazerDePerto()
         {
             foreach (var b in _blocos.Values)
             {
-                if (b.HeraPorFazer == null || b.Casas == null || !HeraPerto(b)) continue;
+                if (b.MobiliaPorFazer == null || b.Casas == null || !Perto(b, raioDaMobilia)) continue;
+                var m = new GameObject("Mobília");
+                m.transform.SetParent(b.Casas.transform, false);
+                b.MalhaDaMobilia = b.MobiliaPorFazer.ParaMesh($"Mobília {b.Chave.x}, {b.Chave.y}");
+                MalhaDeObra.Devolver(b.MobiliaPorFazer);
+                b.MobiliaPorFazer = null;
+                m.AddComponent<MeshFilter>().sharedMesh = b.MalhaDaMobilia;
+                b.Mobilia = m.AddComponent<MeshRenderer>();
+                b.Mobilia.sharedMaterial = materialDasCasas != null ? materialDasCasas : materialDaCidade;
+                return;
+            }
+            foreach (var b in _blocos.Values)
+            {
+                if (b.HeraPorFazer == null || b.Casas == null || !Perto(b, raioDaHera)) continue;
                 var h = new GameObject("Hera");
                 h.transform.SetParent(b.Casas.transform, false);
                 b.MalhaDaHera = b.HeraPorFazer.ParaMesh($"Hera {b.Chave.x}, {b.Chave.y}");
@@ -359,12 +381,12 @@ namespace ZombieCityCleaner.World
             }
         }
 
-        // a hera só perto do jogador local (ou da câmera, sem ele)
-        bool HeraPerto(Bloco b)
+        // a hera e a mobília só perto do jogador local (ou da câmera, sem ele)
+        bool Perto(Bloco b, float raio)
         {
             var local = JogadorRede.Local;
             var olho = local != null ? local.transform.position : Camera.main != null ? Camera.main.transform.position : Vector3.zero;
-            return DistanciaAoBloco(b.Chave.x, b.Chave.y, new Vector2(olho.x, olho.z)) < raioDaHera;
+            return DistanciaAoBloco(b.Chave.x, b.Chave.y, new Vector2(olho.x, olho.z)) < raio;
         }
 
         // as colisões ainda cozinhando em outra thread: o bloco (ou as casas dele) espera por elas para sair, e a malha nova
@@ -756,6 +778,12 @@ namespace ZombieCityCleaner.World
                 b.HeraPorFazer = m.Hera;
                 m.Hera = null;
             }
+            // a mobília: também guardada, e a malha sai perto
+            if (m.Mobilia != null && m.Mobilia.Triangulos > 0)
+            {
+                b.MobiliaPorFazer = m.Mobilia;
+                m.Mobilia = null;
+            }
             if (m.Pichacoes != null && m.Pichacoes.Quadros > 0 && materialDasPichacoes != null)
             {
                 var pich = new GameObject("Pichações");
@@ -878,10 +906,13 @@ namespace ZombieCityCleaner.World
             if (b.MalhaDasCasas != null) Destroy(b.MalhaDasCasas);
             if (b.MalhaDaHera != null) Destroy(b.MalhaDaHera);
             if (b.MalhaDasPichacoes != null) Destroy(b.MalhaDasPichacoes);
-            b.MalhaDaHera = b.MalhaDasPichacoes = null;
-            b.Hera = null;
+            if (b.MalhaDaMobilia != null) Destroy(b.MalhaDaMobilia);
+            b.MalhaDaHera = b.MalhaDasPichacoes = b.MalhaDaMobilia = null;
+            b.Hera = b.Mobilia = null;
             MalhaDaHera.Devolver(b.HeraPorFazer);
             b.HeraPorFazer = null;
+            MalhaDeObra.Devolver(b.MobiliaPorFazer);
+            b.MobiliaPorFazer = null;
             foreach (var (_, malha, _) in b.ColisoesDasCasas) Destroy(malha);
             b.ColisoesDasCasas.Clear();
             b.Predios.Clear();

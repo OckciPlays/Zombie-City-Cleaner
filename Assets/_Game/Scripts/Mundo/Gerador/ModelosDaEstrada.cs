@@ -93,6 +93,7 @@ namespace ZombieCityCleaner.Mundo
             planta.placa = marca;
             var loja = new Loja(planta, medidas);
             loja.Montar((x, z) => 0f, 0f);
+            Mobilia.Por(loja.moveis, loja.vis, loja.col, planta.semente);   // a mobília (sem ela registrada, nada)
             var M = Matrix4x4.TRS(new Vector3(0f, 0f, -10f), Quaternion.Euler(0f, 180f, 0f), Vector3.one);
             m.Malha.Juntar(loja.vis, M, planta.espelhar);
             m.MalhaDeColisao = new MalhaDeObra();

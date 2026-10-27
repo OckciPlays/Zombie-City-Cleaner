@@ -108,6 +108,13 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public readonly List<(Rect area, float chao)> ocupado = new List<(Rect, float)>();
         /// <summary>
+        /// O que é sólido para quem anda, no chão (também no <see cref="ocupado"/>): as folhas das portas bem abertas (a
+        /// partir de 60°, que ficam para dentro do cômodo; as fechadas e as entreabertas ficam na frente da porta, onde não
+        /// vai móvel) e os balcões das lojas. A passagem dos móveis desvia deles, com a folga (a frente da porta, e o resto
+        /// do <see cref="ocupado"/>, como o pé da escada, é livre para quem anda).
+        /// </summary>
+        public readonly List<(Rect area, float chao)> solidos = new List<(Rect, float)>();
+        /// <summary>
         /// As fachadas de prédio, que não são paredes levantadas (são faces da casca): no andar, para as janelas dos
         /// cômodos; na casca, para o abandono.
         /// </summary>
@@ -347,7 +354,9 @@ namespace ZombieCityCleaner.Mundo
         {
             float folha = larg - 0.06f, h = alto - 0.06f;
             var (dob, ponta) = PontasDaFolha(w, ini, larg, dentro, abertura, dobradicaNoInicio);
-            ocupado.Add((Rect.MinMaxRect(Mathf.Min(dob.x, ponta.x) - 0.08f, Mathf.Min(dob.y, ponta.y) - 0.08f, Mathf.Max(dob.x, ponta.x) + 0.08f, Mathf.Max(dob.y, ponta.y) + 0.08f), w.baseY));
+            var area = Rect.MinMaxRect(Mathf.Min(dob.x, ponta.x) - 0.08f, Mathf.Min(dob.y, ponta.y) - 0.08f, Mathf.Max(dob.x, ponta.x) + 0.08f, Mathf.Max(dob.y, ponta.y) + 0.08f);
+            ocupado.Add((area, w.baseY));
+            if (colide && abertura >= 60f) solidos.Add((area, w.baseY));
             Vector2 d = (ponta - dob) / folha;
             Vector2 c = dob + d * (folha / 2);
             float yaw = -Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;

@@ -48,8 +48,15 @@ namespace ZombieCityCleaner.Mundo
     ///  - fora do cômodo, em cima de outro ou do que ocupa o chão (o pé da escada, os buracos das lajes, as folhas das
     ///    portas, os balcões: <see cref="Obra.ocupado"/>);
     ///  - na frente de uma porta (1 m livre para dentro do cômodo) nem alto na frente de uma janela;
-    ///  - onde ele cortaria a passagem: numa grade de 15 cm, com a folga de quem anda (0,28 m), as portas do cômodo
-    ///    continuam ligadas entre si e a frente de cada móvel continua alcançável de uma porta.
+    ///  - onde ele cortaria a passagem: numa grade de 15 cm, com a folga de quem anda (0,3 m), as portas do cômodo
+    ///    continuam ligadas entre si, a frente de cada móvel continua alcançável de uma porta e o chão livre do cômodo
+    ///    continua ligado (um móvel não deixa chão isolado que o cômodo vazio não tinha: uma cama e um guarda-roupa
+    ///    cortavam ao meio um quarto estreito). O que é sólido no chão (<see cref="Obra.solidos"/>: as folhas das portas
+    ///    bem abertas e os balcões das lojas) tem a folga também (com os móveis de verdade, um vaso junto da folha da porta
+    ///    do banheiro fechava o resto dele para o zumbi). E onde o NavMesh pode ter chão (a folga do agente, contada das
+    ///    caixas de colisão dos móveis, menores que o pé) fica perto do chão alcançado: um canto entre uma poltrona e um
+    ///    rack, fechado para a grade, ficava com um pedaço de NavMesh sem caminho. A conferência é o PassagemTestes: o
+    ///    NavMesh de cada construção, com as caixas dos móveis.
     /// As listas de rascunho são de cada thread (as construções são montadas em várias).
     /// </summary>
     public static class MoveisDaObra
@@ -172,14 +179,26 @@ namespace ZombieCityCleaner.Mundo
         // ------------------------------------------------------------ a distribuição
 
         // a folga de quem anda vale para o quadrado inteiro da célula (com a folga só no meio dela, uma fresta de 4 cm
-        // entre dois móveis passava quando o meio de uma célula caía nela): entre dois móveis, passa-se com 0,65 m
-        const float Celula = 0.15f, Folga = 0.25f, FolgaDaGrade = Folga + Celula / 2, FrenteDaPorta = 1.0f, Vao = 0.05f;
+        // entre dois móveis passava quando o meio de uma célula caía nela): entre dois móveis, passa-se com 0,75 m. Com a
+        // mobília, a caixa de colisão de cada móvel é 15 cm menor de cada lado (Mobilia.Recuo): para o NavMesh, 1,05 m,
+        // o bastante para o zumbi (o agente tem 0,35 m de raio, e o NavMesh, com as células de 12 cm, pode perder uma de
+        // cada lado: um vão de 0,9 m num canto fechava); com a folga do jogador (0,25 m), os móveis de verdade fechavam
+        // umas portas de banheiro e de quarto para ele, e com a do zumbi inteira (0,38 m), metade dos móveis não cabia. A
+        // folha da porta e o balcão (que não encolhem) têm a folga mais 10 cm (FolgaDoSolido)
+        const float Celula = 0.15f, Folga = 0.3f, FolgaDaGrade = Folga + Celula / 2, FrenteDaPorta = 1.0f, Vao = 0.05f;
+        const float FolgaDoSolido = FolgaDaGrade + 0.1f;
+        // onde o NavMesh pode ter chão: a 0,35 m (o raio do agente) das paredes, do que é sólido e da caixa de colisão de cada
+        // móvel (o pé encolhido de Mobilia.Recuo), um pouco menos para não deixar de ver um canto; esse chão fica a no máximo
+        // duas células do que a grade alcança (a folga dela é 0,175 m maior)
+        const float FolgaDoNavMesh = 0.3f, FolgaDoNavMeshNoMovel = 0.35f - Mobilia.Recuo;
+        const int Perto = 2;
 
         struct Furo { public float a, b; public bool porta; public float peitoril; }
 
         // um lado do cômodo: 0 = z0 (de frente para +z), 1 = x1 (para -x), 2 = z1 (para -z), 3 = x0 (para +x)
         [System.ThreadStatic] static List<Furo>[] _furos;
-        [System.ThreadStatic] static List<Rect> _bloqueios, _colocados, _frentes, _bocas;
+        [System.ThreadStatic] static List<Rect> _bloqueios, _colocados, _frentes, _bocas, _solidos;
+        [System.ThreadStatic] static int _soltasAntes, _longeAntes;
         [System.ThreadStatic] static List<int> _ordem;
 
         /// <summary>
@@ -197,12 +216,16 @@ namespace ZombieCityCleaner.Mundo
             {
                 _furos = new[] { new List<Furo>(), new List<Furo>(), new List<Furo>(), new List<Furo>() };
                 _bloqueios = new List<Rect>(); _colocados = new List<Rect>(); _frentes = new List<Rect>(); _bocas = new List<Rect>();
+                _solidos = new List<Rect>();
                 _ordem = new List<int>();
             }
             AcharFuros(obra, k, chao);
-            _bloqueios.Clear(); _colocados.Clear(); _frentes.Clear(); _bocas.Clear();
+            _bloqueios.Clear(); _colocados.Clear(); _frentes.Clear(); _bocas.Clear(); _solidos.Clear();
             foreach (var (area, y) in obra.ocupado)
                 if (Mathf.Abs(y - chao) < 0.2f && area.Overlaps(r)) _bloqueios.Add(area);
+            foreach (var (area, y) in obra.solidos)
+                if (Mathf.Abs(y - chao) < 0.2f && area.Overlaps(r))
+                    _solidos.Add(area);
             // a frente de cada porta fica livre, e a boca dela (logo para dentro) é o que a passagem liga
             for (int lado = 0; lado < 4; lado++)
                 foreach (var f in _furos[lado])
@@ -212,6 +235,10 @@ namespace ZombieCityCleaner.Mundo
                         _bocas.Add(Faixa(r, lado, f.a + 0.1f, f.b - 0.1f, 0f, 0.4f));
                     }
             PrepararGrade(r);
+            // o chão que o cômodo vazio já deixa isolado (atrás de uma folha de porta, num canto)
+            bool comeca = Buscar();
+            _soltasAntes = comeca ? Soltas() : 0;
+            _longeAntes = comeca ? Longe() : 0;
             var rnd = new System.Random(semente * 7919 + Mathf.RoundToInt(k.x0 * 13f + k.z0 * 7f + chao * 3f));
             foreach (var item in receita)
             {
@@ -341,9 +368,10 @@ namespace ZombieCityCleaner.Mundo
 
         // ------------------------------------------------------------ a passagem (a grade do cômodo)
 
-        // a grade: 0 livre, 1 parede ou o que ocupa o chão, 2 um móvel posto, 3 o móvel em teste (de cada thread)
-        [System.ThreadStatic] static byte[] _grade;
-        [System.ThreadStatic] static bool[] _visto;
+        // a grade: 0 livre, 1 parede ou o que ocupa o chão, 2 um móvel posto, 3 o móvel em teste (de cada thread); a do
+        // NavMesh, o mesmo com a folga dele
+        [System.ThreadStatic] static byte[] _grade, _doNavMesh;
+        [System.ThreadStatic] static bool[] _visto, _perto;
         [System.ThreadStatic] static int[] _fila;
         [System.ThreadStatic] static Rect _r;
         [System.ThreadStatic] static int _nx, _nz;
@@ -357,19 +385,34 @@ namespace ZombieCityCleaner.Mundo
             _nx = Mathf.Max(1, Mathf.FloorToInt(r.width / Celula));
             _nz = Mathf.Max(1, Mathf.FloorToInt(r.height / Celula));
             int n = _nx * _nz;
-            if (_grade == null || _grade.Length < n) { _grade = new byte[n * 2]; _visto = new bool[n * 2]; _fila = new int[n * 2]; }
+            if (_grade == null || _grade.Length < n)
+            {
+                _grade = new byte[n * 2]; _doNavMesh = new byte[n * 2];
+                _visto = new bool[n * 2]; _perto = new bool[n * 2]; _fila = new int[n * 2];
+            }
             _sx = r.width / _nx;
             _sz = r.height / _nz;
             for (int j = 0; j < _nz; j++)
                 for (int i = 0; i < _nx; i++)
                 {
                     float x = r.xMin + (i + 0.5f) * _sx, z = r.yMin + (j + 0.5f) * _sz;
-                    bool livre = (x - r.xMin >= FolgaDaGrade && r.xMax - x >= FolgaDaGrade && z - r.yMin >= FolgaDaGrade && r.yMax - z >= FolgaDaGrade) || NaBoca(x, z);
-                    if (livre)
-                        foreach (var b in _bloqueios)
-                            if (b.Contains(new Vector2(x, z)) && !EhFrenteDePorta(b)) { livre = false; break; }
-                    _grade[j * _nx + i] = livre ? (byte)0 : (byte)1;
+                    _grade[j * _nx + i] = Anda(r, x, z, FolgaDaGrade, FolgaDoSolido) ? (byte)0 : (byte)1;
+                    _doNavMesh[j * _nx + i] = Anda(r, x, z, FolgaDoNavMesh, FolgaDoNavMesh) ? (byte)0 : (byte)1;
                 }
+        }
+
+        // se dá para andar no ponto, com a folga das paredes e a do que é sólido
+        static bool Anda(Rect r, float x, float z, float folga, float doSolido)
+        {
+            bool livre = (x - r.xMin >= folga && r.xMax - x >= folga && z - r.yMin >= folga && r.yMax - z >= folga) || NaBoca(x, z);
+            if (livre)
+                foreach (var b in _bloqueios)
+                    if (b.Contains(new Vector2(x, z)) && !EhFrenteDePorta(b)) return false;
+            // o que é sólido (com a folga), mesmo encostado na boca
+            if (livre)
+                foreach (var f in _solidos)
+                    if (x > f.xMin - doSolido && x < f.xMax + doSolido && z > f.yMin - doSolido && z < f.yMax + doSolido) return false;
+            return livre;
         }
 
         // as células com o meio dentro de um retângulo (alargado de 'folga')
@@ -383,10 +426,16 @@ namespace ZombieCityCleaner.Mundo
 
         static void Marcar(Rect pe, byte de, byte para)
         {
-            Celulas(pe, FolgaDaGrade, out int i0, out int i1, out int j0, out int j1);
+            Marcar(_grade, pe, FolgaDaGrade, de, para);
+            Marcar(_doNavMesh, pe, FolgaDoNavMeshNoMovel, de, para);
+        }
+
+        static void Marcar(byte[] grade, Rect pe, float folga, byte de, byte para)
+        {
+            Celulas(pe, folga, out int i0, out int i1, out int j0, out int j1);
             for (int j = j0; j <= j1; j++)
                 for (int i = i0; i <= i1; i++)
-                    if (_grade[j * _nx + i] == de) _grade[j * _nx + i] = para;
+                    if (grade[j * _nx + i] == de) grade[j * _nx + i] = para;
         }
 
         // põe o móvel se a passagem continua: as portas ligadas entre si e a frente de cada móvel alcançável
@@ -406,6 +455,47 @@ namespace ZombieCityCleaner.Mundo
         }
 
         static bool Passa()
+        {
+            if (!Buscar()) return false;
+            for (int b = 1; b < _bocas.Count; b++) if (!Alcanca(_bocas[b])) return false;
+            foreach (var f in _frentes) if (!Alcanca(f)) return false;
+            // nenhum chão isolado que o cômodo vazio não tinha: a grade vê o bolsão menor que o NavMesh (a folga dela é maior),
+            // e um de 6 células (a folha de uma porta e a pia ao lado) era um canto de 0,4 m² sem caminho para o zumbi
+            return Soltas() <= _soltasAntes && Longe() <= _longeAntes;
+        }
+
+        // as células onde o NavMesh pode ter chão a mais de Perto células (em x e em z) de uma que a busca alcançou
+        static int Longe()
+        {
+            for (int j = 0; j < _nz; j++)
+                for (int i = 0; i < _nx; i++)
+                {
+                    bool p = false;
+                    for (int a = Mathf.Max(0, i - Perto), b = Mathf.Min(_nx - 1, i + Perto); a <= b && !p; a++) p = _visto[j * _nx + a];
+                    _perto[j * _nx + i] = p;
+                }
+            int longe = 0;
+            for (int j = 0; j < _nz; j++)
+                for (int i = 0; i < _nx; i++)
+                {
+                    if (_doNavMesh[j * _nx + i] != 0) continue;
+                    bool p = false;
+                    for (int a = Mathf.Max(0, j - Perto), b = Mathf.Min(_nz - 1, j + Perto); a <= b && !p; a++) p = _perto[a * _nx + i];
+                    if (!p) longe++;
+                }
+            return longe;
+        }
+
+        // as células livres que a busca não alcançou
+        static int Soltas()
+        {
+            int n = _nx * _nz, soltas = 0;
+            for (int c = 0; c < n; c++) if (_grade[c] == 0 && !_visto[c]) soltas++;
+            return soltas;
+        }
+
+        // a busca pelas células livres, da boca da primeira porta (ou, sem porta, do primeiro lugar livre)
+        static bool Buscar()
         {
             int n = _nx * _nz, cabeca = 0, cauda = 0;
             System.Array.Clear(_visto, 0, n);
@@ -432,8 +522,6 @@ namespace ZombieCityCleaner.Mundo
                 if (j > 0 && _grade[c - _nx] == 0 && !_visto[c - _nx]) { _visto[c - _nx] = true; _fila[cauda++] = c - _nx; }
                 if (j < _nz - 1 && _grade[c + _nx] == 0 && !_visto[c + _nx]) { _visto[c + _nx] = true; _fila[cauda++] = c + _nx; }
             }
-            for (int b = 1; b < _bocas.Count; b++) if (!Alcanca(_bocas[b])) return false;
-            foreach (var f in _frentes) if (!Alcanca(f)) return false;
             return true;
         }
 
