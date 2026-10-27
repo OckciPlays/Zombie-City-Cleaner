@@ -8,21 +8,22 @@ namespace ZombieCityCleaner.Player
     /// Põe no corpo do jogador o que ele leva: a mochila nas costas, o coldre no quadril direito e as armas penduradas
     /// (sem mochila, a da alça na diagonal das costas; com ela, as duas presas nas laterais da mochila; a pistola da alça
     /// no cós e a curta no coldre). Só visual.
-    /// As posições são medidas no corpo em repouso (o "Corpo" do prefab, sem animação, a <c>referencia</c>) e presas aos
-    /// ossos (o peito e o quadril), então acompanham a animação em qualquer pose.
+    /// As posições são medidas no corpo em repouso (o corpo do personagem no prefab, sem animação, a <c>referencia</c>) e
+    /// presas aos ossos (o peito e o quadril), então acompanham a animação em qualquer pose. As medidas do corpo (as costas,
+    /// o cinto, o quadril...) são as do personagem (<see cref="CorpoDoPersonagem"/>): o gordo tem as costas mais para trás.
     /// Serve o retrato do inventário e o boneco de teste do menu do desenvolvedor; a fatia 2 das mochilas vai usar no jogador.
     /// </summary>
     public class EquipamentoNoCorpo : MonoBehaviour
     {
-        // medidas do corpo em repouso (o espaço do "Corpo", olhando para +Z)
-        const float Costas = -0.115f;        // a superfície das costas, na altura do peito
-        const float TopoDaMochila = 1.45f;   // logo abaixo da altura dos ombros
-        const float CentroDasCostas = 1.15f; // onde a arma da alça cruza as costas
-        const float Cinto = 0.97f;
-        const float LadoDoQuadril = 0.18f;
+        // medidas do corpo em repouso (o espaço do corpo, olhando para +Z), as do personagem (CorpoDoPersonagem)
+        float Costas = -0.115f;        // a superfície das costas, na altura do peito
+        float TopoDaMochila = 1.45f;   // logo abaixo da altura dos ombros
+        float CentroDasCostas = 1.15f; // onde a arma da alça cruza as costas
+        float Cinto = 0.97f;
+        float LadoDoQuadril = 0.18f;
         const float InclinacaoDaAlca = 35f;  // a boca do cano por cima do ombro direito
         const float InclinacaoNaLateral = 6f;     // na lateral da mochila, a boca do cano um pouco para fora
-        const float TopoDaArmaNaLateral = 1.78f;  // até onde a boca do cano sobe (a cabeça vai até 1,81)
+        float TopoDaArmaNaLateral = 1.78f;  // até onde a boca do cano sobe (3 cm abaixo do topo da cabeça)
 
         readonly List<GameObject> _pecas = new List<GameObject>();
 
@@ -42,6 +43,17 @@ namespace ZombieCityCleaner.Player
             var peito = Osso(transform, "chest");
             var quadril = Osso(transform, "hips");
             if (peito == null || quadril == null) return;
+            var medidas = GetComponent<CorpoDoPersonagem>();
+            if (medidas == null) medidas = referencia.GetComponent<CorpoDoPersonagem>();
+            if (medidas != null)
+            {
+                Costas = medidas.costas;
+                TopoDaMochila = medidas.topoDaMochila;
+                CentroDasCostas = medidas.centroDasCostas;
+                Cinto = medidas.cinto;
+                LadoDoQuadril = medidas.ladoDoQuadril;
+                TopoDaArmaNaLateral = medidas.topoDaCabeca - 0.03f;
+            }
 
             float fora = Costas;   // até onde já foi ocupado, para trás
             bool comMochila = false;

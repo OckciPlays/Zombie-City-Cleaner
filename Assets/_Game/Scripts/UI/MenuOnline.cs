@@ -13,8 +13,9 @@ namespace ZombieCityCleaner.UI
     /// canto e ESC abre o menu (o mundo continua rodando, porque é online). Nos dois, as <see cref="Opcoes"/> (volume,
     /// limite de FPS e o contador de FPS, que este menu desenha em cima de tudo).
     /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
-    /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip] e -bot (o jogador anda e
-    /// atira sozinho); na cena Mundo, também -semente N, -tamanho pequeno|medio|grande e -nome TEXTO (o mundo de quem hospeda).
+    /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip], -bot (o jogador anda e
+    /// atira sozinho) e -personagem 1 a 4; na cena Mundo, também -semente N, -tamanho pequeno|medio|grande e -nome TEXTO
+    /// (o mundo de quem hospeda). Antes de entrar, o jogador escolhe o personagem (os retratos à esquerda do menu).
     /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o "Novo mundo": o nome, o tamanho e a semente.
     /// </summary>
     public class MenuOnline : MonoBehaviour
@@ -69,6 +70,7 @@ namespace ZombieCityCleaner.UI
                 if (args[i] == "-semente" && int.TryParse(args[i + 1], out int semente)) MundoDaPartida.Pedido.semente = semente;
                 else if (args[i] == "-tamanho" && Tamanhos.Ler(args[i + 1], out var tamanho)) MundoDaPartida.Pedido.tamanho = tamanho;
                 else if (args[i] == "-nome") MundoDaPartida.Pedido.nome = args[i + 1];
+                else if (args[i] == "-personagem" && int.TryParse(args[i + 1], out int personagem)) Player.Personagens.Escolhido = personagem - 1;
             }
             // (o pedido fica de um Play para o outro no Editor; sem o nome, o campo de texto quebrava o menu)
             _nomeDoMundo = string.IsNullOrEmpty(MundoDaPartida.Pedido.nome) ? PedidoDoMundo.Padrao.nome : MundoDaPartida.Pedido.nome;
@@ -211,6 +213,7 @@ namespace ZombieCityCleaner.UI
                 GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
                 return;
             }
+            EscolhaDoPersonagem(u, x, y);
             if (doMundo) y = NovoMundo(u, x, y, w);
             else
             {
@@ -234,6 +237,32 @@ namespace ZombieCityCleaner.UI
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Opções", _botao)) _opcoes = true;
+        }
+
+        // a escolha do personagem (antes de hospedar ou entrar), à esquerda do menu: os 4 retratos em 2 × 2, o escolhido
+        // com a moldura amarela. Fica guardado (Personagens.Escolhido) e vai pela rede quando o jogador nasce
+        void EscolhaDoPersonagem(float u, float xDoMenu, float y)
+        {
+            float lado = 92 * u, alto = lado / 0.6f, vao = 10 * u;   // os retratos são 384 × 640
+            float largura = 2 * lado + vao;
+            float x = Mathf.Max(10 * u, xDoMenu - largura - 40 * u);
+            GUI.Label(new Rect(x, y, largura, 24 * u), "Seu personagem:", _texto);
+            y += 28 * u;
+            for (int i = 0; i < Player.Personagens.Quantos; i++)
+            {
+                var r = new Rect(x + (i % 2) * (lado + vao), y + (i / 2) * (alto + vao), lado, alto);
+                bool escolhido = Player.Personagens.Escolhido == i;
+                GUI.color = escolhido ? new Color(0.98f, 0.85f, 0.45f, 0.95f) : new Color(1f, 1f, 1f, 0.1f);
+                GUI.DrawTexture(r, Texture2D.whiteTexture);
+                var dentro = new Rect(r.x + 3 * u, r.y + 3 * u, r.width - 6 * u, r.height - 6 * u);
+                GUI.color = escolhido ? new Color(0.16f, 0.15f, 0.13f, 1f) : new Color(0f, 0f, 0f, 0.35f);
+                GUI.DrawTexture(dentro, Texture2D.whiteTexture);
+                GUI.color = escolhido ? Color.white : new Color(1f, 1f, 1f, 0.75f);
+                var retrato = Player.Personagens.Retrato(i);
+                if (retrato != null) GUI.DrawTexture(dentro, retrato, ScaleMode.ScaleToFit);
+                GUI.color = Color.white;
+                if (GUI.Button(r, GUIContent.none, GUIStyle.none)) Player.Personagens.Escolhido = i;
+            }
         }
 
         // o "Novo mundo": o nome, o tamanho e a semente, e o botão de criar (hospedar); devolve onde o menu continua

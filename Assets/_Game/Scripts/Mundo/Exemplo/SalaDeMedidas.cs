@@ -101,7 +101,7 @@ namespace ZombieCityCleaner.Mundo
                 posBoneco = NaCasa(casa, p, sala.x1 - 1.4f, piso, sala.z0 + 1.6f);
             }
             if (zumbi != null) Figura(zumbi, "Modelo", "Idle", posZumbi, posBoneco - posZumbi);
-            if (jogador != null) Figura(jogador, "Corpo", "TP_Idle_Maos", posBoneco, posZumbi - posBoneco);
+            if (jogador != null) Figura(jogador, "Corpo_HomemBranco", "Idle_Maos", posBoneco, posZumbi - posBoneco);   // o primeiro personagem
         }
 
         /// <summary>

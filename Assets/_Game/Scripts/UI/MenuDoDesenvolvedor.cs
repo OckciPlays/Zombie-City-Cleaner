@@ -223,7 +223,7 @@ namespace ZombieCityCleaner.UI
         {
             var rede = GetComponent<JogadorRede>();
             var prefab = NetworkManager.Singleton != null ? NetworkManager.Singleton.NetworkConfig.PlayerPrefab : null;
-            var referencia = prefab != null ? prefab.transform.Find("Corpo") : null;
+            var referencia = prefab != null && rede != null ? prefab.transform.Find(rede.animadorCorpo.name) : null;   // o corpo do personagem dele
             if (rede == null || referencia == null) return;
             _qualBoneco = (_qualBoneco + 1) % Bonecos.Length;
             if (_boneco == null)

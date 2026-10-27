@@ -92,6 +92,8 @@ Feitas depois, num PC sem a pasta de arte: os scripts ficam no próprio reposit�
 | O que mudou | Para onde copiar | O que rodar na Unity |
 |---|---|---|
 | Um zumbi (`Modelo 3D/Zumbis/<Modelo>.fbx` + a textura de `Texturas/`) | `Assets/_Game/Art/Characters/Zombie/` | Montar zumbis |
+| Os personagens (`Modelo 3D/Personagens/Personagem_<modelo>.fbx` e `.jpg`) | `Assets/_Game/Art/Characters/Personagens/` | Montar personagens |
+| Os retratos da escolha do personagem (`Modelo 3D/Personagens/Retrato_<modelo>.png`) | `Assets/_Game/Art/UI/Personagens/Resources/` | — |
 | O jogador, as armas ou os itens (`Jogador.fbx`, `Jogador_FP_<Arma ou Item>.fbx`, `Armas.fbx`, `Armas_Sniper.fbx`, `Itens.fbx`) | `Assets/_Game/Art/Characters/Jogador/` | Montar armas |
 | Os ícones (`Modelo 3D/Jogador/Icones/Icone_<modelo>.png`) | `Assets/_Game/Art/UI/Icones/` | Montar armas |
 | O rifle de primeira pessoa (a sniper usa as animações dele) | depois de copiar o `Jogador_FP_Rifle.fbx`, refaça a sniper pelos scripts de `Blender/` | Montar armas |

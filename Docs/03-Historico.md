@@ -259,6 +259,12 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
   - A primeira versão deslocava a imagem da câmera dos braços, e o cano apontava à esquerda da mira (o usuário viu a arma torta). Mover a câmera mantém o cano na mira: conferido nas 5 armas.
 - Testado: as 4 armas longas cabendo juntas, a reserva infinita e um MP4 de teste de 15 s em pé, com a pistola, a mira e a parede dos fundadores no fundo, sem erros no Console.
 
+## Os personagens do jogador (27/10/2026, a pedido)
+
+- O jogador de blocos deu lugar a 4 personagens feitos no Tripo pelo usuário: o homem branco, o homem gordo, a mulher e o homem negro. **Cada jogador escolhe o seu no menu, antes de hospedar ou entrar** (os retratos à esquerda); dois podem ter o mesmo. O personagem vai pela rede (`JogadorRede.Personagem`).
+- No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
+- Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
