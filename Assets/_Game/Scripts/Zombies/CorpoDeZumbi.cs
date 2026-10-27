@@ -33,6 +33,9 @@ namespace ZombieCityCleaner.Zombies
         internal bool emUso;
         bool _parado;
         int _passosSemInterpolar;
+        // os zumbis leves: a cópia do material, com a aparência do zumbi que caiu e o rosto de morto
+        Material _material;
+        Material[] _inteira, _semCabeca;
 
         /// <summary>Recém-criado ou de volta ao pool: cinemático, sem colisão e invisível.</summary>
         internal void Guardar()
@@ -53,8 +56,10 @@ namespace ZombieCityCleaner.Zombies
         /// Toma o lugar do zumbi: a mesma pose (osso a osso), a velocidade dele em todas as partes e o empurrão do tiro
         /// na parte atingida. Sem cabeça, troca a malha (a tampa de carne no pescoço) e o pescoço jorra. Com membros
         /// perdidos, a malha é a cortada e as partes que caíram não colidem (seguem invisíveis, presas às juntas).
+        /// Nos zumbis leves, o corpo copia a aparência do zumbi (o material dele) e fica com o rosto de morto.
         /// </summary>
-        internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes)
+        internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes,
+                           Material aparencia = null)
         {
             emUso = true;
             _parado = false;
@@ -63,7 +68,22 @@ namespace ZombieCityCleaner.Zombies
             for (int i = 0; i < esqueleto.Length && i < pose.Length; i++)
                 esqueleto[i].SetLocalPositionAndRotation(pose[i].localPosition, pose[i].localRotation);
             pele.sharedMesh = Membros.Variante(semCabeca ? malhaSemCabeca : malhaInteira, esqueleto, cortes);
-            pele.sharedMaterials = semCabeca || cortes != 0 ? materiaisSemCabeca : materiaisInteira;   // a carne é o 2º material
+            var inteira = materiaisInteira;
+            var cortada = materiaisSemCabeca;
+            if (Aparencia.Leve(aparencia))
+            {
+                if (_material == null)
+                {
+                    _material = new Material(aparencia) { name = aparencia.name + " (corpo)" };
+                    _inteira = new[] { _material };
+                    _semCabeca = new[] { _material, materiaisSemCabeca[1] };
+                }
+                _material.CopyPropertiesFromMaterial(aparencia);
+                _material.SetVector(Aparencia.QuadrosId, Aparencia.Morto(aparencia.GetVector(Aparencia.QuadrosId)));
+                inteira = _inteira;
+                cortada = _semCabeca;
+            }
+            pele.sharedMaterials = semCabeca || cortes != 0 ? cortada : inteira;   // a carne é o 2º material
             for (int l = 0; l < Membros.Quantos; l++)
             {
                 int e = Membros.Estado(cortes, l);

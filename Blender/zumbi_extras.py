@@ -166,7 +166,8 @@ def construir(modelo, fonte):
     acoes.append(("MancarD", mancar(alvo, walk, "R")))
     # os objetos com os nomes do FBX original. A malha vai junto: com um nó só no topo, a Unity faz dele a raiz e o
     # caminho dos ossos perde o "Zombie_Rig/" (as curvas não achavam os ossos do modelo)
-    corpo = next(o for o in novos if o.type == "MESH")
+    # a malha principal (os zumbis em blocos trazem também os LODs, Zombie_Body_Longe1 e _Longe2)
+    corpo = next((o for o in novos if o.type == "MESH" and "_Longe" not in o.name), None) or next(o for o in novos if o.type == "MESH")
     for o in bpy.data.objects:
         if o.name in ("Zombie_Rig", "Zombie_Body") and o not in (alvo, corpo):
             o.name = o.name + "_outro"

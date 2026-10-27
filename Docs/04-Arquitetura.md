@@ -22,13 +22,14 @@ Assets/_Game/
     Paleta.png            a paleta 16 × 16 de tudo o que não tem textura
   Audio/                  SomZombie1.mp3 (a voz dos zumbis)
   Prefabs/                Jogador.prefab e Zumbis/ (um zumbi e um corpo com física por modelo)
-  Scenes/                 Demo_Cidade.unity (+ o NavMesh e a oclusão dela)
-  Scripts/                Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI e Editor
+  Scenes/                 Demo_Cidade.unity (+ o NavMesh e a oclusão dela) e Video.unity (a dos vídeos, fora da build)
+  Scripts/                Network, Player, Zombies, Combat, Loot, World, Atmosphere, UI, Video e Editor
   Settings/               volumes de pós-processamento (dia e noite)
   Shaders/                NeblinaDeAltura.shader
 Assets/Settings/          os assets do URP (PC_RPAsset, PC_Renderer, PC_Renderer_Bracos)
 Benchmarks/               o histórico do benchmark dos zumbis
 Docs/                     esta documentação
+Recordings/               as tomadas gravadas dos vídeos (MP4, fora do git)
 ```
 
 ## A cena `Demo_Cidade`
@@ -60,8 +61,9 @@ Quase tudo na cena e nos prefabs é **gerado por código**, pelos scripts de `Sc
 | Montar jogador e rede (`MontagemDaRede`) | o prefab do jogador, a "Rede", os "Efeitos" e os pontos de nascimento |
 | Montar zumbis (`MontagemDosZumbis`) | a importação dos 4 zumbis, as malhas, o Animator, os prefabs, os "Zumbis" com as hordas, os decals e o NavMesh |
 | Montar armas (`MontagemDasArmas`) | a importação das armas, dos itens, dos braços e dos ícones, as malhas, os Animators dos braços, o prefab do jogador, a "Parede de armas" e os "Itens no mundo" |
+| Montar cena de vídeo (`MontagemDoVideo`) | a `Video.unity`, a cena dos vídeos de divulgação: uma cópia da Demo_Cidade sem nada estático e sem a oclusão, com o "Diretor do vídeo" no lugar da "Câmera de teste" (veja [08 – Vídeos de divulgação](08-Videos-de-Divulgacao.md)) |
 
-A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis.
+A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis (e, por último, a cena de vídeo, que copia a Demo_Cidade pronta).
 
 - A montagem das armas precisa do móvel do painel de armas, que a cidade põe no bunker.
 - O prefab do jogador (refeito pelas montagens das armas, da rede e dos zumbis) precisa das armas já preparadas.

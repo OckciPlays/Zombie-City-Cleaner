@@ -144,10 +144,12 @@ namespace ZombieCityCleaner.Network
             return "Não deu para conectar: " + e.Message;
         }
 
-        public async void Sair()
+        /// <summary>Sai da partida. Com o erro, o menu mostra o porquê (na cena Mundo, a versão do gerador diferente).</summary>
+        public async void Sair(string erro = null)
         {
             var sessao = _sessao;
             _sessao = null;
+            Erro = erro;
             Atual = Estado.Desconectado;
             Codigo = null;
             Local = false;

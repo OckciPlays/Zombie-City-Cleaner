@@ -8,6 +8,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/Demo_Cidade.unity
     guid: cdb70877061a34c449966a184155d4b1
+  - enabled: 1
+    path: Assets/_Game/Scenes/Video.unity
+    guid: cdd397e23fd9d3649983be950da8ece6
+  - enabled: 1
+    path: Assets/_Game/Scenes/Mundo.unity
+    guid: bb09ce9fdaea0a04b9aefa4d9284e2dd
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

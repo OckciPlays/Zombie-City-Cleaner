@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.World
 {
@@ -75,13 +76,15 @@ namespace ZombieCityCleaner.World
             // neblina nenhuma
             var olho = Camera.main;
             float fundo = olho != null ? Mathf.InverseLerp(subsolo.x, subsolo.y, olho.transform.position.y) : 0f;
+            fundo = Mathf.Max(fundo, ModoVideo.Subsolo);   // o corte do bunker na cena de vídeo olha do alto, com a luz de dentro
             float fora = Mathf.Lerp(1f, sobraNoSubsolo, fundo);
             // dentro de casa a neblina de fora fica rala (sem mexer na luz)
             bool dentro = olho != null && AreaInterna.Contem(olho.transform.position);
             _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
             // pela luneta a neblina afina (rápido: a luneta já fecha em ~0,2 s)
             _luneta = Mathf.MoveTowards(_luneta, NaLuneta ? 1f : 0f, Time.deltaTime * 8f);
-            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta);
+            // e a cena de vídeo afina a neblina por tomada (vista do alto, ela cobria tudo)
+            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina;
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;

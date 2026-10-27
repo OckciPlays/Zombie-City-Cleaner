@@ -222,3 +222,42 @@
 | 250 | 5 / 76 / 168 | 13,4 | 14,0 | 13,4 | 9,2 | 0,03 | 0,00 | 0,22 | 0,20 | 0,14 | 967 | 0 | 68 | 768 | 0,0 |
 | 500 | 10 / 153 / 335 | 13,4 | 14,0 | 13,4 | 9,0 | 0,05 | 0,00 | 0,40 | 0,29 | 0,20 | 1040 | 0 | 68 | 1193 | 0,0 |
 
+## 24/10/2026 12:42 — zumbis leves (ZombieGaroto: 1 modelo, 2.195 triângulos, aparência por zumbi no shader), noite
+
+- Editor 6000.6.5f1, 1918×887
+- AMD Ryzen 7 5700X 8-Core Processor  (16 núcleos), AMD Radeon RX 9060 XT
+- Zumbis espalhados pela cidade, 10 s de medida para cada quantidade, sem vsync. Jogadores na partida: 1. Câmera em (-6, 2, -9), olhando (0.6, -0.1, 0.8).
+
+| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 50 | 2 / 13 / 34 | 5,6 | 6,7 | 5,5 | 2,6 | 0,01 | 0,00 | 0,08 | 0,13 | 0,05 | 1029 | 0 | 90 | 438 | 0,0 |
+| 100 | 2 / 30 / 68 | 6,1 | 7,1 | 6,1 | 2,7 | 0,01 | 0,00 | 0,13 | 0,19 | 0,06 | 1045 | 0 | 91 | 473 | 0,0 |
+| 250 | 12 / 70 / 167 | 6,6 | 8,0 | 6,6 | 2,8 | 0,02 | 0,00 | 0,25 | 0,26 | 0,09 | 1090 | 0 | 91 | 571 | 0,0 |
+| 500 | 12 / 132 / 355 | 7,8 | 9,5 | 7,8 | 2,9 | 0,05 | 0,00 | 0,40 | 0,34 | 0,14 | 1133 | 0 | 91 | 659 | 0,0 |
+
+## 24/10/2026 12:45 — A/B: os 4 modelos de antes (~6.300 triângulos, URP Lit), noite
+
+- Editor 6000.6.5f1, 1918×887
+- AMD Ryzen 7 5700X 8-Core Processor  (16 núcleos), AMD Radeon RX 9060 XT
+- Zumbis espalhados pela cidade, 10 s de medida para cada quantidade, sem vsync. Jogadores na partida: 1. Câmera em (-6, 2, -9), olhando (0.6, 0.0, 0.8).
+
+| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 50 | 1 / 11 / 37 | 5,5 | 6,7 | 5,5 | 2,3 | 0,00 | 0,00 | 0,08 | 0,13 | 0,05 | 1002 | 0 | 86 | 455 | 0,0 |
+| 100 | 3 / 30 / 66 | 5,9 | 7,1 | 5,9 | 2,4 | 0,01 | 0,00 | 0,12 | 0,18 | 0,06 | 1023 | 0 | 87 | 585 | 0,0 |
+| 250 | 4 / 67 / 177 | 6,4 | 7,8 | 6,4 | 2,7 | 0,02 | 0,00 | 0,26 | 0,25 | 0,07 | 1066 | 0 | 87 | 857 | 0,0 |
+| 500 | 9 / 156 / 334 | 7,2 | 8,2 | 7,2 | 2,9 | 0,04 | 0,00 | 0,44 | 0,34 | 0,11 | 1128 | 0 | 87 | 1245 | 0,0 |
+
+## 24/10/2026 12:47 — A/B: zumbis leves (ZombieGaroto), 2ª rodada, noite
+
+- Editor 6000.6.5f1, 1918×887
+- AMD Ryzen 7 5700X 8-Core Processor  (16 núcleos), AMD Radeon RX 9060 XT
+- Zumbis espalhados pela cidade, 10 s de medida para cada quantidade, sem vsync. Jogadores na partida: 1. Câmera em (-6, 2, -9), olhando (0.6, 0.0, 0.8).
+
+| Zumbis | Perto / médio / longe | Quadro médio (ms) | Quadro p95 (ms) | Thread principal (ms) | GPU (ms) | IA + LOD (ms) | Rede (ms) | Animação (ms) | Navegação (ms) | Física (ms) | Draw calls | Batches | SetPass | Triângulos (mil) | Rede (KB/s por cliente) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 50 | 4 / 15 / 30 | 5,8 | 7,2 | 5,7 | 2,2 | 0,01 | 0,00 | 0,09 | 0,14 | 0,05 | 1011 | 0 | 90 | 437 | 0,0 |
+| 100 | 3 / 28 / 68 | 6,1 | 8,3 | 6,1 | 2,7 | 0,01 | 0,00 | 0,15 | 0,17 | 0,06 | 1035 | 0 | 89 | 490 | 0,0 |
+| 250 | 6 / 71 / 171 | 7,4 | 9,6 | 7,4 | 2,5 | 0,03 | 0,00 | 0,23 | 0,29 | 0,13 | 939 | 0 | 86 | 461 | 0,0 |
+| 500 | 49 / 162 / 288 | 9,1 | 11,8 | 9,1 | 1,9 | 0,12 | 0,00 | 0,51 | 0,54 | 0,33 | 713 | 0 | 90 | 497 | 0,0 |
+

@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 
 namespace ZombieCityCleaner.Player
 {
@@ -280,7 +281,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (!Aberta || MenuOnline.Aberto) return;
+            if (!Aberta || MenuOnline.Aberto || ModoVideo.Ligado) return;
             GUI.depth = 0;
             _u = Escala();
             Estilos();

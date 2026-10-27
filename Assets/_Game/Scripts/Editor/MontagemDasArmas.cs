@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
+using ZombieCityCleaner.Player;
 
 namespace ZombieCityCleaner.EditorTools
 {
@@ -85,6 +86,19 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
         static int CorpoDa(int arma) => (int)(Armas.Todas[arma].corpoComo ?? (TipoDeArma)arma);
 
+        /// <summary>
+        /// Os personagens (27/10/2026; Modelo 3D/Personagens na pasta de arte, o personagens.py): Personagem_&lt;modelo&gt;.fbx
+        /// (o esqueleto do jogador com os 5 dedos, o corpo e as 25 animações, com os nomes do Jogador.fbx) e a textura
+        /// Personagem_&lt;modelo&gt;.jpg. Os retratos da tela de escolha ficam em Art/UI/Personagens/Resources.
+        /// </summary>
+        public const string ArtePersonagens = "Assets/_Game/Art/Characters/Personagens";
+        public static string FbxDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.fbx";
+        /// <summary>O controlador do corpo do personagem com a arma (o override do Jogador_TP com as animações dele).</summary>
+        public static string ControladorTPDoPersonagem(int p, int arma) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Armas.Modelos[arma]}.overrideController";
+        /// <summary>O corpo do personagem com a mão vazia (a guarda e o soco) ou com comida e água na mão.</summary>
+        public static string ControladorTPDasMaosDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Maos.overrideController";
+        static string MaterialDoPersonagem(int p) => $"{ArtePersonagens}/Materials/Personagem_{Personagens.Modelos[p]}.mat";
+
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
         {
@@ -120,6 +134,7 @@ namespace ZombieCityCleaner.EditorTools
             MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.Punhos), ClipesFP,
                            c => c == "Fire" ? "SocoDireito" : c == "DryFire" ? "SocoEsquerdo" : c == "Reload" ? "Idle" : c, ControladorFPDa(Itens.Punhos));
             MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_Maos", ControladorTPDasMaos);
+            PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
             {
                 if (i >= Armas.Quantas)
@@ -133,6 +148,77 @@ namespace ZombieCityCleaner.EditorTools
                 MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_{modelo}", ControladorTPDa(i));
             }
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Os personagens e o prefab do jogador, sem mexer na cena. Menu: Zombie City Cleaner > Montar personagens.</summary>
+        [MenuItem("Zombie City Cleaner/Montar personagens")]
+        public static void MontarPersonagens()
+        {
+            PrepararPersonagens();
+            MontagemDaRede.MontarPrefab();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset("Assets/_Game/Prefabs/Jogador.prefab", ImportAssetOptions.ForceUpdate);
+            Debug.Log("Personagens montados: as importações, os materiais, os controladores e o prefab do jogador.");
+        }
+
+        /// <summary>
+        /// Os personagens: a importação (as animações TP_* sem o prefixo, como as do Jogador.fbx), o material com a textura
+        /// e os override do Jogador_TP de cada arma (a pistola também) e dos punhos, com as animações de cada um.
+        /// </summary>
+        public static void PrepararPersonagens()
+        {
+            Directory.CreateDirectory(ArtePersonagens + "/Materials");
+            for (int p = 0; p < Personagens.Quantos; p++)
+            {
+                ImportarPersonagem(p, MaterialDoCorpo(p));
+                string fbx = FbxDoPersonagem(p);
+                MontarOverride(ControladorTP, Arte + "/Jogador.fbx", fbx, ClipesTP, c => $"{c}_Maos", ControladorTPDasMaosDoPersonagem(p));
+                for (int i = 0; i < Armas.Quantas; i++)
+                {
+                    int corpo = CorpoDa(i);
+                    string sufixo = corpo == 0 ? "" : "_" + Armas.Modelos[corpo];
+                    MontarOverride(ControladorTP, Arte + "/Jogador.fbx", fbx, ClipesTP, c => c + sufixo, ControladorTPDoPersonagem(p, i));
+                }
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>O material do corpo: o URP Lit com a textura do Tripo, fosco, sem o passe de motion vectors (como o dos zumbis).</summary>
+        static Material MaterialDoCorpo(int p)
+        {
+            string caminho = MaterialDoPersonagem(p);
+            var m = AssetDatabase.LoadAssetAtPath<Material>(caminho);
+            if (m == null)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(m, caminho);
+            }
+            var textura = AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.jpg");
+            if (textura == null) Debug.LogWarning($"A textura do personagem {Personagens.Modelos[p]} não está em {ArtePersonagens} (copie de Modelo 3D/Personagens).");
+            m.SetTexture("_BaseMap", textura);
+            m.mainTexture = textura;
+            m.SetColor("_BaseColor", Color.white);
+            m.SetFloat("_Smoothness", 0.15f);
+            m.SetFloat("_Metallic", 0f);
+            m.SetShaderPassEnabled("MotionVectors", false);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        /// <summary>O corpo do personagem: rig Generic com avatar do próprio modelo, sem "Bake Axis Conversion" (como o
+        /// Jogador.fbx), o material dele e um clipe por faixa de NLA (TP_Idle → Idle, TP_Idle_Rifle → Idle_Rifle).</summary>
+        static void ImportarPersonagem(int p, Material material)
+        {
+            var imp = Importador(FbxDoPersonagem(p));
+            imp.animationType = ModelImporterAnimationType.Generic;
+            imp.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            imp.bakeAxisConversion = false;
+            imp.importAnimation = true;
+            imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Personagem_" + Personagens.Modelos[p]), material);
+            imp.SaveAndReimport();
+            imp.clipAnimations = Clipes(imp, t => t.StartsWith("TP_") ? t.Substring(3) : null);
+            imp.SaveAndReimport();
         }
 
         /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>

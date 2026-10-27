@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.UI;
+using ZombieCityCleaner.Video;
 using ZombieCityCleaner.World;
 using ZombieCityCleaner.Zombies;
 
@@ -189,13 +190,15 @@ namespace ZombieCityCleaner.Player
             return Inventario != null && Inventario.Achar(id, out var it) ? Mathf.Min(it.qtd, cap) : cap;
         }
 
-        /// <summary>As balas do calibre da arma da mão nas caixas da mochila (o robô de teste tem munição sem fim).</summary>
-        public int Reserva => MenuOnline.Bot ? 999 : Inventario != null ? Inventario.BalasDe(Dados.calibre) : 0;
+        /// <summary>As balas do calibre da arma da mão nas caixas da mochila (o robô de teste e o vídeo das armas têm munição sem fim).</summary>
+        public int Reserva => SemFim ? 999 : Inventario != null ? Inventario.BalasDe(Dados.calibre) : 0;
+
+        static bool SemFim => MenuOnline.Bot || ModoVideo.MunicaoInfinita;
 
         // tira as balas das caixas (no anfitrião); o robô não gasta
         void GastarDaReserva(int balas)
         {
-            if (!MenuOnline.Bot && Inventario != null) Inventario.Gastar(Dados.calibre, balas);
+            if (!SemFim && Inventario != null) Inventario.Gastar(Dados.calibre, balas);
         }
 
         void Update()
@@ -696,7 +699,8 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (MenuOnline.Aberto || MenuOnline.ComTela) return;   // com o inventário ou o menu do desenvolvedor, sem mira
+            // com o inventário ou o menu do desenvolvedor, sem mira; gravando um vídeo, só no das armas
+            if (MenuOnline.Aberto || MenuOnline.ComTela || (ModoVideo.Ligado && !ModoVideo.MostrarMira)) return;
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
             float t = Mathf.Max(1f, Mathf.Round(2 * u));
             if (NaLuneta) Luneta(cx, cy, u);
@@ -735,7 +739,7 @@ namespace ZombieCityCleaner.Player
                 // o pente e, menor, as balas do calibre dela nas caixas da mochila
                 int reserva = Reserva;
                 string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO"
-                    : $"{Municao}<size={Mathf.RoundToInt(15 * u)}> / {(MenuOnline.Bot ? "∞" : reserva.ToString())}</size>";
+                    : $"{Municao}<size={Mathf.RoundToInt(15 * u)}> / {(SemFim ? "∞" : reserva.ToString())}</size>";
                 estilo.richText = true;
                 GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
                 var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };

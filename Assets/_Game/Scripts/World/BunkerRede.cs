@@ -90,6 +90,14 @@ namespace ZombieCityCleaner.World
 
         void AoMudarLuzes(byte antes, byte depois) => AplicarLuzes(depois, (byte)(antes ^ depois));
 
+        /// <summary>No anfitrião, sem pedido nem distância: a cena de vídeo apaga o bunker, abre a porta e acende os cômodos um por um.</summary>
+        public void Definir(byte acesas, bool aberta)
+        {
+            if (!IsServer) return;
+            _luzes.Value = acesas;
+            _aberta.Value = aberta;
+        }
+
         /// <summary>O jogador local pede para abrir ou fechar a porta.</summary>
         public void PedirPorta()
         {

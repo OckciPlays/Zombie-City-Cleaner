@@ -39,7 +39,10 @@ namespace ZombieCityCleaner.Player
         public AudioListener ouvido;
         public GameObject bracos;
 
-        [Header("Corpo (o que os outros veem)")]
+        [Header("Os corpos (um por personagem, na ordem de Personagens.Modelos; só o escolhido fica ligado)")]
+        public CorpoDoPersonagem[] corpos;
+
+        [Header("Corpo (o que os outros veem): o do personagem escolhido, copiado do CorpoDoPersonagem dele")]
         public Animator animadorCorpo;
         public Renderer[] renderersCorpo;
         public Transform ossoPeito;
@@ -55,10 +58,10 @@ namespace ZombieCityCleaner.Player
         [Tooltip("O corpo com a mão vazia (os punhos em guarda e o soco) ou com comida e água na mão.")]
         public RuntimeAnimatorController controladorDasMaos;
 
-        [Header("Cores da família")]
-        [Tooltip("Jogador_Variacao0..3: cada jogador recebe uma, na ordem em que entra.")]
+        [Header("A pele dos braços de primeira pessoa")]
+        [Tooltip("Jogador_Variacao0..3: a linha k da paleta tem a pele do personagem k (as mangas e as luvas também).")]
         public Material[] variacoes;
-        [Tooltip("Renderers que trocam de cor (o material 0 de cada um).")]
+        [Tooltip("Renderers que trocam de cor (o material 0 de cada um): os braços de primeira pessoa.")]
         public Renderer[] pintaveis;
 
         /// <summary>Para onde a cabeça aponta na vertical, em graus (positivo = olhando para baixo).</summary>
@@ -69,7 +72,14 @@ namespace ZombieCityCleaner.Player
         /// se estivessem perto (aparecem, têm hitboxes e vão pela rede), na proporção do aumento.
         /// </summary>
         public readonly NetworkVariable<bool> Luneta = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-        public readonly NetworkVariable<int> Cor = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>
+        /// O personagem (o índice em <see cref="Personagens.Modelos"/>), escolhido no menu antes de entrar e escrito pelo
+        /// dono quando ele nasce. Dois jogadores podem ter o mesmo.
+        /// </summary>
+        public readonly NetworkVariable<byte> Personagem = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        /// <summary>O corpo mudou (o personagem chegou pela rede): quem guarda os ossos dele lê de novo.</summary>
+        public event System.Action CorpoMudou;
 
         /// <summary>Quantos tiros deste jogador chegaram pela rede (para testes).</summary>
         public int TirosRecebidos { get; private set; }
@@ -121,25 +131,18 @@ namespace ZombieCityCleaner.Player
             Vida = GetComponent<VidaJogador>();
             Inventario = GetComponent<InventarioJogador>();
             Passageiro = GetComponent<PassageiroDoCarro>();
-            if (IsServer) Cor.Value = CorLivre();
-            Cor.OnValueChanged += AoMudarCor;
-            AplicarCor(Cor.Value);
 
             bool dono = IsOwner;
+            if (dono) Personagem.Value = (byte)Personagens.Escolhido;
+            Personagem.OnValueChanged += AoMudarPersonagem;
             cameraMundo.enabled = dono;
             cameraBracos.enabled = dono;
             ouvido.enabled = dono;
             bracos.SetActive(dono);
-            if (dono) CorpoDoDono(false);
-            else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;            // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm em que
-            // a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de
-            // primeira pessoa
-            if (dono)
-                foreach (var a in naMaoCorpo) a.GetComponent<Renderer>().enabled = false;
             GetComponent<MovimentoPrimeiraPessoa>().enabled = dono;
             GetComponent<ArmaJogador>().enabled = dono;
             Inventario.Mudou += AplicarNaMao;
-            AplicarNaMao();
+            AplicarPersonagem(Personagem.Value);
             if (dono)
             {
                 Local = this;
@@ -156,7 +159,7 @@ namespace ZombieCityCleaner.Player
             // quem sai da partida devolve as armas ao painel do bunker (a pistola, a uma vaga de pistola livre) e deixa a
             // comida e a água no chão
             if (IsServer && !NetworkManager.ShutdownInProgress) Inventario.Esvaziar();
-            Cor.OnValueChanged -= AoMudarCor;
+            Personagem.OnValueChanged -= AoMudarPersonagem;
             Inventario.Mudou -= AplicarNaMao;
             if (Local == this)
             {
@@ -165,18 +168,42 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        int CorLivre()
-        {
-            for (int c = 0; c < variacoes.Length; c++)
-            {
-                bool usada = false;
-                foreach (var j in Todos) usada |= j != this && j.Cor.Value == c;
-                if (!usada) return c;
-            }
-            return (int)(OwnerClientId % (ulong)Mathf.Max(1, variacoes.Length));
-        }
+        void AoMudarPersonagem(byte antes, byte depois) => AplicarPersonagem(depois);
 
-        void AoMudarCor(int antes, int depois) => AplicarCor(depois);
+        /// <summary>
+        /// Liga o corpo do personagem (e desliga os outros), passa a usar o Animator, os ossos, o que está na mão e os
+        /// controladores dele, e pinta os braços de primeira pessoa com a pele dele.
+        /// </summary>
+        void AplicarPersonagem(int indice)
+        {
+            if (corpos != null && corpos.Length > 0)
+            {
+                indice = Mathf.Clamp(indice, 0, corpos.Length - 1);
+                var c = corpos[indice];
+                for (int k = 0; k < corpos.Length; k++) corpos[k].gameObject.SetActive(k == indice);
+                animadorCorpo = c.animador;
+                renderersCorpo = c.renderers;
+                ossoPeito = c.ossoPeito;
+                ossoCabeca = c.ossoCabeca;
+                naMaoCorpo = c.naMao;
+                bocasCorpo = c.bocas;
+                controladoresCorpo = c.controladores;
+                controladorDasMaos = c.controladorDasMaos;
+            }
+            if (IsOwner)
+            {
+                CorpoDoDono(false);
+                // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm
+                // em que a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente
+                // da arma de primeira pessoa
+                foreach (var a in naMaoCorpo) a.GetComponent<Renderer>().enabled = false;
+            }
+            else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;
+            AplicarCor(indice);
+            _naMaoAplicado = (Item)255;   // o corpo novo pega a arma da mão e o controlador dela
+            if (Inventario != null) AplicarNaMao();
+            CorpoMudou?.Invoke();
+        }
 
         void AplicarCor(int indice)
         {

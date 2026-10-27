@@ -3,20 +3,28 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Video;
+using ZombieCityCleaner.World;
 using ZombieCityCleaner.Zombies;
 
 namespace ZombieCityCleaner.UI
 {
     /// <summary>
-    /// O menu do desenvolvedor (F1; só no Editor e nas builds de desenvolvimento): criar itens (as armas, a lata, a
+    /// O menu do desenvolvedor (F1; no Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada,
+    /// <see cref="Opcoes.LiberarF1"/>): sempre de dia ou sempre de noite (o meio-dia ou a meia-noite com o relógio parado,
+    /// para todos), criar itens (as armas, a lata, a
     /// garrafa, as mochilas, o coldre, as caixas de munição cheias e as peças do motor a 100%) na mochila ou no chão à
     /// frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
-    /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz.
+    /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz. Na cena Mundo, também o painel do mundo
+    /// (MenuDoDesenvolvedor.Mundo.cs: a semente, voar com F2 e ir para um ponto).
     /// </summary>
-    public class MenuDoDesenvolvedor : NetworkBehaviour
+    public partial class MenuDoDesenvolvedor : NetworkBehaviour
     {
-        /// <summary>Só no Editor e nas builds de desenvolvimento.</summary>
-        public static bool Disponivel => Application.isEditor || Debug.isDebugBuild;
+        /// <summary>
+        /// No Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada (ESC > Opções). Os pedidos
+        /// valem pela opção do anfitrião: com ela desligada lá, ele ignora os do F1 dos outros.
+        /// </summary>
+        public static bool Disponivel => Application.isEditor || Debug.isDebugBuild || Opcoes.LiberarF1;
         /// <summary>A janela na tela (vazia, fechada): a tela do inventário não pega cliques nela.</summary>
         public static Rect Area { get; private set; }
 
@@ -74,6 +82,7 @@ namespace ZombieCityCleaner.UI
             if (!IsSpawned || !IsOwner || !Disponivel || MenuOnline.Bot) return;
             var teclado = Keyboard.current;
             if (teclado != null && teclado.f1Key.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!_aberto);
+            AtalhosDoMundo(teclado);
         }
 
         void Avisar(string texto)
@@ -98,11 +107,11 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
-            if (!_aberto || !IsSpawned || !IsOwner || MenuOnline.Aberto) return;
+            if (!_aberto || !IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
             GUI.depth = -10;   // por cima da tela do inventário
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
-            var area = new Rect(12 * u, 40 * u, 300 * u, 624 * u);
+            var area = new Rect(12 * u, 40 * u, 300 * u, 658 * u);
             Area = area;
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
@@ -114,6 +123,22 @@ namespace ZombieCityCleaner.UI
             float x = area.x + 12 * u, w = area.width - 24 * u, y = area.y + 8 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "DESENVOLVEDOR  (F1)", _titulo);
             y += 30 * u;
+
+            // sempre de dia ou sempre de noite: meio-dia ou meia-noite com o relógio parado (o anfitrião manda, para todos)
+            bool deDia = CicloDoDia.Parado && CicloDoDia.Noite < 0.5f, deNoite = CicloDoDia.Parado && !deDia;
+            float meio = (w - 8 * u) / 2f;
+            // (ligado, o botão fica apertado e com o texto amarelo: o estilo "on" do _botao)
+            if (GUI.Toggle(new Rect(x, y, meio, 28 * u), deDia, "Sempre de dia", _botao) != deDia)
+            {
+                PararRelogioRpc(!deDia, false);
+                Avisar(deDia ? "O relógio voltou a andar." : "Meio-dia, com o relógio parado.");
+            }
+            if (GUI.Toggle(new Rect(x + meio + 8 * u, y, meio, 28 * u), deNoite, "Sempre de noite", _botao) != deNoite)
+            {
+                PararRelogioRpc(!deNoite, true);
+                Avisar(deNoite ? "O relógio voltou a andar." : "Meia-noite, com o relógio parado.");
+            }
+            y += 34 * u;
 
             // os zumbis
             var zm = ZombieManager.Instancia;
@@ -184,6 +209,10 @@ namespace ZombieCityCleaner.UI
             if (_boneco != null) GUI.Label(new Rect(x, y, w, 22 * u), Bonecos[_qualBoneco].nome, _texto);
             y += 26 * u;
             if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
+
+            // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
+            var mundo = PainelDoMundo(u, area);
+            if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(area.yMax, mundo.yMax));
         }
 
         /// <summary>
@@ -194,7 +223,7 @@ namespace ZombieCityCleaner.UI
         {
             var rede = GetComponent<JogadorRede>();
             var prefab = NetworkManager.Singleton != null ? NetworkManager.Singleton.NetworkConfig.PlayerPrefab : null;
-            var referencia = prefab != null ? prefab.transform.Find("Corpo") : null;
+            var referencia = prefab != null && rede != null ? prefab.transform.Find(rede.animadorCorpo.name) : null;   // o corpo do personagem dele
             if (rede == null || referencia == null) return;
             _qualBoneco = (_qualBoneco + 1) % Bonecos.Length;
             if (_boneco == null)
@@ -251,6 +280,14 @@ namespace ZombieCityCleaner.UI
             var ponto = Physics.Raycast(frente + Vector3.up * 1.5f, Vector3.down, out var chao, 4f, ~((1 << 2) | (1 << JogadorRede.CamadaJogador)), QueryTriggerInteraction.Ignore)
                 ? chao.point : transform.position;
             ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f);
+        }
+
+        [Rpc(SendTo.Server)]
+        void PararRelogioRpc(bool ligado, bool deNoite, RpcParams parametros = default)
+        {
+            if (!Aceita(parametros) || CicloDoDia.Instancia == null) return;
+            if (deNoite) CicloDoDia.Instancia.SempreDeNoite(ligado);
+            else CicloDoDia.Instancia.SempreDeDia(ligado);
         }
 
         [Rpc(SendTo.Server)]

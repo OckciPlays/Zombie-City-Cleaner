@@ -20,6 +20,19 @@ namespace ZombieCityCleaner.Network
             return new Pose(p.position, p.rotation);
         }
 
+        /// <summary>Muda os pontos (o mundo gerado, na cena Mundo): um filho por posição, criado se faltar.</summary>
+        public static void Definir(Vector3[] posicoes, float[] giros)
+        {
+            if (_instancia == null) return;
+            var raiz = _instancia.transform;
+            for (int i = 0; i < posicoes.Length; i++)
+            {
+                var p = i < raiz.childCount ? raiz.GetChild(i) : new GameObject($"Ponto {i + 1}").transform;
+                p.SetParent(raiz, true);
+                p.SetPositionAndRotation(posicoes[i], Quaternion.Euler(0f, giros[i], 0f));
+            }
+        }
+
         void OnDrawGizmos()
         {
             Gizmos.color = new Color(0.3f, 0.9f, 0.4f);

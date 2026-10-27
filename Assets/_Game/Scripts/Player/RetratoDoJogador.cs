@@ -78,7 +78,7 @@ namespace ZombieCityCleaner.Player
                 _animador.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             }
             var prefab = NetworkManager.Singleton != null ? NetworkManager.Singleton.NetworkConfig.PlayerPrefab : null;
-            _referencia = prefab != null ? prefab.transform.Find("Corpo") : null;
+            _referencia = prefab != null ? prefab.transform.Find(original.name) : null;   // o corpo do mesmo personagem
             if (_referencia != null) Repouso(_referencia, copia.transform);
 
             foreach (var t in copia.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = JogadorRede.CamadaRetrato;

@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ZombieGaroto
+  m_Shader: {fileID: 4800000, guid: 780f76f1771263b4a9ae1a1856650110, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 94595243efaef7442b9da6405931e684, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Mascaras:
+        m_Texture: {fileID: 2800000, guid: b0f46f0ea1683cd44b8bc71fd82e1496, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Rosto:
+        m_Texture: {fileID: 2800000, guid: 4b3de85a53f8006448ba3d6d88f45b41, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sujeiras:
+        m_Texture: {fileID: 18700000, guid: 0e79d61464ec7b740b0385df0c6bd794, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BrilhoDoSangue: 0.55
+    - _Smoothness: 0.15
+    m_Colors:
+    - _Camadas: {r: 0, g: 1, b: 0, a: 1}
+    - _CorBaixo: {r: 0.35499996, g: 0.40399998, b: 0.496, a: 1}
+    - _CorCabelo: {r: 0.44899994, g: 0.23399997, b: 0.15299997, a: 1}
+    - _CorCima: {r: 0.894, g: 0.881, b: 0.875, a: 1}
+    - _CorFerida: {r: 0.62, g: 0.19999996, b: 0.17999998, a: 1}
+    - _CorFeridaFundo: {r: 0.24999997, g: 0.049999982, b: 0.049999982, a: 1}
+    - _CorOlhos: {r: 0.78, g: 0.7, b: 0.19999996, a: 1}
+    - _CorPele: {r: 0.62, g: 0.68, b: 0.54999995, a: 1}
+    - _CorSangue: {r: 0.47999996, g: 0.049999982, b: 0.049999982, a: 1}
+    - _Quadros: {r: 0, g: 8, b: -1, a: -1}
+    - _TomSangueSeco: {r: 0.58, g: 0.32999998, b: 0.28999996, a: 1}
+    - _TomSujeira: {r: 0.58, g: 0.53, b: 0.45, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -211,6 +211,60 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - **As rodas dos carros da cidade (etapa 4b, a pedido):** os carros abandonados também trocam de roda com o macaco, do mesmo jeito da perua. As rodas deles foram recortadas da malha (pela cor do pneu), e cada carro começa com algumas rodas faltando e pneus furados. Sem uma roda, o canto do carro desce até o cubo; com o macaco, o lado dele sobe. As próximas etapas: o porta-malas com o macaco e o estepe, levantar o carro com o macaco e trocar a roda, e pegar as rodas dos carros da cidade.
 - Os testes ficam com o Pedro (a pedido: sem testes automáticos por enquanto).
 
+## A cena dos vídeos de divulgação, parte 1: a base (24/10/2026, a pedido)
+
+- Para os vídeos curtos do Instagram (o plano está em [08 – Vídeos de divulgação](08-Videos-de-Divulgacao.md)): a cena `Video.unity`, montada por script a partir de uma cópia da Demo_Cidade, sem nada estático (as peças vão se mexer nas tomadas) e sem a oclusão assada.
+- **O diretor do vídeo** abre uma partida local sozinho, espera o jogador e os zumbis e roda a tomada com a câmera dele. **O modo vídeo** tira toda a HUD, faz o jogador nascer de mãos vazias e sem levar dano, esvazia o painel de armas, afina a neblina e clareia a imagem por tomada, e faz os zumbis aparecerem e andarem longe da câmera (e com sombra).
+- **A gravação** é pelo Unity Recorder (instalado, 5.1.7): MP4 vertical de 1080 × 1920, a 60 fps constantes, com o som do jogo, em `Recordings/`. O Play para sozinho no fim da tomada.
+- **Testado:** a tomada de teste gravou 5 s (300 quadros) em 1080 × 1920 a 60 fps, com áudio, sem HUD, com os 1.000 zumbis e o jogador sem a pistola.
+
+## A cena dos vídeos, parte 2: o mapa se montando (24/10/2026, a pedido)
+
+- **A tomada `Mapa`** (13,5 s): numa planície de grama, o chão da cidade cai numa onda do meio para fora; as casas e o prédio caem do céu, amassam e levantam poeira; os carros e as coisas da rua caem; os postes, as cercas e as árvores brotam do chão; o anel de pinheiros cresce em volta. No fim anoitece, e os postes acendem um por um, do meio para fora.
+- **Para a vista do alto:** sombras até 320 m, neblina linear só no horizonte, a imagem mais clara e a planície de grama por baixo de tudo. Nada de zumbis nem do bunker nesta tomada.
+- **Gravada três vezes**, conferindo os quadros: na primeira, a neblina deixava tudo cinza, a borda do mundo aparecia em cima, a poeira parecia bolas brancas e o fim ficava escuro demais; na segunda, sem a neblina, o dia ficou escuro; a terceira ficou certa. Aprovada.
+
+## A cena dos vídeos, parte 3: o bunker em corte (24/10/2026, a pedido)
+
+- **A tomada `Bunker`** (9 s): à noite, sobre a casa da família, um corte de raio-X desce do telhado até abaixo do teto dos cômodos, e o bunker aparece apagado, como uma casa de boneca. As luzes acendem uma a uma com o estalo do interruptor (a escada, o salão, os quartos e o depósito), e a porta blindada abre.
+- **O corte** é o plano perto da câmera virado num plano horizontal (a matriz oblíqua dos reflexos na água): a câmera olha inclinada e o corte fica reto. A luz é a do subsolo, mesmo com a câmera no alto.
+- **Na primeira gravação,** o poste da rua iluminava o depósito por cima do corte, e o bunker ficou pequeno na tela. Com o corte abaixo do chão, as luzes de fora apagam; a câmera chegou mais perto e o ritmo ficou mais rápido, para caber nos ~7 s do roteiro.
+- **Depois do primeiro olhar do usuário:** a câmera passou a mergulhar no bunker pelo corte até a altura dos olhos e a mostrar cada cômodo em primeira pessoa (os quatro quartos e o depósito, com corte seco entre eles). A tomada foi de 9 s para 14,5 s.
+- **A folha de conferência:** o diretor salva 12 quadros de cada tomada numa imagem, junto com o vídeo. Ler o MP4 com o VideoPlayer da Unity travou depois de uma leitura interrompida.
+- **Um erro no caminho:** os scripts foram recompilados com o Play do usuário rodando (a prévia do mapa), e a partida dele caiu. Agora a recompilação confere o Play antes.
+- Aprovada.
+
+## A cena dos vídeos, parte 4: os zumbis surgindo (24/10/2026, a pedido)
+
+- **A tomada `Zumbis`** (8 s): à noite, os 1.000 zumbis sobem do chão em ondas, horda por horda, a partir do cruzamento do meio, com poeira nos pés. No fim, um corte para o rosto de um deles, com a luz de uma lanterna e o gemido.
+- **Só o modelo afunda** (o filho da raiz): a raiz continua no NavMesh, então a IA, a navegação e o nível de detalhe não mudam.
+- **Na primeira gravação,** de 55 m os zumbis eram pontinhos e a lanterna estourou o rosto. A câmera chegou perto do cruzamento (30 m a 22 m) e ficou mais clara, e a lanterna ficou 20 vezes mais fraca.
+- Aprovada.
+
+## A cena dos vídeos, parte 5: o jogador entre os zumbis (24/10/2026, a pedido)
+
+- **A tomada `Jogador`** (10 s): à noite, na avenida sul, o jogador anda de punhos em guarda e com a lanterna acesa, visto de trás do ombro; a lanterna o denuncia, e as hordas da frente e de trás vêm devagar. Ele para perto da blitz, e a câmera sobe e mostra ele cercado, sem arma.
+- **O diretor anda com o jogador** (o `MovimentoPrimeiraPessoa` fica desligado, e ele move o `CharacterController`), e o corpo do jogador aparece (para o dono, ele era só sombra).
+- **O fim mudou do plano:** a câmera subindo e mostrando o jogador cercado, no lugar de um zumbi chegando na câmera.
+- **Ajustes depois da primeira gravação:** a câmera mais afastada no começo, o brilho caindo no fim (os zumbis colados na lanterna estouravam) e a subida mais baixa (de 12 m, o jogador sumia no meio das cabeças).
+- **Você no controle (a pedido do usuário):** com "Jogador No Controle", quem grava anda com o teclado e o mouse, e a câmera segue atrás do ombro (com o olhar e encostando nas paredes); Enter faz o final e termina a tomada. Testado com o W e o Enter simulados: o jogador andou 9 m com a câmera atrás, e o Enter parou, subiu a câmera e fechou o vídeo (20 s).
+
+## A parede dos fundadores e o vídeo das armas (25/10/2026, a pedido)
+
+- O primeiro vídeo passou de 2.800 visualizações e 50 comentários. A promessa era pôr o nome de quem comentasse no jogo.
+- **A parede dos fundadores:** os nomes dos 20 primeiros comentários, pintados em spray na parede do fundo do salão do bunker, à direita do painel de armas ("FUNDADORES" em vermelho, os nomes em branco, em colunas, tortos, com as bordas ásperas e escorridos). Os nomes ficam num arquivo de texto (`Settings/Fundadores.txt`), e um menu pinta a imagem e põe a parede na Demo_Cidade. O usuário escreveu os 20 nomes (os @ do Instagram e nomes), e todos couberam.
+- **A montagem da cena de vídeo guarda as escolhas do diretor:** ela refazia o diretor do zero, e a cena voltava na tomada `Teste` (a do primeiro vídeo). Agora a tomada, o Gravar, o Deitado e o resto passam da cena velha para a nova.
+- **A tomada `Armas`** (o segundo vídeo): em primeira pessoa, com quem grava jogando. O jogador nasce no salão, de frente para o painel cheio, com a pistola, a mochila grande e o coldre; no vídeo, todas as armas cabem nele e a munição não acaba. A tela mostra só a mira e a munição. Enter termina.
+- **A arma na tela em pé:** a 1080 × 1920, a arma de primeira pessoa (feita para a tela deitada) ficava cortada. A câmera dos braços abre mais e anda 6 cm para a direita e 2,5 cm para cima para a arma caber, e a opção "Deitado" grava 1920 × 1080.
+  - A primeira versão deslocava a imagem da câmera dos braços, e o cano apontava à esquerda da mira (o usuário viu a arma torta). Mover a câmera mantém o cano na mira: conferido nas 5 armas.
+- Testado: as 4 armas longas cabendo juntas, a reserva infinita e um MP4 de teste de 15 s em pé, com a pistola, a mira e a parede dos fundadores no fundo, sem erros no Console.
+
+## Os personagens do jogador (27/10/2026, a pedido)
+
+- O jogador de blocos deu lugar a 4 personagens feitos no Tripo pelo usuário: o homem branco, o homem gordo, a mulher e o homem negro. **Cada jogador escolhe o seu no menu, antes de hospedar ou entrar** (os retratos à esquerda); dois podem ter o mesmo. O personagem vai pela rede (`JogadorRede.Personagem`).
+- No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
+- Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

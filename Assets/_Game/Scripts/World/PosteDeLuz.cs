@@ -28,6 +28,9 @@ namespace ZombieCityCleaner.World
         void OnEnable() => Todos.Add(this);
         void OnDisable() => Todos.Remove(this);
 
+        /// <summary>Quanto de noite a mais ele espera para acender (sorteado de 0 a 0,15; a cena de vídeo acende um por um).</summary>
+        public float Atraso { get => _atraso; set => _atraso = value; }
+
         /// <summary>Se um ponto do chão está na poça de luz de algum poste aceso.</summary>
         public static bool Ilumina(Vector3 ponto)
         {

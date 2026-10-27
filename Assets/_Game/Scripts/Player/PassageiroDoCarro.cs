@@ -119,11 +119,20 @@ namespace ZombieCityCleaner.Player
             _cabeca = _movimento.cabeca;
             _camera = _rede.cameraMundo.transform;
             _cabecaLocal = _cabeca.localPosition;
-            // os ossos desta cópia e o repouso deles (do prefab do jogador, a mesma pose do retrato do inventário)
+            LerOssos();
+            // o personagem pode chegar pela rede depois do Start (os outros jogadores): o corpo muda e os ossos também
+            _rede.CorpoMudou += LerOssos;
+        }
+
+        /// <summary>Os ossos do corpo do personagem e o repouso deles (do prefab do jogador, a mesma pose do retrato do inventário).</summary>
+        void LerOssos()
+        {
+            _ossos.Clear();
+            _repouso.Clear();
             foreach (var t in _rede.animadorCorpo.GetComponentsInChildren<Transform>(true)) _ossos[t.name] = t;
             var prefab = NetworkManager.Singleton != null && NetworkManager.Singleton.NetworkConfig.PlayerPrefab != null
                 ? NetworkManager.Singleton.NetworkConfig.PlayerPrefab.transform : null;
-            var corpoDoPrefab = prefab != null ? prefab.Find("Corpo") : null;
+            var corpoDoPrefab = prefab != null ? prefab.Find(_rede.animadorCorpo.name) : null;
             if (corpoDoPrefab == null) return;
             var doPrefab = new Dictionary<string, Transform>();
             foreach (var t in corpoDoPrefab.GetComponentsInChildren<Transform>(true)) doPrefab[t.name] = t;
@@ -487,6 +496,7 @@ namespace ZombieCityCleaner.Player
         void OnDestroy()
         {
             if (_mostrador != null) Destroy(_mostrador);
+            if (_rede != null) _rede.CorpoMudou -= LerOssos;
         }
 
         Vector2 LerOlhar()
