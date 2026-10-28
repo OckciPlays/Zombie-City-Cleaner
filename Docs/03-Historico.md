@@ -265,6 +265,71 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## Os sons e a agonia do Oco (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **A etapa 7:** o Oco ganhou voz própria: o gemido grave e oco, o rosnado do golpe, o chamado entre eles (estalos da garganta e um lamento; os de perto respondem), o grito de agonia no sol, a dor do tiro, e os sons da pedra (a crosta estalando, a pedra fechando, a casca quebrando à noite). Os sons foram gerados por um script (Ferramentas/sons_do_oco.py), a partir da voz de zumbi que o jogo já tinha.
+- **A agonia no sol:** cada Oco agoniza do seu jeito enquanto a pedra sobe (as mãos no rosto, limpando a pele, encolhido, ou se debatendo como antes), e a estátua guarda a pose.
+
+## Mais zumbis no mundo (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **A etapa 6:** a cidade ganhou mais zumbis escondidos nas casas e mais estátuas na rua (de dia, perto de 30 a até 60 m do jogador; antes, uns 20), e a mata e as praças ganharam zumbis debaixo das árvores.
+- **O padrão ficou ×2 de dia e ×3 à noite** (escolhido pelo Pedro no F1): de dia, perto de 60 zumbis a até 60 m do jogador na cidade; ao escurecer, mais saem. O F1 continua mudando os dois ("Zumbis de dia", "Zumbis à noite") e tem o "Repovoar em volta agora".
+- **Próxima, a etapa 7:** as animações de petrificar e sons (o Pedro ainda vai explicar).
+
+## A luz, o mundo povoado e os rastejantes (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **Os consertos da horda:** colado no jogador (a menos de 1 m), o zumbi bate na hora, e no alcance espera no máximo 1,5 s pelo lugar dele no cerco (antes dava para encostar nos que davam a volta sem levar golpe); os que travam um no outro numa porta passam 2,5 s sem desviar e entram.
+- **De dia, só o ferido continua:** o tiro só tira da sombra quem está a menos de 5 m (à noite, 12 m); virando pedra no sol, só quem levou tiro, soco ou a batida do carro continua atrás do jogador; os outros voltam a procurar abrigo.
+- **A luz afasta (etapa 4):** no miolo do facho da lanterna (14 m), o zumbi se encolhe e pula de lado para fora da luz, e quem persegue volta pelo escuro, pelo lado; o farol aceso tira os zumbis da frente do carro. Sem dano: só afasta. De perto, a luz não salva.
+- **O mundo se povoa (etapa 5):** em volta de cada jogador, a cidade ganha zumbis (de dia escondidos nas casas, e estátuas de pedra na rua; à noite, soltos), e fora da cidade, às vezes um. Os de longe voltam ao pool.
+- **Os rastejantes:** um em cada 10 carros abandonados tem um zumbi sem pernas embaixo, que sai e agarra quando alguém abre o capô, põe o macaco ou tira uma roda.
+- **F1:** ligar e desligar o povoamento, rastejante em todos os carros e um rastejante agora no carro mais perto.
+
+## A horda que cerca e a ameaça (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **A horda cerca o jogador:** cada zumbi que persegue ganha um lugar em volta do jogador e vai para ele, dando a volta por fora se precisar; eles se abrem em leque de longe e fecham um círculo de perto, atacando de todos os lados, em vez de vir em fila. Cada um anda no seu ritmo.
+- **De dia e ao amanhecer, eles priorizam se esconder:** só saem da sombra atrás do jogador se forem atacados (tiro, soco) ou com um tiro bem perto; ver, encostar ou correr perto não basta mais.
+- **F1 > "Horda de 8 vindo atrás de mim"** para testar.
+
+## Os Ocos se abrigam ao amanhecer (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **Ao amanhecer, os zumbis procuram abrigo:** a partir das 5h, quem está onde o sol vai bater vai para dentro das casas e dos prédios (de preferência com teto) ou para a sombra das construções e das árvores; quem não acha vira estátua quando o sol vem, às ~6h30.
+- **O sol entra pelas janelas:** os zumbis ficam no miolo das casas, longe da luz das janelas e das portas.
+- **As árvores fazem sombra.**
+- **A estátua não geme mais**, e quem já nasce de pedra fica numa pose do andar, não de braços abertos; ao se soltar, a animação volta normal.
+- **F1 > "Amanhecer (5h, o relógio anda)"** para testar.
+
+## Os Ocos viram pedra no sol (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **O sol petrifica os zumbis:** no sol, a pedra sobe dos pés à cabeça em 10 s. Ele entra em desespero, foge procurando sombra e vai ficando lento, até virar estátua na última pose. Na sombra, a pedra recua devagar.
+- **A estátua é dura:** o tiro tira só um quarto, a cabeça não explode e os braços e pernas não caem; o carro e a espingarda de perto a quebram, e ela tomba inteira, como uma estátua.
+- **À noite, elas se soltam:** cada uma num momento sorteado de 30 a 60 s depois de escurecer, quebrando a casca.
+- **De dia, quem está na sombra só observa o jogador no sol:** só sai atrás dele se for ameaçado (tiro, barulho, encostar), e aí vai virando pedra.
+- **F1 > "ZUMBIS (TESTE)":** criar um zumbi na frente (normal ou de pedra), petrificar os de perto e soltar os de pedra.
+
+## Os Ocos viram os zumbis do jogo (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **Os zumbis agora são os Ocos:** as 12 variações de ~5 mil triângulos feitas no Blender (o Original e mais 11 "pessoas": Observador, Desviante, Resíduo, Enfermeira, Mecânico, Estudante, Executivo, Lenhador, Corredora, Vigia e Turista) substituem o zumbi garoto. Eles têm tudo o que os zumbis tinham: as partes do corpo que levam tiro, os braços e pernas que caem, a cabeça que sai, o corpo que cai com física e as mesmas animações (andar, correr, golpe, reação, cair, rastejar e mancar).
+- **No mapa novo, os zumbis voltaram sem hordas:** ninguém nasce sozinho; o F1 cria perto do jogador, até segunda ordem.
+- **O Oco de 125 mil triângulos não vira zumbi:** ele continua só no teste do F1.
+
+## O Oco de teste (27/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **O Oco, o personagem feito no Blender, entrou no jogo para teste:** o F1 ganhou o painel "O Oco (teste)", que põe um Oco na frente do jogador. Ele usa as animações dos zumbis (parado, andar, correr, golpe, reação, cair, rastejar e mancar), vem atrás do jogador e golpeia **sem tirar vida**. Só aparece em quem o pôs (não vai pela rede) e não é um zumbi do jogo (não conta, não ouve tiro e não morre).
+- **Nenhum zumbi nem horda sozinhos** por enquanto, até segunda ordem: quem testa põe o Oco um por um.
+
+## As versões do Oco (28/10/2026, a pedido)
+
+- **12 versões leves do Oco para teste:** o original e 11 "pessoas" diferentes (o Observador, o Desviante, o Resíduo, a Enfermeira, o Mecânico, o Estudante, o Executivo, o Lenhador, a Corredora, o Vigia e o Turista), cada uma com ~5 mil triângulos, feitas no Blender. No F1, o painel "O Oco (teste)" escolhe a versão antes de "Pôr um Oco" e tem "Pôr todas lado a lado", para comparar. Valem as mesmas regras do Oco de teste: só nesta máquina e sem dano.
+
+## O carro no mapa novo e o macaco no canto (27/10/2026, a pedido; branch `feature/carro-no-mundo`)
+
+- **Os carros abandonados do mapa gerado voltaram a abrir o capô e a trocar de roda:** no mapa novo eles nascem com os blocos, então cada um dos 7 modelos ganhou um "kit" pronto (o capô, o cofre do motor, as rodas e o macaco), que o mapa usa no lugar do carro simples. O que sobrou em cada carro sai da semente do mapa (igual para todos, sem rede); só o carro que alguém mexeu vai pela rede.
+- **O macaco levanta só o canto dele** (antes subia o lado inteiro): o carro gira em volta do canto da diagonal, as outras três rodas continuam no chão, e só a roda do macaco sai ou entra. Na perua e nos carros abandonados.
+- **O clique esquerdo sobe e desce o macaco** (mirando nele ou na roda dele, sem atirar); o E apoia e pega o macaco e tira e põe a roda. Assim o carro não sobe de novo sem querer.
+- **Sem a roda, o canto do carro cai até a lataria quase encostar no chão** (antes ficava no ar, como se houvesse uma roda invisível), e a colisão dos carros do mapa inclina junto. A perua sem roda também fica mais baixa (no cubo de 7 cm).
+- **Desempenho:** com o capô fechado, o cofre do motor não é desenhado (95 carros com o kit em volta da casa: 207 peças, eram 337).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

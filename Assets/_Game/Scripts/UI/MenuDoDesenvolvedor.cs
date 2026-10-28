@@ -213,6 +213,12 @@ namespace ZombieCityCleaner.UI
             // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
             var mundo = PainelDoMundo(u, area);
             if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(area.yMax, mundo.yMax));
+            // o Oco de teste, ao lado do último painel
+            var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
+            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, oco.xMax, Mathf.Max(Area.yMax, oco.yMax));
+            // os zumbis (teste: criar um na frente, a pedra do sol), ao lado
+            var zumbis = PainelDosZumbis(u, oco);
+            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
         }
 
         /// <summary>

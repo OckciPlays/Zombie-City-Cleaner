@@ -3,6 +3,7 @@ using UnityEngine;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Vehicles;
 
 namespace ZombieCityCleaner.World
 {
@@ -26,6 +27,8 @@ namespace ZombieCityCleaner.World
         public Material materialDasLetras;
         [Tooltip("Os carros, na ordem de ModelosDaEstrada.NomesDosCarros.")]
         public Mesh[] carros;
+        [Tooltip("O kit de cada carro (Prefabs/Veiculos/Mundo), na ordem de ModelosDaEstrada.NomesDosCarros: o carro com o capô que abre, as rodas e o macaco (o PecasDosCarrosDoMundo guarda o estado). Sem kit, o carro é só a malha.")]
+        public GameObject[] kitsDosCarros;
         public Mesh barreira, cavalete, cone;
         [Tooltip("As ruas das cidades (Parte M5): o poste, a lente dele, as árvores (a verde e a seca), o hidrante e a lixeira.")]
         public Mesh poste, posteLente, arvore, arvoreSeca, hidrante, lixeira;
@@ -204,7 +207,8 @@ namespace ZombieCityCleaner.World
             }
             while (b.Proximo < lista.Length)
             {
-                Criar(_dados.Objetos.Todos[lista[b.Proximo++]], b);
+                int indice = lista[b.Proximo++];
+                Criar(_dados.Objetos.Todos[indice], indice, b);
                 if (_relogio.Elapsed.TotalMilliseconds > orcamentoMs) return;
             }
             b.Feito = true;
@@ -212,8 +216,9 @@ namespace ZombieCityCleaner.World
 
         // ------------------------------------------------------------------ cada objeto
 
-        void Criar(ObjetoDaEstrada o, Bloco b)
+        void Criar(ObjetoDaEstrada o, int indice, Bloco b)
         {
+            if (o.Tipo == TipoDeObjeto.Carro && CriarComKit(o, indice, b)) return;
             Mesh malha;
             List<ModelosDaEstrada.Caixa> caixas = null;
             List<ModelosDaEstrada.Texto> textos = null;
@@ -362,6 +367,100 @@ namespace ZombieCityCleaner.World
             if ((Mathf.Abs(o.Tombo) > 0.01f && !acompanha) || o.NoTalude) y -= menor;
             if (o.EmCima) y += 2.59f;
             return new Vector3(x, y, z);
+        }
+
+        // ------------------------------------------------------------------ os carros com o kit (o capô, as rodas e o macaco)
+
+        // o kit de cada modelo (o CapoDaCidade do prefab, com os pontos das rodas e do macaco) e o material dele
+        CapoDaCidade[] _capoDoKit;
+        Material[] _materialDoKit;
+
+        CapoDaCidade KitDe(int variante, out GameObject prefab)
+        {
+            prefab = null;
+            if (kitsDosCarros == null || kitsDosCarros.Length == 0) return null;
+            int i = variante % kitsDosCarros.Length;
+            prefab = kitsDosCarros[i];
+            if (prefab == null) return null;
+            if (_capoDoKit == null || _capoDoKit.Length != kitsDosCarros.Length)
+            {
+                _capoDoKit = new CapoDaCidade[kitsDosCarros.Length];
+                _materialDoKit = new Material[kitsDosCarros.Length];
+            }
+            if (_capoDoKit[i] == null)
+            {
+                _capoDoKit[i] = prefab.GetComponentInChildren<CapoDaCidade>(true);
+                var mr = prefab.GetComponent<MeshRenderer>();
+                _materialDoKit[i] = mr != null ? mr.sharedMaterial : null;
+            }
+            return _capoDoKit[i];
+        }
+
+        /// <summary>O carro abre o capô e troca as rodas (de pé: o capotado e o de lado, não).</summary>
+        static bool ComKit(ObjetoDaEstrada o) => o.Tipo == TipoDeObjeto.Carro && Mathf.Abs(o.Tombo) < 20f;
+
+        bool CriarComKit(ObjetoDaEstrada o, int indice, Bloco b)
+        {
+            if (!ComKit(o) || carros == null || carros.Length == 0) return false;
+            var kit = KitDe(o.Variante, out var prefab);
+            var malha = carros[o.Variante % carros.Length];
+            if (kit == null || malha == null) return false;
+            var go = Instantiate(prefab, b.Objeto.transform, false);
+            go.name = "Carro";
+            go.transform.SetPositionAndRotation(Posicao(o, malha, out var giro), giro);
+            // o material do mundo (com o abandono) no lugar do da montagem
+            var doKit = _materialDoKit[o.Variante % kitsDosCarros.Length];
+            if (materialDaCidade != null && doKit != null)
+                foreach (var mr in go.GetComponentsInChildren<MeshRenderer>(true))
+                    if (mr.sharedMaterial == doKit) mr.sharedMaterial = materialDaCidade;
+            var capo = go.GetComponentInChildren<CapoDaCidade>(true);
+            capo.pecas = PecasDosCarrosDoMundo.Instancia;
+            capo.indice = indice;
+            // a colisão num filho, que inclina com o carro (sem roda ou no macaco)
+            var colisao = new GameObject("Colisão").transform;
+            colisao.SetParent(go.transform, false);
+            var bc = colisao.gameObject.AddComponent<BoxCollider>();
+            bc.center = malha.bounds.center;
+            bc.size = malha.bounds.size;
+            capo.colisao = colisao;
+            return true;
+        }
+
+        /// <summary>Onde está o carro do mundo (pelos dados, sem precisar do objeto: o anfitrião confere pedidos de longe).</summary>
+        public bool PoseDoCarro(int indice, out Vector3 posicao, out Quaternion giro, out CapoDaCidade kit)
+        {
+            posicao = default;
+            giro = Quaternion.identity;
+            kit = null;
+            if (_dados?.Objetos == null || indice < 0 || indice >= _dados.Objetos.Todos.Count) return false;
+            var o = _dados.Objetos.Todos[indice];
+            if (!ComKit(o) || carros == null || carros.Length == 0) return false;
+            kit = KitDe(o.Variante, out _);
+            var malha = carros[o.Variante % carros.Length];
+            if (kit == null || malha == null) return false;
+            posicao = Posicao(o, malha, out giro);
+            return true;
+        }
+
+        /// <summary>O meio do capô do carro do mundo (onde o pedido no motor conta a distância).</summary>
+        public bool PontoDoCapo(int indice, out Vector3 ponto)
+        {
+            ponto = default;
+            if (!PoseDoCarro(indice, out var pos, out var giro, out var kit)) return false;
+            ponto = pos + giro * kit.transform.localPosition;
+            return true;
+        }
+
+        /// <summary>O meio da roda do carro do mundo e o lado de fora dela (para onde cai o que não coube na mochila).</summary>
+        public bool PontoDaRoda(int indice, int roda, out Vector3 ponto, out Vector3 fora)
+        {
+            ponto = fora = default;
+            if (!PoseDoCarro(indice, out var pos, out var giro, out var kit)) return false;
+            if (kit.centrosDasRodas == null || roda < 0 || roda >= kit.centrosDasRodas.Length) return false;
+            var c = kit.centrosDasRodas[roda];
+            ponto = pos + giro * c;
+            fora = giro * new Vector3(Mathf.Sign(c.x), 0f, 0f);
+            return true;
         }
 
         ModeloPronto Modelo(TipoDeObjeto tipo, int variante)

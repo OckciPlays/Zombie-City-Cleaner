@@ -32,17 +32,25 @@ namespace ZombieCityCleaner.Vehicles
                 if (!carro.Vazio) return "Saiam do carro para apoiar o macaco";
                 return "[E] Apoiar o macaco";
             }
-            if (!carro.NoLadoErguido(roda)) return null;
+            if (!carro.NaRodaDoMacaco(roda)) return null;
             if (carro.MacacoMexendo) return carro.Erguido ? "Levantando o carro..." : "Baixando o carro...";
-            if (!carro.Erguido) return roda == m ? "[E] Levantar o carro" : null;
+            if (!carro.Erguido) return "[Clique] Levantar o carro";
             if (pneus.Tem(roda))
             {
-                string dica = $"[E] Tirar a roda ({pneus.Estado(roda)}%)";
+                string dica = $"[E] Tirar a roda ({pneus.Estado(roda)}%)  ·  [Clique] Baixar";
                 return !inv.PodeReceber(Item.Pneu, out _) ? dica + " · sem espaço: fica no chão"
                     : inv.PneuVaiParaAsMaos ? dica + " · nas mãos (pesado)" : dica;
             }
-            if (PortaMalasDoCarro.AcharPneu(inv, out int estado, out _)) return $"[E] Pôr o pneu ({estado}%)";
-            return carro.Estepe >= 0 ? "Sem pneu na mochila: o estepe está no porta-malas" : "Sem pneu na mochila";
+            if (PortaMalasDoCarro.AcharPneu(inv, out int estado, out _)) return $"[E] Pôr o pneu ({estado}%)  ·  [Clique] Baixar";
+            return (carro.Estepe >= 0 ? "Sem pneu na mochila: o estepe está no porta-malas" : "Sem pneu na mochila") + "  ·  [Clique] Baixar";
+        }
+
+        public override bool UsaClique(ArmaJogador quem) => Pode(quem) && carro.NaRodaDoMacaco(roda);
+
+        public override void Clicar(ArmaJogador quem)
+        {
+            if (!Pode(quem) || !carro.NaRodaDoMacaco(roda) || carro.MacacoMexendo) return;
+            carro.PedirErguer(!carro.Erguido);
         }
 
         public override void Usar(ArmaJogador quem)
@@ -55,12 +63,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (PortaMalasDoCarro.Achar(inv, Item.Macaco, out _) && carro.Vazio) carro.PedirApoiarMacaco(roda);
                 return;
             }
-            if (!carro.NoLadoErguido(roda) || carro.MacacoMexendo) return;
-            if (!carro.Erguido)
-            {
-                if (roda == m) carro.PedirErguer(true);
-                return;
-            }
+            if (!carro.NaRodaDoMacaco(roda) || carro.MacacoMexendo || !carro.Erguido) return;
             if (carro.Pneus.Tem(roda)) carro.PedirTirarRoda(roda);
             else if (PortaMalasDoCarro.AcharPneu(inv, out _, out ushort id)) carro.PedirPorRoda(roda, id);
         }

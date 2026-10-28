@@ -252,6 +252,13 @@ namespace ZombieCityCleaner.Player
             }
             ProcurarAlvo(cam.transform);
             if (!controla) return;
+            // mirando no que usa o clique (o macaco apoiado), o botão esquerdo é dele: não atira nem soca
+            if (_alvo != null && !bot && _alvo.UsaClique(this))
+            {
+                if (_atirar.WasPressedThisFrame()) _alvo.Clicar(this);
+                if (!Usando && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+                return;
+            }
             if (ocupadas)
             {
                 if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
@@ -353,12 +360,22 @@ namespace ZombieCityCleaner.Player
                 if (hitbox != null && hitbox.zumbi != null)
                 {
                     if (hitbox.zumbi.Morto) continue;
-                    Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, false);
-                    Sangue.Respingo(ponto, -cam.forward);
+                    // a estátua do sol: soco em pedra (o som da parede e poeira, sem sangue)
+                    bool pedra = DePedra(hitbox);
+                    if (pedra)
+                    {
+                        Efeitos.Som(Efeitos.SocoParede, ponto, 0.8f, false);
+                        Efeitos.Impacto(ponto, -cam.forward);
+                    }
+                    else
+                    {
+                        Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, false);
+                        Sangue.Respingo(ponto, -cam.forward);
+                    }
                     _marcaAte = Time.time + 0.18f;
                     _marcaNaCabeca = false;
                     rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, danoDoSoco, ponto, false);
-                    rede.AnunciarPancada(ponto, true);
+                    rede.AnunciarPancada(ponto, !pedra);
                     return;
                 }
                 Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
@@ -511,7 +528,7 @@ namespace ZombieCityCleaner.Player
             var encostada = Encostada(origem, direcao, out Vector3 pontoEncostado);
             if (encostada != null)
             {
-                impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = pontoEncostado, normal = -direcao };
+                impacto = new JogadorRede.Impacto { tipo = TipoNoZumbi(encostada), ponto = pontoEncostado, normal = -direcao };
                 Carne(encostada, pontoEncostado, -direcao, 0f);
                 if (!EhBraco(encostada.regiao)) return impacto;
                 bracos++;
@@ -545,7 +562,7 @@ namespace ZombieCityCleaner.Player
                     ultimoZumbi = hitbox.zumbi;
                     ultimoMembro = membro;
                     Carne(hitbox, hit.point, hit.normal, hit.distance);
-                    impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
+                    impacto = new JogadorRede.Impacto { tipo = TipoNoZumbi(hitbox), ponto = hit.point, normal = hit.normal };
                     if (EhBraco(hitbox.regiao) && ++bracos <= 2) continue;
                     parou = true;
                     break;
@@ -579,9 +596,14 @@ namespace ZombieCityCleaner.Player
         static bool EhBraco(RegiaoDoCorpo r) => r == RegiaoDoCorpo.Braco;
 
         // um acerto num zumbi: sangue aqui na hora e a marca na mira; o acerto vai para o anfitrião no fim do disparo
+        // o Oco de pedra (o sol): o tiro solta faíscas e poeira, não sangue (os outros veem um impacto "outro")
+        static bool DePedra(Hitbox hitbox) => hitbox.zumbi != null && hitbox.zumbi.Pedra >= 0.5f;
+        static JogadorRede.TipoDeAcerto TipoNoZumbi(Hitbox hitbox) => DePedra(hitbox) ? JogadorRede.TipoDeAcerto.Outro : JogadorRede.TipoDeAcerto.Carne;
+
         void Carne(Hitbox hitbox, Vector3 ponto, Vector3 normal, float distancia)
         {
-            Sangue.Respingo(ponto, normal);
+            if (DePedra(hitbox)) Efeitos.Impacto(ponto, normal);
+            else Sangue.Respingo(ponto, normal);
             _carne.Add(new NaCarne { hitbox = hitbox, ponto = ponto, distancia = distancia, centro = _chumboDoCentro });
             _marcaAte = Time.time + 0.18f;
             _marcaNaCabeca |= hitbox.regiao == RegiaoDoCorpo.Cabeca;

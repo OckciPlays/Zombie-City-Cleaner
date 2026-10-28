@@ -32,6 +32,8 @@ namespace ZombieCityCleaner.Zombies
         public float barulhoDoTiro = 35f;
         [Tooltip("Perto assim do tiro, ele vai direto em quem atirou; mais longe, vai ver o que foi.")]
         public float tiroChamaDireto = 12f;
+        [Tooltip("De dia e ao amanhecer, o tiro só tira da sombra quem está até aqui (m); mais longe, nem vai ver se o ponto está no sol.")]
+        public float tiroAmeacaDeDia = 5f;
 
         [Header("Perseguição e ataque")]
         public float distanciaDeDesistir = 20f;
@@ -56,5 +58,39 @@ namespace ZombieCityCleaner.Zombies
         public float fatorMancando = 0.55f;
         [Tooltip("A velocidade rastejando (sem as duas pernas), em proporção da normal.")]
         public float fatorRastejando = 0.35f;
+
+        [Header("O sol (os Ocos são fotossensíveis)")]
+        [Tooltip("No sol, a pedra sobe dos pés à cabeça neste tempo (s): aí ele fica petrificado até a noite.")]
+        public float tempoParaPetrificar = 10f;
+        [Tooltip("Na sombra, a pedra que já subiu recua neste tempo (s, da cabeça aos pés).")]
+        public float tempoParaRecuar = 20f;
+        [Tooltip("Com a pedra subindo, a velocidade e a animação caem até esta fração (a pedra prende o corpo).")]
+        public float lentidaoNaPedra = 0.1f;
+        [Tooltip("Fugindo do sol (desesperado), procurando sombra (m/s).")]
+        public float velocidadeDeFuga = 1.7f;
+        [Tooltip("Procura sombra até esta distância (m).")]
+        public float raioDaSombra = 18f;
+        [Tooltip("Ao amanhecer, procura abrigo (de preferência com teto) até esta distância (m).")]
+        public float raioDoAbrigo = 40f;
+        [Tooltip("De pedra, o tiro tira só esta fração (a casca protege); a cabeça já não explode depois desta pedra.")]
+        public float danoNaPedra = 0.25f;
+        public float pedraQueProtegeACabeca = 0.8f;
+        [Tooltip("À noite, cada um se solta da pedra num momento sorteado neste intervalo (s) depois de escurecer.")]
+        public Vector2 soltarANoite = new Vector2(30f, 60f);
+        [Tooltip("Quebrando a casca ao se soltar (s).")]
+        public float tempoDeQuebrar = 1.6f;
+
+        [Header("A luz (a lanterna e o farol só afastam)")]
+        [Tooltip("O miolo do facho da lanterna que o faz se esquivar: até onde (m) e a metade do ângulo (graus).")]
+        public float alcanceDaLanterna = 14f;
+        public float meioAnguloDaLanterna = 15f;
+        [Tooltip("O mesmo para o farol do carro.")]
+        public float alcanceDoFarol = 22f;
+        public float meioAnguloDoFarol = 22f;
+        [Tooltip("O pulo para fora do facho: quanto (m, de lado) e a que velocidade (m/s).")]
+        public float distanciaDaEsquiva = 2.2f;
+        public float velocidadeDaEsquiva = 3.2f;
+        [Tooltip("Entre uma esquiva e outra (s): com a luz parada nele, ele pula de novo.")]
+        public float intervaloDaEsquiva = 1f;
     }
 }
