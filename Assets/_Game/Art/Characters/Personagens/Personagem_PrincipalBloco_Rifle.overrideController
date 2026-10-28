@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Personagem_PrincipalBloco_Rifle
+  m_Controller: {fileID: 9100000, guid: 3fb3dde969a2dd94d9f1a333b329bf9f, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 3972171630871281350, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+    m_OverrideClip: {fileID: -5696143523578804818, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+  - m_OriginalClip: {fileID: 3055724213687943859, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+    m_OverrideClip: {fileID: -7543788333913610952, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+  - m_OriginalClip: {fileID: -4548781001625579245, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+    m_OverrideClip: {fileID: -5154712816988663720, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}

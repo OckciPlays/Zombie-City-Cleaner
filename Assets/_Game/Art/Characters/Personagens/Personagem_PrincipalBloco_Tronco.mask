@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Personagem_PrincipalBloco_Tronco
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000u
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: Jogador_Corpo
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/spine
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck/head
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/index1.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/index1.L/index2.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/middle1.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/middle1.L/middle2.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/pinky1.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/pinky1.L/pinky2.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/ring1.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/ring1.L/ring2.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/thumb.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L/upper_arm.L/forearm.L/hand.L/thumb.L/thumb2.L
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/index1.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/index1.R/index2.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/middle1.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/middle1.R/middle2.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/pinky1.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/pinky1.R/pinky2.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/ring1.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/ring1.R/ring2.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/thumb.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/thumb.R/thumb2.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Espingarda
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Espingarda/Boca_Espingarda
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Espingarda/P_Espingarda_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Garrafa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Garrafa/P_Garrafa_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Lata
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Lata/P_Lata_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Pistola
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Pistola/Boca_Pistola
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Pistola/P_Pistola_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Rifle
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Rifle/Boca_Rifle
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Rifle/P_Rifle_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Sniper
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Sniper/Boca_Sniper
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Sniper/P_Sniper_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Submetralhadora
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Submetralhadora/Boca_Submetralhadora
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Submetralhadora/P_Submetralhadora_corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag/P_Pistola_carregador
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag/P_Rifle_carregador
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag/P_Sniper_carregador
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag/P_Submetralhadora_carregador
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/pump
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/pump/P_Espingarda_telha
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/shell
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/shell/P_Espingarda_cartucho
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/slide
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/slide/P_Pistola_ferrolho
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/slide/P_Rifle_ferrolho
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/slide/P_Sniper_ferrolho
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/slide/P_Submetralhadora_ferrolho
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.L
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.L/shin.L
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.L/shin.L/foot.L
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.L/shin.L/foot.L/toe.L
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.R
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.R/shin.R
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.R/shin.R/foot.R
+    m_Weight: 0
+  - m_Path: PrincipalBloco_Rig/root/hips/thigh.R/shin.R/foot.R/toe.R
+    m_Weight: 0

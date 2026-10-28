@@ -98,7 +98,7 @@ namespace ZombieCityCleaner.Mundo
         }
 
         // tapada por fora: a chapa de compensado inteira (às vezes pichada) ou tábuas pregadas, em X ou de 3 a 4 deitadas,
-        // um pouco tortas
+        // um pouco tortas. Com colisão (28/10/2026): a janela tapada não deixa pular por ela (PuloDaJanela) nem passa tiro
         static void Tabuas(Obra obra, Parede w, Abertura ab, System.Random rnd, float k, MalhaDePichacao pichacoes)
         {
             float h = ab.alto - ab.baixo, cs = ab.ini + ab.larg / 2, cy = ab.baixo + h / 2;
@@ -107,7 +107,7 @@ namespace ZombieCityCleaner.Mundo
             if (v < 0.4)
             {
                 const float borda = 0.05f, esp = 0.025f;
-                obra.Placa(w, ab.ini - borda, ab.ini + ab.larg + borda, ab.baixo - borda, ab.alto + borda, fora, esp, "Compensado");
+                obra.Placa(w, ab.ini - borda, ab.ini + ab.larg + borda, ab.baixo - borda, ab.alto + borda, fora, esp, "Compensado", 0f, true);
                 if (pichacoes != null && rnd.NextDouble() < 0.4 + 0.4 * k)
                     NaChapa(pichacoes, w, rnd, ab.ini - borda, ab.ini + ab.larg + borda, ab.baixo - borda, ab.alto + borda, fora + esp / 2 + 0.004f);
                 return;
@@ -115,8 +115,8 @@ namespace ZombieCityCleaner.Mundo
             if (v < 0.7)
             {
                 float diag = Mathf.Sqrt(ab.larg * ab.larg + h * h) + 0.12f, ang = Mathf.Atan2(h, ab.larg) * Mathf.Rad2Deg;
-                obra.Placa(w, cs - diag / 2, cs + diag / 2, cy - 0.09f, cy + 0.09f, fora, 0.03f, Madeiras[rnd.Next(3)], ang);
-                obra.Placa(w, cs - diag / 2, cs + diag / 2, cy - 0.09f, cy + 0.09f, fora + 0.03f, 0.03f, Madeiras[rnd.Next(3)], -ang);
+                obra.Placa(w, cs - diag / 2, cs + diag / 2, cy - 0.09f, cy + 0.09f, fora, 0.03f, Madeiras[rnd.Next(3)], ang, true);
+                obra.Placa(w, cs - diag / 2, cs + diag / 2, cy - 0.09f, cy + 0.09f, fora + 0.03f, 0.03f, Madeiras[rnd.Next(3)], -ang, true);
             }
             else
             {
@@ -124,7 +124,7 @@ namespace ZombieCityCleaner.Mundo
                 for (int i = 0; i < n; i++)
                 {
                     float y = ab.baixo + (i + 0.5f) * h / n;
-                    obra.Placa(w, ab.ini - 0.12f, ab.ini + ab.larg + 0.12f, y - 0.08f, y + 0.08f, fora, 0.03f, Madeiras[rnd.Next(3)], Faixa(rnd, -8f, 8f));
+                    obra.Placa(w, ab.ini - 0.12f, ab.ini + ab.larg + 0.12f, y - 0.08f, y + 0.08f, fora, 0.03f, Madeiras[rnd.Next(3)], Faixa(rnd, -8f, 8f), true);
                 }
             }
         }
@@ -146,6 +146,9 @@ namespace ZombieCityCleaner.Mundo
                 var q = new List<Vector3> { w.Ponto(s0, y0, 0f), w.Ponto(s1, y0, 0f), w.Ponto(s1, y1, 0f), w.Ponto(s0, y1, 0f) };
                 obra.vis.Face(q, fora, "VidroSujo");
                 obra.vis.Face(q, -fora, "VidroSujo");
+                // o vidro inteiro fecha a janela (não se pula por ela); o quebrado, com o buraco, não
+                Vector2 c = w.a + w.u * ((s0 + s1) / 2);
+                obra.Caixa(new Vector3(c.x, w.baseY + (y0 + y1) / 2, c.y), new Vector3(s1 - s0, y1 - y0, 0.02f), "VidroSujo", w.yaw, null, true, false);
                 return;
             }
             float cs = Mathf.Lerp(s0, s1, Faixa(rnd, 0.3f, 0.7f)), cy = Mathf.Lerp(y0, y1, Faixa(rnd, 0.3f, 0.7f));

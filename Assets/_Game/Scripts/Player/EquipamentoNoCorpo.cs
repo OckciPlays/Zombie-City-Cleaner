@@ -24,6 +24,9 @@ namespace ZombieCityCleaner.Player
         const float InclinacaoDaAlca = 35f;  // a boca do cano por cima do ombro direito
         const float InclinacaoNaLateral = 6f;     // na lateral da mochila, a boca do cano um pouco para fora
         float TopoDaArmaNaLateral = 1.78f;  // até onde a boca do cano sobe (3 cm abaixo do topo da cabeça)
+        // a mochila nas costas é menor que a do chão (a pedido, 28/10/2026: "muito grandes em relação ao personagem"; a
+        // grande, de 48 × 84 × 33 cm, era mais larga que o tronco do principal em blocos)
+        const float TamanhoDaMochila = 0.75f;
 
         readonly List<GameObject> _pecas = new List<GameObject>();
 
@@ -66,11 +69,12 @@ namespace ZombieCityCleaner.Player
                 if (malha != null)
                 {
                     var b = malha.bounds;
-                    var pos = new Vector3(-b.center.x, TopoDaMochila - b.max.y, Costas - 0.005f);
-                    Por(referencia, peito, "Mochila", malha, mundo.material, pos, Quaternion.identity);
-                    fora = pos.z + b.min.z;
+                    float s = TamanhoDaMochila;
+                    var pos = new Vector3(-b.center.x * s, TopoDaMochila - b.max.y * s, Costas - 0.005f);
+                    Por(referencia, peito, "Mochila", malha, mundo.material, pos, Quaternion.identity, s);
+                    fora = pos.z + b.min.z * s;
                     comMochila = true;
-                    naMochila = new Bounds(pos + b.center, b.size);
+                    naMochila = new Bounds(pos + b.center * s, b.size * s);
                 }
             }
 
@@ -170,9 +174,10 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// Põe uma peça presa ao <paramref name="osso"/>, na pose dada no espaço do corpo em repouso (a da referência).
+        /// Põe uma peça presa ao <paramref name="osso"/>, na pose dada no espaço do corpo em repouso (a da referência),
+        /// no tamanho dado (<paramref name="escala"/>: 1, o do item no chão).
         /// </summary>
-        void Por(Transform referencia, Transform osso, string nome, Mesh malha, Material material, Vector3 pos, Quaternion rot)
+        void Por(Transform referencia, Transform osso, string nome, Mesh malha, Material material, Vector3 pos, Quaternion rot, float escala = 1f)
         {
             var ossoRef = Osso(referencia, osso.name);
             var go = new GameObject(nome);
@@ -180,7 +185,7 @@ namespace ZombieCityCleaner.Player
             go.transform.SetParent(osso, false);
             // a pose do osso em repouso, no espaço do corpo; a peça, no espaço do osso (com a escala dele, se tiver)
             var ossoNoCorpo = referencia.worldToLocalMatrix * ossoRef.localToWorldMatrix;
-            var local = ossoNoCorpo.inverse * Matrix4x4.TRS(pos, rot, Vector3.one);
+            var local = ossoNoCorpo.inverse * Matrix4x4.TRS(pos, rot, Vector3.one * escala);
             go.transform.localPosition = local.GetColumn(3);
             go.transform.localRotation = Quaternion.LookRotation(local.GetColumn(2), local.GetColumn(1));
             go.transform.localScale = new Vector3(((Vector3)local.GetColumn(0)).magnitude, ((Vector3)local.GetColumn(1)).magnitude, ((Vector3)local.GetColumn(2)).magnitude);

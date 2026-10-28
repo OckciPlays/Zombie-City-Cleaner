@@ -23,6 +23,8 @@ namespace ZombieCityCleaner.Player
         [Tooltip("O controlador do corpo com cada arma (os override com as animações deste personagem).")]
         public RuntimeAnimatorController[] controladores;
         public RuntimeAnimatorController controladorDasMaos;
+        [Tooltip("O corpo com a lata e com a garrafa na mão (na ordem de Itens.Modelos, a partir de Armas.Quantas); vazio: o dos punhos.")]
+        public RuntimeAnimatorController[] controladoresDosItens;
 
         [Header("Medidas do corpo em repouso (no espaço do corpo, olhando para +Z)")]
         [Tooltip("A superfície das costas na altura do peito (z negativo).")]

@@ -386,7 +386,8 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>
         /// Janela sem vidro (vidro opaco taparia a vista de dentro): aberta ou com tábuas (pesos: aberta, tábuas).
-        /// Os cacos nos cantos, as cortinas e as persianas saíram a pedido em 26/10/2026 (pareciam pedaços pretos).
+        /// Os cacos nos cantos, as cortinas e as persianas saíram a pedido em 26/10/2026 (pareciam pedaços pretos). As
+        /// tábuas têm colisão: a janela tapada não deixa pular por ela (PuloDaJanela).
         /// </summary>
         public bool TratarJanela(Parede w, Abertura ab, int[] pesos, bool tabuasPorDentro = false)
         {
@@ -396,7 +397,7 @@ namespace ZombieCityCleaner.Mundo
             float[] ys = { 0.25f, h / 2, h - 0.25f };
             string[] cores = { "MadeiraVelha", "Madeira", "BancoMadeira" };
             for (int k = 0; k < 3; k++)
-                Placa(w, ab.ini - 0.15f, ab.ini + ab.larg + 0.15f, ab.baixo + ys[k] - 0.08f, ab.baixo + ys[k] + 0.08f, fora, 0.03f, cores[k], Faixa(-9f, 9f));
+                Placa(w, ab.ini - 0.15f, ab.ini + ab.larg + 0.15f, ab.baixo + ys[k] - 0.08f, ab.baixo + ys[k] + 0.08f, fora, 0.03f, cores[k], Faixa(-9f, 9f), true);
             tapadas.Add(new Vector4(w.a.x, w.a.y, w.baseY, ab.ini));
             return true;
         }

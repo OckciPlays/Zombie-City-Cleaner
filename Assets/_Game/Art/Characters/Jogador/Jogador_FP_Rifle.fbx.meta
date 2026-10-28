@@ -14,6 +14,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Pistola
     second: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: PrincipalBloco
+    second: {fileID: 2100000, guid: d1722499f45c1394e9d360731bc8f73d, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0

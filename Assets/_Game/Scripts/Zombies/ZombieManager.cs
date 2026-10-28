@@ -234,7 +234,7 @@ namespace ZombieCityCleaner.Zombies
         {
             var j = JogadorRede.Local;
             if (j == null || !j.IsSpawned) return new Alvo { pes = PontoDeVista(), aumento = 1f };
-            return AlvoDe(j, false, j.cameraMundo != null ? j.cameraMundo.transform.forward : j.transform.forward);
+            return AlvoDe(j, false, j.cameraMundo != null ? j.Olho.forward : j.transform.forward);
         }
 
         /// <summary>Até onde um zumbi enxerga este jogador: de dia longe; à noite pouco, a não ser com luz nele.</summary>

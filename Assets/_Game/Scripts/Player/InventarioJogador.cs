@@ -764,7 +764,7 @@ namespace ZombieCityCleaner.Player
         {
             bool veste = qual == Item.Coldre ? ComColdre.Value : Itens.EhMochila(qual) && MochilaVestida.Value == qual;
             if (!veste || _arma.Usando) return;
-            TirarEquipamentoRpc(qual, PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            TirarEquipamentoRpc(qual, PontoParaLargar(_rede.Olho), transform.eulerAngles.y + Random.Range(-50f, 50f));
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
         }
 
@@ -796,7 +796,7 @@ namespace ZombieCityCleaner.Player
         public void LargarPneu()
         {
             if (!CarregandoPneu) return;
-            LargarPneuRpc(PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            LargarPneuRpc(PontoParaLargar(_rede.Olho), transform.eulerAngles.y + Random.Range(-50f, 50f));
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.7f, false);
         }
 
@@ -805,7 +805,7 @@ namespace ZombieCityCleaner.Player
         {
             if (Do(id) == Item.Nada || (_arma.Usando && id == IdNaMao)) return;
             if (Itens.EhArma(Do(id))) GuardarPente(id, _arma.MunicaoDe(id, Do(id)));   // a arma leva o pente para o chão
-            LargarRpc(id, PontoParaLargar(_rede.cameraMundo.transform), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            LargarRpc(id, PontoParaLargar(_rede.Olho), transform.eulerAngles.y + Random.Range(-50f, 50f));
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
         }
 
@@ -904,6 +904,9 @@ namespace ZombieCityCleaner.Player
 
         GameObject _pneuNoCorpo, _pneuNoOlho;
 
+        /// <summary>O pneu nas mãos do corpo (o dono vê como o corpo: só a sombra na primeira pessoa, inteiro na terceira).</summary>
+        public Renderer PneuNoCorpo => _pneuNoCorpo != null ? _pneuNoCorpo.GetComponent<MeshRenderer>() : null;
+
         // em todas as cópias: o pneu em pé na frente do peito (o dono vê só a sombra dele), e, só no dono, o mesmo pneu
         // na frente da câmera, embaixo, na camada dos braços. O que estava na mão do corpo some
         void PneuQueSeVe()
@@ -929,11 +932,14 @@ namespace ZombieCityCleaner.Player
             var emPe = Quaternion.Euler(90f, 0f, 0f);
             _pneuNoCorpo = Peca("Pneu nas mãos", transform, new Vector3(0f, 0.98f, 0.30f), emPe, malha, mundo.material, gameObject.layer);
             var r = _pneuNoCorpo.GetComponent<MeshRenderer>();
-            if (IsOwner)
+            if (IsOwner && !_rede.CorpoVisivelNoDono)
             {
                 // como o corpo do dono: só a sombra, fora da sombra da lanterna dele
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
                 r.renderingLayerMask = JogadorRede.MascaraDoDono;
+            }
+            if (IsOwner)
+            {
                 if (_rede.cameraMundo != null)
                 {
                     _pneuNoOlho = Peca("Pneu nas mãos (primeira pessoa)", _rede.cameraMundo.transform, new Vector3(0f, -0.50f, 0.48f),
