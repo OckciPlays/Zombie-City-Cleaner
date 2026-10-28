@@ -117,8 +117,12 @@ namespace ZombieCityCleaner.EditorTools
             // a floresta (M9a) e o abandono (M9c: os materiais da cidade, a hera e as pichações)
             PorAFloresta(mundo);
             PorOAbandono(mundo);
+            // os carros abandonados com o capô, as rodas e o macaco (os kits e o PecasDosCarrosDoMundo)
+            MontagemDosVeiculos.PorOsCarrosNoMundo(mundo);
             // a mobília (os móveis nos pontos das casas, das lojas e dos prédios)
             PorAMobilia(mundo);
+            // os zumbis, sem hordas (o F1 cria perto do jogador)
+            MontagemDosZumbis.PorOsZumbisNaCena(cena);
 
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);

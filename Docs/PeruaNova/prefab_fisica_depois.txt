@@ -1,0 +1,208 @@
+Rigidbody mass=1150 linDamp=0,03 angDamp=0,4 interp=Interpolate col=ContinuousSpeculative gravity=True kin=False autoCoM=True autoTensor=True constraints=None
+centerOfMass (Carro.Awake) = (0; 0,38; 0,12) [no código]
+Collider Capô (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0,98; 1,62) size=(1,3; 0,12; 0,95)
+Collider Cofre do motor/Bateria/Gatilho [BoxCollider] trigger=True enabled=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0,1045; 0,001) size=(0,274; 0,239; 0,206)
+Light Cofre do motor/Luz de quem olha Point pos=(0; 0,86818; 0,6325) rot=(0; 0; 0) int=0,25 range=2,2 spot=30
+Collider Cofre do motor/Radiador/Gatilho [BoxCollider] trigger=True enabled=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0,031; 0) size=(0,65; 0,1; 0,39)
+Collider Cofre do motor/Vela/Gatilho [BoxCollider] trigger=True enabled=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0,044; 0) size=(0,1; 0,124; 0,1)
+Collider Colisão/Baixo [BoxCollider] trigger=False enabled=True layer=11 pos=(0; 0,58; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0; 0) size=(1,72; 0,7; 4,36)
+Collider Colisão/Cabine [BoxCollider] trigger=False enabled=True layer=11 pos=(0; 1,19; -0,82) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 0; 0) size=(1,6; 0,52; 2,3)
+Collider Colisão/Para-brisa [BoxCollider] trigger=False enabled=True layer=11 pos=(0; 1,18; 0,65) rot=(33,90001; 0; 0) scale=(1; 1; 1) center=(0; 0; 0) size=(1,58; 0,1; 0,85)
+Light Farol D Spot pos=(0,57; 0,65; 2,2) rot=(5; 3; 0) int=60 range=34 spot=68
+Light Farol E Spot pos=(-0,57; 0,65; 2,2) rot=(5; 357; 0) int=60 range=34 spot=68
+Light Luz de teto Point pos=(0; 1,36; -0,3) rot=(0; 0; 0) int=0 range=2,6 spot=30
+Light Luz do painel Point pos=(-0,25; 1,3; 0,36) rot=(0; 0; 0) int=0 range=1,4 spot=30
+Collider Macaco (apoiado) [BoxCollider] trigger=True enabled=False layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(-0,0275; 0,059; 0) size=(0,475; 0,118; 0,09)
+Collider Porta-malas (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0; 1,03; -2,27) size=(1,22; 0,86; 0,16)
+Collider Portas (mira)/Porta DD [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0,92; 0,78; 0,41) size=(0,14; 0,95; 0,98)
+Collider Portas (mira)/Porta DE [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(-0,92; 0,78; 0,41) size=(0,14; 0,95; 0,98)
+Collider Portas (mira)/Porta TD [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0,92; 0,78; -0,55) size=(0,14; 0,95; 0,74)
+Collider Portas (mira)/Porta TE [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(-0,92; 0,78; -0,55) size=(0,14; 0,95; 0,74)
+WheelCollider Rodas (física)/Roda DD pos=(0,735; 0,39; 1,36) rot=(0; 0; 0) r=0,3 mass=20 damp=0,4 susp=0,18 forceApp=0,12 center=(0; 0; 0) spring=32000 damper=3800 target=0,5
+   fwd exSlip=0,4 exVal=1 asSlip=0,8 asVal=0,5 stiff=1,6 | side exSlip=0,25 exVal=1 asSlip=0,5 asVal=0,75 stiff=2
+WheelCollider Rodas (física)/Roda DE pos=(-0,735; 0,39; 1,36) rot=(0; 0; 0) r=0,3 mass=20 damp=0,4 susp=0,18 forceApp=0,12 center=(0; 0; 0) spring=32000 damper=3800 target=0,5
+   fwd exSlip=0,4 exVal=1 asSlip=0,8 asVal=0,5 stiff=1,6 | side exSlip=0,25 exVal=1 asSlip=0,5 asVal=0,75 stiff=2
+WheelCollider Rodas (física)/Roda TD pos=(0,735; 0,39; -1,36) rot=(0; 0; 0) r=0,3 mass=20 damp=0,4 susp=0,18 forceApp=0,12 center=(0; 0; 0) spring=32000 damper=3800 target=0,5
+   fwd exSlip=0,4 exVal=1 asSlip=0,8 asVal=0,5 stiff=1,6 | side exSlip=0,25 exVal=1 asSlip=0,5 asVal=0,75 stiff=2
+WheelCollider Rodas (física)/Roda TE pos=(-0,735; 0,39; -1,36) rot=(0; 0; 0) r=0,3 mass=20 damp=0,4 susp=0,18 forceApp=0,12 center=(0; 0; 0) spring=32000 damper=3800 target=0,5
+   fwd exSlip=0,4 exVal=1 asSlip=0,8 asVal=0,5 stiff=1,6 | side exSlip=0,25 exVal=1 asSlip=0,5 asVal=0,75 stiff=2
+Collider Rodas (mira)/Roda DD (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0,95; 0,31; 1,36) size=(0,16; 0,62; 0,76)
+Collider Rodas (mira)/Roda DE (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(-0,95; 0,31; 1,36) size=(0,16; 0,62; 0,76)
+Collider Rodas (mira)/Roda TD (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(0,95; 0,31; -1,36) size=(0,16; 0,62; 0,76)
+Collider Rodas (mira)/Roda TE (mira) [BoxCollider] trigger=True enabled=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) center=(-0,95; 0,31; -1,36) size=(0,16; 0,62; 0,76)
+--- Unity.Netcode.NetworkObject
+  m_Script = NetworkObject
+  Ownership = 2
+  AlwaysReplicateAsRoot = False
+  SynchronizeTransform = True
+  ActiveSceneSynchronization = False
+  SceneMigrationSynchronization = False
+  SpawnWithObservers = True
+  DontDestroyWithOwner = True
+  AutoObjectParentSync = True
+  SyncOwnerTransformWhenParented = True
+  AllowOwnerToParent = False
+--- Unity.Netcode.Components.NetworkTransform
+  m_Script = NetworkTransform
+  AutoOwnerAuthorityTickOffset = True
+  PositionInterpolationType = 0
+  RotationInterpolationType = 0
+  ScaleInterpolationType = 0
+  PositionLerpSmoothing = True
+  PositionMaxInterpolationTime = 0,1
+  RotationLerpSmoothing = True
+  RotationMaxInterpolationTime = 0,1
+  ScaleLerpSmoothing = True
+  ScaleMaxInterpolationTime = 0,1
+  AuthorityMode = 1
+  TickSyncChildren = False
+  UseUnreliableDeltas = False
+  SyncPositionX = True
+  SyncPositionY = True
+  SyncPositionZ = True
+  SyncRotAngleX = True
+  SyncRotAngleY = True
+  SyncRotAngleZ = True
+  SyncScaleX = False
+  SyncScaleY = False
+  SyncScaleZ = False
+  PositionThreshold = 0,001
+  RotAngleThreshold = 0,01
+  ScaleThreshold = 0,01
+  UseQuaternionSynchronization = True
+  UseQuaternionCompression = False
+  UseHalfFloatPrecision = False
+  InLocalSpace = False
+  SwitchTransformSpaceWhenParented = False
+  Interpolate = True
+  SlerpPosition = False
+--- Unity.Netcode.Components.NetworkRigidbody
+  m_Script = NetworkRigidbody
+  UseRigidBodyForMotion = False
+  AutoUpdateKinematicState = True
+  AutoSetKinematicOnDespawn = True
+--- ZombieCityCleaner.Vehicles.Carro
+  m_Script = Carro
+  rodas = [4]
+  rodas.Array.size = ArraySize
+  rodas.Array.data[0] = WheelCollider:Rodas (física)/Roda DE
+  rodas.Array.data[1] = WheelCollider:Rodas (física)/Roda DD
+  rodas.Array.data[2] = WheelCollider:Rodas (física)/Roda TE
+  rodas.Array.data[3] = WheelCollider:Rodas (física)/Roda TD
+  rodasVisuais = [4]
+  rodasVisuais.Array.size = ArraySize
+  rodasVisuais.Array.data[0] = Transform:Roda DE (modelo)
+  rodasVisuais.Array.data[1] = Transform:Roda DD (modelo)
+  rodasVisuais.Array.data[2] = Transform:Roda TE (modelo)
+  rodasVisuais.Array.data[3] = Transform:Roda TD (modelo)
+  volante = Transform:Volante
+  portas = [4]
+  portas.Array.size = ArraySize
+  portas.Array.data[0] = PortaDoCarro:Portas (mira)/Porta DE
+  portas.Array.data[1] = PortaDoCarro:Portas (mira)/Porta DD
+  portas.Array.data[2] = PortaDoCarro:Portas (mira)/Porta TE
+  portas.Array.data[3] = PortaDoCarro:Portas (mira)/Porta TD
+  assentos = [4]
+  assentos.Array.size = ArraySize
+  assentos.Array.data[0] = Transform:Lugares/Lugar 0
+  assentos.Array.data[1] = Transform:Lugares/Lugar 1
+  assentos.Array.data[2] = Transform:Lugares/Lugar 2
+  assentos.Array.data[3] = Transform:Lugares/Lugar 3
+  saidas = [4]
+  saidas.Array.size = ArraySize
+  saidas.Array.data[0] = Transform:Lugares/Saída 0
+  saidas.Array.data[1] = Transform:Lugares/Saída 1
+  saidas.Array.data[2] = Transform:Lugares/Saída 2
+  saidas.Array.data[3] = Transform:Lugares/Saída 3
+  farois = [2]
+  farois.Array.size = ArraySize
+  farois.Array.data[0] = Light:Farol E
+  farois.Array.data[1] = Light:Farol D
+  carroceria = MeshRenderer:Carroceria
+  submeshFarol = 3
+  submeshLanterna = 4
+  materialApagado = Cidade
+  farolAceso = FarolAceso
+  lanternaAceso = LanternaAcesa
+  motor = AudioSource:Motor
+  buzina = AudioSource:Buzina
+  arranque = AudioSource:Arranque
+  ignicao = Transform:Ignição
+  chave = Transform:Ignição/Chave
+  pecasDaChave = [4]
+  pecasDaChave.Array.size = ArraySize
+  pecasDaChave.Array.data[0] = MeshRenderer:Ignição/Chave/Haste
+  pecasDaChave.Array.data[1] = MeshRenderer:Ignição/Chave/Cabo
+  pecasDaChave.Array.data[2] = MeshRenderer:Ignição/Chave/Argola
+  pecasDaChave.Array.data[3] = MeshRenderer:Ignição/Chave/Chaveiro
+  anelDaIgnicao = MeshRenderer:Ignição/Anel
+  anelApagado = IgnicaoAnel
+  anelAceso = IgnicaoAnelAceso
+  pesoDaPartida = 0,3
+  molaDaPartida = 25
+  painel = MeshRenderer:Painel (mostradores)
+  painelApagado = PainelApagado
+  painelAceso = PainelAceso
+  ponteiroVelocidade = Transform:Painel (mostradores)/Ponteiro (velocidade)
+  ponteiroCombustivel = Transform:Painel (mostradores)/Ponteiro (gasolina)
+  ponteiros = [2]
+  ponteiros.Array.size = ArraySize
+  ponteiros.Array.data[0] = MeshRenderer:Painel (mostradores)/Ponteiro (velocidade)
+  ponteiros.Array.data[1] = MeshRenderer:Painel (mostradores)/Ponteiro (gasolina)
+  ponteiroApagado = PonteiroApagado
+  ponteiroAceso = PonteiroAceso
+  indicadorFarol = MeshRenderer:Painel (mostradores)/Luz do farol
+  luzDoPainel = Light:Luz do painel
+  intensidadeDoPainel = 0,22
+  luzDoTeto = Light:Luz de teto
+  lenteDoTeto = MeshRenderer:Lente da luz de teto
+  tetoApagado = TetoApagado
+  tetoAceso = TetoAceso
+  intensidadeDoTeto = 0,5
+  combustivel = 0,68
+  capo = Transform:Capô
+  aberturaDoCapo = 62
+  cofre = CofreDoMotor:Cofre do motor
+  velaInicial = 0
+  bateriaInicial = 30
+  radiadorInicial = 25
+  gastoDaPartida = 1,5
+  cargaDoMotor = 0,4
+  esquentar = 40
+  esfriar = 60
+  pneusIniciais = [4]
+  pneusIniciais.Array.size = ArraySize
+  pneusIniciais.Array.data[0] = 0
+  pneusIniciais.Array.data[1] = 80
+  pneusIniciais.Array.data[2] = 70
+  pneusIniciais.Array.data[3] = 75
+  tampaTraseira = Transform:Tampa traseira
+  aberturaDaTampa = 78
+  macacoNoPortaMalas = MeshRenderer:Macaco
+  estepeNoPortaMalas = MeshRenderer:Estepe
+  macacoInicial = True
+  estepeInicial = 85
+  macacoApoiado = MeshRenderer:Macaco (apoiado)
+  alturaDoMacaco = 0,25
+  tempoDoMacaco = 2,2
+  torque = 700
+  velocidadeMaxima = 22
+  velocidadeDeRe = 7
+  freio = 2400
+  freioDeMao = 4500
+  giroMaximo = 32
+  giroNaVelocidadeMaxima = 12
+  velocidadeDoVolante = 110
+  antiCapotar = 7000
+  voltasDoVolante = 12
+--- Unity.AI.Navigation.NavMeshModifier
+  m_Script = NavMeshModifier
+  m_OverrideArea = False
+  m_Area = 0
+  m_OverrideGenerateLinks = False
+  m_GenerateLinks = False
+  m_IgnoreFromBuild = True
+  m_ApplyToChildren = True
+  m_AffectedAgents = [1]
+  m_AffectedAgents.Array.size = ArraySize
+  m_AffectedAgents.Array.data[0] = -1

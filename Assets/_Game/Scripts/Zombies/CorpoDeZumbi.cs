@@ -50,6 +50,48 @@ namespace ZombieCityCleaner.Zombies
             }
             pele.enabled = false;
             enabled = false;
+            Estatua(false);
+        }
+
+        // ------------------------------------------------------------------ a estátua (o Oco que virou pedra no sol)
+
+        static readonly int PetrificacaoId = Shader.PropertyToID("_Petrificacao");
+        CharacterJoint[] _juntas;
+        (SoftJointLimit baixo, SoftJointLimit alto, SoftJointLimit balanco1, SoftJointLimit balanco2)[] _limites;
+        MaterialPropertyBlock _blocoDaPedra;
+        bool _estatua;
+
+        /// <summary>
+        /// O corpo de pedra: todo de pedra no shader do Oco (_Petrificacao 2) e as juntas travadas (cai duro, como uma
+        /// estátua tombando). De volta, as juntas voltam aos limites da montagem.
+        /// </summary>
+        void Estatua(bool sim)
+        {
+            if (sim == _estatua) return;
+            _estatua = sim;
+            if (_juntas == null)
+            {
+                _juntas = GetComponentsInChildren<CharacterJoint>(true);
+                _limites = new (SoftJointLimit, SoftJointLimit, SoftJointLimit, SoftJointLimit)[_juntas.Length];
+                for (int i = 0; i < _juntas.Length; i++)
+                    _limites[i] = (_juntas[i].lowTwistLimit, _juntas[i].highTwistLimit, _juntas[i].swing1Limit, _juntas[i].swing2Limit);
+            }
+            for (int i = 0; i < _juntas.Length; i++)
+            {
+                var j = _juntas[i];
+                var travada = new SoftJointLimit { limit = 0f };
+                j.lowTwistLimit = sim ? travada : _limites[i].baixo;
+                j.highTwistLimit = sim ? travada : _limites[i].alto;
+                j.swing1Limit = sim ? travada : _limites[i].balanco1;
+                j.swing2Limit = sim ? travada : _limites[i].balanco2;
+            }
+            if (sim)
+            {
+                _blocoDaPedra ??= new MaterialPropertyBlock();
+                _blocoDaPedra.SetFloat(PetrificacaoId, 2f);
+                pele.SetPropertyBlock(_blocoDaPedra);
+            }
+            else pele.SetPropertyBlock(null);
         }
 
         /// <summary>
@@ -59,8 +101,9 @@ namespace ZombieCityCleaner.Zombies
         /// Nos zumbis leves, o corpo copia a aparência do zumbi (o material dele) e fica com o rosto de morto.
         /// </summary>
         internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes,
-                           Material aparencia = null)
+                           Material aparencia = null, float pedra = 0f)
         {
+            Estatua(pedra >= 0.5f);
             emUso = true;
             _parado = false;
             caiuEm = Time.time;

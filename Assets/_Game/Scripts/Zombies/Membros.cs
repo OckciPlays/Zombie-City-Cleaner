@@ -71,10 +71,16 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
+        // o osso e os que estão embaixo dele no esqueleto (nos Ocos, os 3 ossos de cada dedo ficam embaixo da mão: sem
+        // eles, os dedos ficavam no ar quando o antebraço caía)
         static void Adicionar(Transform[] ossos, string nome, HashSet<int> saida)
         {
+            Transform osso = null;
             for (int i = 0; i < ossos.Length; i++)
-                if (ossos[i] != null && ossos[i].name == nome) { saida.Add(i); return; }
+                if (ossos[i] != null && ossos[i].name == nome) { saida.Add(i); osso = ossos[i]; break; }
+            if (osso == null) return;
+            for (int i = 0; i < ossos.Length; i++)
+                if (ossos[i] != null && ossos[i] != osso && ossos[i].IsChildOf(osso)) saida.Add(i);
         }
 
         public static int IndiceDoOsso(Transform[] ossos, string nome)

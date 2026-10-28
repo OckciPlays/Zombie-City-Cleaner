@@ -65,6 +65,73 @@ namespace ZombieCityCleaner.World
         public static float MaiorQuadroMs;
 
         public int Blocos => _blocos.Count;
+
+        /// <summary>
+        /// A sombra da mata (os Ocos fotossensíveis, Zombies/Zumbi.Sol.cs): o ponto está debaixo da copa de uma árvore viva
+        /// (as mortas e os tocos não fazem sombra). As copas não têm colisão: a conta é pelas árvores dos blocos montados
+        /// (em volta dos jogadores), a uma distância do tronco menor que o raio da copa (pela espécie e pela escala).
+        /// </summary>
+        public bool SobAsCopas(Vector3 p)
+        {
+            if (_dados == null) return false;
+            var chave = _dados.BlocoDe(p.x, p.z);
+            var canto = _dados.CantoDoBloco(chave.x, chave.y);
+            float lx = p.x - canto.x, lz = p.z - canto.y;
+            const float Borda = 4f;   // as copas passam um pouco da borda do bloco: os vizinhos só perto dela
+            int x0 = lx < Borda ? -1 : 0, x1 = lx > DadosDoMundo.TamanhoDoBloco - Borda ? 1 : 0;
+            int z0 = lz < Borda ? -1 : 0, z1 = lz > DadosDoMundo.TamanhoDoBloco - Borda ? 1 : 0;
+            for (int dx = x0; dx <= x1; dx++)
+                for (int dz = z0; dz <= z1; dz++)
+                {
+                    if (!_blocos.TryGetValue(new Vector2Int(chave.x + dx, chave.y + dz), out var b) || b.Plantas == null) continue;
+                    var pl = b.Plantas;
+                    for (int i = 0; i < pl.Posicoes.Length; i++)
+                    {
+                        var e = (Especie)pl.Especies[i];
+                        if (!Floresta.EhArvore(e) || e == Especie.MortaA || e == Especie.MortaB) continue;
+                        float r = RaioDaCopa(e) * pl.Escalas[i];
+                        float ax = pl.Posicoes[i].x - p.x, az = pl.Posicoes[i].z - p.z;
+                        if (ax * ax + az * az < r * r) return true;
+                    }
+                }
+            return false;
+        }
+
+        /// <summary>
+        /// Uma árvore viva (de copa) sorteada no retângulo (x0, z0)–(x1, z1), entre as dos blocos montados: o tronco e o raio
+        /// da copa. Devolve quantas havia ali (0: nenhuma). Para o povoamento dos Ocos (os que se escondem do sol na mata).
+        /// </summary>
+        public int ArvoreEm(float x0, float z0, float x1, float z1, System.Random sorte, out Vector3 tronco, out float raioDaCopa)
+        {
+            tronco = default;
+            raioDaCopa = 0f;
+            if (_dados == null) return 0;
+            var a = _dados.BlocoDe(x0, z0);
+            var b = _dados.BlocoDe(x1, z1);
+            int vistas = 0;
+            for (int bz = a.y; bz <= b.y; bz++)
+                for (int bx = a.x; bx <= b.x; bx++)
+                {
+                    if (!_blocos.TryGetValue(new Vector2Int(bx, bz), out var bloco) || bloco.Plantas == null) continue;
+                    var pl = bloco.Plantas;
+                    for (int i = 0; i < pl.Posicoes.Length; i++)
+                    {
+                        var e = (Especie)pl.Especies[i];
+                        if (!Floresta.EhArvore(e) || e == Especie.MortaA || e == Especie.MortaB) continue;
+                        var p = pl.Posicoes[i];
+                        if (p.x < x0 || p.x > x1 || p.z < z0 || p.z > z1) continue;
+                        vistas++;
+                        // uma qualquer, todas com a mesma chance, sem guardar a lista
+                        if (sorte.Next(vistas) != 0) continue;
+                        tronco = p;
+                        raioDaCopa = RaioDaCopa(e) * pl.Escalas[i];
+                    }
+                }
+            return vistas;
+        }
+
+        // o raio da copa (m, na escala 1): as coníferas são estreitas; o salgueiro, largo
+        static float RaioDaCopa(Especie e) => e <= Especie.PinheiroVermelhoB ? 2.2f : e == Especie.Salgueiro ? 3.5f : 3f;
         public int PlantasNaVista { get; private set; }
         public int Troncos { get; private set; }
 

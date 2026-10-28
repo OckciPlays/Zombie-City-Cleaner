@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 571145536}
   - component: {fileID: 571145535}
+  - component: {fileID: 571145537}
   m_Layer: 0
   m_Name: Efeitos
   m_TagString: Untagged
@@ -165,6 +166,194 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &571145537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 571145534}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07c79b5b2911a0a4dbbb1f2318806fc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Combat.Sangue
+  materialParticulas: {fileID: 2100000, guid: 9cc564461553a5947b60a654d4f68203, type: 2}
+  decalSangue: {fileID: 2100000, guid: b4f612615a58348459b5848062f8fec3, type: 2}
+  decalFuro: {fileID: 2100000, guid: 2d097f3ed9922334c88d931eb6ce9257, type: 2}
+  manchas: 40
+  furos: 40
+  jorros: 10
+--- !u!1 &621969962
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 621969964}
+  - component: {fileID: 621969963}
+  - component: {fileID: 621969966}
+  - component: {fileID: 621969965}
+  m_Layer: 0
+  m_Name: Zumbis
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &621969963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 621969962}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 236385291
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &621969964
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 621969962}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &621969965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 621969962}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d453e298233760d4495f1b3ccf70ed3f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.BenchmarkDeZumbis
+  quantidades: 3200000064000000fa000000f4010000i
+  acomodar: 4
+  medir: 10
+  esperarCliente: 25
+--- !u!114 &621969966
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 621969962}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e9df748c6ea7fd488d49de698c2250d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.ZombieManager
+  ShowTopMostFoldoutHeaderGroup: 1
+  corposPorModelo: 8
+  tempoAteAssentar: 6
+  tempoDoCorpo: 15
+  empurraoDoTiro: 30
+  arremesso: {x: 4.5, y: 2.2}
+  pedacosNoPool: 24
+  empurraoDoPedaco: {x: 2.2, y: 1.6}
+  intervaloDeEnvio: 0.1
+  divisorMedio: 3
+  tempoParaSumir: 1.5
+  modelos:
+  - {fileID: 7504586512184035756, guid: f6e5e0eb08331c6478a84dade158807f, type: 3}
+  - {fileID: 30938019407838490, guid: 523421273912f7941a05e85a27682ddf, type: 3}
+  - {fileID: 3600095284769210043, guid: 9ae2755d5d4edfd4097396390a5f7c49, type: 3}
+  - {fileID: 3564104083565284363, guid: 41a32582b751dde4fbf06d056889598c, type: 3}
+  - {fileID: 7467520259782524273, guid: d0042bfa15fcdc94892fa9feae0f6460, type: 3}
+  - {fileID: 7804840178861720365, guid: eddaa46abb069f342aec0bfc63503f12, type: 3}
+  - {fileID: 6254722331294851706, guid: e8244d8c5ef475545915b698569b6458, type: 3}
+  - {fileID: 7601724699815465802, guid: 9d96ad159e7c73943964f1c848c00cbb, type: 3}
+  - {fileID: 8411994613900001583, guid: 7fd323ed58cf07e429e113f13689565d, type: 3}
+  - {fileID: 4530023603336238551, guid: 80ca20c84250f4847b0bcfb00a5fdc72, type: 3}
+  - {fileID: 6833495527358214738, guid: fe93e4a56e7ccad409cb763b33f00b2b, type: 3}
+  - {fileID: 8588024638294765473, guid: bfda416ff09bac54c8e4233d7c4e1824, type: 3}
+  corpos:
+  - {fileID: 7202344746257357654, guid: 1876a85186922af4b9875b960e9a10b9, type: 3}
+  - {fileID: 1630130910964538740, guid: 498de446a2aa05c4aa8263c97740135c, type: 3}
+  - {fileID: 2366008063046438839, guid: 9ee7421fff521394a9519099f9a3e914, type: 3}
+  - {fileID: 5857937448361503196, guid: fd41ac1cb92821e4eb3f09177c16f136, type: 3}
+  - {fileID: 555041261210365823, guid: 484ee251173a0c14088198ace75a3b94, type: 3}
+  - {fileID: 8289883206599087844, guid: 27d1a232b97954e42a495b08d3fd1b6d, type: 3}
+  - {fileID: 5035980331964780122, guid: 1bfda40234491154985b45e90dacb2c5, type: 3}
+  - {fileID: 7727788543841362691, guid: 710c133b3f0e0a340bc8f7abd08fcf71, type: 3}
+  - {fileID: 5797155423053041818, guid: 90c148f83eb3e6946a8805f48e5a1405, type: 3}
+  - {fileID: 5202672733574261382, guid: 00802630338bac346b48f12577646ba7, type: 3}
+  - {fileID: 1392073283663179667, guid: 4a2061ce6ad3a5948b00ef13e9ead234, type: 3}
+  - {fileID: 3021658302543256054, guid: e3bd35148c8e5a54d86c13c842b63e93, type: 3}
+  vozDoZumbi: {fileID: 8300000, guid: 70cca28de9d7bf84c9e8ac77e082eeb8, type: 3}
+  trechosDaVoz:
+  - {x: 0.1, y: 1}
+  - {x: 1.75, y: 1}
+  - {x: 3.1, y: 0.85}
+  - {x: 4.35, y: 1}
+  povoarAoComecar: 1
+  criadosPorQuadro: 6
+  areasLivres: []
+  distanciaPerto: 15
+  distanciaMedia: 40
+  histerese: 3
+  intervaloPerto: 0.1
+  intervaloMedio: 0.5
+  orcamentoPorQuadro: 40
+  distanciaDeDesenho: 65
+  distanciaDoLOD1: 12
+  distanciaDoLOD2: 26
+  ajustes:
+    velocidadeVagando: 0.55
+    velocidadeInvestigando: 0.8
+    velocidadePerseguindo: 1.1
+    raioDeVagar: 7
+    pausa: {x: 2, y: 8}
+    visaoDeDia: 16
+    visaoDeNoite: 6
+    visaoComLanterna: 26
+    visaoSobPoste: 13
+    meioAnguloDaVisao: 70
+    distanciaDeContato: 2.5
+    barulhoDeCorrida: 9
+    barulhoDoTiro: 35
+    tiroChamaDireto: 12
+    distanciaDeDesistir: 20
+    tempoSemVer: 6
+    alcanceDoAtaque: 1.3
+    intervaloDoGolpe: 1.4
+    danoDoGolpe: 12
+    atrasoDoDano: 0.45
+    vidaDoCorpo: 6
+    danoNosMembros: 0.5
+    vidaDoMembro: 3
+    fatorMancando: 0.55
+    fatorRastejando: 0.35
 --- !u!1 &692325279
 GameObject:
   m_ObjectHideFlags: 0
@@ -3271,6 +3460,7 @@ GameObject:
   - component: {fileID: 2005601262}
   - component: {fileID: 2005601269}
   - component: {fileID: 2005601270}
+  - component: {fileID: 2005601271}
   m_Layer: 0
   m_Name: Mundo
   m_TagString: Untagged
@@ -3359,6 +3549,14 @@ MonoBehaviour:
   - {fileID: 112857496062930692, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
   - {fileID: -6665385969838071644, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
   - {fileID: -1436160075756539853, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  kitsDosCarros:
+  - {fileID: 742498723116570370, guid: cd8ff4e7f961ea74ea405ba668be2410, type: 3}
+  - {fileID: 921207681052980596, guid: 37605d8217c7b7749917b2757e42d541, type: 3}
+  - {fileID: 1834046166713597461, guid: 8dc3957d3dd133c40be596ed5cabb73e, type: 3}
+  - {fileID: 8225307620923874269, guid: 0499086ce6f47434ea0a2f81825a3dda, type: 3}
+  - {fileID: 1881236559243180460, guid: 7df1dd65ceaf9e241be5b0fc2c541a7f, type: 3}
+  - {fileID: 7148018320657742526, guid: b42fed185cc2cec4da0ec46160c594df, type: 3}
+  - {fileID: 3221663464187775476, guid: a6d821d7f6682d446a4e6acb7e3378ba, type: 3}
   barreira: {fileID: -2801608058337553116, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
   cavalete: {fileID: -4193309250223690241, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
   cone: {fileID: 3613567641014311022, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
@@ -3652,6 +3850,31 @@ MonoBehaviour:
   - {fileID: 6008424420378179403, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
   - {fileID: 8476567016535443079, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
   - {fileID: -136606356150907032, guid: 22df5c12ad962284db1c38ec0a4f80dd, type: 3}
+--- !u!114 &2005601271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8439702b3f960a4e9e23debfa8e4eb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.PecasDosCarrosDoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  chance:
+  - 0.55
+  - 0.5
+  - 0.45
+  faixas:
+  - {x: 15, y: 100}
+  - {x: 5, y: 70}
+  - {x: 20, y: 100}
+  chanceDaRoda: 0.9
+  chanceDeFurado: 0.3
+  faixaDoPneu: {x: 15, y: 85}
+  distanciaMaxima: 3.5
 --- !u!1 &2056384982
 GameObject:
   m_ObjectHideFlags: 0
@@ -3793,3 +4016,4 @@ SceneRoots:
   - {fileID: 1519397510}
   - {fileID: 692325281}
   - {fileID: 2005601261}
+  - {fileID: 621969964}
