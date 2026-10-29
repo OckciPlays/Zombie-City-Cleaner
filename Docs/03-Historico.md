@@ -265,6 +265,10 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## A quantidade de zumbis que foi aprovada (29/10/2026)
+
+- **Correção:** na etapa 6, os números de zumbis por pedaço do mapa subiram no código, mas o Unity aberto continuou usando os de antes, e foi com eles que o ×2 de dia e o ×3 à noite foram testados e aprovados. No git (e no PC do amigo) valia o código, com quase o dobro. O código voltou para os números testados (1 a 4 acordados e 0 a 2 estátuas na cidade; 15% e 6% fora), e o teste de novo deu exatamente a quantidade aprovada.
+
 ## Os sons e a agonia do Oco (28/10/2026, a pedido; branch `feature/carro-no-mundo`)
 
 - **A etapa 7:** o Oco ganhou voz própria: o gemido grave e oco, o rosnado do golpe, o chamado entre eles (estalos da garganta e um lamento; os de perto respondem), o grito de agonia no sol, a dor do tiro, e os sons da pedra (a crosta estalando, a pedra fechando, a casca quebrando à noite). Os sons foram gerados por um script (Ferramentas/sons_do_oco.py), a partir da voz de zumbi que o jogo já tinha.

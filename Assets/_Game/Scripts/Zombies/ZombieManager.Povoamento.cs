@@ -13,8 +13,8 @@ namespace ZombieCityCleaner.Zombies
     /// todos os zumbis"; antes, no mundo gerado, nenhum zumbi nascia sozinho). Só no anfitrião, e só com o mundo gerado
     /// (na Demo_Cidade valem as hordas da cena).
     /// <para><b>As células:</b> o mapa é cortado em células de 40 m. Quando o meio de uma chega a 52 m de um jogador (o
-    /// NavMesh do mundo vai a 60 m dele) e o NavMesh já chegou ali, ela se povoa uma vez: na cidade, de 3 a 6 zumbis
-    /// acordados e, de dia, de 1 a 3 estátuas; fora da cidade, às vezes um acordado ou uma estátua; e, com 4 árvores ou
+    /// NavMesh do mundo vai a 60 m dele) e o NavMesh já chegou ali, ela se povoa uma vez: na cidade, de 1 a 4 zumbis
+    /// acordados e, de dia, até 2 estátuas; fora da cidade, às vezes um acordado ou uma estátua; e, com 4 árvores ou
     /// mais na célula (a mata, as praças), de 1 a 3 debaixo das copas. Ninguém nasce a menos de 22 m de um jogador. De dia
     /// e ao amanhecer, os acordados nascem onde o sol não bate (de preferência sob um teto, dentro das casas), e as
     /// estátuas onde ele bate (na rua, já de pedra, paradas no meio de um passo); à noite, os acordados nascem em qualquer
@@ -39,14 +39,16 @@ namespace ZombieCityCleaner.Zombies
         public float alcanceDoPovoamento = 52f;
         [Tooltip("Ninguém nasce mais perto que isto de um jogador (m).")]
         public float longeDoJogador = 22f;
-        // a etapa 6 (a pedido em 28/10/2026: "achei que tem muito pouco zumbi no mapa ... tanto na rua petrificados, como
-        // nas casas, em árvores"): na cidade, de 1-4 para 3-6 acordados e de 0-2 para 1-3 estátuas; e os da mata
+        // a quantidade que o Pedro testou e aprovou (com ×2 de dia e ×3 à noite, DensidadeDeDia e DensidadeDeNoite). Na
+        // etapa 6 estes números subiram no código (3-6, 1-3, 25%, 12%), mas a cena aberta no Editor continuou com os de
+        // antes, e foi com eles que a quantidade foi testada: voltaram para estes em 29/10/2026. Ao mudar um número aqui,
+        // reabra a cena Mundo antes de testar (a cena aberta guarda o valor antigo) e não a salve com o valor velho
         [Tooltip("Zumbis acordados por célula, na cidade (mínimo, máximo).")]
-        public Vector2Int acordadosNaCidade = new Vector2Int(3, 6);
+        public Vector2Int acordadosNaCidade = new Vector2Int(1, 4);
         [Tooltip("Estátuas por célula, na cidade, de dia (mínimo, máximo).")]
-        public Vector2Int estatuasNaCidade = new Vector2Int(1, 3);
+        public Vector2Int estatuasNaCidade = new Vector2Int(0, 2);
         [Tooltip("Fora das cidades: a chance de um zumbi acordado por célula, e a de uma estátua (de dia).")]
-        public float acordadoForaDaCidade = 0.25f, estatuaForaDaCidade = 0.12f;
+        public float acordadoForaDaCidade = 0.15f, estatuaForaDaCidade = 0.06f;
         [Tooltip("Debaixo das árvores (na mata, nas praças): com pelo menos tantas árvores na célula, ela ganha estes zumbis (mínimo, máximo); de dia, escondidos debaixo das copas.")]
         public int arvoresParaAMata = 4;
         public Vector2Int acordadosNaMata = new Vector2Int(1, 3);
