@@ -342,7 +342,11 @@ namespace ZombieCityCleaner.Player
         public void AnunciarTiro(TipoDeArma arma, Impacto[] impactos)
         {
             animadorCorpo.SetTrigger(FireId);
-            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+            if (IsServer)
+            {
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);   // o tiro num carro com alarme dispara
+            }
             TiroRpc((byte)arma, impactos);
         }
 
@@ -350,8 +354,12 @@ namespace ZombieCityCleaner.Player
         void TiroRpc(byte qual, Impacto[] impactos)
         {
             TirosRecebidos++;
-            // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
-            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+            // no anfitrião, o tiro de um amigo chama os zumbis em volta dele (e dispara o alarme do carro em que pegou)
+            if (IsServer)
+            {
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);
+            }
             animadorCorpo.SetTrigger(FireId);
             var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);
             var boca = bocasCorpo[(int)arma];

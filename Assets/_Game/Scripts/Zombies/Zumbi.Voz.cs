@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.Zombies
             voz.Stop();
             voz.clip = clip;
             voz.pitch = tom * Random.Range(0.93f, 1.06f);
-            voz.volume = _volumeDaVoz * volume;
+            voz.volume = _volumeDaVoz * volume * (Sons != null ? Sons.volume : 1f);
             voz.time = 0f;
             voz.Play();
             float duracao = clip.length / voz.pitch;

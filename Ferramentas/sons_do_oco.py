@@ -376,12 +376,15 @@ def soltando():
     salvar('Oco_Soltando', saturar(y / (np.abs(y).max() + 1e-9), 3.5), cauda=0.12)
 
 
-for i in range(6): voz(i)
-for i in range(3): golpe(i)
+# desde 29/10/2026 a voz, o golpe, a agonia e a dor do tiro saem das gravações do Pedro (oco_gravado.py): estes só
+# com "tudo" no fim do comando (python sons_do_oco.py voz.wav pasta tudo), para não apagar os gravados
+if len(sys.argv) > 3 and sys.argv[3] == 'tudo':
+    for i in range(6): voz(i)
+    for i in range(3): golpe(i)
+    for i in range(4): agonia(i)
+    for i in range(4): tiro(i)
 for i in range(3): chamado(i)
 for i in range(3): resposta(i)
-for i in range(4): agonia(i)
-for i in range(4): tiro(i)
 petrificando()
 petrificou()
 soltando()

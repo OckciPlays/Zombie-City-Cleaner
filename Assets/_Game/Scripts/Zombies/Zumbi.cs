@@ -361,7 +361,7 @@ namespace ZombieCityCleaner.Zombies
                     // o último grito (a voz para logo abaixo: o som vai solto, no lugar)
                     var sons = Sons;
                     if (sons != null && sons.tiro != null && sons.tiro.Length > 0 && _m.PodeOuvir(transform.position))
-                        Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f, true, 30f);
+                        Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f * sons.volume, true, 30f);
                     if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
                     Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
                 }

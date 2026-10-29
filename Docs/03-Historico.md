@@ -265,6 +265,17 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## A voz do Oco gravada (29/10/2026, a pedido)
+
+- **A voz, o golpe, a agonia no sol e a dor do tiro** agora saem da voz do Pedro, gravada e transformada (mais grave, com a garganta maior, um rosnado por baixo, um sopro rouco, o oco e uma sala), sem dar para reconhecer quem gravou. São 37 variações no lugar das 17 geradas de antes. O chamado, a resposta e os sons da pedra continuam os de antes.
+- **Mais baixo:** todas as vozes do Oco tocam a 60% do volume de antes (um ajuste só, no asset dos sons).
+
+## O alarme dos carros (29/10/2026, a pedido)
+
+- **Um carro abandonado em cada 10 tem alarme** (e sempre tem bateria). Dispara com um tiro no carro, ao abrir o capô ou ao trocar o pneu, e toca por 40 s, ou até alguém tirar a bateria (que fica com quem tirou). A sirene clássica de carro (três alarmes diferentes) e o pisca-alerta piscando.
+- **Os zumbis:** à noite, os que estão até 60 m vão ver o que foi; de dia, ninguém sai da sombra: vão até a beira dela e ficam olhando.
+- **No F1:** alarme em todos os carros, para testar, e disparar o alarme do carro mais perto.
+
 ## A trilha sonora (29/10/2026, a pedido)
 
 - **A música do jogo:** gerada por código, em ré menor, sobre um tema de quatro notas descendo (a solidão do jogador). A neblina de dia (o piano velho, as cordas, a voz distante, o violoncelo), a noite (mais lenta e grave, o coração longe, o sino), o perigo em três níveis (a tensão, a perseguição, a horda), o amanhecer e a morte. O Pedro ouviu as faixas e duas sessões simuladas antes de ela entrar no jogo.

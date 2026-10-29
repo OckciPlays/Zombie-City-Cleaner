@@ -18,7 +18,7 @@ namespace ZombieCityCleaner.UI
     {
         Rect PainelDosZumbis(float u, Rect aoLado)
         {
-            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 380 * u);
+            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 410 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -89,6 +89,21 @@ namespace ZombieCityCleaner.UI
             {
                 RastejanteAgoraRpc();
                 Avisar("Sai um rastejante de baixo do carro abandonado mais perto (até 25 m).");
+            }
+            y += 30 * u;
+            // o alarme dos carros (a pedido em 29/10/2026): em todos, para testar o tiro, o capô e o pneu; ou já tocando
+            var pecas = Vehicles.PecasDosCarrosDoMundo.Instancia;
+            bool alarmeEmTodos = pecas != null && pecas.IsSpawned && pecas.AlarmeEmTodos.Value;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), alarmeEmTodos ? "Alarme: TODOS" : "Alarme: 1 em 10", _botao))
+            {
+                AlarmesRpc(!alarmeEmTodos);
+                Avisar(!alarmeEmTodos ? "Todo carro abandonado tem alarme: tiro nele, abrir o capô ou trocar o pneu dispara (40 s, ou até tirar a bateria)."
+                                      : "Volta ao normal: um em cada 10 carros tem alarme.");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Alarme no + perto", _botao))
+            {
+                AlarmeAgoraRpc();
+                Avisar("O alarme do carro abandonado mais perto (até 25 m) dispara agora.");
             }
             y += 30 * u;
             // a etapa 6: quantos nascem, de dia e à noite (o padrão: ×2 e ×3), e povoar tudo de novo para ver
@@ -187,6 +202,18 @@ namespace ZombieCityCleaner.UI
         {
             if (Aceita(parametros) && ZombieManager.Instancia != null)
                 ZombieManager.Instancia.RastejanteNoCarroMaisPerto(GetComponent<Player.JogadorRede>());
+        }
+
+        [Rpc(SendTo.Server)]
+        void AlarmesRpc(bool emTodos, RpcParams parametros = default)
+        {
+            if (Aceita(parametros) && Vehicles.PecasDosCarrosDoMundo.Instancia != null) Vehicles.PecasDosCarrosDoMundo.Instancia.AlarmeEmTodosOsCarros(emTodos);
+        }
+
+        [Rpc(SendTo.Server)]
+        void AlarmeAgoraRpc(RpcParams parametros = default)
+        {
+            if (Aceita(parametros) && Vehicles.PecasDosCarrosDoMundo.Instancia != null) Vehicles.PecasDosCarrosDoMundo.Instancia.DispararOMaisPerto(transform.position);
         }
 
         [Rpc(SendTo.Server)]

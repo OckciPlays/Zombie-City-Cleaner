@@ -442,6 +442,18 @@ namespace ZombieCityCleaner.World
             return true;
         }
 
+        /// <summary>
+        /// Onde está o carro do mundo e a caixa dele (a da colisão, no espaço do carro), pelos dados: o alarme confere se o
+        /// tiro pegou nele e põe o pisca-alerta nos cantos (Vehicles/PecasDosCarrosDoMundo.Alarme.cs).
+        /// </summary>
+        public bool CaixaDoCarro(int indice, out Vector3 posicao, out Quaternion giro, out Bounds caixa)
+        {
+            caixa = default;
+            if (!PoseDoCarro(indice, out posicao, out giro, out _)) return false;
+            caixa = carros[_dados.Objetos.Todos[indice].Variante % carros.Length].bounds;
+            return true;
+        }
+
         /// <summary>O meio do capô do carro do mundo (onde o pedido no motor conta a distância).</summary>
         public bool PontoDoCapo(int indice, out Vector3 ponto)
         {
