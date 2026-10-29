@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ZombieCityCleaner.Mundo
 {
@@ -28,6 +29,37 @@ namespace ZombieCityCleaner.Mundo
         public string Resumo { get; private set; } = "";
         public readonly List<GameObject> Construcoes = new List<GameObject>();
 
+        /// <summary>
+        /// Uma construção para o AndarNoExemplo pular até ela (as setas) e mostrar a planta (P): onde chegar (na calçada, de
+        /// frente para ela), a ficha (o texto da tela), os limites no mundo, a altura e o nome de cada piso (do mais baixo ao
+        /// mais alto) e os cômodos (o meio de cada um no mundo, o piso e o rótulo).
+        /// </summary>
+        public sealed class Parada
+        {
+            public string Ficha;
+            public Vector3 Chegada;
+            public float Giro;
+            public Bounds Limites;
+            public readonly List<float> Pisos = new List<float>();
+            public readonly List<string> NomesDosPisos = new List<string>();
+            public readonly List<(Vector3 centro, int piso, string rotulo)> Comodos = new List<(Vector3, int, string)>();
+        }
+        /// <summary>As construções na ordem de visitar (as cenas que não usam ficam vazias).</summary>
+        public readonly List<Parada> Paradas = new List<Parada>();
+
+        /// <summary>A parada mais perto de 'pos' (até 30 m dos limites dela), ou -1.</summary>
+        public int MaisPerto(Vector3 pos)
+        {
+            int melhor = -1;
+            float menor = 30f * 30f;
+            for (int i = 0; i < Paradas.Count; i++)
+            {
+                float d = Paradas[i].Limites.SqrDistance(pos);
+                if (d < menor) { menor = d; melhor = i; }
+            }
+            return melhor;
+        }
+
         protected Transform raiz;
         /// <summary>O chão: a grama, a rua, as calçadas e os caminhos, num objeto só.</summary>
         protected Obra chao;
@@ -44,6 +76,12 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>O texto da tela do AndarNoExemplo, de onde o jogador está.</summary>
         public virtual string Texto(Vector3 posicao) => Resumo;
+
+        /// <summary>As teclas da cena, além das do AndarNoExemplo (no Play, a cada quadro).</summary>
+        public virtual void Teclas(Keyboard k) { }
+
+        /// <summary>A linha das teclas da cena na ajuda do AndarNoExemplo (null: nenhuma).</summary>
+        public virtual string AjudaDasTeclas => null;
 
         void OnEnable()
         {
@@ -102,6 +140,7 @@ namespace ZombieCityCleaner.Mundo
         public void Apagar()
         {
             Construcoes.Clear();
+            Paradas.Clear();
             Transform velho;
             while ((velho = transform.Find(NomeDaRaiz)) != null)
             {

@@ -18,7 +18,10 @@ namespace ZombieCityCleaner.EditorTools
     ///    escalas. Menu Zombie City Cleaner > Exemplos > Sala de medidas (Parte M0);
     ///  - `Scenes/Exemplos/Abandono.unity`: a cena de testes do abandono da Parte M9b (CenaDoAbandono), os mesmos trechos
     ///    de rua em 4 graus de abandono. Menu Zombie City Cleaner > Exemplos > Abandono (Parte M9b); as fotos, em
-    ///    Zombie City Cleaner > Exemplos > Fotos do abandono.
+    ///    Zombie City Cleaner > Exemplos > Fotos do abandono;
+    ///  - `Scenes/Exemplos/Variacoes.unity`: uma construção de cada variação do mapa, com os móveis (CenaDasVariacoes).
+    ///    Menu Zombie City Cleaner > Exemplos > Variações das construções; as plantas, em Zombie City Cleaner > Exemplos >
+    ///    Fotos das variações.
     /// Os menus refazem a cena. Foto() tira fotos da cena aberta sem dar Play.
     /// </summary>
     public static class MontagemDoExemploDasCasas
@@ -27,6 +30,8 @@ namespace ZombieCityCleaner.EditorTools
         const string Cena = PastaCena + "/Exemplo_Casas.unity";
         const string CenaDaSala = PastaCena + "/Sala_de_Medidas.unity";
         const string CenaAbandono = PastaCena + "/Abandono.unity";
+        const string CenaVariacoes = PastaCena + "/Variacoes.unity";
+        const string PastaDasFotos = @"C:\Users\gusta\OneDrive\Documentos\Projetos\Projeto Zombie City Cleaner\Imgs\Renders\";
         const string FbxRua = "Assets/_Game/Art/Cidade/Cidade_Rua.fbx";
         const string FbxArvores = "Assets/_Game/Art/Cidade/Cidade_Arvores.fbx";
         static readonly Color CorDaNeblina = new Color(0.60f, 0.62f, 0.62f);
@@ -154,6 +159,163 @@ namespace ZombieCityCleaner.EditorTools
             Debug.Log("[Abandono] Fotos em Imgs/Renders/Abandono_*.png");
         }
 
+        [MenuItem("Zombie City Cleaner/Exemplos/Variações das construções")]
+        public static void MontarVariacoes()
+        {
+            var cena = CenaNova();
+            if (cena == null) return;
+            var go = new GameObject("Variações das construções");
+            go.SetActive(false);
+            var c = go.AddComponent<CenaDasVariacoes>();
+            Comum(c);
+            // sem as árvores atrás dos lotes (os prédios e o mercado são fundos)
+            c.arvores = new Mesh[0];
+            c.mobilia = AssetDatabase.LoadAllAssetsAtPath(MontagemDoMundo.FbxDaMobilia).OfType<Mesh>()
+                .Where(m => ZombieCityCleaner.Mundo.Mobilia.Feitos.ContainsKey(m.name)).OrderBy(m => m.name).ToArray();
+            // o mostruário da mobília nova (os prefabs de Mobília nova > Montar)
+            c.mobiliaNova = MontagemDaMobiliaNova.Carregar();
+            go.SetActive(true);
+            Jogador(c.Paradas.Count > 0 ? c.Paradas[0].Chegada : new Vector3(0f, 0.2f, -2.5f));
+            EditorSceneManager.SaveScene(cena.Value, CenaVariacoes);
+            Debug.Log($"Cena das variações montada: {CenaVariacoes}\n{c.Resumo}\n\n{string.Join("\n", c.Paradas.Select(p => p.Ficha))}");
+        }
+
+        /// <summary>
+        /// As plantas da cena das variações (aberta), em Imgs/Renders/Variacoes_*.png da pasta de arte: cada piso de cada
+        /// construção visto de cima, logo abaixo do teto (como o P do AndarNoExemplo), com o nome e o tamanho de cada
+        /// cômodo, numa folha por grupo (as casas e as lojas com todos os pisos; os prédios, o térreo e o primeiro andar), e
+        /// a rua de cima.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Exemplos/Fotos das variações")]
+        public static void FotosDasVariacoes()
+        {
+            var c = Object.FindAnyObjectByType<CenaDasVariacoes>();
+            if (c == null) { Debug.LogWarning("Abra a cena das variações antes."); return; }
+            var sol = Object.FindObjectsByType<Light>(FindObjectsSortMode.None).FirstOrDefault(l => l.type == LightType.Directional);
+            var sombras = sol != null ? sol.shadows : LightShadows.None;
+            Foto(PastaDasFotos + "Variacoes_Rua.png", new Vector3(-30f, 55f, -70f), new Vector3(110f, 0f, 15f), 55f);
+            // sem a sombra do telhado e das lajes, que deixaria os cômodos no escuro
+            if (sol != null) sol.shadows = LightShadows.None;
+            try
+            {
+                foreach (var (grupo, nome, colunas, lado, ateOPiso) in new[] { ("Casas", "Casas", 6, 520, 9), ("Lojas", "Lojas", 5, 600, 9), ("Prédios", "Predios", 4, 760, 1) })
+                {
+                    var imagens = new System.Collections.Generic.List<Texture2D>();
+                    foreach (var p in c.Paradas.Where(p => p.Ficha.StartsWith(grupo)))
+                        for (int piso = 0; piso < p.Pisos.Count && piso <= ateOPiso; piso++)
+                            if (p.NomesDosPisos[piso] != "Cobertura") imagens.Add(Planta(p, piso, lado));
+                    Grade(PastaDasFotos + $"Variacoes_{nome}.png", imagens, colunas, lado);
+                }
+            }
+            finally
+            {
+                if (sol != null) sol.shadows = sombras;
+            }
+            Debug.Log("[Variações] Fotos em Imgs/Renders/Variacoes_*.png");
+        }
+
+        /// <summary>Para rodar sem a tela (batchmode): monta a cena das variações e tira as fotos dela.</summary>
+        public static void MontarEFotografarVariacoes()
+        {
+            MontarVariacoes();
+            FotosDasVariacoes();
+        }
+
+        // um piso de uma construção de cima, logo abaixo do teto (ortográfica, quadrada), com os rótulos dos cômodos e o
+        // título embaixo, do lado da frente
+        static Texture2D Planta(CenaDeExemplo.Parada p, int piso, int lado)
+        {
+            float tamanho = Mathf.Max(p.Limites.extents.x, p.Limites.extents.z) * 1.04f + 1.4f;
+            float y = p.Pisos[piso];
+            var giro = Quaternion.Euler(90f, p.Giro, 0f);
+            Vector3 cima = giro * Vector3.up, direita = giro * Vector3.right;
+            var fonte = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var rotulos = new System.Collections.Generic.List<GameObject>();
+            void Rotulo(string texto, Vector3 pos, float letra)
+            {
+                // a sombra preta, um pouco para baixo e para a direita na foto, e o texto branco por cima
+                rotulos.Add(TextoNoChao(texto, pos + (direita - cima) * letra * 0.07f - Vector3.up * 0.01f, giro, letra, fonte, Color.black));
+                rotulos.Add(TextoNoChao(texto, pos, giro, letra, fonte, Color.white));
+            }
+            float letra = tamanho * 0.06f;
+            foreach (var (centro, pi, rotulo) in p.Comodos)
+                if (pi == piso) Rotulo(rotulo, new Vector3(centro.x, y + 1.7f, centro.z), letra);
+            string titulo = p.Ficha.Split('\n')[0].Trim() + " · " + p.NomesDosPisos[piso];
+            var meio = new Vector3(p.Limites.center.x, y + 1.7f, p.Limites.center.z);
+            // o título cabe na largura da foto (cada letra tem uns 55% da altura da linha)
+            float letraDoTitulo = Mathf.Min(letra * 1.1f, 1.9f * tamanho / (titulo.Length * 0.55f));
+            Rotulo(titulo, meio - cima * (tamanho - letraDoTitulo * 1.2f), letraDoTitulo);
+
+            var go = new GameObject("Câmera da planta") { hideFlags = HideFlags.HideAndDontSave };
+            var cam = go.AddComponent<Camera>();
+            Ajustar(cam, 60f);
+            // sem o pós-processamento do dia (a vinheta escurecia os cantos)
+            cam.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+            cam.orthographic = true;
+            cam.orthographicSize = tamanho;
+            cam.nearClipPlane = 0.02f;
+            cam.farClipPlane = 60f;
+            go.transform.SetPositionAndRotation(new Vector3(p.Limites.center.x, y + 2.25f, p.Limites.center.z), giro);
+            var rt = new RenderTexture(lado, lado, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+            cam.targetTexture = rt;
+            cam.Render();
+            var antes = RenderTexture.active;
+            RenderTexture.active = rt;
+            var tex = new Texture2D(lado, lado, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, lado, lado), 0, 0);
+            tex.Apply();
+            RenderTexture.active = antes;
+            cam.targetTexture = null;
+            Object.DestroyImmediate(rt);
+            Object.DestroyImmediate(go);
+            foreach (var r in rotulos) Object.DestroyImmediate(r);
+            return tex;
+        }
+
+        // um texto deitado no chão, de frente para a câmera de cima; 'letra' é a altura de uma linha em metros (o TextMesh
+        // desenha 1 m para cada 10 pixels da fonte no characterSize 1)
+        static GameObject TextoNoChao(string texto, Vector3 pos, Quaternion giro, float letra, Font fonte, Color cor)
+        {
+            var go = new GameObject("Rótulo") { hideFlags = HideFlags.HideAndDontSave };
+            go.transform.SetPositionAndRotation(pos, giro);
+            var tm = go.AddComponent<TextMesh>();
+            tm.font = fonte;
+            tm.fontSize = 64;
+            tm.characterSize = letra / 7.4f;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+            tm.fontStyle = FontStyle.Bold;
+            tm.color = cor;
+            tm.text = texto;
+            go.GetComponent<MeshRenderer>().sharedMaterial = fonte.material;
+            return go;
+        }
+
+        // as imagens numa grade de 'colunas' colunas (de cima para baixo, da esquerda para a direita), quadradas de 'lado',
+        // com uma faixa escura entre elas; destrói as imagens
+        static void Grade(string arquivo, System.Collections.Generic.List<Texture2D> imagens, int colunas, int lado)
+        {
+            if (imagens.Count == 0) return;
+            const int faixa = 6;
+            colunas = Mathf.Min(colunas, imagens.Count);
+            int linhas = (imagens.Count + colunas - 1) / colunas;
+            int W = colunas * lado + (colunas - 1) * faixa, H = linhas * lado + (linhas - 1) * faixa;
+            var junta = new Texture2D(W, H, TextureFormat.RGB24, false);
+            var fundo = new Color32[W * H];
+            for (int i = 0; i < fundo.Length; i++) fundo[i] = new Color32(20, 20, 22, 255);
+            junta.SetPixels32(fundo);
+            for (int i = 0; i < imagens.Count; i++)
+            {
+                int col = i % colunas, lin = i / colunas;
+                junta.SetPixels(col * (lado + faixa), H - (lin + 1) * lado - lin * faixa, lado, lado, imagens[i].GetPixels());
+                Object.DestroyImmediate(imagens[i]);
+            }
+            junta.Apply();
+            Directory.CreateDirectory(Path.GetDirectoryName(arquivo));
+            File.WriteAllBytes(arquivo, junta.EncodeToPNG());
+            Object.DestroyImmediate(junta);
+        }
+
         /// <summary>Várias vistas numa grade de 'colunas' colunas (de cima para baixo, da esquerda para a direita), com uma faixa escura entre elas.</summary>
         public static void FotosEmGrade(string arquivo, float campo, int largura, int altura, int colunas, params (Vector3 pos, Vector3 alvo)[] vistas)
         {
@@ -186,7 +348,10 @@ namespace ZombieCityCleaner.EditorTools
             c.arvores = new[] { "Pinheiro_A", "Pinheiro_B", "Pinheiro_C", "Arvore", "Arvore_Seca" }.Select(n => Malha(FbxRua, n)).Where(m => m != null).ToArray();
         }
 
-        /// <summary>O jogador simples: a cápsula de 1,80 m, a cabeça a 1,62 m e a câmera de 70°, como o do jogo.</summary>
+        /// <summary>
+        /// O jogador simples: a cápsula de 1,80 m, a cabeça a 1,62 m e a câmera de 70°, como o do jogo, e o corpo do
+        /// personagem (para a terceira pessoa do AndarNoExemplo).
+        /// </summary>
         static void Jogador(Vector3 pos)
         {
             var jogador = new GameObject("Jogador de exemplo");
@@ -200,8 +365,25 @@ namespace ZombieCityCleaner.EditorTools
             Ajustar(cam, 70f);
             cabeca.tag = "MainCamera";
             cabeca.AddComponent<AudioListener>();
-            jogador.AddComponent<AndarNoExemplo>().cabeca = cabeca.transform;
+            var andar = jogador.AddComponent<AndarNoExemplo>();
+            andar.cabeca = cabeca.transform;
+            // o corpo do personagem do jogo, para a terceira pessoa (T), com o controlador dele
+            var modelo = AssetDatabase.LoadAssetAtPath<GameObject>(CorpoDoPersonagem);
+            if (modelo != null)
+            {
+                var corpo = (GameObject)PrefabUtility.InstantiatePrefab(modelo);
+                corpo.name = "Corpo";
+                corpo.transform.SetParent(jogador.transform, false);
+                var animador = corpo.GetComponent<Animator>();
+                if (animador == null) animador = corpo.AddComponent<Animator>();
+                animador.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControladorDoCorpo);
+                animador.applyRootMotion = false;
+                andar.corpo = animador;
+            }
         }
+
+        const string CorpoDoPersonagem = "Assets/_Game/Art/Characters/Personagens/Personagem_PrincipalBloco.fbx";
+        const string ControladorDoCorpo = "Assets/_Game/Art/Characters/Personagens/Personagem_PrincipalBloco_Corpo.controller";
 
         /// <summary>Uma cena vazia com a luz de um dia nublado, a neblina leve e o volume do dia (null se não deu para trocar de cena).</summary>
         static UnityEngine.SceneManagement.Scene? CenaNova()
