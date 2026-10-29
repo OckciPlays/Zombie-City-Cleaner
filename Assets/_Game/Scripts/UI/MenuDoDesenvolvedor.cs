@@ -41,6 +41,7 @@ namespace ZombieCityCleaner.UI
             Item.Coldre, Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
             Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
             Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco,
+            Item.CaixaDeBolas, Item.TacoMadeira, Item.TacoEscuro, Item.TacoPreto, Item.TacoVermelho,
         };
         static readonly string[] Destinos = { "Na mochila", "No chão" };
 

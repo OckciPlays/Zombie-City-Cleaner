@@ -193,6 +193,9 @@ namespace ZombieCityCleaner.EditorTools
             rede.bocasCorpo = primeiro.bocas;
             rede.controladoresCorpo = primeiro.controladores;
             rede.controladorDasMaos = primeiro.controladorDasMaos;
+            rede.controladorDoTaco = primeiro.controladorDoTaco;
+            rede.tacoCorpo = primeiro.taco;
+            rede.pontaDoTacoCorpo = primeiro.pontaDoTaco;
             // a pele dos braços de primeira pessoa: o material do corpo de cada personagem (o principal em blocos: a textura)
             rede.variacoes = Enumerable.Range(0, Personagens.Quantos).Select(p => Carregar<Material>(MontagemDasArmas.MaterialDoPersonagem(p))).ToArray();
             rede.pintaveis = smrBracos.Cast<Renderer>().ToArray();
@@ -211,6 +214,9 @@ namespace ZombieCityCleaner.EditorTools
             int np = Itens.QuantasPecas;
             inventario.iconesDePeca = Enumerable.Range(0, np).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaPeca(k))).ToArray();
             inventario.fotosDePeca = Enumerable.Range(0, np).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaPeca(k))).ToArray();
+            int ns = Itens.QuantosDaSinuca;
+            inventario.iconesDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaSinuca(k))).ToArray();
+            inventario.fotosDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaSinuca(k))).ToArray();
             tela.rede = rede; tela.inventario = inventario; tela.arma = arma;
             telaDoCapo.rede = rede; telaDoCapo.inventario = inventario; telaDoCapo.telaDoInventario = tela;
             terceira.rede = rede; terceira.movimento = movimento; terceira.arma = arma; terceira.capo = telaDoCapo;
@@ -279,6 +285,10 @@ namespace ZombieCityCleaner.EditorTools
             c.bocas = bocas;
             c.controladores = Enumerable.Range(0, Armas.Quantas).Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoPersonagem(p, i))).ToArray();
             c.controladorDasMaos = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDasMaosDoPersonagem(p));
+            // o taco de sinuca: o vazio e a ponta (sem malha: o TacoNaMao põe o taco de cada cor)
+            c.controladorDoTaco = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoTacoDoPersonagem(p));
+            c.taco = todos.FirstOrDefault(t => t.name == "Arma_Taco");
+            c.pontaDoTaco = todos.FirstOrDefault(t => t.name == "Boca_Taco");
             c.controladoresDosItens = Enumerable.Range(Armas.Quantas, n - Armas.Quantas)
                 .Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoItemDoPersonagem(p, i))).ToArray();
             var m = MedidasDosCorpos[p];

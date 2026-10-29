@@ -5,7 +5,8 @@ namespace ZombieCityCleaner.Loot
     /// <summary>
     /// O que vai na mochila (e na mão): uma arma (o tipo + 1) ou a comida e a água; as caixas de munição (uma por
     /// calibre, só na grade: não vão na mão); e o que se veste (os equipamentos: as 3 mochilas e o coldre), que não vai na
-    /// grade nem na mão. Vai pela rede num byte.
+    /// grade nem na mão; as peças do carro; e a sinuca (a caixa das bolas, cheia ou vazia, só na grade, e os 4 tacos, que
+    /// vão na mão). Vai pela rede num byte.
     /// </summary>
     public enum Item : byte
     {
@@ -13,6 +14,14 @@ namespace ZombieCityCleaner.Loot
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
         Municao9mm = 48, Municao556, Municao12, Municao762,
         Vela = 64, Bateria, Radiador, Pneu, Macaco,
+        CaixaDeBolas = 80, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
+    }
+
+    /// <summary>Uma coisa da sinuca (a caixa das bolas e os tacos): o nome do modelo (Sinuca.fbx, Icone_ e Foto_), o tamanho na mochila e o resumo.</summary>
+    public class DadosDaSinuca
+    {
+        public string modelo, nome, nomeComArtigo, resumo;
+        public UnityEngine.Vector2Int tamanho;
     }
 
     /// <summary>
@@ -60,14 +69,16 @@ namespace ZombieCityCleaner.Loot
         public const int QuantosModelos = Armas.Quantas + 2;
 
         /// <summary>
-        /// Na primeira pessoa há mais um modelo, depois dos de <see cref="Modelos"/>: os punhos da mão vazia
-        /// (Jogador_FP_Maos.fbx, para o soco).
+        /// Na primeira pessoa há mais dois modelos, depois dos de <see cref="Modelos"/>: os punhos da mão vazia
+        /// (Jogador_FP_Maos.fbx, para o soco) e a mão com o taco de sinuca em pé (Jogador_FP_Taco.fbx, sem o taco: o
+        /// <c>TacoNaMao</c> põe o de cada cor no osso gun).
         /// </summary>
         public const int Punhos = QuantosModelos;
-        public const int QuantosModelosFP = QuantosModelos + 1;
-        public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : Modelos[modelo];
-        /// <summary>O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia).</summary>
-        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : Modelo(i);
+        public const int TacoFP = QuantosModelos + 1;
+        public const int QuantosModelosFP = QuantosModelos + 2;
+        public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : Modelos[modelo];
+        /// <summary>O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia; a mão com o taco).</summary>
+        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : EhTaco(i) ? TacoFP : Modelo(i);
 
         static readonly DadosDoConsumivel[] _consumiveis =
         {
@@ -122,6 +133,33 @@ namespace ZombieCityCleaner.Loot
             new DadosDaPeca { modelo = "Macaco", nome = "macaco", nomeComArtigo = "o macaco", resumo = "Levanta o carro para trocar a roda.", funcao = "Ferramenta", tamanho = new(3, 1) },
         };
         public static int QuantasPecas => _pecas.Length;
+
+        /// <summary>
+        /// A sinuca, na ordem do enum (de CaixaDeBolas em diante): Sinuca.fbx (&lt;modelo&gt;_*), Icone_&lt;modelo&gt; e
+        /// Foto_&lt;modelo&gt;, feitos pelo Blender/sinuca.py. A caixa cheia, na mesa de sinuca, põe as bolas nela e fica
+        /// vazia; a vazia recolhe as bolas e fica cheia (as duas do mesmo tamanho: a troca não mexe na grade). O taco vai
+        /// na mão e é o que joga.
+        /// </summary>
+        static readonly DadosDaSinuca[] _sinuca =
+        {
+            new DadosDaSinuca { modelo = "CaixaDeBolas", nome = "caixa de bolas de sinuca", nomeComArtigo = "a caixa de bolas de sinuca", resumo = "As 16 bolas. Na mesa de sinuca, E põe as bolas nela.", tamanho = new(3, 1) },
+            new DadosDaSinuca { modelo = "CaixaDeBolasVazia", nome = "caixa de bolas vazia", nomeComArtigo = "a caixa de bolas vazia", resumo = "Sem as bolas. Na mesa, E recolhe as bolas.", tamanho = new(3, 1) },
+            new DadosDaSinuca { modelo = "TacoMadeira", nome = "taco de madeira", nomeComArtigo = "o taco de madeira", resumo = "Taco de sinuca. Na mão, E na mesa joga.", tamanho = new(4, 1) },
+            new DadosDaSinuca { modelo = "TacoEscuro", nome = "taco escuro", nomeComArtigo = "o taco escuro", resumo = "Taco de sinuca, com os filetes brancos.", tamanho = new(4, 1) },
+            new DadosDaSinuca { modelo = "TacoPreto", nome = "taco preto", nomeComArtigo = "o taco preto", resumo = "Taco de sinuca, com os anéis prateados.", tamanho = new(4, 1) },
+            new DadosDaSinuca { modelo = "TacoVermelho", nome = "taco vermelho", nomeComArtigo = "o taco vermelho", resumo = "Taco de sinuca.", tamanho = new(4, 1) },
+        };
+        public static int QuantosDaSinuca => _sinuca.Length;
+        /// <summary>Uma coisa da sinuca: a caixa das bolas (cheia ou vazia) ou um taco.</summary>
+        public static bool EhSinuca(Item i) => i >= Item.CaixaDeBolas && i <= Item.TacoVermelho;
+        public static bool EhTaco(Item i) => i >= Item.TacoMadeira && i <= Item.TacoVermelho;
+        public static bool EhCaixaDeBolas(Item i) => i == Item.CaixaDeBolas || i == Item.CaixaDeBolasVazia;
+        /// <summary>O índice da coisa da sinuca (0 e 1 as caixas, de 2 a 5 os tacos), ou -1.</summary>
+        public static int IndiceDaSinuca(Item i) => EhSinuca(i) ? i - Item.CaixaDeBolas : -1;
+        /// <summary>O índice do taco (0 a 3), ou -1.</summary>
+        public static int IndiceDoTaco(Item i) => EhTaco(i) ? i - Item.TacoMadeira : -1;
+        public static Item DaSinuca(int k) => (Item)((int)Item.CaixaDeBolas + k);
+        public static string ModeloDaSinuca(int k) => _sinuca[k].modelo;
         /// <summary>Uma peça do carro (as 3 do motor, o pneu e o macaco), feita pelo pecas.py.</summary>
         public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.Macaco;
         /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco.</summary>
@@ -137,7 +175,7 @@ namespace ZombieCityCleaner.Loot
         /// Vai para a mão e para os atalhos? As caixas de munição e as peças, não (só ficam na mochila); o que se veste
         /// também não.
         /// </summary>
-        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i);
+        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i);
         public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.Municao762;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;
@@ -199,6 +237,7 @@ namespace ZombieCityCleaner.Loot
         {
             if (EhMunicao(i)) return new UnityEngine.Vector2Int(1, 1);
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
+            if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);
             return m >= 0 ? _tamanhos[m] : UnityEngine.Vector2Int.zero;
         }
@@ -215,13 +254,14 @@ namespace ZombieCityCleaner.Loot
             if (EhEquipamento(i)) return DadosDe(i).resumo;
             if (EhMunicao(i)) return _municoes[IndiceDaMunicao(i)].resumo;
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].resumo;
+            if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].resumo;
             int m = Modelo(i);
             return m >= 0 ? _resumos[m] : "";
         }
 
         public static string Nome(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nome : EhConsumivel(i) ? Consumivel(i).nome : EhEquipamento(i) ? DadosDe(i).nome
-            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : "";
+            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nome : "";
         public static string NomeComArtigo(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nomeComArtigo : EhConsumivel(i) ? Consumivel(i).nomeComArtigo : EhEquipamento(i) ? DadosDe(i).nomeComArtigo
-            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : "";
+            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nomeComArtigo : "";
     }
 }

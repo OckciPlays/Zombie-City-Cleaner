@@ -77,6 +77,8 @@ namespace ZombieCityCleaner.Player
         static readonly Color FundoDeEquipamento = new Color(0.52f, 0.5f, 0.44f, 0.95f);
         static readonly Color FundoDeMunicao = new Color(0.47f, 0.45f, 0.38f, 0.95f);
         static readonly Color FundoDePeca = new Color(0.55f, 0.53f, 0.5f, 0.95f);
+        // a sinuca: o verde do pano, claro (o estojo e a base dos tacos são escuros)
+        static readonly Color FundoDaSinuca = new Color(0.44f, 0.54f, 0.46f, 0.95f);
         static readonly Color CorDoTexto = new Color(0.94f, 0.92f, 0.86f);
         static readonly Color TextoApagado = new Color(0.8f, 0.78f, 0.72f, 0.85f);
         static readonly Color Destaque = new Color(0.98f, 0.82f, 0.36f);
@@ -622,7 +624,7 @@ namespace ZombieCityCleaner.Player
         {
             float u = _u;
             var fundo = Itens.EhArma(it.item) ? FundoDeArma : Itens.EhMunicao(it.item) ? FundoDeMunicao : Itens.EhPeca(it.item) ? FundoDePeca
-                : it.item == Item.Comida ? FundoDeComida : FundoDeAgua;
+                : Itens.EhSinuca(it.item) ? FundoDaSinuca : it.item == Item.Comida ? FundoDeComida : FundoDeAgua;
             fundo.a *= alfa;
             Ret(r, fundo);
             if (sobMouse) Ret(r, new Color(1f, 1f, 1f, 0.07f));
@@ -762,6 +764,16 @@ namespace ZombieCityCleaner.Player
                     Linha("Vai no capô", Vehicles.PecasDoMotor.Lugares[k]);
                     Linha("Efeito", Vehicles.PecasDoMotor.Efeito(k, it.qtd));
                 }
+            }
+            else if (Itens.EhCaixaDeBolas(item))
+            {
+                Linha("Bolas", item == Item.CaixaDeBolas ? "as 16" : "nenhuma (estão numa mesa)");
+                Linha("Na mesa de sinuca", item == Item.CaixaDeBolas ? "E: pôr as bolas" : "E: recolher as bolas");
+            }
+            else if (Itens.EhTaco(item))
+            {
+                Linha("Serve para", "jogar sinuca");
+                Linha("Na mão, na mesa", "E: jogar");
             }
             else if (Itens.EhConsumivel(item))
             {

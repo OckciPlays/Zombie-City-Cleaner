@@ -73,6 +73,8 @@ namespace ZombieCityCleaner.Player
         public Texture2D[] iconesDeMunicao, fotosDeMunicao;
         [Tooltip("Os ícones e as fotos das peças do motor (a vela, a bateria e o radiador), na ordem do enum Item.")]
         public Texture2D[] iconesDePeca, fotosDePeca;
+        [Tooltip("Os ícones e as fotos da sinuca (as 2 caixas de bolas e os 4 tacos), na ordem do enum Item.")]
+        public Texture2D[] iconesDaSinuca, fotosDaSinuca;
 
         /// <summary>
         /// A mochila (a grade e a arma da alça; escrita pelo anfitrião). O jogador nasce sem mochila, com a pistola na alça,
@@ -542,6 +544,30 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
+        /// Só no anfitrião: o item vira outro do mesmo tamanho, no mesmo lugar da grade (a caixa de bolas cheia vira a
+        /// vazia, e a vazia, a cheia). Falso se ele não está na mochila ou se os tamanhos são diferentes.
+        /// </summary>
+        public bool TrocarItem(ushort id, Item novo)
+        {
+            int k = IsServer ? Indice(id) : -1;
+            if (k < 0) return false;
+            var it = Mochila[k];
+            if (Itens.Tamanho(it.item) != Itens.Tamanho(novo)) return false;
+            it.item = novo;
+            it.qtd = 0;
+            Mochila[k] = it;
+            return true;
+        }
+
+        /// <summary>O primeiro item deste tipo na mochila (o Id; 0, nenhum).</summary>
+        public ushort Primeiro(Item item)
+        {
+            foreach (var it in Mochila)
+                if (it.item == item) return it.id;
+            return 0;
+        }
+
+        /// <summary>
         /// Só no anfitrião, depois de trocar ou tirar a mochila ou o coldre: o que ainda cabe fica onde está; o resto
         /// procura outro lugar na grade nova (os maiores primeiro), e o que não couber (ou a arma sem lugar no corpo) cai no
         /// chão, em volta do ponto.
@@ -612,7 +638,7 @@ namespace ZombieCityCleaner.Player
             {
                 var it = Mochila[i];
                 if (Itens.EhArma(it.item)) ParedeDeArmas.Instancia?.Devolver(Itens.Arma(it.item), it.qtd);
-                else if (Itens.EhConsumivel(it.item) || Itens.EhMunicao(it.item) || Itens.EhPeca(it.item)) ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd);
+                else if (Itens.EhConsumivel(it.item) || Itens.EhMunicao(it.item) || Itens.EhPeca(it.item) || Itens.EhSinuca(it.item)) ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd);
             }
             if (MochilaVestida.Value != Item.Nada) ItensNoMundo.Instancia?.Criar(MochilaVestida.Value, PontoAosPes(++k), k * 90f, 0);
             if (ComColdre.Value) ItensNoMundo.Instancia?.Criar(Item.Coldre, PontoAosPes(++k), k * 90f, 0);
@@ -981,6 +1007,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>O ícone colorido do item (null, nada).</summary>
         public Texture2D IconeDe(Item item)
         {
+            int s = Itens.IndiceDaSinuca(item);
+            if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return iconesDePeca != null && p < iconesDePeca.Length ? iconesDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -993,6 +1021,8 @@ namespace ZombieCityCleaner.Player
 
         public Texture2D FotoDe(Item item)
         {
+            int s = Itens.IndiceDaSinuca(item);
+            if (s >= 0) return fotosDaSinuca != null && s < fotosDaSinuca.Length ? fotosDaSinuca[s] : null;
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return fotosDePeca != null && p < fotosDePeca.Length ? fotosDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1041,6 +1071,7 @@ namespace ZombieCityCleaner.Player
             string linha = null;
             float alfa = 1f;
             if (Itens.EhConsumivel(naMao)) linha = $"{Itens.Nome(naMao)}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
+            else if (Itens.EhTaco(naMao)) linha = $"{Itens.Nome(naMao)}   ·   E na mesa de sinuca: jogar   ·   G: largar";
             else if (Time.time < _nomeAte)
             {
                 linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco" : Itens.Nome(naMao);

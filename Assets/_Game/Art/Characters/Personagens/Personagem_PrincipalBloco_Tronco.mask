@@ -123,6 +123,10 @@ AvatarMask:
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Submetralhadora/P_Submetralhadora_corpo
     m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Taco
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/Arma_Taco/Boca_Taco
+    m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.R/upper_arm.R/forearm.R/hand.R/weapon.R/mag/P_Pistola_carregador

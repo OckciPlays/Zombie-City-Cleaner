@@ -41,6 +41,8 @@ namespace ZombieCityCleaner.Loot
         public Mesh[] malhasDeMunicao;
         [Tooltip("A malha de cada peça do motor (a vela, a bateria e o radiador), na ordem do enum Item (topo em +Y).")]
         public Mesh[] malhasDePeca;
+        [Tooltip("A malha de cada coisa da sinuca (as 2 caixas de bolas e os 4 tacos, deitados), na ordem do enum Item (topo em +Y).")]
+        public Mesh[] malhasDaSinuca;
         public Material material;
         [Tooltip("Os itens do começo da partida: o ponto de apoio de cada um.")]
         public Vector3[] lugares;
@@ -214,9 +216,11 @@ namespace ZombieCityCleaner.Loot
         {
             o.item = it.item;
             int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item), pc = Itens.IndiceDaPeca(it.item);
+            int sn = Itens.IndiceDaSinuca(it.item);
             var malha = e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
                 : mun >= 0 ? (malhasDeMunicao != null && mun < malhasDeMunicao.Length ? malhasDeMunicao[mun] : null)
                 : pc >= 0 ? (malhasDePeca != null && pc < malhasDePeca.Length ? malhasDePeca[pc] : null)
+                : sn >= 0 ? (malhasDaSinuca != null && sn < malhasDaSinuca.Length ? malhasDaSinuca[sn] : null)
                 : malhas != null && m >= 0 && m < malhas.Length ? malhas[m] : null;
             o.GetComponent<MeshFilter>().sharedMesh = malha;
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";

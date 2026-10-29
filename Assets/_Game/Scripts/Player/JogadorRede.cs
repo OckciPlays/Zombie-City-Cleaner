@@ -59,6 +59,9 @@ namespace ZombieCityCleaner.Player
         public RuntimeAnimatorController controladorDasMaos;
         [Tooltip("O corpo com a lata e com a garrafa na mão (na ordem de Itens.Modelos, a partir de Armas.Quantas); vazio: o dos punhos.")]
         public RuntimeAnimatorController[] controladoresDosItens;
+        [Tooltip("O corpo com o taco de sinuca em pé na mão direita, e onde fica o taco (a pegada e a ponta: o TacoNaMao).")]
+        public RuntimeAnimatorController controladorDoTaco;
+        public Transform tacoCorpo, pontaDoTacoCorpo;
 
         [Header("A pele dos braços de primeira pessoa")]
         [Tooltip("Jogador_Variacao0..3: a linha k da paleta tem a pele do personagem k (as mangas e as luvas também).")]
@@ -110,6 +113,8 @@ namespace ZombieCityCleaner.Player
         Item _naMaoAplicado = (Item)255;
         ushort _idAplicado;
         bool _naMaoEscondida;
+        /// <summary>O que está na mão do corpo está escondido (sentado num carro).</summary>
+        public bool NaMaoEscondida => _naMaoEscondida;
 
         /// <summary>A câmera de terceira pessoa do dono (o V).</summary>
         public CameraTerceiraPessoa TerceiraPessoa => _terceira != null ? _terceira : _terceira = GetComponent<CameraTerceiraPessoa>();
@@ -177,6 +182,7 @@ namespace ZombieCityCleaner.Player
             GetComponent<MovimentoPrimeiraPessoa>().enabled = dono;
             GetComponent<ArmaJogador>().enabled = dono;
             Inventario.Mudou += AplicarNaMao;
+            if (GetComponent<TacoNaMao>() == null) gameObject.AddComponent<TacoNaMao>();
             AplicarPersonagem(Personagem.Value);
             if (dono)
             {
@@ -225,6 +231,9 @@ namespace ZombieCityCleaner.Player
                 controladoresCorpo = c.controladores;
                 controladorDasMaos = c.controladorDasMaos;
                 controladoresDosItens = c.controladoresDosItens;
+                controladorDoTaco = c.controladorDoTaco;
+                tacoCorpo = c.taco;
+                pontaDoTacoCorpo = c.pontaDoTaco;
             }
             if (IsOwner)
             {
@@ -267,6 +276,7 @@ namespace ZombieCityCleaner.Player
             for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m && !_naMaoEscondida);
             int k = m - Armas.Quantas;
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)]
+                : Itens.EhTaco(item) && controladorDoTaco != null ? controladorDoTaco
                 : k >= 0 && controladoresDosItens != null && k < controladoresDosItens.Length && controladoresDosItens[k] != null ? controladoresDosItens[k]
                 : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
             if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
