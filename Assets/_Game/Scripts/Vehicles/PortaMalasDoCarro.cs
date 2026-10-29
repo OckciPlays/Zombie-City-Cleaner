@@ -72,7 +72,7 @@ namespace ZombieCityCleaner.Vehicles
         {
             var rede = quem.GetComponent<JogadorRede>();
             if (rede == null || rede.cameraMundo == null) return -1;
-            var olho = rede.cameraMundo.transform;
+            var olho = rede.Olho;
             var raio = new Ray(olho.position, olho.forward);
             int alvo = -1;
             float menor = float.MaxValue;

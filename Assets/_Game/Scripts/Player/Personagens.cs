@@ -3,14 +3,14 @@ using UnityEngine;
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// Os 4 personagens do jogador (27/10/2026, a pedido: cada jogador escolhe o seu antes de hospedar ou entrar): os
-    /// modelos do Tripo do usuário, com o esqueleto e as animações do jogador de blocos (Modelo 3D/Personagens na pasta de
-    /// arte, o personagens.py). A ordem é o número que vai pela rede (<see cref="JogadorRede.Personagem"/>), a linha da
-    /// paleta dos braços de primeira pessoa (a pele de cada um, Jogador_Variacao0..3) e a do PERSONAGENS do script.
+    /// Os personagens do jogador (cada jogador escolhe o seu antes de hospedar ou entrar). Desde 28/10/2026, a pedido,
+    /// só o personagem principal em blocos (Modelo 3D/Principal na pasta de arte: o PrincipalBloco.blend e o
+    /// bloco_exportar.py), no lugar dos 4 do Tripo. A ordem é o número que vai pela rede
+    /// (<see cref="JogadorRede.Personagem"/>).
     /// </summary>
     public static class Personagens
     {
-        public static readonly string[] Modelos = { "HomemBranco", "HomemGordo", "Mulher", "HomemNegro" };
+        public static readonly string[] Modelos = { "PrincipalBloco" };
         public static int Quantos => Modelos.Length;
 
         const string Chave = "personagem";

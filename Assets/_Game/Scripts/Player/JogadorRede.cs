@@ -57,6 +57,8 @@ namespace ZombieCityCleaner.Player
         public RuntimeAnimatorController[] controladoresCorpo;
         [Tooltip("O corpo com a mão vazia (os punhos em guarda e o soco) ou com comida e água na mão.")]
         public RuntimeAnimatorController controladorDasMaos;
+        [Tooltip("O corpo com a lata e com a garrafa na mão (na ordem de Itens.Modelos, a partir de Armas.Quantas); vazio: o dos punhos.")]
+        public RuntimeAnimatorController[] controladoresDosItens;
 
         [Header("A pele dos braços de primeira pessoa")]
         [Tooltip("Jogador_Variacao0..3: a linha k da paleta tem a pele do personagem k (as mangas e as luvas também).")]
@@ -109,17 +111,50 @@ namespace ZombieCityCleaner.Player
         ushort _idAplicado;
         bool _naMaoEscondida;
 
+        /// <summary>A câmera de terceira pessoa do dono (o V).</summary>
+        public CameraTerceiraPessoa TerceiraPessoa => _terceira != null ? _terceira : _terceira = GetComponent<CameraTerceiraPessoa>();
+        CameraTerceiraPessoa _terceira;
+
+        /// <summary>A câmera do dono está atrás dele (a terceira pessoa a pé).</summary>
+        public bool EmTerceiraPessoa => TerceiraPessoa != null && TerceiraPessoa.Ativa;
+
+        /// <summary>
+        /// De onde o dono olha, e para onde: o tiro, o soco, o E, o largar e a lanterna. Na primeira pessoa, a câmera; na
+        /// terceira, a cabeça, olhando para o que está no meio da tela (<see cref="CameraTerceiraPessoa.Mira"/>).
+        /// </summary>
+        public Transform Olho => EmTerceiraPessoa ? TerceiraPessoa.Mira : cameraMundo.transform;
+
+        /// <summary>O corpo do dono está visível na máquina dele (a terceira pessoa ou a câmera de trás do carro).</summary>
+        public bool CorpoVisivelNoDono { get; private set; }
+        bool _corpoDoDonoAplicado;
+
         /// <summary>
         /// O corpo do dono, na máquina dele: só sombra (a primeira pessoa), na <see cref="CamadaDeRenderDoDono"/> (fora da
-        /// sombra da própria lanterna), ou visível e na camada normal (a câmera de trás do carro).
+        /// sombra da própria lanterna), ou visível e na camada normal (a terceira pessoa e a câmera de trás do carro). O
+        /// que está na mão do corpo fica desligado na primeira pessoa, nem sombra: a ponta das armas longas passa dos 60 cm
+        /// em que a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de
+        /// primeira pessoa. Só muda o que mudou (a câmera de terceira pessoa chama a cada quadro).
         /// </summary>
         public void CorpoDoDono(bool visivel)
         {
+            if (_corpoDoDonoAplicado && CorpoVisivelNoDono == visivel) return;
+            _corpoDoDonoAplicado = true;
+            CorpoVisivelNoDono = visivel;
             foreach (var r in renderersCorpo)
             {
                 if (r == null) continue;
                 r.shadowCastingMode = visivel ? ShadowCastingMode.On : ShadowCastingMode.ShadowsOnly;
                 r.renderingLayerMask = visivel ? 1u : MascaraDoDono;
+            }
+            if (naMaoCorpo != null)
+                foreach (var a in naMaoCorpo)
+                    if (a != null)
+                        foreach (var r in PecasDaArma.Renderers(a)) r.enabled = visivel;
+            var pneu = Inventario != null ? Inventario.PneuNoCorpo : null;
+            if (pneu != null)
+            {
+                pneu.shadowCastingMode = visivel ? ShadowCastingMode.On : ShadowCastingMode.ShadowsOnly;
+                pneu.renderingLayerMask = visivel ? 1u : MascaraDoDono;
             }
         }
 
@@ -189,14 +224,13 @@ namespace ZombieCityCleaner.Player
                 bocasCorpo = c.bocas;
                 controladoresCorpo = c.controladores;
                 controladorDasMaos = c.controladorDasMaos;
+                controladoresDosItens = c.controladoresDosItens;
             }
             if (IsOwner)
             {
+                // o corpo novo começa na primeira pessoa (a câmera de terceira pessoa mostra de novo no próximo quadro)
+                _corpoDoDonoAplicado = false;
                 CorpoDoDono(false);
-                // o que está na mão do corpo do dono fica desligado, nem sombra: a ponta das armas longas passa dos 60 cm
-                // em que a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente
-                // da arma de primeira pessoa
-                foreach (var a in naMaoCorpo) a.GetComponent<Renderer>().enabled = false;
             }
             else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;
             AplicarCor(indice);
@@ -231,7 +265,10 @@ namespace ZombieCityCleaner.Player
             _idAplicado = id;
             int m = Itens.Modelo(item);
             for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m && !_naMaoEscondida);
-            var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)] : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
+            int k = m - Armas.Quantas;
+            var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)]
+                : k >= 0 && controladoresDosItens != null && k < controladoresDosItens.Length && controladoresDosItens[k] != null ? controladoresDosItens[k]
+                : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
             if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
             if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, id);
         }
@@ -271,9 +308,12 @@ namespace ZombieCityCleaner.Player
             animadorCorpo.SetBool(AimingId, Mirando.Value);
         }
 
+        /// <summary>O corpo não acompanha o olhar (pulando a janela: a animação é do corpo todo).</summary>
+        public bool SemOlhar { get; set; }
+
         void LateUpdate()
         {
-            if (!IsSpawned) return;
+            if (!IsSpawned || SemOlhar) return;
             // O corpo acompanha o olhar: metade no peito, metade na cabeça, por cima da animação.
             float pitch = Pitch.Value;
             Vector3 eixo = transform.right;

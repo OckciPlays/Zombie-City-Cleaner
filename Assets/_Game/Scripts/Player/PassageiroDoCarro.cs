@@ -71,9 +71,12 @@ namespace ZombieCityCleaner.Player
         Transform _cabeca, _camera;
         Vector3 _cabecaLocal;
         float _yaw, _pitch;
-        // a câmera de trás do carro (V)
-        static bool _terceira;
-        bool _corpoVisivel;
+        // a câmera de trás do carro (V): a mesma escolha da terceira pessoa a pé
+        static bool _terceira
+        {
+            get => CameraTerceiraPessoa.Ligada;
+            set => CameraTerceiraPessoa.Ligada = value;
+        }
         float _yaw3, _pitch3 = 12f, _distancia3 = 6f, _mexeuNaCamera;
         string _aviso;
         float _avisoAte;
@@ -209,6 +212,11 @@ namespace ZombieCityCleaner.Player
             _segurandoChave = false;
             _carroSaindo = null;
             _rede.animadorCorpo.enabled = true;
+            if (TemLugar(_rede.animadorCorpo))
+            {
+                _rede.animadorCorpo.SetInteger(LugarId, 0);
+                if (_rede.animadorCorpo.layerCount > 1) _rede.animadorCorpo.SetLayerWeight(1, 1f);
+            }
             _cc.enabled = _ccLigado;
             _passos.enabled = true;
             _rede.EsconderNaMao(false);
@@ -546,13 +554,9 @@ namespace ZombieCityCleaner.Player
             _camera.SetPositionAndRotation(pivo + rot * Vector3.back * _distancia3, rot);
         }
 
-        // o próprio corpo: só sombra na primeira pessoa (como fora do carro), inteiro na câmera de trás
-        void CorpoVisivel(bool visivel)
-        {
-            if (_corpoVisivel == visivel) return;
-            _corpoVisivel = visivel;
-            _rede.CorpoDoDono(visivel);
-        }
+        // o próprio corpo: só sombra na primeira pessoa (como fora do carro), inteiro na câmera de trás (o JogadorRede só
+        // muda o que mudou; a terceira pessoa a pé também mexe nele)
+        void CorpoVisivel(bool visivel) => _rede.CorpoDoDono(visivel);
 
         void Avisar(string texto, float tempo = 1.6f)
         {
@@ -569,8 +573,17 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         void Pose(bool motorista)
         {
-            if (_repouso.Count == 0) return;
             var animador = _rede.animadorCorpo;
+            // o personagem com as animações de sentado (o principal em blocos, 28/10/2026): o Animator toca a do lugar
+            // (o parâmetro Lugar: 1 o motorista, 2 os outros) e a camada dos braços sai; sem elas, a pose feita aqui
+            if (TemLugar(animador))
+            {
+                if (!animador.enabled) animador.enabled = true;
+                animador.SetInteger(LugarId, motorista ? 1 : 2);
+                if (animador.layerCount > 1) animador.SetLayerWeight(1, 0f);
+                return;
+            }
+            if (_repouso.Count == 0) return;
             if (animador.enabled) animador.enabled = false;
             foreach (var (osso, pos, rot) in _repouso) osso.SetLocalPositionAndRotation(pos, rot);
             if (_ossos.TryGetValue("spine", out var coluna)) coluna.rotation = Quaternion.AngleAxis(-10f, transform.right) * coluna.rotation;
@@ -591,6 +604,23 @@ namespace ZombieCityCleaner.Player
                     Apontar("forearm" + l, new Vector3(-s * 0.28f, -0.32f, 0.9f));
                 }
             }
+        }
+
+        static readonly int LugarId = Animator.StringToHash("Lugar");
+        RuntimeAnimatorController _controladorVisto;
+        bool _temLugar;
+
+        /// <summary>Se o controlador do corpo tem as animações de sentado (o parâmetro Lugar).</summary>
+        bool TemLugar(Animator animador)
+        {
+            if (animador.runtimeAnimatorController != _controladorVisto)
+            {
+                _controladorVisto = animador.runtimeAnimatorController;
+                _temLugar = false;
+                foreach (var p in animador.parameters)
+                    if (p.nameHash == LugarId) _temLugar = true;
+            }
+            return _temLugar;
         }
 
         void Apontar(string nome, Vector3 direcao)

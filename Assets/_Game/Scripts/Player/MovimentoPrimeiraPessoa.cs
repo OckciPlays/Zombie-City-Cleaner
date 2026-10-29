@@ -61,6 +61,7 @@ namespace ZombieCityCleaner.Player
         CharacterController _controle;
         InputAction _mover, _olhar, _pular, _correr;
         InventarioJogador _inventario;
+        PuloDaJanela _janela;
         Vector3 _velocidade;
         float _yaw, _pitch, _coice;
         bool _voando;
@@ -68,6 +69,7 @@ namespace ZombieCityCleaner.Player
         void Awake()
         {
             _controle = GetComponent<CharacterController>();
+            _janela = GetComponent<PuloDaJanela>();
             var acoes = InputSystem.actions;
             _mover = acoes.FindAction("Player/Move", true);
             _olhar = acoes.FindAction("Player/Look", true);
@@ -181,6 +183,8 @@ namespace ZombieCityCleaner.Player
             if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
             bool pesado = _inventario != null && _inventario.CarregandoPneu;
             if (pesado) correr = pular = false;
+            // de frente para uma janela livre, o pulo é por ela (o PuloDaJanela leva o jogador daqui em diante)
+            if (pular && _controle.isGrounded && _janela != null && _janela.Tentar()) return;
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value;
             float alvo = rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
             if (pesado) alvo *= InventarioJogador.LentidaoDoPneu;

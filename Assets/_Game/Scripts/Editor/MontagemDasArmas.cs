@@ -87,17 +87,31 @@ namespace ZombieCityCleaner.EditorTools
         static int CorpoDa(int arma) => (int)(Armas.Todas[arma].corpoComo ?? (TipoDeArma)arma);
 
         /// <summary>
-        /// Os personagens (27/10/2026; Modelo 3D/Personagens na pasta de arte, o personagens.py): Personagem_&lt;modelo&gt;.fbx
-        /// (o esqueleto do jogador com os 5 dedos, o corpo e as 25 animações, com os nomes do Jogador.fbx) e a textura
-        /// Personagem_&lt;modelo&gt;.jpg. Os retratos da tela de escolha ficam em Art/UI/Personagens/Resources.
+        /// Os personagens: desde 28/10/2026, só o principal em blocos (Modelo 3D/Principal na pasta de arte, o
+        /// bloco_exportar.py): Personagem_&lt;modelo&gt;.fbx (o esqueleto, o corpo numa malha só, Jogador_Corpo, as armas e os
+        /// itens presos ao weapon.R, Arma_&lt;modelo&gt;, com a boca do cano, Boca_&lt;modelo&gt;, e as peças que mexem nos
+        /// ossos delas, e as ações como clipes, com os nomes de lá) e a textura Personagem_&lt;modelo&gt;.png. Os retratos da
+        /// tela de escolha ficam em Art/UI/Personagens/Resources.
         /// </summary>
         public const string ArtePersonagens = "Assets/_Game/Art/Characters/Personagens";
         public static string FbxDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.fbx";
-        /// <summary>O controlador do corpo do personagem com a arma (o override do Jogador_TP com as animações dele).</summary>
+        /// <summary>O controlador do corpo do personagem (as pernas e, do peito para cima, a pistola; as outras armas, os
+        /// itens e os punhos são override dele).</summary>
+        public static string ControladorDoCorpo(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Corpo.controller";
+        /// <summary>A máscara da camada de cima: o peito e tudo o que sai dele (o pescoço, a cabeça, os braços e a arma).</summary>
+        static string MascaraDoTronco(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Tronco.mask";
+        /// <summary>O controlador do corpo do personagem com a arma (o override do controlador do corpo).</summary>
         public static string ControladorTPDoPersonagem(int p, int arma) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Armas.Modelos[arma]}.overrideController";
-        /// <summary>O corpo do personagem com a mão vazia (a guarda e o soco) ou com comida e água na mão.</summary>
+        /// <summary>O corpo do personagem com a mão vazia (a guarda e o soco).</summary>
         public static string ControladorTPDasMaosDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Maos.overrideController";
-        static string MaterialDoPersonagem(int p) => $"{ArtePersonagens}/Materials/Personagem_{Personagens.Modelos[p]}.mat";
+        /// <summary>O corpo do personagem com a lata ou a garrafa na mão (segurar e, no lugar do tiro, comer ou beber).</summary>
+        public static string ControladorTPDoItemDoPersonagem(int p, int item) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Itens.Modelos[item]}.overrideController";
+        public static string MaterialDoPersonagem(int p) => $"{ArtePersonagens}/Materials/Personagem_{Personagens.Modelos[p]}.mat";
+        /// <summary>Os clipes do corpo que repetem (os outros tocam uma vez).</summary>
+        static readonly string[] EmLacoNoCorpo = { "Parado", "Andar", "Correr", "Agachado", "Andar_Agachado", "No_Ar", "Sentado_Motorista",
+                                                   "Sentado_Passageiro", "Maos_Guarda" };
+        /// <summary>Os clipes da camada de cima no controlador do corpo (os da pistola); os override trocam cada um.</summary>
+        static readonly string[] CamadaDeCima = { "Pistola_Segurar", "Pistola_Mirar", "Pistola_Atirar" };
 
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
@@ -162,8 +176,10 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
-        /// Os personagens: a importação (as animações TP_* sem o prefixo, como as do Jogador.fbx), o material com a textura
-        /// e os override do Jogador_TP de cada arma (a pistola também) e dos punhos, com as animações de cada um.
+        /// Os personagens: a importação (os clipes com os nomes das faixas de NLA do Blender), o material com a textura, o
+        /// controlador do corpo (<see cref="MontarControladorDoCorpo"/>) e os override dele: cada arma (segurar, mirar e
+        /// atirar, a da sniper com o ferrolho), os punhos (a guarda e o soco direito) e os itens (segurar e, no lugar do
+        /// tiro, comer ou beber).
         /// </summary>
         public static void PrepararPersonagens()
         {
@@ -172,15 +188,128 @@ namespace ZombieCityCleaner.EditorTools
             {
                 ImportarPersonagem(p, MaterialDoCorpo(p));
                 string fbx = FbxDoPersonagem(p);
-                MontarOverride(ControladorTP, Arte + "/Jogador.fbx", fbx, ClipesTP, c => $"{c}_Maos", ControladorTPDasMaosDoPersonagem(p));
+                MontarControladorDoCorpo(p);
+                string corpo = ControladorDoCorpo(p);
+                string Qual(string c) => c.Substring("Pistola_".Length);
                 for (int i = 0; i < Armas.Quantas; i++)
                 {
-                    int corpo = CorpoDa(i);
-                    string sufixo = corpo == 0 ? "" : "_" + Armas.Modelos[corpo];
-                    MontarOverride(ControladorTP, Arte + "/Jogador.fbx", fbx, ClipesTP, c => c + sufixo, ControladorTPDoPersonagem(p, i));
+                    string arma = Armas.Modelos[i];
+                    MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => $"{arma}_{Qual(c)}", ControladorTPDoPersonagem(p, i));
+                }
+                MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? "Maos_SocoDireito" : "Maos_Guarda", ControladorTPDasMaosDoPersonagem(p));
+                for (int i = Armas.Quantas; i < Itens.QuantosModelos; i++)
+                {
+                    string item = Itens.Modelos[i];
+                    MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
                 }
             }
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// O controlador do corpo (28/10/2026, para o personagem principal em blocos: as animações dele são em camadas).
+        /// A base é o corpo todo: a árvore pelo Speed (parado, andando e correndo) e, pelo Lugar (1 o motorista, 2 os
+        /// outros; o <see cref="PassageiroDoCarro"/> põe), sentado no carro. A camada "Braços" (a máscara do peito para
+        /// cima, por cima da base) segura a arma (ou o item, ou os punhos), mira com o Aiming e atira com o Fire.
+        /// </summary>
+        static void MontarControladorDoCorpo(int p)
+        {
+            string fbx = FbxDoPersonagem(p);
+            string caminho = ControladorDoCorpo(p);
+            AssetDatabase.DeleteAsset(caminho);
+            var ctrl = AnimatorController.CreateAnimatorControllerAtPath(caminho);
+            ctrl.AddParameter("Speed", AnimatorControllerParameterType.Float);
+            ctrl.AddParameter("Aiming", AnimatorControllerParameterType.Bool);
+            ctrl.AddParameter("Fire", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("Lugar", AnimatorControllerParameterType.Int);
+            ctrl.AddParameter("Janela", AnimatorControllerParameterType.Trigger);
+            var baseSm = ctrl.layers[0].stateMachine;
+            var arvore = new BlendTree { name = "Locomoção", blendType = BlendTreeType.Simple1D, blendParameter = "Speed", useAutomaticThresholds = false };
+            AssetDatabase.AddObjectToAsset(arvore, ctrl);
+            arvore.AddChild(Clipe(fbx, "Parado"), 0f);
+            arvore.AddChild(Clipe(fbx, "Andar"), 2.0f);
+            arvore.AddChild(Clipe(fbx, "Correr"), 4.2f);
+            var loc = baseSm.AddState("Locomoção");
+            loc.motion = arvore;
+            loc.writeDefaultValues = false;
+            baseSm.defaultState = loc;
+            for (int lugar = 1; lugar <= 2; lugar++)
+            {
+                var e = baseSm.AddState(lugar == 1 ? "Sentado_Motorista" : "Sentado_Passageiro");
+                e.motion = Clipe(fbx, e.name);
+                e.writeDefaultValues = false;
+                var ida = baseSm.AddAnyStateTransition(e);
+                ida.AddCondition(AnimatorConditionMode.Equals, lugar, "Lugar");
+                ida.canTransitionToSelf = false; ida.hasExitTime = false; ida.duration = 0.2f; ida.hasFixedDuration = true;
+                var volta = e.AddTransition(loc);
+                volta.AddCondition(AnimatorConditionMode.NotEqual, lugar, "Lugar");
+                volta.hasExitTime = false; volta.duration = 0.2f; volta.hasFixedDuration = true;
+            }
+            // pular a janela (o PuloDaJanela): o corpo todo, uma vez, e de volta à locomoção (a camada dos braços sai
+            // enquanto isso, pelo código)
+            var janela = baseSm.AddState("Pular_Janela");
+            janela.motion = Clipe(fbx, "Pular_Janela");
+            janela.writeDefaultValues = false;
+            var pula = baseSm.AddAnyStateTransition(janela);
+            pula.AddCondition(AnimatorConditionMode.If, 0f, "Janela");
+            pula.canTransitionToSelf = false; pula.hasExitTime = false; pula.duration = 0.1f; pula.hasFixedDuration = true;
+            var sai = janela.AddTransition(loc);
+            sai.hasExitTime = true; sai.exitTime = 1f; sai.duration = 0.1f; sai.hasFixedDuration = true;
+
+            ctrl.AddLayer("Braços");
+            var camadas = ctrl.layers;
+            camadas[1].defaultWeight = 1f;
+            camadas[1].blendingMode = AnimatorLayerBlendingMode.Override;
+            camadas[1].avatarMask = MontarMascaraDoTronco(p);
+            ctrl.layers = camadas;
+            var sm = ctrl.layers[1].stateMachine;
+            AnimatorState Estado(string nome, string clipe)
+            {
+                var e = sm.AddState(nome);
+                e.motion = Clipe(fbx, clipe);
+                e.writeDefaultValues = false;
+                return e;
+            }
+            var segurar = Estado("Segurar", "Pistola_Segurar");
+            var mirar = Estado("Mirar", "Pistola_Mirar");
+            var atirar = Estado("Atirar", "Pistola_Atirar");
+            sm.defaultState = segurar;
+            void Ir(AnimatorState de, AnimatorState para, AnimatorConditionMode modo, float duracao, bool fim)
+            {
+                var t = de.AddTransition(para);
+                t.AddCondition(modo, 0f, "Aiming");
+                t.hasExitTime = fim; t.exitTime = 1f; t.duration = duracao; t.hasFixedDuration = true;
+            }
+            Ir(segurar, mirar, AnimatorConditionMode.If, 0.15f, false);
+            Ir(mirar, segurar, AnimatorConditionMode.IfNot, 0.2f, false);
+            Ir(atirar, mirar, AnimatorConditionMode.If, 0.1f, true);
+            Ir(atirar, segurar, AnimatorConditionMode.IfNot, 0.15f, true);
+            var tiro = sm.AddAnyStateTransition(atirar);
+            tiro.AddCondition(AnimatorConditionMode.If, 0f, "Fire");
+            tiro.canTransitionToSelf = true; tiro.hasExitTime = false; tiro.duration = 0.04f; tiro.hasFixedDuration = true;
+            EditorUtility.SetDirty(ctrl);
+        }
+
+        /// <summary>A máscara da camada dos braços: o osso chest e tudo o que vem dele.</summary>
+        static AvatarMask MontarMascaraDoTronco(int p)
+        {
+            string caminho = MascaraDoTronco(p);
+            var modelo = AssetDatabase.LoadAssetAtPath<GameObject>(FbxDoPersonagem(p));
+            var mascara = AssetDatabase.LoadAssetAtPath<AvatarMask>(caminho);
+            if (mascara == null)
+            {
+                mascara = new AvatarMask();
+                AssetDatabase.CreateAsset(mascara, caminho);
+            }
+            mascara.transformCount = 0;
+            mascara.AddTransformPath(modelo.transform, true);
+            for (int i = 0; i < mascara.transformCount; i++)
+            {
+                string t = mascara.GetTransformPath(i);
+                mascara.SetTransformActive(i, t.EndsWith("/chest") || t.Contains("/chest/"));
+            }
+            EditorUtility.SetDirty(mascara);
+            return mascara;
         }
 
         /// <summary>O material do corpo: o URP Lit com a textura do Tripo, fosco, sem o passe de motion vectors (como o dos zumbis).</summary>
@@ -193,8 +322,9 @@ namespace ZombieCityCleaner.EditorTools
                 m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
                 AssetDatabase.CreateAsset(m, caminho);
             }
-            var textura = AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.jpg");
-            if (textura == null) Debug.LogWarning($"A textura do personagem {Personagens.Modelos[p]} não está em {ArtePersonagens} (copie de Modelo 3D/Personagens).");
+            var textura = AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.png")
+                          ?? AssetDatabase.LoadAssetAtPath<Texture2D>($"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}.jpg");
+            if (textura == null) Debug.LogWarning($"A textura do personagem {Personagens.Modelos[p]} não está em {ArtePersonagens} (o bloco_exportar.py, em Modelo 3D/Principal).");
             m.SetTexture("_BaseMap", textura);
             m.mainTexture = textura;
             m.SetColor("_BaseColor", Color.white);
@@ -206,7 +336,7 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>O corpo do personagem: rig Generic com avatar do próprio modelo, sem "Bake Axis Conversion" (como o
-        /// Jogador.fbx), o material dele e um clipe por faixa de NLA (TP_Idle → Idle, TP_Idle_Rifle → Idle_Rifle).</summary>
+        /// Jogador.fbx), o material dele (e o das armas, a paleta) e um clipe por faixa de NLA, com o nome dela.</summary>
         static void ImportarPersonagem(int p, Material material)
         {
             var imp = Importador(FbxDoPersonagem(p));
@@ -215,9 +345,10 @@ namespace ZombieCityCleaner.EditorTools
             imp.bakeAxisConversion = false;
             imp.importAnimation = true;
             imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
-            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Personagem_" + Personagens.Modelos[p]), material);
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), Personagens.Modelos[p]), material);
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Pistola"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
             imp.SaveAndReimport();
-            imp.clipAnimations = Clipes(imp, t => t.StartsWith("TP_") ? t.Substring(3) : null);
+            imp.clipAnimations = Clipes(imp, t => t, n => EmLacoNoCorpo.Contains(n) || n.EndsWith("_Segurar") || n.EndsWith("_Mirar"));
             imp.SaveAndReimport();
         }
 
@@ -256,13 +387,14 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Um clipe por take (o nome da faixa de NLA do Blender), do primeiro ao último quadro.</summary>
-        static ModelImporterClipAnimation[] Clipes(ModelImporter imp, System.Func<string, string> nome)
+        static ModelImporterClipAnimation[] Clipes(ModelImporter imp, System.Func<string, string> nome, System.Func<string, bool> laco = null)
         {
+            laco ??= n => EmLaco.Any(l => n == l || n.StartsWith(l + "_"));
             return imp.importedTakeInfos.Select(t => (take: t, n: nome(t.name))).Where(x => x.n != null).Select(x => new ModelImporterClipAnimation
             {
                 name = x.n, takeName = x.take.name,
                 firstFrame = Mathf.Round(x.take.startTime * x.take.sampleRate), lastFrame = Mathf.Round(x.take.stopTime * x.take.sampleRate),
-                loopTime = EmLaco.Any(l => x.n == l || x.n.StartsWith(l + "_")),
+                loopTime = laco(x.n),
             }).ToArray();
         }
 
@@ -276,6 +408,8 @@ namespace ZombieCityCleaner.EditorTools
             imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Personagem"), AssetDatabase.LoadAssetAtPath<Material>(MaterialPersonagem));
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Pistola"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
+            // os braços do personagem principal em blocos: a textura dele (o material do corpo)
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "PrincipalBloco"), MaterialDoCorpo(0));
             imp.clipAnimations = Clipes(imp, t => t);
             imp.SaveAndReimport();
         }

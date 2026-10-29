@@ -5,12 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/_Game/Scenes/Demo_Cidade.unity
     guid: cdb70877061a34c449966a184155d4b1
-  - enabled: 1
+  - enabled: 0
     path: Assets/_Game/Scenes/Video.unity
-    guid: cdd397e23fd9d3649983be950da8ece6
+    guid: 2218d31468bedaf4e8dcc7f33a9df407
   - enabled: 1
     path: Assets/_Game/Scenes/Mundo.unity
     guid: bb09ce9fdaea0a04b9aefa4d9284e2dd

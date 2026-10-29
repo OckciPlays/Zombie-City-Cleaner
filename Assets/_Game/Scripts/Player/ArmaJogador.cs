@@ -250,7 +250,7 @@ namespace ZombieCityCleaner.Player
                 animador.SetFloat(SpeedId, rede.Velocidade);
                 PesoDasAcoes(animador);
             }
-            ProcurarAlvo(cam.transform);
+            ProcurarAlvo(rede.Olho);
             if (!controla) return;
             // mirando no que usa o clique (o macaco apoiado), o botão esquerdo é dele: não atira nem soca
             if (_alvo != null && !bot && _alvo.UsaClique(this))
@@ -346,7 +346,7 @@ namespace ZombieCityCleaner.Player
 
         void Golpear()
         {
-            var cam = rede.cameraMundo.transform;
+            var cam = rede.Olho;
             Physics.SyncTransforms();   // as hitboxes andam com a animação
             int n = Physics.SphereCastNonAlloc(cam.position, raioDoSoco, cam.forward, _acertos, alcanceDoSoco, MascaraDoTiro, QueryTriggerInteraction.Ignore);
             System.Array.Sort(_acertos, 0, n, PorDistancia);
@@ -413,13 +413,15 @@ namespace ZombieCityCleaner.Player
             var d = Dados;
             Municao--;
             Acao(FireId);
-            Efeitos.Clarao(Boca, JogadorRede.CamadaBracos);
+            // na terceira pessoa, o clarão é o da arma do corpo, na camada de todo mundo
+            if (rede.EmTerceiraPessoa) Efeitos.Clarao(rede.bocasCorpo[(int)Atual], 0);
+            else Efeitos.Clarao(Boca, JogadorRede.CamadaBracos);
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
             movimento.Coice(d.coiceGraus);
 
-            var cam = rede.cameraMundo.transform;
+            var cam = rede.Olho;
             _marcaNaCabeca = false;
             float abertura = (d.fovLuneta > 0f && !NaLuneta ? d.dispersaoSemLuneta : d.dispersao) + (movimento.Correndo ? d.dispersaoAndando * 2f : 0f);
             // as hitboxes andam com a animação: sincroniza a física antes do raio, para acertar onde o zumbi está agora

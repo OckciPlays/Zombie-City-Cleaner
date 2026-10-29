@@ -14,6 +14,11 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: Pistola
     second: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: PrincipalBloco
+    second: {fileID: 2100000, guid: d1722499f45c1394e9d360731bc8f73d, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
@@ -187,11 +192,11 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
-      name: Reload
-      takeName: Reload
-      internalID: 229770723416056496
+      name: Sacar
+      takeName: Sacar
+      internalID: 6326907279473880864
       firstFrame: 0
-      lastFrame: 46
+      lastFrame: 12
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -216,11 +221,11 @@ ModelImporter:
       maskSource: {instanceID: 0}
       additiveReferencePoseFrame: 0
     - serializedVersion: 16
-      name: Sacar
-      takeName: Sacar
-      internalID: 6326907279473880864
+      name: Reload
+      takeName: Reload
+      internalID: 229770723416056496
       firstFrame: 0
-      lastFrame: 12
+      lastFrame: 46
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

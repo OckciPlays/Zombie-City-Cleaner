@@ -336,7 +336,7 @@ namespace ZombieCityCleaner.Mundo
                             string[] cores = { "MadeiraVelha", "Madeira", "BancoMadeira" };
                             float[] ys = { 0.25f, alt / 2, alt - 0.25f };
                             for (int k = 0; k < 3; k++)
-                                Caixa(P(meio, ab.baixo + ys[k], e + 0.03f), new Vector3(ab.larg + 0.3f, 0.16f, 0.03f), cores[k], yaw, RZ(Faixa(-9f, 9f)));
+                                Caixa(P(meio, ab.baixo + ys[k], e + 0.03f), new Vector3(ab.larg + 0.3f, 0.16f, 0.03f), cores[k], yaw, RZ(Faixa(-9f, 9f)), colide: true);
                         }
                         else if (f >= 1 && Chance(0.06f))
                             Caixa(P(meio, ab.baixo - 0.4f, e + 0.28f), new Vector3(0.8f, 0.5f, 0.5f), Um("ConcretoClaro", "Metal"), yaw, colide: false);

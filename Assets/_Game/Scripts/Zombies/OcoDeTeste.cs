@@ -8,10 +8,11 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// O Oco de teste (a pedido em 27/10/2026, para ver o modelo e as animações): posto pelo F1, só nesta máquina, sem rede
     /// e sem dano. Não entra no <see cref="ZombieManager"/>: não é contado, não ouve tiro e não morre. O modelo é o do
-    /// Blender (Art/Characters/Oco), com as animações dos zumbis (as mesmas do ZombieGaroto, importadas como Humanoid).
+    /// Blender (Art/Characters/Oco/Variantes), com as animações dos zumbis (as mesmas do ZombieGaroto, importadas como Humanoid).
     /// Em "Seguir", ele vem atrás do jogador local (pelo NavMesh, se houver; senão, em linha reta) e, a 1,3 m, faz o golpe
     /// sem tirar vida. Nos outros modos, fica no lugar, virado para o jogador, repetindo a animação escolhida.
-    /// O prefab é montado pelo menu Zombie City Cleaner > Zumbis > Montar o Oco (teste) (Resources/Oco_Teste).
+    /// Os prefabs são montados pelo menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste) (Resources/Oco_*).
+    /// O Oco de teste antigo, de ~125 mil triângulos (Oco_Teste), saiu do jogo a pedido em 28/10/2026 (pesado demais).
     /// </summary>
     public class OcoDeTeste : MonoBehaviour
     {
@@ -24,16 +25,13 @@ namespace ZombieCityCleaner.Zombies
             "Atacar (sem dano)", "Reação ao tiro", "Cair", "Rastejar", "Mancar",
         };
 
-        public const string Prefab = "Oco_Teste";
-
         /// <summary>
-        /// As versões que o F1 põe (a pedido em 28/10/2026): o prefab (em Resources) e o nome do botão. A primeira é o Oco de
-        /// teste antigo (~125 mil triângulos); as outras, ~5 mil triângulos cada, são montadas pelo menu Zombie City Cleaner >
-        /// Zumbis > Montar as versões do Oco (teste) (Editor/MontagemDasVariantesDoOco).
+        /// As versões que o F1 põe (a pedido em 28/10/2026): o prefab (em Resources) e o nome do botão, ~5 mil triângulos
+        /// cada, montadas pelo menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste)
+        /// (Editor/MontagemDasVariantesDoOco).
         /// </summary>
         public static readonly (string prefab, string nome)[] Versoes =
         {
-            (Prefab, "Antigo (125k)"),
             ("Oco_00_Original", "Original 5k"),
             ("Oco_01_O_Observador", "01 Observador"),
             ("Oco_02_O_Desviante", "02 Desviante"),

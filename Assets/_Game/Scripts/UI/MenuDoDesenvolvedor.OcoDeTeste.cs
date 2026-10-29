@@ -5,8 +5,8 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// O painel do Oco de teste, ao lado dos outros do F1 (a pedido em 27/10/2026): pôr um Oco 4 m à frente, tirar todos e
-    /// escolher a animação. Desde 28/10/2026, também a versão (o antigo ou uma das versões de ~5 mil triângulos,
-    /// <see cref="OcoDeTeste.Versoes"/>) e "Pôr todas lado a lado", para comparar. Só nesta máquina (sem rede) e sem dano
+    /// escolher a animação. Desde 28/10/2026, também a versão (uma das versões de ~5 mil triângulos,
+    /// <see cref="OcoDeTeste.Versoes"/>; o antigo, de ~125 mil, saiu) e "Pôr todas lado a lado", para comparar. Só nesta máquina (sem rede) e sem dano
     /// (<see cref="OcoDeTeste"/>).
     /// </summary>
     public partial class MenuDoDesenvolvedor
@@ -77,20 +77,18 @@ namespace ZombieCityCleaner.UI
             Vector3 frente = FrenteNoChao();
             var versao = OcoDeTeste.Versoes[OcoDeTeste.VersaoEscolhida];
             if (OcoDeTeste.Criar(ChaoNaFrente(frente, 4f, 0f), -frente) == null)
-                Avisar(OcoDeTeste.VersaoEscolhida == 0
-                    ? "O Oco ainda não foi montado: menu Zombie City Cleaner > Zumbis > Montar o Oco (teste)."
-                    : "Esta versão ainda não foi montada: menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).");
+                Avisar("Esta versão ainda não foi montada: menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).");
             else Avisar($"Oco \"{versao.nome}\" posto 4 m à frente.");
         }
 
-        // as versões de ~5 mil triângulos (sem o antigo) numa fila a 5 m, 1,1 m uma da outra, todas olhando para o jogador
+        // as versões numa fila a 5 m, 1,1 m uma da outra, todas olhando para o jogador
         void PorTodasAsVersoes()
         {
             Vector3 frente = FrenteNoChao();
-            int total = OcoDeTeste.Versoes.Length - 1, postas = 0;
-            for (int i = 1; i <= total; i++)
+            int total = OcoDeTeste.Versoes.Length, postas = 0;
+            for (int i = 0; i < total; i++)
             {
-                float lado = (i - 1 - (total - 1) * 0.5f) * 1.1f;
+                float lado = (i - (total - 1) * 0.5f) * 1.1f;
                 if (OcoDeTeste.Criar(ChaoNaFrente(frente, 5f, lado), -frente, i) != null) postas++;
             }
             if (postas == 0) Avisar("As versões ainda não foram montadas: menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).");

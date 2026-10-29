@@ -25,6 +25,13 @@ namespace ZombieCityCleaner.UI
         /// valem pela opção do anfitrião: com ela desligada lá, ele ignora os do F1 dos outros.
         /// </summary>
         public static bool Disponivel => Application.isEditor || Debug.isDebugBuild || Opcoes.LiberarF1;
+
+        /// <summary>
+        /// Se o F1 está liberado no anfitrião (escrito por ele, em todos os jogadores): quem entra numa partida com o F1
+        /// desligado lá vê o aviso no painel (28/10/2026: o painel abria, e os pedidos sumiam sem explicação até o anfitrião
+        /// ligar o dele).
+        /// </summary>
+        public readonly NetworkVariable<bool> LiberadoNoAnfitriao = new(false);
         /// <summary>A janela na tela (vazia, fechada): a tela do inventário não pega cliques nela.</summary>
         public static Rect Area { get; private set; }
 
@@ -79,6 +86,7 @@ namespace ZombieCityCleaner.UI
 
         void Update()
         {
+            if (IsSpawned && IsServer && LiberadoNoAnfitriao.Value != Disponivel) LiberadoNoAnfitriao.Value = Disponivel;
             if (!IsSpawned || !IsOwner || !Disponivel || MenuOnline.Bot) return;
             var teclado = Keyboard.current;
             if (teclado != null && teclado.f1Key.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!_aberto);
@@ -111,7 +119,8 @@ namespace ZombieCityCleaner.UI
             GUI.depth = -10;   // por cima da tela do inventário
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
-            var area = new Rect(12 * u, 40 * u, 300 * u, 658 * u);
+            bool semAnfitriao = !IsServer && !LiberadoNoAnfitriao.Value;
+            var area = new Rect(12 * u, 40 * u, 300 * u, (semAnfitriao ? 712 : 658) * u);
             Area = area;
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
@@ -123,6 +132,15 @@ namespace ZombieCityCleaner.UI
             float x = area.x + 12 * u, w = area.width - 24 * u, y = area.y + 8 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "DESENVOLVEDOR  (F1)", _titulo);
             y += 30 * u;
+            if (semAnfitriao)
+            {
+                // os pedidos (itens, relógio, zumbis) valem pela opção do anfitrião
+                var cor = _texto.normal.textColor;
+                _texto.normal.textColor = new Color(1f, 0.45f, 0.35f);
+                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens, o relógio e os zumbis daqui não valem. Lá: ESC > Opções > Menu do desenvolvedor (F1).", _texto);
+                _texto.normal.textColor = cor;
+                y += 54 * u;
+            }
 
             // sempre de dia ou sempre de noite: meio-dia ou meia-noite com o relógio parado (o anfitrião manda, para todos)
             bool deDia = CicloDoDia.Parado && CicloDoDia.Noite < 0.5f, deNoite = CicloDoDia.Parado && !deDia;

@@ -28,13 +28,13 @@ namespace ZombieCityCleaner.Player
         // a pose, no espaço do corpo (olhando para +Z; +X é a direita dele): para onde cada osso do braço aponta
         // (não são constantes para poder ajustar com o jogo rodando)
         static Vector3 BracoDireito = new Vector3(0.14f, -0.97f, 0.2f);
-        static Vector3 AntebracoDireito = new Vector3(0.05f, -0.8f, 0.6f);
         static Vector3 AntebracoDireitoSolto = new Vector3(0.06f, -0.95f, 0.3f);
         static Vector3 BracoEsquerdo = new Vector3(-0.14f, -0.97f, 0.12f);
         static Vector3 AntebracoEsquerdo = new Vector3(-0.07f, -0.95f, 0.3f);
-        // quanto a mão desce a partir da pose de repouso (onde o cano sobe 36°), em graus
-        static float AbaixarPistola = 75f;   // o cano 39° para baixo
-        static float AbaixarItem = 60f;      // a lata e a garrafa, quase em pé
+        // para onde aponta o que está na mão direita: o cano da pistola 39° para baixo e um pouco para fora; a lata e a
+        // garrafa em pé, com a frente para a frente
+        static Vector3 CanoDaPistola = new Vector3(0.12f, -0.63f, 0.78f);
+        static Vector3 FrenteDoItem = new Vector3(0.1f, -0.1f, 1f);
         const float Respiracao = 4f;         // segundos por respiração
 
         readonly GameObject _raiz;
@@ -53,7 +53,7 @@ namespace ZombieCityCleaner.Player
         // os ossos da pose e a rotação de repouso deles
         readonly Transform _peito, _bracoD, _antebracoD, _maoD, _bracoE, _antebracoE, _maoE;
         readonly Quaternion _peitoRepouso, _bracoDRepouso, _antebracoDRepouso, _maoDRepouso, _bracoERepouso, _antebracoERepouso, _maoERepouso;
-        readonly Quaternion _maoNoCorpo;   // a mão direita em repouso, no espaço do corpo
+        readonly Quaternion _pulsoReto;    // a mão direita no antebraço, com o pulso reto (o repouso do esqueleto)
 
         /// <summary>O giro do modelo, em graus (0 = de frente). Começa um pouco de lado, mostrando a arma da mão.</summary>
         public float Giro = 20f;
@@ -67,6 +67,9 @@ namespace ZombieCityCleaner.Player
             _raiz.transform.position = Lugar;
             var copia = Object.Instantiate(original.gameObject, _raiz.transform, false);
             copia.name = "Corpo";
+            // o equipamento do corpo do jogador (o EquipamentoDoJogador) vem junto na cópia: sai, e o retrato põe o dele
+            EquipamentoNoCorpo.TirarCopiadas(copia.transform);
+            foreach (var e in copia.GetComponents<EquipamentoNoCorpo>()) Object.Destroy(e);
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
             _modelo = copia.transform;
@@ -112,7 +115,16 @@ namespace ZombieCityCleaner.Player
             if (_maoD != null)
             {
                 _maoDRepouso = _maoD.localRotation;
-                _maoNoCorpo = Quaternion.Inverse(_modelo.rotation) * _maoD.rotation;
+                // o pulso reto: a mão no antebraço na pose de ligação da malha (a pose T); sem ela, a do prefab
+                _pulsoReto = _antebracoD != null ? Quaternion.Inverse(_antebracoD.rotation) * _maoD.rotation : Quaternion.identity;
+                foreach (var pele in copia.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    int f = System.Array.IndexOf(pele.bones, _antebracoD), h = System.Array.IndexOf(pele.bones, _maoD);
+                    if (f < 0 || h < 0 || pele.sharedMesh == null) continue;
+                    var ligacao = pele.sharedMesh.bindposes;
+                    _pulsoReto = (ligacao[f] * ligacao[h].inverse).rotation;
+                    break;
+                }
             }
             if (_bracoE != null) _bracoERepouso = _bracoE.localRotation;
             if (_antebracoE != null) _antebracoERepouso = _antebracoE.localRotation;
@@ -187,13 +199,13 @@ namespace ZombieCityCleaner.Player
         public void Atualizar()
         {
             _modelo.localRotation = Quaternion.Euler(0f, Giro, 0f);   // o corpo olha para +Z, para a câmera
-            string naMao = null;
+            GameObject naMao = null;
             for (int i = 0; i < _naMao.Length; i++)
             {
                 if (_naMao[i] == null) continue;
                 bool ligado = _naMaoOriginal[i].activeSelf;
                 if (_naMao[i].activeSelf != ligado) _naMao[i].SetActive(ligado);
-                if (ligado) naMao = _naMao[i].name;
+                if (ligado) naMao = _naMao[i];
             }
             Vestir();
             Posar(naMao);
@@ -204,28 +216,7 @@ namespace ZombieCityCleaner.Player
         void Vestir()
         {
             if (_inventario == null || _referencia == null || !_inventario.IsSpawned) return;
-            Item mochila = _inventario.MochilaVestida.Value;
-            bool coldre = _inventario.ComColdre.Value;
-            Item alca = Item.Nada, costas = Item.Nada, cintura = Item.Nada;
-            ushort idNaMao = _inventario.IdNaMao;
-            Item curta1 = Item.Nada, curta2 = Item.Nada, longa = Item.Nada;
-            foreach (var it in _inventario.Mochila)
-            {
-                if (!Itens.EhArma(it.item) || it.id == idNaMao) continue;
-                if (it.naAlca) alca = it.item;
-                else if (!Itens.EhCurta(it.item)) { if (longa == Item.Nada) longa = it.item; }
-                else if (curta1 == Item.Nada) curta1 = it.item;
-                else if (curta2 == Item.Nada) curta2 = it.item;
-            }
-            // a longa vai nas costas; a curta, no coldre (se houver) ou nas costas
-            costas = longa;
-            foreach (var c in new[] { curta1, curta2 })
-            {
-                if (c == Item.Nada) continue;
-                if (coldre && cintura == Item.Nada) cintura = c;
-                else if (costas == Item.Nada) costas = c;
-            }
-            long chave = (long)mochila | ((coldre ? 1L : 0L) << 8) | ((long)alca << 16) | ((long)costas << 24) | ((long)cintura << 32);
+            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, out bool coldre, out var alca, out var costas, out var cintura);
             if (chave == _vestido) return;
             _vestido = chave;
             _equipamento.Vestir(_referencia, mochila, coldre, alca, costas, cintura);
@@ -233,9 +224,10 @@ namespace ZombieCityCleaner.Player
 
         // a pose: as armas de coronha, o parado delas; o resto, o peito respirando, o braço esquerdo solto e o direito
         // baixo, segurando o que está na mão
-        void Posar(string naMao)
+        void Posar(GameObject naMao)
         {
-            bool comCoronha = naMao != null && naMao.StartsWith("Arma_") && naMao != "Arma_Pistola";
+            string nome = naMao != null ? naMao.name : null;
+            bool comCoronha = nome != null && nome.StartsWith("Arma_") && nome != "Arma_Pistola";
             if (_animador != null)
             {
                 if (comCoronha)
@@ -277,10 +269,15 @@ namespace ZombieCityCleaner.Player
                 Apontar(_maoD, AntebracoDireitoSolto);
                 return;
             }
-            Apontar(_antebracoD, AntebracoDireito);
-            // a mão gira a partir da de repouso (a arma com o cano subindo 36°), descendo o cano
-            float abaixar = naMao.StartsWith("Item_") ? AbaixarItem : AbaixarPistola;
-            _maoD.rotation = _modelo.rotation * Quaternion.Euler(abaixar, 0f, 0f) * _maoNoCorpo;
+            // a mão sai do que ela segura (no espaço da arma, o cano em -Y e o topo em +Z): o cano para a frente e para
+            // baixo, o topo para cima; o antebraço vai junto, com o pulso reto (o do repouso do esqueleto). Girando a mão
+            // a partir da pose do prefab, o pulso do principal em blocos dobrava para trás (a pedido, 28/10/2026)
+            Vector3 cano = (nome.StartsWith("Item_") ? FrenteDoItem : CanoDaPistola).normalized;
+            Vector3 topo = Vector3.ProjectOnPlane(Vector3.up, cano).normalized;
+            var naMaoNaMao = Quaternion.Inverse(_maoD.rotation) * naMao.transform.rotation;
+            var mao = _modelo.rotation * Quaternion.LookRotation(topo, -cano) * Quaternion.Inverse(naMaoNaMao);
+            _antebracoD.rotation = mao * Quaternion.Inverse(_pulsoReto);
+            _maoD.rotation = mao;
         }
 
         // gira o osso (o eixo Y dele vai ao longo do osso) para apontar na direção dada, no espaço do corpo

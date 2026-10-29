@@ -11,13 +11,13 @@ namespace ZombieCityCleaner.EditorTools
     /// <summary>
     /// As versões do Oco para teste (a pedido em 28/10/2026): o original e as 11 "pessoas" feitas no Blender
     /// (pasta "D:\teste blender\O Oco", fora do repositório), cada uma com ~5 mil triângulos, 1 malha (OCO_Jogo), 1 material
-    /// com 3 texturas 2048 e o mesmo esqueleto de 53 ossos do Oco de teste.
+    /// com 3 texturas 2048 e o mesmo esqueleto de 53 ossos (o do Oco de teste antigo, de ~125 mil, que saiu em 28/10/2026).
     ///  - Art/Characters/Oco/Variantes/&lt;versão&gt;/O_Oco_&lt;versão&gt;.fbx (Humanoid) e Texturas/ (cor, normal, rugosidade).
     ///  - Materiais URP Lit (Materiais/Oco_&lt;versão&gt;.mat), com os dois lados (a malha tem bordas abertas onde o corpo some
     ///    debaixo da roupa).
     ///  - Prefabs/Zumbis/Resources/Oco_&lt;versão&gt;.prefab, com o <see cref="OcoDeTeste"/> e o mesmo Oco.controller
     ///    (as animações dos zumbis passam pelo avatar de cada um).
-    /// O Oco de teste antigo (Oco_Teste) não muda. Menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).
+    /// Menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).
     /// </summary>
     public static class MontagemDasVariantesDoOco
     {
@@ -33,18 +33,17 @@ namespace ZombieCityCleaner.EditorTools
                 Debug.LogWarning("Saia do Play antes de montar as versões do Oco.");
                 return;
             }
-            // o controlador (e as animações) vêm da montagem do Oco de teste
+            // o controlador (e as animações) vêm da montagem das animações do Oco
             if (AssetDatabase.LoadAssetAtPath<AnimatorController>(Controlador) == null) MontagemDoOco.Montar();
             var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(Controlador);
             if (ctrl == null)
             {
-                Debug.LogError("Falta o Oco.controller: rode antes Zombie City Cleaner > Zumbis > Montar o Oco (teste).");
+                Debug.LogError("Falta o Oco.controller: rode antes Zombie City Cleaner > Zumbis > Montar as animações do Oco (teste).");
                 return;
             }
             int feitas = 0;
             foreach (var (prefab, nome) in OcoDeTeste.Versoes)
             {
-                if (prefab == OcoDeTeste.Prefab) continue;           // o Oco de teste antigo tem a montagem dele
                 string versao = prefab.Substring("Oco_".Length);    // ex.: 01_O_Observador
                 string pasta = $"{Pasta}/{versao}";
                 string modelo = $"{pasta}/O_Oco_{versao}.fbx";

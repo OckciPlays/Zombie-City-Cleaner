@@ -138,8 +138,9 @@ namespace ZombieCityCleaner.Player
             Quaternion olhar;
             if (IsOwner)
             {
-                // no carro, a cabeça (com a câmera de trás, a câmera fica longe dela)
-                var cam = noCarro ? rede.cameraMundo.transform.parent : rede.cameraMundo.transform;
+                // no carro, a cabeça (com a câmera de trás, a câmera fica longe dela); a pé, o olho (na terceira pessoa,
+                // a cabeça olhando para o meio da tela)
+                var cam = noCarro ? rede.cameraMundo.transform.parent : rede.Olho;
                 olho = cam.position;
                 olhar = cam.rotation;
             }
