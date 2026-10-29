@@ -1,0 +1,240 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa0b6a2c741fc1940b2d13565cbce759, type: 3}
+  m_Name: TrilhaDoJogo
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Music.TrilhaDoJogo
+  neblina:
+    bpm: 56
+    comprimento: 17.142857
+    blocos:
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: e865de9aa16a46c44bcada7ed0398bb6, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: cc26c1fd702ab5f4e8d486095e639fb3, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 863dc070505577f4db20d0001038c6db, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: e1f0d16bcf65d9544b9167ccc1600d84, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 08565abb38f1509488f396d8da08a0b0, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 9edde053707a6f5428dbbb5608e174ff, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: a29355a925feeee4c87eaf1c9994dd53, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: b02d94680f73e9f43b57cd317989cddf, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: c3d0b8b2b64fdc34e8fdcbef707ccacd, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: 64b93a52388385c4e99b8306e3f1a193, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: f42c2501c1369034ab8c739a252472ae, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: 2c35462076196e446b16f6723a8cc28a, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: 566dcb895a34784499c17a45f47c2bc4, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: aed32d5670ecc374e9d56e1f15476280, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: e6b4ac8a2ef463a4793c21d8358ab356, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 119c5f363742df342b3bcb47c76f640a, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 35d0701c4ca401c47b5f72fa81051ce0, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: dc595a89fc215f04f80e49a0a1fdc339, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 757d6e4aabdb045428b646bbcefede16, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 43b36a5f0c990a34c9df3fc9b30a3404, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: c123d28cc8b1f0644a3a00acc7ccc9fb, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 353e575068b707d40b0748f72c6d3d9f, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: ced9c7abac7ea05449003406631ce6ff, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: def355a5dd837b142bfda0039edc5c1a, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: ca9d7557c0797d2489bea21e4c6172bf, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 509b84f99c1c94044ae7019181cb76d0, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 6a28cdd4261c97849a81a3b5175c1df4, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: 6e5250ff4a1145f46a59b804fefef94f, type: 3}
+    - tipo: piano
+      clipe: {fileID: 8300000, guid: e9a9a2e9ee00aef4c9c3dae71f5eca55, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 1a15b4c706e60ca4e89f5b699f121d8b, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: a2dc6d2ac80dd68469fe04e92bb199c8, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: b694bb6992340ee46b115348ff3f55cb, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 077ba7d865d2f9d4cb3d2feb2d323fbe, type: 3}
+    - tipo: vazio
+      clipe: {fileID: 8300000, guid: 64dfee39db095fd49b2123397f61c44d, type: 3}
+    - tipo: vazio
+      clipe: {fileID: 8300000, guid: 248795df35ae3e9429c5016fed2d61ad, type: 3}
+    - tipo: vazio
+      clipe: {fileID: 8300000, guid: 350648990b6234a429bea880ce6b6b59, type: 3}
+    - tipo: vazio
+      clipe: {fileID: 8300000, guid: 1d13e8e48436a1f4db97a7e10222338c, type: 3}
+    - tipo: vazio
+      clipe: {fileID: 8300000, guid: 0ad09b44d0bdfc24c904c41df8abe946, type: 3}
+  noite:
+    bpm: 46
+    comprimento: 20.869566
+    blocos:
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: ddc5335f528ad5e40a7c5fb72cd3dc63, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: ca7b4ba1924f8fc419f4d1357b743d60, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 0c54da18ff88cfd43991819bd6d50197, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 295e2e2b903bc9140816b2ec7272ee28, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 7d99711e63983c249abd5ebbdf57ac43, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: e2e840f8afc93b440ae538d63dc3f899, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: e3e79e737ed0a9e4e99b572529ac4b0c, type: 3}
+    - tipo: cello
+      clipe: {fileID: 8300000, guid: 471071ccb2c09734e86038b1fd341dab, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: e50030c71ac19c94ab63201beaadbae2, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 833c6a26c96a9e544a06d4e7f955193d, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 614b5f286cd9db24f921b2bc65c33930, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 46084a52da1674747a02a7906e03407d, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 27230d464387f884bb21d5768e9fbd1d, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: dae9890765b58ac408803e874cc31133, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: fc529471299871d42aee70db95ac54bf, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: 102bf0d8a05ca7f4999f37a2b1591532, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: a57c494f4082f934380c12e4ac19fbc9, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: c6053d3bc50914c409ed67d84b0b243a, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: efe8d4657ed92544485698c8194a8d74, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: a5b877d231a30a54d89f04ea9ec12e56, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: ff3fa6131e25c7c46bc9ecc6a3f8eb34, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 453be89073bc23746b885a86753f8aa3, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: a88fc55d3944f0d41bd665fd8597f840, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 83c5f49706746e84c93163b83b9be059, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: a80e3bd89a4c354479c09612bbd98a78, type: 3}
+    - tipo: vidro
+      clipe: {fileID: 8300000, guid: 32a5b973742cc7d4fa12b44690f1c2e1, type: 3}
+    - tipo: vidro
+      clipe: {fileID: 8300000, guid: 0150f7155604d3f4ca6818b453dd9ed9, type: 3}
+    - tipo: vidro
+      clipe: {fileID: 8300000, guid: ca46fe4c9a7d28d459952a01291b4069, type: 3}
+    - tipo: vidro
+      clipe: {fileID: 8300000, guid: 0c277f41eadbfc34d9bb3697e02fddcd, type: 3}
+  bpmDoPerigo: 88
+  comprimentoDoPerigo: 10.909091
+  perigo:
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: a3c3cacc8923e04499f140e865a2955e, type: 3}
+    - {fileID: 8300000, guid: ec85cad578397c54a9ec13ae2fe40b0b, type: 3}
+    - {fileID: 8300000, guid: fb89bf1624bf6a149b382b482d27058c, type: 3}
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: 934842c48e18a7a4592b36e8b0b3b91e, type: 3}
+    - {fileID: 8300000, guid: 07f7cf5ccf3973f48b5356c8ea857fef, type: 3}
+    - {fileID: 8300000, guid: a75afc1a85f7db743aeac7299dd1d7b5, type: 3}
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: f3dec1578a026064a9cc71c486cad9de, type: 3}
+    - {fileID: 8300000, guid: 7e3c786759b911846ba0a2f5260fa5e9, type: 3}
+    - {fileID: 8300000, guid: 07b1541342c08cc4885e8b0831df3916, type: 3}
+  - plano: B
+    camadas:
+    - {fileID: 8300000, guid: df7e55557c8d2b743848ac7b6a09e42f, type: 3}
+    - {fileID: 8300000, guid: 5fba4a7bb27976c4ebba06755d2ecf08, type: 3}
+    - {fileID: 8300000, guid: 8af0572861cd7b04da4c90ae91f80762, type: 3}
+  - plano: B
+    camadas:
+    - {fileID: 8300000, guid: 3fb3bc2b45b8b1947bb7c33e49b2bd3e, type: 3}
+    - {fileID: 8300000, guid: 1c9f9f1854ac77c479ccee079a84f66e, type: 3}
+    - {fileID: 8300000, guid: 7e3023ad121eafe478f3944d0f6dd744, type: 3}
+  - plano: B
+    camadas:
+    - {fileID: 8300000, guid: 2700577da56863a43b6fd044ce87df43, type: 3}
+    - {fileID: 8300000, guid: d41612bc07347734fb17f6f6c123e359, type: 3}
+    - {fileID: 8300000, guid: bc5189f28abefe94e9ec0f3e4dee903d, type: 3}
+  - plano: C
+    camadas:
+    - {fileID: 8300000, guid: 5d416afbae635f7489981ddeb6a3e28d, type: 3}
+    - {fileID: 8300000, guid: f71ac1a822e37d545a5d47eb3cbf57df, type: 3}
+    - {fileID: 8300000, guid: 130c7667296bda841924b4fb479c0eed, type: 3}
+  - plano: C
+    camadas:
+    - {fileID: 8300000, guid: f1994c64de2f8044486ab7397e504e2d, type: 3}
+    - {fileID: 8300000, guid: 30ace87daf746784d9db7aa0bb47278f, type: 3}
+    - {fileID: 8300000, guid: d8c54d54193bbea4d8dd3c45fd7b1f11, type: 3}
+  - plano: C
+    camadas:
+    - {fileID: 8300000, guid: 54c34e630dc4ee54f880262037ae4685, type: 3}
+    - {fileID: 8300000, guid: e2440c3a8251b0d4f8ab75a6e65ab9f9, type: 3}
+    - {fileID: 8300000, guid: af83efb74194fc04eb568867ead08bcb, type: 3}
+  entradas:
+  - {fileID: 8300000, guid: 3d4e15edc068fca4ea36473f3e266b54, type: 3}
+  - {fileID: 8300000, guid: 6bd2ed397ece38b42a2ee2b1fed16fea, type: 3}
+  - {fileID: 8300000, guid: ac2dc455ac3e84b438c29cbde4295295, type: 3}
+  encaixeDaEntrada: 1.3636
+  saidas:
+  - {fileID: 8300000, guid: 97cf0717603e54d44942ee315c91bb2b, type: 3}
+  - {fileID: 8300000, guid: 342041a9de6ed68418da0ffc4435e29d, type: 3}
+  saidasPelaPedra:
+  - {fileID: 8300000, guid: bfe46f20c0559a5428e0542107abbf0a, type: 3}
+  - {fileID: 8300000, guid: 795cf3a1825dc3543a3e817fd8b37c5f, type: 3}
+  ventoDeDia:
+  - {fileID: 8300000, guid: b6f882996e3a0754b83a618b1ff8278e, type: 3}
+  - {fileID: 8300000, guid: 9df905f4d1e194c41b532d7ca7f35214, type: 3}
+  - {fileID: 8300000, guid: 5ed28932c8c321144a5e57644e1c700b, type: 3}
+  - {fileID: 8300000, guid: 1ba8d7384169d444caa31e327286a5f0, type: 3}
+  - {fileID: 8300000, guid: 33fc983c94e07744bae8ca991278a376, type: 3}
+  - {fileID: 8300000, guid: c6ebf138108a4004b8f5c59482e8cf49, type: 3}
+  - {fileID: 8300000, guid: 8e5eda9a58624b149ada4307dd333708, type: 3}
+  - {fileID: 8300000, guid: be739f2236ee3db4083cb884ef67d787, type: 3}
+  - {fileID: 8300000, guid: 3ede610e1961ac94d884b585eddb30d8, type: 3}
+  - {fileID: 8300000, guid: ecd205e9fc67d0d4ebdc92f7d6e8a2fb, type: 3}
+  ventoDeNoite:
+  - {fileID: 8300000, guid: e9c216dece4c35845867e76766175fee, type: 3}
+  - {fileID: 8300000, guid: 8d3fc438534bbbd4ab239a702fa08f9a, type: 3}
+  - {fileID: 8300000, guid: 27ee28a29ecbe3b42a032b21e69510ae, type: 3}
+  - {fileID: 8300000, guid: f0933dd50e07a7d49b0aae37e325429f, type: 3}
+  - {fileID: 8300000, guid: 0faa8bbd3ae537940a7ce0f168db9f84, type: 3}
+  - {fileID: 8300000, guid: ae2aa57c96a53ba49a67331d56ecf28a, type: 3}
+  - {fileID: 8300000, guid: 0e1f0cee746230e42982a11d5b8fbd83, type: 3}
+  - {fileID: 8300000, guid: cd5886a66b270d544a00c5b0462596ed, type: 3}
+  - {fileID: 8300000, guid: 00af9f4e84026ce4da2bc2199bcb2abd, type: 3}
+  - {fileID: 8300000, guid: 79e6dc78592535a4fbe926565e93fd15, type: 3}
+  sobreposicaoDoVento: 4
+  amanhecer: {fileID: 8300000, guid: 1d8e03329cf020d48a44395d5f61b15d, type: 3}
+  morte: {fileID: 8300000, guid: d80e42ee2ae311b45a31a584eb6b259d, type: 3}

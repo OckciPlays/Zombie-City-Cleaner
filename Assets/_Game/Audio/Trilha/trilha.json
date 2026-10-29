@@ -1,0 +1,16 @@
+{
+ "neblina": {
+  "bpm": 56,
+  "comprimento": 17.142857142857142
+ },
+ "noite": {
+  "bpm": 46,
+  "comprimento": 20.869565217391305
+ },
+ "perigo": {
+  "bpm": 88,
+  "comprimento": 10.909090909090908
+ },
+ "encaixeDaEntrada": 1.3636,
+ "sobreposicaoDoVento": 4.0
+}

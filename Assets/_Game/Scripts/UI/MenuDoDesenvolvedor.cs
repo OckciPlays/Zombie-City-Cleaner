@@ -237,6 +237,9 @@ namespace ZombieCityCleaner.UI
             // os zumbis (teste: criar um na frente, a pedra do sol), ao lado
             var zumbis = PainelDosZumbis(u, oco);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
+            // a trilha sonora (teste), embaixo dos zumbis
+            var trilha = PainelDaTrilha(u, zumbis);
+            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Mathf.Max(Area.xMax, trilha.xMax), Mathf.Max(Area.yMax, trilha.yMax));
         }
 
         /// <summary>

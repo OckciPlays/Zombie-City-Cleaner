@@ -265,6 +265,14 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## A trilha sonora (29/10/2026, a pedido)
+
+- **A música do jogo:** gerada por código, em ré menor, sobre um tema de quatro notas descendo (a solidão do jogador). A neblina de dia (o piano velho, as cordas, a voz distante, o violoncelo), a noite (mais lenta e grave, o coração longe, o sino), o perigo em três níveis (a tensão, a perseguição, a horda), o amanhecer e a morte. O Pedro ouviu as faixas e duas sessões simuladas antes de ela entrar no jogo.
+- **Sem repetir:** a música é tocada em blocos curtos que se encaixam em qualquer ordem, escolhidos na hora sem repetir os últimos. Entre um trecho e outro, de 1 a 3 minutos só com o vento batendo (o silêncio também é trilha, a pedido).
+- **O nível de horda:** cada jogador ouve a sua música, pelos zumbis em volta dele. As camadas do perigo entram quando alguém investiga, caça ou quando vem a horda, e saem devagar.
+- **Os momentos, em conjunto:** o "te viram" toca uma vez por perigo, no tempo da música; o fim do perigo pode ser pela pedra (quem caçava virou estátua). Nada toca para cada zumbi.
+- **No F1:** o painel da trilha (ligar, volume, forçar o nível do perigo, silêncio curto, música agora, amanhecer e morte).
+
 ## A quantidade de zumbis que foi aprovada (29/10/2026)
 
 - **Correção:** na etapa 6, os números de zumbis por pedaço do mapa subiram no código, mas o Unity aberto continuou usando os de antes, e foi com eles que o ×2 de dia e o ×3 à noite foram testados e aprovados. No git (e no PC do amigo) valia o código, com quase o dobro. O código voltou para os números testados (1 a 4 acordados e 0 a 2 estátuas na cidade; 15% e 6% fora), e o teste de novo deu exatamente a quantidade aprovada.
