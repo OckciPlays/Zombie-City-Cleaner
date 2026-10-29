@@ -22,10 +22,14 @@ namespace ZombieCityCleaner.Zombies
     /// Nos zumbis leves, a aparência (cores, sangue, sujeira e machucados) sai do Id e da geração (<see cref="Aparencia"/>),
     /// igual em todas as máquinas, e o rosto muda de expressão com o estado.
     /// Não tem Update próprio (com centenas de zumbis, o ZombieManager faz um laço só).
+    /// Os Ocos são fotossensíveis (Zumbi.Sol.cs): no sol a pedra sobe e ele vira estátua até a noite.
     /// </summary>
-    public class Zumbi : MonoBehaviour
+    public partial class Zumbi : MonoBehaviour
     {
-        public enum Estado : byte { Parado, Vagando, Investigando, Procurando, Perseguindo, Atacando, Morto }
+        // Fugindo: no sol, desesperado, procurando sombra; Petrificado: de pedra, parado até a noite; Abrigando: ao
+        // amanhecer, indo para um abrigo do sol (Zumbi.Sol.cs); Esquivando: pulando para fora do facho de uma lanterna ou
+        // de um farol (Zumbi.Luz.cs). O estado vai pela rede em 4 bits (até 15).
+        public enum Estado : byte { Parado, Vagando, Investigando, Procurando, Perseguindo, Atacando, Morto, Fugindo, Petrificado, Abrigando, Esquivando }
         public enum Nivel : byte { Perto, Medio, Longe }
 
         public const int CamadaZumbi = 7;
@@ -85,7 +89,7 @@ namespace ZombieCityCleaner.Zombies
         internal byte InfoDaMorte => (byte)((SemCabeca ? 1 : 0) | (_parteDaMorte << 1) | (_arremessado ? 32 : 0));
         internal float DirecaoDaMorte { get; private set; }
         /// <summary>Perseguindo, atacando ou levou tiro há pouco: nunca cai de nível.</summary>
-        public bool Engajado => Atual == Estado.Perseguindo || Atual == Estado.Atacando || Time.time < _engajadoAte;
+        public bool Engajado => Atual == Estado.Perseguindo || Atual == Estado.Atacando || (Atual == Estado.Esquivando && _alvo != null) || Time.time < _engajadoAte;
         internal float mortoEm;
 
         ZombieManager _m;
@@ -112,7 +116,7 @@ namespace ZombieCityCleaner.Zombies
             if (n == NivelAtual && !forcar) return;
             NivelAtual = n;
             bool perto = n == Nivel.Perto, longe = n == Nivel.Longe;
-            animador.enabled = !longe && !Morto;
+            animador.enabled = !longe && !Morto && !Petrificado;
             if (animador.enabled) AplicarPernasNoAnimador();
             animador.cullingMode = perto ? AnimatorCullingMode.CullUpdateTransforms : AnimatorCullingMode.CullCompletely;
             capsula.gameObject.layer = perto ? CamadaSoBloqueio : CamadaZumbi;
@@ -178,13 +182,16 @@ namespace ZombieCityCleaner.Zombies
         void MostrarGolpe()
         {
             _ataqueAte = Time.time + 0.9f;
-            if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(AtacarId);
+            if (animador.isActiveAndEnabled && _pernas < 3 && !Petrificado) animador.SetTrigger(AtacarId);
+            var s = Sons;
+            if (s != null) Falar(s.golpe, Fala.Golpe, 1f, 1f, false);   // o rosnado do golpe (Zumbi.Voz.cs)
         }
 
         void MostrarReacao()
         {
             _dorAte = Time.time + 0.6f;
-            if (animador.isActiveAndEnabled && _pernas < 3) animador.SetTrigger(TiroId);
+            if (animador.isActiveAndEnabled && _pernas < 3 && !Petrificado) animador.SetTrigger(TiroId);
+            SomDaReacao();
         }
 
         // ------------------------------------------------------------------ aparência (zumbis leves)
@@ -293,6 +300,16 @@ namespace ZombieCityCleaner.Zombies
 
         float FatorDasPernas => _pernas == 0 ? 1f : _pernas == 3 ? 0f : _pernas == 4 ? _m.ajustes.fatorRastejando : _m.ajustes.fatorMancando;
 
+        /// <summary>
+        /// No anfitrião: nasce já rastejando, sem as duas pernas do joelho para baixo (o rastejante embaixo do carro,
+        /// ZombieManager.Povoamento.cs). Sem efeito: nada voa nem jorra; as cópias recebem os cortes pela rede.
+        /// </summary>
+        internal void VirarRastejante()
+        {
+            byte cortes = Membros.ComEstado(Membros.ComEstado(Cortes, Membros.PernaE, 1), Membros.PernaD, 1);
+            MudarCortes(cortes, false, Vector3.zero);
+        }
+
         void DefinirPernas(int p)
         {
             _pernas = p;
@@ -306,7 +323,7 @@ namespace ZombieCityCleaner.Zombies
             capsula.height = altura;
             capsula.center = new Vector3(0f, altura / 2f, 0f);
             agente.height = p >= 3 ? 0.7f : _alturaDoAgente;
-            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas;
+            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * _ritmo;
             AplicarPernasNoAnimador();
         }
 
@@ -338,8 +355,16 @@ namespace ZombieCityCleaner.Zombies
                 Vector3 direcao = Quaternion.Euler(0f, DirecaoDaMorte, 0f) * Vector3.forward;
                 Vector3 velocidade = Copia ? transform.forward * Velocidade : agente.enabled ? agente.velocity : Vector3.zero;
                 _m.Cair(this, velocidade, SemCabeca, _parteDaMorte, direcao, _arremessado, Cortes);
-                if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
-                Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
+                if (Pedra >= 0.5f) Quebrar();
+                else
+                {
+                    // o último grito (a voz para logo abaixo: o som vai solto, no lugar)
+                    var sons = Sons;
+                    if (sons != null && sons.tiro != null && sons.tiro.Length > 0 && _m.PodeOuvir(transform.position))
+                        Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f, true, 30f);
+                    if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
+                    Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
+                }
             }
             AtualizarColisores();
             AtualizarRenderers();
@@ -349,7 +374,15 @@ namespace ZombieCityCleaner.Zombies
 
         internal void Gemer(float tom)
         {
-            if (Morto || voz == null || voz.isPlaying || _m == null || _m.vozDoZumbi == null || !_m.PodeGemer(transform.position)) return;
+            // o Oco tem a voz própria (Zumbi.Voz.cs); sem ela, a voz antiga, em trechos
+            var sons = Sons;
+            if (sons != null && sons.voz != null && sons.voz.Length > 0)
+            {
+                if (voz != null && !voz.isPlaying) Falar(sons.voz, Fala.Voz, 1f, tom);
+                return;
+            }
+            // de pedra (ou com a pedra quase cheia), calado
+            if (Morto || Petrificado || Pedra >= 0.9f || voz == null || voz.isPlaying || _m == null || _m.vozDoZumbi == null || !_m.PodeGemer(transform.position)) return;
             var trecho = _m.TrechoDaVoz();
             voz.clip = _m.vozDoZumbi;
             voz.pitch = tom * Random.Range(0.85f, 1.05f);
@@ -361,7 +394,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Volta ao estado de fábrica, para o pool: inteiro, vivo, de pé, sem alvo.</summary>
         internal void Zerar()
         {
-            _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f;
+            _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f; _ameacadoAte = 0f; _feridoAte = 0f; _temCerco = false; _noAlcanceDesde = -1f; ZerarLuz();
             _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f; _arremessado = false;
             for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? _m.ajustes.vidaDoMembro : 3f;
             if (Cortes != 0)
@@ -374,6 +407,8 @@ namespace ZombieCityCleaner.Zombies
             _rastejaEm = 0f;
             if (_pernas != 0) DefinirPernas(0);
             _dorAte = _ataqueAte = 0f;
+            ZerarPedra();
+            ZerarVoz();
             Golpes = 0; Reacoes = 0; Velocidade = 0f; _velAnimacao = 0f; _qtd = 0;
             Atual = Estado.Parado;
             if (agente.enabled)
@@ -409,6 +444,8 @@ namespace ZombieCityCleaner.Zombies
             _fimDaPausa = Time.time + Random.Range(0f, 4f);
             proximaDecisao = ultimaDecisao = Time.time;
             _visivel = true;
+            _longeDesde = Time.time;
+            SortearRitmo();
             AplicarAparencia();
             AplicarNivel(Nivel.Longe, true);
         }
@@ -417,8 +454,12 @@ namespace ZombieCityCleaner.Zombies
         internal void MudarNivelNoServidor(Nivel n)
         {
             if (n == NivelAtual) return;
+            var antes = NivelAtual;
             AplicarNivel(n);
             if (Morto) return;   // o corpo não anda mais
+            if (antes == Nivel.Longe) ChegouDeLonge();
+            else if (n == Nivel.Longe) _longeDesde = Time.time;
+            if (Petrificado) return;   // a estátua não anda (nem liga o agente)
             if (n == Nivel.Longe)
             {
                 // zumbi virtual: guarda só a posição e o estado, sem agente nem animação
@@ -453,14 +494,24 @@ namespace ZombieCityCleaner.Zombies
             else if (Atual == Estado.Procurando) transform.Rotate(0f, _giro * dt, 0f);
             Animar(dt);
             AtualizarRosto();
+            MostrarPedra(dt);
+            VozNoQuadro();
         }
 
         /// <summary>Uma decisão. No nível Médio ele só vaga e responde a tiros; a percepção é só no Perto.</summary>
         internal void Pensar(float agora, float dt)
         {
-            if (Morto || !NoNavMesh) return;
+            if (Morto || Petrificado || !NoNavMesh) return;
             var a = _m.ajustes;
             if (_golpeEm > 0f && agora >= _golpeEm) Acertar(a);
+            Destravar(agora);
+            // a luz (a lanterna, o farol): pula para fora do facho (Zumbi.Luz.cs)
+            if (Luz(agora, a)) return;
+            if (Atual == Estado.Fugindo)
+            {
+                FugirDoSol(agora, a);
+                return;
+            }
             if (NivelAtual == Nivel.Perto && Atual != Estado.Perseguindo && Atual != Estado.Atacando) Perceber(agora, dt, a);
             switch (Atual)
             {
@@ -486,6 +537,14 @@ namespace ZombieCityCleaner.Zombies
                 case Estado.Atacando:
                     Atacar(agora, a);
                     break;
+                case Estado.Abrigando:
+                    // chegou ao abrigo: fica por ali (vaga em volta, só onde o sol não bate)
+                    if (Chegou())
+                    {
+                        _casa = transform.position;
+                        Pausar(agora);
+                    }
+                    break;
             }
         }
 
@@ -501,7 +560,8 @@ namespace ZombieCityCleaner.Zombies
                 Vector3 para = p.peito - olho;
                 float d = para.magnitude;
                 float forca;
-                if (d < a.distanciaDeContato || (p.correndo && d < a.barulhoDeCorrida)) forca = 100f;   // sente ou ouve: na hora
+                bool perto = d < a.distanciaDeContato || (p.correndo && d < a.barulhoDeCorrida);
+                if (perto) forca = 100f;   // sente ou ouve: na hora
                 else
                 {
                     float alcance = _m.AlcanceDaVisao(p);
@@ -521,6 +581,10 @@ namespace ZombieCityCleaner.Zombies
             }
             _alerta += maior * dt;
             ref readonly var visto = ref _m.Jogadores[quem];
+            // de dia e ao amanhecer, ele prioriza se esconder: quem está onde o sol bate (ou vai bater) só é observado,
+            // mesmo encostando ou correndo perto; ele só sai atrás se foi atacado (tiro, soco) ou com um tiro bem perto
+            // (Ameacado; a pedido em 28/10/2026: antes encostar e correr perto também o tiravam da sombra)
+            if (visto.exposto && !Ameacado) _alerta = Mathf.Min(_alerta, 0.95f);
             if (_alerta >= 1f)
             {
                 ComecarPerseguicao(visto.jogador, agora);
@@ -542,7 +606,9 @@ namespace ZombieCityCleaner.Zombies
             {
                 Vector2 r = Random.insideUnitCircle * a.raioDeVagar;
                 Vector3 p = _casa + new Vector3(r.x, 0f, r.y);
-                if (NavMesh.SamplePosition(p, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - _casa.y) < 1.2f)
+                if (NavMesh.SamplePosition(p, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - _casa.y) < 1.2f
+                    && !(_m.ProtegerDoSol && _m.Exposto(hit.position))   // de dia e ao amanhecer, só vaga onde o sol não bate
+                    && !(_m.Fachos.Count > 0 && _m.NoFacho(hit.position + Vector3.up * 1.2f, out _)))   // nem para dentro da luz
                 {
                     Ir(hit.position, a.velocidadeVagando, 0.4f);
                     Atual = Estado.Vagando;
@@ -555,7 +621,7 @@ namespace ZombieCityCleaner.Zombies
         void Ir(Vector3 destino, float velocidade, float parada)
         {
             _velocidadeBase = velocidade;
-            agente.speed = velocidade * FatorDasPernas;   // mancando ou rastejando, mais devagar (caindo, parado)
+            agente.speed = velocidade * FatorDasPernas * FatorDaPedra * _ritmo;   // mancando, rastejando ou virando pedra, mais devagar; cada um no seu ritmo
             agente.stoppingDistance = parada;
             agente.isStopped = false;
             agente.SetDestination(destino);
@@ -590,7 +656,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Foi ver um barulho: anda até lá, olha em volta e passa a vagar ali.</summary>
         internal void Investigar(Vector3 ponto, float agora)
         {
-            if (!NoNavMesh || Morto) return;
+            if (!NoNavMesh || Morto || Petrificado) return;
             _alvo = null;
             if (NavMesh.SamplePosition(ponto, out var hit, 3f, NavMesh.AllAreas)) ponto = hit.position;
             Ir(ponto, _m.ajustes.velocidadeInvestigando, 1f);
@@ -599,7 +665,7 @@ namespace ZombieCityCleaner.Zombies
 
         internal void ComecarPerseguicao(JogadorRede jogador, float agora)
         {
-            if (jogador == null || Morto) return;
+            if (jogador == null || Morto || Petrificado) return;
             bool novo = Atual != Estado.Perseguindo && Atual != Estado.Atacando;
             _alvo = jogador;
             _alerta = 1f;
@@ -609,7 +675,7 @@ namespace ZombieCityCleaner.Zombies
             Atual = Estado.Perseguindo;
             _m.Engajou(this);   // sobe direto para o nível Perto (liga o agente, se estava desligado)
             if (NoNavMesh) Ir(_ultimaPosicao, _m.ajustes.velocidadePerseguindo, 0.9f);
-            if (novo) Gemer(1.05f);
+            if (novo) Chamar();   // achou alguém: o chamado (os de perto respondem)
         }
 
         void Perseguir(float agora, AjustesDeZumbi a)
@@ -622,7 +688,7 @@ namespace ZombieCityCleaner.Zombies
             Vector3 pos = _alvo.transform.position;
             Vector3 delta = pos - transform.position;
             float d = delta.magnitude;
-            if (d > a.distanciaDeDesistir)
+            if (d > a.distanciaDeDesistir || DesisteDoSol(pos))
             {
                 Desistir(agora);
                 return;
@@ -639,7 +705,13 @@ namespace ZombieCityCleaner.Zombies
                 return;
             }
             float horizontal = new Vector2(delta.x, delta.z).magnitude;
-            if (horizontal < a.alcanceDoAtaque && Mathf.Abs(delta.y) < 1.2f)
+            // no alcance do golpe: ataca quando chega ao lugar dele no cerco (senão os primeiros atacavam de onde
+            // chegavam, todos do mesmo lado); colado no jogador (a menos de 1 m), bate na hora; no alcance, espera chegar ao
+            // lugar no máximo 1,5 s (a pedido em 28/10/2026: chegando perto de um que estava dando a volta, ele não batia)
+            bool noAlcance = horizontal < a.alcanceDoAtaque && Mathf.Abs(delta.y) < 1.2f;
+            if (!noAlcance) _noAlcanceDesde = -1f;
+            else if (_noAlcanceDesde < 0f) _noAlcanceDesde = agora;
+            if (noAlcance && (horizontal < 1f || NoLugarDoCerco(pos) || agora - _noAlcanceDesde > 1.5f))
             {
                 Atual = Estado.Atacando;
                 agente.ResetPath();
@@ -648,7 +720,8 @@ namespace ZombieCityCleaner.Zombies
             }
             if (agora >= _proximoCaminho)
             {
-                Ir(_ultimaPosicao, a.velocidadePerseguindo, 0.9f);
+                // a horda cerca: cada um vai para o lugar dele em volta do alvo (Zumbi.Cerco.cs), não todos para o mesmo ponto
+                Ir(DestinoNoCerco(_ultimaPosicao, d), a.velocidadePerseguindo, _temCerco ? ParadaNoCerco : 0.9f);
                 _proximoCaminho = agora + 0.25f;
             }
         }
@@ -661,6 +734,11 @@ namespace ZombieCityCleaner.Zombies
                 return;
             }
             Vector3 pos = _alvo.transform.position;
+            if (DesisteDoSol(pos))
+            {
+                Desistir(agora);
+                return;
+            }
             Vector3 delta = pos - transform.position;
             if (new Vector2(delta.x, delta.z).magnitude > a.alcanceDoAtaque + 0.4f || Mathf.Abs(delta.y) > 1.4f)
             {
@@ -707,16 +785,25 @@ namespace ZombieCityCleaner.Zombies
         {
             if (Morto) return;
             var a = _m.ajustes;
-            if (regiao == RegiaoDoCorpo.Cabeca)
+            // a estátua: o carro (acima de 3 m/s) e a espingarda de perto (o arremesso) a quebram de uma vez
+            if (Petrificado && arremesso)
+            {
+                Morrer(agora, false, ponto, direcao, arremesso);
+                return;
+            }
+            // a cabeça explode com um tiro, a não ser que a pedra já tenha chegado nela
+            if (regiao == RegiaoDoCorpo.Cabeca && Pedra < a.pedraQueProtegeACabeca)
             {
                 Morrer(agora, true, ponto, direcao, arremesso);
                 return;
             }
+            // a casca de pedra: o tiro tira menos, quanto mais pedra
+            float naPedra = Mathf.Lerp(1f, a.danoNaPedra, Pedra);
             bool noMembro = regiao == RegiaoDoCorpo.Braco || regiao == RegiaoDoCorpo.Perna;
-            _danoNoCorpo += noMembro ? dano * a.danoNosMembros : dano;
-            // a vida do membro: acabou, ele cai no pedaço que levou o tiro (o de baixo, ou o membro todo)
+            _danoNoCorpo += (noMembro ? dano * a.danoNosMembros : dano) * naPedra;
+            // a vida do membro: acabou, ele cai no pedaço que levou o tiro (o de baixo, ou o membro todo); de pedra, não cai
             int limbo = Membros.Limbo(membro);
-            if (noMembro && limbo >= 0 && !Membros.Perdeu(Cortes, membro))
+            if (noMembro && limbo >= 0 && Pedra < 0.5f && !Membros.Perdeu(Cortes, membro))
             {
                 _vidaDosMembros[limbo] -= dano;
                 if (_vidaDosMembros[limbo] <= 0.001f)
@@ -734,9 +821,11 @@ namespace ZombieCityCleaner.Zombies
                 Morrer(agora, false, ponto, direcao, arremesso);
                 return;
             }
+            if (Petrificado) return;   // a estátua não reage nem vai atrás
             Reacoes++;
             MostrarReacao();
             _engajadoAte = agora + 5f;
+            Ferir(agora);
             if (autor != null) ComecarPerseguicao(autor, agora);
         }
 
@@ -799,7 +888,7 @@ namespace ZombieCityCleaner.Zombies
             AplicarNivel(Nivel.Medio, true);
         }
 
-        internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade, byte cortes)
+        internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade, byte cortes, byte pedra)
         {
             ultimoRecebido = Time.unscaledTime;
             bool primeira = _qtd == 0;
@@ -816,10 +905,10 @@ namespace ZombieCityCleaner.Zombies
                 _qtd--;
             }
             _amostras[_qtd++] = new Amostra { tempo = tempo, posicao = posicao, yaw = yaw };
-            // o que mudou desde o último pacote vira efeito; na primeira vez, o zumbi só aparece como já está
-            if (!primeira && estado == Estado.Perseguindo && Atual != Estado.Perseguindo && Atual != Estado.Atacando) Gemer(1.05f);
-            if (!primeira && golpes != (Golpes & 3)) MostrarGolpe();
-            if (!primeira && reacoes != (Reacoes & 3)) MostrarReacao();
+            // o que mudou desde o último pacote vira efeito (depois de o estado novo entrar: o som da reação depende dele);
+            // na primeira vez, o zumbi só aparece como já está
+            bool chamou = !primeira && estado == Estado.Perseguindo && Atual != Estado.Perseguindo && Atual != Estado.Atacando && Atual != Estado.Esquivando;
+            bool golpeou = !primeira && golpes != (Golpes & 3), reagiu = !primeira && reacoes != (Reacoes & 3);
             // os membros antes da morte: o corpo que cai já sai cortado
             if (cortes != Cortes && Atual != Estado.Morto) MudarCortes(cortes, !primeira, -transform.forward);
             bool morreu = estado == Estado.Morto && Atual != Estado.Morto;
@@ -833,9 +922,16 @@ namespace ZombieCityCleaner.Zombies
                 DirecaoDaMorte = velocidade;
             }
             else if (estado != Estado.Morto) Velocidade = velocidade;
+            Pedra = pedra / 255f;
+            if (primeira) _pedraVista = Pedra;
+            bool eraPedra = Petrificado;
             Atual = estado;
             Golpes = golpes;
             Reacoes = reacoes;
+            if (eraPedra != Petrificado) MudouAPedra(!primeira, primeira);
+            if (chamou) Chamar();
+            if (golpeou) MostrarGolpe();
+            if (reagiu) MostrarReacao();
             if (morreu) MostrarMorte(!primeira);
         }
 
@@ -866,6 +962,8 @@ namespace ZombieCityCleaner.Zombies
             PassarDoTempoDasPernas();
             Animar(dt);
             AtualizarRosto();
+            MostrarPedra(dt);
+            VozNoQuadro();
         }
     }
 }

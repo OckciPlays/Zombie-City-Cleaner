@@ -290,11 +290,11 @@ namespace ZombieCityCleaner.Vehicles
         public bool Erguido => IsSpawned && _erguido.Value;
         /// <summary>O carro ainda está subindo ou descendo no macaco.</summary>
         public bool MacacoMexendo => MacacoNaRoda >= 0 && Time.time - _erguidoMudouEm < tempoDoMacaco;
-        /// <summary>A roda fica do lado que o macaco levanta (as rodas pares são as da esquerda).</summary>
-        public bool NoLadoErguido(int roda)
+        /// <summary>A roda é a do macaco (o macaco levanta aquele canto: só ela sai do chão e pode ser trocada).</summary>
+        public bool NaRodaDoMacaco(int roda)
         {
             int m = MacacoNaRoda;
-            return m >= 0 && roda >= 0 && roda < PneusDoCarro.Quantas && roda % 2 == m % 2;
+            return m >= 0 && roda == m;
         }
         /// <summary>Ninguém sentado no carro.</summary>
         public bool Vazio
@@ -1003,7 +1003,7 @@ namespace ZombieCityCleaner.Vehicles
         [Rpc(SendTo.Server)]
         void TirarRodaRpc(byte roda, RpcParams parametros = default)
         {
-            if (!_erguido.Value || _ergueu < 0.98f || !NoLadoErguido(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            if (!_erguido.Value || _ergueu < 0.98f || !NaRodaDoMacaco(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
             var p = _pneus.Value;
             if (!p.Tem(roda)) return;
             int estado = p.Estado(roda);
@@ -1017,7 +1017,7 @@ namespace ZombieCityCleaner.Vehicles
         [Rpc(SendTo.Server)]
         void PorRodaRpc(byte roda, ushort id, RpcParams parametros = default)
         {
-            if (!_erguido.Value || _ergueu < 0.98f || !NoLadoErguido(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            if (!_erguido.Value || _ergueu < 0.98f || !NaRodaDoMacaco(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
             var p = _pneus.Value;
             if (p.Tem(roda)) return;
             int estado;
@@ -1057,18 +1057,29 @@ namespace ZombieCityCleaner.Vehicles
             else Efeitos.Som(Efeitos.Largar, ponto, qual == 2 ? 1f : 0.8f, true, 15f);
         }
 
-        // no anfitrião (o dono do carro vazio): o carro fica cinemático e gira em volta da linha das rodas do outro lado, até
-        // o lado do macaco subir alturaDoMacaco na roda
+        // no anfitrião (o dono do carro vazio): o carro fica cinemático e gira em volta do canto da diagonal (o do outro lado e
+        // do outro eixo), até o canto do macaco subir alturaDoMacaco. Os dois cantos vizinhos sobem a metade, e as rodas
+        // deles continuam no chão (a suspensão estica, em Rodas); a do macaco sai do chão.
         void NoMacaco(float dt)
         {
             if (!_corpo.isKinematic) _corpo.isKinematic = true;
             _ergueu = Mathf.MoveTowards(_ergueu, _erguido.Value ? 1f : 0f, dt / Mathf.Max(0.1f, tempoDoMacaco));
-            float x = rodas[MacacoNaRoda].transform.localPosition.x;
-            float largura = Mathf.Max(0.5f, 2f * Mathf.Abs(x));
-            float angulo = Mathf.Asin(Mathf.Clamp(alturaDoMacaco / largura, 0f, 0.5f)) * Mathf.Rad2Deg * Mathf.Sign(x) * _ergueu;
-            var pivo = new Vector3(-x, 0f, 0f);
-            var giro = _giroBase * Quaternion.AngleAxis(angulo, Vector3.forward);
-            _corpo.MovePosition(_poseBase + _giroBase * pivo - giro * pivo);
+            int m = MacacoNaRoda;
+            // o retângulo das rodas (no espaço do carro): o meio, a bitola e o entre-eixos
+            Vector3 meioDasRodas = Vector3.zero;
+            for (int i = 0; i < rodas.Length; i++) meioDasRodas += rodas[i].transform.localPosition;
+            meioDasRodas /= Mathf.Max(1, rodas.Length);
+            meioDasRodas.y = 0f;
+            float bitola = Mathf.Max(0.5f, Mathf.Abs(rodas[1].transform.localPosition.x - rodas[0].transform.localPosition.x));
+            float entre = Mathf.Max(0.5f, Mathf.Abs(rodas[0].transform.localPosition.z - rodas[2].transform.localPosition.z));
+            // o canto do macaco sobe h, os vizinhos h/2, a diagonal nada: um plano, que sobe h/2 no meio e inclina
+            float h = alturaDoMacaco * _ergueu;
+            var cm = rodas[m].transform.localPosition - meioDasRodas;
+            float lado = Mathf.Sign(cm.x) * h / 2f / bitola;       // a direita mais alta
+            float frente = Mathf.Sign(cm.z) * h / 2f / entre;      // a frente mais alta
+            var giro = _giroBase * Quaternion.Euler(-Mathf.Atan(frente) * Mathf.Rad2Deg, 0f, Mathf.Atan(lado) * Mathf.Rad2Deg);
+            var pivo = meioDasRodas;
+            _corpo.MovePosition(_poseBase + _giroBase * (pivo + Vector3.up * (h / 2f)) - giro * pivo);
             _corpo.MoveRotation(giro);
         }
 
@@ -1270,10 +1281,20 @@ namespace ZombieCityCleaner.Vehicles
                 float rapidez = Mathf.Abs(v);
                 float dano = Mathf.Clamp((rapidez - 2.5f) * 1.6f, 1f, 10f);
                 Vector3 ponto = h.zumbi.transform.position + Vector3.up * 1.0f;
-                motorista.AcertarZumbi(h.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, rapidez > 8f);
-                Efeitos.Som(Efeitos.SocoCarne, ponto, 1f, true, 30f);
-                Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
-                _corpo.linearVelocity *= dano >= 6f ? 0.9f : 0.96f;
+                // o zumbi de pedra (o sol) quebra com a batida (o "arremesso" quebra a estátua), e pesa mais
+                bool pedra = h.zumbi.Petrificado;
+                motorista.AcertarZumbi(h.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, rapidez > 8f || pedra);
+                if (pedra)
+                {
+                    Efeitos.Impacto(ponto, transform.forward * Mathf.Sign(v));
+                    Efeitos.Som(Efeitos.SocoParede, ponto, 1f, true, 40f);
+                }
+                else
+                {
+                    Efeitos.Som(Efeitos.SocoCarne, ponto, 1f, true, 30f);
+                    Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
+                }
+                _corpo.linearVelocity *= pedra ? 0.8f : dano >= 6f ? 0.9f : 0.96f;
             }
             if (_atropelados.Count > 64) _atropelados.Clear();
         }
@@ -1447,9 +1468,11 @@ namespace ZombieCityCleaner.Vehicles
                 // nos outros (e no macaco): a roda desce até o chão (dentro do curso da suspensão), vira e gira pela velocidade
                 var w = rodas[i];
                 Vector3 topo = w.transform.TransformPoint(w.center);
-                float desce = w.suspensionDistance;
-                if (Physics.Raycast(topo, -transform.up, out var chao, w.radius + w.suspensionDistance, ~(1 << CamadaVeiculo), QueryTriggerInteraction.Ignore))
-                    desce = Mathf.Clamp(chao.distance - w.radius, 0f, w.suspensionDistance);
+                // a roda do macaco, com o carro erguido, quase não estica: ela sai do chão
+                float curso = i == MacacoNaRoda && Erguido ? Mathf.Min(0.05f, w.suspensionDistance) : w.suspensionDistance;
+                float desce = curso;
+                if (Physics.Raycast(topo, -transform.up, out var chao, w.radius + curso, ~(1 << CamadaVeiculo), QueryTriggerInteraction.Ignore))
+                    desce = Mathf.Clamp(chao.distance - w.radius, 0f, curso);
                 visual.position = topo - transform.up * desce;
                 float angulo = i < 2 ? giro : 0f;
                 visual.rotation = transform.rotation * Quaternion.Euler(0f, angulo, 0f) * Quaternion.Euler(_giroDasRodas, 0f, 0f) * virar;

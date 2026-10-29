@@ -73,7 +73,7 @@ namespace ZombieCityCleaner.Zombies
             // um pouco para cima: o tiro tira o pé do chão, e o corpo não arrasta
             Vector3 empurrao = (direcao.normalized + Vector3.up * 0.15f) * empurraoDoTiro;
             if (arremessado) velocidade = direcao.normalized * arremesso.x + Vector3.up * arremesso.y;
-            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes, z.MaterialDaPele);
+            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes, z.MaterialDaPele, z.Pedra);
         }
 
         void AtualizarCorpos(float agora, float dt)

@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>Abaixo disso (%) o pneu está furado.</summary>
         public const int Minimo = 10;
         /// <summary>O raio da roda inteira, o do pneu furado (o aro e a borracha amassada) e o do cubo (sem a roda), em m.</summary>
-        public const float RaioBom = 0.30f, RaioFurado = 0.215f, RaioDoCubo = 0.13f;
+        public const float RaioBom = 0.30f, RaioFurado = 0.215f, RaioDoCubo = 0.07f;
 
         public byte de, dd, te, td;
 

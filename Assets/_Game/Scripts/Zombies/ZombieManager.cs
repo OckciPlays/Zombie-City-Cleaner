@@ -23,6 +23,7 @@ namespace ZombieCityCleaner.Zombies
     /// Nos clientes, mantém as cópias. Em todas as máquinas, cuida dos corpos que caem (ZombieManager.Corpos.cs).
     /// Há vários modelos de zumbi (um prefab e um pool para cada); o modelo sai do Id e da geração, então o anfitrião e
     /// os clientes chegam ao mesmo sem mandar nada a mais. F3 mostra os números na tela.
+    /// O sol dos Ocos (a pedra) fica em ZombieManager.Sol.cs e Zumbi.Sol.cs.
     /// </summary>
     public partial class ZombieManager : NetworkBehaviour
     {
@@ -42,6 +43,11 @@ namespace ZombieCityCleaner.Zombies
             public JogadorRede jogador;
             public Vector3 pes, peito, olho, olhar;
             public bool lanterna, correndo, iluminado;
+            /// <summary>
+            /// De dia ou amanhecendo, onde o sol bate (ou vai bater): o zumbi só observa (prioriza se esconder), a não ser
+            /// atacado.
+            /// </summary>
+            public bool exposto;
             public float aumento, meioCone;
         }
 
@@ -160,11 +166,19 @@ namespace ZombieCityCleaner.Zombies
             {
                 float agora = Time.time, dt = Time.deltaTime;
                 AtualizarJogadores();
+                AtualizarFachos();
                 if (agora >= _proximaVarredura)
                 {
                     _proximaVarredura = agora + 0.2f;
                     VarrerNiveis();
                 }
+                SolNosZumbis(agora, dt);
+                if (agora >= _proximoCerco)
+                {
+                    _proximoCerco = agora + 0.3f;
+                    OrganizarCerco();
+                }
+                PovoarEmVolta(agora);   // o mundo gerado (ZombieManager.Povoamento.cs)
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)
                     if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe) _ativos[i].QuadroNoServidor(dt);
@@ -186,7 +200,8 @@ namespace ZombieCityCleaner.Zombies
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null || !j.IsSpawned || n == Jogadores.Length) continue;
-                Jogadores[n++] = AlvoDe(j, noite, Quaternion.Euler(j.Pitch.Value, j.transform.eulerAngles.y, 0f) * Vector3.forward);
+                Jogadores[n] = AlvoDe(j, noite, Quaternion.Euler(j.Pitch.Value, j.transform.eulerAngles.y, 0f) * Vector3.forward);
+                Jogadores[n++].exposto = ProtegerDoSol && Exposto(j.transform.position);
             }
             QuantosJogadores = n;
         }
@@ -299,17 +314,26 @@ namespace ZombieCityCleaner.Zombies
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer) return;
             float agora = Time.time;
-            float raio2 = m.ajustes.barulhoDoTiro * m.ajustes.barulhoDoTiro, direto2 = m.ajustes.tiroChamaDireto * m.ajustes.tiroChamaDireto;
+            // de dia e ao amanhecer, o tiro só tira da sombra quem está bem perto (5 m; à noite, 12 m)
+            float direto = m.ProtegerDoSol ? m.ajustes.tiroAmeacaDeDia : m.ajustes.tiroChamaDireto;
+            float raio2 = m.ajustes.barulhoDoTiro * m.ajustes.barulhoDoTiro, direto2 = direto * direto;
             foreach (var z in m._ativos)
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
                 float d2 = (z.transform.position - ponto).sqrMagnitude;
                 if (d2 > raio2 || BunkerRede.Isolado(ponto, z.transform.position)) continue;   // a porta do bunker fechada
-                if (d2 < direto2 && autor != null) z.ComecarPerseguicao(autor, agora);
+                if (d2 < direto2 && autor != null)
+                {
+                    z.Ameacar(agora);   // um tiro bem perto: sai atrás de quem atirou, mesmo de dia
+                    z.ComecarPerseguicao(autor, agora);
+                }
                 else
                 {
-                    Vector2 erro = Random.insideUnitCircle * 3f;
-                    z.Investigar(ponto + new Vector3(erro.x, 0f, erro.y), agora);
+                    // vai ver o que foi: cada um num ponto (quanto mais longe, mais espalhados), e não todos na mesma linha
+                    Vector2 erro = Random.insideUnitCircle * Mathf.Clamp(Mathf.Sqrt(d2) * 0.2f, 3f, 7f);
+                    var ver = ponto + new Vector3(erro.x, 0f, erro.y);
+                    if (m.ProtegerDoSol && m.Exposto(ver)) continue;   // de dia, não vai para o sol ver um barulho
+                    z.Investigar(ver, agora);
                 }
             }
         }
@@ -567,7 +591,7 @@ namespace ZombieCityCleaner.Zombies
 
         void GemidosAoAcaso()
         {
-            if (vozDoZumbi == null || Time.time < _proximoGemido) return;
+            if ((vozDoZumbi == null && Sons == null) || Time.time < _proximoGemido) return;
             _proximoGemido = Time.time + Random.Range(2.5f, 6f);
             var lista = IsServer ? _ativos : _copias;
             if (lista.Count == 0) return;
@@ -577,7 +601,9 @@ namespace ZombieCityCleaner.Zombies
                 var z = lista[Random.Range(0, lista.Count)];
                 if (z.NivelAtual != Zumbi.Nivel.Longe && (z.transform.position - ouvinte).sqrMagnitude < 18f * 18f)
                 {
-                    z.Gemer(0.9f);
+                    // de vez em quando, um chama (e os de perto respondem): eles "conversam" (Zumbi.Voz.cs)
+                    if (Sons != null && Random.value < 0.22f) z.Chamar();
+                    else z.Gemer(0.9f);
                     return;
                 }
             }

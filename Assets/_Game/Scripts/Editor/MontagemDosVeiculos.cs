@@ -712,40 +712,53 @@ namespace ZombieCityCleaner.EditorTools
                 var t = mf.transform;
                 // o capotado não abre; os de fora da barreira (os das barricadas) não se alcançam
                 if (t.up.y < 0.5f || new Vector2(t.position.x, t.position.z).magnitude > 60f) continue;
-                var b = mf.sharedMesh.bounds;
-                // a altura do capô: um raio de cima na malha (um colisor temporário)
-                var medidor = new GameObject("Medidor temporário").AddComponent<MeshCollider>();
-                medidor.sharedMesh = mf.sharedMesh;
-                float zCapo = b.max.z - 0.6f;
-                float yCapo = medidor.Raycast(new Ray(new Vector3(b.center.x, b.max.y + 1f, zCapo), Vector3.down), out var acerto, 5f)
-                    ? acerto.point.y : b.center.y;
-                Object.DestroyImmediate(medidor.gameObject);
-                // o gatilho envolve a frente do carro (um pouco maior que a caixa de colisão dele, para a mira achar o
-                // gatilho antes dela); o ponto dele é o meio do capô
-                var g = new GameObject("Capô") { layer = 2 };
-                g.transform.SetParent(t, false);
-                g.transform.localPosition = new Vector3(b.center.x, yCapo, zCapo);
-                g.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
-                var bc = g.AddComponent<BoxCollider>();
-                bc.isTrigger = true;
-                float z0 = b.max.z - 1.25f, z1 = b.max.z + 0.08f;
-                bc.center = new Vector3(0f, (b.min.y + b.max.y + 0.08f) / 2f - yCapo, (z0 + z1) / 2f - zCapo);
-                bc.size = new Vector3(b.size.x + 0.1f, b.size.y + 0.08f, z1 - z0);
-                var capo = g.AddComponent<CapoDaCidade>();
-                capo.pecas = pecas;
-                capo.indice = capos.Count;
-                capo.nome = NomeDoCarro(mf.sharedMesh.name);
-                if (!AbrirCarroDaCidade(mf, capo, m))
-                {
-                    Object.DestroyImmediate(g);
-                    continue;
-                }
+                var capo = PorOCapo(mf, pecas, capos.Count, m);
+                if (capo == null) continue;
                 capos.Add(capo);
             }
             pecas.capos = capos.ToArray();
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             Debug.Log($"Capô em {capos.Count} carros da cidade.");
+        }
+
+        /// <summary>
+        /// O capô, as rodas e o macaco num carro da cidade (a malha do Cidade_Rua.fbx): o gatilho "Capô" em volta da frente
+        /// (Ignore Raycast, fora do NavMesh), com o <see cref="CapoDaCidade"/>, e o "Capô aberto" (<see cref="AbrirCarroDaCidade"/>).
+        /// Null se a malha não tem capô. Serve aos carros da Demo_Cidade e aos kits do mundo gerado.
+        /// </summary>
+        static CapoDaCidade PorOCapo(MeshFilter mf, FonteDasPecas pecas, int indice, Mats m)
+        {
+            var t = mf.transform;
+            var b = mf.sharedMesh.bounds;
+            // a altura do capô: um raio de cima na malha (um colisor temporário)
+            var medidor = new GameObject("Medidor temporário").AddComponent<MeshCollider>();
+            medidor.sharedMesh = mf.sharedMesh;
+            float zCapo = b.max.z - 0.6f;
+            float yCapo = medidor.Raycast(new Ray(new Vector3(b.center.x, b.max.y + 1f, zCapo), Vector3.down), out var acerto, 5f)
+                ? acerto.point.y : b.center.y;
+            Object.DestroyImmediate(medidor.gameObject);
+            // o gatilho envolve a frente do carro (um pouco maior que a caixa de colisão dele, para a mira achar o
+            // gatilho antes dela); o ponto dele é o meio do capô
+            var g = new GameObject("Capô") { layer = 2 };
+            g.transform.SetParent(t, false);
+            g.transform.localPosition = new Vector3(b.center.x, yCapo, zCapo);
+            g.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
+            var bc = g.AddComponent<BoxCollider>();
+            bc.isTrigger = true;
+            float z0 = b.max.z - 1.25f, z1 = b.max.z + 0.08f;
+            bc.center = new Vector3(0f, (b.min.y + b.max.y + 0.08f) / 2f - yCapo, (z0 + z1) / 2f - zCapo);
+            bc.size = new Vector3(b.size.x + 0.1f, b.size.y + 0.08f, z1 - z0);
+            var capo = g.AddComponent<CapoDaCidade>();
+            capo.pecas = pecas;
+            capo.indice = indice;
+            capo.nome = NomeDoCarro(mf.sharedMesh.name);
+            if (!AbrirCarroDaCidade(mf, capo, m))
+            {
+                Object.DestroyImmediate(g);
+                return null;
+            }
+            return capo;
         }
 
         // "Carro_Sedan_Cinza" vira "Sedã cinza"; "Carro_Pickup_Branco", "Picape branca"

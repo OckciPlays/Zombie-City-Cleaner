@@ -1,0 +1,83 @@
+Arranque active=True layer=11 pos=(0,25; 0,45; 1,45) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,AudioSource]
+Buzina active=True layer=11 pos=(0; 0,55; 2,05) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,AudioSource]
+Capô active=True layer=11 pos=(0; 0,91133; 1,145) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Capo v=408 sub=1 bounds=(0; -0,06379; 0,47)/(1,15; 0,12908; 0,94) mats=[Perua_Lataria] sombra=On on=True
+Capô (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,CapoDoCarro]
+Carro active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,Rigidbody,NetworkObject,NetworkTransform,NetworkRigidbody,Carro,NavMeshObstacle,NavMeshModifier]
+Carroceria active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Carroceria v=33879 sub=5 bounds=(0; 0,87204; 0)/(1,85898; 1,35408; 4,51) mats=[Perua_Lataria, Perua_Interior, Perua_Vidro, Perua_Farol, Perua_Lanterna] sombra=On on=True
+Cofre do motor active=True layer=11 pos=(0; 0,491; 1,5875) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,CofreDoMotor]
+Cofre do motor/Bateria active=True layer=11 pos=(0,4; 0,02; 0,1) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Bateria v=528 sub=1 bounds=(0; 0,1045; 0,001)/(0,244; 0,209; 0,176) mats=[Cidade] sombra=On on=True
+Cofre do motor/Bateria/Apagada active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Bateria v=528 sub=1 bounds=(0; 0,1045; 0,001)/(0,244; 0,209; 0,176) mats=[Fantasma] sombra=Off on=False
+Cofre do motor/Bateria/Gatilho active=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Cofre do motor/Frente active=True layer=11 pos=(0; 0; 0,4425) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Cofre_Frente v=840 sub=1 bounds=(0; 0,18; -0,20186)/(0,78; 0,36; 0,26372) mats=[Cidade] sombra=On on=True
+Cofre do motor/Luz de quem olha active=True layer=0 pos=(0; 0,86818; 0,6325) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,Light]
+Cofre do motor/Motor active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Cofre_Motor v=3516 sub=1 bounds=(0,01675; 0,18289; 0,0015)/(1,10001; 0,36578; 0,653) mats=[Cidade] sombra=On on=True
+Cofre do motor/Olhar active=True layer=0 pos=(0; 0,80818; 0,6825) rot=(43,64495; 180; 0) scale=(1; 1; 1) [Transform]
+Cofre do motor/Radiador active=True layer=11 pos=(0; 0,175; 0,3225) rot=(90; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Radiador v=768 sub=1 bounds=(0; 0,031; 0)/(0,62; 0,062; 0,36) mats=[Cidade] sombra=On on=True
+Cofre do motor/Radiador/Apagada active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Radiador v=768 sub=1 bounds=(0; 0,031; 0)/(0,62; 0,062; 0,36) mats=[Fantasma] sombra=Off on=False
+Cofre do motor/Radiador/Gatilho active=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Cofre do motor/Vela active=True layer=11 pos=(-0,09; 0,265; -0,08) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Vela v=636 sub=1 bounds=(0; 0,044; 0)/(0,01819; 0,094; 0,021) mats=[Cidade] sombra=On on=True
+Cofre do motor/Vela/Apagada active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Vela v=636 sub=1 bounds=(0; 0,044; 0)/(0,01819; 0,094; 0,021) mats=[Fantasma] sombra=Off on=False
+Cofre do motor/Vela/Gatilho active=True layer=2 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Colisão active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Colisão/Baixo active=True layer=11 pos=(0; 0,58; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Colisão/Cabine active=True layer=11 pos=(0; 1,19; -0,82) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Colisão/Para-brisa active=True layer=11 pos=(0; 1,18; 0,65) rot=(33,90001; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider]
+Estepe active=True layer=11 pos=(0; 0,67; -1,5) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Pneu v=480 sub=1 bounds=(0; 0,1035; 0)/(0,59088; 0,227; 0,6) mats=[Cidade] sombra=On on=True
+Farol D active=True layer=11 pos=(0,57; 0,65; 2,2) rot=(5; 3; 0) scale=(1; 1; 1) [Transform,Light]
+Farol E active=True layer=11 pos=(-0,57; 0,65; 2,2) rot=(5; 357; 0) scale=(1; 1; 1) [Transform,Light]
+Ignição active=True layer=11 pos=(-0,23; 0,655; 0,62) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Ignição/Anel active=True layer=11 pos=(0; 0; -0,002) rot=(90; 0; 0) scale=(0,05; 0,002; 0,05) [Transform,MeshFilter,MeshRenderer] mesh=Cylinder v=88 sub=1 bounds=(0; 0; 0)/(1; 2; 1) mats=[IgnicaoAnel] sombra=Off on=True
+Ignição/Chave active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Ignição/Chave/Argola active=True layer=11 pos=(0; -0,012; -0,046) rot=(0; 0; 90) scale=(0,016; 0,0012; 0,016) [Transform,MeshFilter,MeshRenderer] mesh=Cylinder v=88 sub=1 bounds=(0; 0; 0)/(1; 2; 1) mats=[ChaveMetal] sombra=Off on=False
+Ignição/Chave/Cabo active=True layer=11 pos=(0; 0,002; -0,031) rot=(0; 0; 0) scale=(0,007; 0,03; 0,022) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[ChavePlastico] sombra=Off on=False
+Ignição/Chave/Chaveiro active=True layer=11 pos=(0; -0,034; -0,047) rot=(0; 0; 8) scale=(0,005; 0,028; 0,016) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[Chaveiro] sombra=Off on=False
+Ignição/Chave/Haste active=True layer=11 pos=(0; 0; -0,016) rot=(0; 0; 0) scale=(0,0035; 0,009; 0,01) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[ChaveMetal] sombra=Off on=False
+Ignição/Marca 0 active=True layer=11 pos=(0; 0,0225; -0,0043) rot=(0; 0; 0) scale=(0,0018; 0,004; 0,001) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[IgnicaoMarca] sombra=Off on=True
+Ignição/Marca 60 active=True layer=11 pos=(0,01949; 0,01125; -0,0043) rot=(0; 0; 300) scale=(0,0018; 0,004; 0,001) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[IgnicaoMarca] sombra=Off on=True
+Ignição/Marca 92 active=True layer=11 pos=(0,02249; -0,00079; -0,0043) rot=(0; 0; 268) scale=(0,0018; 0,004; 0,001) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[IgnicaoMarca] sombra=Off on=True
+Ignição/Miolo active=True layer=11 pos=(0; 0; -0,007) rot=(90; 0; 0) scale=(0,036; 0,005; 0,036) [Transform,MeshFilter,MeshRenderer] mesh=Cylinder v=88 sub=1 bounds=(0; 0; 0)/(1; 2; 1) mats=[IgnicaoMiolo] sombra=Off on=True
+Lente da luz de teto active=True layer=11 pos=(0; 1,394; -0,3) rot=(0; 0; 0) scale=(0,16; 0,012; 0,08) [Transform,MeshFilter,MeshRenderer] mesh=Cube v=24 sub=1 bounds=(0; 0; 0)/(1; 1; 1) mats=[TetoApagado] sombra=Off on=True
+Lugares active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Lugar 0 active=True layer=11 pos=(-0,37; 0,58; 0,06) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Lugar 1 active=True layer=11 pos=(0,37; 0,58; 0,06) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Lugar 2 active=True layer=11 pos=(-0,38; 0,6; -0,68) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Lugar 3 active=True layer=11 pos=(0,38; 0,6; -0,68) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Saída 0 active=True layer=11 pos=(-1,55; 0; 0,41) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Saída 1 active=True layer=11 pos=(1,55; 0; 0,41) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Saída 2 active=True layer=11 pos=(-1,55; 0; -0,55) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Lugares/Saída 3 active=True layer=11 pos=(1,55; 0; -0,55) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Luz de teto active=True layer=11 pos=(0; 1,36; -0,3) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,Light]
+Luz do painel active=True layer=11 pos=(-0,25; 1,3; 0,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,Light]
+Macaco active=True layer=11 pos=(0; 0,67; -1,97) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Peca_Macaco v=312 sub=1 bounds=(-0,0275; 0,059; 0)/(0,475; 0,118; 0,09) mats=[Cidade] sombra=On on=True
+Macaco (apoiado) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer,BoxCollider,MacacoApoiado] mesh=Peca_Macaco v=312 sub=1 bounds=(-0,0275; 0,059; 0)/(0,475; 0,118; 0,09) mats=[Cidade] sombra=On on=False
+Motor active=True layer=11 pos=(0; 0,6; 1,6) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,AudioSource]
+Painel (mostradores) active=True layer=11 pos=(-0,37; 0,85; 0,626) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Painel_Quadro v=4 sub=1 bounds=(0; 0; 0)/(0,3; 0,09; 0) mats=[PainelApagado] sombra=Off on=True
+Painel (mostradores)/Luz do farol active=True layer=11 pos=(0,00938; 0,02563; -0,001) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Painel_Icone v=4 sub=1 bounds=(0; 0; 0)/(0,014; 0,014; 0) mats=[PainelIndicador] sombra=Off on=False
+Painel (mostradores)/Ponteiro (gasolina) active=True layer=11 pos=(0,06563; -0,00563; -0,002) rot=(0; 0; 50) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Painel_PonteiroGasolina v=8 sub=1 bounds=(0; 0,0095; -0,00025)/(0,009; 0,031; 0,0005) mats=[PonteiroApagado] sombra=Off on=True
+Painel (mostradores)/Ponteiro (velocidade) active=True layer=11 pos=(-0,04688; -0,00188; -0,002) rot=(0; 0; 120) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Painel_PonteiroVelocidade v=8 sub=1 bounds=(0; 0,01575; -0,00025)/(0,009; 0,0435; 0,0005) mats=[PonteiroApagado] sombra=Off on=True
+Porta DD active=True layer=11 pos=(0,86; 0; 0,92) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Porta_DD v=2056 sub=3 bounds=(0,015; 0,8875; -0,51)/(0,29; 1,057; 1,02) mats=[Perua_Lataria, Perua_Interior, Perua_Vidro] sombra=On on=True
+Porta DE active=True layer=11 pos=(-0,86; 0; 0,92) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Porta_DE v=2056 sub=3 bounds=(-0,015; 0,8875; -0,51)/(0,29; 1,057; 1,02) mats=[Perua_Lataria, Perua_Interior, Perua_Vidro] sombra=On on=True
+Porta TD active=True layer=11 pos=(0,86; 0; -0,16) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Porta_TD v=1480 sub=3 bounds=(-0,056; 0,8875; -0,39)/(0,148; 1,057; 0,78) mats=[Perua_Lataria, Perua_Interior, Perua_Vidro] sombra=On on=True
+Porta TE active=True layer=11 pos=(-0,86; 0; -0,16) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Porta_TE v=1480 sub=3 bounds=(0,056; 0,8875; -0,39)/(0,148; 1,057; 0,78) mats=[Perua_Lataria, Perua_Interior, Perua_Vidro] sombra=On on=True
+Porta-malas (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,PortaMalasDoCarro]
+Portas (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Portas (mira)/Porta DD active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,PortaDoCarro]
+Portas (mira)/Porta DE active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,PortaDoCarro]
+Portas (mira)/Porta TD active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,PortaDoCarro]
+Portas (mira)/Porta TE active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,PortaDoCarro]
+Roda DD (modelo) active=True layer=11 pos=(0,735; 0,3; 1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Roda v=1895 sub=1 bounds=(0,015; 0; 0)/(0,24; 0,6; 0,6) mats=[Perua_Lataria] sombra=On on=True
+Roda DE (modelo) active=True layer=11 pos=(-0,735; 0,3; 1,36) rot=(0; 180; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Roda v=1895 sub=1 bounds=(0,015; 0; 0)/(0,24; 0,6; 0,6) mats=[Perua_Lataria] sombra=On on=True
+Roda TD (modelo) active=True layer=11 pos=(0,735; 0,3; -1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Roda v=1895 sub=1 bounds=(0,015; 0; 0)/(0,24; 0,6; 0,6) mats=[Perua_Lataria] sombra=On on=True
+Roda TE (modelo) active=True layer=11 pos=(-0,735; 0,3; -1,36) rot=(0; 180; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Roda v=1895 sub=1 bounds=(0,015; 0; 0)/(0,24; 0,6; 0,6) mats=[Perua_Lataria] sombra=On on=True
+Rodas (física) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Rodas (física)/Roda DD active=True layer=11 pos=(0,735; 0,39; 1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,WheelCollider]
+Rodas (física)/Roda DE active=True layer=11 pos=(-0,735; 0,39; 1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,WheelCollider]
+Rodas (física)/Roda TD active=True layer=11 pos=(0,735; 0,39; -1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,WheelCollider]
+Rodas (física)/Roda TE active=True layer=11 pos=(-0,735; 0,39; -1,36) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,WheelCollider]
+Rodas (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform]
+Rodas (mira)/Roda DD (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,RodaDoCarro]
+Rodas (mira)/Roda DE (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,RodaDoCarro]
+Rodas (mira)/Roda TD (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,RodaDoCarro]
+Rodas (mira)/Roda TE (mira) active=True layer=11 pos=(0; 0; 0) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,BoxCollider,RodaDoCarro]
+Tampa traseira active=True layer=11 pos=(0; 1,445; -1,91) rot=(0; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Tampa v=1260 sub=3 bounds=(0; -0,405; -0,12075)/(1,19; 0,84; 0,3215) mats=[Perua_Lataria, Perua_Vidro, Perua_Interior] sombra=On on=True
+Volante active=True layer=11 pos=(-0,37; 0,86; 0,5) rot=(25; 0; 0) scale=(1; 1; 1) [Transform,MeshFilter,MeshRenderer] mesh=Perua_Volante v=904 sub=1 bounds=(0; 0; 0,04523)/(0,414; 0,414; 0,12955) mats=[Perua_Interior] sombra=Off on=True

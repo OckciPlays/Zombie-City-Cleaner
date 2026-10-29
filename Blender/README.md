@@ -76,3 +76,10 @@ Como rodar:
 - Como rodar: carregue `carro.py` e chame `construir()`, `exportar()` (grava `Assets/_Game/Art/Veiculos/Carro.fbx`) e,
   se quiser conferir, `foto(caminho)`. Depois, na Unity, rode Zombie City Cleaner > Montar veículos. Ao mudar uma medida
   (portas, rodas, bancos), mude também a `MontagemDosVeiculos`.
+- `PeruaNova/perua_nova.py` (28/10/2026): o visual novo da mesma perua (mais detalhe e materiais PBR assados), com as
+  medidas lidas do `carro.py`. O editável é o `PeruaNova/PeruaNova.blend`.
+  - Como rodar: `sys.path.append(r"<repo>\Blender\PeruaNova")`, `import perua_nova` e chame `construir()`,
+    `desembrulhar()`, `assar()` (Cycles; ~1 min por canal na CPU: se a conexão do MCP cair, um canal por chamada,
+    `assar(canais=("cor",))`...), `compor()`, `exportar()` (grava `Assets/_Game/Art/Veiculos/PeruaNova/PeruaNova.fbx` e
+    as texturas em `.../PeruaNova/Texturas`) e `salvar()`. Depois, na Unity, Zombie City Cleaner > Veículos > Aplicar o
+    visual novo da perua (também depois de cada "Montar veículos"). Detalhes em `Docs/PeruaNova/README.md`.

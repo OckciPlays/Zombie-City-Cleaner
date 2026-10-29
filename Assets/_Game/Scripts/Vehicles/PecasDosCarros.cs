@@ -13,7 +13,7 @@ namespace ZombieCityCleaner.Vehicles
     /// Também guarda quem está olhando o motor de cada carro (um bit por carro, <see cref="EstaAberto"/>): com alguém
     /// olhando, o capô dele fica aberto em todas as máquinas. Quem se afasta mais de 4,5 m ou sai deixa de contar.
     /// </summary>
-    public class PecasDosCarros : NetworkBehaviour
+    public class PecasDosCarros : FonteDasPecas
     {
         [Tooltip("O capô de cada carro (CapoDaCidade), na ordem da lista.")]
         public CapoDaCidade[] capos;
@@ -80,25 +80,25 @@ namespace ZombieCityCleaner.Vehicles
         }
 
         /// <summary>As 4 rodas do carro (antes da lista chegar, todas, como no modelo).</summary>
-        public PneusDoCarro PneusDo(int carro) =>
+        public override PneusDoCarro PneusDo(int carro) =>
             IsSpawned && carro >= 0 && carro < _pneus.Count ? _pneus[carro] : PneusDoCarro.Com(new[] { 100, 100, 100, 100 });
 
         /// <summary>A roda ao lado da qual o macaco está apoiado neste carro, ou -1.</summary>
-        public int MacacoDo(int carro) =>
+        public override int MacacoDo(int carro) =>
             IsSpawned && carro >= 0 && carro < _macacos.Count && _macacos[carro] != SemMacaco ? _macacos[carro] & 3 : -1;
 
         /// <summary>O macaco deste carro está levantado.</summary>
-        public bool ErguidoDo(int carro) => MacacoDo(carro) >= 0 && (_macacos[carro] & Erguido) != 0;
+        public override bool ErguidoDo(int carro) => MacacoDo(carro) >= 0 && (_macacos[carro] & Erguido) != 0;
 
         /// <summary>As peças do carro (antes da lista chegar, nenhuma).</summary>
-        public PecasDoMotor Do(int carro) =>
+        public override PecasDoMotor Do(int carro) =>
             IsSpawned && carro >= 0 && carro < _pecas.Count ? _pecas[carro] : PecasDoMotor.Com(-1, -1, -1);
 
         /// <summary>Alguém está olhando o motor deste carro (o capô fica aberto).</summary>
-        public bool EstaAberto(int carro) => IsSpawned && carro >= 0 && carro < 64 && (_abertos.Value & (1UL << carro)) != 0;
+        public override bool EstaAberto(int carro) => IsSpawned && carro >= 0 && carro < 64 && (_abertos.Value & (1UL << carro)) != 0;
 
         /// <summary>O jogador local começou ou parou de olhar o motor do carro.</summary>
-        public void Olhar(int carro, bool olhando)
+        public override void Olhar(int carro, bool olhando)
         {
             if (IsSpawned && carro >= 0 && carro < 64) OlharRpc((byte)carro, olhando);
         }
@@ -141,14 +141,14 @@ namespace ZombieCityCleaner.Vehicles
             if (_abertos.Value != bits) _abertos.Value = bits;
         }
 
-        public void PedirTirar(int carro, int peca)
+        public override void PedirTirar(int carro, int peca)
         {
             if (IsSpawned) TirarRpc((byte)carro, (byte)peca);
         }
 
-        public void PedirPor(int carro, int peca, ushort id)
+        public override void PedirPor(int carro, int peca, ushort idNaMochila)
         {
-            if (IsSpawned) PorRpc((byte)carro, (byte)peca, id);
+            if (IsSpawned) PorRpc((byte)carro, (byte)peca, idNaMochila);
         }
 
         bool Perto(int carro, ulong cliente, out InventarioJogador inventario)
@@ -179,28 +179,28 @@ namespace ZombieCityCleaner.Vehicles
 
         // ------------------------------------------------------------------ as rodas e o macaco (como na perua)
 
-        public void PedirApoiarMacaco(int carro, int roda)
+        public override void PedirApoiarMacaco(int carro, int roda)
         {
             if (IsSpawned) ApoiarMacacoRpc((byte)carro, (byte)roda);
         }
 
-        public void PedirErguer(int carro, bool erguer)
+        public override void PedirErguer(int carro, bool erguer)
         {
             if (IsSpawned) ErguerRpc((byte)carro, erguer);
         }
 
-        public void PedirTirarMacaco(int carro)
+        public override void PedirTirarMacaco(int carro)
         {
             if (IsSpawned) TirarMacacoRpc((byte)carro);
         }
 
-        public void PedirTirarRoda(int carro, int roda)
+        public override void PedirTirarRoda(int carro, int roda)
         {
             if (IsSpawned) TirarRodaRpc((byte)carro, (byte)roda);
         }
 
         /// <summary>Um pneu da mochila (pelo Id; 0, o das mãos) vai para a roda vazia do lado erguido.</summary>
-        public void PedirPorRoda(int carro, int roda, ushort idNaMochila)
+        public override void PedirPorRoda(int carro, int roda, ushort idNaMochila)
         {
             if (IsSpawned) PorRodaRpc((byte)carro, (byte)roda, idNaMochila);
         }
@@ -252,7 +252,8 @@ namespace ZombieCityCleaner.Vehicles
             SomRpc(0, capos[carro].PosicaoDaRoda(m));
         }
 
-        bool PodeTrocar(int carro, int roda) => ErguidoDo(carro) && Parado(carro) && MacacoDo(carro) % 2 == roda % 2;
+        // só a roda do macaco sai ou entra (o macaco levanta aquele canto)
+        bool PodeTrocar(int carro, int roda) => ErguidoDo(carro) && Parado(carro) && MacacoDo(carro) == roda;
 
         [Rpc(SendTo.Server)]
         void TirarRodaRpc(byte carro, byte roda, RpcParams parametros = default)

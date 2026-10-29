@@ -14,7 +14,8 @@ namespace ZombieCityCleaner.Vehicles
     /// </summary>
     public class CapoDaCidade : Interagivel, ICapo
     {
-        public PecasDosCarros pecas;
+        [Tooltip("Quem guarda as peças: o PecasDosCarros (Demo_Cidade) ou o PecasDosCarrosDoMundo (o mundo gerado).")]
+        public FonteDasPecas pecas;
         public int indice;
         [Tooltip("O nome do carro na tela (\"Sedã cinza\").")]
         public string nome = "Carro";
@@ -37,14 +38,19 @@ namespace ZombieCityCleaner.Vehicles
         public float raioDaRoda = 0.3f;
         [Tooltip("O macaco apoiado (filho do carro, fora do \"Capô aberto\", que inclina): esticado do chão até a lataria.")]
         public MeshRenderer macaco;
-        [Tooltip("Quanto o lado do macaco sobe (m).")]
-        public float alturaDoMacaco = 0.22f;
+        [Tooltip("Quanto o canto do macaco sobe (m). O carro gira em volta do canto do outro lado: os dois cantos vizinhos sobem a metade, e as rodas deles continuam no chão (a suspensão estica).")]
+        public float alturaDoMacaco = 0.2f;
+        [Tooltip("A colisão do carro (um filho, no mundo gerado): inclina junto com ele. Na Demo_Cidade, vazio.")]
+        public Transform colisao;
 
         float _visto, _ergueu, _erguidoMudouEm = -99f, _alturaDoMacacoFechado = 0.118f;
         bool _erguidoVisto, _macacoFeito;
         BoxCollider _miraDoMacaco;
-        // o cubo da roda (sem ela, o canto do carro desce até ele)
-        const float RaioDoCubo = 0.13f;
+        // sem a roda, o canto do carro desce até a lataria quase encostar no chão (o modelo não tem o cubo nem o disco)
+        const float RaioDoCubo = 0.06f;
+        // o quanto a suspensão estica (a roda desce) e encolhe (a roda sobe) para a roda continuar no chão; a roda do macaco
+        // estica pouco: ela sai do chão
+        const float Estica = 0.2f, Encolhe = 0.12f, EsticaNoMacaco = 0.05f;
 
         public string NomeDoCarro => nome;
         public CofreDoMotor Cofre => cofre;
@@ -60,7 +66,8 @@ namespace ZombieCityCleaner.Vehicles
         public bool Erguido => pecas != null && pecas.ErguidoDo(indice);
         /// <summary>O carro ainda está subindo ou descendo no macaco.</summary>
         public bool MacacoMexendo => MacacoNaRoda >= 0 && Time.time - _erguidoMudouEm < PecasDosCarros.TempoDoMacaco;
-        public bool NoLadoErguido(int roda) { int m = MacacoNaRoda; return m >= 0 && roda >= 0 && roda < 4 && roda % 2 == m % 2; }
+        /// <summary>A roda é a do macaco (só ela sai do chão e pode ser trocada).</summary>
+        public bool NaRodaDoMacaco(int roda) { int m = MacacoNaRoda; return m >= 0 && roda == m; }
         public Transform Carro => carroFechado != null ? carroFechado.transform : transform;
         /// <summary>O meio da roda no mundo (a distância dos pedidos conta daqui).</summary>
         public Vector3 PosicaoDaRoda(int roda) =>
@@ -87,43 +94,67 @@ namespace ZombieCityCleaner.Vehicles
             }
             _ergueu = Mathf.MoveTowards(_ergueu, m >= 0 && erguido ? 1f : 0f, Time.deltaTime / PecasDosCarros.TempoDoMacaco);
             bool mexido = m >= 0 || !pneus.Tem(0) || !pneus.Tem(1) || !pneus.Tem(2) || !pneus.Tem(3);
-            Macaco(m);
+            MostrarMacaco(m);
             if (!abrir && _visto == 0f && !mexido)
             {
                 Mostrar(false);
+                if (colisao != null && colisao.localRotation != Quaternion.identity) colisao.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
                 return;
             }
             Mostrar(true);
             CofreDoMotor.AnimarCapo(tampa, Quaternion.identity, abertura, ref _visto, abrir, Time.deltaTime);
+            // com o capô fechado (a cópia só pela roda ou pelo macaco), o cofre não aparece: são ~5 peças a menos por carro
+            MostrarCofre(abrir || _visto > 0f);
             Pose(pneus, m);
             if (_visto == 0f && !mexido) Mostrar(false);
         }
 
-        // a cópia inclina: o canto sem a roda desce até o cubo, e o lado do macaco sobe (o plano que passa mais perto da
-        // altura de cada canto)
+        // a cópia inclina pelo plano que passa mais perto da altura de cada canto:
+        //  - sem a roda, o canto desce até a lataria quase encostar no chão;
+        //  - no macaco, o carro gira em volta do canto do outro lado (na diagonal): o canto do macaco sobe alturaDoMacaco e os
+        //    dois vizinhos a metade (os quatro num plano só).
+        // Depois, cada roda que ficou acompanha o chão (a suspensão estica ou encolhe); a do macaco quase não estica e sai do chão.
         void Pose(PneusDoCarro p, int m)
         {
             if (aberto == null || centrosDasRodas == null || centrosDasRodas.Length < 4) return;
             for (int i = 0; i < 4 && rodas != null && i < rodas.Length; i++)
                 if (rodas[i] != null && rodas[i].gameObject.activeSelf != p.Tem(i)) rodas[i].gameObject.SetActive(p.Tem(i));
             float queda = Mathf.Max(0f, raioDaRoda - RaioDoCubo);
-            float h0 = Altura(p, m, 0, queda), h1 = Altura(p, m, 1, queda), h2 = Altura(p, m, 2, queda), h3 = Altura(p, m, 3, queda);
+            for (int i = 0; i < 4; i++) _alturas[i] = (p.Tem(i) ? 0f : -queda) + Macaco(m, i);
             float bitola = Mathf.Max(0.5f, Mathf.Abs(centrosDasRodas[1].x - centrosDasRodas[0].x));
             float entre = Mathf.Max(0.5f, Mathf.Abs(centrosDasRodas[0].z - centrosDasRodas[2].z));
+            float h0 = _alturas[0], h1 = _alturas[1], h2 = _alturas[2], h3 = _alturas[3];
+            float meio = (h0 + h1 + h2 + h3) / 4f;
             float lado = ((h1 + h3) - (h0 + h2)) / 2f / bitola;    // a direita mais alta
             float frente = ((h0 + h1) - (h2 + h3)) / 2f / entre;   // a frente mais alta
-            aberto.transform.SetLocalPositionAndRotation(new Vector3(0f, (h0 + h1 + h2 + h3) / 4f, 0f),
-                Quaternion.Euler(-Mathf.Atan(frente) * Mathf.Rad2Deg, 0f, Mathf.Atan(lado) * Mathf.Rad2Deg));
+            var pos = new Vector3(0f, meio, 0f);
+            var giro = Quaternion.Euler(-Mathf.Atan(frente) * Mathf.Rad2Deg, 0f, Mathf.Atan(lado) * Mathf.Rad2Deg);
+            aberto.transform.SetLocalPositionAndRotation(pos, giro);
+            if (colisao != null) colisao.SetLocalPositionAndRotation(pos, giro);
+            // as rodas: a altura do canto (no plano) vira o quanto a roda desce para continuar no chão
+            for (int i = 0; i < 4 && rodas != null && i < rodas.Length; i++)
+            {
+                if (rodas[i] == null || !p.Tem(i)) continue;
+                float sx = Mathf.Sign(centrosDasRodas[i].x), sz = Mathf.Sign(centrosDasRodas[i].z);
+                float canto = meio + lado * sx * bitola / 2f + frente * sz * entre / 2f;
+                float desce = Mathf.Clamp(canto, -Encolhe, i == m && Erguido ? EsticaNoMacaco : Estica);
+                rodas[i].localPosition = centrosDasRodas[i] + Vector3.down * desce;
+            }
         }
 
-        float Altura(PneusDoCarro p, int m, int i, float queda)
+        readonly float[] _alturas = new float[4];
+
+        // o quanto o macaco levanta este canto: o dele inteiro, os vizinhos a metade, o da diagonal nada
+        float Macaco(int m, int i)
         {
-            float h = p.Tem(i) ? 0f : -queda;
-            return m >= 0 && i % 2 == m % 2 ? Mathf.Lerp(h, alturaDoMacaco, _ergueu) : h;
+            if (m < 0 || _ergueu <= 0f) return 0f;
+            float h = alturaDoMacaco * _ergueu;
+            if (i == m) return h;
+            return i == (m ^ 3) ? 0f : h * 0.5f;
         }
 
         // o macaco apoiado: do chão até onde ele encosta na lataria (que sobe com a cópia), com o gatilho dele
-        void Macaco(int m)
+        void MostrarMacaco(int m)
         {
             if (macaco == null) return;
             if (!_macacoFeito)
@@ -152,6 +183,21 @@ namespace ZombieCityCleaner.Vehicles
                 _miraDoMacaco.center = new Vector3(0f, _alturaDoMacacoFechado * 0.5f, -s * 0.09f);
                 _miraDoMacaco.size = new Vector3(0.44f, _alturaDoMacacoFechado * 1.1f, 0.34f);
             }
+        }
+
+        GameObject _paredesDoCofre;
+        bool _procurouParedes;
+
+        void MostrarCofre(bool ver)
+        {
+            if (!_procurouParedes)
+            {
+                _procurouParedes = true;
+                var p = aberto != null ? aberto.transform.Find("Paredes do cofre") : null;
+                _paredesDoCofre = p != null ? p.gameObject : null;
+            }
+            if (cofre != null && cofre.gameObject.activeSelf != ver) cofre.gameObject.SetActive(ver);
+            if (_paredesDoCofre != null && _paredesDoCofre.activeSelf != ver) _paredesDoCofre.SetActive(ver);
         }
 
         // o carro da cidade ou o do capô aberto (o mesmo carro, com o capô à parte)

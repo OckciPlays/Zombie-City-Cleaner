@@ -35,7 +35,7 @@ namespace ZombieCityCleaner.EditorTools
     /// - os decals (manchas de sangue e furos de tiro) no renderizador.
     /// Menu: Zombie City Cleaner > Montar zumbis. Pode rodar de novo.
     /// </summary>
-    public static class MontagemDosZumbis
+    public static partial class MontagemDosZumbis
     {
         const string Arte = "Assets/_Game/Art/Characters/Zombie";
         // o zumbi leve (24/10/2026, ~1.300 faces, a aparência variando por zumbi). Ficam na pasta e voltam se entrarem na
@@ -43,7 +43,13 @@ namespace ZombieCityCleaner.EditorTools
         // <corpo>_<cabelo>.fbx, com os LODs dentro: "ZombieBloco_Cuia", "_Espetado", "_Comprido",
         // "ZombieBlocoMulher_Longo", "_Selvagem" e "_Chanel"; saíram a pedido, ainda não estavam bons), e os 4 modelos
         // de ~3.100 vértices ("Zombie1", "ZombieHomem2", "ZombieMulher", "ZombieMulherLoira")
-        static readonly string[] Modelos = { "ZombieGaroto" };
+        // desde 28/10/2026, a pedido, só os Ocos (as 12 variações de ~5 mil triângulos; veja MontagemDosZumbis.Oco.cs). O
+        // primeiro dá o Animator e a máscara do tronco; os outros, o override com os clipes deles
+        static readonly string[] Modelos =
+        {
+            "Oco_Original", "Oco_Observador", "Oco_Desviante", "Oco_Residuo", "Oco_Enfermeira", "Oco_Mecanico",
+            "Oco_Estudante", "Oco_Executivo", "Oco_Lenhador", "Oco_Corredora", "Oco_Vigia", "Oco_Turista",
+        };
         // a pasta de arte dos zumbis leves e em blocos: <texturas>_Base.png, <texturas>_Mascaras.png, <texturas>_Sujeiras.png
         // (as 10 camadas numa folha de 5 × 2) e a folha de rostos (Rosto.png; a dos zumbis em blocos, Rosto_Bloco.png).
         // Nos zumbis em blocos, as texturas são as do corpo (<corpo>_*.png), as mesmas para os 3 cabelos
@@ -131,12 +137,35 @@ namespace ZombieCityCleaner.EditorTools
             public Mesh original, inteira, semCabeca;
             public Mesh[] longe;
             public Material material;
+            public Avatar avatar;   // os Ocos: o Generic dos clipes gravados (os outros usam o do FBX)
             public int submeshCabeca, submeshCarne;
             public float altura;
         }
 
+        /// <summary>
+        /// Tudo: os prefabs e, na cena aberta (a Demo_Cidade), o "Zumbis" com as hordas, o sangue e o NavMesh assado. Para o
+        /// mundo gerado, veja <see cref="PorOsZumbisNoMundo"/> (sem hordas).
+        /// </summary>
         [MenuItem("Zombie City Cleaner/Montar zumbis")]
         public static void Montar()
+        {
+            var (prefabs, corpos) = MontarPrefabs();
+            MontagemDaRede.MontarPrefab();
+            var decals = MateriaisDosDecals();
+            DecalsNoRenderizador();
+            var cena = EditorSceneManager.GetActiveScene();
+            MontarCena(cena, prefabs, corpos, decals);
+            AssarNavegacao(cena);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Só os prefabs dos zumbis e dos corpos que caem (não mexe na cena nem no jogador).</summary>
+        [MenuItem("Zombie City Cleaner/Zumbis/Montar só os prefabs dos zumbis")]
+        public static void MontarSoOsPrefabs() => MontarPrefabs();
+
+        public static (Zumbi[] prefabs, CorpoDeZumbi[] corpos) MontarPrefabs()
         {
             CamadasDosZumbis();
             var modelos = Modelos.Select(ImportarModelo).ToArray();
@@ -150,20 +179,44 @@ namespace ZombieCityCleaner.EditorTools
                 prefabs[m.indice] = MontarPrefab(m, animacao);
                 corpos[m.indice] = MontarCorpo(m);
             }
-            MontagemDaRede.MontarPrefab();
-            var decals = MateriaisDosDecals();
-            DecalsNoRenderizador();
-            var cena = EditorSceneManager.GetActiveScene();
-            MontarCena(cena, prefabs, corpos, decals);
-            AssarNavegacao(cena);
-            EditorSceneManager.MarkSceneDirty(cena);
-            EditorSceneManager.SaveScene(cena);
             AssetDatabase.SaveAssets();
             // O controlador é apagado e criado de novo (com o mesmo GUID). Ao ser apagado, os prefabs são reimportados
             // sem ele; salvos depois iguais, a Unity não os importa de novo, e os zumbis nasciam sem animação (pose T).
             foreach (var p in AssetDatabase.FindAssets("t:Prefab", new[] { Prefabs }).Select(AssetDatabase.GUIDToAssetPath))
                 AssetDatabase.ImportAsset(p, ImportAssetOptions.ForceUpdate);
             Debug.Log("Zumbis montados: " + string.Join(", ", modelos.Select(m => $"{m.nome} ({m.altura:F2} m)")));
+            return (prefabs, corpos);
+        }
+
+        /// <summary>
+        /// O mundo gerado (a cena Mundo) com os zumbis, sem hordas (a pedido em 28/10/2026: por enquanto ninguém nasce
+        /// sozinho; o F1 cria perto do jogador): o "Zumbis" com o ZombieManager e os prefabs que já existem, e o sangue no
+        /// "Efeitos". O NavMesh é o do mundo (NavMeshDoMundo, em volta dos jogadores). A montagem da cena do mundo também chama.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Mundo/Pôr os zumbis no mundo (sem hordas)")]
+        public static void PorOsZumbisNoMundo()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de pôr os zumbis no mundo.");
+                return;
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != MontagemDoMundo.Cena) cena = EditorSceneManager.OpenScene(MontagemDoMundo.Cena);
+            PorOsZumbisNaCena(cena);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+        }
+
+        /// <summary>O "Zumbis" sem hordas na cena (com os prefabs da pasta, na ordem da lista), e o sangue.</summary>
+        public static void PorOsZumbisNaCena(Scene cena)
+        {
+            var prefabs = Modelos.Select(n => AssetDatabase.LoadAssetAtPath<Zumbi>($"{Prefabs}/Zumbi_{n}.prefab")).ToArray();
+            var corpos = Modelos.Select(n => AssetDatabase.LoadAssetAtPath<CorpoDeZumbi>($"{Prefabs}/Corpo_{n}.prefab")).ToArray();
+            if (prefabs.Any(p => p == null) || corpos.Any(c => c == null)) (prefabs, corpos) = MontarPrefabs();
+            var decals = MateriaisDosDecals();
+            DecalsNoRenderizador();
+            MontarCena(cena, prefabs, corpos, decals, false);
         }
 
         static T Carregar<T>(string caminho) where T : Object
@@ -199,7 +252,8 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static Modelo ImportarModelo(string nome, int indice)
         {
-            var m = new Modelo { indice = indice, nome = nome, fbx = $"{Arte}/{nome}.fbx" };
+            if (EhOco(nome)) return ImportarOco(nome, indice);
+            var m = new Modelo { indice = indice, nome = nome, fbx = FbxDe(nome) };
             var importador = (ModelImporter)AssetImporter.GetAtPath(m.fbx);
             importador.generateSecondaryUV = false;   // o segundo UV é o do rosto (zumbis leves)
             importador.animationType = ModelImporterAnimationType.Generic;
@@ -431,6 +485,7 @@ namespace ZombieCityCleaner.EditorTools
             ctrl.AddParameter("Atacar", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Tiro", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Pernas", AnimatorControllerParameterType.Int);
+            ctrl.AddParameter("Agonia", AnimatorControllerParameterType.Int);
 
             var baseSm = ctrl.layers[0].stateMachine;
             var andar = Arvore(ctrl, "Andar", (c["Idle"], 0f), (c["Walk"], 0.6f), (c["Chase"], 1.12f));
@@ -468,6 +523,17 @@ namespace ZombieCityCleaner.EditorTools
             t = acoes.AddAnyStateTransition(tiro);
             t.AddCondition(AnimatorConditionMode.If, 0f, "Tiro"); t.duration = 0.05f; t.canTransitionToSelf = true;
             t = tiro.AddTransition(vazio); t.hasExitTime = true; t.exitTime = 0.85f; t.duration = 0.15f;
+            // a agonia no sol (a etapa 7, os Ocos): pelo inteiro "Agonia" (1 as mãos no rosto, 2 limpando a pele, 3 encolhido;
+            // 0 nenhuma), a partir do vazio (o golpe e a reação ao tiro passam por cima e, acabando, ela volta)
+            for (int i = 0; i < ClipesDaAgonia.Length; i++)
+            {
+                if (!c.TryGetValue(ClipesDaAgonia[i].nome, out var clipe)) continue;
+                var agonia = Estado(acoes, ClipesDaAgonia[i].nome, clipe);
+                t = vazio.AddTransition(agonia);
+                t.AddCondition(AnimatorConditionMode.Equals, i + 1, "Agonia"); t.hasExitTime = false; t.duration = 0.3f;
+                t = agonia.AddTransition(vazio);
+                t.AddCondition(AnimatorConditionMode.NotEqual, i + 1, "Agonia"); t.hasExitTime = false; t.duration = 0.35f;
+            }
             EditorUtility.SetDirty(ctrl);
             return ctrl;
         }
@@ -481,7 +547,8 @@ namespace ZombieCityCleaner.EditorTools
             string caminho = $"{Arte}/Zombie_{m.nome}.overrideController";
             AssetDatabase.DeleteAsset(caminho);
             var aoc = new AnimatorOverrideController(baseCtrl) { name = "Zombie_" + m.nome };
-            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
+            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Where(c => primeiro.clipes.ContainsKey(c.nome) && m.clipes.ContainsKey(c.nome))
+                .Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
             AssetDatabase.CreateAsset(aoc, caminho);
             return aoc;
         }
@@ -601,6 +668,7 @@ namespace ZombieCityCleaner.EditorTools
             modelo.transform.SetParent(raiz.transform, false);
             var animador = modelo.GetComponent<Animator>();
             animador.runtimeAnimatorController = animacao;
+            if (m.avatar != null) animador.avatar = m.avatar;
             animador.applyRootMotion = false;
             animador.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             animador.keepAnimatorStateOnDisable = true;   // o nível Longe desliga o Animator; ao voltar, ele continua de onde estava
@@ -902,7 +970,7 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ cena
 
-        static void MontarCena(Scene cena, Zumbi[] prefabs, CorpoDeZumbi[] corpos, (Material sangue, Material furo) decals)
+        static void MontarCena(Scene cena, Zumbi[] prefabs, CorpoDeZumbi[] corpos, (Material sangue, Material furo) decals, bool comHordas = true)
         {
             var velho = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Zumbis");
             if (velho != null) Object.DestroyImmediate(velho);
@@ -914,12 +982,13 @@ namespace ZombieCityCleaner.EditorTools
             m.corpos = corpos;
             m.corposPorModelo = Mathf.Max(8, CorposNoTotal / prefabs.Length);
             m.vozDoZumbi = Carregar<AudioClip>("Assets/_Game/Audio/SomZombie1.mp3");
-            m.areasLivres = new[]
+            m.areasLivres = comHordas ? new[]
             {
                 new ZombieManager.AreaLivre { centro = new Vector3(-20f, 0f, -20f), raio = 11f },   // a casa da família e o bunker
                 new ZombieManager.AreaLivre { centro = new Vector3(-20f, 0f, -4.4f), raio = 12f },  // a frente da casa
-            };
-            foreach (var (nome, centro, raio, quantidade) in Hordas)
+            } : new ZombieManager.AreaLivre[0];
+            // no mundo gerado, sem hordas (a pedido em 28/10/2026: os zumbis entram um por um pelo F1)
+            if (comHordas) foreach (var (nome, centro, raio, quantidade) in Hordas)
             {
                 var h = new GameObject($"Horda: {nome}").AddComponent<PontoDeHorda>();
                 h.transform.SetParent(go.transform, false);
