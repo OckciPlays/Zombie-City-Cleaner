@@ -75,6 +75,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - `Recordings/` (fora de `Assets`, ignorada pelo git): as tomadas gravadas dos vídeos, em `Recordings/<vídeo>/`.
 - `Blender/` (fora de `Assets`): os scripts do Blender da sniper e das animações do desmembramento dos zumbis, com o passo a passo no README de lá. O zumbi antigo que eles leem (`NovoZombie_antigo.fbx`) sai do histórico do git e fica fora do git.
 - `Docs/` (fora de `Assets`): a documentação para quem colabora no projeto, em português: visão do jogo, plano da demo com o estado de cada parte, histórico, arquitetura, arte e como colaborar. O `README.md` da raiz aponta para ela. Ao terminar uma parte ou mudar algo importante, atualize também o `Docs/` (sobretudo o histórico e o plano).
+  - `Docs/Arte/`: a cópia das notas da pasta de arte (o `CLAUDE.md` de lá, aqui `CLAUDE_Arte.md`, e os planos da demo, do mapa e da mobília; 29/10/2026, a pedido, para o contexto ficar no git). O original fica na pasta de arte: **antes de cada commit, copie os quatro de novo** (`CLAUDE.md` como `CLAUDE_Arte.md`, `Plano_Demo.md`, `Plano_Mapa.md` e `Plano_Mobilia.md`).
 
 ## Cena `Demo_Cidade`
 
