@@ -67,6 +67,9 @@ namespace ZombieCityCleaner.Player
             _raiz.transform.position = Lugar;
             var copia = Object.Instantiate(original.gameObject, _raiz.transform, false);
             copia.name = "Corpo";
+            // o equipamento do corpo do jogador (o EquipamentoDoJogador) vem junto na cópia: sai, e o retrato põe o dele
+            EquipamentoNoCorpo.TirarCopiadas(copia.transform);
+            foreach (var e in copia.GetComponents<EquipamentoNoCorpo>()) Object.Destroy(e);
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
             _modelo = copia.transform;
@@ -213,28 +216,7 @@ namespace ZombieCityCleaner.Player
         void Vestir()
         {
             if (_inventario == null || _referencia == null || !_inventario.IsSpawned) return;
-            Item mochila = _inventario.MochilaVestida.Value;
-            bool coldre = _inventario.ComColdre.Value;
-            Item alca = Item.Nada, costas = Item.Nada, cintura = Item.Nada;
-            ushort idNaMao = _inventario.IdNaMao;
-            Item curta1 = Item.Nada, curta2 = Item.Nada, longa = Item.Nada;
-            foreach (var it in _inventario.Mochila)
-            {
-                if (!Itens.EhArma(it.item) || it.id == idNaMao) continue;
-                if (it.naAlca) alca = it.item;
-                else if (!Itens.EhCurta(it.item)) { if (longa == Item.Nada) longa = it.item; }
-                else if (curta1 == Item.Nada) curta1 = it.item;
-                else if (curta2 == Item.Nada) curta2 = it.item;
-            }
-            // a longa vai nas costas; a curta, no coldre (se houver) ou nas costas
-            costas = longa;
-            foreach (var c in new[] { curta1, curta2 })
-            {
-                if (c == Item.Nada) continue;
-                if (coldre && cintura == Item.Nada) cintura = c;
-                else if (costas == Item.Nada) costas = c;
-            }
-            long chave = (long)mochila | ((coldre ? 1L : 0L) << 8) | ((long)alca << 16) | ((long)costas << 24) | ((long)cintura << 32);
+            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, out bool coldre, out var alca, out var costas, out var cintura);
             if (chave == _vestido) return;
             _vestido = chave;
             _equipamento.Vestir(_referencia, mochila, coldre, alca, costas, cintura);

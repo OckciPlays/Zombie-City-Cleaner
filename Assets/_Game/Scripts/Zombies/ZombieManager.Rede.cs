@@ -9,7 +9,9 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// Os zumbis na rede. Não são NetworkObjects (seriam centenas): o anfitrião manda, para cada cliente, um pacote
     /// próprio só com os zumbis perto dele. Os que estão a menos de 15 m vão 10 vezes por segundo, os de 15 a 40 m a cada
-    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 15 bytes: posição em centímetros, giro, estado (com as
+    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 15 bytes: posição em centímetros a partir do jogador que recebe
+    /// (o pacote leva a posição dele: em centímetros num short, a posição do mundo só cabia até 327 m da origem, e no
+    /// mapa gerado, de quilômetros, os zumbis chegavam presos na borda, longe de quem entrou; 28/10/2026), giro, estado (com as
     /// contagens de golpes e de tiros levados), velocidade, como ele morreu (morto, a velocidade dá lugar à direção do
     /// tiro que o derrubou), os membros perdidos (2 bits por membro) e a pedra do sol. As mensagens são não confiáveis e em
     /// ordem: um pacote perdido é coberto pelo próximo, e como o estado inteiro vai em todos, nada se perde de vez.
@@ -84,24 +86,26 @@ namespace ZombieCityCleaner.Zombies
                         // os do nível médio se revezam (pelo Id), para não irem todos no mesmo envio
                         if (n == Zumbi.Nivel.Perto || (n == Zumbi.Nivel.Medio && (_tick + z.Id) % divisorMedio == 0)) _envio.Add(z);
                     }
-                    if (_envio.Count > 0) Mandar(cliente, tempo, _envio);
+                    if (_envio.Count > 0) Mandar(cliente, tempo, Jogadores[j].jogador.transform.position, _envio);
                 }
                 ClientesNaRede = clientes;
             }
         }
 
-        void Mandar(ulong cliente, double tempo, List<Zumbi> lista)
+        // origem: o jogador do cliente (os zumbis que vão estão a menos de 40 m dele, ou 160 na luneta)
+        void Mandar(ulong cliente, double tempo, Vector3 origem, List<Zumbi> lista)
         {
             for (int i = 0; i < lista.Count; i += PorPacote)
             {
                 int n = Mathf.Min(PorPacote, lista.Count - i);
-                using var w = new FastBufferWriter(sizeof(double) + sizeof(ushort) + n * BytesPorZumbi, Allocator.Temp);
+                using var w = new FastBufferWriter(sizeof(double) + 3 * sizeof(float) + sizeof(ushort) + n * BytesPorZumbi, Allocator.Temp);
                 w.WriteValueSafe(tempo);
+                w.WriteValueSafe(origem);
                 w.WriteValueSafe((ushort)n);
                 for (int k = 0; k < n; k++)
                 {
                     var z = lista[i + k];
-                    Vector3 p = z.transform.position;
+                    Vector3 p = z.transform.position - origem;
                     w.WriteValueSafe((ushort)z.Id);
                     w.WriteValueSafe(z.Geracao);
                     w.WriteValueSafe(Centimetros(p.x));
@@ -130,6 +134,7 @@ namespace ZombieCityCleaner.Zombies
             using (MarcaCopias.Auto())
             {
                 r.ReadValueSafe(out double tempo);
+                r.ReadValueSafe(out Vector3 origem);
                 r.ReadValueSafe(out ushort n);
                 for (int i = 0; i < n; i++)
                 {
@@ -153,7 +158,7 @@ namespace ZombieCityCleaner.Zombies
                         c = NovaCopia(id, geracao);
                     }
                     var e = (Zumbi.Estado)(estado & 15);
-                    c.Receber(tempo, new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
+                    c.Receber(tempo, origem + new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
                               morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra);
                 }
             }

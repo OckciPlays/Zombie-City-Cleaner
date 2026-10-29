@@ -106,6 +106,7 @@ namespace ZombieCityCleaner.EditorTools
             var telaDoCapo = raiz.AddComponent<TelaDoCapo>();
             var terceira = raiz.AddComponent<CameraTerceiraPessoa>();
             raiz.AddComponent<PuloDaJanela>();
+            raiz.AddComponent<EquipamentoDoJogador>();
 
             // os corpos (o que os outros veem; para o dono vira só sombra): um por personagem, só o escolhido ligado
             var corpos = Enumerable.Range(0, Personagens.Quantos).Select(p => MontarCorpo(raiz.transform, p)).ToArray();

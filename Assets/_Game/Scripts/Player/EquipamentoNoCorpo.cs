@@ -11,7 +11,8 @@ namespace ZombieCityCleaner.Player
     /// As posições são medidas no corpo em repouso (o corpo do personagem no prefab, sem animação, a <c>referencia</c>) e
     /// presas aos ossos (o peito e o quadril), então acompanham a animação em qualquer pose. As medidas do corpo (as costas,
     /// o cinto, o quadril...) são as do personagem (<see cref="CorpoDoPersonagem"/>): o gordo tem as costas mais para trás.
-    /// Serve o retrato do inventário e o boneco de teste do menu do desenvolvedor; a fatia 2 das mochilas vai usar no jogador.
+    /// Serve o retrato do inventário, o boneco de teste do menu do desenvolvedor e, desde 28/10/2026, o corpo dos jogadores
+    /// (<see cref="EquipamentoDoJogador"/>). O que vai no corpo sai do inventário por <see cref="OQueVeste"/>.
     /// </summary>
     public class EquipamentoNoCorpo : MonoBehaviour
     {
@@ -29,6 +30,56 @@ namespace ZombieCityCleaner.Player
         const float TamanhoDaMochila = 0.75f;
 
         readonly List<GameObject> _pecas = new List<GameObject>();
+
+        /// <summary>O começo do nome de cada peça: a cópia do corpo (o retrato do inventário) acha e tira as que vieram junto.</summary>
+        public const string Prefixo = "Equipamento: ";
+
+        /// <summary>As peças postas agora.</summary>
+        public IReadOnlyList<GameObject> Pecas => _pecas;
+
+        /// <summary>
+        /// O que vai no corpo, pelo inventário (o que vem pela rede, em qualquer máquina): a mochila e o coldre vestidos e as
+        /// armas que não estão na mão, como no porte de armas (a da alça; a longa nas costas; a curta no coldre, se houver,
+        /// ou nas costas). Devolve uma chave que muda quando alguma delas muda.
+        /// </summary>
+        public static long OQueVeste(InventarioJogador inventario, out Item mochila, out bool coldre, out Item alca, out Item costas, out Item cintura)
+        {
+            mochila = inventario.MochilaVestida.Value;
+            coldre = inventario.ComColdre.Value;
+            alca = costas = cintura = Item.Nada;
+            ushort idNaMao = inventario.IdNaMao;
+            Item curta1 = Item.Nada, curta2 = Item.Nada, longa = Item.Nada;
+            var lista = inventario.Mochila;
+            for (int i = 0; i < lista.Count; i++)
+            {
+                var it = lista[i];
+                if (!Itens.EhArma(it.item) || it.id == idNaMao) continue;
+                if (it.naAlca) alca = it.item;
+                else if (!Itens.EhCurta(it.item)) { if (longa == Item.Nada) longa = it.item; }
+                else if (curta1 == Item.Nada) curta1 = it.item;
+                else if (curta2 == Item.Nada) curta2 = it.item;
+            }
+            costas = longa;
+            for (int k = 0; k < 2; k++)
+            {
+                var c = k == 0 ? curta1 : curta2;
+                if (c == Item.Nada) continue;
+                if (coldre && cintura == Item.Nada) cintura = c;
+                else if (costas == Item.Nada) costas = c;
+            }
+            return (long)mochila | ((coldre ? 1L : 0L) << 8) | ((long)alca << 16) | ((long)costas << 24) | ((long)cintura << 32);
+        }
+
+        /// <summary>Tira as peças que vieram numa cópia do corpo (Instantiate leva os filhos dos ossos, não a lista).</summary>
+        public static void TirarCopiadas(Transform raiz)
+        {
+            foreach (var t in raiz.GetComponentsInChildren<Transform>(true))
+            {
+                if (!t.name.StartsWith(Prefixo)) continue;
+                t.gameObject.SetActive(false);
+                Destroy(t.gameObject);
+            }
+        }
 
         /// <summary>O material das peças (vazio: o dos itens no chão). O retrato do inventário usa o dele, sem sombra.</summary>
         public Material material;
@@ -158,7 +209,12 @@ namespace ZombieCityCleaner.Player
 
         public void Limpar()
         {
-            foreach (var p in _pecas) if (p != null) Destroy(p);
+            foreach (var p in _pecas)
+            {
+                if (p == null) continue;
+                p.SetActive(false);   // (o Destroy só vale no fim do quadro)
+                Destroy(p);
+            }
             _pecas.Clear();
         }
 
@@ -180,7 +236,7 @@ namespace ZombieCityCleaner.Player
         void Por(Transform referencia, Transform osso, string nome, Mesh malha, Material material, Vector3 pos, Quaternion rot, float escala = 1f)
         {
             var ossoRef = Osso(referencia, osso.name);
-            var go = new GameObject(nome);
+            var go = new GameObject(Prefixo + nome);
             go.layer = gameObject.layer;
             go.transform.SetParent(osso, false);
             // a pose do osso em repouso, no espaço do corpo; a peça, no espaço do osso (com a escala dele, se tiver)
