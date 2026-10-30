@@ -17,6 +17,7 @@ namespace ZombieCityCleaner.EditorTools
     {
         const string Pasta = "Assets/_Game/Audio/Trilha";
         const string Asset = "Assets/_Game/Audio/Resources/TrilhaDoJogo.asset";
+        const string PastaDoAmbiente = "Assets/_Game/Audio/Ambiente";
 
         [System.Serializable]
         class Info
@@ -25,6 +26,7 @@ namespace ZombieCityCleaner.EditorTools
             public class Familia { public float bpm, comprimento; }
             public Familia neblina, noite, perigo;
             public float encaixeDaEntrada, sobreposicaoDoVento;
+            public TrilhaDoJogo.Rajadas[] rajadasDeDia, rajadasDeNoite;
         }
 
         [MenuItem("Zombie City Cleaner/Trilha/Montar a trilha")]
@@ -54,6 +56,26 @@ namespace ZombieCityCleaner.EditorTools
             {
                 AssetDatabase.StopAssetEditing();
             }
+            // o ambiente: os grilos em estéreo (laço longo, comprimidos na memória); os eventos, mono e curtos
+            var doAmbiente = Directory.Exists(PastaDoAmbiente)
+                ? Directory.GetFiles(PastaDoAmbiente, "*.wav").Select(p => p.Replace('\\', '/')).OrderBy(p => p).ToArray() : new string[0];
+            foreach (var caminho in doAmbiente)
+            {
+                var imp = (AudioImporter)AssetImporter.GetAtPath(caminho);
+                if (imp == null) continue;
+                bool laco = Path.GetFileName(caminho).StartsWith("Grilos");
+                imp.forceToMono = !laco;
+                imp.loadInBackground = false;
+                var s = imp.defaultSampleSettings;
+                s.loadType = laco ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+                s.compressionFormat = AudioCompressionFormat.Vorbis;
+                s.quality = 0.6f;
+                s.preloadAudioData = true;
+                imp.defaultSampleSettings = s;
+                imp.SaveAndReimport();
+            }
+            AudioClip[] DoAmbiente(string prefixo) => doAmbiente.Where(p => Path.GetFileNameWithoutExtension(p).StartsWith(prefixo))
+                .Select(AssetDatabase.LoadAssetAtPath<AudioClip>).Where(c => c != null).ToArray();
 
             string Nome(string p) => Path.GetFileNameWithoutExtension(p);
             AudioClip Clipe(string p) => AssetDatabase.LoadAssetAtPath<AudioClip>(p);
@@ -94,14 +116,28 @@ namespace ZombieCityCleaner.EditorTools
             trilha.ventoDeDia = Varios("vento_dia_");
             trilha.ventoDeNoite = Varios("vento_noite_");
             trilha.sobreposicaoDoVento = info.sobreposicaoDoVento;
+            trilha.rajadasDoVentoDeDia = info.rajadasDeDia;
+            trilha.rajadasDoVentoDeNoite = info.rajadasDeNoite;
+            trilha.grilos = DoAmbiente("Grilos_");
+            trilha.latidos = DoAmbiente("Latido_");
+            trilha.uivos = DoAmbiente("Uivo_");
+            trilha.janelas = DoAmbiente("Janela_");
+            trilha.portas = DoAmbiente("Porta_");
+            trilha.placas = DoAmbiente("Placa_");
+            trilha.latas = DoAmbiente("Lata_");
+            trilha.madeira = DoAmbiente("Madeira_");
+            trilha.corvos = DoAmbiente("Corvos_");
             trilha.amanhecer = Clipe($"{Pasta}/momentos/amanhecer.ogg");
             trilha.morte = Clipe($"{Pasta}/momentos/morte.ogg");
+            trilha.menu = Clipe($"{Pasta}/momentos/menu.ogg");
             if (novo) AssetDatabase.CreateAsset(trilha, Asset);
             else EditorUtility.SetDirty(trilha);
             AssetDatabase.SaveAssets();
             Debug.Log($"Trilha: neblina {trilha.neblina.blocos.Length} blocos, noite {trilha.noite.blocos.Length}, perigo {trilha.perigo.Length} (x3 camadas), " +
                       $"entradas {trilha.entradas.Length}, saídas {trilha.saidas.Length} + {trilha.saidasPelaPedra.Length} pela pedra, " +
-                      $"vento {trilha.ventoDeDia.Length} + {trilha.ventoDeNoite.Length}, amanhecer {(trilha.amanhecer != null ? "sim" : "não")}, morte {(trilha.morte != null ? "sim" : "não")}");
+                      $"vento {trilha.ventoDeDia.Length} + {trilha.ventoDeNoite.Length} (rajadas {trilha.rajadasDoVentoDeDia?.Length ?? 0}), " +
+                      $"ambiente {trilha.grilos.Length} grilos, {trilha.latidos.Length + trilha.uivos.Length} cachorros, {trilha.janelas.Length + trilha.portas.Length + trilha.placas.Length + trilha.latas.Length} do vento, " +
+                      $"{trilha.madeira.Length} madeira, {trilha.corvos.Length} corvos, amanhecer {(trilha.amanhecer != null ? "sim" : "não")}, morte {(trilha.morte != null ? "sim" : "não")}");
         }
     }
 }

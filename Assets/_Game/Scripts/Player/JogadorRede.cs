@@ -79,6 +79,11 @@ namespace ZombieCityCleaner.Player
         /// dono quando ele nasce. Dois jogadores podem ter o mesmo.
         /// </summary>
         public readonly NetworkVariable<byte> Personagem = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>
+        /// A distância de visão que este jogador escolheu (Configurações > Gráficos, <see cref="Graficos.Visao"/>: 0 Curta a 3
+        /// Máxima), escrita pelo dono: o anfitrião manda os zumbis até ela e faz os novos nascerem mais longe dele.
+        /// </summary>
+        public readonly NetworkVariable<byte> Visao = new(2, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>O corpo mudou (o personagem chegou pela rede): quem guarda os ossos dele lê de novo.</summary>
         public event System.Action CorpoMudou;
@@ -284,6 +289,7 @@ namespace ZombieCityCleaner.Player
         void Update()
         {
             if (!IsSpawned) return;
+            if (IsOwner && Visao.Value != Graficos.Visao) Visao.Value = (byte)Graficos.Visao;   // a escolha dos Gráficos, para o anfitrião
             // Velocidade no chão: o dono usa a do próprio controle; os outros medem a posição recebida a cada 0,1 s
             // (quadro a quadro a medida oscila, porque a posição chega em degraus).
             float medida;

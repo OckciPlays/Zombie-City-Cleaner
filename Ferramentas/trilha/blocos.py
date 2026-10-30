@@ -357,7 +357,7 @@ def vento(semente, noite_):
     d[:m] *= rampa
     e[-m:] *= rampa[::-1]
     d[-m:] *= rampa[::-1]
-    return e, d, dur, len(centros)
+    return e, d, dur, [float(c) for c in centros]   # o meio de cada rajada (s): o jogo bate as janelas ali
 
 
 # ============================================================================================== o estúdio dos blocos
@@ -462,8 +462,8 @@ def familia_vento(noite_):
     for s, (e, d, dur, k) in enumerate(brutos):
         caminho = os.path.join(PASTA, nome, f'{nome}_{s}.wav')
         gravar(caminho, e * g, d * g)
-        blocos.append(dict(nome=f'{nome}_{s}', arquivo=os.path.relpath(caminho, PASTA).replace('\\', '/'), duracao=round(dur, 3), rajadas=k))
-    print(f'{nome}: {len(blocos)} blocos, {sum(b["rajadas"] for b in blocos)} rajadas')
+        blocos.append(dict(nome=f'{nome}_{s}', arquivo=os.path.relpath(caminho, PASTA).replace('\\', '/'), duracao=round(dur, 3), rajadas=[round(c, 2) for c in k]))
+    print(f'{nome}: {len(blocos)} blocos, {sum(len(b["rajadas"]) for b in blocos)} rajadas')
     return dict(sobreposicao=4.0, blocos=blocos)
 
 

@@ -42,7 +42,7 @@ namespace ZombieCityCleaner.UI
             y += linhasVersao * 26 * u + 8 * u;
             if (GUI.Button(new Rect(x, y, w, 28 * u), "Pôr um Oco na minha frente", _botao)) PorOco();
             y += 34 * u;
-            if (GUI.Button(new Rect(x, y, w, 28 * u), "Pôr todas lado a lado (5k)", _botao)) PorTodasAsVersoes();
+            if (GUI.Button(new Rect(x, y, w, 28 * u), "Pôr todas lado a lado", _botao)) PorTodasAsVersoes();
             y += 34 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), $"Tirar os Ocos ({OcoDeTeste.Todos.Count})", _botao)) OcoDeTeste.TirarTodos();
             y += 34 * u;
@@ -92,7 +92,7 @@ namespace ZombieCityCleaner.UI
                 if (OcoDeTeste.Criar(ChaoNaFrente(frente, 5f, lado), -frente, i) != null) postas++;
             }
             if (postas == 0) Avisar("As versões ainda não foram montadas: menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste).");
-            else Avisar($"{postas} versões postas lado a lado, 5 m à frente (da esquerda: Original 5k, 01 ... 11).");
+            else Avisar($"{postas} versões postas lado a lado, 5 m à frente (da esquerda: Original 5k, 2k, 1k, 01 ... 11).");
         }
     }
 }

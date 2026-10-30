@@ -49,6 +49,11 @@ namespace ZombieCityCleaner.Zombies
             /// </summary>
             public bool exposto;
             public float aumento, meioCone;
+            /// <summary>
+            /// A distância de visão deste jogador (UI/Graficos): até onde os zumbis são desenhados e mandados para ele, e de
+            /// onde os novos nascem perto dele (m).
+            /// </summary>
+            public float visao, nascer;
         }
 
         /// <summary>O campo de visão normal da câmera do mundo (o aumento da luneta conta a partir dele).</summary>
@@ -86,8 +91,8 @@ namespace ZombieCityCleaner.Zombies
         public float intervaloMedio = 0.5f;
         [Tooltip("Quantos zumbis pensam por quadro, no máximo.")]
         public int orcamentoPorQuadro = 40;
-        [Tooltip("Além disto o anfitrião nem desenha o zumbi: a neblina já esconde.")]
-        public float distanciaDeDesenho = 65f;
+        // até onde o zumbi é desenhado nesta máquina: a distância de visão de quem joga aqui (UI/Graficos). Era 65 m fixos,
+        // mas os de longe (além de 40 m) nem eram desenhados: apareciam do nada a ~37 m, sobretudo de carro
         [Tooltip("Até onde o zumbi usa a malha inteira (LOD0) e a do LOD1; depois, a do LOD2 (os zumbis em blocos).")]
         public float distanciaDoLOD1 = 12f;
         public float distanciaDoLOD2 = 26f;
@@ -220,6 +225,8 @@ namespace ZombieCityCleaner.Zombies
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
+                visao = Graficos.Metros(j.Visao.Value),
+                nascer = Graficos.NascerAPartirDe(j.Visao.Value),
             };
             var dados = Armas.Dados(j.ArmaNaMao);
             if (j.Luneta.Value && dados.fovLuneta > 0f)
@@ -248,8 +255,11 @@ namespace ZombieCityCleaner.Zombies
         internal Alvo AlvoLocal()
         {
             var j = JogadorRede.Local;
-            if (j == null || !j.IsSpawned) return new Alvo { pes = PontoDeVista(), aumento = 1f };
-            return AlvoDe(j, false, j.cameraMundo != null ? j.Olho.forward : j.transform.forward);
+            if (j == null || !j.IsSpawned)
+                return new Alvo { pes = PontoDeVista(), aumento = 1f, visao = Graficos.Metros(Graficos.Visao), nascer = Graficos.NascerAPartirDe(Graficos.Visao) };
+            var a = AlvoDe(j, false, j.cameraMundo != null ? j.Olho.forward : j.transform.forward);
+            a.visao = Graficos.Metros(Graficos.Visao);   // a desta máquina, sem esperar a rede
+            return a;
         }
 
         /// <summary>Até onde um zumbi enxerga este jogador: de dia longe; à noite pouco, a não ser com luz nele.</summary>
@@ -373,7 +383,7 @@ namespace ZombieCityCleaner.Zombies
                     if (z.Engajado) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
                     float daqui = Mathf.Min(Distancia(local, p), doVideo);
-                    z.DefinirVisivel(daqui < distanciaDeDesenho);
+                    z.DefinirVisivel(daqui < local.visao);
                     z.DefinirDetalhe(daqui, distanciaDoLOD1, distanciaDoLOD2);
                 }
             }

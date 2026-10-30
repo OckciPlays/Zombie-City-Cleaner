@@ -281,8 +281,21 @@ MonoBehaviour:
   arremesso: {x: 4.5, y: 2.2}
   pedacosNoPool: 24
   empurraoDoPedaco: {x: 2.2, y: 1.6}
+  celulaDoPovoamento: 40
+  alcanceDoPovoamento: 52
+  longeDoJogador: 22
+  acordadosNaCidade: {x: 1, y: 4}
+  estatuasNaCidade: {x: 0, y: 2}
+  acordadoForaDaCidade: 0.15
+  estatuaForaDaCidade: 0.06
+  arvoresParaAMata: 4
+  acordadosNaMata: {x: 1, y: 3}
+  distanciaDeRecolher: 130
+  umRastejanteEmCadaCarros: 10
+  acordadosPorAndar: {x: 0, y: 1}
   intervaloDeEnvio: 0.1
   divisorMedio: 3
+  divisorLonge: 5
   tempoParaSumir: 1.5
   modelos:
   - {fileID: 7504586512184035756, guid: f6e5e0eb08331c6478a84dade158807f, type: 3}
@@ -325,7 +338,6 @@ MonoBehaviour:
   intervaloPerto: 0.1
   intervaloMedio: 0.5
   orcamentoPorQuadro: 40
-  distanciaDeDesenho: 65
   distanciaDoLOD1: 12
   distanciaDoLOD2: 26
   ajustes:
@@ -343,6 +355,7 @@ MonoBehaviour:
     barulhoDeCorrida: 9
     barulhoDoTiro: 35
     tiroChamaDireto: 12
+    tiroAmeacaDeDia: 5
     distanciaDeDesistir: 20
     tempoSemVer: 6
     alcanceDoAtaque: 1.3
@@ -354,6 +367,23 @@ MonoBehaviour:
     vidaDoMembro: 3
     fatorMancando: 0.55
     fatorRastejando: 0.35
+    tempoParaPetrificar: 10
+    tempoParaRecuar: 20
+    lentidaoNaPedra: 0.1
+    velocidadeDeFuga: 1.7
+    raioDaSombra: 18
+    raioDoAbrigo: 40
+    danoNaPedra: 0.25
+    pedraQueProtegeACabeca: 0.8
+    soltarANoite: {x: 30, y: 60}
+    tempoDeQuebrar: 1.6
+    alcanceDaLanterna: 14
+    meioAnguloDaLanterna: 15
+    alcanceDoFarol: 22
+    meioAnguloDoFarol: 22
+    distanciaDaEsquiva: 2.2
+    velocidadeDaEsquiva: 3.2
+    intervaloDaEsquiva: 1
 --- !u!1 &692325279
 GameObject:
   m_ObjectHideFlags: 0
@@ -451,6 +481,7 @@ MonoBehaviour:
   - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
   - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
   - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
+  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
   material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
   lugares: []
   itensDosLugares: 
@@ -3639,6 +3670,7 @@ MonoBehaviour:
   terreno: {fileID: 2005601267}
   raioPronto: 40
   carro: {fileID: 7941846832386056945, guid: 3ce65d8700700834a801f19558159d9a, type: 3}
+  segundoCarro: {fileID: 8502286537706648564, guid: 6417562996a05514c891099c73c50323, type: 3}
 --- !u!114 &2005601269
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3863,6 +3895,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.PecasDosCarrosDoMundo
   ShowTopMostFoldoutHeaderGroup: 1
+  umAlarmeEmCada: 10
+  duracaoDoAlarme: 40
+  raioDoAlarme: 60
+  chamarACada: 3
+  alcanceDaSirene: 130
+  volumeDaSirene: 0.6
   chance:
   - 0.55
   - 0.5

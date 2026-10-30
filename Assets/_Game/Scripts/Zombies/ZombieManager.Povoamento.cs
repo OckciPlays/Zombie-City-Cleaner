@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.Zombies
         public float celulaDoPovoamento = 40f;
         [Tooltip("Uma célula se povoa quando o meio dela chega a esta distância de um jogador (m; o NavMesh vai a 60 m).")]
         public float alcanceDoPovoamento = 52f;
-        [Tooltip("Ninguém nasce mais perto que isto de um jogador (m).")]
+        [Tooltip("Ninguém nasce mais perto que isto de um jogador (m). Quem escolheu ver mais longe (Configurações > Gráficos > Distância de visão) tem mais: até 46 m (UI/Graficos.NascerAPartirDe).")]
         public float longeDoJogador = 22f;
         // a quantidade que o Pedro testou e aprovou (com ×2 de dia e ×3 à noite, DensidadeDeDia e DensidadeDeNoite). Na
         // etapa 6 estes números subiram no código (3-6, 1-3, 25%, 12%), mas a cena aberta no Editor continuou com os de
@@ -99,12 +99,18 @@ namespace ZombieCityCleaner.Zombies
             if (dados == null || QuantosJogadores == 0) return;
             Recolher(agora);
             if (!PovoarOMundo.Value) return;
+            PovoarAndares(dados);   // os andares dos prédios que carregaram (ZombieManager.Predios.cs)
             float c = celulaDoPovoamento, agoraD = DensidadeAgora;
-            int r = Mathf.CeilToInt(alcanceDoPovoamento / c);
             _candidatas.Clear();
             for (int k = 0; k < QuantosJogadores; k++)
             {
                 Vector3 p = Jogadores[k].pes;
+                // quem vê mais longe (UI/Graficos) faz os zumbis nascerem mais longe dele: o alcance da célula cresce junto
+                // (até onde o NavMesh, ~60 m, ainda dá lugar), e a célula quase toda dentro da distância de nascer espera
+                // ele se afastar (povoada agora, ficaria com poucos para sempre)
+                float nascer = Jogadores[k].nascer, alcance = Mathf.Max(alcanceDoPovoamento, nascer + 14f);
+                float esperar = nascer > longeDoJogador ? nascer - 12f : 0f;
+                int r = Mathf.CeilToInt(alcance / c);
                 int cx = Mathf.FloorToInt(p.x / c), cz = Mathf.FloorToInt(p.z / c);
                 for (int dz = -r; dz <= r; dz++)
                 for (int dx = -r; dx <= r; dx++)
@@ -113,7 +119,7 @@ namespace ZombieCityCleaner.Zombies
                     float antes = _celulas.TryGetValue(celula, out float ja) ? ja : -1f;
                     if (antes >= agoraD - 0.01f) continue;
                     float d = new Vector2((celula.x + 0.5f) * c - p.x, (celula.y + 0.5f) * c - p.z).magnitude;
-                    if (d <= alcanceDoPovoamento) _candidatas.Add((celula, d, antes));
+                    if (d <= alcance && d >= esperar) _candidatas.Add((celula, d, antes));
                 }
             }
             if (_candidatas.Count == 0) return;
@@ -161,7 +167,7 @@ namespace ZombieCityCleaner.Zombies
         {
             var floresta = FlorestaDoMundo.Instancia;
             if (floresta == null) return;
-            float m = celulaDoPovoamento * 0.5f, longe2 = longeDoJogador * longeDoJogador;
+            float m = celulaDoPovoamento * 0.5f;
             int arvores = floresta.ArvoreEm(meio.x - m, meio.z - m, meio.x + m, meio.z + m, sorte, out _, out _);
             if (arvores < arvoresParaAMata) return;
             int quantos = Vezes(sorte.Next(acordadosNaMata.x, acordadosNaMata.y + 1), densidade, sorte);
@@ -175,7 +181,7 @@ namespace ZombieCityCleaner.Zombies
                     var tentativa = tronco + new Vector3(Mathf.Sin(ang), 0f, Mathf.Cos(ang)) * dist;
                     if (!NavMesh.SamplePosition(tentativa, out var hit, 1.2f, NavMesh.AllAreas)) continue;
                     Vector3 p = hit.position;
-                    if (EmAreaLivre(p) || PertoDeAlguem(p, longe2)) continue;
+                    if (EmAreaLivre(p) || PertoDemaisParaNascer(p)) continue;
                     if (ProtegerDoSol && Exposto(p)) continue;
                     if (Nascer(p) != null) PovoamentoPos++;
                     break;
@@ -206,6 +212,7 @@ namespace ZombieCityCleaner.Zombies
                 n++;
             }
             _celulas.Clear();
+            _andaresPovoados.Clear();
             _proximoPovoamento = 0f;
             PovoamentoQuis = PovoamentoPos = 0;
             return n;
@@ -217,7 +224,7 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         bool PontoNaCelula(System.Random sorte, DadosDoMundo dados, Vector3 meio, Lugar onde, out Vector3 ponto)
         {
-            float c = celulaDoPovoamento, longe2 = longeDoJogador * longeDoJogador;
+            float c = celulaDoPovoamento;
             bool querTeto = onde == Lugar.Sombra || (onde == Lugar.Qualquer && sorte.NextDouble() < 0.5);
             // 28 tentativas (eram 14: perto do jogador e procurando um teto, muitas falhavam e a célula ficava com menos)
             for (int t = 0; t < 28; t++)
@@ -226,7 +233,7 @@ namespace ZombieCityCleaner.Zombies
                 var tentativa = new Vector3(x, dados.Altura(x, z), z);
                 if (!NavMesh.SamplePosition(tentativa, out var hit, 3f, NavMesh.AllAreas)) continue;
                 Vector3 p = hit.position;
-                if (EmAreaLivre(p) || PertoDeAlguem(p, longe2)) continue;
+                if (EmAreaLivre(p) || PertoDemaisParaNascer(p)) continue;
                 bool teto = t < 20 && querTeto;   // nas últimas tentativas, aceita sem teto
                 if (onde == Lugar.Sol && (!Exposto(p) || Coberto(p))) continue;
                 if (onde == Lugar.Sombra && Exposto(p)) continue;
@@ -235,6 +242,20 @@ namespace ZombieCityCleaner.Zombies
                 return true;
             }
             ponto = default;
+            return false;
+        }
+
+        // perto demais de algum jogador para um zumbi nascer: cada um pela distância de visão dele (UI/Graficos.NascerAPartirDe;
+        // no mínimo longeDoJogador)
+        bool PertoDemaisParaNascer(Vector3 p)
+        {
+            for (int k = 0; k < QuantosJogadores; k++)
+            {
+                Vector3 d = Jogadores[k].pes - p;
+                d.y = 0f;
+                float minimo = Mathf.Max(longeDoJogador, Jogadores[k].nascer);
+                if (d.sqrMagnitude < minimo * minimo) return true;
+            }
             return false;
         }
 
@@ -266,6 +287,7 @@ namespace ZombieCityCleaner.Zombies
             foreach (var celula in _celulas.Keys)
                 if (!PertoDeAlguem(new Vector3((celula.x + 0.5f) * c, 0f, (celula.y + 0.5f) * c), rc)) _esquecer.Add(celula);
             foreach (var celula in _esquecer) _celulas.Remove(celula);
+            EsquecerAndares(rc);
         }
 
         static int Misturar(int semente, int a, int b)

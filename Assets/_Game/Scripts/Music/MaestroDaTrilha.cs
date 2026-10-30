@@ -28,7 +28,7 @@ namespace ZombieCityCleaner.Music
     /// Os blocos tocam pelo relógio do áudio (AudioSource.PlayScheduled): cada bloco começa exatamente no fim do anterior,
     /// e a cauda do eco do anterior soa por baixo. No F1, o painel da trilha (MenuDoDesenvolvedor.Trilha.cs).
     /// </summary>
-    public class MaestroDaTrilha : MonoBehaviour
+    public partial class MaestroDaTrilha : MonoBehaviour
     {
         public static MaestroDaTrilha Instancia { get; private set; }
 
@@ -75,7 +75,7 @@ namespace ZombieCityCleaner.Music
         public static float Volume
         {
             get => PlayerPrefs.GetFloat("trilha.volume", 0.7f);
-            set { PlayerPrefs.SetFloat("trilha.volume", Mathf.Clamp01(value)); PlayerPrefs.Save(); }
+            set => PlayerPrefs.SetFloat("trilha.volume", Mathf.Clamp01(value));   // grava junto com as opções (ou ao sair do jogo)
         }
 
         /// <summary>O nível de perigo forçado pelo F1 (de 0 a 3), ou -1: o dos zumbis em volta.</summary>
@@ -103,6 +103,7 @@ namespace ZombieCityCleaner.Music
             public float rampaAlvo, rampaSegundos;
             public bool cortar;
             public string nome;
+            public AudioLowPassFilter filtro;
 
             public void Rampa(float novo, float segundos)
             {
@@ -190,6 +191,7 @@ namespace ZombieCityCleaner.Music
             if (_nivel != antes) Anotar(agora, $"nível do perigo: {antes} -> {_nivel}");
 
             Vento(agora, dia);
+            Ambiente(agora, dia, dt);   // os sons de ambiente (MaestroDaTrilha.Ambiente.cs)
             if (_caiu)
             {
                 _caiu = false;
@@ -228,12 +230,14 @@ namespace ZombieCityCleaner.Music
             _eraDia = dia;
             _fila.Clear();
             Registro.Clear();
+            ComecarOAmbiente(agora);
             Anotar(agora, "a partida começou: o vento, e a música daqui a pouco");
         }
 
         void Desligar(double agora)
         {
             foreach (var f in _fontes) Apagar(f, agora, 2f);
+            DesligarOAmbiente();
             _estado = Estado.Fora;
         }
 
@@ -484,6 +488,7 @@ namespace ZombieCityCleaner.Music
                 var clipe = Escolher(dia ? "vento_dia" : "vento_noite", new List<AudioClip>(lista));
                 double inicio = Math.Max(_proximoVento, agora + 0.05);
                 Tocar(clipe, inicio, _estado == Estado.Silencio ? 1f : ventoNaMusica, "vento");
+                MarcarRajadas(dia ? _trilha.rajadasDoVentoDeDia : _trilha.rajadasDoVentoDeNoite, Array.IndexOf(lista, clipe), inicio);
                 _proximoVento = inicio + clipe.length - _trilha.sobreposicaoDoVento;
             }
             bool musica = _estado == Estado.Exploracao || _estado == Estado.Perigo;
@@ -506,7 +511,7 @@ namespace ZombieCityCleaner.Music
             som.clip = clipe;
             double agora = AudioSettings.dspTime;
             if (quando < agora + 0.02) quando = agora + 0.02;
-            var f = new Fonte { som = som, inicio = quando, fim = quando + clipe.length, grupo = grupo, camada = camada, ganho = ganho, alvo = ganho, nome = clipe.name };
+            var f = new Fonte { som = som, inicio = quando, fim = quando + clipe.length, grupo = grupo, camada = camada, ganho = ganho, alvo = ganho, nome = clipe.name, filtro = som.GetComponent<AudioLowPassFilter>() };
             som.volume = ganho * Volume;
             som.PlayScheduled(quando);
             _fontes.Add(f);
@@ -548,6 +553,7 @@ namespace ZombieCityCleaner.Music
                     f.ganho = Mathf.Abs(f.alvo - f.ganho) <= passo ? f.alvo : f.ganho + Mathf.Sign(f.alvo - f.ganho) * passo;
                 }
                 f.som.volume = f.ganho * volume;
+                if (f.filtro != null) f.filtro.cutoffFrequency = f.grupo == "vento" ? CorteDoVento : 22000f;   // dentro, o vento abafado
                 bool acabou = agora > f.fim + 0.05 || (f.cortar && f.ganho <= 0.001f && f.rampaEm < 0);
                 if (!acabou) continue;
                 f.som.Stop();
@@ -575,6 +581,7 @@ namespace ZombieCityCleaner.Music
             som.dopplerLevel = 0f;
             som.bypassReverbZones = true;
             som.bypassListenerEffects = true;
+            go.AddComponent<AudioLowPassFilter>().cutoffFrequency = 22000f;
             return som;
         }
 

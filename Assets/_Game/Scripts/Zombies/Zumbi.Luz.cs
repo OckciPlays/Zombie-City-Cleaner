@@ -108,6 +108,8 @@ namespace ZombieCityCleaner.Zombies
             if (NavMesh.Raycast(transform.position, ponto, out var bate, NavMesh.AllAreas)) ponto = bate.position;
             Vector3 d = ponto - transform.position;
             d.y = 0f;
+            // de dia, fugindo da lanterna na sombra, ele não pula para o sol (fica, se os dois lados forem sol)
+            if (_m.ProtegerDoSol && _m.Exposto(ponto)) return false;
             return d.sqrMagnitude >= 1f;
         }
 

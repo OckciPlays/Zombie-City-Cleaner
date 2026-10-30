@@ -267,7 +267,68 @@ def morte():
     return renderizar(p, 9.0, eco_cfg=(5.5, 3.0, 7.0, 0.03), molhado=0.55, alvo_db=-19, cauda=4, saida=SAIDA)
 
 
-PECAS = {'neblina': neblina, 'noite': noite, 'perigo1': lambda: perigo(1), 'perigo2': lambda: perigo(2),
+def menu():
+    """O menu do jogo (a pedido em 29/10/2026: "algo mais calmo também, transparecendo o medo e a angústia"): devagar, o
+    piano velho tocando o tema de longe em longe sobre o ré que não para, as cordas mudando de acorde a cada dois
+    compassos, a voz distante, uma caixinha de música um pouco desafinada (a lembrança da família) e o vidro frio. Em
+    laço: o fim emenda no começo (o lá do fim chama o ré do começo), sem corte. 32 compassos a 52 bpm (2 min 28 s)."""
+    I.sorte(83)
+    p = Peca('ZCC_00_Menu', 52)
+    T, B = p.T, p.b
+    total = T(32)
+    alem = 7.0   # o que passa do fim (o vento, o grave, os ecos) entra por baixo do começo
+    p.add('vento', 0, total + alem, None, 0.045, eco=0.15, corte=420, ataque=0.01, solta=0.01)
+    p.add('baixo', 0, total + alem, 38, 0.11, eco=0.3, ataque=0.01, solta=0.01, batimento=0.35)
+    # os acordes, dois compassos cada: a primeira metade em ré menor; a segunda passa pelo mi bemol (a sombra do frígio)
+    acordes = [([50, 57, 64], 38), ([46, 53, 57, 62], 34), ([43, 50, 52, 58], 31), ([45, 50, 52, 57], 33),
+               ([50, 57, 65], 38), ([46, 50, 57, 62], 34), ([43, 46, 50, 55], 31), ([45, 49, 52, 55], 33),
+               ([46, 53, 57, 62], 34), ([41, 48, 57, 60], 29), ([43, 50, 55, 58], 31), ([50, 53, 57, 62], 38),
+               ([39, 46, 51, 55], 39), ([46, 50, 53, 58], 34), ([45, 52, 55, 61], 33), ([45, 49, 52, 57], 33)]
+    for i, (notas, grave) in enumerate(acordes):
+        c = 2 * i
+        p.acorde('cordas', T(c), B(8) + 0.5, notas, 0.03, abertura=0.6, eco=0.6, ataque=3.0, solta=4.0, brilho=0.6)
+        p.add('baixo', T(c), B(8), grave, 0.07, eco=0.3, ataque=2.0, solta=3.0)
+    mel = dict(lado=-0.15, eco=0.6, pedal=1.2, desafinado=8.0, corte=3800)
+    mao = dict(lado=-0.3, eco=0.6, desafinado=8.0, corte=3000)
+    # o piano: o tema de longe em longe, com espaço (a solidão); a mão esquerda só nos começos de frase
+    p.frase('piano', 2, 0, [(69, 2), (67, 1), (65, 1), (64, 6)], 0.30, **mel)
+    p.frase('piano', 6, 1, [(69, 2), (67, 1), (65, 1), (62, 6)], 0.28, **mel)
+    p.frase('piano', 10, 0, [(65, 1), (67, 1), (69, 2), (72, 2), (70, 4)], 0.27, **mel)
+    p.frase('piano', 14, 0, [(69, 2), (67, 1), (65, 1), (61, 6)], 0.30, **mel)   # o dó sustenido, sem resolver
+    for c, notas in [(2, [46, 53]), (6, [46, 50]), (10, [41, 48]), (14, [45, 52])]:
+        for m in notas:
+            p.add('piano', T(c), B(4) + 1.0, m, 0.12, **mao)
+    gota = dict(lado=0.4, eco=0.85, desafinado=8.0, corte=5500)
+    for c, tempo, m in [(4, 2, 86), (8, 3, 81), (12, 1, 84), (17, 2, 86), (21, 0, 81), (25, 3, 77), (29, 1, 85)]:
+        p.add('piano', T(c, tempo), 2.5, m, 0.08, **gota)
+    # a segunda metade: a voz longe, a caixinha (a família) e o tema uma oitava acima, mais fraco
+    p.add('coro', T(16), B(16), 74, 0.035, lado=0.35, eco=0.9, vogal='u', ataque=4, solta=5)
+    p.add('coro', T(24), B(12), 75, 0.03, lado=-0.3, eco=0.9, vogal='u', ataque=4, solta=5)   # o mi bemol
+    p.frase('caixinha', 20, 0, [(80.8, 2), (78.8, 1), (76.8, 1), (75.8, 4), (None, 2), (80.8, 2), (78.8, 1), (76.8, 1), (73.8, 4)], 0.07, lado=0.3, eco=0.7)
+    p.frase('piano', 26, 0, [(81, 2), (79, 1), (77, 1), (74, 6)], 0.18, **dict(mel, lado=0.2))
+    p.add('piano', T(30), B(8) + 2.0, 61, 0.22, **mel)   # o dó sustenido sozinho: chama o ré do começo
+    p.add('piano', T(30), B(8) + 2.0, 45, 0.12, **mao)
+    # o vidro frio, duas vezes
+    p.add('metal', T(8), 9.0, 88, 0.022, lado=0.6, eco=0.85, ataque=3, solta=4)
+    p.add('metal', T(23), 10.0, 87, 0.02, lado=-0.6, eco=0.85, ataque=3, solta=4, curva=-1.0)
+    p.add('sino', T(12, 2), 0, 50, 0.04, lado=-0.5, eco=0.9, longo=1.5)
+    return renderizar_laco(p, total, alem, eco_cfg=(6.0, 3.4, 8.0, 0.05), molhado=0.65, alvo_db=-22, saida=SAIDA)
+
+
+def renderizar_laco(p, total, alem, eco_cfg, molhado, alvo_db, saida):
+    """Em laço: o que passa do fim (o vento, o grave, a cauda dos ecos) entra cruzando por baixo do começo."""
+    import numpy as np
+    from estudio import mixar, finalizar_sem_fim
+    e, d = mixar(p, total + alem, eco_cfg, molhado, cauda=4.0)
+    n, m = int(total * I.SR), int(alem * I.SR)
+    k = np.sin(np.linspace(0, np.pi / 2, m)) ** 2
+    saida_e, saida_d = e[:n].copy(), d[:n].copy()
+    saida_e[:m] = e[:m] * k + e[n:n + m] * k[::-1]
+    saida_d[:m] = d[:m] * k + d[n:n + m] * k[::-1]
+    return finalizar_sem_fim(p.nome, saida_e, saida_d, alvo_db, saida)
+
+
+PECAS = {'menu': menu, 'neblina': neblina, 'noite': noite, 'perigo1': lambda: perigo(1), 'perigo2': lambda: perigo(2),
          'perigo3': lambda: perigo(3), 'bunker': bunker, 'visto': visto, 'estatua': estatua, 'amanhecer': amanhecer, 'morte': morte}
 
 if __name__ == '__main__':

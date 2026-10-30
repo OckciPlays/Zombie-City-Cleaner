@@ -46,7 +46,7 @@ def main():
         for b in man[fam]['blocos']:
             ogg(os.path.join(BLOCOS, b['arquivo']), os.path.join(DESTINO, 'vento', b['nome'] + '.ogg'))
             n += 1
-    for nome, arq in (('amanhecer', 'ZCC_07_Momento_Amanhecer.wav'), ('morte', 'ZCC_08_Momento_Morte.wav')):
+    for nome, arq in (('amanhecer', 'ZCC_07_Momento_Amanhecer.wav'), ('morte', 'ZCC_08_Momento_Morte.wav'), ('menu', 'ZCC_00_Menu.wav')):
         origem = os.path.join(SAIDA, arq)
         if not os.path.exists(origem):
             subprocess.run([sys.executable, 'compor.py', 'saida', nome], cwd=AQUI, check=True)
@@ -56,12 +56,37 @@ def main():
     info = dict(neblina=dict(bpm=man['neblina']['bpm'], comprimento=man['neblina']['comprimento']),
                 noite=dict(bpm=man['noite']['bpm'], comprimento=man['noite']['comprimento']),
                 perigo=dict(bpm=man['perigo']['bpm'], comprimento=man['perigo']['comprimento']),
-                encaixeDaEntrada=entrada['encaixe'], sobreposicaoDoVento=man['vento_dia']['sobreposicao'])
+                encaixeDaEntrada=entrada['encaixe'], sobreposicaoDoVento=man['vento_dia']['sobreposicao'],
+                rajadasDeDia=[dict(tempos=b['rajadas']) for b in man['vento_dia']['blocos']],
+                rajadasDeNoite=[dict(tempos=b['rajadas']) for b in man['vento_noite']['blocos']])
     with open(os.path.join(DESTINO, 'trilha.json'), 'w', encoding='utf-8') as f:
         json.dump(info, f, indent=1)
     tamanho = sum(os.path.getsize(os.path.join(r, a)) for r, _, fs in os.walk(DESTINO) for a in fs if a.endswith('.ogg'))
     print(f'{n} arquivos em {DESTINO} ({tamanho / 1e6:.1f} MB)')
 
 
+def so_rajadas():
+    """Só os tempos das rajadas do vento (no manifesto e no trilha.json), sem refazer nem converter os sons: o vento é o
+    mesmo (as mesmas sementes), e converter de novo mudaria os .ogg por dentro (o git veria 123 arquivos mudados)."""
+    import blocos
+    caminho = os.path.join(BLOCOS, 'manifesto.json')
+    man = json.load(open(caminho, encoding='utf-8'))
+    for fam, noite in (('vento_dia', False), ('vento_noite', True)):
+        for s, b in enumerate(man[fam]['blocos']):
+            *_, centros = blocos.vento(s, noite)
+            b['rajadas'] = [round(c, 2) for c in centros]
+    open(caminho, 'w', encoding='utf-8').write(json.dumps(man, ensure_ascii=False, indent=1, default=float))
+    destino = os.path.join(DESTINO, 'trilha.json')
+    info = json.load(open(destino, encoding='utf-8'))
+    info['rajadasDeDia'] = [dict(tempos=b['rajadas']) for b in man['vento_dia']['blocos']]
+    info['rajadasDeNoite'] = [dict(tempos=b['rajadas']) for b in man['vento_noite']['blocos']]
+    with open(destino, 'w', encoding='utf-8') as f:
+        json.dump(info, f, indent=1)
+    print('rajadas por bloco:', [len(b['rajadas']) for b in man['vento_dia']['blocos']], [len(b['rajadas']) for b in man['vento_noite']['blocos']])
+
+
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == 'rajadas':
+        so_rajadas()   # python exportar.py rajadas
+    else:
+        main()

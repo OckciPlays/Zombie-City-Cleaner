@@ -51,6 +51,13 @@ namespace ZombieCityCleaner.World
 
         public PlantaDePredio Planta => _planta;
 
+        /// <summary>Os prédios de verdade agora (o povoamento dos andares, ZombieManager.Predios.cs).</summary>
+        public static readonly List<AndaresDoPredio> Ativos = new List<AndaresDoPredio>();
+
+        void OnEnable() => Ativos.Add(this);
+
+        void OnDisable() => Ativos.Remove(this);
+
         /// <summary>Algum andar está com a colisão cozinhando (o bloco espera para tirar o prédio).</summary>
         public bool Cozinhando
         {
@@ -210,12 +217,8 @@ namespace ZombieCityCleaner.World
             }
             pisos.resto = Superficie.Concreto;
             float b = _planta.Base(f), h = _planta.PeDireitoDe(f);
-            var eco = new GameObject("Eco").AddComponent<AudioReverbZone>();
-            eco.transform.SetParent(go.transform, false);
-            eco.transform.localPosition = new Vector3(0f, b + h / 2, 0f);
-            eco.reverbPreset = AudioReverbPreset.Room;
-            eco.minDistance = Mathf.Min(_planta.W, _planta.D) * 0.4f;
-            eco.maxDistance = Mathf.Max(_planta.W, _planta.D) * 0.6f;
+            // o eco de sala, só com o ouvido dentro deste andar (a esfera vazava para o telhado e para a rua)
+            EcoSoDentro.Criar(go.transform, new Bounds(new Vector3(0f, b + h / 2, 0f), new Vector3(_planta.W, h, _planta.D)));
             if (_escuros[f] != null) _escuros[f].enabled = false;
             MalhasDasCasas.Devolver(r);
         }

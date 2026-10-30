@@ -60,7 +60,9 @@ namespace ZombieCityCleaner.Zombies
 
         /// <summary>
         /// O facho que bate neste ponto (o peito do zumbi): dentro do alcance e do ângulo, sem parede no meio. De dia, a
-        /// luz só conta sob um teto (na rua, o sol apaga o facho; a lanterna fica ligada de dia também).
+        /// luz conta em qualquer sombra (debaixo de um teto, na sombra dos prédios, debaixo das copas); no sol, não (o sol
+        /// apaga o facho, e o zumbi no sol já está fugindo). Até 29/10/2026 era só debaixo de um teto, e na cidade grande os
+        /// zumbis que passam o dia na sombra dos prédios, na rua, não ligavam para a lanterna (o bug que o Pedro viu).
         /// </summary>
         internal bool NoFacho(Vector3 peito, out Facho facho)
         {
@@ -75,7 +77,7 @@ namespace ZombieCityCleaner.Zombies
                 if (d > f.alcance || d < 0.3f) continue;
                 if (Vector3.Dot(para / d, f.direcao) < f.cosMeio) continue;
                 if (!Enxerga(f.origem, peito)) continue;
-                if (dia && !Coberto(peito)) continue;
+                if (dia && Exposto(peito - Vector3.up * 1.2f)) continue;   // no sol (o ponto é o peito; o Exposto quer os pés)
                 facho = f;
                 return true;
             }

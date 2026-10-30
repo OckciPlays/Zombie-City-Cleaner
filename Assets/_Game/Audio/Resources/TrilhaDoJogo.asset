@@ -236,5 +236,80 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 00af9f4e84026ce4da2bc2199bcb2abd, type: 3}
   - {fileID: 8300000, guid: 79e6dc78592535a4fbe926565e93fd15, type: 3}
   sobreposicaoDoVento: 4
+  rajadasDoVentoDeDia:
+  - tempos: []
+  - tempos:
+    - 12.58
+  - tempos: []
+  - tempos:
+    - 7.66
+  - tempos:
+    - 8.6
+  - tempos:
+    - 9.1
+  - tempos:
+    - 7.53
+  - tempos:
+    - 14.91
+  - tempos:
+    - 9.72
+  - tempos:
+    - 10.42
+  rajadasDoVentoDeNoite:
+  - tempos: []
+  - tempos:
+    - 18.05
+  - tempos:
+    - 16.96
+  - tempos:
+    - 13.98
+  - tempos:
+    - 15.82
+  - tempos:
+    - 16.75
+  - tempos: []
+  - tempos:
+    - 14.18
+  - tempos:
+    - 22.26
+  - tempos:
+    - 10.47
+    - 20.32
+  grilos:
+  - {fileID: 8300000, guid: 8b41de13b9656c44c8f275d3b5362bad, type: 3}
+  - {fileID: 8300000, guid: 11d49206991070344b8cec6aa93a7af9, type: 3}
+  latidos:
+  - {fileID: 8300000, guid: db64077e72c9b3742a7d9b218a1958c3, type: 3}
+  - {fileID: 8300000, guid: 94683fb5e833f4f449f08b2b5c277e8c, type: 3}
+  - {fileID: 8300000, guid: 3ef1387c445c6414093ca7c79e5444d4, type: 3}
+  - {fileID: 8300000, guid: 9bafe41ba58835d4db007496ed4bc91e, type: 3}
+  uivos:
+  - {fileID: 8300000, guid: 98ebc5fc223a67f4db840d781de7a465, type: 3}
+  - {fileID: 8300000, guid: ac85b053d1aba4445875acf7545f546f, type: 3}
+  - {fileID: 8300000, guid: b146899404a20594ab40282a5d0f8b2d, type: 3}
+  janelas:
+  - {fileID: 8300000, guid: d878beeb80d61cc408c1e585d23e1dd9, type: 3}
+  - {fileID: 8300000, guid: 6b4d866f5b5b0154696aef675072f230, type: 3}
+  - {fileID: 8300000, guid: 2c3a30c9277095c40a75a27f19927444, type: 3}
+  - {fileID: 8300000, guid: 32467dba25247af448de7eab508624f4, type: 3}
+  portas:
+  - {fileID: 8300000, guid: 7b843c05cb2084042b06b9e0deeb6292, type: 3}
+  - {fileID: 8300000, guid: 120c2858b7e488443a7c2b7eeff3ea56, type: 3}
+  placas:
+  - {fileID: 8300000, guid: a76febed87ab469479eea1c34e53537d, type: 3}
+  - {fileID: 8300000, guid: b799dc487d94a8e4fb0a9ba2dca422c3, type: 3}
+  - {fileID: 8300000, guid: 69847fb3219d08b45ababdfbc5c73fb5, type: 3}
+  latas:
+  - {fileID: 8300000, guid: db8fedcac466d8a46977684919a8c316, type: 3}
+  - {fileID: 8300000, guid: 9d3fe1d654223bd4e892d077a0a7c19d, type: 3}
+  madeira:
+  - {fileID: 8300000, guid: cccf784308055f149b8ae63f9fdd6f1e, type: 3}
+  - {fileID: 8300000, guid: 648d8a59bf902a84eb06233bbf4beedf, type: 3}
+  - {fileID: 8300000, guid: c015e60f02ec1d64baf795ede0e3c527, type: 3}
+  corvos:
+  - {fileID: 8300000, guid: 346c2338962c9394da2898fb71d67b36, type: 3}
+  - {fileID: 8300000, guid: dd302c149009ef2459472963694c2f66, type: 3}
+  - {fileID: 8300000, guid: 63ab704cda22d1446916af22e5925e3e, type: 3}
   amanhecer: {fileID: 8300000, guid: 1d8e03329cf020d48a44395d5f61b15d, type: 3}
   morte: {fileID: 8300000, guid: d80e42ee2ae311b45a31a584eb6b259d, type: 3}
+  menu: {fileID: 8300000, guid: cd5b2c13a925f7349a70b36a42a3084b, type: 3}

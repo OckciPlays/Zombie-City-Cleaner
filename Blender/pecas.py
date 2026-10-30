@@ -1,4 +1,4 @@
-# As peças do carro (a vela, a bateria, o radiador e o pneu): os modelos, o Pecas.fbx e os ícones e as fotos do inventário.
+# As peças do carro (a vela, a bateria, o radiador, o pneu, o macaco e a chave da perua): os modelos, o Pecas.fbx e os ícones e as fotos do inventário.
 # As do motor se acham no capô dos carros da cidade e vão no capô do carro que se dirige; o pneu vai numa das rodas.
 #
 # Como rodar (Blender 5.2, numa cena qualquer):
@@ -6,7 +6,8 @@
 #   pecas.construir()    # refaz as 4 peças na cena "Pecas"
 #   pecas.exportar()     # grava Assets/_Game/Art/Characters/Jogador/Pecas.fbx
 #   pecas.imagens()      # grava Icone_<nome>.png e Foto_<nome>.png (600 x 500) em Assets/_Game/Art/UI/Icones
-# Depois, na Unity: Zombie City Cleaner > Montar armas.
+#   pecas.imagens("ChaveDaPerua")   # só as de uma
+# Depois, na Unity: Zombie City Cleaner > Veículos > Montar as peças do carro (e a chave), com o Mundo aberto.
 #
 # O formato é o do Municao.fbx (as peças e as cores vêm do equipamentos.py): cada uma é um objeto girado 90° em X, com a
 # malha nos eixos da Unity, a origem embaixo, no meio.
@@ -15,8 +16,9 @@
 # - Radiador: deitado (as aletas de alumínio por cima, as caixas pretas dos lados, a tampa e os dois canos).
 # - Pneu: a roda inteira deitada, com a calota para cima (as medidas da Carro_Roda do carro.py: 0,30 m de raio, 0,19 de largura).
 # - Macaco: o macaco sanfona fechado, deitado (a base, os 4 braços em losango, o fuso com o olhal e o apoio de cima).
+# - ChaveDaPerua: a chave do carro, deitada (a cabeça de plástico preto, a lâmina com os dentes, a argola e o chaveiro amarelo).
 # Os ícones têm a proporção das células da peça no inventário (Itens.cs): a vela 1 x 1, a bateria 2 x 2, o radiador 3 x 2,
-# o pneu 3 x 3 e o macaco 3 x 1.
+# o pneu 3 x 3, o macaco 3 x 1 e a chave 1 x 1.
 
 import math
 import os
@@ -26,9 +28,9 @@ from mathutils import Vector
 
 import equipamentos as eq
 
-NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco"]
+NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco", "ChaveDaPerua"]
 # as células de cada uma no inventário (o ícone tem esta proporção, 128 px por célula)
-CELULAS = {"Vela": (1, 1), "Bateria": (2, 2), "Radiador": (3, 2), "Pneu": (3, 3), "Macaco": (3, 1)}
+CELULAS = {"Vela": (1, 1), "Bateria": (2, 2), "Radiador": (3, 2), "Pneu": (3, 3), "Macaco": (3, 1), "ChaveDaPerua": (1, 1)}
 
 # as cores novas, (linha da imagem, coluna) na Paleta.png
 eq.CORES.update({
@@ -146,7 +148,34 @@ def _macaco():
     return pecas
 
 
-MODELOS = {"Vela": _vela, "Bateria": _bateria, "Radiador": _radiador, "Pneu": _pneu, "Macaco": _macaco}
+def _chave():
+    # a chave da perua deitada, uns 13 cm com o chaveiro (o comprimento em X): a cabeça de plástico preto, a lâmina de
+    # metal com os dentes de um lado e a ponta em bico, a argola (8 lados) e o chaveiro amarelo
+    x0 = 0.019   # para o meio da chave ficar na origem
+    e = 0.0022   # a grossura da lâmina
+    pecas = [
+        (_caixa, "preto_bateria", (0.032, 0.026, 0.007), (x0 - 0.016, 0, 0.0035), (0, 0, 0), 0.002),
+        (_caixa, "aco_escuro", (0.004, 0.012, 0.0045), (x0 + 0.001, 0, 0.0035), (0, 0, 0), 0),
+        (_caixa, "metal_claro", (0.044, 0.009, e), (x0 + 0.022, 0, 0.0035), (0, 0, 0), 0),
+        (_caixa, "metal_claro", (0.0062, 0.0062, e), (x0 + 0.044, 0, 0.0035), (0, 0, 45), 0),
+    ]
+    # os dentes, de um lado só, em alturas diferentes
+    for x, fundo in ((0.010, 0.0030), (0.017, 0.0018), (0.024, 0.0034), (0.031, 0.0022), (0.037, 0.0028)):
+        pecas.append((_caixa, "metal_claro", (0.0045, fundo, e), (x0 + x, -0.0045 - fundo / 2, 0.0035), (0, 0, 0), 0))
+    # a argola, deitada, passando pelo furo da cabeça
+    ra, ca = 0.012, x0 - 0.036
+    lado = 2 * ra * math.sin(math.pi / 8) + 0.0012
+    for i in range(8):
+        a = (i + 0.5) * 45
+        t = math.radians(a)
+        pecas.append((_caixa, "aco", (lado, 0.0022, 0.0022), (ca + ra * math.cos(t), ra * math.sin(t), 0.0011), (0, 0, a + 90), 0))
+    # o chaveiro: uma placa de plástico amarelo, com o furo por onde passa a argola
+    pecas.append((_caixa, "etiqueta", (0.040, 0.022, 0.004), (ca - ra - 0.019, 0, 0.002), (0, 0, 0), 0.002))
+    pecas.append((_caixa, "aco_escuro", (0.004, 0.004, 0.0045), (ca - ra - 0.003, 0, 0.002), (0, 0, 0), 0))
+    return pecas
+
+
+MODELOS = {"Vela": _vela, "Bateria": _bateria, "Radiador": _radiador, "Pneu": _pneu, "Macaco": _macaco, "ChaveDaPerua": _chave}
 
 
 def _cena():
@@ -178,9 +207,9 @@ def exportar():
                              apply_scale_options="FBX_SCALE_ALL", bake_anim=False, mesh_smooth_type="FACE")
 
 
-def imagens():
+def imagens(so=None):
     """Os ícones (128 px por célula, na proporção da peça no inventário) e as fotos (600 x 500, de 3/4), no estilo dos
-    outros: o Workbench com a textura, a cavidade, o contorno e o fundo transparente."""
+    outros: o Workbench com a textura, a cavidade, o contorno e o fundo transparente. so: o nome de uma peça (só ela)."""
     cena = _cena()
     r = cena.render
     try:
@@ -200,6 +229,8 @@ def imagens():
     cena.view_settings.view_transform = "Standard"
     objs = {o.name.split("_")[0]: o for o in cena.objects if o.name.split("_")[0] in NOMES}
     for nome, o in objs.items():
+        if so and nome != so:
+            continue
         for outro in objs.values():
             outro.hide_render = outro is not o
         cantos = [o.matrix_world @ Vector(c) for c in o.bound_box]
@@ -207,14 +238,14 @@ def imagens():
         tam = max((max(c[i] for c in cantos) - min(c[i] for c in cantos)) for i in range(3))
         cx, cy = CELULAS[nome]
         # a frente é -Y no Blender. O radiador, deitado, é visto mais de cima (as aletas)
-        icone = {"Vela": (0.6, -1.0, 0.45), "Bateria": (0.45, -1.0, 0.6), "Radiador": (0.0, -0.55, 1.0), "Pneu": (0.25, -0.6, 1.0), "Macaco": (0.0, -1.0, 0.3)}[nome]
-        foto = {"Vela": (0.9, -1.0, 0.6), "Bateria": (0.8, -1.0, 0.75), "Radiador": (0.6, -0.8, 1.0), "Pneu": (0.6, -1.0, 0.9), "Macaco": (0.8, -1.0, 0.6)}[nome]
+        icone = {"Vela": (0.6, -1.0, 0.45), "Bateria": (0.45, -1.0, 0.6), "Radiador": (0.0, -0.55, 1.0), "Pneu": (0.25, -0.6, 1.0), "Macaco": (0.0, -1.0, 0.3), "ChaveDaPerua": (0.15, -0.4, 1.0)}[nome]
+        foto = {"Vela": (0.9, -1.0, 0.6), "Bateria": (0.8, -1.0, 0.75), "Radiador": (0.6, -0.8, 1.0), "Pneu": (0.6, -1.0, 0.9), "Macaco": (0.8, -1.0, 0.6), "ChaveDaPerua": (0.5, -0.8, 1.0)}[nome]
         r.resolution_x, r.resolution_y = 128 * cx, 128 * cy
         eq._camera(cena, True, centro, icone, 3.0, tam * 1.15)
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500
-        eq._camera(cena, False, centro, foto, tam * (1.9 if nome in ("Radiador", "Pneu") else 1.5 if nome == "Macaco" else 2.6), tam)
+        eq._camera(cena, False, centro, foto, tam * (1.9 if nome in ("Radiador", "Pneu", "ChaveDaPerua") else 1.5 if nome == "Macaco" else 2.6), tam)
         r.filepath = os.path.join(eq.ICONES, f"Foto_{nome}.png")
         bpy.ops.render.render(write_still=True)
     for o in objs.values():

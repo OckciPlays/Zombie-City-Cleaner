@@ -8,6 +8,26 @@ namespace ZombieCityCleaner.Zombies
     {
         SonsDoOco _sons;
         bool _sonsCarregados;
+        static float _volumeDosZumbis = -1f;
+
+        /// <summary>
+        /// O volume dos sons dos zumbis (Configurações > Zumbis, a pedido em 29/10/2026; de 0 a 1, gravado no computador):
+        /// a voz (o gemido, o golpe, o chamado, a resposta, a agonia, a dor), a crosta estalando, a pedra fechando e
+        /// quebrando e o grito ao morrer. A voz e a crosta mudam na hora (o volume delas é refeito enquanto tocam).
+        /// </summary>
+        public static float VolumeDosZumbis
+        {
+            get
+            {
+                if (_volumeDosZumbis < 0f) _volumeDosZumbis = Mathf.Clamp01(PlayerPrefs.GetFloat("zumbis.volume", 1f));
+                return _volumeDosZumbis;
+            }
+            set
+            {
+                _volumeDosZumbis = Mathf.Clamp01(value);
+                PlayerPrefs.SetFloat("zumbis.volume", _volumeDosZumbis);   // grava junto com as opções
+            }
+        }
 
         /// <summary>Os sons do Oco (Audio/Resources/SonsDoOco.asset), ou null (sem eles, a voz antiga).</summary>
         internal SonsDoOco Sons

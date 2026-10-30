@@ -130,6 +130,44 @@ namespace ZombieCityCleaner.EditorTools
             Debug.Log("Armas montadas: braços, animações, malhas, ícones, prefab do jogador, o suporte do bunker e os itens no mundo.");
         }
 
+        /// <summary>
+        /// Só as peças do carro (a pedido em 29/10/2026, quando entrou a chave da perua): as malhas Peca_* do Pecas.fbx
+        /// (Blender/pecas.py), os ícones e as fotos, os ícones no prefab do jogador e as malhas no "Itens no mundo" da cena
+        /// aberta. Sem refazer as armas, os braços, os controladores e o resto da "Montar armas".
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Veículos/Montar as peças do carro (e a chave)")]
+        public static void MontarAsPecasDoCarro()
+        {
+            ImportarAvulsas(FbxPecas);
+            for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
+            ImportarIcones();
+            AssetDatabase.SaveAssets();
+            Texture2D[] Imagens(System.Func<int, string> caminho) =>
+                Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(caminho(k))).ToArray();
+            const string jogador = "Assets/_Game/Prefabs/Jogador.prefab";
+            var raiz = PrefabUtility.LoadPrefabContents(jogador);
+            try
+            {
+                var inventario = raiz.GetComponentInChildren<InventarioJogador>(true);
+                inventario.iconesDePeca = Imagens(IconeDaPeca);
+                inventario.fotosDePeca = Imagens(FotoDaPeca);
+                PrefabUtility.SaveAsPrefabAsset(raiz, jogador);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(raiz);
+            }
+            var mundo = Object.FindAnyObjectByType<ItensNoMundo>();
+            if (mundo != null)
+            {
+                mundo.malhasDePeca = Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaPeca(k))).ToArray();
+                EditorUtility.SetDirty(mundo);
+                EditorSceneManager.MarkSceneDirty(mundo.gameObject.scene);
+                EditorSceneManager.SaveScene(mundo.gameObject.scene);
+            }
+            Debug.Log($"Peças do carro montadas: {Itens.QuantasPecas} malhas, ícones e fotos no jogador" + (mundo != null ? $", malhas no \"Itens no mundo\" de {mundo.gameObject.scene.name}." : " (sem \"Itens no mundo\" na cena aberta)."));
+        }
+
         /// <summary>Tudo menos o prefab e a cena: importações, malhas, ícones e controladores.</summary>
         public static void Preparar()
         {

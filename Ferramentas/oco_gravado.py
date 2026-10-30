@@ -6,8 +6,9 @@
 #  - o sopro: um chiado rouco com a forma das vogais da própria voz (o ar passando por uma garganta seca);
 #  - o tremor da garganta (pulsos irregulares, como o "fry"), a saturação, o oco (tubos que não casam: soa vazio, de
 #    dentro) e uma sala curta, que também dá a cauda que a supressão de ruído do celular cortou.
-# O volume de cada tipo fica 2 dB abaixo do dos sons gerados de antes (densos, eles soam mais fortes); no jogo, todas as
-# vozes do Oco ainda passam pelo volume do SonsDoOco.asset (a pedido: "o de antes também era um pouco alto").
+# O volume de cada tipo fica no dos sons gerados de antes (a referência). Na madrugada de 29/10/2026 eles desceram 2 dB e
+# o SonsDoOco.asset, para 60% ("o de antes também era um pouco alto"); na tarde do mesmo dia os dois voltaram, a pedido
+# ("deixar os que eu gravei porém com o volume alto"), e quem quer mais baixo usa Configurações > Zumbis, no jogo.
 # Uso: python oco_gravado.py <pasta das gravações> <pasta de saída>
 #   (no jogo: python oco_gravado.py "C:/Users/pedro/Videos" ../Assets/_Game/Audio/Oco; depois, o menu Zombie City
 #   Cleaner > Zumbis > Montar os sons do Oco)
@@ -24,7 +25,7 @@ from scipy.ndimage import uniform_filter1d
 SR = 44100
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ATUAIS = os.path.join(AQUI, '..', 'Assets', '_Game', 'Audio', 'Oco')
-ABAIXO_DB = -2.0
+ABAIXO_DB = 0.0   # quanto abaixo da referência (foi -2 na madrugada de 29/10/2026)
 # o volume dos sons gerados de antes (a voz ativa, a mediana de cada tipo): a referência, que não muda quando os
 # gravados ocupam o lugar deles
 REFERENCIA_DB = {'Voz': -11.8, 'Golpe': -7.8, 'Agonia': -8.9, 'Tiro': -7.2}

@@ -29,6 +29,8 @@ namespace ZombieCityCleaner.Zombies
         public float intervaloDeEnvio = 0.1f;
         [Tooltip("Os do nível médio vão a cada N envios.")]
         public int divisorMedio = 3;
+        [Tooltip("Os de longe (parados), dentro da distância de visão do cliente (UI/Graficos), vão a cada N envios (abaixo do tempo para sumir).")]
+        public int divisorLonge = 5;
         [Tooltip("Sem notícias por este tempo (s), a cópia some: o zumbi saiu do alcance.")]
         public float tempoParaSumir = 1.5f;
 
@@ -81,10 +83,13 @@ namespace ZombieCityCleaner.Zombies
                     foreach (var z in _ativos)
                     {
                         // a distância conta a luneta: na linha dela, os zumbis de longe vão como se estivessem perto
-                        var n = NivelPara(Distancia(Jogadores[j], z.transform.position), (Zumbi.Nivel)niveis[z.Id]);
+                        float d = Distancia(Jogadores[j], z.transform.position);
+                        var n = NivelPara(d, (Zumbi.Nivel)niveis[z.Id]);
                         niveis[z.Id] = (byte)n;
-                        // os do nível médio se revezam (pelo Id), para não irem todos no mesmo envio
-                        if (n == Zumbi.Nivel.Perto || (n == Zumbi.Nivel.Medio && (_tick + z.Id) % divisorMedio == 0)) _envio.Add(z);
+                        // os do nível médio se revezam (pelo Id), para não irem todos no mesmo envio; os de longe também, mais
+                        // devagar, só até a distância de visão do cliente (lá ele os desenha parados, como o anfitrião)
+                        if (n == Zumbi.Nivel.Perto || (n == Zumbi.Nivel.Medio && (_tick + z.Id) % divisorMedio == 0)
+                            || (n == Zumbi.Nivel.Longe && d < Jogadores[j].visao && (_tick + z.Id) % divisorLonge == 0)) _envio.Add(z);
                     }
                     if (_envio.Count > 0) Mandar(cliente, tempo, Jogadores[j].jogador.transform.position, _envio);
                 }
@@ -92,7 +97,7 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        // origem: o jogador do cliente (os zumbis que vão estão a menos de 40 m dele, ou 160 na luneta)
+        // origem: o jogador do cliente (os zumbis que vão estão até a distância de visão dele, no máximo 85 m, ou 160 na luneta)
         void Mandar(ulong cliente, double tempo, Vector3 origem, List<Zumbi> lista)
         {
             for (int i = 0; i < lista.Count; i += PorPacote)

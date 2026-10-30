@@ -790,12 +790,14 @@ MonoBehaviour:
   - {fileID: 2800000, guid: e9cfc5cdc126e44428a7b5d10f81419d, type: 3}
   - {fileID: 2800000, guid: f6f5a71a0a886494abc6e7a8075199af, type: 3}
   - {fileID: 2800000, guid: 886f48c87e1884a46a30d44374604753, type: 3}
+  - {fileID: 2800000, guid: b513d9099b98bf04ca859e28071f23d2, type: 3}
   fotosDePeca:
   - {fileID: 2800000, guid: a45164fa85fc8a94ba7626fbda5bc646, type: 3}
   - {fileID: 2800000, guid: c8b9c48f13e2dd64395cf1e18272db25, type: 3}
   - {fileID: 2800000, guid: a838051a4e14e11418a74753c92c79c8, type: 3}
   - {fileID: 2800000, guid: aa3cf2057436021438be0d86b0d9aad6, type: 3}
   - {fileID: 2800000, guid: 728509401991c9149876bc5dc6444481, type: 3}
+  - {fileID: 2800000, guid: 91354b084aa840845ad561c3ed0b2ff1, type: 3}
 --- !u!114 &4620897733806836672
 MonoBehaviour:
   m_ObjectHideFlags: 0

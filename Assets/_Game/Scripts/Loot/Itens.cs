@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.Loot
         Nada = 0, Pistola, Rifle, Submetralhadora, Espingarda, Sniper, Comida = 16, Agua,
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
         Municao9mm = 48, Municao556, Municao12, Municao762,
-        Vela = 64, Bateria, Radiador, Pneu, Macaco,
+        Vela = 64, Bateria, Radiador, Pneu, Macaco, ChaveDaPerua,
     }
 
     /// <summary>
@@ -120,12 +120,16 @@ namespace ZombieCityCleaner.Loot
             new DadosDaPeca { modelo = "Pneu", nome = "pneu", nomeComArtigo = "o pneu", resumo = "Uma roda com o pneu, para trocar a de um carro.", funcao = "Roda", tamanho = new(3, 3) },
             // a ferramenta (sem estado): fica no porta-malas, com o estepe
             new DadosDaPeca { modelo = "Macaco", nome = "macaco", nomeComArtigo = "o macaco", resumo = "Levanta o carro para trocar a roda.", funcao = "Ferramenta", tamanho = new(3, 1) },
+            // a chave da perua (a pedido em 29/10/2026; sem estado): com ela, a partida é direta; sem ela, ligação direta
+            new DadosDaPeca { modelo = "ChaveDaPerua", nome = "chave da perua", nomeComArtigo = "a chave da perua", resumo = "Liga a perua direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
         };
         public static int QuantasPecas => _pecas.Length;
-        /// <summary>Uma peça do carro (as 3 do motor, o pneu e o macaco), feita pelo pecas.py.</summary>
-        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.Macaco;
-        /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco.</summary>
-        public static bool ComEstado(Item i) => EhPeca(i) && i != Item.Macaco;
+        /// <summary>Uma peça do carro (as 3 do motor, o pneu, o macaco e a chave da perua), feita pelo pecas.py.</summary>
+        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.ChaveDaPerua;
+        /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco e a chave.</summary>
+        public static bool ComEstado(Item i) => EhPeca(i) && i != Item.Macaco && i != Item.ChaveDaPerua;
+        /// <summary>Uma chave de veículo (hoje só a da perua; cada veículo novo terá a sua).</summary>
+        public static bool EhChave(Item i) => i == Item.ChaveDaPerua;
         /// <summary>Uma peça do capô (a vela, a bateria e o radiador; o pneu, não).</summary>
         public static bool EhPecaDoMotor(Item i) => i >= Item.Vela && i <= Item.Radiador;
         /// <summary>O índice da peça (0 a 2 as do motor, a ordem de <see cref="Vehicles.PecasDoMotor"/>; 3 o pneu), ou -1.</summary>

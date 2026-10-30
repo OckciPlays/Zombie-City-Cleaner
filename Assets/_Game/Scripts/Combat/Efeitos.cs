@@ -152,7 +152,15 @@ namespace ZombieCityCleaner.Combat
             s.spatialBlend = espacial ? 1f : 0f;
             s.maxDistance = alcance;
             float longe = espacial && cam != null ? Mathf.Clamp01(Vector3.Distance(cam.transform.position, posicao) / alcance) : 0f;
-            s.GetComponent<AudioLowPassFilter>().cutoffFrequency = 22000f * Mathf.Pow(0.08f, longe);
+            float corte = 22000f * Mathf.Pow(0.08f, longe);
+            // com parede, laje ou o telhado no meio, abafado e mais baixo (Abafamento)
+            float tapado = espacial && cam != null ? Abafamento.Quanto(cam.transform.position, posicao) : 0f;
+            if (tapado > 0f)
+            {
+                corte = Mathf.Min(corte, Abafamento.Corte(tapado));
+                volume *= Mathf.Lerp(1f, Abafamento.VolumeTapado, tapado);
+            }
+            s.GetComponent<AudioLowPassFilter>().cutoffFrequency = corte;
             s.pitch = Random.Range(0.94f, 1.06f);
             s.PlayOneShot(clip, volume);
         }

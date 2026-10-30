@@ -21,7 +21,7 @@ namespace ZombieCityCleaner.UI
     public partial class MenuDoDesenvolvedor : NetworkBehaviour
     {
         /// <summary>
-        /// No Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada (ESC > Opções). Os pedidos
+        /// No Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada (ESC > Configurações). Os pedidos
         /// valem pela opção do anfitrião: com ela desligada lá, ele ignora os do F1 dos outros.
         /// </summary>
         public static bool Disponivel => Application.isEditor || Debug.isDebugBuild || Opcoes.LiberarF1;
@@ -40,7 +40,7 @@ namespace ZombieCityCleaner.UI
             Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Comida, Item.Agua,
             Item.Coldre, Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
             Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
-            Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco,
+            Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua,
         };
         static readonly string[] Destinos = { "Na mochila", "No chão" };
 
@@ -137,7 +137,7 @@ namespace ZombieCityCleaner.UI
                 // os pedidos (itens, relógio, zumbis) valem pela opção do anfitrião
                 var cor = _texto.normal.textColor;
                 _texto.normal.textColor = new Color(1f, 0.45f, 0.35f);
-                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens, o relógio e os zumbis daqui não valem. Lá: ESC > Opções > Menu do desenvolvedor (F1).", _texto);
+                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens, o relógio e os zumbis daqui não valem. Lá: ESC > Configurações > Menu do desenvolvedor (F1).", _texto);
                 _texto.normal.textColor = cor;
                 y += 54 * u;
             }

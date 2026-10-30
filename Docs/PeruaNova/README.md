@@ -141,3 +141,68 @@ shader de abandono do mundo (`Abandono*.mat`) e os kits de capô/rodas/macaco re
   `VisualDaPerua.Textura` (a madeira perde definição de perto).
 - Notado de passagem (não mexido): sem a roda, o WheelCollider fica com raio 0,07 no Play; o `CLAUDE.md` fala em 0,13. O
   `PneusDoCarro.cs` já estava modificado (não commitado) antes deste trabalho.
+
+---
+
+# Versão 2 (leve) — 29/10/2026
+
+A pedido ("50k está muito alto"; "textura em alguns lugares ao invés de várias faces"; "o pneu está muito redondo,
+algo próximo do pneu da roda antiga"; "dar uma polida"). A v1 continua intacta (arquivos, script e `.blend`); a v2 é
+nova e é a que está no prefab agora.
+
+| | Carro antigo | v1 | **v2** |
+|---|---:|---:|---:|
+| Triângulos (com 4 rodas) | 5.192 | 31.716 | **9.672** |
+| Vértices (com 4 rodas) | 10.246 | 51.092 | **17.951** |
+| Carroceria | 2.580 | 18.608 | 5.260 |
+| Roda (cada) | 284 | 1.952 | 600 |
+| Portas (D / T) | 292 / 224 | 1.068 / 752 | 392 / 316 |
+| Volante, tampa, capô | 296, 104, 44 | 824, 632, 204 | 332, 228, 36 |
+
+**O que mudou**
+- **Os detalhes miúdos viraram textura:** frisos cromados, barras da grade, gomos dos bancos, os painéis de madeira com a
+  moldura bege (antes eram placas sobrepostas), as aletas da calota e os parafusos, a placa, tapetes, saídas de ar,
+  botões do rádio, vincos do capô, o refletor do farol etc. A v1 inteira é o modelo "alto": cor, relevo (normal),
+  oclusão, metal e aspereza dela foram **projetados** na malha leve (bake "selected to active"). Chanfros só nas peças
+  grandes, com 1 segmento; cilindros, tubos e o aro do volante com menos lados.
+- **A roda:** pneu de 18 lados (o antigo tinha 18), mais quadrado, com sombreado chapado (facetado, como o antigo); a
+  calota com as aletas e os 5 parafusos na textura (a roda tem mais pixel no atlas: a malha é uma só para as 4).
+  Raio 0,30 e largura 0,21 continuam (o cilindro do tiro).
+- **Polimento:** o veio da madeira da tampa traseira agora corre na horizontal (antes parecia raiz); o forro do teto
+  mais claro e menos manchado; o vinil um pouco mais vivo.
+- **Igual:** a silhueta, as peças, as origens (dobradiças, pivôs), o painel/ignição, e tudo do prefab além da malha e
+  dos materiais.
+
+**Arquivos novos**
+- `Blender/PeruaNova2/perua_nova2.py` (usa as medidas e os construtores da v1), `rodar.py` (as etapas num Blender em
+  segundo plano), `foto.py` (fotos de conferência) e `PeruaNova2.blend` (editável; tem também as peças da v1, que são a
+  fonte do bake).
+- `Assets/_Game/Art/Veiculos/PeruaNova2/` — `PeruaNova2.fbx` (peças `Perua2_*`), `Texturas/` (2 atlas de 2048: cor,
+  MS, normal) e `Materiais/` (`Perua2_Lataria`, `_Interior`, `_Vidro`, `_Farol`, `_Lanterna`).
+- `Assets/_Game/Scripts/Editor/PeruaNova/VisualDaPerua2.cs` — menus **Zombie City Cleaner > Veículos > Aplicar o visual
+  novo da perua (v2, leve)** e **Voltar para a v1 da perua**.
+- `Backups/Perua_v1_antes_da_v2_2026-10-29/` — o prefab como estava com a v1.
+- Capturas: `capturas/v2_*.png` (mesmas câmeras e luzes das `antes_*` e `depois_*`, mais `v2_dia_tampa_perto` e
+  `v2_jogo_neblina`).
+
+**Modificado:** `Assets/_Game/Prefabs/Veiculos/Carro.prefab` (só a malha e os materiais das 12 peças visuais).
+
+**Como refazer:** `blender -b Blender/PeruaNova/PeruaNova.blend --python Blender/PeruaNova2/rodar.py -- construir`;
+depois, com `Blender/PeruaNova2/PeruaNova2.blend`, `-- assar cor`, `aspereza`, `metal`, `normal`, `ao` (um processo por
+canal, ~1 min cada, na CPU: com a Unity aberta a GPU fica sem memória e o bake sai preto sem erro; o script imprime a
+média de cada imagem) e `-- compor_exportar`. Na Unity, o menu "Aplicar o visual novo da perua (v2, leve)". Depois de
+um "Montar veículos", rode o menu de novo.
+
+**Conferido**
+- Impressão completa do prefab (todos os campos de física, rede, gatilhos, lugares, luzes, sons e referências por
+  caminho) igual à da v1 (`prefab_impressao_completa_v2.txt`; só os ids de memória das referências diferem entre sessões
+  do Editor). Lentes: farol no submesh 3, lanterna no 4, como na v1.
+- Visão do motorista: 0 de 75 raios do olho até a ignição, a chave e os mostradores tapados.
+- Play (Demo_Cidade, host local): rodas visuais sobre as físicas (0,0000 m), tiro no pneu acerta a roda certa (3,91 m),
+  sem erros no Console. Os testes completos (capô/vela, chave, dirigir, porta-malas, macaco, rodas, banco de trás) foram
+  feitos na v1; a v2 não muda nada além da malha e dos materiais.
+- Não testado: multijogador 2+, mini-game com mouse real, atropelamento.
+
+**Limites:** de muito perto, as bordas finas projetadas (a moldura bege em volta dos arcos, o aro da calota) mostram os
+pixels; a coluna interna de trás tem um pouco de ruído da projeção. Com texturas de 4096 isso some, mas a memória
+quadruplica (~30 MB → ~120 MB).

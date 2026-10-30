@@ -90,7 +90,12 @@ def renderizar(p, duracao, eco_cfg=(4.5, 2.8, 5.0, 0.04), molhado=0.5, alvo_db=-
     return finalizar(p.nome, e, d, alvo_db, saida)
 
 
-def finalizar(nome, e, d, alvo_db, saida):
+def finalizar_sem_fim(nome, e, d, alvo_db, saida):
+    """Como o finalizar, mas sem o desvanecer do fim (a peça em laço emenda o fim no começo)."""
+    return finalizar(nome, e, d, alvo_db, saida, desvanecer=False)
+
+
+def finalizar(nome, e, d, alvo_db, saida, desvanecer=True):
     hp = sg.butter(2, 30, btype='high', fs=SR, output='sos')
     e, d = sg.sosfilt(hp, e), sg.sosfilt(hp, d)
     rms = np.sqrt(np.mean((e.astype(np.float64) ** 2 + d.astype(np.float64) ** 2) / 2)) + 1e-12
@@ -106,9 +111,10 @@ def finalizar(nome, e, d, alvo_db, saida):
 
     e, d = limitar(e), limitar(d)
     # o fim: some devagar (a cauda do eco já está no tempo)
-    m = int(2.0 * SR)
-    e[-m:] *= np.linspace(1, 0, m) ** 2
-    d[-m:] *= np.linspace(1, 0, m) ** 2
+    if desvanecer:
+        m = int(2.0 * SR)
+        e[-m:] *= np.linspace(1, 0, m) ** 2
+        d[-m:] *= np.linspace(1, 0, m) ** 2
     os.makedirs(saida, exist_ok=True)
     wav = os.path.join(saida, nome + '.wav')
     wf.write(wav, SR, (np.stack([e, d], axis=1) * 32767).astype(np.int16))

@@ -115,9 +115,8 @@ namespace ZombieCityCleaner.Zombies
         {
             if (n == NivelAtual && !forcar) return;
             NivelAtual = n;
-            bool perto = n == Nivel.Perto, longe = n == Nivel.Longe;
-            animador.enabled = !longe && !Morto && !Petrificado;
-            if (animador.enabled) AplicarPernasNoAnimador();
+            bool perto = n == Nivel.Perto;
+            AtualizarAnimador();
             animador.cullingMode = perto ? AnimatorCullingMode.CullUpdateTransforms : AnimatorCullingMode.CullCompletely;
             capsula.gameObject.layer = perto ? CamadaSoBloqueio : CamadaZumbi;
             AtualizarColisores();
@@ -127,12 +126,31 @@ namespace ZombieCityCleaner.Zombies
             AtualizarRenderers();
         }
 
-        /// <summary>Longe demais de quem joga nesta máquina: a neblina esconde, então nem desenha.</summary>
+        /// <summary>
+        /// Além da distância de visão de quem joga nesta máquina (UI/Graficos), nem desenha. Dentro dela, o de longe (o
+        /// virtual, sem andar) também aparece, parado e respirando.
+        /// </summary>
         internal void DefinirVisivel(bool visivel)
         {
             if (visivel == _visivel) return;
             _visivel = visivel;
             AtualizarRenderers();
+            if (NivelAtual == Nivel.Longe) AtualizarAnimador();
+        }
+
+        // a animação: perto e médio, sempre; o de longe, só se está sendo desenhado, e parado (o virtual não anda: com a
+        // velocidade de antes, ele "andaria no lugar"); a estátua e o morto, nunca
+        void AtualizarAnimador()
+        {
+            bool longe = NivelAtual == Nivel.Longe;
+            animador.enabled = (!longe || _visivel) && !Morto && !Petrificado;
+            if (!animador.enabled) return;
+            AplicarPernasNoAnimador();
+            if (longe)
+            {
+                _velAnimacao = 0f;
+                animador.SetFloat(SpeedId, 0f);
+            }
         }
 
         /// <summary>O LOD do desenho (0 perto, 1 e 2 mais longe), pela distância de quem joga nesta máquina.</summary>
@@ -156,10 +174,10 @@ namespace ZombieCityCleaner.Zombies
         Mesh MalhaDoDetalhe => Detalhe == 0 || malhasDeLonge == null || Detalhe > malhasDeLonge.Length || malhasDeLonge[Detalhe - 1] == null
             ? malhaInteira : malhasDeLonge[Detalhe - 1];
 
-        // morto, o zumbi some: quem aparece é o corpo com física
+        // morto, o zumbi some: quem aparece é o corpo com física. O de longe também é desenhado (até a distância de visão)
         void AtualizarRenderers()
         {
-            bool ligado = _visivel && NivelAtual != Nivel.Longe && !Morto;
+            bool ligado = _visivel && !Morto;
             foreach (var r in renderers) r.enabled = ligado;
         }
 
@@ -361,7 +379,7 @@ namespace ZombieCityCleaner.Zombies
                     // o último grito (a voz para logo abaixo: o som vai solto, no lugar)
                     var sons = Sons;
                     if (sons != null && sons.tiro != null && sons.tiro.Length > 0 && _m.PodeOuvir(transform.position))
-                        Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f * sons.volume, true, 30f);
+                        Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f * sons.volume * ZombieManager.VolumeDosZumbis, true, 30f);
                     if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
                     Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
                 }
@@ -385,6 +403,9 @@ namespace ZombieCityCleaner.Zombies
             if (Morto || Petrificado || Pedra >= 0.9f || voz == null || voz.isPlaying || _m == null || _m.vozDoZumbi == null || !_m.PodeGemer(transform.position)) return;
             var trecho = _m.TrechoDaVoz();
             voz.clip = _m.vozDoZumbi;
+            if (_volumeDaVoz < 0f) _volumeDaVoz = voz.volume;
+            voz.volume = _volumeDaVoz * ZombieManager.VolumeDosZumbis;
+            _volumeDaFala = -1f;   // o volume fica o da fonte (só o filtro abafa)
             voz.pitch = tom * Random.Range(0.85f, 1.05f);
             voz.Play();
             voz.time = trecho.x;

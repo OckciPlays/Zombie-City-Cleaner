@@ -310,12 +310,7 @@ namespace ZombieCityCleaner.World
             dentro.transform.SetParent(go.transform, false);
             dentro.transform.localPosition = m.CentroDeDentro;
             dentro.AddComponent<AreaInterna>().tamanho = m.TamanhoDeDentro;
-            var eco = new GameObject("Eco").AddComponent<AudioReverbZone>();
-            eco.transform.SetParent(go.transform, false);
-            eco.transform.localPosition = m.CentroDeDentro;
-            eco.reverbPreset = AudioReverbPreset.Room;
-            eco.minDistance = Mathf.Min(m.TamanhoDeDentro.x, m.TamanhoDeDentro.z) * 0.4f;
-            eco.maxDistance = Mathf.Max(m.TamanhoDeDentro.x, m.TamanhoDeDentro.z) * 0.6f;
+            EcoSoDentro.Criar(go.transform, new Bounds(m.CentroDeDentro, m.TamanhoDeDentro));   // o eco só de dentro
         }
 
         // a lente do poste (uma peça à parte no Cidade_Rua.fbx), apagada: anos depois do apocalipse, não há energia

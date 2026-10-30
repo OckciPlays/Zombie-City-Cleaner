@@ -750,6 +750,11 @@ namespace ZombieCityCleaner.Player
                     Linha("Serve para", "levantar o carro");
                     Linha("Fica", "no porta-malas, com o estepe");
                 }
+                else if (Itens.EhChave(item))
+                {
+                    Linha("Serve para", "dar a partida na perua");
+                    Linha("Sem ela", "só com a ligação direta");
+                }
                 else if (item == Item.Pneu)
                 {
                     Linha("Estado", $"{it.qtd}%");

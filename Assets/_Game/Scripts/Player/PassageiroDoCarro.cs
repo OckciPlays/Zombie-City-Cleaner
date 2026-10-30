@@ -91,8 +91,12 @@ namespace ZombieCityCleaner.Player
         struct Marca { public float centro, largura; public bool pequena, acertada; }
         readonly List<Marca> _marcas = new List<Marca>();
         float _ponteiro, _voltas, _errouEm = -99f;
+        // com a chave do veículo, a partida é direta (a pedido em 29/10/2026): o motor de arranque gira este tempo (mais
+        // com a vela gasta) e o motor pega, sem o mini-game, que ficou para a ligação direta (sem a chave)
+        const float PartidaComChave = 0.8f;
+        float _arranqueComChave;
         Texture2D _mostrador;
-        bool _mostradorSujo = true, _mostradorNaPartida;
+        bool _mostradorSujo = true, _mostradorNaPartida, _mostradorDireto;
         /// <summary>O quanto o olhar pode passar longe do miolo da ignição (graus) para a mira pegar a chave.</summary>
         const float MiraNaChave = 7f;
         InputAction _mover, _olhar, _interagir, _pular, _desvirar;
@@ -349,14 +353,17 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// A chave: olhando para a ignição, um clique põe a chave; outro pega a chave (o mouse para de olhar e aparece o
-        /// mostrador). Arrastar gira: para a direita, a ignição e a partida (da ignição para a partida ela pesa e volta
-        /// sozinha, é preciso empurrar; chegando, fica presa); para a esquerda, desliga. Presa na partida, o motor de
-        /// arranque gira e o mini-game começa: um ponteiro dá voltas no anel, e o clique tem de pegar ele em cima das
-        /// marcas. A pequena (dourada) liga na hora; as 3 grandes (laranja) ligam quando todas foram acertadas, e errar
-        /// apaga as já acertadas. Em <see cref="VoltasDaPartida"/> voltas sem ligar, a chave volta para a ignição. Ligou,
-        /// a chave volta sozinha para a ignição e é solta. Fora da partida, o clique (ou, sempre, o botão direito) solta a
-        /// chave; puxar para a esquerda na partida desiste.
+        /// A chave: olhando para a ignição, um clique põe a chave (se o motorista tem a chave do veículo na mochila,
+        /// <see cref="Carro.chaveDoVeiculo"/>); outro pega a chave (o mouse para de olhar e aparece o mostrador). Arrastar
+        /// gira: para a direita, a ignição e a partida (da ignição para a partida ela pesa e volta sozinha, é preciso
+        /// empurrar; chegando, fica presa); para a esquerda, desliga. Presa na partida, o motor de arranque gira um pouco
+        /// (<see cref="PartidaComChave"/>, mais com a vela gasta) e o motor pega, sem mini-game.
+        /// Sem a chave, o clique faz a ligação direta (os fios juntos: o arranque gira na hora) e começa o mini-game: um
+        /// ponteiro dá voltas no anel, e o clique tem de pegar ele em cima das marcas. A pequena (dourada) liga na hora; as
+        /// 3 grandes (laranja) ligam quando todas foram acertadas, e errar apaga as já acertadas. Em
+        /// <see cref="VoltasDaPartida"/> voltas sem ligar, os fios param na ignição (o clique tenta de novo). Ligado pela
+        /// direta, o clique na ignição separa os fios e desliga. Ligou, a chave volta sozinha para a ignição e é solta.
+        /// Fora da partida, o clique (ou, sempre, o botão direito) solta a chave; puxar para a esquerda na partida desiste.
         /// </summary>
         void Chave(bool controla)
         {
@@ -365,18 +372,52 @@ namespace ZombieCityCleaner.Player
             if (!_segurandoChave)
             {
                 if (!controla || !mouse.leftButton.wasPressedThisFrame || !MirandoAChave()) return;
-                if (Carro.Estado == Carro.EstadoDoMotor.SemChave) Carro.PorAChave();
-                else
+                if (Carro.LigacaoDireta)
                 {
-                    _segurandoChave = true;
-                    _naPartidaAntes = false;
-                    _mostradorSujo = true;
+                    // os fios juntos: com o motor ligado, o clique separa os fios (desliga); parado, tenta de novo (ou,
+                    // com a chave achada depois, separa os fios e põe a chave)
+                    if (Carro.MotorLigado)
+                    {
+                        Carro.DesfazerLigacaoDireta();
+                        Avisar("Fios separados: o motor desligou");
+                    }
+                    else if (TemAChave)
+                    {
+                        Carro.DesfazerLigacaoDireta();
+                        Carro.PorAChave();
+                    }
+                    else
+                    {
+                        Carro.FazerLigacaoDireta();
+                        Segurar();
+                    }
+                    return;
                 }
+                if (Carro.Estado == Carro.EstadoDoMotor.SemChave)
+                {
+                    // com a chave do veículo na mochila, ela entra na ignição; sem ela, a ligação direta (o mini-game)
+                    if (TemAChave) Carro.PorAChave();
+                    else
+                    {
+                        Carro.FazerLigacaoDireta();
+                        Segurar();
+                    }
+                    return;
+                }
+                Segurar();
                 return;
             }
             if (!controla || _terceira || _fase != Fase.Dentro || mouse.rightButton.wasPressedThisFrame)
             {
                 SoltarAChave();
+                return;
+            }
+            // na ligação direta, puxar até o fim separa os fios: não sobra nada para segurar
+            if (Carro.Estado == Carro.EstadoDoMotor.SemChave)
+            {
+                _segurandoChave = false;
+                _naPartidaAntes = false;
+                Avisar("Fios separados");
                 return;
             }
             // a chave na partida sem a bateria ter força: o arranque não gira, e a chave volta para a ignição
@@ -399,7 +440,18 @@ namespace ZombieCityCleaner.Player
                 if (partida) NovaPartida();
                 _mostradorSujo = true;
             }
-            if (partida)
+            if (partida && !Carro.LigacaoDireta)
+            {
+                // com a chave: o motor de arranque gira um pouco (mais com a vela gasta) e o motor pega (ou só tosse:
+                // a vela queimada, o motor quente; Ligou avisa)
+                _arranqueComChave += Time.deltaTime;
+                if (_arranqueComChave >= PartidaComChave / Mathf.Max(0.3f, Carro.Pecas.FatorDasMarcas))
+                {
+                    Ligou();
+                    return;
+                }
+            }
+            else if (partida)
             {
                 _ponteiro += VelocidadeDoPonteiro * Time.deltaTime;
                 if (_ponteiro >= 360f)
@@ -423,6 +475,18 @@ namespace ZombieCityCleaner.Player
             Carro.GirarChave(mouse.delta.ReadValue().x * GrausPorPixel);
         }
 
+        // pega a chave (ou os fios, na ligação direta): o mouse gira e aparece o mostrador
+        void Segurar()
+        {
+            _segurandoChave = true;
+            _naPartidaAntes = false;
+            _mostradorSujo = true;
+        }
+
+        /// <summary>O motorista (esta máquina) tem a chave deste veículo na mochila.</summary>
+        bool TemAChave => Carro != null && _rede != null && _rede.Inventario != null
+                          && PortaMalasDoCarro.Achar(_rede.Inventario, Carro.chaveDoVeiculo, out _);
+
         void SoltarAChave()
         {
             _segurandoChave = false;
@@ -434,6 +498,7 @@ namespace ZombieCityCleaner.Player
         // ponteiro (em cima)
         void NovaPartida()
         {
+            _arranqueComChave = 0f;
             _ponteiro = 0f;
             _voltas = 0f;
             _marcas.Clear();
@@ -679,7 +744,9 @@ namespace ZombieCityCleaner.Player
             if (aviso != null)
             {
                 var a = new GUIStyle(dica) { fontSize = Mathf.RoundToInt(18 * u), alignment = TextAnchor.MiddleCenter };
-                Sombra(new Rect(Screen.width / 2f - 300 * u, Screen.height / 2f + 130 * u, 600 * u, 30 * u), aviso, a, new Color(0.95f, 0.93f, 0.85f));
+                // com o mostrador da chave aberto, o aviso vai para cima dele (embaixo ficam as instruções)
+                float y = Lugar == 0 && _segurandoChave && !_terceira ? Screen.height / 2f - 140f * u - 40f * u : Screen.height / 2f + 130 * u;
+                Sombra(new Rect(Screen.width / 2f - 300 * u, y, 600 * u, 30 * u), aviso, a, new Color(0.95f, 0.93f, 0.85f));
             }
         }
 
@@ -712,12 +779,16 @@ namespace ZombieCityCleaner.Player
             }
             if (mira)
             {
-                string texto = e == Carro.EstadoDoMotor.SemChave ? "[Clique] Pôr a chave" : "[Clique] Pegar a chave";
+                string texto = Carro.LigacaoDireta ? (ligado ? "[Clique] Separar os fios (desligar)" : TemAChave ? "[Clique] Pôr a chave" : "[Clique] Tentar a ligação direta de novo")
+                    : e == Carro.EstadoDoMotor.SemChave ? (TemAChave ? "[Clique] Pôr a chave" : "[Clique] Ligação direta (sem a chave)") : "[Clique] Pegar a chave";
                 Sombra(new Rect(cx - 320 * u, cy + 14 * u, 640 * u, 26 * u), texto, meio, new Color(0.97f, 0.95f, 0.88f));
             }
             else if (!ligado)
             {
-                string texto = e == Carro.EstadoDoMotor.SemChave ? "Olhe para a ignição, à direita do volante, e clique para pôr a chave"
+                string texto = e == Carro.EstadoDoMotor.SemChave
+                    ? (TemAChave ? "Olhe para a ignição, à direita do volante, e clique para pôr a chave"
+                                 : "Sem a chave: olhe para a ignição, à direita do volante, e clique para fazer a ligação direta")
+                    : Carro.LigacaoDireta ? "Olhe para a ignição e clique para tentar a ligação direta de novo"
                     : "Olhe para a chave e clique nela para dar a partida";
                 Sombra(new Rect(cx - 360 * u, Screen.height - 62 * u, 720 * u, 24 * u), texto, dica, new Color(0.95f, 0.85f, 0.55f));
             }
@@ -733,30 +804,46 @@ namespace ZombieCityCleaner.Player
         void Mostrador(float u, float cx, float cy, Carro.EstadoDoMotor e)
         {
             bool partida = e == Carro.EstadoDoMotor.Arranque && _naPartidaAntes;
-            if (_mostrador == null || _mostradorSujo || _mostradorNaPartida != partida) PintarMostrador(partida);
+            bool direta = Carro.LigacaoDireta, miniGame = partida && direta;
+            if (_mostrador == null || _mostradorSujo || _mostradorNaPartida != miniGame || _mostradorDireto != direta) PintarMostrador(miniGame, direta);
             float r = 140f * u;
             bool errou = Time.time - _errouEm < 0.8f;
             if (Time.time - _errouEm < 0.25f) cx += Mathf.Sin(Time.time * 90f) * 4f * u;   // errou: treme
             var centro = new Vector2(cx, cy);
             GUI.DrawTexture(new Rect(cx - r, cy - r, 2 * r, 2 * r), _mostrador);
 
-            // as posições da chave (a de agora mais clara)
+            // as posições da chave (a de agora mais clara); na ligação direta, não há chave
             float angulo = Carro.AnguloDaChave;
+            var antes = GUI.matrix;
+            if (!direta)
+            {
             var rotulo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(10 * u), alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             Rotulo(centro, r * 0.66f, 0f, "DESL", rotulo, u, angulo < Carro.ChaveDesliga ? Color.white : new Color(0.7f, 0.7f, 0.68f));
             Rotulo(centro, r * 0.66f, Carro.ChaveLiga, "LIGA", rotulo, u, angulo >= Carro.ChaveDesliga && angulo < Carro.ChavePartida - 8f ? new Color(0.7f, 1f, 0.7f) : new Color(0.5f, 0.75f, 0.5f));
             Rotulo(centro, r * 0.66f, Carro.ChavePartida + 12f, "PARTIDA", rotulo, u, angulo >= Carro.ChavePartida - 8f ? new Color(1f, 0.75f, 0.45f) : new Color(0.85f, 0.5f, 0.25f));
 
             // a chave, vista de frente: o cabo atravessando o miolo, com a ponta clara mostrando a posição
-            var antes = GUI.matrix;
             GUIUtility.RotateAroundPivot(angulo, centro);
             Retangulo(new Rect(cx - 0.075f * r, cy - 0.44f * r, 0.15f * r, 0.66f * r), new Color(0.03f, 0.03f, 0.03f, 0.95f));
             Retangulo(new Rect(cx - 0.055f * r, cy - 0.42f * r, 0.11f * r, 0.62f * r), new Color(0.13f, 0.13f, 0.14f));
             Retangulo(new Rect(cx - 0.03f * r, cy - 0.42f * r, 0.06f * r, 0.10f * r), new Color(0.95f, 0.9f, 0.75f));
             GUI.matrix = antes;
+            }
+            else
+            {
+                // os dois fios, um vermelho e um preto, cruzados no miolo
+                var fio = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11 * u), alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+                GUIUtility.RotateAroundPivot(35f, centro);
+                Retangulo(new Rect(cx - 0.42f * r, cy - 0.025f * r, 0.84f * r, 0.05f * r), new Color(0.8f, 0.15f, 0.12f));
+                GUI.matrix = antes;
+                GUIUtility.RotateAroundPivot(-35f, centro);
+                Retangulo(new Rect(cx - 0.42f * r, cy - 0.025f * r, 0.84f * r, 0.05f * r), new Color(0.08f, 0.08f, 0.08f));
+                GUI.matrix = antes;
+                Sombra(new Rect(cx - 70f * u, cy - 0.7f * r, 140f * u, 20f * u), "LIGAÇÃO DIRETA", fio, new Color(1f, 0.75f, 0.45f));
+            }
 
-            // o ponteiro do mini-game
-            if (partida)
+            // o ponteiro do mini-game (só na ligação direta)
+            if (miniGame)
             {
                 GUIUtility.RotateAroundPivot(_ponteiro, centro);
                 Retangulo(new Rect(cx - 3.5f * u, cy - 1.0f * r, 7f * u, 0.2f * r), new Color(0f, 0f, 0f, 0.8f));
@@ -769,13 +856,23 @@ namespace ZombieCityCleaner.Player
             var linha = new GUIStyle(titulo) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Normal };
             string t1, t2;
             Color cor = new Color(0.97f, 0.95f, 0.88f);
-            if (partida)
+            if (miniGame)
             {
                 int acertadas = 0;
                 foreach (var m in _marcas) if (!m.pequena && m.acertada) acertadas++;
-                t1 = errou ? "Errou! As marcas laranja apagaram" : "Clique quando o ponteiro passar nas marcas";
+                t1 = errou ? "Errou! As marcas laranja apagaram" : "Ligação direta: clique quando o ponteiro passar nas marcas";
                 if (errou) cor = new Color(1f, 0.45f, 0.35f);
-                t2 = $"<color=#FFCC38>dourada</color>: liga na hora   ·   <color=#EB7326>laranja</color>: acerte as 3 ({acertadas} de 3)\nPuxe para a esquerda: desistir   ·   botão direito: soltar a chave";
+                t2 = $"<color=#FFCC38>dourada</color>: liga na hora   ·   <color=#EB7326>laranja</color>: acerte as 3 ({acertadas} de 3)\nPuxe para a esquerda: desistir   ·   botão direito: soltar os fios";
+            }
+            else if (partida)
+            {
+                t1 = "Dando a partida...";
+                t2 = "Com a chave, o motor pega sozinho\nPuxe para a esquerda: desistir   ·   botão direito: soltar a chave";
+            }
+            else if (direta)
+            {
+                t1 = "Os fios da ignição estão juntos";
+                t2 = "Arraste para a direita para tentar de novo   ·   para a esquerda: separar os fios\nClique ou botão direito: soltar";
             }
             else if (Carro.MotorLigado)
             {
@@ -804,8 +901,9 @@ namespace ZombieCityCleaner.Player
         }
 
         // o desenho parado do mostrador (256 × 256, com as bordas suaves): o fundo escuro, o anel do mini-game (com as
-        // marcas, na partida), o arco das posições da chave com as 3 marcas brancas e o miolo cromado
-        void PintarMostrador(bool partida)
+        // marcas, na partida), o arco das posições da chave com as 3 marcas brancas (não na ligação direta, sem chave) e o
+        // miolo cromado
+        void PintarMostrador(bool partida, bool direta)
         {
             const int N = 256;
             if (_mostrador == null)
@@ -828,13 +926,14 @@ namespace ZombieCityCleaner.Player
                         foreach (var m in _marcas)
                             if (Mathf.Abs(Mathf.DeltaAngle(m.centro, ang)) <= m.largura / 2f) anel = m.acertada ? Verde : m.pequena ? Dourado : Laranja;
                     c = Por(c, anel, Faixa(d, 0.84f, 0.97f, px));
-                    if (ang <= Carro.ChavePartida + 0.4f)
+                    if (!direta && ang <= Carro.ChavePartida + 0.4f)
                     {
                         var arco = ang < Carro.ChaveDesliga ? cinza : ang < Carro.ChavePartida - 8f ? verdeEscuro : Laranja;
                         c = Por(c, arco, Faixa(d, 0.50f, 0.56f, px));
                     }
-                    foreach (float a in posicoes)
-                        if (Mathf.Abs(Mathf.DeltaAngle(a, ang)) * Mathf.Deg2Rad * d < 0.012f) c = Por(c, new Color(0.95f, 0.95f, 0.9f), Faixa(d, 0.46f, 0.60f, px));
+                    if (!direta)
+                        foreach (float a in posicoes)
+                            if (Mathf.Abs(Mathf.DeltaAngle(a, ang)) * Mathf.Deg2Rad * d < 0.012f) c = Por(c, new Color(0.95f, 0.95f, 0.9f), Faixa(d, 0.46f, 0.60f, px));
                     c = Por(c, new Color(0.3f, 0.3f, 0.29f), Faixa(d, -1f, 0.31f, px));
                     c = Por(c, new Color(0.5f, 0.5f, 0.48f), Faixa(d, -1f, 0.27f, px));
                     pixels[y * N + x] = c;
@@ -843,6 +942,7 @@ namespace ZombieCityCleaner.Player
             _mostrador.Apply();
             _mostradorSujo = false;
             _mostradorNaPartida = partida;
+            _mostradorDireto = direta;
         }
 
         // quanto do pixel está entre os raios a e b (a borda suave tem um pixel)

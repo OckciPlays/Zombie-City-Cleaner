@@ -3961,6 +3961,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 316667329}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &52449475
 GameObject:
   m_ObjectHideFlags: 0
@@ -18440,6 +18441,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 1054286671}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &266934822
 GameObject:
   m_ObjectHideFlags: 0
@@ -25893,6 +25895,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 1304139948}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!4 &326243820
 Transform:
   m_ObjectHideFlags: 0
@@ -27313,6 +27316,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 1528433024}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &339452749
 GameObject:
   m_ObjectHideFlags: 0
@@ -27637,6 +27641,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 918128673}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &344791166
 GameObject:
   m_ObjectHideFlags: 0
@@ -30003,6 +30008,67 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 374576782}
   m_Mesh: {fileID: 4976106111585889953, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+--- !u!1001 &375792581
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3990239089345905814, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 1576137423
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -17.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -37.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8470516758916576987, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8502286537706648564, guid: 6417562996a05514c891099c73c50323, type: 3}
+      propertyPath: m_Name
+      value: Cupe
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6417562996a05514c891099c73c50323, type: 3}
 --- !u!1 &376439784
 GameObject:
   m_ObjectHideFlags: 0
@@ -34056,6 +34122,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 307400792}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &425763407
 GameObject:
   m_ObjectHideFlags: 0
@@ -51524,6 +51591,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 380447980}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &622203604
 GameObject:
   m_ObjectHideFlags: 0
@@ -66160,6 +66228,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 849899611}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &824325453
 GameObject:
   m_ObjectHideFlags: 0
@@ -66804,6 +66873,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 1579072060}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &837479222
 GameObject:
   m_ObjectHideFlags: 0
@@ -91973,6 +92043,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 590748339}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1173702760
 GameObject:
   m_ObjectHideFlags: 0
@@ -96963,6 +97034,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 1560475382}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1232416906
 GameObject:
   m_ObjectHideFlags: 0
@@ -98496,6 +98568,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 506288433}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1253331972
 GameObject:
   m_ObjectHideFlags: 0
@@ -124399,6 +124472,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 161518097}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1579072055
 GameObject:
   m_ObjectHideFlags: 0
@@ -129542,6 +129616,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 366402242}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1659537841
 GameObject:
   m_ObjectHideFlags: 0
@@ -130087,8 +130162,21 @@ MonoBehaviour:
   arremesso: {x: 4.5, y: 2.2}
   pedacosNoPool: 24
   empurraoDoPedaco: {x: 2.2, y: 1.6}
+  celulaDoPovoamento: 40
+  alcanceDoPovoamento: 52
+  longeDoJogador: 22
+  acordadosNaCidade: {x: 1, y: 4}
+  estatuasNaCidade: {x: 0, y: 2}
+  acordadoForaDaCidade: 0.15
+  estatuaForaDaCidade: 0.06
+  arvoresParaAMata: 4
+  acordadosNaMata: {x: 1, y: 3}
+  distanciaDeRecolher: 130
+  umRastejanteEmCadaCarros: 10
+  acordadosPorAndar: {x: 0, y: 1}
   intervaloDeEnvio: 0.1
   divisorMedio: 3
+  divisorLonge: 5
   tempoParaSumir: 1.5
   modelos:
   - {fileID: 2768917940340087754, guid: f1e67687d67c4b14cab84888fba28e16, type: 3}
@@ -130113,7 +130201,6 @@ MonoBehaviour:
   intervaloPerto: 0.1
   intervaloMedio: 0.5
   orcamentoPorQuadro: 40
-  distanciaDeDesenho: 65
   distanciaDoLOD1: 12
   distanciaDoLOD2: 26
   ajustes:
@@ -130131,6 +130218,7 @@ MonoBehaviour:
     barulhoDeCorrida: 9
     barulhoDoTiro: 35
     tiroChamaDireto: 12
+    tiroAmeacaDeDia: 5
     distanciaDeDesistir: 20
     tempoSemVer: 6
     alcanceDoAtaque: 1.3
@@ -130142,6 +130230,23 @@ MonoBehaviour:
     vidaDoMembro: 3
     fatorMancando: 0.55
     fatorRastejando: 0.35
+    tempoParaPetrificar: 10
+    tempoParaRecuar: 20
+    lentidaoNaPedra: 0.1
+    velocidadeDeFuga: 1.7
+    raioDaSombra: 18
+    raioDoAbrigo: 40
+    danoNaPedra: 0.25
+    pedraQueProtegeACabeca: 0.8
+    soltarANoite: {x: 30, y: 60}
+    tempoDeQuebrar: 1.6
+    alcanceDaLanterna: 14
+    meioAnguloDaLanterna: 15
+    alcanceDoFarol: 22
+    meioAnguloDoFarol: 22
+    distanciaDaEsquiva: 2.2
+    velocidadeDaEsquiva: 3.2
+    intervaloDaEsquiva: 1
 --- !u!1 &1669386826
 GameObject:
   m_ObjectHideFlags: 0
@@ -132479,6 +132584,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 294470366}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1701097631
 GameObject:
   m_ObjectHideFlags: 0
@@ -134092,6 +134198,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 1213827877}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1722974697
 GameObject:
   m_ObjectHideFlags: 0
@@ -135250,6 +135357,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000016
   macaco: {fileID: 46252084}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1734954533
 GameObject:
   m_ObjectHideFlags: 0
@@ -145494,6 +145602,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 513307023}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1870162904
 GameObject:
   m_ObjectHideFlags: 0
@@ -153478,6 +153587,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 20542732}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &1974788066
 GameObject:
   m_ObjectHideFlags: 0
@@ -159599,6 +159709,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 1497575802}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &2062914058
 GameObject:
   m_ObjectHideFlags: 0
@@ -161568,6 +161679,7 @@ MonoBehaviour:
   raioDaRoda: 0.33000004
   macaco: {fileID: 436535233}
   alturaDoMacaco: 0.22
+  colisao: {fileID: 0}
 --- !u!1 &2085830567
 GameObject:
   m_ObjectHideFlags: 0
@@ -166025,3 +166137,4 @@ SceneRoots:
   - {fileID: 1732286512}
   - {fileID: 1667150902}
   - {fileID: 2081007437}
+  - {fileID: 375792581}

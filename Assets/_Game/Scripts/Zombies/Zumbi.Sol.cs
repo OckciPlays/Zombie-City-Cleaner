@@ -95,10 +95,10 @@ namespace ZombieCityCleaner.Zombies
                 var sons = Sons;
                 if (comEfeito && sons != null && sons.petrificou != null)
                 {
-                    if (_m.PodeOuvir(transform.position, 35f)) Efeitos.Som(sons.petrificou, transform.position + Vector3.up, 0.9f, true, 35f);
+                    if (_m.PodeOuvir(transform.position, 35f)) Efeitos.Som(sons.petrificou, transform.position + Vector3.up, 0.9f * ZombieManager.VolumeDosZumbis, true, 35f);
                 }
                 else if (comEfeito && renderers.Length > 0 && renderers[0].isVisible)
-                    Efeitos.Som(Efeitos.SocoParede, transform.position + Vector3.up, 0.7f, true, 20f);
+                    Efeitos.Som(Efeitos.SocoParede, transform.position + Vector3.up, 0.7f * ZombieManager.VolumeDosZumbis, true, 20f);
                 return;
             }
             _soltouEm = Time.time;
@@ -110,9 +110,15 @@ namespace ZombieCityCleaner.Zombies
                 var sons = Sons;
                 if (comEfeito && sons != null) Falar(sons.voz, Fala.Chamado, 1f, 0.85f);   // e ruge, livre
             }
+            else if (!Morto)
+            {
+                // de longe: se está sendo desenhado (dentro da distância de visão), volta a respirar, parado
+                animador.speed = 1f;
+                AtualizarAnimador();
+            }
             if (comEfeito && renderers.Length > 0 && renderers[0].isVisible) Quebrar();
             else if (comEfeito && Sons != null && Sons.soltando != null && _m.PodeOuvir(transform.position))
-                Efeitos.Som(Sons.soltando, transform.position + Vector3.up, 0.9f, true, 30f);   // fora da tela: só o som
+                Efeitos.Som(Sons.soltando, transform.position + Vector3.up, 0.9f * ZombieManager.VolumeDosZumbis, true, 30f);   // fora da tela: só o som
         }
 
         /// <summary>Uma pose natural (um quadro sorteado do andar, ou do mancar e do rastejar) para a estátua.</summary>
@@ -138,7 +144,7 @@ namespace ZombieCityCleaner.Zombies
             foreach (var p in partes)
                 if (p != null) Efeitos.Impacto(p.position, (p.position - (transform.position + Vector3.up)).normalized + Vector3.up * 0.3f);
             var sons = Sons;
-            Efeitos.Som(sons != null && sons.soltando != null ? sons.soltando : Efeitos.SocoParede, transform.position + Vector3.up, 1f, true, 30f);
+            Efeitos.Som(sons != null && sons.soltando != null ? sons.soltando : Efeitos.SocoParede, transform.position + Vector3.up, ZombieManager.VolumeDosZumbis, true, 30f);
         }
 
         // ------------------------------------------------------------------ anfitrião

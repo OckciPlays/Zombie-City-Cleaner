@@ -265,6 +265,41 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## O cupê: as portas fechadas, a mira certa e 110 km/h (29/10/2026, a pedido)
+
+- **As portas não parecem mais abertas:** a janela da porta ficava em pé, com o friso 5 cm para fora da beirada do teto e um vão escuro em cima, como a porta entreaberta. Agora as janelas de lado inclinam um pouco para dentro (como num carro de verdade) e a da porta sobe até o teto: o friso encosta nele. O modelo e as texturas do cupê foram refeitos.
+- **Só 2 lugares, os da frente:** a porta comprida tinha dois gatilhos (a metade da frente para o volante, a de trás para o banco de trás), e mirando na porta o jogador às vezes ia parar atrás. O cupê ficou só com os bancos da frente: a porta inteira leva ao volante (na esquerda) ou ao banco do lado (na direita), e ninguém senta atrás.
+- **O cupê é o carro rápido:** chega a 113 km/h numa reta, com os pneus bons (100 km/h em 12 s); a perua fica nos ~80. O som das marchas acompanha a velocidade maior.
+
+## A chave da perua, a ligação direta e o volante mais calmo (29/10/2026, a pedido)
+
+- **A chave da perua** é um item novo (1 × 1 na mochila, com modelo, ícone e foto): começa no chão da sala, entre os dois primeiros lugares onde os jogadores nascem.
+- **Com a chave, a partida é direta:** olhando para a ignição, um clique põe a chave; gira até a PARTIDA e o motor pega sozinho em menos de 1 s, sem o mini-game (a vela gasta demora um pouco mais; a vela queimada ou o motor quente continuam impedindo).
+- **Sem a chave, a ligação direta:** o clique na ignição junta os fios e o mini-game das marcas começa, como "roubar o carro". Não pegou em 3 voltas, os fios ficam juntos e um clique tenta de novo; ligado pela direta, um clique separa os fios e desliga. O mostrador mostra os fios cruzados (vermelho e preto) no lugar da chave, e não aparece chave na ignição.
+- **O volante desenhado gira mais devagar** na primeira pessoa (só o visual; a direção do carro é a mesma): gira menos que antes em relação às rodas e no máximo uns 320° por segundo (antes, mais de 1.300°).
+- Os avisos do carro não ficam mais por cima das instruções do mostrador da chave (sobem para cima dele).
+
+## O menu do jogo e os volumes separados (29/10/2026, a pedido)
+
+- **O menu principal:** ao abrir o jogo, o título e quatro opções: Iniciar novo jogo (a tela do mundo novo e do multiplayer, agora com Voltar), Continuar (reabre o último mundo criado: o mesmo mapa, porque o jogo ainda não salva), Configurações e Sair. Ao sair de uma partida, ele volta.
+- **O fundo:** um vídeo de 35 s em laço, gravado no próprio jogo (a rua com as estátuas, o Oco olhando pela janela pregada, o carro com o pisca-alerta, uma estátua de perto, a cidade do alto, com luzes piscando), e uma trilha só do menu, calma e angustiada. Leve: enquanto o vídeo cobre a tela, o jogo não desenha a cena.
+- **A abertura como uma TV ligando** (o Pedro achou a entrada abrupta e a música com um corte): um ponto claro vira uma linha, a linha se abre na imagem com chiado, a imagem sai do escuro e só então o menu aparece, devagar. Com o som de uma TV de tubo ligando (o botão, o "bum" da bobina, o estalo quando o ponto acende, a neve); a trilha do menu entra logo depois, subindo do silêncio.
+- **Mais qualidade no fundo** (o Pedro gostou da abertura e quis deixar assim, só com mais qualidade): o vídeo, que era 1280 × 720 bem comprimido e esticado na tela, agora tem 2560 × 1440, as mesmas tomadas ampliadas, limpas e com pouca compressão; o grão de filme é desenhado na tela, fino, e o chiado da TV ficou mais fino.
+- **Sem a imagem duplicada sob o mouse:** a sombra dos textos clareava com o mouse em cima (a cor de "mouse em cima" do Unity). E saiu o "até 4 jogadores" do menu.
+- **"Opções" virou "Configurações"** (no menu do começo, no ESC e no aviso do F1).
+- **As vozes do Oco voltaram ao volume de antes:** as gravadas pelo Pedro, sem os 2 dB e sem os 60% da madrugada.
+- **Os volumes separados:** nas Configurações, além do volume geral, uma barra para a música, outra para os zumbis e outra para os sons de ambiente (que antes seguiam o volume da música).
+- **A rua do vídeo sem a "esticada":** a câmera passava colada num poste e numa estátua, que atravessavam a borda da imagem deformados. A tomada da rua foi regravada com o caminho da câmera livre (outra rua, com o mesmo clima); as outras quatro continuam as aprovadas.
+- **A aba Gráficos nas Configurações:** a resolução, o modo da tela (tela cheia, janela sem borda, janela), a escala de renderização (de 50 a 200%: acima de 100%, mais nítido e mais pesado) e a qualidade (Baixa, Média, Alta, Ultra: as sombras, o anti-serrilhado, as texturas e os detalhes ao longe). A Alta é o jogo como era.
+- **A distância de visão dos zumbis** (nos Gráficos; o Pedro via os zumbis brotarem em cima do carro): os de longe agora aparecem parados na neblina até 40, 55, 70 ou 85 m (antes, além de 40 m, nem eram desenhados), e os novos nascem mais longe de quem vê mais longe (até 46 m; antes, a partir de 22 m). Cada jogador escolhe a sua, e o anfitrião respeita a de cada um. A qualidade traz a dela; o padrão é a Longa. Num teste andando reto a 54 km/h, nenhum zumbi apareceu a menos de 35 m (antes, quase metade).
+
+## Os sons de ambiente, o som abafado e os zumbis nos prédios (29/10/2026, a pedido)
+
+- **O ambiente:** os grilos à noite, cachorros latindo e uivando longe, janelas e portas batendo, a placa de metal rangendo, a lata rolando, os corvos de dia e, de dentro dos prédios, a madeira rangendo. É o maestro da trilha que decide: mais no silêncio, raro com a música, nada no perigo. O que o vento mexe bate logo depois de uma rajada do vento da trilha, e os uivos estão no tom da música. De dentro, o vento e a rua chegam abafados.
+- **O som que vinha de cima:** em cima de um prédio, a voz dos zumbis da rua chegava limpa e com eco de sala, como se estivessem ali. Agora o eco de sala só vale dentro do lugar, e o som com parede, laje ou telhado no meio chega abafado e mais baixo (os zumbis, os tiros dos outros).
+- **Zumbis nos apartamentos:** cada andar de prédio ganha os seus zumbis quando carrega (dentro dos apartamentos, onde ninguém está vendo); subindo a escada, cada andar tem os seus.
+- **A lanterna de dia:** os zumbis na sombra dos prédios, na rua (sobretudo na cidade grande), não ligavam para a lanterna: de dia, ela só valia debaixo de um teto. Agora vale em qualquer sombra, e quem se esquiva não pula para o sol.
+
 ## A voz do Oco gravada (29/10/2026, a pedido)
 
 - **A voz, o golpe, a agonia no sol e a dor do tiro** agora saem da voz do Pedro, gravada e transformada (mais grave, com a garganta maior, um rosnado por baixo, um sopro rouco, o oco e uma sala), sem dar para reconhecer quem gravou. São 37 variações no lugar das 17 geradas de antes. O chamado, a resposta e os sons da pedra continuam os de antes.
@@ -365,7 +400,7 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 
 ## Pendências e observações conhecidas
 
-- **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A comida, a água e a munição no chão não são salvas: cada partida começa com os 50 itens do começo (as balas das caixas são sorteadas de novo).
+- **O saque nos móveis, a despensa, dormir e salvar** ainda não existem (Parte 7). A comida, a água e a munição no chão não são salvas: cada partida começa com os 50 itens do começo (as balas das caixas são sorteadas de novo). O Continuar do menu reabre o mesmo mapa, mas do zero.
 - **A mochila não empilha os itens** (de propósito, por enquanto), e a armadura e a aba de criar ainda estão vazias.
 - **Os outros não veem comer e beber:** o corpo segura a lata ou a garrafa na guarda dos punhos, e só quem come ou bebe ouve o som.
 - **O painel de armas, a porta e as luzes do bunker não são salvos:** ao recomeçar a partida, o painel volta ao conteúdo inicial, a porta fecha e as luzes acendem.

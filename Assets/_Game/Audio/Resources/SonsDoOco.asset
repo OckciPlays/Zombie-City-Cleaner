@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eccb00fb14d949488e93c28bd8b30fe, type: 3}
   m_Name: SonsDoOco
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Zombies.SonsDoOco
-  volume: 0.6
+  volume: 1
   voz:
   - {fileID: 8300000, guid: f43f7cb4ee55d2e43ae3173c5158f62d, type: 3}
   - {fileID: 8300000, guid: 4dc19b78d5ae559498498977a24f71fe, type: 3}

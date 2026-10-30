@@ -15,7 +15,7 @@ namespace ZombieCityCleaner.UI
 
         Rect PainelDaTrilha(float u, Rect emCima)
         {
-            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 194 * u);
+            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 240 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -28,8 +28,9 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(x, y, w, 22 * u), "TRILHA (TESTE)", _titulo);
             y += 24 * u;
             var m = MaestroDaTrilha.Instancia;
-            GUI.Label(new Rect(x, y, w, 38 * u), m == null ? "Sem a trilha (falta o TrilhaDoJogo.asset)." : m.Situacao, _texto);
-            y += 40 * u;
+            string ambiente = m == null ? "" : $"\nambiente: {(m.UltimoAmbiente.Length > 0 ? m.UltimoAmbiente : "nada ainda")}{(m.Dentro > 0.5f ? " · dentro" : "")}";
+            GUI.Label(new Rect(x, y, w, 56 * u), m == null ? "Sem a trilha (falta o TrilhaDoJogo.asset)." : m.Situacao + ambiente, _texto);
+            y += 56 * u;
             if (m == null) return area;
 
             bool ligada = MaestroDaTrilha.Ligada;
@@ -77,6 +78,19 @@ namespace ZombieCityCleaner.UI
             {
                 m.TestarMorte();
                 Avisar("A morte: tudo some e toca a morte; depois o vento.");
+            }
+            y += 30 * u;
+            // o ambiente (a pedido em 29/10/2026): os grilos, os cachorros, a janela e a placa com o vento, os corvos
+            bool ambienteLigado = MaestroDaTrilha.AmbienteLigado;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), ambienteLigado ? $"Ambiente: {Mathf.RoundToInt(MaestroDaTrilha.VolumeDoAmbiente * 100f)}%" : "Ambiente: DESLIGADO", _botao))
+            {
+                MaestroDaTrilha.AmbienteLigado = !ambienteLigado;
+                Avisar(!ambienteLigado ? "Os sons de ambiente voltam." : "Sem os sons de ambiente (a música e o vento continuam).");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Ambiente agora", _botao))
+            {
+                m.AmbienteAgora();
+                Avisar("Um som de ambiente agora (o que caberia aqui: de dia ou de noite, dentro ou fora).");
             }
             return area;
         }

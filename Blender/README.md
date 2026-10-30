@@ -83,3 +83,11 @@ Como rodar:
     `assar(canais=("cor",))`...), `compor()`, `exportar()` (grava `Assets/_Game/Art/Veiculos/PeruaNova/PeruaNova.fbx` e
     as texturas em `.../PeruaNova/Texturas`) e `salvar()`. Depois, na Unity, Zombie City Cleaner > Veículos > Aplicar o
     visual novo da perua (também depois de cada "Montar veículos"). Detalhes em `Docs/PeruaNova/README.md`.
+- `PeruaNova2/` (29/10/2026): a versão leve da perua (~9.700 triângulos; os detalhes da v1 projetados nas texturas).
+  Roda num Blender em segundo plano, uma etapa por processo (`rodar.py`: `construir` a partir do `PeruaNova/PeruaNova.blend`,
+  depois `assar <canal>` e `compor_exportar` no `PeruaNova2/PeruaNova2.blend`). Na Unity: Zombie City Cleaner > Veículos >
+  Aplicar o visual novo da perua (v2, leve).
+- `Cupe/` (29/10/2026): o segundo carro que se dirige, um cupê fastback preto e cinza (~8.200 triângulos; o mesmo caminho
+  da perua v2). Num Blender em segundo plano: `rodar.py -- construir`, depois `assar <canal> <A|B>` (um atlas por processo,
+  para caber na memória) e `compor_exportar`. Na Unity: Zombie City Cleaner > Veículos > Montar o cupê.
+  Detalhes em `Docs/Cupe/README.md`.

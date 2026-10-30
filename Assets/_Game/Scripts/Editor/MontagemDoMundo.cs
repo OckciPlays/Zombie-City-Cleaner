@@ -92,6 +92,17 @@ namespace ZombieCityCleaner.EditorTools
             terreno.materialDaAgua = AssetDatabase.LoadAssetAtPath<Material>(TexturasDoChao.MaterialDaAgua);
             partida.terreno = terreno;
             partida.carro = carro;
+            // o segundo carro (o cupê, Editor/Cupe/MontagemDoCupe), se já foi montado: também na lista da rede
+            var cupe = AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDoCupe.Prefab);
+            if (cupe != null)
+            {
+                partida.segundoCarro = cupe;
+                if (lista != null && !lista.PrefabList.Any(p => p.Prefab == cupe))
+                {
+                    lista.Add(new NetworkPrefab { Prefab = cupe });
+                    EditorUtility.SetDirty(lista);
+                }
+            }
             mundo.AddComponent<TelaDeCarregamento>();
             mundo.AddComponent<MapaDoMundo>();
 
