@@ -19,8 +19,10 @@ namespace ZombieCityCleaner.Loot
         public Vector3 apoio;
         public float giro;
         public ushort qtd;
+        /// <summary>O desgaste da arma (0, nova).</summary>
+        public byte desgaste;
 
-        public bool Equals(ItemNoChao o) => id == o.id && item == o.item && apoio == o.apoio && giro == o.giro && qtd == o.qtd;
+        public bool Equals(ItemNoChao o) => id == o.id && item == o.item && apoio == o.apoio && giro == o.giro && qtd == o.qtd && desgaste == o.desgaste;
     }
 
     /// <summary>
@@ -41,6 +43,8 @@ namespace ZombieCityCleaner.Loot
         public Mesh[] malhasDeMunicao;
         [Tooltip("A malha de cada peça do motor (a vela, a bateria e o radiador), na ordem do enum Item (topo em +Y).")]
         public Mesh[] malhasDePeca;
+        [Tooltip("A malha de cada item do saque (o loot.py), na ordem de Itens.DoLoot (topo em +Y).")]
+        public Mesh[] malhasDeLoot;
         public Material material;
         [Tooltip("Os itens do começo da partida: o ponto de apoio de cada um.")]
         public Vector3[] lugares;
@@ -76,7 +80,7 @@ namespace ZombieCityCleaner.Loot
                 {
                     var item = itensDosLugares[i];
                     // a caixa achada nunca vem cheia: o anfitrião sorteia as balas a cada partida
-                    int qtd = Itens.EhMunicao(item) ? UnityEngine.Random.Range(Itens.Municao(Itens.CalibreDa(item)).achadaMin, Itens.Municao(Itens.CalibreDa(item)).achadaMax + 1) : 0;
+                    int qtd = Itens.EhMunicao(item) ? UnityEngine.Random.Range(Itens.Municao(Itens.CalibreDa(item)).achadaMin, Itens.Municao(Itens.CalibreDa(item)).achadaMax + 1) : Itens.EmPilha(item) ? 1 : 0;
                     _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = lugares[i], giro = girosDosLugares[i], qtd = (ushort)qtd });
                 }
             }
@@ -97,12 +101,13 @@ namespace ZombieCityCleaner.Loot
         /// Só no anfitrião: um item novo no mundo, apoiado no ponto. <paramref name="qtd"/>: as balas (da caixa, ou do pente
         /// da arma); -1, cheio.
         /// </summary>
-        public void Criar(Item item, Vector3 apoio, float giro, int qtd = -1)
+        public void Criar(Item item, Vector3 apoio, float giro, int qtd = -1, int desgaste = 0)
         {
             if (!IsServer || !IsSpawned || item == Item.Nada) return;
             if (qtd < 0) qtd = Itens.QuantidadePadrao(item);
             if (Itens.EhMunicao(item) && qtd <= 0) return;   // a caixa vazia não fica no chão
-            _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = apoio, giro = giro, qtd = (ushort)qtd });
+            if (Itens.EmPilha(item)) qtd = Mathf.Max(1, qtd);
+            _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = apoio, giro = giro, qtd = (ushort)qtd, desgaste = (byte)Mathf.Clamp(desgaste, 0, 100) });
         }
 
         /// <summary>O jogador local pede para pegar o item.</summary>
@@ -122,10 +127,10 @@ namespace ZombieCityCleaner.Loot
             if (inventario == null || k < 0) return;
             var it = _itens[k];
             if ((cliente.PlayerObject.transform.position - it.apoio).sqrMagnitude > distanciaMaxima * distanciaMaxima) return;
-            // a munição completa as caixas que ele já tem, e o que não couber fica no chão
-            if (Itens.EhMunicao(it.item))
+            // a pilha (a munição, o saque) completa as que ele já tem, e o que não couber fica no chão
+            if (Itens.EmPilha(it.item))
             {
-                int sobra = inventario.ReceberMunicao(it.item, it.qtd);
+                int sobra = inventario.ReceberEmPilha(it.item, Itens.Quantos(it.item, it.qtd));
                 if (sobra <= 0) _itens.RemoveAt(k);
                 else if (sobra != it.qtd)
                 {
@@ -135,7 +140,7 @@ namespace ZombieCityCleaner.Loot
                 return;
             }
             // sem espaço na mochila, ele fica no chão (a dica avisa)
-            if (inventario.Receber(it.item, it.qtd)) _itens.RemoveAt(k);
+            if (inventario.Receber(it.item, it.qtd, it.desgaste)) _itens.RemoveAt(k);
         }
 
         int Indice(ushort id)
@@ -210,19 +215,30 @@ namespace ZombieCityCleaner.Loot
 
         // a lata, a garrafa, as mochilas e o coldre em pé; as armas deitadas de lado. O ponto de apoio fica embaixo do
         // meio da malha
+        /// <summary>A malha do item do saque (null: não é um, ou ainda não foi montada).</summary>
+        public Mesh MalhaDoLoot(Item item)
+        {
+            int k = Itens.IndiceDoLoot(item);
+            return malhasDeLoot != null && k >= 0 && k < malhasDeLoot.Length ? malhasDeLoot[k] : null;
+        }
+
         void Montar(ItemNoChaoNaMira o, ItemNoChao it)
         {
             o.item = it.item;
             int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item), pc = Itens.IndiceDaPeca(it.item);
-            var malha = e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
+            var malha = MalhaDoLoot(it.item) is Mesh l ? l
+                : e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
                 : mun >= 0 ? (malhasDeMunicao != null && mun < malhasDeMunicao.Length ? malhasDeMunicao[mun] : null)
                 : pc >= 0 ? (malhasDePeca != null && pc < malhasDePeca.Length ? malhasDePeca[pc] : null)
                 : malhas != null && m >= 0 && m < malhas.Length ? malhas[m] : null;
             o.GetComponent<MeshFilter>().sharedMesh = malha;
+            // a paleta, ou o material com a textura própria do modelo (a pistola nova)
+            var proprio = m >= 0 && e < 0 && mun < 0 && pc < 0 ? Itens.MaterialProprio(m) : null;
+            o.GetComponent<MeshRenderer>().sharedMaterial = proprio != null ? proprio : material;
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";
             if (malha == null) return;
             var b = malha.bounds;
-            var rot = Quaternion.Euler(0f, it.giro, 0f) * (Itens.EhArma(it.item) ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity);
+            var rot = Quaternion.Euler(0f, it.giro, 0f) * (Itens.EhArma(it.item) || Itens.EhBranca(it.item) ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity);
             float baixo = float.MaxValue;
             Vector3 meio = Vector3.zero;
             for (int c = 0; c < 8; c++)
@@ -250,7 +266,7 @@ namespace ZombieCityCleaner.Loot
         {
             var inventario = quem.Inventario;
             if (inventario == null || mundo.Do(id) == Item.Nada) return null;
-            return inventario.DicaDePegar(item, Itens.EhMunicao(item) || Itens.EhArma(item) || Itens.ComEstado(item) ? mundo.Quantidade(id) : -1);
+            return inventario.DicaDePegar(item, Itens.EmPilha(item) || Itens.EhArma(item) || Itens.ComEstado(item) ? mundo.Quantidade(id) : -1);
         }
 
         public override void Usar(ArmaJogador quem) => mundo.PedirPegar(id, quem.Inventario);

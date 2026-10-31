@@ -7,7 +7,7 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// O que o jogador leva, no corpo dele (28/10/2026, a pedido: a mochila não aparecia nas costas dos jogadores; era a
-    /// fatia 2 das mochilas): a mochila, o coldre e as armas penduradas, as mesmas do retrato do inventário
+    /// fatia 2 das mochilas): a mochila e as armas dos atalhos penduradas, as mesmas do retrato do inventário
     /// (<see cref="EquipamentoNoCorpo.OQueVeste"/>), em todas as máquinas, pelo inventário que vem pela rede, presas aos
     /// ossos do corpo (acompanham a animação). No dono, como o corpo: só a sombra na primeira pessoa (fora da sombra da
     /// lanterna dele) e inteiras na terceira (<see cref="JogadorRede.CorpoVisivelNoDono"/>). Somem no carro.
@@ -20,6 +20,7 @@ namespace ZombieCityCleaner.Player
         EquipamentoNoCorpo _equipamento;
         Transform _referencia;
         long _vestido = -1;
+        readonly Item[] _armas = new Item[InventarioJogador.Atalhos];
         bool _aplicado, _visivel, _noCarro;
 
         void Awake()
@@ -56,11 +57,11 @@ namespace ZombieCityCleaner.Player
             }
             if (_referencia == null) return;
 
-            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, out bool coldre, out var alca, out var costas, out var cintura);
+            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, _armas);
             if (chave != _vestido)
             {
                 _vestido = chave;
-                _equipamento.Vestir(_referencia, mochila, coldre, alca, costas, cintura);
+                _equipamento.Vestir(_referencia, mochila, _armas);
                 _aplicado = false;
             }
 

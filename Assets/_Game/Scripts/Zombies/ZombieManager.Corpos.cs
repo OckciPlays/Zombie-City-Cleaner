@@ -59,15 +59,14 @@ namespace ZombieCityCleaner.Zombies
                 }
             if (livre == null)
             {
-                // todos em uso: some o mais antigo, de preferência um que ninguém está vendo aqui
+                // todos em uso: some o mais antigo, de preferência um que ninguém está vendo aqui (nunca o boneco de um zumbi
+                // vivo caindo sem uma perna)
                 foreach (var c in lista)
-                    if (!c.pele.isVisible && (livre == null || c.caiuEm < livre.caiuEm)) livre = c;
+                    if (!c.vivo && !c.pele.isVisible && (livre == null || c.caiuEm < livre.caiuEm)) livre = c;
                 if (livre == null)
-                {
-                    livre = lista[0];
                     foreach (var c in lista)
-                        if (c.caiuEm < livre.caiuEm) livre = c;
-                }
+                        if (!c.vivo && (livre == null || c.caiuEm < livre.caiuEm)) livre = c;
+                if (livre == null) return;
                 livre.Guardar();
             }
             // um pouco para cima: o tiro tira o pé do chão, e o corpo não arrasta
@@ -76,13 +75,38 @@ namespace ZombieCityCleaner.Zombies
             livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes, z.MaterialDaPele, z.Pedra);
         }
 
+        /// <summary>
+        /// Um zumbi vivo cai sem uma perna (Zumbi.Equilibrio.cs): um corpo livre do modelo dele cai no lugar, com a pose de
+        /// agora, a velocidade dele e o empurrão para o lado da queda, e volta quando a queda acaba. Sem corpo livre, null
+        /// (a queda é só a animação).
+        /// </summary>
+        internal CorpoDeZumbi CairVivo(Zumbi z, Vector3 velocidade, Vector3 empurrao)
+        {
+            if (_corpos == null || z.modelo >= _corpos.Length) return null;
+            foreach (var c in _corpos[z.modelo])
+                if (!c.emUso)
+                {
+                    c.Cair(z.raizDoModelo, z.esqueleto, velocidade, false, 1, empurrao, z.Cortes, z.MaterialDaPele, 0f, true);
+                    return c;
+                }
+            return null;
+        }
+
+        internal void DevolverBoneco(CorpoDeZumbi c) => c.Guardar();
+
+        /// <summary>O zumbi morreu caindo: o boneco dele vira o corpo (o rosto de morto, a cabeça e o empurrão do tiro).</summary>
+        internal void MorrerNoBoneco(CorpoDeZumbi c, Zumbi z, bool semCabeca, int parte, Vector3 direcao)
+        {
+            c.VirarMorto(semCabeca, parte, (direcao.normalized + Vector3.up * 0.15f) * empurraoDoTiro, z.Cortes, z.MaterialDaPele);
+        }
+
         void AtualizarCorpos(float agora, float dt)
         {
             if (_corpos == null) return;
             foreach (var lista in _corpos)
                 foreach (var c in lista)
                 {
-                    if (!c.emUso) continue;
+                    if (!c.emUso || c.vivo) continue;
                     float t = agora - c.caiuEm;
                     if (t > tempoDoCorpo + 2.5f) c.Guardar();
                     else if (t > tempoDoCorpo) c.Afundar(0.25f * dt);

@@ -23,6 +23,63 @@ Como rodar:
 2. No console do Blender, carregue `sniper_construir.py` (por exemplo com `importlib`) e chame `construir()`.
 3. Na Unity, rode Zombie City Cleaner > Montar armas.
 
+## A pistola nova (29/10/2026)
+
+- `Pistola/pistola.py`: a pistola mais realista (aço gasto e enferrujado, ferrolho serrilhado, miras de três pontos,
+  trilho, guarda-mato quadrado, placas do punho e o carregador comprido enrolado em fita), nas mesmas três peças e no
+  mesmo espaço da antiga do `Armas.fbx` (o cano em -Y, o alto em +Z, a direita da arma em -X, a origem no cabo). Não usa
+  a paleta: tem textura própria, assada de materiais de nós (a cor e o metal/lisura, 1024 x 1024).
+- Roda num Blender em segundo plano (~1 min): `blender -b --factory-startup --python Blender/Pistola/pistola.py -- tudo`
+  (ou as etapas `construir`, `assar`, `exportar`, `imagens`). Grava o `Pistola.blend`, o
+  `Assets/_Game/Art/Characters/Jogador/Armas_Pistola.fbx`, as texturas em `Art/Characters/Jogador/Texturas` e o ícone e a
+  foto em `Art/UI/Icones`.
+- Na Unity: Zombie City Cleaner > Armas > Montar a pistola nova (troca a antiga nos braços, no corpo e na arma solta).
+
+## As armas novas (29/10/2026)
+
+- `Armas/`: as 4 armas (a pistola, a M4, a espingarda e a sniper) refeitas a partir dos modelos prontos que o Pedro mandou
+  (`Armas/Fontes`: Fort-17, um AR-15, Remington 870 e Mosin-Nagant), adaptadas ao jogo: no espaço e nas peças das
+  antigas (a boca do cano e o cabo onde as animações seguram), preto e grafite, com os materiais PBR assados num atlas
+  por arma. `armas.py` é o caminho comum; `arma_<arma>.py`, a configuração de cada uma (a sniper ganha aqui a luneta e a
+  empunhadura). Os editáveis: `<Arma>.blend` (com as mãos de primeira pessoa como referência).
+- Num Blender em segundo plano (~4 min por arma): `blender -b --factory-startup --disable-autoexec --python
+  Blender/Armas/rodar.py -- <pistola|rifle|espingarda|sniper> tudo` (ou as etapas `construir`, `assar`, `exportar`,
+  `fotos`, `imagens`, `rascunho`). Na Unity: Zombie City Cleaner > Armas > Pôr as armas novas. Detalhes em
+  `Docs/Armas/README.md`.
+- A pistola enferrujada do `Pistola/` (de antes, no mesmo dia) não é mais usada.
+- **As estilizadas (v2, 30/10/2026):** o rifle, a espingarda e a sniper no jogo são as próprias antigas melhoradas
+  (`estilizadas.py`, `v2_<arma>.py`): a arma antiga dos braços de primeira pessoa, separada pelos ossos, com as quinas
+  chanfradas, alguns detalhes e a paleta de cores chapadas (`Art/Armas/Texturas/Armas_Paleta_*`). Num Blender em segundo
+  plano: `blender -b --factory-startup --disable-autoexec --python Blender/Armas/rodar_v2.py -- <rifle|espingarda|sniper> tudo`
+  (as etapas `construir`, `exportar`, `fotos`, `imagens`, `rascunho`). As v1 realistas delas ficam como estavam.
+- **O saque (31/10/2026, `loot.py`):** a comida, a bebida, os remédios, os materiais e os kits (39 itens), as construções
+  montadas (a fogueira, a cama e a barricada) e a bancada: `Loot.fbx`, os ícones e as fotos (`blender -b --factory-startup
+  --disable-autoexec --python Blender/loot.py -- tudo`). Usa as funções do `equipamentos.py` e as células novas da
+  `Paleta.png` (a linha 11, colunas 6 a 15, e a linha 0, colunas 0 a 5).
+- **O machado e o bastão em pé (31/10/2026):** a pegada dos dois foi refeita a pedido (em pé à direita da tela, o fio do
+  machado para a esquerda; o machado com a mão direita 18 cm acima no cabo, o bastão bem embaixo) e o golpe gira para a
+  esquerda (`machado.CHAVES_DO_GOLPE`, que o bastão usa). As fotos de conferência do `faca.py` usam 55° de campo de
+  visão, o da câmera dos braços do jogo.
+- **O bastão, a lança e a tocha (31/10/2026, `Armas/bastao.py`, `lanca.py`, `tocha.py`):** as armas brancas da fabricação,
+  com as etapas do `faca.py` (o bastão e a lança nas duas mãos, com o golpe e a segunda mão do `machado.py`; a tocha na mão
+  direita, com a `PONTA` onde a chama nasce).
+- **O machado (31/10/2026):** a segunda arma branca (`machado.py -- tudo`, as etapas do `faca.py`), nas duas mãos (a mão
+  esquerda no cabo por IK em todos os clipes) e com o clipe `Golpe` próprio (a machadada na diagonal).
+- **A faca (31/10/2026):** a primeira arma branca (`faca.py -- tudo`: `construir`, `exportar` (o `Itens_Faca.fbx`),
+  `imagens`, `fotos` e `bracos` (o `Jogador_FP_Faca.fbx`, a partir dos punhos); `conferir` faz fotos da câmera de
+  primeira pessoa).
+- **A submetralhadora v3 (30/10/2026):** a MP5K, toda modelada a partir da imagem (`v3_mp5.py`; `rodar_v2.py -- v3_mp5
+  tudo`), e os braços de primeira pessoa com a mão esquerda na empunhadura vertical (`maos_smg.py -- exportar`: parte do
+  FBX original, no backup da SMG, e grava o `Jogador_FP_Submetralhadora.fbx` e o `Bracos_Submetralhadora.blend`;
+  `-- medir` mostra a pose de segurar; `-- conferir` faz fotos de conferência).
+- **O rifle v3 (30/10/2026):** a M4A1 com a alça de transporte, do AR-15 fonte (`v3_m4.py`; `rodar_v2.py -- v3_m4 tudo`):
+  as peças da fonte com Decimate e quinas vivas acima de 12°, e a alça, o guarda-mão canelado, a massa de mira, o
+  quebra-chamas e a alavanca modelados no espaço do AR-15.
+- **A sniper v3 (30/10/2026):** a Mosin fiel com a luneta "scout" da v1 (`v3_mosin.py`; `rodar_v2.py -- v3_mosin tudo`; a
+  versão leve que vai no jogo, com 4.219 triângulos: `v3_mosin_leve.py`, `rodar_v2.py -- v3_mosin_leve tudo`) e os
+  braços de primeira pessoa com a mão direita no punho dela (`maos_sniper.py -- exportar`: parte do FBX original, no
+  backup das armas, e grava o `Jogador_FP_Sniper.fbx` e o `Bracos_Sniper.blend`; `-- conferir` faz fotos de conferência).
+
 ## As mochilas e o coldre
 
 - `equipamentos.py`: as 3 mochilas (a pequena, de lona verde-oliva; a média, militar, cáqui com tiras de couro; a grande,

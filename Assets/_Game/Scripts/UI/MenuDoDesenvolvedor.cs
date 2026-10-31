@@ -13,7 +13,7 @@ namespace ZombieCityCleaner.UI
     /// O menu do desenvolvedor (F1; no Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada,
     /// <see cref="Opcoes.LiberarF1"/>): sempre de dia ou sempre de noite (o meio-dia ou a meia-noite com o relógio parado,
     /// para todos), criar itens (as armas, a lata, a
-    /// garrafa, as mochilas, o coldre, as caixas de munição cheias e as peças do motor a 100%) na mochila ou no chão à
+    /// garrafa, as mochilas, as caixas de munição cheias e as peças do motor a 100%) na mochila ou no chão à
     /// frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
     /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz. Na cena Mundo, também o painel do mundo
     /// (MenuDoDesenvolvedor.Mundo.cs: a semente, voar com F2 e ir para um ponto).
@@ -35,23 +35,47 @@ namespace ZombieCityCleaner.UI
         /// <summary>A janela na tela (vazia, fechada): a tela do inventário não pega cliques nela.</summary>
         public static Rect Area { get; private set; }
 
-        static readonly Item[] ItensDoMenu =
+        // os itens que o menu cria, por espécie (31/10/2026: com o saque, eram itens demais numa lista só)
+        static readonly (string nome, Item[] itens)[] ItensDoMenu =
         {
-            Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Comida, Item.Agua,
-            Item.Coldre, Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
-            Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
-            Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua,
+            ("Armas", new[]
+            {
+                Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Faca, Item.Machado,
+                Item.Bastao, Item.Lanca, Item.Tocha, Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
+            }),
+            ("Comida", new[]
+            {
+                Item.Comida, Item.Feijao, Item.Carne, Item.Milho, Item.Sopa, Item.Salgadinho, Item.Chocolate, Item.BarraDeEnergia,
+                Item.Agua, Item.CopoDeAgua, Item.RefrigeranteGarrafa, Item.RefrigeranteLata, Item.Energetico, Item.Leite, Item.Suco, Item.GarrafaTermica,
+            }),
+            ("Remédios", new[]
+            {
+                Item.Remedio, Item.Comprimidos, Item.KitMedico, Item.Atadura, Item.Gaze, Item.Desinfetante, Item.SprayAntisseptico, Item.Antibiotico, Item.Bandagem,
+            }),
+            ("Materiais", new[]
+            {
+                Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
+                Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada,
+            }),
+            ("Outros", new[]
+            {
+                Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
+                Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua,
+            }),
         };
+        static readonly string[] NomesDasEspecies = System.Array.ConvertAll(ItensDoMenu, e => e.nome);
+        int _especie;
         static readonly string[] Destinos = { "Na mochila", "No chão" };
 
-        // o boneco de teste: uma cópia do corpo com a mochila, o coldre e as armas penduradas (só visual, só aqui)
-        static readonly (string nome, Item mochila, bool coldre, Item alca, Item costas, Item cintura)[] Bonecos =
+        // o boneco de teste: uma cópia do corpo com a mochila e as armas dos 3 atalhos penduradas (só visual, só aqui)
+        static readonly (string nome, Item mochila, Item[] armas)[] Bonecos =
         {
-            ("sem mochila, a pistola no cós", Item.Nada, false, Item.Pistola, Item.Nada, Item.Nada),
-            ("sem mochila, a espingarda na alça", Item.Nada, false, Item.Espingarda, Item.Nada, Item.Nada),
-            ("mochila pequena, coldre: pistola, submetralhadora", Item.MochilaPequena, true, Item.Pistola, Item.Submetralhadora, Item.Nada),
-            ("mochila média: rifle, espingarda e pistola", Item.MochilaMedia, true, Item.Rifle, Item.Espingarda, Item.Pistola),
-            ("mochila grande: sniper, rifle e submetralhadora", Item.MochilaGrande, true, Item.Sniper, Item.Rifle, Item.Submetralhadora),
+            ("sem mochila: pistola no cós", Item.Nada, new[] { Item.Pistola, Item.Nada, Item.Nada }),
+            ("sem mochila: espingarda, rifle e faca", Item.Nada, new[] { Item.Espingarda, Item.Rifle, Item.Faca }),
+            ("sem mochila: sniper, rifle e machado", Item.Nada, new[] { Item.Sniper, Item.Rifle, Item.Machado }),
+            ("mochila pequena: pistola, submetralhadora", Item.MochilaPequena, new[] { Item.Pistola, Item.Submetralhadora, Item.Nada }),
+            ("mochila média: rifle, espingarda e pistola", Item.MochilaMedia, new[] { Item.Rifle, Item.Espingarda, Item.Pistola }),
+            ("mochila grande: sniper, rifle e machado", Item.MochilaGrande, new[] { Item.Sniper, Item.Rifle, Item.Machado }),
         };
         GameObject _boneco;
         int _qualBoneco = -1;
@@ -195,11 +219,14 @@ namespace ZombieCityCleaner.UI
             y += 26 * u;
             _destino = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _destino, Destinos, 2, _botao);
             y += 34 * u;
+            _especie = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _especie, NomesDasEspecies, NomesDasEspecies.Length, _botao);
+            y += 34 * u;
             float bw = (w - 8 * u) / 2f;
             var inventario = GetComponent<InventarioJogador>();
-            for (int i = 0; i < ItensDoMenu.Length; i++)
+            var lista = ItensDoMenu[_especie].itens;
+            for (int i = 0; i < lista.Length; i++)
             {
-                var item = ItensDoMenu[i];
+                var item = lista[i];
                 var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
                 string nome = Itens.Nome(item);
                 if (!GUI.Button(r, char.ToUpper(nome[0]) + nome.Substring(1), _botao)) continue;
@@ -211,7 +238,10 @@ namespace ZombieCityCleaner.UI
                 }
                 CriarItemRpc(item, noChao);
             }
-            y += (ItensDoMenu.Length + 1) / 2 * 32 * u + 4 * u;
+            // a altura da maior espécie (a janela não pula ao trocar)
+            int maior = 0;
+            foreach (var e in ItensDoMenu) maior = Mathf.Max(maior, e.itens.Length);
+            y += (maior + 1) / 2 * 32 * u + 4 * u;
 
             // o boneco de teste
             GUI.Label(new Rect(x, y, w, 22 * u), "Boneco equipado (teste)", _titulo);
@@ -288,7 +318,7 @@ namespace ZombieCityCleaner.UI
                 corpo.AddComponent<EquipamentoNoCorpo>();
             }
             var b = Bonecos[_qualBoneco];
-            _boneco.GetComponentInChildren<EquipamentoNoCorpo>().Vestir(referencia, b.mochila, b.coldre, b.alca, b.costas, b.cintura);
+            _boneco.GetComponentInChildren<EquipamentoNoCorpo>().Vestir(referencia, b.mochila, b.armas);
         }
 
         // ------------------------------------------------------------------ no anfitrião
@@ -300,13 +330,15 @@ namespace ZombieCityCleaner.UI
         {
             if (!Aceita(parametros) || item == Item.Nada) return;
             var inventario = GetComponent<InventarioJogador>();
-            if (!noChao && inventario != null && inventario.Receber(item)) return;
+            // o saque vem numa pilha cheia (os materiais da fabricação, de uma vez)
+            int qtd = Itens.EmPilha(item) && !Itens.EhMunicao(item) ? Itens.Pilha(item) : -1;
+            if (!noChao && inventario != null && inventario.Receber(item, qtd)) return;
             if (ItensNoMundo.Instancia == null) return;
             // no chão, 1,2 m à frente (onde um raio de cima bater)
             Vector3 frente = transform.position + transform.forward * 1.2f;
             var ponto = Physics.Raycast(frente + Vector3.up * 1.5f, Vector3.down, out var chao, 4f, ~((1 << 2) | (1 << JogadorRede.CamadaJogador)), QueryTriggerInteraction.Ignore)
                 ? chao.point : transform.position;
-            ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f);
+            ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f, qtd);
         }
 
         [Rpc(SendTo.Server)]

@@ -113,6 +113,8 @@ namespace ZombieCityCleaner.Zombies
         public int Mortos { get; private set; }
 
         readonly List<Zumbi> _ativos = new List<Zumbi>();
+        /// <summary>Os zumbis em jogo agora (só no anfitrião: as barricadas contam os que estão nelas).</summary>
+        public IReadOnlyList<Zumbi> Ativos => _ativos;
         Stack<Zumbi>[] _pools;
         readonly Zumbi[] _porId = new Zumbi[MaxZumbis];
         readonly byte[] _geracoes = new byte[MaxZumbis];
@@ -194,6 +196,16 @@ namespace ZombieCityCleaner.Zombies
             AtualizarCorpos(Time.time, Time.deltaTime);
             AtualizarPedacos(Time.time, Time.deltaTime);
             GemidosAoAcaso();
+        }
+
+        // depois da animação: o equilíbrio sem uma perna (o corpo inclinado no pé que sobrou e a pose saindo do boneco da
+        // queda; Zumbi.Equilibrio.cs). A conta de quem não está numa fase sai na primeira linha
+        void LateUpdate()
+        {
+            if (!IsSpawned) return;
+            float dt = Time.deltaTime;
+            var lista = IsServer ? _ativos : _copias;
+            for (int i = 0; i < lista.Count; i++) lista[i].DepoisDaAnimacao(dt);
         }
 
         // ------------------------------------------------------------------ jogadores e percepção
@@ -301,7 +313,7 @@ namespace ZombieCityCleaner.Zombies
         /// atrasada, então a conferência é tolerante (é co-op): o zumbi tem que existir (mesmo Id e geração), estar
         /// vivo e perto do ponto do acerto.
         /// </summary>
-        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor)
+        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor, float corte = 1f)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
@@ -310,7 +322,8 @@ namespace ZombieCityCleaner.Zombies
             if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
             // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
-            z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 10f), ponto, direcao, arremesso, autor, Time.time);
+            // o limite (é co-op, mas um número absurdo não passa): o maior acerto é o carro muito rápido (500 a 110 km/h)
+            z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 1000f), ponto, direcao, arremesso, autor, Time.time, Mathf.Clamp(corte, 0f, 4f));
         }
 
         internal void Golpear(JogadorRede alvo, float dano, Vector3 de)

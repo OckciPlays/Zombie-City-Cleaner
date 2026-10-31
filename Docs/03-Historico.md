@@ -265,6 +265,30 @@ Pedido de teste: mais clima de começo de apocalipse, sem pesar (as hordas vêm 
 - No Blender (`Modelo 3D/Personagens/personagens.py`, na pasta de arte): o esqueleto do jogador medido em cada malha, com os 5 dedos de 3 ossos cada, os pesos automáticos e as 25 animações do jogador passadas para cada um (as da pistola, as de arma longa e as dos punhos). Os braços do Tripo são curtos: a arma de terceira pessoa fica um pouco menor (84% a 91%), a mão esquerda escorrega no guarda-mão e a arma vem para perto do corpo quando falta braço.
 - Na Unity: os 4 corpos no prefab do jogador, só o escolhido ligado; os controladores de cada um; o retrato do TAB, o boneco do F1, o equipamento no corpo e a pose no carro usam o corpo do personagem. Os braços de primeira pessoa continuam os de blocos, sem luvas, com a pele de quem foi escolhido.
 
+## O zumbi sem uma perna: o equilíbrio e o levantar feito no Blender (31/10/2026, a pedido)
+
+- **O equilíbrio** (a pedido: "ele vai começar a tombar pros lados, cair no chão, pode começar a se arrastejar mesmo com uma perna, pode tentar se levantar e cair novamente [...] e conseguir andar com uma perna pulando"): perdendo só uma perna, o Oco cai na hora ou cambaleia, tombando como um pêndulo em volta do pé que sobrou e pulando de lado; termina caindo (com física: o corpo cai de verdade, para o lado do tombo) ou firme, pulando numa perna (e um tiro pode derrubá-lo de novo). No chão, ele tenta levantar (pode falhar e cair de novo) ou rasteja numa perna, e de tempos em tempos tenta outra vez, até desistir. O anfitrião decide; a fase e a inclinação vão pela rede num byte.
+- **O levantar novo** (a pedido, depois do primeiro teste: "Ele está levantando de repente, sem utilizar o apoio dos braços [...] algo mais cinematografico e impactante"): o clipe Cair tocado de trás para a frente deu lugar a uma animação feita pose a pose no esqueleto do Oco (`Blender/equilibrio_oco.py`), de ~4,5 s: de bruços, ele arrasta as mãos para baixo dos ombros, empurra o chão (os braços falham uma vez e o peito despenca), faz a perna de sapo, fica de quatro com o joelho embaixo do corpo, quase tomba para o lado do coto e se segura na mão, arrasta o pé até ficar agachado numa perna e sobe empurrando o chão (a mão do lado do coto sai por último), os braços abertos para se equilibrar. As mãos e o joelho ficam plantados no chão (IK feito no script), com tremor de esforço no tronco. Uma versão sem a esquerda e o espelho sem a direita, gravadas no esqueleto de cada um dos 12 Ocos.
+- **Uma tentativa que falha** cai num dos três momentos fracos do clipe (os braços falhando, o tombo, o empurrão final); no tombo, para o lado do coto.
+- Testado no Play (Oco Original, Turista e Lenhador): sem a esquerda e sem a direita, levantando inteiro, e falhando duas vezes até rastejar.
+
+## A vida dos zumbis em 100 e o dano novo das armas (31/10/2026, a pedido)
+
+Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir juntos e chegar em um acordo"), pensando nos zumbis especiais que virão.
+
+- **A vida do Oco agora é 100** (era 6, contada em tiros de pistola). Cada parte do corpo multiplica o dano: a cabeça vale 3 vezes, os braços e as pernas metade. Cada braço e cada perna tem 50 de vida e cai quando ela acaba. A cabeça não mata mais com qualquer tiro: ela explode só no acerto que mata.
+- **As armas de fogo**: a pistola tira 15 (7 tiros no corpo, 3 na cabeça), a submetralhadora 18 (6 / 2), o rifle 25 (4 / 2) e a sniper 50 (2 / 1). A espingarda: 115 até 5 m (um tiro mata), 30 até 15 m (4 / 2) e 17 mais longe (6 / 2).
+- **As armas brancas e o soco**, na faixa das armas de fogo (o Pedro não quis que passassem muito delas): o soco 6, a tocha 8, a faca 15, o bastão com pregos 20, a lança 20 e o machado 25. A cabeça vale 3 vezes em todas. O machado decepa um braço ou uma perna com um golpe. A cabeça só explode com tiros e cortes: o soco, o bastão e a tocha matam pela cabeça com ela no lugar.
+- **O atropelamento**: cada km/h acima de 10 tira 5 de vida, sem limite. O Oco morre a partir de 30 km/h; um zumbi especial com mais vida vai precisar de mais velocidade.
+- Testado no Play, acertando zumbis de verdade: as contagens de tiros e golpes acima, a cabeça explodindo no acerto que mata, o machado decepando com um golpe (a pistola, com 4) e o carro matando a partir de 30 km/h.
+
+## A pistola nova, mais realista (29/10/2026, a pedido)
+
+- **O modelo:** pela foto de referência do Pedro, uma semiautomática de aço gasto e enferrujado, com o ferrolho serrilhado atrás, a janela de ejeção, as miras de três pontos brancos, o trilho embaixo do cano, o guarda-mato quadrado, as placas do punho com parafusos e o carregador comprido enrolado em fita de pano. Uns 3.500 triângulos (a antiga tinha 364), com textura própria (o aço com pátina marrom, as quinas gastas, a ferrugem nos cantos, a fita encardida), no lugar das cores lisas da paleta.
+- **Onde aparece:** na mão (primeira pessoa e no corpo, visto pelos outros), no chão, no painel do bunker, no coldre e no cós, e no ícone e na foto do inventário. As animações são as mesmas: o ferrolho corre no tiro e o carregador sai e entra na recarga.
+- **De onde vem:** de um script do Blender no projeto (`Blender/Pistola/pistola.py`). Os braços e o corpo continuam vindo da pasta de arte do Gustavo com a pistola antiga, e a montagem da Unity troca pela nova sozinha (mesmo se o prefab do jogador for refeito).
+- **Um defeito antigo corrigido:** testar a qualidade Ultra no Editor deixava o anti-serrilhado 4x gravado nas configurações do projeto; agora tudo volta ao sair do Play.
+
 ## O cupê: as portas fechadas, a mira certa e 110 km/h (29/10/2026, a pedido)
 
 - **As portas não parecem mais abertas:** a janela da porta ficava em pé, com o friso 5 cm para fora da beirada do teto e um vão escuro em cima, como a porta entreaberta. Agora as janelas de lado inclinam um pouco para dentro (como num carro de verdade) e a da porta sobe até o teto: o friso encosta nele. O modelo e as texturas do cupê foram refeitos.

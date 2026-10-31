@@ -14,6 +14,7 @@ Esta pasta explica o que o jogo vai ser, o que já está pronto e como trabalhar
 | [06 – Como colaborar](06-Como-Colaborar.md) | o git, as regras do projeto, como testar (inclusive online) e o checklist antes do commit |
 | [07 – Ideias do modo história](07-Ideias-do-Modo-Historia.md) | as ideias para depois da demo (Dia 0, escolhas e finais, o carro, a floresta e os dois acampamentos), divididas em frentes de trabalho |
 | [08 – Vídeos de divulgação](08-Videos-de-Divulgacao.md) | os vídeos curtos do Instagram: o roteiro do primeiro, as tomadas em partes e como gravar pela cena `Video.unity` |
+| [09 – O que mudou de 29 a 31/10](09-Novidades-29-a-31-10.md) | para o Gustavo: as armas novas, as armas brancas, a vida em 100, o saque e a fabricação, e o zumbi sem uma perna |
 
 A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz do repositório. Ele é escrito para o assistente de IA que trabalha no projeto, mas é um texto comum, em português, e descreve cada sistema em detalhe. Esta pasta é o resumo para gente.
 

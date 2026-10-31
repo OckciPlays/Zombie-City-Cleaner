@@ -9,20 +9,23 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// Os zumbis na rede. Não são NetworkObjects (seriam centenas): o anfitrião manda, para cada cliente, um pacote
     /// próprio só com os zumbis perto dele. Os que estão a menos de 15 m vão 10 vezes por segundo, os de 15 a 40 m a cada
-    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 15 bytes: posição em centímetros a partir do jogador que recebe
+    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 16 bytes: posição em centímetros a partir do jogador que recebe
     /// (o pacote leva a posição dele: em centímetros num short, a posição do mundo só cabia até 327 m da origem, e no
     /// mapa gerado, de quilômetros, os zumbis chegavam presos na borda, longe de quem entrou; 28/10/2026), giro, estado (com as
     /// contagens de golpes e de tiros levados), velocidade, como ele morreu (morto, a velocidade dá lugar à direção do
-    /// tiro que o derrubou), os membros perdidos (2 bits por membro) e a pedra do sol. As mensagens são não confiáveis e em
+    /// tiro que o derrubou), os membros perdidos (2 bits por membro), a pedra do sol e o equilíbrio sem uma perna (a fase e a
+    /// inclinação, Zumbi.Equilibrio.cs). As mensagens são não confiáveis e em
     /// ordem: um pacote perdido é coberto pelo próximo, e como o estado inteiro vai em todos, nada se perde de vez.
     /// No cliente, cada zumbi recebido vira uma cópia (do mesmo pool), que some se ficar sem notícias.
     /// </summary>
     public partial class ZombieManager
     {
         const string NomeDaMensagem = "ZCC.Zumbis";
-        // ~1,1 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
-        const int PorPacote = 80;
-        const int BytesPorZumbi = 15;   // (o 15º, desde 28/10/2026: a pedra do sol, de 0 a 255)
+        // ~1,2 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
+        const int PorPacote = 75;
+        // (o 15º, desde 28/10/2026: a pedra do sol, de 0 a 255; o 16º, desde 31/10/2026: o equilíbrio sem uma perna, a fase
+        // em 3 bits e a inclinação em 5)
+        const int BytesPorZumbi = 16;
 
         [Header("Rede")]
         [Tooltip("Intervalo entre envios (s). Os zumbis perto de cada cliente vão em todos.")]
@@ -124,6 +127,7 @@ namespace ZombieCityCleaner.Zombies
                     w.WriteValueSafe(z.InfoDaMorte);
                     w.WriteValueSafe(z.Cortes);
                     w.WriteValueSafe((byte)Mathf.RoundToInt(z.Pedra * 255f));
+                    w.WriteValueSafe(z.EquilibrioNaRede);
                 }
                 NetworkManager.CustomMessagingManager.SendNamedMessage(NomeDaMensagem, cliente, w, NetworkDelivery.UnreliableSequenced);
                 BytesEnviados += w.Length;
@@ -154,6 +158,7 @@ namespace ZombieCityCleaner.Zombies
                     r.ReadValueSafe(out byte morte);
                     r.ReadValueSafe(out byte cortes);
                     r.ReadValueSafe(out byte pedra);
+                    r.ReadValueSafe(out byte equilibrio);
                     if (id >= MaxZumbis) continue;
                     var c = _porId[id];
                     if (c == null || c.Geracao != geracao)
@@ -164,7 +169,7 @@ namespace ZombieCityCleaner.Zombies
                     }
                     var e = (Zumbi.Estado)(estado & 15);
                     c.Receber(tempo, origem + new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
-                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra);
+                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra, equilibrio);
                 }
             }
         }

@@ -101,6 +101,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var c in ImportarHumanoide(AnimacoesHumanoidesExtra, ClipesExtra)) clipes[c.Key] = c.Value;
             // a agonia no sol (a etapa 7): feita por código nos músculos, partindo da pose parada do Idle
             foreach (var c in ClipesHumanoidesDaAgonia(FbxDe("Oco_Original"), clipes["Idle"])) clipes[c.Key] = c.Value;
+            // o levantar numa perna (Blender/equilibrio_oco.py), se o FBX já existe
+            foreach (var c in ClipesHumanoidesDoEquilibrio()) clipes[c.Key] = c.Value;
             return clipes;
         }
 
@@ -151,15 +153,23 @@ namespace ZombieCityCleaner.EditorTools
         static Dictionary<string, AnimationClip> GravarClipes(Modelo m, Avatar humano)
         {
             var fontes = ClipesHumanoides();
-            string pasta = $"{ClipesDosOcos}/{m.nome}";
+            return Gravar(m.nome, m.fbx, humano, fontes,
+                          Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio.Where(c => fontes.ContainsKey(c.nome))));
+        }
+
+        /// <summary>Grava os clipes da lista (das fontes Humanoid) no esqueleto do modelo, em Oco/Clipes/&lt;modelo&gt;/.</summary>
+        static Dictionary<string, AnimationClip> Gravar(string nomeDoModelo, string fbx, Avatar humano, Dictionary<string, AnimationClip> fontes,
+                                                         IEnumerable<(string nome, bool loop)> lista)
+        {
+            string pasta = $"{ClipesDosOcos}/{nomeDoModelo}";
             Directory.CreateDirectory(pasta);
-            var inst = (GameObject)Object.Instantiate(Carregar<GameObject>(m.fbx));
+            var inst = (GameObject)Object.Instantiate(Carregar<GameObject>(fbx));
             var animador = inst.GetComponent<Animator>();
             if (animador == null) animador = inst.AddComponent<Animator>();
             animador.avatar = humano;
             animador.applyRootMotion = false;
             animador.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            var ctrl = new AnimatorController { name = "Gravação do " + m.nome };
+            var ctrl = new AnimatorController { name = "Gravação do " + nomeDoModelo };
             ctrl.AddLayer("Base");
             var sm = ctrl.layers[0].stateMachine;
             foreach (var f in fontes) sm.AddState(f.Key).motion = f.Value;
@@ -174,7 +184,7 @@ namespace ZombieCityCleaner.EditorTools
             var saida = new Dictionary<string, AnimationClip>();
             try
             {
-                foreach (var (nome, loop) in Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia))
+                foreach (var (nome, loop) in lista)
                 {
                     var fonte = fontes[nome];
                     animador.Rebind();

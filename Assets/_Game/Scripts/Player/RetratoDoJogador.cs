@@ -42,6 +42,8 @@ namespace ZombieCityCleaner.Player
         readonly Camera _camera;
         readonly GameObject[] _naMao, _naMaoOriginal;
         readonly List<Material> _materiais = new List<Material>();
+        // as cópias do material do retrato com a textura de um material próprio (a pistola nova), uma por material
+        readonly Dictionary<Material, Material> _copiasDosProprios = new Dictionary<Material, Material>();
         readonly InventarioJogador _inventario;
         readonly EquipamentoNoCorpo _equipamento;
         readonly Transform _referencia;
@@ -135,6 +137,11 @@ namespace ZombieCityCleaner.Player
             _equipamento.semSombra = true;
             var mundo = ItensNoMundo.Instancia;
             _equipamento.material = Copia(material, mundo != null ? mundo.material : null);
+            _equipamento.copiaDoProprio = proprio =>
+            {
+                if (!_copiasDosProprios.TryGetValue(proprio, out var c)) _copiasDosProprios[proprio] = c = Copia(material, proprio);
+                return c;
+            };
 
             var camGo = new GameObject("Câmera do retrato");
             camGo.transform.SetParent(_raiz.transform, false);
@@ -211,15 +218,16 @@ namespace ZombieCityCleaner.Player
             Posar(naMao);
         }
 
-        // o que ele leva, menos o que está na mão: a mochila, o coldre e as outras armas (a da alça, e as da grade nas
-        // costas ou no coldre, como no porte de armas do inventário)
+        // o que ele leva, menos o que está na mão: a mochila e as armas dos outros atalhos (como no corpo dele)
+        readonly Item[] _armas = new Item[InventarioJogador.Atalhos];
+
         void Vestir()
         {
             if (_inventario == null || _referencia == null || !_inventario.IsSpawned) return;
-            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, out bool coldre, out var alca, out var costas, out var cintura);
+            long chave = EquipamentoNoCorpo.OQueVeste(_inventario, out var mochila, _armas);
             if (chave == _vestido) return;
             _vestido = chave;
-            _equipamento.Vestir(_referencia, mochila, coldre, alca, costas, cintura);
+            _equipamento.Vestir(_referencia, mochila, _armas);
         }
 
         // a pose: as armas de coronha, o parado delas; o resto, o peito respirando, o braço esquerdo solto e o direito

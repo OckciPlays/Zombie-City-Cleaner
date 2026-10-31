@@ -46,6 +46,13 @@ namespace ZombieCityCleaner.Player
             GolpeRpc(de);
         }
 
+        /// <summary>Só no anfitrião: um remédio (ou a comida que cura) devolve vida, até a máxima.</summary>
+        public void Curar(float valor)
+        {
+            if (!IsServer || !IsSpawned || valor <= 0f) return;
+            Vida.Value = Mathf.Min(vidaMaxima, Vida.Value + valor);
+        }
+
         /// <summary>Só no anfitrião: tira vida sem golpe (a fome e a sede). Se acabar, o jogador cai e volta para casa.</summary>
         public void Perder(float valor)
         {
@@ -72,7 +79,8 @@ namespace ZombieCityCleaner.Player
         [Rpc(SendTo.Owner)]
         void CaiuRpc()
         {
-            var ponto = PontosDeNascimento.Ponto(OwnerClientId);
+            // a cama dele (a última que montou), ou o ponto de nascimento
+            var ponto = Loot.ConstrucoesNoMundo.CamaDe(OwnerClientId, out var cama) ? cama : PontosDeNascimento.Ponto(OwnerClientId);
             GetComponent<PassageiroDoCarro>().Soltar();
             GetComponent<MovimentoPrimeiraPessoa>().Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
             _caiuAte = Time.time + 3f;

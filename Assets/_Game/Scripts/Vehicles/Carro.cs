@@ -1318,7 +1318,12 @@ namespace ZombieCityCleaner.Vehicles
             return Mathf.Lerp(m == 0 ? 0.2f : 0.38f, 0.92f, dentro) + acelerar * 0.06f;
         }
 
-        // os zumbis na frente do carro (ou atrás, de ré) levam o acerto, como um tiro no tronco do motorista
+        /// <summary>Quanto o carro tira de vida (na escala de 100) por km/h acima de <see cref="KmhSemDano"/>.</summary>
+        public const float DanoPorKmh = 5f, KmhSemDano = 10f;
+
+        // os zumbis na frente do carro (ou atrás, de ré) levam o acerto, como um tiro no tronco do motorista. O dano vem da
+        // velocidade, sem teto (31/10/2026, a pedido: o atropelamento no sistema de vida de 100, pensando nos zumbis
+        // especiais): (km/h - 10) x 5; o Oco (100) morre a partir de 30 km/h, e um especial de 300, a partir de 70
         void Atropelar(float v)
         {
             if (Mathf.Abs(v) < 3f) return;
@@ -1334,7 +1339,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (_atropelados.TryGetValue(chave, out float ate) && Time.time < ate) continue;
                 _atropelados[chave] = Time.time + 0.7f;
                 float rapidez = Mathf.Abs(v);
-                float dano = Mathf.Clamp((rapidez - 2.5f) * 1.6f, 1f, 10f);
+                float dano = Mathf.Max(1f, (rapidez * 3.6f - KmhSemDano) * DanoPorKmh);
                 Vector3 ponto = h.zumbi.transform.position + Vector3.up * 1.0f;
                 // o zumbi de pedra (o sol) quebra com a batida (o "arremesso" quebra a estátua), e pesa mais
                 bool pedra = h.zumbi.Petrificado;
@@ -1349,7 +1354,7 @@ namespace ZombieCityCleaner.Vehicles
                     Efeitos.Som(Efeitos.SocoCarne, ponto, 1f, true, 30f);
                     Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
                 }
-                _corpo.linearVelocity *= pedra ? 0.8f : dano >= 6f ? 0.9f : 0.96f;
+                _corpo.linearVelocity *= pedra ? 0.8f : dano >= 100f ? 0.9f : 0.96f;
             }
             if (_atropelados.Count > 64) _atropelados.Clear();
         }

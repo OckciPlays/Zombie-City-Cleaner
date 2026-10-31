@@ -63,7 +63,7 @@ namespace ZombieCityCleaner.UI
         static UniversalRenderPipelineAsset _urp;
         static bool _guardado;
         static float _escala0, _sombra0, _lod0;
-        static int _msaa0, _mapaDaSombra0, _cascatas0, _texturas0;
+        static int _msaa0, _mapaDaSombra0, _cascatas0, _texturas0, _aa0;
         static Camera _camera;
         static int _qualidadeNaCamera = -1;
 
@@ -139,8 +139,12 @@ namespace ZombieCityCleaner.UI
             _cascatas0 = _urp.shadowCascadeCount;
             _lod0 = QualitySettings.lodBias;
             _texturas0 = QualitySettings.globalTextureMipmapLimit;
+            _aa0 = QualitySettings.antiAliasing;
 #if UNITY_EDITOR
+            // ao sair do Play (o Application.quitting não chegava sempre: o asset do URP ficava com o MSAA 4x da Ultra na
+            // memória do Editor, e ele gravava o 4x nas configurações de qualidade do projeto)
             Application.quitting += Devolver;
+            UnityEditor.EditorApplication.playModeStateChanged += AoMudarOPlay;
 #endif
         }
 
@@ -202,10 +206,17 @@ namespace ZombieCityCleaner.UI
         }
 
 #if UNITY_EDITOR
+        static void AoMudarOPlay(UnityEditor.PlayModeStateChange estado)
+        {
+            if (estado == UnityEditor.PlayModeStateChange.ExitingPlayMode || estado == UnityEditor.PlayModeStateChange.EnteredEditMode) Devolver();
+        }
+
         // no Editor, o asset do URP é o do projeto: volta ao original ao sair do Play
         static void Devolver()
         {
             Application.quitting -= Devolver;
+            UnityEditor.EditorApplication.playModeStateChanged -= AoMudarOPlay;
+            if (!_guardado) return;
             if (_urp != null)
             {
                 _urp.renderScale = _escala0;
@@ -216,6 +227,9 @@ namespace ZombieCityCleaner.UI
             }
             QualitySettings.lodBias = _lod0;
             QualitySettings.globalTextureMipmapLimit = _texturas0;
+            // o MSAA do asset do URP passa para o anti-serrilhado das configurações de qualidade, e o Editor gravava o 4x da
+            // Ultra no ProjectSettings/QualitySettings (visto em 29/10/2026): volta também
+            QualitySettings.antiAliasing = _aa0;
             _guardado = false;
             _camera = null;
         }

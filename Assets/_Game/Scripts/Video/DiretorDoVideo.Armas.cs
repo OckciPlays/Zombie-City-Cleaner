@@ -31,9 +31,8 @@ namespace ZombieCityCleaner.Video
             jogador.cameraMundo.enabled = true;
             jogador.cameraBracos.enabled = true;
             jogador.ouvido.enabled = true;
-            // a mochila grande e o coldre: as armas longas e as curtas cabem
+            // a mochila grande: as armas cabem
             jogador.Inventario.Receber(Item.MochilaGrande);
-            jogador.Inventario.Receber(Item.Coldre);
             return AnimarArmas(jogador);
         }
 

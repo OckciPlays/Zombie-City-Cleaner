@@ -85,10 +85,16 @@ namespace ZombieCityCleaner.UI
                               : "Volta ao normal: um em cada 10 carros.");
             }
             y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Rastejante agora no carro mais perto", _botao))
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Rastejante no carro", _botao))
             {
                 RastejanteAgoraRpc();
                 Avisar("Sai um rastejante de baixo do carro abandonado mais perto (até 25 m).");
+            }
+            // o equilíbrio sem uma perna (31/10/2026): arranca uma perna do zumbi de pé mais perto
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Tirar 1 perna", _botao))
+            {
+                TirarUmaPernaRpc();
+                Avisar("O zumbi de pé mais perto (até 25 m) perde uma perna: cai na hora ou cambaleia, e no chão tenta levantar ou rasteja.");
             }
             y += 30 * u;
             // o alarme dos carros (a pedido em 29/10/2026): em todos, para testar o tiro, o capô e o pneu; ou já tocando
@@ -157,6 +163,26 @@ namespace ZombieCityCleaner.UI
             frente.y = 0f;
             frente.Normalize();
             ZombieManager.Instancia.CriarHordaPerseguindo(GetComponent<Player.JogadorRede>(), transform.position + frente * 14f, quantos);
+        }
+
+        // arranca a coxa (a perna inteira) de um lado sorteado do zumbi de pé, com as duas pernas, mais perto (até 25 m)
+        [Rpc(SendTo.Server)]
+        void TirarUmaPernaRpc(RpcParams parametros = default)
+        {
+            var zm = ZombieManager.Instancia;
+            if (!Aceita(parametros) || zm == null) return;
+            Zumbi melhor = null;
+            float menor = 25f * 25f;
+            foreach (var z in zm.Ativos)
+            {
+                if (z == null || z.Morto || z.Petrificado || z.Pernas != 0) continue;
+                float d = (z.transform.position - transform.position).sqrMagnitude;
+                if (d < menor) { menor = d; melhor = z; }
+            }
+            if (melhor == null) return;
+            var membro = Random.value < 0.5f ? Membro.CoxaE : Membro.CoxaD;
+            ZombieManager.Acertar(melhor.Id, melhor.Geracao, RegiaoDoCorpo.Perna, membro, zm.ajustes.vidaDoMembro,
+                                  melhor.transform.position + Vector3.up * 0.5f, false, GetComponent<Player.JogadorRede>());
         }
 
         [Rpc(SendTo.Server)]
