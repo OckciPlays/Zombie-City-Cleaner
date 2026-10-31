@@ -1,4 +1,4 @@
-# Scripts do Blender (sniper, mochilas, munição, carro e animações do desmembramento)
+# Scripts do Blender (sniper, mochilas, munição, sinuca, carro e animações do desmembramento)
 
 Estes scripts geram arte que não veio da pasta de arte do projeto (`Projeto Zombie City Cleaner`): a sniper e as animações
 novas dos zumbis. Eles leem os FBX que já estão em `Assets/` e escrevem os FBX novos lá, nos mesmos formatos (a ida e
@@ -102,6 +102,16 @@ Unity, rode Zombie City Cleaner > Montar armas.
   A origem fica embaixo, no meio; a tampa aberta, atrás.
 - Como rodar: carregue `municao.py` e chame `construir()`, `exportar()` (grava `Municao.fbx` na pasta do jogador) e
   `imagens()` (os ícones de 128 × 128 e as fotos de 600 × 500). Depois, na Unity, rode Zombie City Cleaner > Montar armas.
+
+## A sinuca
+
+- `sinuca.py` (29/10/2026): a caixa das bolas (o estojo de madeira aberto, com as 16 bolas em duas fileiras de 8, e a
+  vazia, com os berços) e os 4 tacos (o de madeira, o escuro, o preto e o vermelho: só a parte de trás muda), no formato
+  e nas cores do `equipamentos.py` (só cores que já existem na `Paleta.png`). Os tacos ficam deitados ao longo do X, com
+  1,45 m.
+- Como rodar: carregue `sinuca.py` e chame `construir()`, `exportar()` (grava `Sinuca.fbx` na pasta do jogador) e
+  `imagens()` (os ícones, 128 px por célula, a caixa 3 × 1 e os tacos 4 × 1, e as fotos de 600 × 500). Depois, na Unity,
+  rode Zombie City Cleaner > Montar armas.
 
 ## As animações do desmembramento dos zumbis
 

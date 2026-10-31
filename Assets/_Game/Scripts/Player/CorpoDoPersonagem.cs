@@ -12,8 +12,10 @@ namespace ZombieCityCleaner.Player
     public class CorpoDoPersonagem : MonoBehaviour
     {
         public Animator animador;
-        [Tooltip("O corpo e o que está na mão (as armas e os itens dentro do Arma_TP).")]
+        [Tooltip("O corpo (o NPC_Corpo e as peças das roupas) e o que está na mão (as armas e os itens dentro do Arma_TP).")]
         public Renderer[] renderers;
+        [Tooltip("As roupas do corpo (o corpo das roupas e as peças, presos aos ossos deste corpo): a aparência do jogador.")]
+        public ZombieCityCleaner.Roupas.Vestimenta vestimenta;
         public Transform ossoPeito;
         public Transform ossoCabeca;
         [Tooltip("As armas e os itens dentro do Arma_TP (na ordem de Itens.Modelos).")]
@@ -25,6 +27,10 @@ namespace ZombieCityCleaner.Player
         public RuntimeAnimatorController controladorDasMaos;
         [Tooltip("O corpo com a lata e com a garrafa na mão (na ordem de Itens.Modelos, a partir de Armas.Quantas); vazio: o dos punhos.")]
         public RuntimeAnimatorController[] controladoresDosItens;
+        [Tooltip("O corpo com o taco de sinuca em pé na mão direita.")]
+        public RuntimeAnimatorController controladorDoTaco;
+        [Tooltip("O taco na mão (o vazio Arma_Taco, no weapon.R: a pegada) e a ponta dele (Boca_Taco); o TacoNaMao põe o taco de cada cor entre os dois.")]
+        public Transform taco, pontaDoTaco;
 
         [Header("Medidas do corpo em repouso (no espaço do corpo, olhando para +Z)")]
         [Tooltip("A superfície das costas na altura do peito (z negativo).")]

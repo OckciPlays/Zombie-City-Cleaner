@@ -15,7 +15,7 @@ namespace ZombieCityCleaner.Testes
     /// zumbi, 0,35 m de raio). Em cada cômodo, cada pedaço de chão com NavMesh (numa grade de 0,5 m) precisa ter caminho da
     /// rua (nos prédios, do corredor do andar): um pedaço sem caminho é um canto que os móveis fecharam (o NavMesh tira as
     /// ilhas menores que 2 m², mas não todas: um canto de 0,15 m² entre uma poltrona e um rack ficava). O mesmo NavMesh sem os móveis separa o que já era assim antes deles (contado à parte, não
-    /// falha). É a parte "o zumbi chega" das conferências do F1 (no Play, até uma hora para uma amostra) em uns 4 minutos
+    /// falha). Com a mobília nova (a etapa 4 do Plano_Mobilia.md da pasta de arte), as caixas dela também. É a parte "o zumbi chega" das conferências do F1 (no Play, até uma hora para uma amostra) em uns 4 minutos
     /// para o mapa todo; as do Play continuam para o jogador andando, as escadas dos prédios e o mundo carregando.
     /// Nas falhas, o log mostra o mapa do NavMesh do cômodo (o = tem caminho, x = sem caminho, # = sem NavMesh, M = móvel).
     /// </summary>
@@ -132,6 +132,8 @@ namespace ZombieCityCleaner.Testes
             double t0 = EditorApplication.timeSinceStartup;
             var sem = obra.col.ParaMesh("sem os móveis");
             Mobilia.Por(moveis, null, obra.col, semente);
+            // e as da mobília nova (as casas e os apartamentos; aqui sem espelhar, como os pontos)
+            MobiliaNova.Caixas(moveis, obra.col);
             var com = obra.col.ParaMesh("com os móveis");
             var b = com.bounds;
             var limites = new Bounds(new Vector3(b.center.x, (y0 + y1) / 2, b.center.z) + Longe, new Vector3(b.size.x + 12f, y1 - y0, b.size.z + 12f));

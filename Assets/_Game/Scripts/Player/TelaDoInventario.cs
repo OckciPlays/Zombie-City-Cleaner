@@ -87,6 +87,8 @@ namespace ZombieCityCleaner.Player
         static readonly Color FundoDeMaterial = new Color(0.5f, 0.47f, 0.42f, 0.95f);
         static readonly Color FundoDeConstrucao = new Color(0.47f, 0.5f, 0.42f, 0.95f);
         static readonly Color Bom = new Color(0.55f, 0.9f, 0.5f), Ruim = new Color(1f, 0.5f, 0.42f);
+        // a sinuca: o verde do pano, claro (o estojo e a base dos tacos são escuros)
+        static readonly Color FundoDaSinuca = new Color(0.44f, 0.54f, 0.46f, 0.95f);
         static readonly Color CorDoTexto = new Color(0.94f, 0.92f, 0.86f);
         static readonly Color TextoApagado = new Color(0.8f, 0.78f, 0.72f, 0.85f);
         static readonly Color Destaque = new Color(0.98f, 0.82f, 0.36f);
@@ -850,6 +852,7 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhArma(item) || Itens.EhBranca(item)) return FundoDeArma;
             if (Itens.EhMunicao(item)) return FundoDeMunicao;
             if (Itens.EhPeca(item)) return FundoDePeca;
+            if (Itens.EhSinuca(item)) return FundoDaSinuca;
             var l = Itens.Loot(item);
             if (l == null) return FundoDeEquipamento;
             return l.tipo == TipoDeLoot.Comida ? FundoDeComida : l.tipo == TipoDeLoot.Bebida ? FundoDeAgua : l.tipo == TipoDeLoot.Remedio ? FundoDeRemedio
@@ -1088,6 +1091,16 @@ namespace ZombieCityCleaner.Player
                     Linha("Vai no capô", Vehicles.PecasDoMotor.Lugares[k]);
                     Linha("Efeito", Vehicles.PecasDoMotor.Efeito(k, it.qtd));
                 }
+            }
+            else if (Itens.EhCaixaDeBolas(item))
+            {
+                Linha("Bolas", item == Item.CaixaDeBolas ? "as 16" : "nenhuma (estão numa mesa)");
+                Linha("Na mesa de sinuca", item == Item.CaixaDeBolas ? "E: pôr as bolas" : "E: recolher as bolas");
+            }
+            else if (Itens.EhTaco(item))
+            {
+                Linha("Serve para", "jogar sinuca");
+                Linha("Na mão, na mesa", "E: jogar");
             }
             else if (Itens.EhLoot(item))
             {

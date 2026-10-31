@@ -12,7 +12,8 @@ namespace ZombieCityCleaner.Testes
     /// das casas, das lojas, dos andares dos prédios e da loja do posto tem um modelo, os móveis entram na malha da mobília
     /// do bloco (e nos andares, no desenho deles) com uma caixa de colisão por móvel, sempre os mesmos para a mesma semente,
     /// e cada modelo cabe no ponto dele (com a folga do que sai para a frente: as cadeiras, as portas entreabertas).
-    /// Os modelos ficam registrados só durante estes testes.
+    /// Os modelos ficam registrados só durante estes testes. A mobília nova (a etapa 4 do Plano_Mobilia.md da pasta de
+    /// arte, nas casas e nos apartamentos): os de longe de cada casa numa malha, com uma caixa por móvel no chão na colisão.
     /// </summary>
     public class MobiliaTestes
     {
@@ -80,7 +81,9 @@ namespace ZombieCityCleaner.Testes
                 foreach (var p in lista)
                 {
                     pontos++;
+                    // (os da mobília nova são os modelos dela)
                     string nome = Mobilia.ModeloDo(p, 0);
+                    if (MobiliaNova.EhNovo(p.tipo)) continue;
                     if (nome == null || !Mobilia.Feitos.ContainsKey(nome)) semModelo[p.tipo] = semModelo.TryGetValue(p.tipo, out int n) ? n + 1 : 1;
                 }
             }
@@ -115,7 +118,7 @@ namespace ZombieCityCleaner.Testes
             foreach (var b in BlocosComCasas(d, 2))
             {
                 var r = MalhasDasCasas.Bloco(d, b.x, b.y);
-                if (r.Casas.Count >= 3)
+                if (r.Casas.Count >= 3 && r.Casas.Any(c => c.Moveis.Any(p => Mobilia.ModeloDo(p, 0) != null)))
                 {
                     com = r;
                     k = b;
@@ -125,7 +128,8 @@ namespace ZombieCityCleaner.Testes
             }
             Assert.IsNotNull(com, "nenhum bloco com 3 casas");
             Assert.IsNotNull(com.Mobilia, "o bloco sem a malha da mobília");
-            int pontos = com.Casas.Sum(c => c.Moveis.Count);
+            // (os da mobília antiga: as lojas e as lavanderias)
+            int pontos = com.Casas.Sum(c => c.Moveis.Count(p => Mobilia.ModeloDo(p, 0) != null));
             Assert.Greater(com.Mobilia.Triangulos, pontos * 30, "poucos triângulos de mobília");
             var colisoes = com.Casas.Select(c => c.Colisao.Triangulos).ToArray();
             // sem os modelos, a mesma casa: a colisão tem 12 triângulos a menos por móvel
@@ -140,6 +144,54 @@ namespace ZombieCityCleaner.Testes
             }
             MalhasDasCasas.Devolver(com);
             MalhasDasCasas.Devolver(sem);
+        }
+
+        [Test]
+        public void AMobiliaNovaEntraNoDesenhoENaColisao()
+        {
+            var longes = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/_Game/Prefabs/MobiliaNova" })
+                .Select(g => AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(g)))
+                .Select(p =>
+                {
+                    var l = p.transform.Find(p.name + "_Longe");
+                    return (p.name, (l != null ? l.GetComponent<MeshFilter>() : p.GetComponent<MeshFilter>()).sharedMesh);
+                }).ToList();
+            Assert.Greater(longes.Count, 80, "os prefabs da mobília nova (Mobília nova > Montar)");
+            MobiliaNova.Registrar(longes);
+            try
+            {
+                var d = Medio;
+                var k = BlocosComCasas(d, 2).First(b => d.Plano != null && MalhasDasCasas.TemCasas(d, b.x, b.y));
+                var com = MalhasDasCasas.Bloco(d, k.x, k.y);
+                MobiliaNova.Limpar();
+                var sem = MalhasDasCasas.Bloco(d, k.x, k.y);
+                var pecas = new List<MobiliaNova.Peca>();
+                int comNovos = 0;
+                for (int i = 0; i < com.Casas.Count; i++)
+                {
+                    int caixas = 0, novos = 0;
+                    foreach (var p in com.Casas[i].Moveis.Where(p => MobiliaNova.EhNovo(p.tipo)))
+                    {
+                        novos++;
+                        pecas.Clear();
+                        MobiliaNova.Pecas(p, 0, pecas);
+                        caixas += pecas.Where(q => q.caixa).Sum(q => MobiliaNova.Camadas(q.tamanho.y));
+                    }
+                    Assert.AreEqual(sem.Casas[i].Colisao.Triangulos + caixas * 12, com.Casas[i].Colisao.Triangulos, $"{com.Casas[i].Nome}: as caixas dos móveis novos");
+                    Assert.IsNull(sem.Casas[i].MobiliaNova);
+                    if (novos == 0) continue;
+                    comNovos++;
+                    Assert.IsNotNull(com.Casas[i].MobiliaNova, $"{com.Casas[i].Nome}: sem os de longe");
+                    Assert.Greater(com.Casas[i].MobiliaNova.Triangulos, novos * 10, $"{com.Casas[i].Nome}: poucos triângulos de longe");
+                }
+                Assert.Greater(comNovos, 0, "nenhuma casa com os móveis novos");
+                MalhasDasCasas.Devolver(com);
+                MalhasDasCasas.Devolver(sem);
+            }
+            finally
+            {
+                MobiliaNova.Limpar();
+            }
         }
 
         [Test]

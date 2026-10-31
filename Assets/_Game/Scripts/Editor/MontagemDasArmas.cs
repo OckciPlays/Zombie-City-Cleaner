@@ -34,6 +34,8 @@ namespace ZombieCityCleaner.EditorTools
         const string FbxMunicao = Arte + "/Municao.fbx";
         /// <summary>As peças do motor: a vela, a bateria e o radiador (Blender/pecas.py, no repositório).</summary>
         const string FbxPecas = Arte + "/Pecas.fbx";
+        /// <summary>A sinuca: as 2 caixas de bolas e os 4 tacos (Blender/sinuca.py, no repositório).</summary>
+        const string FbxSinuca = Arte + "/Sinuca.fbx";
         /// <summary>O saque (31/10/2026): a comida, a bebida, os remédios, os materiais e os kits (Blender/loot.py).</summary>
         internal const string FbxLoot = Arte + "/Loot.fbx";
         const string PastaIcones = "Assets/_Game/Art/UI/Icones";
@@ -58,7 +60,7 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>
         /// Os braços de primeira pessoa de um modelo (na ordem de Itens.Modelos: as armas, a lata e a garrafa; depois, os
-        /// punhos da mão vazia, Itens.Punhos).
+        /// punhos da mão vazia, Itens.Punhos, e a mão com o taco de sinuca, Itens.TacoFP).
         /// </summary>
         public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.fbx";
         /// <summary>A malha avulsa de um modelo: Arma_&lt;nome&gt; ou Item_&lt;nome&gt; (origem onde a mão segura, topo em +Y).</summary>
@@ -83,6 +85,10 @@ namespace ZombieCityCleaner.EditorTools
         public static string MalhaDaPeca(int k) => $"{Malhas}/Peca_{Itens.ModeloDaPeca(k)}.asset";
         public static string IconeDaPeca(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaPeca(k)}.png";
         public static string FotoDaPeca(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaPeca(k)}.png";
+        /// <summary>A malha de uma coisa da sinuca (na ordem do enum Item): Sinuca_&lt;modelo&gt;.</summary>
+        public static string MalhaDaSinuca(int k) => $"{Malhas}/Sinuca_{Itens.ModeloDaSinuca(k)}.asset";
+        public static string IconeDaSinuca(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaSinuca(k)}.png";
+        public static string FotoDaSinuca(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaSinuca(k)}.png";
         public static string MalhaDoLoot(int k) => $"{Malhas}/Loot_{Itens.ModeloDoLoot(k)}.asset";
         public static string IconeDoLoot(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDoLoot(k)}.png";
         public static string FotoDoLoot(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDoLoot(k)}.png";
@@ -126,6 +132,8 @@ namespace ZombieCityCleaner.EditorTools
         public static string ControladorTPDasMaosDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Maos.overrideController";
         /// <summary>O corpo do personagem com a lata ou a garrafa na mão (segurar e, no lugar do tiro, comer ou beber).</summary>
         public static string ControladorTPDoItemDoPersonagem(int p, int item) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Itens.Modelos[item]}.overrideController";
+        /// <summary>O corpo do personagem com o taco de sinuca em pé na mão direita (o tiro e a mira não mudam nada).</summary>
+        public static string ControladorTPDoTacoDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Taco.overrideController";
         public static string MaterialDoPersonagem(int p) => $"{ArtePersonagens}/Materials/Personagem_{Personagens.Modelos[p]}.mat";
         /// <summary>Os clipes do corpo que repetem (os outros tocam uma vez).</summary>
         static readonly string[] EmLacoNoCorpo = { "Parado", "Andar", "Correr", "Agachado", "Andar_Agachado", "No_Ar", "Sentado_Motorista",
@@ -202,6 +210,7 @@ namespace ZombieCityCleaner.EditorTools
             for (int k = 0; k < Itens.QuantosEquipamentos; k++) Juntar(FbxEquipamentos, Itens.ModeloDoEquipamento(k) + "_", MalhaDoEquipamento(k));
             for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
             for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
+            for (int k = 0; k < Itens.QuantosDaSinuca; k++) Juntar(FbxSinuca, Itens.ModeloDaSinuca(k) + "_", MalhaDaSinuca(k));
             JuntarLoot();
             ImportarIcones();
             MontarControladorFP();
@@ -209,6 +218,9 @@ namespace ZombieCityCleaner.EditorTools
             // corpo, a guarda e o soco (as animações TP_<clipe>_Maos)
             MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.Punhos), ClipesFP,
                            c => c == "Fire" ? "SocoDireito" : c == "DryFire" ? "SocoEsquerdo" : c == "Reload" ? "Idle" : c, ControladorFPDa(Itens.Punhos));
+            // o taco de sinuca: só segura (o tiro, o gatilho sem bala e a recarga nunca tocam)
+            MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.TacoFP), ClipesFP,
+                           c => c == "Fire" || c == "DryFire" || c == "Reload" ? "Idle" : c, ControladorFPDa(Itens.TacoFP));
             MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_Maos", ControladorTPDasMaos);
             PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
@@ -249,8 +261,8 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>
         /// Os personagens: a importação (os clipes com os nomes das faixas de NLA do Blender), o material com a textura, o
         /// controlador do corpo (<see cref="MontarControladorDoCorpo"/>) e os override dele: cada arma (segurar, mirar e
-        /// atirar, a da sniper com o ferrolho), os punhos (a guarda e o soco direito) e os itens (segurar e, no lugar do
-        /// tiro, comer ou beber).
+        /// atirar, a da sniper com o ferrolho), os punhos (a guarda e o soco direito), os itens (segurar e, no lugar do
+        /// tiro, comer ou beber) e o taco de sinuca (só segurar).
         /// </summary>
         public static void PrepararPersonagens()
         {
@@ -277,6 +289,7 @@ namespace ZombieCityCleaner.EditorTools
                     else
                         MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
                 }
+                MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => "Taco_Segurar", ControladorTPDoTacoDoPersonagem(p));
             }
             AssetDatabase.SaveAssets();
         }
@@ -434,6 +447,7 @@ namespace ZombieCityCleaner.EditorTools
                          .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
                          .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) }))
                          .Concat(Enumerable.Range(0, Itens.QuantasPecas).SelectMany(k => new[] { IconeDaPeca(k), FotoDaPeca(k) }))
+                         .Concat(Enumerable.Range(0, Itens.QuantosDaSinuca).SelectMany(k => new[] { IconeDaSinuca(k), FotoDaSinuca(k) }))
                          .Concat(Enumerable.Range(0, Itens.QuantosLoots).SelectMany(k => new[] { IconeDoLoot(k), FotoDoLoot(k) })))
             {
                 if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
@@ -507,6 +521,7 @@ namespace ZombieCityCleaner.EditorTools
             ImportarAvulsas(FbxEquipamentos);
             ImportarAvulsas(FbxMunicao);
             ImportarAvulsas(FbxPecas);
+            ImportarAvulsas(FbxSinuca);
             if (File.Exists(FbxLoot)) ImportarAvulsas(FbxLoot);
             for (int i = 0; i < Armas.Quantas; i++)
                 if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
@@ -691,6 +706,7 @@ namespace ZombieCityCleaner.EditorTools
             mundo.malhasDeEquipamento = Enumerable.Range(0, Itens.QuantosEquipamentos).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDoEquipamento(k))).ToArray();
             mundo.malhasDeMunicao = Enumerable.Range(0, Itens.QuantasMunicoes).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaMunicao(k))).ToArray();
             mundo.malhasDePeca = Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaPeca(k))).ToArray();
+            mundo.malhasDaSinuca = Enumerable.Range(0, Itens.QuantosDaSinuca).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaSinuca(k))).ToArray();
             mundo.malhasDeLoot = MalhasDoLoot();
             mundo.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
             MontagemDoSaque.BancadasNaCena(cena);

@@ -12,6 +12,7 @@ using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Roupas;
 using ZombieCityCleaner.UI;
 
 namespace ZombieCityCleaner.EditorTools
@@ -107,6 +108,8 @@ namespace ZombieCityCleaner.EditorTools
             var terceira = raiz.AddComponent<CameraTerceiraPessoa>();
             raiz.AddComponent<PuloDaJanela>();
             raiz.AddComponent<EquipamentoDoJogador>();
+            // a tela de criar o personagem (ao entrar na partida), com o parado do mostruário das roupas no estúdio
+            raiz.AddComponent<TelaDeCriarPersonagem>().controladorDoEstudio = Carregar<RuntimeAnimatorController>(MontagemDasRoupas.Controlador);
 
             // os corpos (o que os outros veem; para o dono vira só sombra): um por personagem, só o escolhido ligado
             var corpos = Enumerable.Range(0, Personagens.Quantos).Select(p => MontarCorpo(raiz.transform, p)).ToArray();
@@ -199,6 +202,9 @@ namespace ZombieCityCleaner.EditorTools
             rede.bocasCorpo = primeiro.bocas;
             rede.controladoresCorpo = primeiro.controladores;
             rede.controladorDasMaos = primeiro.controladorDasMaos;
+            rede.controladorDoTaco = primeiro.controladorDoTaco;
+            rede.tacoCorpo = primeiro.taco;
+            rede.pontaDoTacoCorpo = primeiro.pontaDoTaco;
             // a pele dos braços de primeira pessoa: o material do corpo de cada personagem (o principal em blocos: a textura)
             rede.variacoes = Enumerable.Range(0, Personagens.Quantos).Select(p => Carregar<Material>(MontagemDasArmas.MaterialDoPersonagem(p))).ToArray();
             rede.pintaveis = smrBracos.Cast<Renderer>().ToArray();
@@ -217,6 +223,9 @@ namespace ZombieCityCleaner.EditorTools
             int np = Itens.QuantasPecas;
             inventario.iconesDePeca = Enumerable.Range(0, np).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaPeca(k))).ToArray();
             inventario.fotosDePeca = Enumerable.Range(0, np).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaPeca(k))).ToArray();
+            int ns = Itens.QuantosDaSinuca;
+            inventario.iconesDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaSinuca(k))).ToArray();
+            inventario.fotosDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaSinuca(k))).ToArray();
             int nl = Itens.QuantosLoots;
             inventario.iconesDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDoLoot(k))).ToArray();
             inventario.fotosDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDoLoot(k))).ToArray();
@@ -286,14 +295,21 @@ namespace ZombieCityCleaner.EditorTools
 
             var c = corpo.AddComponent<CorpoDoPersonagem>();
             c.animador = anim;
-            var pele = Buscar(corpo.transform, "Jogador_Corpo").GetComponent<SkinnedMeshRenderer>();
-            c.renderers = new Renderer[] { pele }.Concat(renderersArmas).ToArray();
+            // o corpo vestido (o Plano_Personagem.md da pasta de arte, a parte 1): o corpo do FBX do personagem sai, e no
+            // lugar dele entram o corpo das roupas e as peças, presos aos ossos deste corpo
+            Buscar(corpo.transform, "Jogador_Corpo").gameObject.SetActive(false);
+            c.vestimenta = Vestir(corpo, out var roupas);
+            c.renderers = roupas.Concat(renderersArmas).ToArray();
             c.ossoPeito = Buscar(corpo.transform, "chest");
             c.ossoCabeca = Buscar(corpo.transform, "head");
             c.naMao = naMao;
             c.bocas = bocas;
             c.controladores = Enumerable.Range(0, Armas.Quantas).Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoPersonagem(p, i))).ToArray();
             c.controladorDasMaos = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDasMaosDoPersonagem(p));
+            // o taco de sinuca: o vazio e a ponta (sem malha: o TacoNaMao põe o taco de cada cor)
+            c.controladorDoTaco = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoTacoDoPersonagem(p));
+            c.taco = todos.FirstOrDefault(t => t.name == "Arma_Taco");
+            c.pontaDoTaco = todos.FirstOrDefault(t => t.name == "Boca_Taco");
             c.controladoresDosItens = Enumerable.Range(Armas.Quantas, n - Armas.Quantas)
                 .Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoItemDoPersonagem(p, i))).ToArray();
             var m = MedidasDosCorpos[p];
@@ -303,6 +319,45 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
+        /// As roupas no corpo do jogador: o corpo das roupas (NPC_Corpo) e todas as peças (Roupa_&lt;nome&gt;) do Roupas.fbx,
+        /// num filho "Roupas" do corpo, cada uma presa aos ossos dele pelo nome (o esqueleto é o mesmo: o do personagem
+        /// principal), com o material das roupas, e a <see cref="Vestimenta"/>, que liga as vestidas (a aparência que chega
+        /// pela rede; no prefab, só o corpo). Precisa da montagem das roupas (o material e o FBX legível).
+        /// </summary>
+        static Vestimenta Vestir(GameObject corpo, out Renderer[] renderers)
+        {
+            var modelo = Carregar<GameObject>(MontagemDasRoupas.Fbx);
+            var material = Carregar<Material>(MontagemDasRoupas.ArquivoDoMaterial);
+            var ossos = new System.Collections.Generic.Dictionary<string, Transform>();
+            foreach (var t in corpo.GetComponentsInChildren<Transform>(true)) ossos.TryAdd(t.name, t);
+            var pasta = new GameObject("Roupas").transform;
+            pasta.SetParent(corpo.transform, false);
+            var lista = new System.Collections.Generic.List<Renderer>();
+            foreach (var smr in modelo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (smr.name != Vestimenta.Corpo && !smr.name.StartsWith(Vestimenta.PrefixoDasPecas)) continue;
+                var go = new GameObject(smr.name);
+                go.transform.SetParent(pasta, false);
+                var r = go.AddComponent<SkinnedMeshRenderer>();
+                r.sharedMesh = smr.sharedMesh;
+                r.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, smr.sharedMesh.subMeshCount)).ToArray();
+                var semOsso = smr.bones.Where(b => b != null && !ossos.ContainsKey(b.name)).Select(b => b.name).ToArray();
+                if (semOsso.Length > 0) throw new System.Exception($"{smr.name}: o corpo do jogador não tem os ossos {string.Join(", ", semOsso)}");
+                r.bones = smr.bones.Select(b => b != null ? ossos[b.name] : null).ToArray();
+                r.rootBone = smr.rootBone != null ? ossos[smr.rootBone.name] : null;
+                r.localBounds = smr.localBounds;
+                r.skinnedMotionVectors = false;
+                go.SetActive(smr.name == Vestimenta.Corpo);
+                lista.Add(r);
+            }
+            var v = corpo.AddComponent<Vestimenta>();
+            v.catalogo = Carregar<TextAsset>(MontagemDasRoupas.Json);
+            v.npc = "";
+            v.tipo = "";
+            renderers = lista.ToArray();
+            return v;
+        }
+
         /// A faca no corpo (31/10/2026): ela não vem no FBX do personagem. Uma peça nova no weapon.R, no encaixe da lata
         /// (o punho fecha em volta dela do mesmo jeito: o eixo da lata, o Z da peça, atravessa a mão), com a malha avulsa
         /// (Item_Faca, a lâmina em +Z) e o material dos itens. Na guarda dos punhos, a lâmina sai por cima do punho.

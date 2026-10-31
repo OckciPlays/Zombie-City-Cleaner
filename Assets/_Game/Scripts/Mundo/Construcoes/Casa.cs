@@ -412,7 +412,7 @@ namespace ZombieCityCleaner.Mundo
                 if (k.andar != f || !Segmento(k, lado, out float s0, out float s1)) continue;
                 bool porao = k.tipo == "porao", pequena = k.tipo == "banheiro";
                 float larg = porao ? 0.9f : pequena ? m.janelaPequena : m.janela;
-                float baixo = porao ? m.alturaPorao - 0.42f : pequena ? m.peitorilPequena : m.peitoril;
+                float baixo = porao ? m.alturaPorao - 0.42f : pequena ? m.peitorilPequena : k.tipo == "cozinha" ? m.peitorilDaCozinha : m.peitoril;
                 float alto = porao ? m.alturaPorao - 0.1f : m.topoJanela;
                 float U = s1 - s0 - 1.2f;
                 int n = Quantas(k, lado, U, larg);

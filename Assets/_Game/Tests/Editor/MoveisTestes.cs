@@ -11,7 +11,9 @@ namespace ZombieCityCleaner.Testes
     /// ocupa o chão (o pé da escada, os buracos, as folhas das portas, os balcões) e da frente das portas, e nada alto fica
     /// na frente de uma janela; as portas de cada cômodo continuam ligadas e a frente de cada móvel alcançável (por uma
     /// grade própria, um pouco mais folgada que a do distribuidor); os cômodos têm os móveis principais; e os pontos saem
-    /// nas malhas das casas (espelhados com elas).
+    /// nas malhas das casas (espelhados com elas). Com a mobília nova (nas casas e nos apartamentos), os pendurados e os
+    /// tapetes ficam fora do que ocupa o chão (<see cref="PontoDeMovel.OcupaOChao"/>), os móveis novos podem passar 0,3 m do
+    /// peitoril, e a frente do sofá e da cama pode ficar tapada pela mesa de centro e pelo baú.
     /// </summary>
     public class MoveisTestes
     {
@@ -59,7 +61,8 @@ namespace ZombieCityCleaner.Testes
                             var p = new Predio(l.Predio, M, f);
                             p.MontarAndar();
                             var r = Guardar(p, $"{(l.Predio.hospital ? "hospital" : "prédio")} em {t.Cidade.Nome}, andar {f}", p.Moveis);
-                            foreach (var k in p.Comodos) r.comodos.Add((k, l.Predio.Base(f), l.Predio.hospital ? "hospital" : k.apto >= 0 ? "casa" : "predio"));
+                            // (os apartamentos dos prédios à parte: "apartamento"; para o distribuidor, "casa")
+                            foreach (var k in p.Comodos) r.comodos.Add((k, l.Predio.Base(f), l.Predio.hospital ? "hospital" : k.apto >= 0 ? "apartamento" : "predio"));
                         }
                 }
             var posto = PlantasDeLoja.DoPosto(new System.Random(11), M);
@@ -130,7 +133,7 @@ namespace ZombieCityCleaner.Testes
                     {
                         var a = c.pontos[i];
                         var b = c.pontos[j];
-                        if (Mathf.Abs(a.centro.y - b.centro.y) > 0.01f) continue;
+                        if (Mathf.Abs(a.centro.y - b.centro.y) > 0.01f || !a.OcupaOChao || !b.OcupaOChao) continue;
                         Assert.IsFalse(Encolher(a.Pe, 0.01f).Overlaps(Encolher(b.Pe, 0.01f)), $"{c.nome}: {a.tipo} em cima de {b.tipo} ({a.Pe} e {b.Pe})");
                     }
         }
@@ -141,18 +144,27 @@ namespace ZombieCityCleaner.Testes
             foreach (var c in Construcoes())
                 foreach (var p in c.pontos)
                 {
+                    if (!p.OcupaOChao) continue;
                     var pe = Encolher(p.Pe, 0.01f);
                     foreach (var (area, chao) in c.ocupado)
                         if (Mathf.Abs(chao - p.centro.y) < 0.2f)
                             Assert.IsFalse(pe.Overlaps(area), $"{c.nome}: {p.tipo} no {p.comodo} em cima do que ocupa o chão ({area})");
-                    // na frente das portas (0,9 m para cada lado da parede, ao longo da largura dela), nada
+                    // na frente das portas (0,9 m para cada lado da parede, ao longo da largura dela; no vão largo sem porta, do
+                    // meio dele, da largura de uma porta), nada
                     foreach (var f in c.furos)
                     {
                         if (!f.porta || Mathf.Abs(f.chao - p.centro.y) > 0.2f) continue;
                         bool emX = Mathf.Abs(f.a.y - f.b.y) < 0.01f;
+                        float a0 = emX ? Mathf.Min(f.a.x, f.b.x) : Mathf.Min(f.a.y, f.b.y), b0 = emX ? Mathf.Max(f.a.x, f.b.x) : Mathf.Max(f.a.y, f.b.y);
+                        if (b0 - a0 > MoveisDaObra.VaoLargo)
+                        {
+                            float meio = (a0 + b0) / 2;
+                            a0 = meio - M.porta / 2;
+                            b0 = meio + M.porta / 2;
+                        }
                         var frente = emX
-                            ? Rect.MinMaxRect(Mathf.Min(f.a.x, f.b.x), f.a.y - 0.9f, Mathf.Max(f.a.x, f.b.x), f.a.y + 0.9f)
-                            : Rect.MinMaxRect(f.a.x - 0.9f, Mathf.Min(f.a.y, f.b.y), f.a.x + 0.9f, Mathf.Max(f.a.y, f.b.y));
+                            ? Rect.MinMaxRect(a0, f.a.y - 0.9f, b0, f.a.y + 0.9f)
+                            : Rect.MinMaxRect(f.a.x - 0.9f, a0, f.a.x + 0.9f, b0);
                         Assert.IsFalse(pe.Overlaps(frente), $"{c.nome}: {p.tipo} no {p.comodo} na frente de uma porta ({frente})");
                     }
                 }
@@ -165,7 +177,7 @@ namespace ZombieCityCleaner.Testes
                 foreach (var p in c.pontos)
                     foreach (var f in c.furos)
                     {
-                        if (f.porta || Mathf.Abs(f.chao - p.centro.y) > 0.2f || p.tamanho.y <= f.peitoril) continue;
+                        if (f.porta || !p.OcupaOChao || Mathf.Abs(f.chao - p.centro.y) > 0.2f || p.tamanho.y <= f.peitoril + (MobiliaNova.EhNovo(p.tipo) ? 0.3f : 0f)) continue;
                         bool emX = Mathf.Abs(f.a.y - f.b.y) < 0.01f;
                         // a faixa de 0,3 m dos dois lados da parede, ao longo da janela
                         var janela = emX
@@ -184,7 +196,7 @@ namespace ZombieCityCleaner.Testes
                 foreach (var (k, chao, _) in c.comodos)
                 {
                     var r = Interior(k);
-                    var meus = c.pontos.FindAll(p => p.comodo == k.tipo && p.andar == k.andar && Mathf.Abs(p.centro.y - chao) < 0.01f && k.Contem(p.centro.x, p.centro.z));
+                    var meus = c.pontos.FindAll(p => p.OcupaOChao && p.comodo == k.tipo && p.andar == k.andar && Mathf.Abs(p.centro.y - chao) < 0.01f && k.Contem(p.centro.x, p.centro.z));
                     if (meus.Count == 0) continue;
                     comodos++;
                     int nx = Mathf.FloorToInt(r.width / celula), nz = Mathf.FloorToInt(r.height / celula);
@@ -251,7 +263,18 @@ namespace ZombieCityCleaner.Testes
                         // a frente do móvel: quem anda chega a uns 0,3 m dela (o quadrado de 0,6 m logo na frente do meio)
                         var dir = new Vector2(Mathf.Sin(p.giro * Mathf.Deg2Rad), Mathf.Cos(p.giro * Mathf.Deg2Rad));
                         var meio = new Vector2(p.centro.x, p.centro.z) + dir * (p.tamanho.z / 2 + 0.3f);
-                        Assert.IsTrue(Alcanca(new Rect(meio.x - 0.3f, meio.y - 0.3f, 0.6f, 0.6f)) || p.tipo == "gondola", $"{c.nome}: a frente do {p.tipo} no {k.tipo} não se alcança");
+                        var quadrado = new Rect(meio.x - 0.3f, meio.y - 0.3f, 0.6f, 0.6f);
+                        bool tapada = meus.Exists(o => (o.tipo == "MesaDeCentro" || o.tipo == "Bau") && o.Pe.Overlaps(quadrado));
+                        // (na cama nova, também pelos lados: a de lado, encostada pelo comprido, chega-se por um deles)
+                        bool peloLado = false;
+                        if (p.tipo.StartsWith("Cama") || p.tipo == "Beliche" || p.tipo == "ColchaoNoChao")
+                            foreach (float s in new[] { -1f, 1f })
+                            {
+                                var lado = new Vector2(dir.y, -dir.x) * s;
+                                var m = new Vector2(p.centro.x, p.centro.z) + lado * (p.tamanho.x / 2 + 0.3f);
+                                peloLado |= Alcanca(new Rect(m.x - 0.3f, m.y - 0.3f, 0.6f, 0.6f));
+                            }
+                        Assert.IsTrue(Alcanca(quadrado) || p.tipo == "gondola" || tapada || peloLado, $"{c.nome}: a frente do {p.tipo} no {k.tipo} não se alcança");
                     }
                 }
             Assert.Greater(comodos, 10000);
@@ -263,14 +286,24 @@ namespace ZombieCityCleaner.Testes
             // o que cada cômodo precisa ter (um dos tipos), e em quantos por cento dos cômodos, no mínimo
             var regras = new (string contexto, string comodo, string[] tipos, float minimo)[]
             {
-                ("casa", "quarto", new[] { "cama", "cama de solteiro" }, 0.97f),
+                // (as casas e os apartamentos: a mobília nova, a etapa 4 do Plano_Mobilia.md da pasta de arte)
+                ("casa", "quarto", new[] { "CamaCasal", "CamaSolteiro", "Beliche", "ColchaoNoChao" }, 0.97f),
                 // (com as folhas das portas bem abertas sólidas para quem anda, a mobília: 92% e 94%; eram 95%. Nas casas
                 // e nos apartamentos das lojas, todas; nos apartamentos dos prédios, 85% e 88%: a porta de entrada abre
                 // para dentro da cozinha pequena, e a folha toma o lugar da geladeira ou do fogão)
-                ("casa", "cozinha", new[] { "geladeira", "frigobar" }, 0.91f),
-                ("casa", "cozinha", new[] { "fogao" }, 0.93f),
-                ("casa", "banheiro", new[] { "vaso" }, 0.97f),
-                ("casa", "sala", new[] { "sofa", "poltrona" }, 0.95f),
+                ("casa", "cozinha", new[] { "Geladeira", "GeladeiraGrande" }, 0.91f),
+                ("casa", "cozinha", new[] { "Fogao" }, 0.93f),
+                ("casa", "banheiro", new[] { "Privada" }, 0.97f),
+                ("casa", "sala", new[] { "Sofa1", "Sofa2", "Sofa3", "SofaL" }, 0.95f),
+                // os apartamentos dos prédios: a cozinha (3 × 3,6 m, com uma porta ou um vão em cada parede) só tem parede
+                // para dois dos móveis de 1 m de fundo da mobília nova em ×1,30: o fogão e a pia quase sempre, a geladeira
+                // em uns 18% (com a mobília antiga, 85%); no banheiro de 2 × 2,6 m, a folha da porta atravessa quase o cômodo,
+                // e a privada (0,8 m de fundo) fica de fora em uns 11%; o quarto estreito leva a cama de solteiro de lado
+                ("apartamento", "quarto", new[] { "CamaCasal", "CamaSolteiro", "Beliche", "ColchaoNoChao" }, 0.97f),
+                ("apartamento", "cozinha", new[] { "Fogao" }, 0.9f),
+                ("apartamento", "cozinha", new[] { "Geladeira", "GeladeiraGrande" }, 0.15f),
+                ("apartamento", "banheiro", new[] { "Privada" }, 0.85f),
+                ("apartamento", "sala", new[] { "Sofa1", "Sofa2", "Sofa3", "SofaL" }, 0.9f),
                 ("hospital", "enfermaria", new[] { "cama de hospital" }, 0.95f),
                 ("Mercado", "salao", new[] { "prateleira", "gondola" }, 1f),
                 ("Farmacia", "salao", new[] { "prateleira" }, 1f),

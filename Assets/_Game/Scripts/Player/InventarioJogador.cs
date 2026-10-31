@@ -76,6 +76,8 @@ namespace ZombieCityCleaner.Player
         public Texture2D[] iconesDeMunicao, fotosDeMunicao;
         [Tooltip("Os ícones e as fotos das peças do motor (a vela, a bateria e o radiador), na ordem do enum Item.")]
         public Texture2D[] iconesDePeca, fotosDePeca;
+        [Tooltip("Os ícones e as fotos da sinuca (as 2 caixas de bolas e os 4 tacos), na ordem do enum Item.")]
+        public Texture2D[] iconesDaSinuca, fotosDaSinuca;
         [Tooltip("Os ícones e as fotos do saque (o loot.py), na ordem de Itens.DoLoot.")]
         public Texture2D[] iconesDeLoot, fotosDeLoot;
 
@@ -572,6 +574,30 @@ namespace ZombieCityCleaner.Player
             var item = Mochila[k].item;
             Mochila.RemoveAt(k);
             return item;
+        }
+
+        /// <summary>
+        /// Só no anfitrião: o item vira outro do mesmo tamanho, no mesmo lugar da grade (a caixa de bolas cheia vira a
+        /// vazia, e a vazia, a cheia). Falso se ele não está na mochila ou se os tamanhos são diferentes.
+        /// </summary>
+        public bool TrocarItem(ushort id, Item novo)
+        {
+            int k = IsServer ? Indice(id) : -1;
+            if (k < 0) return false;
+            var it = Mochila[k];
+            if (Itens.Tamanho(it.item) != Itens.Tamanho(novo)) return false;
+            it.item = novo;
+            it.qtd = 0;
+            Mochila[k] = it;
+            return true;
+        }
+
+        /// <summary>O primeiro item deste tipo na mochila (o Id; 0, nenhum).</summary>
+        public ushort Primeiro(Item item)
+        {
+            foreach (var it in Mochila)
+                if (it.item == item) return it.id;
+            return 0;
         }
 
         /// <summary>
@@ -1140,6 +1166,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>O ícone colorido do item (null, nada).</summary>
         public Texture2D IconeDe(Item item)
         {
+            int s = Itens.IndiceDaSinuca(item);
+            if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
             if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length ? iconesDeLoot[l] : null;
             int p = Itens.IndiceDaPeca(item);
@@ -1154,6 +1182,8 @@ namespace ZombieCityCleaner.Player
 
         public Texture2D FotoDe(Item item)
         {
+            int s = Itens.IndiceDaSinuca(item);
+            if (s >= 0) return fotosDaSinuca != null && s < fotosDaSinuca.Length ? fotosDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
             if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length ? fotosDeLoot[l] : null;
             int p = Itens.IndiceDaPeca(item);
@@ -1218,6 +1248,7 @@ namespace ZombieCityCleaner.Player
                 int n = Achar(IdNaMao, out var pilha) ? Itens.Quantos(naMao, pilha.qtd) : 1;
                 linha = $"{Itens.Nome(naMao)}{(n > 1 ? $" ({n})" : "")}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
             }
+            else if (Itens.EhTaco(naMao)) linha = $"{Itens.Nome(naMao)}   ·   E na mesa de sinuca: jogar   ·   G: largar";
             else if (Time.time < _nomeAte)
             {
                 linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco"
