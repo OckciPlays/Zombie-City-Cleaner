@@ -12,8 +12,10 @@ namespace ZombieCityCleaner.Player
     public class CorpoDoPersonagem : MonoBehaviour
     {
         public Animator animador;
-        [Tooltip("O corpo e o que está na mão (as armas e os itens dentro do Arma_TP).")]
+        [Tooltip("O corpo (o NPC_Corpo e as peças das roupas) e o que está na mão (as armas e os itens dentro do Arma_TP).")]
         public Renderer[] renderers;
+        [Tooltip("As roupas do corpo (o corpo das roupas e as peças, presos aos ossos deste corpo): a aparência do jogador.")]
+        public ZombieCityCleaner.Roupas.Vestimenta vestimenta;
         public Transform ossoPeito;
         public Transform ossoCabeca;
         [Tooltip("As armas e os itens dentro do Arma_TP (na ordem de Itens.Modelos).")]

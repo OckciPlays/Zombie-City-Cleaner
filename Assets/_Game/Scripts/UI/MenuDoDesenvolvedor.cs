@@ -92,6 +92,7 @@ namespace ZombieCityCleaner.UI
             var teclado = Keyboard.current;
             if (teclado != null && teclado.f1Key.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!_aberto);
             AtalhosDoMundo(teclado);
+            AtalhosDoMapaFixo(teclado);
         }
 
         void Avisar(string texto)
@@ -231,6 +232,8 @@ namespace ZombieCityCleaner.UI
 
             // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
             var mundo = PainelDoMundo(u, area);
+            // ou, na cena do mapa fixo, o painel dele
+            if (mundo.width <= 0f) mundo = PainelDoMapaFixo(u, area);
             if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(area.yMax, mundo.yMax));
             // o Oco de teste, ao lado do último painel
             var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
@@ -263,6 +266,9 @@ namespace ZombieCityCleaner.UI
                 _boneco.transform.SetPositionAndRotation(pe, Quaternion.LookRotation(frente));
                 var corpo = Instantiate(referencia.gameObject, _boneco.transform, false);
                 corpo.name = "Corpo";
+                // vestido como o jogador (as mesmas peças e cores)
+                var vestimenta = corpo.GetComponent<ZombieCityCleaner.Roupas.Vestimenta>();
+                if (vestimenta != null && rede.Vestimenta != null) vestimenta.VestirComo(rede.Vestimenta);
                 corpo.transform.localPosition = Vector3.zero;
                 corpo.transform.localRotation = Quaternion.identity;
                 foreach (var t in corpo.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 0;

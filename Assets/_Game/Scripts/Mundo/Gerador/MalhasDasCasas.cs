@@ -20,7 +20,10 @@ namespace ZombieCityCleaner.Mundo
     /// chão da obra (a umidade na base das paredes, no shader do abandono).
     /// A mobília ("A mobília", primeira fatia; <see cref="Mobilia"/>): os móveis das casas e das lojas do bloco numa
     /// malha à parte (<see cref="DoBloco.Mobilia"/>, que aparece só perto), e uma caixa por móvel na colisão de cada uma;
-    /// nos andares dos prédios, no desenho e na colisão do andar (que já carregam só perto).
+    /// nos andares dos prédios, no desenho e na colisão do andar (que já carregam só perto). A mobília nova (a etapa 4 do
+    /// Plano_Mobilia.md da pasta de arte, nas casas e nos apartamentos; <see cref="MobiliaNova"/>): os de longe numa malha
+    /// por obra (<see cref="CasaPronta.MobiliaNova"/>, <see cref="AndarPronto.MobiliaNova"/>; os de perto, com as portas e
+    /// as gavetas, a cena põe) e uma caixa por móvel no chão na colisão.
     /// </summary>
     public static class MalhasDasCasas
     {
@@ -46,6 +49,9 @@ namespace ZombieCityCleaner.Mundo
             public int Triangulos;
             /// <summary>Os pontos dos móveis (nas coordenadas da casa, já espelhados).</summary>
             public readonly List<PontoDeMovel> Moveis = new List<PontoDeMovel>();
+            /// <summary>Os de longe dos móveis novos (nas coordenadas da casa; do estoque, null sem eles) e a semente da obra.</summary>
+            public MalhaDaMobilia MobiliaNova;
+            public int Semente;
         }
 
         /// <summary>Um prédio (Parte M6, segunda fatia): a casca vai para o desenho do bloco; o resto, aqui.</summary>
@@ -75,6 +81,9 @@ namespace ZombieCityCleaner.Mundo
             public readonly List<Zona> Zonas = new List<Zona>();
             /// <summary>Os pontos dos móveis do andar (nas coordenadas do prédio, já espelhados).</summary>
             public readonly List<PontoDeMovel> Moveis = new List<PontoDeMovel>();
+            /// <summary>Os de longe dos móveis novos do andar (do estoque, null sem eles) e a semente dele.</summary>
+            public MalhaDaMobilia MobiliaNova;
+            public int Semente;
         }
 
         public sealed class DoBloco
@@ -148,6 +157,8 @@ namespace ZombieCityCleaner.Mundo
             {
                 MalhaDeObra.Devolver(c.Colisao);
                 c.Colisao = null;
+                MalhaDaMobilia.Devolver(c.MobiliaNova);
+                c.MobiliaNova = null;
             }
             foreach (var p in r.Predios)
             {
@@ -164,6 +175,8 @@ namespace ZombieCityCleaner.Mundo
             MalhaDeObra.Devolver(a.Desenho);
             MalhaDeObra.Devolver(a.Colisao);
             a.Desenho = a.Colisao = null;
+            MalhaDaMobilia.Devolver(a.MobiliaNova);
+            a.MobiliaNova = null;
         }
 
         /// <summary>
@@ -250,6 +263,8 @@ namespace ZombieCityCleaner.Mundo
             desenho.Juntar(loja.vis, matriz, p.espelhar, altura: true);
             MalhaDeObra.Devolver(loja.vis);
             foreach (var pm in loja.moveis) pronta.Moveis.Add(p.espelhar ? pm.Espelhado() : pm);
+            pronta.Semente = p.semente;
+            pronta.MobiliaNova = MobiliaNovaDa(pronta.Moveis, p.semente, pronta.Colisao);
             foreach (var k in p.comodos) pronta.Zonas.Add(ZonaDo(k, sx, p.Base(k.andar), k.piso ?? "Piso"));
             float baixo = PlantaDeLoja.Piso, alto = p.Cobertura - M.laje;
             pronta.CentroDeDentro = new Vector3(0f, (baixo + alto) / 2, 0f);
@@ -265,6 +280,8 @@ namespace ZombieCityCleaner.Mundo
             Mobilia.Por(predio.Moveis, predio.vis, predio.col, p.semente * 31 + f);
             var r = new AndarPronto { Andar = f, Desenho = Espelhada(predio.vis, p.espelhar), Colisao = Espelhada(predio.col, p.espelhar) };
             foreach (var pm in predio.Moveis) r.Moveis.Add(p.espelhar ? pm.Espelhado() : pm);
+            r.Semente = p.semente * 31 + f;
+            r.MobiliaNova = MobiliaNovaDa(r.Moveis, r.Semente, r.Colisao);
             float sx = p.espelhar ? -1f : 1f;
             foreach (var k in predio.Comodos) r.Zonas.Add(ZonaDo(k, sx, p.Base(f), k.piso));
             return r;
@@ -292,6 +309,15 @@ namespace ZombieCityCleaner.Mundo
             Mobilia.Por(pontos, desenho, colisao, semente);
             mobilia.Juntar(desenho, matriz, espelhar, altura: true);
             MalhaDeObra.Devolver(desenho);
+        }
+
+        // a mobília nova (Plano_Mobilia.md da pasta de arte, a etapa 4): dos pontos já espelhados (os modelos não espelham: o
+        // móvel vai para o lugar espelhado, com o giro dele), as caixas na colisão já espelhada e os de longe numa malha
+        static MalhaDaMobilia MobiliaNovaDa(List<PontoDeMovel> pontos, int semente, MalhaDeObra colisao)
+        {
+            if (!MobiliaNova.Pronta) return null;
+            MobiliaNova.Caixas(pontos, colisao);
+            return MobiliaNova.Desenho(pontos, semente);
         }
 
         // a montagem fica com a malha da obra (espelhada nela mesma, se precisar), em vez de copiá-la para outra do estoque:
@@ -332,6 +358,8 @@ namespace ZombieCityCleaner.Mundo
             pronta.Triangulos = casa.vis.Triangulos;
             MalhaDeObra.Devolver(casa.vis);
             foreach (var pm in casa.moveis) pronta.Moveis.Add(p.espelhar ? pm.Espelhado() : pm);
+            pronta.Semente = p.semente;
+            pronta.MobiliaNova = MobiliaNovaDa(pronta.Moveis, p.semente, pronta.Colisao);
 
             // o caminho do pé da escada da frente até a calçada, e a entrada do carro
             Caminho(d, t, l, casa.Entrada, 1.2f, desenho);

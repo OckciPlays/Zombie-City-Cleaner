@@ -172,6 +172,7 @@ namespace ZombieCityCleaner.Mundo
                         n = U >= 2 * larg + 2.2f ? 2 : U >= larg ? 1 : 0;
                         break;
                     case "cozinha": case "deposito": case "consultorio": case "triagem": case "posto":
+                        if (k.tipo == "cozinha") baixo = m.peitorilDaCozinha;
                         n = U >= larg ? 1 : 0;
                         break;
                     case "banheiro": case "lavanderia": case "rouparia":

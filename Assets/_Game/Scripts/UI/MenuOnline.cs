@@ -15,13 +15,16 @@ namespace ZombieCityCleaner.UI
     /// Também é o dono do mouse: solto com o menu aberto, preso no jogo assim que a partida começa ou o menu fecha.
     /// Linha de comando para testes: -entrar CÓDIGO, -hospedar-local, -entrar-local [ip], -bot (o jogador anda e
     /// atira sozinho) e -personagem 1 a 4; na cena Mundo, também -semente N, -tamanho pequeno|medio|grande e -nome TEXTO
-    /// (o mundo de quem hospeda). Antes de entrar, o jogador escolhe o personagem (os retratos à esquerda do menu).
+    /// (o mundo de quem hospeda). O personagem é criado ao entrar na partida (a tela de criar, a TelaDeCriarPersonagem do
+    /// jogador; o Plano_Personagem.md da pasta de arte): a escolha dos retratos saiu do menu.
     /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o "Novo mundo": o nome, o tamanho e a semente.
     /// </summary>
     public class MenuOnline : MonoBehaviour
     {
-        /// <summary>Menu aberto: o jogador local não recebe comandos.</summary>
+        /// <summary>Menu aberto (ou uma tela obrigatória, a de criar o personagem): o jogador local não recebe comandos.</summary>
         public static bool Aberto { get; private set; } = true;
+        /// <summary>O menu da partida (ESC) está aberto: as telas embaixo dele não respondem.</summary>
+        public static bool Pausado { get; private set; }
         /// <summary>Teste automático: o jogador local anda em círculo, atira e liga a lanterna sozinho.</summary>
         public static bool Bot { get; private set; }
 
@@ -40,13 +43,26 @@ namespace ZombieCityCleaner.UI
         public static bool ComTela => _telas.Count > 0;
         public static event Action FecharTelas;
 
-        public static void Tela(object dona, bool aberta)
+        /// <summary>
+        /// Abre ou fecha uma tela do jogo. Uma obrigatória (a de criar o personagem) não fecha com ESC: ESC abre o menu
+        /// por cima dela (de onde se sai da partida), e com ela aberta o menu conta como aberto (sem os atalhos do jogo).
+        /// </summary>
+        public static void Tela(object dona, bool aberta, bool obrigatoria = false)
         {
-            if (aberta) _telas.Add(dona);
-            else _telas.Remove(dona);
+            if (aberta)
+            {
+                _telas.Add(dona);
+                if (obrigatoria) _obrigatorias.Add(dona);
+            }
+            else
+            {
+                _telas.Remove(dona);
+                _obrigatorias.Remove(dona);
+            }
         }
 
         static readonly System.Collections.Generic.HashSet<object> _telas = new System.Collections.Generic.HashSet<object>();
+        static readonly System.Collections.Generic.HashSet<object> _obrigatorias = new System.Collections.Generic.HashSet<object>();
         static bool _esperarSoltar;
         SessaoOnline _sessao;
         string _codigo = "", _ip = "127.0.0.1";
@@ -93,11 +109,12 @@ namespace ZombieCityCleaner.UI
             bool esc = teclado != null && teclado.escapeKey.wasPressedThisFrame;
             // ESC nas opções volta para o menu; com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
             if (esc && _opcoes) _opcoes = false;
-            else if (naPartida && esc && ComTela) FecharTelas?.Invoke();
+            else if (naPartida && esc && _telas.Count > _obrigatorias.Count && !_pausa) FecharTelas?.Invoke();
             else if (naPartida && esc) _pausa = !_pausa;
             if (naPartida && !_pausa) _opcoes = false;
             if (!naPartida) _pausa = false;
-            Aberto = !naPartida || _pausa;
+            Pausado = naPartida && _pausa;
+            Aberto = !naPartida || _pausa || _obrigatorias.Count > 0;
             bool solto = Aberto || ComTela;
             if (solto && !Bot)
             {
@@ -173,6 +190,7 @@ namespace ZombieCityCleaner.UI
         void OnGUI()
         {
             if (ModoVideo.Ligado) return;   // gravando um vídeo: nem o menu, nem o código da partida, nem o FPS
+            GUI.depth = -18;   // por cima das telas do jogo (a de criar o personagem, o F1, o mapa); embaixo da de carregamento
             Estilos();
             float u = Screen.height / 720f;
             Menu(u);
@@ -185,6 +203,8 @@ namespace ZombieCityCleaner.UI
             var estado = _sessao.Atual;
             if (estado == SessaoOnline.Estado.Conectado)
             {
+                // com a tela de criar o personagem aberta, só o menu (ESC)
+                if (_obrigatorias.Count > 0 && !_pausa) return;
                 string codigo = _sessao.Local ? "partida local" : $"código {_sessao.Codigo}";
                 // na cena Mundo, o nome, a semente e o tamanho do mundo
                 var m = MundoDaPartida.Instancia;
@@ -213,7 +233,6 @@ namespace ZombieCityCleaner.UI
                 GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
                 return;
             }
-            EscolhaDoPersonagem(u, x, y);
             if (doMundo) y = NovoMundo(u, x, y, w);
             else
             {
@@ -237,32 +256,6 @@ namespace ZombieCityCleaner.UI
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Opções", _botao)) _opcoes = true;
-        }
-
-        // a escolha do personagem (antes de hospedar ou entrar), à esquerda do menu: os 4 retratos em 2 × 2, o escolhido
-        // com a moldura amarela. Fica guardado (Personagens.Escolhido) e vai pela rede quando o jogador nasce
-        void EscolhaDoPersonagem(float u, float xDoMenu, float y)
-        {
-            float lado = 92 * u, alto = lado / 0.6f, vao = 10 * u;   // os retratos são 384 × 640
-            float largura = 2 * lado + vao;
-            float x = Mathf.Max(10 * u, xDoMenu - largura - 40 * u);
-            GUI.Label(new Rect(x, y, largura, 24 * u), "Seu personagem:", _texto);
-            y += 28 * u;
-            for (int i = 0; i < Player.Personagens.Quantos; i++)
-            {
-                var r = new Rect(x + (i % 2) * (lado + vao), y + (i / 2) * (alto + vao), lado, alto);
-                bool escolhido = Player.Personagens.Escolhido == i;
-                GUI.color = escolhido ? new Color(0.98f, 0.85f, 0.45f, 0.95f) : new Color(1f, 1f, 1f, 0.1f);
-                GUI.DrawTexture(r, Texture2D.whiteTexture);
-                var dentro = new Rect(r.x + 3 * u, r.y + 3 * u, r.width - 6 * u, r.height - 6 * u);
-                GUI.color = escolhido ? new Color(0.16f, 0.15f, 0.13f, 1f) : new Color(0f, 0f, 0f, 0.35f);
-                GUI.DrawTexture(dentro, Texture2D.whiteTexture);
-                GUI.color = escolhido ? Color.white : new Color(1f, 1f, 1f, 0.75f);
-                var retrato = Player.Personagens.Retrato(i);
-                if (retrato != null) GUI.DrawTexture(dentro, retrato, ScaleMode.ScaleToFit);
-                GUI.color = Color.white;
-                if (GUI.Button(r, GUIContent.none, GUIStyle.none)) Player.Personagens.Escolhido = i;
-            }
         }
 
         // o "Novo mundo": o nome, o tamanho e a semente, e o botão de criar (hospedar); devolve onde o menu continua

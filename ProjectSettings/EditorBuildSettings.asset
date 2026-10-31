@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Game/Scenes/Exemplos/Sinuca.unity
     guid: 5561df485a9aa5d4799454755e5e3d43
+  - enabled: 1
+    path: Assets/_Game/Scenes/MapaFixo.unity
+    guid: f047d01b5904be84a8a5013071830757
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

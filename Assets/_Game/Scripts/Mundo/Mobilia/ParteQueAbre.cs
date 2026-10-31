@@ -7,7 +7,7 @@ namespace ZombieCityCleaner.Mundo
     /// origem dela), a tampa (a do baú) gira para cima na dobradiça de trás e a gaveta corre para a frente do móvel (+Z
     /// dele). O jogador mira nela e aperta o E
     /// (<see cref="Alternar"/>); ela abre ou fecha em <see cref="duracao"/> segundos, suave no começo e no fim.
-    /// Por enquanto só na cena de testes (sem rede); no mundo, o estado vai pelo anfitrião (o plano, etapa 4).
+    /// Na cena de testes, direto; no mundo, o estado vem do anfitrião (<see cref="Definir"/>, pelo MobiliaNovaDoMundo).
     /// </summary>
     public class ParteQueAbre : MonoBehaviour
     {
@@ -45,6 +45,17 @@ namespace ZombieCityCleaner.Mundo
             Guardar();
             Aberta = !Aberta;
             _alvo = Aberta ? 1f : 0f;
+            enabled = true;
+        }
+
+        /// <summary>Fica aberta ou fechada (o estado do anfitrião); 'ja': sem a animação (o móvel acabou de aparecer).</summary>
+        public void Definir(bool aberta, bool ja = false)
+        {
+            Guardar();
+            if (Aberta == aberta && !ja) return;
+            Aberta = aberta;
+            _alvo = aberta ? 1f : 0f;
+            if (ja) _t = _alvo;
             enabled = true;
         }
 

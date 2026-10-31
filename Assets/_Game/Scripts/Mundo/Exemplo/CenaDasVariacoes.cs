@@ -24,6 +24,8 @@ namespace ZombieCityCleaner.Mundo
     /// (a sala, o quarto...), com o piso, as paredes e a porta do tamanho das construções (×1,15). As portas e as gavetas
     /// abrem com o E (o ParteQueAbre), o C troca a cor do móvel na mira (o MovelDoMostruario) e o K troca a escala dos
     /// móveis (1,00, 1,15 e 1,30; começa em 1,30, a escolhida para o jogo).
+    /// Antes dele, a primeira parada: as mesas dos itens (o lote 6 das roupas, 31/10/2026), com as roupas como itens e os
+    /// itens que já se pegam no jogo, para ver a quantidade de coisas (<see cref="MesasDosItens"/>).
     /// Montada por Editor/MontagemDoExemploDasCasas (menu Zombie City Cleaner > Exemplos > Variações das construções).
     /// </summary>
     [ExecuteAlways]
@@ -34,11 +36,20 @@ namespace ZombieCityCleaner.Mundo
         public Mesh[] mobilia;
         [Tooltip("Os prefabs da mobília nova (Prefabs/MobiliaNova, de Editor/MontagemDaMobiliaNova): o mostruário no começo da rua.")]
         public GameObject[] mobiliaNova;
+        [Tooltip("As roupas como itens (Prefabs/Roupas/Itens, de Editor/MontagemDasRoupas): as mesas antes do mostruário.")]
+        public GameObject[] roupas;
+        [Tooltip("O lugar de cada roupa (o mesmo índice): a cabeça, os óculos, a máscara, o tronco...")]
+        public string[] lugaresDasRoupas;
+        [Tooltip("As malhas dos itens que já se pegam no jogo (Art/Characters/Jogador/Malhas: as armas, a comida e a água, os equipamentos, a munição, as peças do carro e a sinuca).")]
+        public Mesh[] coletaveis;
+        [Tooltip("O material deles (o Pistola.mat, a paleta).")]
+        public Material materialDosColetaveis;
 
         /// <summary>O espaço entre um lote e o outro.</summary>
         const float Entre = 4f;
 
-        protected override string Chave => $"{semente}|{tamanho}|variações|{mobilia?.Length ?? 0}|{mobiliaNova?.Length ?? 0}";
+        protected override string Chave => $"{semente}|{tamanho}|variações|{mobilia?.Length ?? 0}|{mobiliaNova?.Length ?? 0}|" +
+                                           $"{roupas?.Length ?? 0}|{coletaveis?.Length ?? 0}";
 
         float _norte, _sul;
 
@@ -139,6 +150,7 @@ namespace ZombieCityCleaner.Mundo
             var ordemDosPredios = NaOrdem(OrdemDosPredios, predios, faltam);
 
             float inicio = Mostruario(M);
+            inicio = Mathf.Min(inicio, MesasDosItens(inicio < 0f ? inicio - EntreComodos - 2f : -14f));
             _norte = _sul = 0f;
             for (int i = 0; i < ordemDasCasas.Count; i++)
             {
@@ -615,6 +627,189 @@ namespace ZombieCityCleaner.Mundo
             var c = cadeira.tamanho.center;
             float z = mesa.size.z + cadeira.tamanho.size.z / 2f - 0.15f;
             Instanciar(cadeira.prefab, suporte, new Vector3(x + c.x, 0f, z + c.z), 172f);
+        }
+
+        // ------------------------------------------------------------------ as mesas dos itens
+
+        /// <summary>Os grupos das roupas (o lugar no corpo e o nome), na ordem das mesas.</summary>
+        static readonly (string lugar, string nome)[] GruposDasRoupas =
+        {
+            ("Tronco", "as camisetas e as camisas"), ("Por_Cima", "as jaquetas, os moletons e o jaleco"), ("Colete", "os coletes"),
+            ("Cintura", "os cintos"), ("Pernas", "as calças"), ("Pes", "os calçados"), ("Maos", "as luvas"),
+            ("Cabeca", "os chapéus e os capacetes"), ("Oculos", "os óculos"), ("Mascara", "as máscaras"),
+        };
+
+        /// <summary>Os grupos dos itens que já se pegam no jogo (o começo do nome da malha e o nome).</summary>
+        static readonly (string prefixo, string nome)[] GruposDosColetaveis =
+        {
+            ("Arma_", "as armas"), ("Item_", "a comida e a água"), ("Equip_", "as mochilas e o coldre"), ("Mun_", "a munição"),
+            ("Peca_", "as peças do carro"), ("Sinuca_", "a sinuca"),
+        };
+
+        /// <summary>As mesas por fileira, o espaço entre as mesas e entre os itens, e a escala das mesas (a do jogo).</summary>
+        const int MesasPorFileira = 5;
+        const float EntreMesas = 1.3f, EntreItens = 0.07f, EscalaDasMesas = 1.3f;
+
+        sealed class ItemNaMesa
+        {
+            public string nome, grupo;
+            public GameObject prefab;       // a roupa
+            public Mesh malha;              // o coletável
+            public Quaternion giro;
+            public Bounds tamanho;          // depois do giro
+        }
+
+        static Bounds Girado(Bounds b, Quaternion q)
+        {
+            var r = new Bounds(q * b.center, Vector3.zero);
+            for (int i = 0; i < 8; i++)
+            {
+                var canto = new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1);
+                r.Encapsulate(q * (b.center + Vector3.Scale(b.extents, canto)));
+            }
+            return r;
+        }
+
+        /// <summary>
+        /// As mesas dos itens (o lote 6 das roupas, 31/10/2026, a pedido: "tudo numa cena em cima de mesas, para ter uma
+        /// visão da quantidade de coisas"): as roupas como itens (deitadas de frente, a gola para o fundo; o resto de
+        /// frente para a rua) e os itens que já se pegam no jogo (as armas deitadas de lado, como no chão do jogo), cada
+        /// grupo começando numa mesa (a de 6 lugares da mobília nova, na escala do jogo), vários itens por mesa, em
+        /// fileiras, as mesas em fileiras de 5 no lado norte, terminando em x = fim. É a primeira parada (o jogador começa
+        /// nela). Devolve onde a área começa (em x), ou fim sem os itens.
+        /// </summary>
+        float MesasDosItens(float fim)
+        {
+            var mesa = (mobiliaNova ?? new GameObject[0]).FirstOrDefault(p => p != null && p.name == "Mesa6")
+                       ?? (mobiliaNova ?? new GameObject[0]).FirstOrDefault(p => p != null && p.name == "Mesa4");
+            var grupos = new List<(string nome, List<ItemNaMesa> itens)>();
+            var deFrente = Quaternion.Euler(0f, 180f, 0f);
+            if (roupas != null)
+                foreach (var (lugar, nome) in GruposDasRoupas)
+                {
+                    var lista = new List<ItemNaMesa>();
+                    for (int i = 0; i < roupas.Length; i++)
+                    {
+                        if (roupas[i] == null || lugaresDasRoupas == null || i >= lugaresDasRoupas.Length || lugaresDasRoupas[i] != lugar) continue;
+                        var mf = roupas[i].GetComponent<MeshFilter>();
+                        if (mf == null || mf.sharedMesh == null) continue;
+                        lista.Add(new ItemNaMesa { nome = roupas[i].name.Replace("Item_", ""), grupo = nome, prefab = roupas[i], giro = deFrente,
+                                                   tamanho = Girado(mf.sharedMesh.bounds, deFrente) });
+                    }
+                    if (lista.Count > 0) grupos.Add((nome, lista));
+                }
+            if (coletaveis != null && materialDosColetaveis != null)
+                foreach (var (prefixo, nome) in GruposDosColetaveis)
+                {
+                    var lista = new List<ItemNaMesa>();
+                    foreach (var m in coletaveis.Where(m => m != null && m.name.StartsWith(prefixo)).OrderBy(m => m.name))
+                    {
+                        // as armas deitadas de lado (como o ItensNoMundo as põe no chão), o resto como é (os tacos já deitados)
+                        var q = prefixo == "Arma_" ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
+                        lista.Add(new ItemNaMesa { nome = m.name.Substring(prefixo.Length), grupo = nome, malha = m, giro = q,
+                                                   tamanho = Girado(m.bounds, q) });
+                    }
+                    if (lista.Count > 0) grupos.Add((nome, lista));
+                }
+            if (grupos.Count == 0 || mesa == null) return fim;
+
+            // o tampo da mesa (na escala do jogo): a largura, o fundo e a altura
+            var bm = Medir(null, mesa).tamanho;
+            float W = bm.size.x * EscalaDasMesas, D = bm.size.z * EscalaDasMesas, H = bm.max.y * EscalaDasMesas;
+            float uW = W - 0.12f, uD = D - 0.12f;
+
+            // o plano: cada grupo a partir de uma mesa nova, em fileiras (o x e o z de cada item no tampo, a partir do canto)
+            var mesas = new List<List<(ItemNaMesa item, float x, float z)>>();
+            var nomesDasMesas = new List<string>();
+            foreach (var (nome, itens) in grupos)
+            {
+                List<(ItemNaMesa, float, float)> atual = null;
+                float x = 0f, z = 0f, fundoDaFileira = 0f;
+                foreach (var it in itens)
+                {
+                    // o que é mais fundo que a mesa vai virado de lado
+                    if (it.tamanho.size.z > uD && it.tamanho.size.x < uD)
+                    {
+                        it.giro = Quaternion.Euler(0f, 90f, 0f) * it.giro;
+                        it.tamanho = Girado(it.prefab != null ? it.prefab.GetComponent<MeshFilter>().sharedMesh.bounds : it.malha.bounds, it.giro);
+                    }
+                    float w = it.tamanho.size.x, d = it.tamanho.size.z;
+                    if (atual != null && x + w > uW) { x = 0f; z += fundoDaFileira + EntreItens; fundoDaFileira = 0f; }
+                    // (as roupas deitadas, de 55 cm, cabem em duas fileiras saindo um pouco do tampo)
+                    if (atual == null || z + d > D + 0.06f)
+                    {
+                        atual = new List<(ItemNaMesa, float, float)>();
+                        mesas.Add(atual);
+                        nomesDasMesas.Add(nome);
+                        x = z = fundoDaFileira = 0f;
+                    }
+                    atual.Add((it, x + w / 2f, z + d / 2f));
+                    x += w + EntreItens;
+                    fundoDaFileira = Mathf.Max(fundoDaFileira, d);
+                }
+            }
+
+            int fileiras = (mesas.Count + MesasPorFileira - 1) / MesasPorFileira;
+            float passoX = W + EntreMesas, passoZ = D + EntreMesas;
+            float largura = MesasPorFileira * passoX + 1.2f, x0 = fim - largura;
+            float z0 = FrenteDoMostruario, fundo = fileiras * passoZ + 1.2f;
+            chao.Caixa(new Vector3(x0 + largura / 2f, PisoDoMostruario / 2f, z0 + fundo / 2f), new Vector3(largura, PisoDoMostruario, fundo), "Taco", colide: true);
+
+            var parada = new Parada { Giro = 0f };
+            parada.Pisos.Add(PisoDoMostruario);
+            parada.NomesDosPisos.Add("As roupas e os itens");
+            int nRoupas = 0, nColetaveis = 0;
+            for (int k = 0; k < mesas.Count; k++)
+            {
+                int col = k % MesasPorFileira, fil = k / MesasPorFileira;
+                // a primeira fileira perto da rua; a mesa com o tampo de x0 a x0 + W
+                var centro = new Vector3(x0 + 0.6f + col * passoX + W / 2f, PisoDoMostruario, z0 + 0.6f + fil * passoZ + D / 2f);
+                var s = Novo($"Mesa dos itens {k + 1}: {nomesDasMesas[k]}", raiz).transform;
+                s.localPosition = centro;
+                s.localScale = Vector3.one * EscalaDasMesas;
+                var m = Instantiate(mesa, s);
+                m.name = mesa.name;
+                foreach (var t in m.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = HideFlags.DontSave;
+                m.transform.SetLocalPositionAndRotation(new Vector3(-bm.center.x, 0f, -bm.center.z), Quaternion.identity);
+                // os itens no tampo, no meio dele (a frente da mesa para a rua: o x da esquerda para a direita, o z da
+                // frente para o fundo)
+                float usadoX = mesas[k].Max(p => p.x + p.item.tamanho.size.x / 2f);
+                float usadoZ = mesas[k].Max(p => p.z + p.item.tamanho.size.z / 2f);
+                foreach (var (it, ix, iz) in mesas[k])
+                {
+                    var pos = new Vector3(centro.x - usadoX / 2f + ix, PisoDoMostruario + H, centro.z - usadoZ / 2f + iz);
+                    // o meio do pé do item no lugar
+                    pos -= new Vector3(it.tamanho.center.x, it.tamanho.min.y, it.tamanho.center.z);
+                    GameObject go;
+                    if (it.prefab != null)
+                    {
+                        go = Instantiate(it.prefab, raiz);
+                        foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = HideFlags.DontSave;
+                        nRoupas++;
+                    }
+                    else
+                    {
+                        go = Novo(it.malha.name, raiz);
+                        go.AddComponent<MeshFilter>().sharedMesh = it.malha;
+                        go.AddComponent<MeshRenderer>().sharedMaterial = materialDosColetaveis;
+                        nColetaveis++;
+                    }
+                    go.name = it.nome;
+                    go.transform.SetLocalPositionAndRotation(pos, it.giro);
+                }
+                parada.Comodos.Add((centro + Vector3.up * 0.1f, 0, $"{nomesDasMesas[k]}\n{mesas[k].Count} itens"));
+            }
+            parada.Limites = new Bounds(new Vector3(x0 + largura / 2f, 1.5f, z0 + fundo / 2f), new Vector3(largura, 3f, fundo));
+            parada.Chegada = new Vector3(x0 + largura / 2f, 0.2f, Calcada - 1.2f);
+            var ficha = new StringBuilder();
+            ficha.AppendLine($"As roupas e os itens: {nRoupas} roupas e acessórios (os itens das roupas) e {nColetaveis} itens que já se pegam no jogo, " +
+                             $"em {mesas.Count} mesas (a de 6 lugares, ×{EscalaDasMesas:0.00}). Os itens no tamanho real.");
+            foreach (var (nome, itens) in grupos)
+                ficha.AppendLine($"    {nome} ({itens.Count}): {string.Join(", ", itens.Select(i => i.nome.Replace('_', ' ')))}");
+            parada.Ficha = ficha.ToString();
+            Paradas.Insert(0, parada);
+            resumo.AppendLine($"As mesas dos itens: {nRoupas} roupas e {nColetaveis} coletáveis em {mesas.Count} mesas, de x = {x0:0} a {fim:0}.");
+            return x0;
         }
 
         string FichaDoComodo(Sala c)

@@ -199,7 +199,8 @@ namespace ZombieCityCleaner.Zombies
             bool noite = CicloDoDia.Noite > 0.5f;
             foreach (var j in JogadorRede.Todos)
             {
-                if (j == null || !j.IsSpawned || n == Jogadores.Length) continue;
+                // quem ainda está criando o personagem (a tela de criar) não aparece para os zumbis
+                if (j == null || !j.IsSpawned || !j.Criado || n == Jogadores.Length) continue;
                 Jogadores[n] = AlvoDe(j, noite, Quaternion.Euler(j.Pitch.Value, j.transform.eulerAngles.y, 0f) * Vector3.forward);
                 Jogadores[n++].exposto = ProtegerDoSol && Exposto(j.transform.position);
             }

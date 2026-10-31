@@ -174,6 +174,12 @@ namespace ZombieCityCleaner.EditorTools
                 .Where(m => ZombieCityCleaner.Mundo.Mobilia.Feitos.ContainsKey(m.name)).OrderBy(m => m.name).ToArray();
             // o mostruário da mobília nova (os prefabs de Mobília nova > Montar)
             c.mobiliaNova = MontagemDaMobiliaNova.Carregar();
+            // as mesas dos itens: as roupas como itens (Roupas e NPCs > Montar) e os itens que já se pegam no jogo
+            (c.roupas, c.lugaresDasRoupas) = MontagemDasRoupas.CarregarItens();
+            c.coletaveis = AssetDatabase.FindAssets("t:Mesh", new[] { "Assets/_Game/Art/Characters/Jogador/Malhas" })
+                .Select(g => AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(g))).Where(m => m != null)
+                .OrderBy(m => m.name).ToArray();
+            c.materialDosColetaveis = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Characters/Jogador/Materials/Pistola.mat");
             go.SetActive(true);
             Jogador(c.Paradas.Count > 0 ? c.Paradas[0].Chegada : new Vector3(0f, 0.2f, -2.5f));
             EditorSceneManager.SaveScene(cena.Value, CenaVariacoes);

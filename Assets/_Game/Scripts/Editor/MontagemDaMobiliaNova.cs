@@ -34,6 +34,9 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>Até onde vai o de perto e o de longe (a altura na tela, como no LODGroup).</summary>
         const float AtePerto = 0.08f, AteLonge = 0.012f;
 
+        /// <summary>A tabela das medidas de cada móvel, escrita a partir dos prefabs (o gerador do mapa a lê em outras threads).</summary>
+        const string ArquivoDasMedidas = "Assets/_Game/Scripts/Mundo/Mobilia/MedidasDaMobilia.cs";
+
         [MenuItem("Zombie City Cleaner/Mobília nova/Montar (texturas, material e prefabs)")]
         public static void Montar() => Debug.Log(MontarTudo());
 
@@ -46,7 +49,68 @@ namespace ZombieCityCleaner.EditorTools
             var log = new StringBuilder($"[Mobília nova] {array.depth} texturas de {array.width} px, o material {ArquivoDoMaterial}\n");
             foreach (var p in Prefabs(material, log)) log.AppendLine($"  {AssetDatabase.GetAssetPath(p)}");
             AssetDatabase.SaveAssets();
+            log.AppendLine(EscreverMedidas());
             return log.ToString();
+        }
+
+        /// <summary>
+        /// O MedidasDaMobilia.cs: de cada prefab, a caixa do corpo com as partes fechadas (sem o de longe), no tamanho real:
+        /// o tamanho e onde fica o meio dela (em x e z) e o pé (o y de baixo). Se mudou, a Unity recompila.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Mobília nova/Escrever as medidas")]
+        public static string EscreverMedidas()
+        {
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            string F(float v) => v.ToString("0.###", ci) + "f";
+            var s = new StringBuilder();
+            s.AppendLine("// Escrito pela Zombie City Cleaner > Mobília nova > Escrever as medidas (MontagemDaMobiliaNova): não mude à mão.");
+            s.AppendLine("using System.Collections.Generic;");
+            s.AppendLine("using UnityEngine;");
+            s.AppendLine();
+            s.AppendLine("namespace ZombieCityCleaner.Mundo");
+            s.AppendLine("{");
+            s.AppendLine("    public static partial class MedidasDaMobilia");
+            s.AppendLine("    {");
+            s.AppendLine("        // o modelo: o tamanho (largura em x, altura, fundo em z), o meio da caixa em x e z e o y de baixo, no tamanho real");
+            s.AppendLine("        static readonly Dictionary<string, (Vector3 tamanho, Vector2 meio, float baixo)> _medidas = new Dictionary<string, (Vector3, Vector2, float)>");
+            s.AppendLine("        {");
+            int n = 0;
+            foreach (var p in Carregar())
+            {
+                var caixa = Caixa(p);
+                s.AppendLine($"            [\"{p.name}\"] = (new Vector3({F(caixa.size.x)}, {F(caixa.size.y)}, {F(caixa.size.z)}), new Vector2({F(caixa.center.x)}, {F(caixa.center.z)}), {F(caixa.min.y)}),");
+                n++;
+            }
+            s.AppendLine("        };");
+            s.AppendLine("    }");
+            s.AppendLine("}");
+            string texto = s.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
+            string velho = File.Exists(ArquivoDasMedidas) ? File.ReadAllText(ArquivoDasMedidas) : null;
+            if (velho == texto) return $"[Mobília nova] as medidas de {n} móveis não mudaram";
+            File.WriteAllText(ArquivoDasMedidas, texto, new UTF8Encoding(true));
+            AssetDatabase.ImportAsset(ArquivoDasMedidas);
+            return $"[Mobília nova] as medidas de {n} móveis em {ArquivoDasMedidas}";
+        }
+
+        /// <summary>A caixa do móvel (o corpo e as partes, fechadas; sem o de longe), no espaço dele.</summary>
+        public static Bounds Caixa(GameObject prefab)
+        {
+            var b = new Bounds();
+            bool tem = false;
+            foreach (var f in prefab.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (f.sharedMesh == null || f.name.EndsWith("_Longe")) continue;
+                var m = f.transform == prefab.transform ? Matrix4x4.identity : prefab.transform.worldToLocalMatrix * f.transform.localToWorldMatrix;
+                var mb = f.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    var c = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    var w = m.MultiplyPoint3x4(c);
+                    if (!tem) { b = new Bounds(w, Vector3.zero); tem = true; }
+                    else b.Encapsulate(w);
+                }
+            }
+            return b;
         }
 
         /// <summary>Os prefabs feitos (para a cena das variações), na ordem do nome.</summary>

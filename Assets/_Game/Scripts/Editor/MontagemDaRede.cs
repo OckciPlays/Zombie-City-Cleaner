@@ -12,6 +12,7 @@ using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Network;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.Roupas;
 using ZombieCityCleaner.UI;
 
 namespace ZombieCityCleaner.EditorTools
@@ -107,6 +108,8 @@ namespace ZombieCityCleaner.EditorTools
             var terceira = raiz.AddComponent<CameraTerceiraPessoa>();
             raiz.AddComponent<PuloDaJanela>();
             raiz.AddComponent<EquipamentoDoJogador>();
+            // a tela de criar o personagem (ao entrar na partida), com o parado do mostruário das roupas no estúdio
+            raiz.AddComponent<TelaDeCriarPersonagem>().controladorDoEstudio = Carregar<RuntimeAnimatorController>(MontagemDasRoupas.Controlador);
 
             // os corpos (o que os outros veem; para o dono vira só sombra): um por personagem, só o escolhido ligado
             var corpos = Enumerable.Range(0, Personagens.Quantos).Select(p => MontarCorpo(raiz.transform, p)).ToArray();
@@ -277,8 +280,11 @@ namespace ZombieCityCleaner.EditorTools
 
             var c = corpo.AddComponent<CorpoDoPersonagem>();
             c.animador = anim;
-            var pele = Buscar(corpo.transform, "Jogador_Corpo").GetComponent<SkinnedMeshRenderer>();
-            c.renderers = new Renderer[] { pele }.Concat(renderersArmas).ToArray();
+            // o corpo vestido (o Plano_Personagem.md da pasta de arte, a parte 1): o corpo do FBX do personagem sai, e no
+            // lugar dele entram o corpo das roupas e as peças, presos aos ossos deste corpo
+            Buscar(corpo.transform, "Jogador_Corpo").gameObject.SetActive(false);
+            c.vestimenta = Vestir(corpo, out var roupas);
+            c.renderers = roupas.Concat(renderersArmas).ToArray();
             c.ossoPeito = Buscar(corpo.transform, "chest");
             c.ossoCabeca = Buscar(corpo.transform, "head");
             c.naMao = naMao;
@@ -295,6 +301,46 @@ namespace ZombieCityCleaner.EditorTools
             c.costas = m[0]; c.topoDaMochila = m[1]; c.centroDasCostas = m[2]; c.cinto = m[3]; c.ladoDoQuadril = m[4]; c.topoDaCabeca = m[5];
             corpo.SetActive(p == 0);
             return c;
+        }
+
+        /// <summary>
+        /// As roupas no corpo do jogador: o corpo das roupas (NPC_Corpo) e todas as peças (Roupa_&lt;nome&gt;) do Roupas.fbx,
+        /// num filho "Roupas" do corpo, cada uma presa aos ossos dele pelo nome (o esqueleto é o mesmo: o do personagem
+        /// principal), com o material das roupas, e a <see cref="Vestimenta"/>, que liga as vestidas (a aparência que chega
+        /// pela rede; no prefab, só o corpo). Precisa da montagem das roupas (o material e o FBX legível).
+        /// </summary>
+        static Vestimenta Vestir(GameObject corpo, out Renderer[] renderers)
+        {
+            var modelo = Carregar<GameObject>(MontagemDasRoupas.Fbx);
+            var material = Carregar<Material>(MontagemDasRoupas.ArquivoDoMaterial);
+            var ossos = new System.Collections.Generic.Dictionary<string, Transform>();
+            foreach (var t in corpo.GetComponentsInChildren<Transform>(true)) ossos.TryAdd(t.name, t);
+            var pasta = new GameObject("Roupas").transform;
+            pasta.SetParent(corpo.transform, false);
+            var lista = new System.Collections.Generic.List<Renderer>();
+            foreach (var smr in modelo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (smr.name != Vestimenta.Corpo && !smr.name.StartsWith(Vestimenta.PrefixoDasPecas)) continue;
+                var go = new GameObject(smr.name);
+                go.transform.SetParent(pasta, false);
+                var r = go.AddComponent<SkinnedMeshRenderer>();
+                r.sharedMesh = smr.sharedMesh;
+                r.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, smr.sharedMesh.subMeshCount)).ToArray();
+                var semOsso = smr.bones.Where(b => b != null && !ossos.ContainsKey(b.name)).Select(b => b.name).ToArray();
+                if (semOsso.Length > 0) throw new System.Exception($"{smr.name}: o corpo do jogador não tem os ossos {string.Join(", ", semOsso)}");
+                r.bones = smr.bones.Select(b => b != null ? ossos[b.name] : null).ToArray();
+                r.rootBone = smr.rootBone != null ? ossos[smr.rootBone.name] : null;
+                r.localBounds = smr.localBounds;
+                r.skinnedMotionVectors = false;
+                go.SetActive(smr.name == Vestimenta.Corpo);
+                lista.Add(r);
+            }
+            var v = corpo.AddComponent<Vestimenta>();
+            v.catalogo = Carregar<TextAsset>(MontagemDasRoupas.Json);
+            v.npc = "";
+            v.tipo = "";
+            renderers = lista.ToArray();
+            return v;
         }
 
         static Material MaterialParticula(string nome, bool aditivo, Texture2D textura)

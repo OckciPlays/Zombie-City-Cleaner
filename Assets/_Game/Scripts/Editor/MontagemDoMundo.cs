@@ -25,7 +25,8 @@ namespace ZombieCityCleaner.EditorTools
     ///    estradas e as ruas das cidades, com os modelos do Cidade_Rua.fbx e o material das letras das placas) e a
     ///    <see cref="FlorestaDoMundo"/> (Parte M9a: as plantas do Cidade_Arvores.fbx e o material da vegetação, por
     ///    <see cref="PorAFloresta"/>, que também põe a floresta numa cena já montada) e a <see cref="MobiliaDoMundo"/> (os
-    ///    móveis do Cidade_Mobilia.fbx, por <see cref="PorAMobilia"/>). Sem as luzes da cidade: anos depois do
+    ///    móveis do Cidade_Mobilia.fbx, por <see cref="PorAMobilia"/>, com a <see cref="MobiliaNovaDoMundo"/>: os prefabs da
+    ///    mobília nova, nas casas e nos apartamentos). Sem as luzes da cidade: anos depois do
     ///    apocalipse, não há energia (os postes ficam apagados e as janelas escuras).
     /// A cena fica fora das Build Settings por enquanto (a demo continua sendo a Demo_Cidade).
     /// </summary>
@@ -205,7 +206,24 @@ namespace ZombieCityCleaner.EditorTools
             int faltam = ZombieCityCleaner.Mundo.Mobilia.Feitos.Keys.Count(n => mobilia.malhas.All(m => m.name != n));
             if (faltam > 0) Debug.LogWarning($"Faltam {faltam} modelos da mobília no {FbxDaMobilia}.");
             EditorUtility.SetDirty(mobilia);
+            PorAMobiliaNova(mundo);
             return mobilia;
+        }
+
+        /// <summary>
+        /// A mobília nova (a etapa 4 do Plano_Mobilia.md da pasta de arte): a <see cref="MobiliaNovaDoMundo"/> no objeto
+        /// "Mundo", com os prefabs da montagem dela (Zombie City Cleaner > Mobília nova > Montar).
+        /// </summary>
+        public static MobiliaNovaDoMundo PorAMobiliaNova(GameObject mundo)
+        {
+            var nova = mundo.GetComponent<MobiliaNovaDoMundo>();
+            if (nova == null) nova = mundo.AddComponent<MobiliaNovaDoMundo>();
+            nova.prefabs = AssetDatabase.FindAssets("t:Prefab", new[] { MontagemDaMobiliaNova.PastaDosPrefabs })
+                .Select(g => AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(g)))
+                .Where(p => p != null).OrderBy(p => p.name).ToArray();
+            if (nova.prefabs.Length == 0) Debug.LogWarning($"Sem os prefabs da mobília nova em {MontagemDaMobiliaNova.PastaDosPrefabs}: rode a montagem dela.");
+            EditorUtility.SetDirty(nova);
+            return nova;
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a mobília na cena")]
@@ -227,7 +245,7 @@ namespace ZombieCityCleaner.EditorTools
             var m = PorAMobilia(mundo);
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
-            Debug.Log($"Mobília posta na cena: {m.malhas.Length} modelos.");
+            Debug.Log($"Mobília posta na cena: {m.malhas.Length} modelos e {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} da mobília nova.");
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a floresta na cena")]

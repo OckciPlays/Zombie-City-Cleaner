@@ -58,6 +58,12 @@ namespace ZombieCityCleaner.World
         /// <summary>Quem joga nesta máquina está olhando pela luneta (a ArmaJogador liga e desliga).</summary>
         public static bool NaLuneta { get; set; }
 
+        /// <summary>
+        /// Sem neblina nenhuma (a de distância e a de altura), nesta máquina: a opção da cena do mapa fixo, para ver o
+        /// relevo de longe e medir as coisas (o F1, "Neblina", ou o N).
+        /// </summary>
+        public static bool SemNeblina { get; set; }
+
         float _dentro, _dentroVel, _luneta;
 
         void OnEnable() => NaLuneta = false;
@@ -84,7 +90,7 @@ namespace ZombieCityCleaner.World
             // pela luneta a neblina afina (rápido: a luneta já fecha em ~0,2 s)
             _luneta = Mathf.MoveTowards(_luneta, NaLuneta ? 1f : 0f, Time.deltaTime * 8f);
             // e a cena de vídeo afina a neblina por tomada (vista do alto, ela cobria tudo)
-            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina;
+            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina * (SemNeblina ? 0f : 1f);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;

@@ -801,6 +801,9 @@ namespace ZombieCityCleaner.World
                 go.transform.SetParent(b.Casas.transform, false);
                 go.transform.SetPositionAndRotation(c.Posicao, Quaternion.Euler(0f, c.Giro, 0f));
                 MoveisDaConstrucao.Por(go, c.Moveis);
+                // a mobília nova (os de longe ficam com ela)
+                MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100);
+                c.MobiliaNova = null;
                 var malha = c.Colisao.ParaMesh($"{c.Nome} (colisão)");
                 var colisor = go.AddComponent<MeshCollider>();
                 colisor.enabled = false;

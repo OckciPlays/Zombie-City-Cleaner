@@ -82,6 +82,27 @@ namespace ZombieCityCleaner.Player
         /// dono quando ele nasce. Dois jogadores podem ter o mesmo.
         /// </summary>
         public readonly NetworkVariable<byte> Personagem = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>
+        /// A aparência (o Plano_Personagem.md da pasta de arte): o nome, o sexo, a pele, o cabelo, a barba, a cor deles, a
+        /// camiseta e a calça, escrita pelo dono quando ele cria o personagem, na tela de criar (<see cref="TelaDeCriarPersonagem"/>,
+        /// que abre quando ele entra; o robô de teste sai sorteado). Quem entra depois recebe a dos outros. Antes de criar
+        /// (<see cref="Criado"/>), o corpo e o que está na mão ficam escondidos, e os zumbis não o veem.
+        /// </summary>
+        public readonly NetworkVariable<AparenciaDoJogador> Aparencia = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        /// <summary>O personagem foi criado (a aparência chegou): antes, ele não aparece para ninguém.</summary>
+        public bool Criado => Aparencia.Value.definida != 0;
+
+        /// <summary>O dono cria o personagem (a tela de criar): a aparência vai pela rede.</summary>
+        public void Criar(AparenciaDoJogador a)
+        {
+            if (!IsOwner) return;
+            a.definida = 1;
+            Aparencia.Value = a;
+        }
+
+        /// <summary>As roupas do corpo (a aparência e, depois, as roupas achadas).</summary>
+        public ZombieCityCleaner.Roupas.Vestimenta Vestimenta { get; private set; }
 
         /// <summary>O corpo mudou (o personagem chegou pela rede): quem guarda os ossos dele lê de novo.</summary>
         public event System.Action CorpoMudou;
@@ -175,6 +196,7 @@ namespace ZombieCityCleaner.Player
             bool dono = IsOwner;
             if (dono) Personagem.Value = (byte)Personagens.Escolhido;
             Personagem.OnValueChanged += AoMudarPersonagem;
+            Aparencia.OnValueChanged += AoMudarAparencia;
             cameraMundo.enabled = dono;
             cameraBracos.enabled = dono;
             ouvido.enabled = dono;
@@ -186,6 +208,13 @@ namespace ZombieCityCleaner.Player
             AplicarPersonagem(Personagem.Value);
             if (dono)
             {
+                // o personagem de cada partida: a tela de criar (o robô de teste sai sorteado)
+                if (MenuOnline.Bot)
+                {
+                    var semente = new System.Random(unchecked((int)OwnerClientId * 7919 + System.Environment.TickCount));
+                    Criar(AparenciaDoJogador.Sortear(semente, $"Robô {OwnerClientId + 1}"));
+                }
+                else if (!Criado && GetComponent<TelaDeCriarPersonagem>() != null) GetComponent<TelaDeCriarPersonagem>().Abrir();
                 Local = this;
                 CameraDoMenu.Ligar(false);
                 var ponto = PontosDeNascimento.Ponto(OwnerClientId);
@@ -201,6 +230,7 @@ namespace ZombieCityCleaner.Player
             // comida e a água no chão
             if (IsServer && !NetworkManager.ShutdownInProgress) Inventario.Esvaziar();
             Personagem.OnValueChanged -= AoMudarPersonagem;
+            Aparencia.OnValueChanged -= AoMudarAparencia;
             Inventario.Mudou -= AplicarNaMao;
             if (Local == this)
             {
@@ -210,6 +240,55 @@ namespace ZombieCityCleaner.Player
         }
 
         void AoMudarPersonagem(byte antes, byte depois) => AplicarPersonagem(depois);
+
+        void AoMudarAparencia(AparenciaDoJogador antes, AparenciaDoJogador depois) => AplicarAparencia();
+
+        /// <summary>
+        /// Veste o corpo pela aparência (o corpo, a pele e as peças) e, no dono, pinta os braços de primeira pessoa com a
+        /// pele dela. Sem aparência ainda (antes de o dono escrever), o corpo fica como está.
+        /// </summary>
+        void AplicarAparencia()
+        {
+            var a = Aparencia.Value;
+            if (Vestimenta == null) return;
+            // antes de criar o personagem, nada aparece (nem o corpo, nem o que está na mão)
+            var roupas = Vestimenta.transform.Find("Roupas");
+            if (roupas != null) roupas.gameObject.SetActive(a.definida != 0);
+            if (a.definida == 0)
+            {
+                EsconderNaMao(true);
+                return;
+            }
+            if (_naMaoEscondida && (Passageiro == null || !Passageiro.NoCarro)) EsconderNaMao(false);
+            var catalogo = Vestimenta.Catalogo;
+            Vestimenta.corpo = a.Corpo;
+            Vestimenta.pele = a.Pele(catalogo);
+            Vestimenta.Vestir(a.Pecas(catalogo));
+            if (IsOwner) PintarBracos(Vestimenta.pele);
+        }
+
+        /// <summary>A cor da pele do corpo do personagem principal (a da textura dele, que os braços de primeira pessoa usam).</summary>
+        public const string PeleDaTextura = "#D08A63";
+
+        /// <summary>
+        /// Os braços de primeira pessoa com a pele escolhida: eles são só pele (a textura do personagem principal), então a
+        /// cor base do material deles vira a pele pedida dividida pela da textura (na luz linear).
+        /// </summary>
+        void PintarBracos(string pele)
+        {
+            var pedida = ZombieCityCleaner.Roupas.CatalogoDasRoupas.Cor(pele).linear;
+            var original = ZombieCityCleaner.Roupas.CatalogoDasRoupas.Cor(PeleDaTextura).linear;
+            var tinta = new Color(pedida.r / Mathf.Max(original.r, 1e-4f), pedida.g / Mathf.Max(original.g, 1e-4f),
+                                  pedida.b / Mathf.Max(original.b, 1e-4f), 1f).gamma;
+            var bloco = new MaterialPropertyBlock();
+            foreach (var r in pintaveis)
+            {
+                if (r == null) continue;
+                r.GetPropertyBlock(bloco, 0);
+                bloco.SetColor("_BaseColor", tinta);
+                r.SetPropertyBlock(bloco, 0);
+            }
+        }
 
         /// <summary>
         /// Liga o corpo do personagem (e desliga os outros), passa a usar o Animator, os ossos, o que está na mão e os
@@ -234,6 +313,7 @@ namespace ZombieCityCleaner.Player
                 controladorDoTaco = c.controladorDoTaco;
                 tacoCorpo = c.taco;
                 pontaDoTacoCorpo = c.pontaDoTaco;
+                Vestimenta = c.vestimenta;
             }
             if (IsOwner)
             {
@@ -243,6 +323,7 @@ namespace ZombieCityCleaner.Player
             }
             else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;
             AplicarCor(indice);
+            AplicarAparencia();
             _naMaoAplicado = (Item)255;   // o corpo novo pega a arma da mão e o controlador dela
             if (Inventario != null) AplicarNaMao();
             CorpoMudou?.Invoke();

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Roupas
+  m_Shader: {fileID: 4800000, guid: 0f861c37228b09541b7162ab061ca28a, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Cores:
+        m_Texture: {fileID: 18700000, guid: 569581915c3006e4396191a11c96eaca, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CorpoCor:
+        m_Texture: {fileID: 2800000, guid: 1a8f2a205eae0fc47aadbfd3d1f7ca03, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CorpoMascara:
+        m_Texture: {fileID: 2800000, guid: 0d2632131e3617743b147f793096911d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Mascaras:
+        m_Texture: {fileID: 18700000, guid: 4e315591bd7967d478ecd1a42f4d65b7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Suavidade: 0.12
+    m_Colors:
+    - _Cor1: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _Cor2: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _Cor3: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

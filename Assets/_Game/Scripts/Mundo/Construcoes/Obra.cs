@@ -31,6 +31,11 @@ namespace ZombieCityCleaner.Mundo
         public float janela, peitoril, topoJanela;
         /// <summary>A janela do banheiro.</summary>
         public float janelaPequena, peitorilPequena;
+        /// <summary>
+        /// O peitoril da janela da cozinha (a mobília nova, 29/10/2026): acima da bancada, que em ×1,30 tem 1,17 m (a pia fica
+        /// embaixo dela). Fica fora do pulo da janela (até 1,25 m).
+        /// </summary>
+        public float peitorilDaCozinha;
         public float larguraEscada, pisada;
 
         public static Medidas Hoje => new Medidas
@@ -38,7 +43,7 @@ namespace ZombieCityCleaner.Mundo
             nome = "Hoje", escala = 1f, altura = 2.8f, laje = 0.3f, forro = 0.12f, esp = 0.2f, alturaPorao = 2.4f,
             porta = 1.1f, alturaPorta = 2.1f, portaFrente = 1.1f, alturaPortaFrente = 2.1f, passagem = 1.8f,
             janela = 1.2f, peitoril = 0.9f, topoJanela = 2.1f, janelaPequena = 0.6f, peitorilPequena = 1.4f,
-            larguraEscada = 1.1f, pisada = 0.27f,
+            peitorilDaCozinha = 1.25f, larguraEscada = 1.1f, pisada = 0.27f,
         };
 
         /// <summary>
@@ -56,7 +61,7 @@ namespace ZombieCityCleaner.Mundo
             nome = $"×{k:0.00}", escala = k, altura = 2.8f * k, laje = 0.3f, forro = 0.12f, esp = 0.2f, alturaPorao = 2.4f * k,
             porta = 1.1f * k, alturaPorta = 2.1f * k, portaFrente = 1.1f * k, alturaPortaFrente = 2.1f * k, passagem = 1.8f * k,
             janela = 1.2f * k, peitoril = 0.9f, topoJanela = 2.1f * k, janelaPequena = 0.6f * k, peitorilPequena = 1.4f + 0.2f * (k - 1f),
-            larguraEscada = 1.1f * k, pisada = 0.28f,
+            peitorilDaCozinha = 1.25f, larguraEscada = 1.1f * k, pisada = 0.28f,
         };
     }
 

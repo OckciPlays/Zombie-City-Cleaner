@@ -70,7 +70,7 @@ namespace ZombieCityCleaner.World
             foreach (var p in pontos)
             {
                 var tam = p.tamanho * 0.97f;
-                obra.Caixa(Matrix4x4.TRS(p.centro + Vector3.up * (tam.y / 2 + 0.01f), Quaternion.Euler(0f, p.giro, 0f), Vector3.one), tam,
+                obra.Caixa(Matrix4x4.TRS(p.centro + Vector3.up * (p.altura + tam.y / 2 + 0.01f), Quaternion.Euler(0f, p.giro, 0f), Vector3.one), tam,
                            p.saque ? "PlacaAmarela" : "ConcretoClaro");
             }
             _malha = obra.ParaMesh($"{name}: pontos dos móveis");

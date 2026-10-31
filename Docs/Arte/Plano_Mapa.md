@@ -586,6 +586,8 @@ O usuário pediu a M9 agora e deixou estas para depois, nesta ordem por enquanto
 
 ### O mapa fixo (uma ideia do usuário, 27/10/2026, para outra fase)
 
+- **O plano dele, de 15 km, está em `Plano_Mapa_Fixo.md`** (29/10/2026, esperando aprovação).
+
 - **O pedido:** fixar o mapa para construir a história em cima dele ("fica mais fácil de controlar a história"), e aproveitar para deixar o jogo mais leve.
 - **A conversa:** só a semente fixa não segura o mapa (qualquer mudança no gerador mexe em tudo). O caminho: usar o gerador como a ferramenta de desenhar o mapa, escolher a semente e o tamanho e congelar o plano (as cidades, as estradas, os lotes, os nomes e os lugares) num arquivo, com as edições da história por cima; as malhas continuam montadas na hora, perto dos jogadores (assar todas daria gigabytes de malha no disco e na memória).
 - **O que dá para ganhar:** o NavMesh assado por bloco (montá-lo durante o jogo foi o que travava na M6), as cidades de longe simplificadas (uma malha por bloco), o acerto à mão dos pontos pesados (a densidade do centro, as linhas de visão) e um mapa menor e cuidado; a geração do plano (2 a 5 s) sai do carregamento. Os nomes americanos das cidades e das placas entram junto (escritos à mão).

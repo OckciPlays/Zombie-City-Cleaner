@@ -19,6 +19,11 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>O tipo do cômodo e o andar dele (-1 = porão).</summary>
         public string comodo;
         public int andar;
+        /// <summary>Pendurado na parede (a mobília nova: os quadros, o espelho, os armários de cima da cozinha): a altura da base sobre o chão; 0 no chão.</summary>
+        public float altura;
+
+        /// <summary>Ocupa o chão (os pendurados e os tapetes, não: não mexem na passagem nem têm caixa).</summary>
+        public bool OcupaOChao => altura <= 0f && (tipo == null || !tipo.StartsWith("Tapete"));
 
         /// <summary>O mesmo ponto espelhado em x (como as malhas das construções espelhadas).</summary>
         public PontoDeMovel Espelhado()
@@ -59,11 +64,11 @@ namespace ZombieCityCleaner.Mundo
     ///    NavMesh de cada construção, com as caixas dos móveis.
     /// As listas de rascunho são de cada thread (as construções são montadas em várias).
     /// </summary>
-    public static class MoveisDaObra
+    public static partial class MoveisDaObra
     {
-        enum Regra : byte { Parede, Fileira }
+        enum Regra : byte { Parede, Fileira, Bancada, Meio, FrenteDe, AoLado, Alto, Tapete }
 
-        sealed class Item
+        sealed partial class Item
         {
             public string tipo;
             public float w, d, h;
@@ -130,6 +135,9 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         static Item[] Receita(string contexto, string tipo)
         {
+            // as casas e os apartamentos (e os depósitos dos prédios): a mobília nova
+            var nova = ReceitaNova(contexto, tipo);
+            if (nova != null) return nova;
             if (contexto == "hospital")
                 switch (tipo)
                 {
@@ -226,12 +234,15 @@ namespace ZombieCityCleaner.Mundo
             foreach (var (area, y) in obra.solidos)
                 if (Mathf.Abs(y - chao) < 0.2f && area.Overlaps(r))
                     _solidos.Add(area);
-            // a frente de cada porta fica livre, e a boca dela (logo para dentro) é o que a passagem liga
+            // a frente de cada porta fica livre, e a boca dela (logo para dentro) é o que a passagem liga; no vão largo sem
+            // porta (a passagem da sala para a cozinha), só o meio dele, da largura de uma porta (com a mobília nova, em
+            // ×1,30, os cantos dele eram o lugar da geladeira nas cozinhas pequenas)
             for (int lado = 0; lado < 4; lado++)
                 foreach (var f in _furos[lado])
                     if (f.porta)
                     {
-                        _bloqueios.Add(Faixa(r, lado, f.a - 0.15f, f.b + 0.15f, 0f, FrenteDaPorta));
+                        var (a, b) = FrenteLivre(f, obra.m);
+                        _bloqueios.Add(Faixa(r, lado, a, b, 0f, FrenteDaPorta));
                         _bocas.Add(Faixa(r, lado, f.a + 0.1f, f.b - 0.1f, 0f, 0.4f));
                     }
             PrepararGrade(r);
@@ -240,17 +251,57 @@ namespace ZombieCityCleaner.Mundo
             _soltasAntes = comeca ? Soltas() : 0;
             _longeAntes = comeca ? Longe() : 0;
             var rnd = new System.Random(semente * 7919 + Mathf.RoundToInt(k.x0 * 13f + k.z0 * 7f + chao * 3f));
+            _altos.Clear();
+            int inicio = saida.Count;
             foreach (var item in receita)
             {
+                // (só os itens novos têm a chance: as receitas antigas sorteiam como antes)
+                if (item.chance < 1f && rnd.NextDouble() > item.chance) continue;
                 int quantos = item.min + rnd.Next(item.max - item.min + 1);
                 for (int n = 0; n < quantos; n++)
                 {
-                    bool feito = item.regra == Regra.Fileira ? Fileira(item, r, k, chao, rnd, saida) : NaParede(item, r, k, chao, rnd, saida);
-                    if (!feito && item.senao != null) feito = NaParede(item.senao, r, k, chao, rnd, saida);
+                    bool feito = false;
+                    for (var x = item; x != null && !feito; x = x.senao)
+                    {
+                        var escolhido = x.Escolher(rnd);
+                        feito = escolhido != null && Por(escolhido, r, k, chao, rnd, saida, inicio);
+                    }
                     if (!feito) break;
                 }
             }
         }
+
+        static bool Por(Item it, Rect r, Comodo k, float chao, System.Random rnd, List<PontoDeMovel> saida, int inicio)
+        {
+            switch (it.regra)
+            {
+                case Regra.Fileira: return Fileira(it, r, k, chao, rnd, saida);
+                case Regra.Bancada: return Bancada(it, r, k, chao, rnd, saida, inicio);
+                case Regra.Meio: return NoMeio(it, r, k, chao, rnd, saida);
+                case Regra.FrenteDe: return NaFrenteDe(it, r, k, chao, saida, inicio);
+                case Regra.AoLado: return AoLadoDe(it, r, k, chao, rnd, saida, inicio);
+                case Regra.Alto: return NaParedeAlto(it, r, k, chao, rnd, saida, inicio);
+                case Regra.Tapete: return NoChao(it, r, k, chao, saida, inicio);
+                default:
+                    if (it.unico != null && Tem(saida, inicio, it.unico)) return true;
+                    return NaParede(it, r, k, chao, rnd, saida, inicio);
+            }
+        }
+
+        /// <summary>
+        /// Ao longo da porta (de a até b, na parede), onde a frente dela fica livre: a largura dela e mais 15 cm de cada lado;
+        /// num vão mais largo que <see cref="VaoLargo"/> (a passagem sem porta), só o meio, da largura de uma porta.
+        /// </summary>
+        public static (float a, float b) FrenteLivre(float a, float b, Medidas m)
+        {
+            if (b - a <= VaoLargo) return (a - 0.15f, b + 0.15f);
+            float meio = (a + b) / 2;
+            return (meio - m.porta / 2, meio + m.porta / 2);
+        }
+
+        public const float VaoLargo = 1.6f;
+
+        static (float a, float b) FrenteLivre(Furo f, Medidas m) => FrenteLivre(f.a, f.b, m);
 
         // as portas e as janelas de cada lado do cômodo, das paredes desta obra e das de fora (a fachada do prédio)
         static void AcharFuros(Obra obra, Comodo k, float chao)
@@ -301,14 +352,19 @@ namespace ZombieCityCleaner.Mundo
         const float Passo = 0.2f;
         const int Tentativas = 10, TentativasDoPrecisa = 40;
 
-        // um móvel de costas para uma parede: os lugares de 20 em 20 cm em volta do cômodo, sorteados
-        static bool NaParede(Item it, Rect r, Comodo k, float chao, System.Random rnd, List<PontoDeMovel> saida)
+        // um móvel de costas para uma parede: os lugares de 20 em 20 cm em volta do cômodo, sorteados (o que fica de frente
+        // para outro, como o rack para o sofá, tenta primeiro a parede da frente dele). De lado (a cama de solteiro e o
+        // colchão num quarto estreito), o comprido dele encosta na parede, e chega-se a ele pelo lado comprido
+        static bool NaParede(Item it, Rect r, Comodo k, float chao, System.Random rnd, List<PontoDeMovel> saida, int inicio = 0)
         {
+            float w = it.deLado ? it.d : it.w, d = it.deLado ? it.w : it.d;
             _ordem.Clear();
             for (int lado = 0; lado < 4; lado++)
             {
                 float comprimento = lado == 0 || lado == 2 ? r.width : r.height;
-                int n = Mathf.FloorToInt((comprimento - it.w) / Passo);
+                // (o que não cabe de fundo nem entra na conta: a cama de 2,67 m num quarto de 2,5 m gastava as tentativas)
+                if (d > (lado == 0 || lado == 2 ? r.height : r.width)) continue;
+                int n = Mathf.FloorToInt((comprimento - w) / Passo);
                 for (int i = 0; i <= n; i++) _ordem.Add(lado * 1000 + i);
             }
             for (int i = _ordem.Count - 1; i > 0; i--)
@@ -316,15 +372,30 @@ namespace ZombieCityCleaner.Mundo
                 int j = rnd.Next(i + 1);
                 (_ordem[i], _ordem[j]) = (_ordem[j], _ordem[i]);
             }
+            if (it.oposto != null && Achar(saida, inicio, it.oposto, out var anfitriao))
+            {
+                int frente = (LadoDoGiro(anfitriao.giro) + 2) % 4;
+                // a parede da frente primeiro (na ordem sorteada)
+                int primeiros = 0;
+                for (int i = 0; i < _ordem.Count; i++)
+                    if (_ordem[i] / 1000 == frente)
+                    {
+                        int c = _ordem[i];
+                        _ordem.RemoveAt(i);
+                        _ordem.Insert(primeiros++, c);
+                    }
+            }
             int tentativas = 0, maximo = it.min > 0 ? TentativasDoPrecisa : Tentativas;
             foreach (int codigo in _ordem)
             {
                 int lado = codigo / 1000;
                 float ini = (lado == 0 || lado == 2 ? r.xMin : r.yMin) + (codigo % 1000) * Passo;
-                var pe = Faixa(r, lado, ini, ini + it.w, 0f, it.d);
+                var pe = Faixa(r, lado, ini, ini + w, 0f, d);
                 if (!Livre(pe) || TapaJanela(it, pe, r)) continue;
-                var frente = Faixa(r, lado, ini + it.w / 2 - 0.2f, ini + it.w / 2 + 0.2f, it.d + 0.05f, it.d + 0.45f);
-                if (Colocar(pe, frente)) { Guardar(it, pe, Giros[lado], k, chao, saida); return true; }
+                var frente = Faixa(r, lado, ini + w / 2 - 0.2f, ini + w / 2 + 0.2f, d + 0.05f, d + 0.45f);
+                // (de lado, o pé para um lado ou para o outro ao longo da parede)
+                float giro = Giros[lado] + (!it.deLado ? 0f : rnd.Next(2) == 0 ? 90f : -90f);
+                if (Colocar(pe, frente)) { Guardar(it, pe, giro, k, chao, saida); return true; }
                 if (++tentativas >= maximo) return false;
             }
             return false;
@@ -336,7 +407,7 @@ namespace ZombieCityCleaner.Mundo
         {
             for (int lado = 0; lado < 4; lado++)
                 foreach (var f in _furos[lado])
-                    if (!f.porta && it.h > f.peitoril + 0.01f && pe.Overlaps(Faixa(r, lado, f.a - 0.1f, f.b + 0.1f, 0f, 0.35f))) return true;
+                    if (!f.porta && it.h > f.peitoril + it.tolerancia && pe.Overlaps(Faixa(r, lado, f.a - 0.1f, f.b + 0.1f, 0f, 0.35f))) return true;
             return false;
         }
 
@@ -441,8 +512,20 @@ namespace ZombieCityCleaner.Mundo
         // põe o móvel se a passagem continua: as portas ligadas entre si e a frente de cada móvel alcançável
         static bool Colocar(Rect pe, Rect frente)
         {
+            _umaFrente ??= new List<Rect>(1);
+            _umaFrente.Clear();
+            _umaFrente.Add(frente);
+            return Colocar(pe, _umaFrente);
+        }
+
+        [System.ThreadStatic] static List<Rect> _umaFrente;
+
+        // (com mais de uma frente: a bancada da cozinha, a de cada módulo)
+        static bool Colocar(Rect pe, List<Rect> frentes)
+        {
             Marcar(pe, 0, 3);
-            _frentes.Add(frente);
+            int antes = _frentes.Count;
+            _frentes.AddRange(frentes);
             if (Passa())
             {
                 Marcar(pe, 3, 2);
@@ -450,7 +533,7 @@ namespace ZombieCityCleaner.Mundo
                 return true;
             }
             Marcar(pe, 3, 0);
-            _frentes.RemoveAt(_frentes.Count - 1);
+            _frentes.RemoveRange(antes, _frentes.Count - antes);
             return false;
         }
 
@@ -550,7 +633,7 @@ namespace ZombieCityCleaner.Mundo
             return false;
         }
 
-        static void Guardar(Item it, Rect pe, float giro, Comodo k, float chao, List<PontoDeMovel> saida)
+        static void Guardar(Item it, Rect pe, float giro, Comodo k, float chao, List<PontoDeMovel> saida, float altura = 0f)
         {
             saida.Add(new PontoDeMovel
             {
@@ -561,6 +644,7 @@ namespace ZombieCityCleaner.Mundo
                 saque = it.saque,
                 comodo = k.tipo,
                 andar = k.andar,
+                altura = altura,
             });
         }
     }

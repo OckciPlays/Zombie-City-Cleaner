@@ -10,6 +10,8 @@ namespace ZombieCityCleaner.Mundo
         public Vector3[] Vertices;
         public Vector3[] Normais;
         public Color32[] Cores;
+        /// <summary>O UV (na paleta), nas malhas que têm (o relevo de longe do mapa fixo); null nas outras.</summary>
+        public Vector2[] Uvs;
         public int[] Triangulos;
         public Bounds Limites;
         public bool Vazia => Triangulos == null || Triangulos.Length == 0;
@@ -22,6 +24,7 @@ namespace ZombieCityCleaner.Mundo
             m.SetVertices(Vertices);
             m.SetNormals(Normais);
             if (Cores != null) m.SetColors(Cores);
+            if (Uvs != null) m.SetUVs(0, Uvs);
             m.SetTriangles(Triangulos, 0, false);
             m.bounds = Limites;
         }

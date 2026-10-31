@@ -193,6 +193,8 @@ namespace ZombieCityCleaner.World
             go.transform.SetParent(transform, false);
             a.Objeto = go;
             MoveisDaConstrucao.Por(go, r.Moveis);
+            MobiliaDaConstrucao.Por(go, r.Moveis, r.MobiliaNova, r.Semente, f);
+            r.MobiliaNova = null;
             a.Desenho = r.Desenho.ParaMesh($"{name}: andar {f}");
             a.Colisao = r.Colisao.ParaMesh($"{name}: andar {f} (colisão)");
             go.AddComponent<MeshFilter>().sharedMesh = a.Desenho;

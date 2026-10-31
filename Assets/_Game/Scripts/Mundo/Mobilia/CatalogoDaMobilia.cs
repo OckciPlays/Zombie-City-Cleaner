@@ -370,14 +370,11 @@ namespace ZombieCityCleaner.Mundo
             T("Garrafas", "Garrafas vazias e o galão", Grupo.Servico, Lugar.Meio, new[] { V("plástico azulado") }),
         };
 
-        static Dictionary<string, Tipo> _porModelo;
+        // (feito de uma vez: o gerador do mapa lê em várias threads)
+        static readonly Dictionary<string, Tipo> _porModelo = Tipos.ToDictionary(t => t.modelo);
 
         /// <summary>O tipo do modelo (o nome do objeto do FBX), ou null.</summary>
-        public static Tipo DoModelo(string modelo)
-        {
-            if (_porModelo == null) _porModelo = Tipos.ToDictionary(t => t.modelo);
-            return modelo != null && _porModelo.TryGetValue(modelo, out var t) ? t : null;
-        }
+        public static Tipo DoModelo(string modelo) => modelo != null && _porModelo.TryGetValue(modelo, out var t) ? t : null;
 
         // ------------------------------------------------------------------ pintar
 
@@ -400,19 +397,31 @@ namespace ZombieCityCleaner.Mundo
             if (uv1.Count != m.vertexCount || cores.Count != m.vertexCount) return m;
             for (int i = 0; i < uv1.Count; i++)
             {
-                int troca = Mathf.RoundToInt(uv1[i].y);
-                var a = troca == 1 ? v.principal : troca == 2 ? v.secundaria : null;
-                if (a == null) continue;
-                int velha = Mathf.Clamp(Mathf.RoundToInt(uv1[i].x), 0, Texturas.Length - 1);
-                if (velha != a.textura && !Ajustadas.Contains(Texturas[velha].nome) && !Ajustadas.Contains(Texturas[a.textura].nome))
-                    uv0[i] *= Texturas[a.textura].escala / Texturas[velha].escala;
-                uv1[i] = new Vector2(a.textura, troca);
-                cores[i] = a.cor.linear;
+                Vector2 a = uv0[i], b = uv1[i];
+                var c = cores[i];
+                Pintar(ref a, ref b, ref c, v);
+                uv0[i] = a;
+                uv1[i] = b;
+                cores[i] = c;
             }
             m.SetUVs(0, uv0);
             m.SetUVs(1, uv1);
             m.SetColors(cores);
             return m;
+        }
+
+        /// <summary>Um vértice da variação (o que o <see cref="Pintar(Mesh, Variacao)"/> faz em cada um; seguro em outras threads).</summary>
+        public static void Pintar(ref Vector2 uv0, ref Vector2 uv1, ref Color cor, Variacao v)
+        {
+            if (v == null) return;
+            int troca = Mathf.RoundToInt(uv1.y);
+            var a = troca == 1 ? v.principal : troca == 2 ? v.secundaria : null;
+            if (a == null) return;
+            int velha = Mathf.Clamp(Mathf.RoundToInt(uv1.x), 0, Texturas.Length - 1);
+            if (velha != a.textura && !Ajustadas.Contains(Texturas[velha].nome) && !Ajustadas.Contains(Texturas[a.textura].nome))
+                uv0 *= Texturas[a.textura].escala / Texturas[velha].escala;
+            uv1 = new Vector2(a.textura, troca);
+            cor = a.cor.linear;
         }
     }
 }

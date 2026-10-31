@@ -187,6 +187,7 @@ namespace ZombieCityCleaner.Mundo
                             n = U >= 2 * larg + 2.2f ? 2 : U >= larg ? 1 : 0;
                             break;
                         case "cozinha":
+                            baixo = m.peitorilDaCozinha;
                             n = U >= larg ? 1 : 0;
                             break;
                         case "banheiro":

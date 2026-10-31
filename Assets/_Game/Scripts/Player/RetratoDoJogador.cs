@@ -72,6 +72,9 @@ namespace ZombieCityCleaner.Player
             foreach (var e in copia.GetComponents<EquipamentoNoCorpo>()) Object.Destroy(e);
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
+            // as roupas: as mesmas peças e cores do jogador (a cópia não leva as cores, que ficam fora do material)
+            var vestimenta = copia.GetComponent<ZombieCityCleaner.Roupas.Vestimenta>();
+            if (vestimenta != null && rede.Vestimenta != null) vestimenta.VestirComo(rede.Vestimenta);
             _modelo = copia.transform;
             // sem animação: a pose é feita à mão (abaixo), a partir da de repouso do prefab
             _animador = copia.GetComponent<Animator>();
@@ -163,6 +166,17 @@ namespace ZombieCityCleaner.Player
         // uma cópia do material do retrato com a textura (e o deslocamento da variação da cor) de outro material
         Material Copia(Material retrato, Material de)
         {
+            // as roupas (o shader delas, com as cores por peça): a cópia do material delas na luz fixa do retrato
+            if (de != null && de.shader != null && de.shader.name == "ZombieCityCleaner/Roupas")
+            {
+                var roupa = new Material(de);
+                roupa.SetFloat("_Retrato", 1f);
+                foreach (var p in new[] { "_Ambiente", "_Luz" })
+                    if (retrato.HasProperty(p)) roupa.SetFloat(p, retrato.GetFloat(p));
+                if (retrato.HasProperty("_DirecaoDaLuz")) roupa.SetVector("_DirecaoDaLuz", retrato.GetVector("_DirecaoDaLuz"));
+                _materiais.Add(roupa);
+                return roupa;
+            }
             var m = new Material(retrato);
             if (de != null && de.mainTexture != null)
             {
