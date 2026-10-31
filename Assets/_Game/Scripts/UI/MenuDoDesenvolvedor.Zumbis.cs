@@ -18,7 +18,7 @@ namespace ZombieCityCleaner.UI
     {
         Rect PainelDosZumbis(float u, Rect aoLado)
         {
-            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 500 * u);
+            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 410 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -34,25 +34,25 @@ namespace ZombieCityCleaner.UI
                 : zm.Amanhecendo ? "amanhecendo: procuram abrigo" : "noite: as estátuas se soltam";
             GUI.Label(new Rect(x, y, w, 36 * u), $"{CicloDoDia.Relogio()} · {sol}\nde pé: {(zm != null ? zm.Vivos : 0)} · de pedra: {(zm != null ? zm.DePedra : 0)}", _texto);
             y += 40 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Criar 1 zumbi na minha frente", _botao))
+            // (em pares, lado a lado, para caber o painel da trilha embaixo)
+            float meio = (w - 6 * u) / 2f, x2 = x + meio + 6 * u;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Criar 1 zumbi", _botao))
             {
                 CriarZumbiNaFrenteRpc(false);
                 Avisar("Um zumbi 5 m à frente.");
             }
-            y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Criar 1 de pedra na minha frente", _botao))
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Criar 1 de pedra", _botao))
             {
                 CriarZumbiNaFrenteRpc(true);
                 Avisar("Um zumbi de pedra 5 m à frente.");
             }
             y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Petrificar os de perto (30 m)", _botao))
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Petrificar (30 m)", _botao))
             {
                 PedraRpc(true);
                 Avisar("Os zumbis até 30 m viraram pedra.");
             }
-            y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Soltar os de pedra", _botao))
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Soltar as pedras", _botao))
             {
                 PedraRpc(false);
                 Avisar("As estátuas se soltaram (no sol, a pedra volta a subir).");
@@ -85,10 +85,31 @@ namespace ZombieCityCleaner.UI
                               : "Volta ao normal: um em cada 10 carros.");
             }
             y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Rastejante agora no carro mais perto", _botao))
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Rastejante no carro", _botao))
             {
                 RastejanteAgoraRpc();
                 Avisar("Sai um rastejante de baixo do carro abandonado mais perto (até 25 m).");
+            }
+            // o equilíbrio sem uma perna (31/10/2026): arranca uma perna do zumbi de pé mais perto
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Tirar 1 perna", _botao))
+            {
+                TirarUmaPernaRpc();
+                Avisar("O zumbi de pé mais perto (até 25 m) perde uma perna: cai na hora ou cambaleia, e no chão tenta levantar ou rasteja.");
+            }
+            y += 30 * u;
+            // o alarme dos carros (a pedido em 29/10/2026): em todos, para testar o tiro, o capô e o pneu; ou já tocando
+            var pecas = Vehicles.PecasDosCarrosDoMundo.Instancia;
+            bool alarmeEmTodos = pecas != null && pecas.IsSpawned && pecas.AlarmeEmTodos.Value;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), alarmeEmTodos ? "Alarme: TODOS" : "Alarme: 1 em 10", _botao))
+            {
+                AlarmesRpc(!alarmeEmTodos);
+                Avisar(!alarmeEmTodos ? "Todo carro abandonado tem alarme: tiro nele, abrir o capô ou trocar o pneu dispara (40 s, ou até tirar a bateria)."
+                                      : "Volta ao normal: um em cada 10 carros tem alarme.");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Alarme no + perto", _botao))
+            {
+                AlarmeAgoraRpc();
+                Avisar("O alarme do carro abandonado mais perto (até 25 m) dispara agora.");
             }
             y += 30 * u;
             // a etapa 6: quantos nascem, de dia e à noite (o padrão: ×2 e ×3), e povoar tudo de novo para ver
@@ -144,6 +165,26 @@ namespace ZombieCityCleaner.UI
             ZombieManager.Instancia.CriarHordaPerseguindo(GetComponent<Player.JogadorRede>(), transform.position + frente * 14f, quantos);
         }
 
+        // arranca a coxa (a perna inteira) de um lado sorteado do zumbi de pé, com as duas pernas, mais perto (até 25 m)
+        [Rpc(SendTo.Server)]
+        void TirarUmaPernaRpc(RpcParams parametros = default)
+        {
+            var zm = ZombieManager.Instancia;
+            if (!Aceita(parametros) || zm == null) return;
+            Zumbi melhor = null;
+            float menor = 25f * 25f;
+            foreach (var z in zm.Ativos)
+            {
+                if (z == null || z.Morto || z.Petrificado || z.Pernas != 0) continue;
+                float d = (z.transform.position - transform.position).sqrMagnitude;
+                if (d < menor) { menor = d; melhor = z; }
+            }
+            if (melhor == null) return;
+            var membro = Random.value < 0.5f ? Membro.CoxaE : Membro.CoxaD;
+            ZombieManager.Acertar(melhor.Id, melhor.Geracao, RegiaoDoCorpo.Perna, membro, zm.ajustes.vidaDoMembro,
+                                  melhor.transform.position + Vector3.up * 0.5f, false, GetComponent<Player.JogadorRede>());
+        }
+
         [Rpc(SendTo.Server)]
         void PovoarRpc(bool ligado, RpcParams parametros = default)
         {
@@ -187,6 +228,18 @@ namespace ZombieCityCleaner.UI
         {
             if (Aceita(parametros) && ZombieManager.Instancia != null)
                 ZombieManager.Instancia.RastejanteNoCarroMaisPerto(GetComponent<Player.JogadorRede>());
+        }
+
+        [Rpc(SendTo.Server)]
+        void AlarmesRpc(bool emTodos, RpcParams parametros = default)
+        {
+            if (Aceita(parametros) && Vehicles.PecasDosCarrosDoMundo.Instancia != null) Vehicles.PecasDosCarrosDoMundo.Instancia.AlarmeEmTodosOsCarros(emTodos);
+        }
+
+        [Rpc(SendTo.Server)]
+        void AlarmeAgoraRpc(RpcParams parametros = default)
+        {
+            if (Aceita(parametros) && Vehicles.PecasDosCarrosDoMundo.Instancia != null) Vehicles.PecasDosCarrosDoMundo.Instancia.DispararOMaisPerto(transform.position);
         }
 
         [Rpc(SendTo.Server)]

@@ -31,7 +31,7 @@ namespace ZombieCityCleaner.Vehicles
     /// O anfitrião confere a distância pelos dados do mundo (<see cref="ObjetosDoMundo.PoseDoCarro"/>), não pelo objeto do
     /// carro: ele só cria os carros em volta dele mesmo, e o pedido pode vir de um cliente longe.
     /// </summary>
-    public class PecasDosCarrosDoMundo : FonteDasPecas
+    public partial class PecasDosCarrosDoMundo : FonteDasPecas
     {
         public static PecasDosCarrosDoMundo Instancia { get; private set; }
 
@@ -67,6 +67,7 @@ namespace ZombieCityCleaner.Vehicles
             Instancia = this;
             _mexidos = new NetworkList<CarroMexido>();
             _abertos = new NetworkList<int>();
+            _alarmes = new NetworkList<int>();   // os alarmes tocando (PecasDosCarrosDoMundo.Alarme.cs)
             _mexidos.OnListChanged += _ => _lugarVelho = true;
         }
 
@@ -85,6 +86,8 @@ namespace ZombieCityCleaner.Vehicles
             _abertos.Clear();
             _macacoMudouEm.Clear();
             _olhando.Clear();
+            _alarmes.Clear();
+            _fimDoAlarme.Clear();
         }
 
         // ------------------------------------------------------------------ o estado de cada carro
@@ -119,6 +122,9 @@ namespace ZombieCityCleaner.Vehicles
             for (int k = 0; k < PneusDoCarro.Quantas; k++)
                 e.pneus[k] = s.Valor() >= chanceDaRoda ? PneusDoCarro.Vazio
                     : s.Valor() < chanceDeFurado ? (byte)s.Entre(0, PneusDoCarro.Minimo - 1) : (byte)s.Entre(faixaDoPneu.x, faixaDoPneu.y);
+            // o carro com alarme sempre tem bateria, com carga (é ela que faz o alarme tocar; quem tira, cala o alarme)
+            byte bateria = e.pecas[PecasDoMotor.Bateria];
+            if (AlarmeDeFabrica(carro) && (bateria == PecasDoMotor.Vazio || bateria < 30)) e.pecas[PecasDoMotor.Bateria] = (byte)s.Entre(35, 80);
             _padroes[carro] = e;
             return e;
         }
@@ -205,7 +211,7 @@ namespace ZombieCityCleaner.Vehicles
             if (olhando && Perto(carro, cliente, out _))
             {
                 quem.Add(cliente);
-                Susto(carro, cliente);
+                Susto(carro, cliente, "abriram o capô");
             }
             else quem.Remove(cliente);
             AtualizarAbertos();
@@ -214,6 +220,7 @@ namespace ZombieCityCleaner.Vehicles
         // no anfitrião: quem se afastou (com folga) ou saiu deixa de olhar
         void Update()
         {
+            AlarmesNoQuadro();
             if (!IsServer || !IsSpawned || _olhando.Count == 0 || Time.time < _conferirEm) return;
             _conferirEm = Time.time + 0.5f;
             foreach (var par in _olhando)
@@ -254,6 +261,7 @@ namespace ZombieCityCleaner.Vehicles
             var e = Estado(carro);
             if (!e.pecas.Tirar(peca, inventario)) return;
             Gravar(e);
+            if (peca == PecasDoMotor.Bateria) Silenciar(carro);   // sem a bateria, o alarme para
         }
 
         [Rpc(SendTo.Server)]
@@ -309,7 +317,7 @@ namespace ZombieCityCleaner.Vehicles
             Gravar(e);
             _macacoMudouEm.Remove(carro);
             Som(0, carro, roda);
-            Susto(carro, parametros.Receive.SenderClientId);
+            Susto(carro, parametros.Receive.SenderClientId, "apoiaram o macaco");
         }
 
         [Rpc(SendTo.Server)]
@@ -322,7 +330,7 @@ namespace ZombieCityCleaner.Vehicles
             Gravar(e);
             _macacoMudouEm[carro] = Time.time;
             Som(1, carro, m);
-            if (erguer) Susto(carro, parametros.Receive.SenderClientId);
+            if (erguer) Susto(carro, parametros.Receive.SenderClientId, "ergueram o carro");
         }
 
         [Rpc(SendTo.Server)]
@@ -350,13 +358,15 @@ namespace ZombieCityCleaner.Vehicles
             e.pneus[roda] = PneusDoCarro.Vazio;
             Gravar(e);
             Som(2, carro, roda);
-            Susto(carro, parametros.Receive.SenderClientId);
+            Susto(carro, parametros.Receive.SenderClientId, "tiraram uma roda");
         }
 
         // um em cada 10 carros tem um rastejante embaixo: quem mexe no carro (o capô, o macaco, a roda) leva o susto
-        // (a pedido em 28/10/2026; Zombies/ZombieManager.Povoamento.cs)
-        void Susto(int carro, ulong cliente)
+        // (a pedido em 28/10/2026; Zombies/ZombieManager.Povoamento.cs); e um em cada 10 tem alarme, que dispara
+        // (PecasDosCarrosDoMundo.Alarme.cs)
+        void Susto(int carro, ulong cliente, string oQue)
         {
+            Disparar(carro, oQue);
             var zumbis = Zombies.ZombieManager.Instancia;
             if (zumbis != null && Jogador(cliente, out var j)) zumbis.MexeramNoCarro(carro, j.GetComponent<Player.JogadorRede>());
         }

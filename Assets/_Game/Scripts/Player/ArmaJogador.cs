@@ -23,6 +23,8 @@ namespace ZombieCityCleaner.Player
     /// Com comida ou água: clique come ou bebe (o clipe Usar, com o som); no fim o item acaba e a mão volta para a última
     /// arma. Enquanto isso, nada de trocar, largar ou usar outra coisa.
     /// Com a mão vazia: os punhos em guarda, e o clique soca (<see cref="Socar"/>).
+    /// Com uma arma branca (a faca e o machado; 31/10/2026, o sistema básico): o clique golpeia
+    /// (<see cref="GolpearComBranca"/>), com os números dela (<see cref="Itens.Branca"/>).
     /// Mirando de perto uma coisa que se usa (<see cref="Interagivel"/>: um item no chão, uma arma do painel, a porta do
     /// bunker, um interruptor), a dica aparece e E usa.
     /// A sniper tem luneta: mirando, a câmera fecha até o campo de visão dela, os braços somem e a tela mostra a luneta
@@ -54,8 +56,8 @@ namespace ZombieCityCleaner.Player
         public float alcanceDoSoco = 1.15f;
         [Tooltip("A grossura do golpe (o raio da esfera que procura o alvo, m).")]
         public float raioDoSoco = 0.16f;
-        [Tooltip("Dano de um soco no corpo do zumbi (a vida do corpo é 6, em tiros de pistola).")]
-        public float danoDoSoco = 0.75f;
+        [Tooltip("Dano de um soco (a vida do Oco é 100; a cabeça vale 3 vezes): 6, 17 socos no corpo e 6 na cabeça.")]
+        public float danoDoSoco = 6f;
 
         public int Municao { get; private set; }
         /// <summary>Olhando pela luneta (a câmera já fechou): os braços somem e a tela mostra a luneta.</summary>
@@ -68,6 +70,21 @@ namespace ZombieCityCleaner.Player
         public bool ComArma => Itens.EhArma(NaMao);
         /// <summary>Comendo ou bebendo (o clipe Usar).</summary>
         public bool Usando { get; private set; }
+        /// <summary>
+        /// Montando uma construção (<see cref="MontadorDeConstrucao"/>): o clique é dele, a arma não atira nem recarrega e a
+        /// mochila não troca nem larga. Vale até o quadro seguinte ao que parou (o clique que montou não atira).
+        /// </summary>
+        public bool Montando
+        {
+            get => _montando || Time.frameCount <= _montandoAte;
+            set
+            {
+                if (_montando && !value) _montandoAte = Time.frameCount + 1;
+                _montando = value;
+            }
+        }
+        bool _montando;
+        int _montandoAte = -1;
         public InventarioJogador Inventario { get; private set; }
         /// <summary>As mãos estão ocupadas com um pneu: sem arma, sem soco, sem comer (o E ainda funciona).</summary>
         public bool MaosOcupadas => Inventario != null && Inventario.CarregandoPneu;
@@ -112,7 +129,7 @@ namespace ZombieCityCleaner.Player
         readonly System.Collections.Generic.Dictionary<ushort, int> _pentes = new System.Collections.Generic.Dictionary<ushort, int>();
         ushort _id, _ultimaArma;
         // o aviso de sem munição, embaixo das balas
-        float _semMunicaoAte;
+        float _semMunicaoAte, _emperrouAte;
 
         void Awake()
         {
@@ -163,6 +180,15 @@ namespace ZombieCityCleaner.Player
             int m = Itens.ModeloNaMao(novo);   // a mão vazia mostra os punhos
             bool ocupadas = MaosOcupadas;   // com o pneu nas mãos, os braços somem
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
+            // os do saque vão com a malha deles no lugar da lata ou da garrafa
+            if (m >= 0 && m < modelos.Length) ItemNaMaoProprio.Aplicar(modelos[m], novo);
+            // a tocha: a chama na ponta (a boca dos braços dela), só as chamas (a luz é a do corpo)
+            // e, no dono, a luz dela ali, na frente dos braços (a do corpo, perto do rosto, estourava os braços de laranja)
+            if (novo == Item.Tocha && m >= 0 && m < bocas.Length && bocas[m] != null && bocas[m].Find("Fogo") == null && Loot.ConstrucoesNoMundo.Instancia != null)
+            {
+                var fogo = Loot.ConstrucoesNoMundo.Fogo(bocas[m], Vector3.zero, Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.28f, 8f, false, JogadorRede.CamadaBracos);
+                fogo.GetComponent<Light>().intensity = 1.3f;
+            }
             if (ComArma)
             {
                 Atual = Itens.Arma(novo);
@@ -251,7 +277,10 @@ namespace ZombieCityCleaner.Player
                 PesoDasAcoes(animador);
             }
             ProcurarAlvo(rede.Olho);
-            if (!controla) return;
+            // a tocha acesa na mão queima: o desgaste sobe com o tempo (100: ela se apaga e some)
+            if (NaMao == Item.Tocha && !bot && Inventario != null)
+                Inventario.Desgastar(_id, Time.deltaTime / Itens.SegundosDaTochaPorDesgaste);
+            if (!controla || Montando) return;
             // mirando no que usa o clique (o macaco apoiado), o botão esquerdo é dele: não atira nem soca
             if (_alvo != null && !bot && _alvo.UsaClique(this))
             {
@@ -286,7 +315,21 @@ namespace ZombieCityCleaner.Player
                 {
                     // no automático, o próximo tiro conta do anterior (sem perder a cadência com o tempo do quadro)
                     _proximoTiro = (Time.time - _proximoTiro > Time.deltaTime ? Time.time : _proximoTiro) + d.intervalo;
-                    if (Municao > 0) Atirar();
+                    // a arma gasta: quebrada, não atira; muito gasta, emperra às vezes (o clique sem tiro)
+                    int desgaste = bot ? 0 : Inventario.DesgasteDe(_id);
+                    if (desgaste >= 100 || (Municao > 0 && desgaste >= Itens.DesgasteQueEmperra
+                                            && Random.value < (desgaste - Itens.DesgasteQueEmperra) / (100f - Itens.DesgasteQueEmperra) * 0.3f))
+                    {
+                        Acao(DryFireId);
+                        Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
+                        _emperrouAte = Time.time + 1.4f;
+                        _proximoTiro = Time.time + Mathf.Max(d.intervalo, 0.35f);
+                    }
+                    else if (Municao > 0)
+                    {
+                        Atirar();
+                        if (!bot) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
+                    }
                     else if (apertou)
                     {
                         Acao(DryFireId);
@@ -300,6 +343,9 @@ namespace ZombieCityCleaner.Player
             // a mão vazia soca (segurando o botão, um soco atrás do outro)
             else if (NaMao == Item.Nada && !bot && Time.time >= _proximoTiro && _atirar.IsPressed())
                 StartCoroutine(Socar());
+            // a arma branca golpeia (segurando o botão, um golpe atrás do outro)
+            else if (Itens.EhBranca(NaMao) && !bot && Time.time >= _proximoTiro && _atirar.IsPressed())
+                StartCoroutine(GolpearComBranca());
             if (_alvo != null && !bot && !Usando && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
         }
 
@@ -329,8 +375,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>
         /// O soco, com a mão vazia: um punho de cada vez (o direito no estado do tiro, o esquerdo no do gatilho sem bala),
         /// com o vento do braço. No quadro do golpe, uma esfera curta sai do olho, na direção da mira: o primeiro zumbi
-        /// que ela pega leva o dano no corpo (sem arrancar membro nem explodir a cabeça), com a pancada, um pouco de sangue
-        /// e a marca na mira; uma parede faz o barulho dos nós dos dedos. Os outros veem o soco no corpo e ouvem tudo.
+        /// que ela pega leva o dano no corpo ou, na cabeça, 3 vezes (sem arrancar membro), com a pancada, um pouco de
+        /// sangue e a marca na mira; uma parede faz o barulho dos nós dos dedos. Os outros veem o soco no corpo e ouvem tudo.
         /// </summary>
         IEnumerator Socar()
         {
@@ -341,14 +387,36 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.45f, false);
             rede.AnunciarSoco();
             yield return new WaitForSeconds(SomDoSoco.Impacto);
-            Golpear();
+            Golpear(alcanceDoSoco, raioDoSoco, danoDoSoco, false, false, 0f);   // o punho não tem fio: não explode a cabeça
         }
 
-        void Golpear()
+        /// <summary>
+        /// O golpe de uma arma branca (o básico, 31/10/2026: "um sistema básico de atacar e segurar, vou arrumar
+        /// posteriormente"): o clipe de golpe dos braços dela (a faca: o soco direito com ela no punho; o machado: a
+        /// machadada nas duas mãos), o vento do braço e, quando o golpe pega (DadosDaBranca.impacto), a esfera do soco com
+        /// o alcance, a grossura e o dano dela; a cabeça vale 3 vezes em todas; o machado e a lança acertam o braço ou a
+        /// perna onde pegam (o machado corta em dobro: decepa com um golpe). Os outros veem o soco direito no corpo, com
+        /// ela na mão.
+        /// </summary>
+        IEnumerator GolpearComBranca()
+        {
+            var b = Itens.Branca(NaMao);
+            _proximoTiro = Time.time + b.intervalo;
+            Acao(FireId);
+            Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.55f, false);
+            rede.AnunciarSoco();
+            yield return new WaitForSeconds(b.impacto);
+            Golpear(b.alcance, b.raio, b.dano, true, b.porRegiao, b.corte);
+        }
+
+        // o golpe: na cabeça (todas as armas, o soco também), o dano vale 3 vezes no zumbi, e o golpe que mata só explode a
+        // cabeça se tiver corte (o soco, o bastão e a tocha, 0, derrubam com ela no lugar); num braço ou numa perna, só as
+        // que acertam o membro (porRegiao: o machado e a lança) o levam, com o corte; o resto conta como o tronco
+        void Golpear(float alcance, float raio, float dano, bool faca, bool porRegiao, float corte)
         {
             var cam = rede.Olho;
             Physics.SyncTransforms();   // as hitboxes andam com a animação
-            int n = Physics.SphereCastNonAlloc(cam.position, raioDoSoco, cam.forward, _acertos, alcanceDoSoco, MascaraDoTiro, QueryTriggerInteraction.Ignore);
+            int n = Physics.SphereCastNonAlloc(cam.position, raio, cam.forward, _acertos, alcance, MascaraDoTiro, QueryTriggerInteraction.Ignore);
             System.Array.Sort(_acertos, 0, n, PorDistancia);
             for (int i = 0; i < n; i++)
             {
@@ -369,17 +437,24 @@ namespace ZombieCityCleaner.Player
                     }
                     else
                     {
-                        Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, false);
+                        Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
                         Sangue.Respingo(ponto, -cam.forward);
+                        if (faca) Sangue.Respingo(ponto, cam.forward);
                     }
                     _marcaAte = Time.time + 0.18f;
-                    _marcaNaCabeca = false;
-                    rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, danoDoSoco, ponto, false);
+                    bool naCabeca = hitbox.regiao == RegiaoDoCorpo.Cabeca;
+                    _marcaNaCabeca = naCabeca;
+                    if (naCabeca) rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Cabeca, Membro.Nenhum, dano, ponto, false, corte);
+                    else if (porRegiao) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, hitbox.membro, dano, ponto, false, corte);
+                    else rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, false);
                     rede.AnunciarPancada(ponto, !pedra);
+                    if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));   // a arma branca gasta a cada golpe que pega
                     return;
                 }
                 Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
+                if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
                 rede.AnunciarPancada(ponto, false);
+                if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
                 return;
             }
         }
@@ -393,15 +468,16 @@ namespace ZombieCityCleaner.Player
             Usando = true;
             var item = NaMao;
             ushort id = _id;
-            bool lata = item == Item.Comida;
+            var dados = Itens.Consumivel(item);
+            bool bebe = dados.tipo == TipoDeLoot.Bebida, remedio = dados.tipo == TipoDeLoot.Remedio;
             float inicio = Time.time;
             Acao(FireId);   // o estado do tiro toca o clipe Usar (o override do item)
-            Efeitos.Som(lata ? Efeitos.AbrirLata : Efeitos.AbrirTampa, rede.cameraMundo.transform.position, 0.45f, false);
-            // as mordidas e os goles, nos quadros 14, 20 e 26 do clipe (itens.py)
+            Efeitos.Som(bebe || remedio ? Efeitos.AbrirTampa : Efeitos.AbrirLata, rede.cameraMundo.transform.position, 0.45f, false);
+            // as mordidas e os goles, nos quadros 14, 20 e 26 do clipe (itens.py); o remédio, sem
             foreach (float quando in new[] { 14 / 24f, 20 / 24f, 26 / 24f })
             {
                 yield return new WaitForSeconds(Mathf.Max(0f, quando - (Time.time - inicio)));
-                Efeitos.Som(lata ? Efeitos.Mastigar : Efeitos.Gole, rede.cameraMundo.transform.position, 0.5f, false);
+                if (!remedio) Efeitos.Som(bebe ? Efeitos.Gole : Efeitos.Mastigar, rede.cameraMundo.transform.position, 0.5f, false);
             }
             yield return new WaitForSeconds(Mathf.Max(0f, Itens.Consumivel(item).tempoDeUso - (Time.time - inicio)));
             Usando = false;
@@ -509,8 +585,8 @@ namespace ZombieCityCleaner.Player
 
         void Mandar(in NaCarne c, DadosDaArma d)
         {
-            var faixa = Armas.Dano(d, c.distancia);
-            float dano = EhMembro(c.hitbox.regiao) ? faixa.membro : faixa.corpo;
+            // o dano da distância; a parte do corpo (a cabeça 3 vezes, o membro metade) multiplica no zumbi
+            float dano = Armas.Dano(d, c.distancia);
             bool arremesso = d.arremessoAte > 0f && c.distancia <= d.arremessoAte;
             rede.AcertarZumbi(c.hitbox.zumbi, c.hitbox.regiao, c.hitbox.membro, dano, c.ponto, arremesso);
         }
@@ -523,7 +599,7 @@ namespace ZombieCityCleaner.Player
             var impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Nada, normal = Vector3.up };
             int bracos = 0;
             // a bala que atravessa o antebraço e pega o braço logo atrás conta uma vez só naquele membro (senão o braço
-            // caía com dois tiros em vez de três)
+            // caía com metade dos tiros: dois de pistola em vez de quatro)
             Zumbi ultimoZumbi = null;
             int ultimoMembro = -1;
             // à queima-roupa, a hitbox colada na câmera leva o tiro primeiro
@@ -768,8 +844,16 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
                 var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
                 nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
-                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 74 * u, 240 * u, 24 * u),
-                    $"{d.nome.ToUpperInvariant()}  ·  {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}", nome);
+                int desgaste = Inventario != null ? Inventario.DesgasteDe(_id) : 0;
+                GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 74 * u, 340 * u, 24 * u),
+                    $"{d.nome.ToUpperInvariant()}  ·  {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}{(desgaste > 0 ? $"  ·  {100 - desgaste}%" : "")}", nome);
+                if (desgaste >= 100 || Time.time < _emperrouAte)
+                {
+                    var aviso = new GUIStyle(nome) { fontSize = Mathf.RoundToInt(15 * u) };
+                    aviso.normal.textColor = new Color(1f, 0.5f, 0.42f);
+                    GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 122 * u, 340 * u, 24 * u),
+                        desgaste >= 100 ? "ARMA QUEBRADA: USE UM KIT DE REPARO" : "EMPERROU", aviso);
+                }
                 if (Time.time < _semMunicaoAte)
                 {
                     var aviso = new GUIStyle(nome) { fontSize = Mathf.RoundToInt(15 * u) };

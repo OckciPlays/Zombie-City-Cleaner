@@ -36,8 +36,10 @@ namespace ZombieCityCleaner.EditorTools
         const string FbxPecas = Arte + "/Pecas.fbx";
         /// <summary>A sinuca: as 2 caixas de bolas e os 4 tacos (Blender/sinuca.py, no repositório).</summary>
         const string FbxSinuca = Arte + "/Sinuca.fbx";
+        /// <summary>O saque (31/10/2026): a comida, a bebida, os remédios, os materiais e os kits (Blender/loot.py).</summary>
+        internal const string FbxLoot = Arte + "/Loot.fbx";
         const string PastaIcones = "Assets/_Game/Art/UI/Icones";
-        const string MaterialArma = Arte + "/Materials/Pistola.mat";
+        internal const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
 
         static readonly string[] ClipesFP = { "Idle", "Walk", "Run", "Fire", "DryFire", "Reload", "Sacar" };
@@ -87,8 +89,26 @@ namespace ZombieCityCleaner.EditorTools
         public static string MalhaDaSinuca(int k) => $"{Malhas}/Sinuca_{Itens.ModeloDaSinuca(k)}.asset";
         public static string IconeDaSinuca(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDaSinuca(k)}.png";
         public static string FotoDaSinuca(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDaSinuca(k)}.png";
+        public static string MalhaDoLoot(int k) => $"{Malhas}/Loot_{Itens.ModeloDoLoot(k)}.asset";
+        public static string IconeDoLoot(int k) => $"{PastaIcones}/Icone_{Itens.ModeloDoLoot(k)}.png";
+        public static string FotoDoLoot(int k) => $"{PastaIcones}/Foto_{Itens.ModeloDoLoot(k)}.png";
+        /// <summary>As malhas do saque (Loot_*), das peças do Loot.fbx (null nas que ainda não existem).</summary>
+        internal static Mesh[] MalhasDoLoot() => Enumerable.Range(0, Itens.QuantosLoots).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDoLoot(k))).ToArray();
+
+        // junta as peças do Loot.fbx em Loot_<modelo> (as que existem nele)
+        internal static void JuntarLoot()
+        {
+            if (!File.Exists(FbxLoot)) return;
+            var nomes = AssetDatabase.LoadAllAssetsAtPath(FbxLoot).OfType<Mesh>().Select(m => m.name).ToList();
+            for (int k = 0; k < Itens.QuantosLoots; k++)
+                if (nomes.Any(n => n.StartsWith(Itens.ModeloDoLoot(k) + "_"))) Juntar(FbxLoot, Itens.ModeloDoLoot(k) + "_", MalhaDoLoot(k));
+                else Debug.LogWarning($"O {Itens.ModeloDoLoot(k)} não está no Loot.fbx (rode o Blender/loot.py).");
+            MontagemDoSaque.JuntarMontadas();
+        }
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
+        /// <summary>Os itens novos também (Itens_Faca.fbx, do Blender/Armas/faca.py), fora do Itens.fbx.</summary>
+        static string FbxAvulsaDoItem(int modelo) => $"{Arte}/Itens_{Itens.Modelos[modelo]}.fbx";
         /// <summary>A arma cujas animações o corpo usa (a sniper usa as do rifle).</summary>
         static int CorpoDa(int arma) => (int)(Armas.Todas[arma].corpoComo ?? (TipoDeArma)arma);
 
@@ -138,10 +158,51 @@ namespace ZombieCityCleaner.EditorTools
             Debug.Log("Armas montadas: braços, animações, malhas, ícones, prefab do jogador, o suporte do bunker e os itens no mundo.");
         }
 
+        /// <summary>
+        /// Só as peças do carro (a pedido em 29/10/2026, quando entrou a chave da perua): as malhas Peca_* do Pecas.fbx
+        /// (Blender/pecas.py), os ícones e as fotos, os ícones no prefab do jogador e as malhas no "Itens no mundo" da cena
+        /// aberta. Sem refazer as armas, os braços, os controladores e o resto da "Montar armas".
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Veículos/Montar as peças do carro (e a chave)")]
+        public static void MontarAsPecasDoCarro()
+        {
+            ImportarAvulsas(FbxPecas);
+            for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
+            ImportarIcones();
+            AssetDatabase.SaveAssets();
+            Texture2D[] Imagens(System.Func<int, string> caminho) =>
+                Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(caminho(k))).ToArray();
+            const string jogador = "Assets/_Game/Prefabs/Jogador.prefab";
+            var raiz = PrefabUtility.LoadPrefabContents(jogador);
+            try
+            {
+                var inventario = raiz.GetComponentInChildren<InventarioJogador>(true);
+                inventario.iconesDePeca = Imagens(IconeDaPeca);
+                inventario.fotosDePeca = Imagens(FotoDaPeca);
+                PrefabUtility.SaveAsPrefabAsset(raiz, jogador);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(raiz);
+            }
+            var mundo = Object.FindAnyObjectByType<ItensNoMundo>();
+            if (mundo != null)
+            {
+                mundo.malhasDePeca = Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaPeca(k))).ToArray();
+                EditorUtility.SetDirty(mundo);
+                EditorSceneManager.MarkSceneDirty(mundo.gameObject.scene);
+                EditorSceneManager.SaveScene(mundo.gameObject.scene);
+            }
+            Debug.Log($"Peças do carro montadas: {Itens.QuantasPecas} malhas, ícones e fotos no jogador" + (mundo != null ? $", malhas no \"Itens no mundo\" de {mundo.gameObject.scene.name}." : " (sem \"Itens no mundo\" na cena aberta)."));
+        }
+
         /// <summary>Tudo menos o prefab e a cena: importações, malhas, ícones e controladores.</summary>
         public static void Preparar()
         {
             Directory.CreateDirectory(Malhas);
+            // as armas novas (Blender/Armas): as texturas, os materiais e os FBX de Art/Armas, que a MontarMalha usa no lugar
+            // das peças do Armas.fbx; os braços e o corpo são trocados na montagem do prefab (MontagemDaRede)
+            ArmasNovas.PrepararTodas();
             for (int i = 0; i < Itens.QuantosModelosFP; i++) ImportarFP(FbxFP(i));
             ImportarCorpo();
             ImportarArmas();
@@ -150,6 +211,7 @@ namespace ZombieCityCleaner.EditorTools
             for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
             for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
             for (int k = 0; k < Itens.QuantosDaSinuca; k++) Juntar(FbxSinuca, Itens.ModeloDaSinuca(k) + "_", MalhaDaSinuca(k));
+            JuntarLoot();
             ImportarIcones();
             MontarControladorFP();
             // a mão vazia: o soco direito no lugar do tiro e o esquerdo no do gatilho sem bala (o código alterna); no
@@ -163,6 +225,15 @@ namespace ZombieCityCleaner.EditorTools
             PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
             {
+                if (Itens.ModeloBranco(i))
+                {
+                    // as armas brancas (31/10/2026, o básico): os braços dos punhos com ela na mão; no lugar do tiro, o golpe
+                    // dela (o clipe Golpe: a machadada) ou, sem ele, o soco direito (a faca)
+                    string golpe = AssetDatabase.LoadAllAssetsAtPath(FbxFP(i)).OfType<AnimationClip>().Any(a => a.name == "Golpe") ? "Golpe" : "SocoDireito";
+                    MontarOverride(ControladorFP, FbxFP(0), FbxFP(i), ClipesFP,
+                                   c => c == "Fire" ? golpe : c == "DryFire" ? "SocoEsquerdo" : c == "Reload" ? "Idle" : c, ControladorFPDa(i));
+                    continue;
+                }
                 if (i >= Armas.Quantas)
                 {
                     // os itens: o Usar (comer ou beber) no lugar do tiro; o gatilho sem bala e a recarga nunca tocam
@@ -212,7 +283,11 @@ namespace ZombieCityCleaner.EditorTools
                 for (int i = Armas.Quantas; i < Itens.QuantosModelos; i++)
                 {
                     string item = Itens.Modelos[i];
-                    MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
+                    // a faca: a guarda dos punhos e o soco direito (o corpo não tem clipes dela)
+                    if (Itens.ModeloBranco(i))
+                        MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? "Maos_SocoDireito" : "Maos_Guarda", ControladorTPDoItemDoPersonagem(p, i));
+                    else
+                        MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
                 }
                 MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => "Taco_Segurar", ControladorTPDoTacoDoPersonagem(p));
             }
@@ -372,7 +447,8 @@ namespace ZombieCityCleaner.EditorTools
                          .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
                          .Concat(Enumerable.Range(0, Itens.QuantasMunicoes).SelectMany(k => new[] { IconeDaMunicao(k), FotoDaMunicao(k) }))
                          .Concat(Enumerable.Range(0, Itens.QuantasPecas).SelectMany(k => new[] { IconeDaPeca(k), FotoDaPeca(k) }))
-                         .Concat(Enumerable.Range(0, Itens.QuantosDaSinuca).SelectMany(k => new[] { IconeDaSinuca(k), FotoDaSinuca(k) })))
+                         .Concat(Enumerable.Range(0, Itens.QuantosDaSinuca).SelectMany(k => new[] { IconeDaSinuca(k), FotoDaSinuca(k) }))
+                         .Concat(Enumerable.Range(0, Itens.QuantosLoots).SelectMany(k => new[] { IconeDoLoot(k), FotoDoLoot(k) })))
             {
                 if (!(AssetImporter.GetAtPath(caminho) is TextureImporter imp))
                 {
@@ -440,10 +516,13 @@ namespace ZombieCityCleaner.EditorTools
         {
             ImportarAvulsas(FbxArmas);
             ImportarAvulsas(FbxItens);
+            for (int i = Armas.Quantas; i < Itens.QuantosModelos; i++)
+                if (File.Exists(FbxAvulsaDoItem(i))) ImportarAvulsas(FbxAvulsaDoItem(i));
             ImportarAvulsas(FbxEquipamentos);
             ImportarAvulsas(FbxMunicao);
             ImportarAvulsas(FbxPecas);
             ImportarAvulsas(FbxSinuca);
+            if (File.Exists(FbxLoot)) ImportarAvulsas(FbxLoot);
             for (int i = 0; i < Armas.Quantas; i++)
                 if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
         }
@@ -465,12 +544,14 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static void MontarMalha(int modelo)
         {
-            string fbx = modelo >= Armas.Quantas ? FbxItens : File.Exists(FbxAvulsaDa(modelo)) ? FbxAvulsaDa(modelo) : FbxArmas;
+            if (ArmasNovas.MalhaSolta(modelo)) return;   // a arma nova (Art/Armas), se o modelo tem uma
+            string fbx = modelo >= Armas.Quantas ? (File.Exists(FbxAvulsaDoItem(modelo)) ? FbxAvulsaDoItem(modelo) : FbxItens)
+                : File.Exists(FbxAvulsaDa(modelo)) ? FbxAvulsaDa(modelo) : FbxArmas;
             Juntar(fbx, Itens.Modelos[modelo] + "_", MalhaDo(modelo));
         }
 
         /// <summary>As peças &lt;prefixo&gt;* do FBX numa malha só, gravada no caminho.</summary>
-        static void Juntar(string fbx, string prefixo, string caminho)
+        internal static void Juntar(string fbx, string prefixo, string caminho)
         {
             var pecas = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Mesh>().Where(m => m.name.StartsWith(prefixo)).ToArray();
             if (pecas.Length == 0) throw new System.Exception($"Nenhuma peça {prefixo}* no {fbx}.");
@@ -626,7 +707,10 @@ namespace ZombieCityCleaner.EditorTools
             mundo.malhasDeMunicao = Enumerable.Range(0, Itens.QuantasMunicoes).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaMunicao(k))).ToArray();
             mundo.malhasDePeca = Enumerable.Range(0, Itens.QuantasPecas).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaPeca(k))).ToArray();
             mundo.malhasDaSinuca = Enumerable.Range(0, Itens.QuantosDaSinuca).Select(k => AssetDatabase.LoadAssetAtPath<Mesh>(MalhaDaSinuca(k))).ToArray();
+            mundo.malhasDeLoot = MalhasDoLoot();
             mundo.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialArma);
+            MontagemDoSaque.BancadasNaCena(cena);
+            MontagemDoSaque.MontarConstrucoes(cena);
             mundo.lugares = marcas.Select(t => t.position).ToArray();
             // o item vem no nome da marca: "Lugar de item (Comida)", "(Agua)", "(Municao9mm)"...
             mundo.itensDosLugares = marcas.Select(t => System.Enum.TryParse<Item>(t.name.Substring(t.name.IndexOf('(') + 1).TrimEnd(')'), out var item) ? item : Item.Comida).ToArray();

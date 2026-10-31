@@ -13,7 +13,7 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// Um item na mochila: o Id (único na mochila), o que é, a célula de cima, à esquerda, que ele ocupa e se está girado
-    /// (90°: a largura e a altura trocam). A arma da alça (<see cref="naAlca"/>) não ocupa a grade.
+    /// (90°: a largura e a altura trocam). Tudo vai na grade (31/10/2026: a alça saiu).
     /// <see cref="qtd"/>: as balas da caixa de munição, ou as do pente da arma (a cópia do anfitrião: o dono manda quando a
     /// arma sai da mão, é largada ou guardada).
     /// </summary>
@@ -23,29 +23,32 @@ namespace ZombieCityCleaner.Player
         public Item item;
         public byte x, y;
         public bool girado;
-        /// <summary>A arma pendurada pela alça, no ombro: fora da grade.</summary>
-        public bool naAlca;
         /// <summary>As balas: na caixa de munição, ou no pente da arma.</summary>
         public ushort qtd;
+        /// <summary>O desgaste das armas (0, nova; 100, quebrada: <see cref="Itens.ComDesgaste"/>).</summary>
+        public byte desgaste;
 
         /// <summary>As células que ele ocupa, com o giro.</summary>
         public Vector2Int Tamanho => InventarioJogador.TamanhoNaGrade(item, girado);
 
-        public bool Equals(ItemNaMochila o) => id == o.id && item == o.item && x == o.x && y == o.y && girado == o.girado && naAlca == o.naAlca && qtd == o.qtd;
+        public bool Equals(ItemNaMochila o) => id == o.id && item == o.item && x == o.x && y == o.y && girado == o.girado && qtd == o.qtd && desgaste == o.desgaste;
     }
 
     /// <summary>
     /// O inventário do jogador:
-    /// - o que ele veste (<see cref="MochilaVestida"/> e <see cref="ComColdre"/>, escritos pelo anfitrião). Sem mochila,
-    ///   só os bolsos;
+    /// - o que ele veste (<see cref="MochilaVestida"/>, escrita pelo anfitrião). Sem mochila, só os bolsos;
     /// - a grade: os bolsos (4 × 2) ou a mochila vestida (pequena 6 × 4, média 8 × 5, grande 10 × 7;
     ///   <see cref="Itens.EspacoDa"/>), e cada item ocupa as células dele (<see cref="Itens.Tamanho"/>: a sniper 7 × 2, a
-    ///   lata 1), deitado ou girado 90° (a tela gira com R). Sem pilhas. O que é pego entra na primeira posição em que
-    ///   couber (de cima para baixo, da esquerda para a direita; se não couber deitado, girado); sem espaço, não entra.
+    ///   lata 1), deitado ou girado 90° (a tela gira com R). O que é pego entra na primeira posição em que couber (de cima
+    ///   para baixo, da esquerda para a direita; se não couber deitado, girado); sem espaço, não entra. A munição e o saque
+    ///   vão em pilhas (<see cref="Itens.Pilha"/>: o qtd é quantos há nela): o que é pego completa primeiro as pilhas dele
+    ///   que já estão na mochila, e arrastar uma pilha em cima de outra do mesmo item junta as duas;
+    /// - a fabricação e a desmontagem (<see cref="Receitas"/>; a aba Criar e o menu do botão direito da tela): o anfitrião
+    ///   confere os ingredientes, a ferramenta e a bancada, tira o que gasta e põe o que sai (o que não couber cai aos pés);
     ///   Trocar ou tirar a mochila arruma a grade de novo, e o que não cabe mais cai no chão;
-    /// - as armas: a primeira vai pela alça (<see cref="ItemNaMochila.naAlca"/>, de qualquer tamanho, sem gastar a
-    ///   grade). As outras vão na grade, e cada uma precisa de um lugar no corpo: a mochila prende uma nas costas (longa ou
-    ///   curta) e o coldre, uma curta (a pistola ou a submetralhadora). Sem os dois, só a da alça (<see cref="ArmaCabeNaGrade"/>);
+    /// - as armas: quantas couberem na grade (31/10/2026, a pedido: "vamos deixar liberal, carrega quantas armas conseguir
+    ///   no inventário"; a alça, o coldre e o limite de armas saíram). As dos atalhos aparecem penduradas no corpo
+    ///   (<see cref="EquipamentoNoCorpo.OQueVeste"/>);
     /// - a barra de atalhos: 3 lugares, cada um apontando para um item da mochila (o item continua nela). O do lugar
     ///   escolhido fica na mão; um lugar vazio deixa a mão vazia (os punhos). A roda passa pelos 3, vazios ou não, 1, 2 e
     ///   3 escolhem, G larga o da mão.
@@ -75,16 +78,16 @@ namespace ZombieCityCleaner.Player
         public Texture2D[] iconesDePeca, fotosDePeca;
         [Tooltip("Os ícones e as fotos da sinuca (as 2 caixas de bolas e os 4 tacos), na ordem do enum Item.")]
         public Texture2D[] iconesDaSinuca, fotosDaSinuca;
+        [Tooltip("Os ícones e as fotos do saque (o loot.py), na ordem de Itens.DoLoot.")]
+        public Texture2D[] iconesDeLoot, fotosDeLoot;
 
         /// <summary>
-        /// A mochila (a grade e a arma da alça; escrita pelo anfitrião). O jogador nasce sem mochila, com a pistola na alça,
-        /// no primeiro atalho.
+        /// A mochila (a grade; escrita pelo anfitrião). O jogador nasce sem mochila, com a pistola nos bolsos, no primeiro
+        /// atalho.
         /// </summary>
         public NetworkList<ItemNaMochila> Mochila { get; private set; }
         /// <summary>A mochila que ele veste (Nada: só os bolsos). Escrita pelo anfitrião.</summary>
         public readonly NetworkVariable<Item> MochilaVestida = new(Item.Nada, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        /// <summary>Se ele usa o coldre (leva mais uma arma curta). Escrito pelo anfitrião.</summary>
-        public readonly NetworkVariable<bool> ComColdre = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>
         /// O pneu que ele carrega nas mãos (o estado; <see cref="SemPneu"/>, nenhum), quando ele não coube na mochila.
         /// Escrito pelo anfitrião. Com ele, as mãos ficam ocupadas (sem arma) e o jogador anda devagar, sem correr nem pular.
@@ -101,18 +104,6 @@ namespace ZombieCityCleaner.Player
         public Vector2Int TamanhoDaGrade => Itens.EspacoDa(MochilaVestida.Value);
         public int Colunas => TamanhoDaGrade.x;
         public int Linhas => TamanhoDaGrade.y;
-        /// <summary>Quantas armas ele pode levar: a da alça, mais uma nas costas (com mochila) e uma no coldre.</summary>
-        public int VagasDeArma => 1 + (MochilaVestida.Value != Item.Nada ? 1 : 0) + (ComColdre.Value ? 1 : 0);
-        /// <summary>Quantas armas ele leva agora (na alça e na grade).</summary>
-        public int ArmasLevadas
-        {
-            get
-            {
-                int n = 0;
-                foreach (var it in Mochila) if (Itens.EhArma(it.item)) n++;
-                return n;
-            }
-        }
         // os 3 atalhos, 16 bits cada (o Id do item na mochila; 0 = vazio), escritos pelo dono
         readonly NetworkVariable<long> _atalhos = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>O atalho da mão (0 a 2).</summary>
@@ -128,6 +119,8 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>A mochila, os atalhos ou o atalho da mão mudaram (em todas as cópias).</summary>
         public event Action Mudou;
+        /// <summary>No dono: uma receita saiu, ou um item foi desmontado (o texto do aviso).</summary>
+        public event Action<string> Feito;
 
         // o raio de largar não vê o próprio jogador, os braços, os zumbis, os corpos e o Ignore Raycast
         const int MascaraDoCenario = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
@@ -152,13 +145,11 @@ namespace ZombieCityCleaner.Player
             _atalhos.OnValueChanged += AoMudarAtalhos;
             Escolhido.OnValueChanged += AoMudarEscolhido;
             MochilaVestida.OnValueChanged += AoMudarEquipamento;
-            ComColdre.OnValueChanged += AoMudarColdre;
             PneuNasMaos.OnValueChanged += AoMudarPneu;
             if (IsServer)
             {
                 Mochila.Clear();
                 MochilaVestida.Value = Item.Nada;
-                ComColdre.Value = false;
                 PneuNasMaos.Value = SemPneu;
                 if (!ModoVideo.SemArma) Receber(Item.Pistola);   // na cena de vídeo, de mãos vazias
             }
@@ -173,7 +164,6 @@ namespace ZombieCityCleaner.Player
             _atalhos.OnValueChanged -= AoMudarAtalhos;
             Escolhido.OnValueChanged -= AoMudarEscolhido;
             MochilaVestida.OnValueChanged -= AoMudarEquipamento;
-            ComColdre.OnValueChanged -= AoMudarColdre;
             PneuNasMaos.OnValueChanged -= AoMudarPneu;
             if (_pneuNoCorpo != null) Destroy(_pneuNoCorpo);
             if (_pneuNoOlho != null) Destroy(_pneuNoOlho);
@@ -181,7 +171,6 @@ namespace ZombieCityCleaner.Player
 
         void AoMudarEquipamento(Item antes, Item depois) => Mudou?.Invoke();
         void AoMudarPneu(byte antes, byte depois) => Mudou?.Invoke();
-        void AoMudarColdre(bool antes, bool depois) => Mudou?.Invoke();
 
         static ushort Ler(long atalhos, int lugar) => (ushort)((atalhos >> (16 * lugar)) & 0xFFFF);
         static long Gravar(long atalhos, int lugar, ushort id) => (atalhos & ~(0xFFFFL << (16 * lugar))) | ((long)id << (16 * lugar));
@@ -236,7 +225,7 @@ namespace ZombieCityCleaner.Player
             if (t.x <= 0 || x < 0 || y < 0 || x + t.x > espaco.x || y + t.y > espaco.y) return false;
             foreach (var o in lista)
             {
-                if (o.id == ignorar || o.naAlca) continue;
+                if (o.id == ignorar) continue;
                 var s = o.Tamanho;
                 if (x < o.x + s.x && o.x < x + t.x && y < o.y + s.y && o.y < y + t.y) return false;
             }
@@ -259,26 +248,8 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// A arma pode ir para a grade: cada arma da grade precisa de um lugar no corpo. A mochila prende uma nas costas
-        /// (longa ou curta), e o coldre, uma curta. (A da alça não conta.)
-        /// </summary>
-        static bool ArmaCabeEm(List<ItemNaMochila> lista, bool mochila, bool coldre, Item arma, ushort ignorar)
-        {
-            if (ModoVideo.ArmasSemLimite) return true;   // o vídeo das armas: só o espaço da mochila conta
-            int m = mochila ? 1 : 0, c = coldre ? 1 : 0, todas = 0, longas = 0;
-            foreach (var o in lista)
-            {
-                if (o.id == ignorar || o.naAlca || !Itens.EhArma(o.item)) continue;
-                todas++;
-                if (!Itens.EhCurta(o.item)) longas++;
-            }
-            if (todas >= m + c) return false;
-            return Itens.EhCurta(arma) || longas < m;
-        }
-
-        /// <summary>
         /// O item cabe (girado ou não) com o canto de cima, à esquerda, nesta célula, sem contar o item 'ignorar' (o que
-        /// se move). A arma da alça não ocupa a grade.
+        /// se move).
         /// </summary>
         public bool Cabe(Item item, bool girado, int x, int y, ushort ignorar = 0) => CabeEm(Copia(), TamanhoDaGrade, item, girado, x, y, ignorar);
 
@@ -290,73 +261,26 @@ namespace ZombieCityCleaner.Player
 
         public bool TemEspaco(Item item) => Espaco(item, out _, out _, out _);
 
-        /// <summary>A alça está livre (sem contar o item 'ignorar').</summary>
-        public bool AlcaLivre(ushort ignorar = 0)
-        {
-            foreach (var it in Mochila)
-                if (it.naAlca && it.id != ignorar) return false;
-            return true;
-        }
-
-        /// <summary>A arma da alça (false, a alça vazia).</summary>
-        public bool NaAlca(out ItemNaMochila arma)
-        {
-            foreach (var it in Mochila)
-                if (it.naAlca)
-                {
-                    arma = it;
-                    return true;
-                }
-            arma = default;
-            return false;
-        }
-
-        /// <summary>A arma pode ir para a grade (há lugar no corpo para ela: as costas da mochila ou o coldre).</summary>
-        public bool ArmaCabeNaGrade(Item arma, ushort ignorar = 0) =>
-            ArmaCabeEm(Copia(), MochilaVestida.Value != Item.Nada, ComColdre.Value, arma, ignorar);
-
-        /// <summary>O item pode ir para esta posição da grade (se saiu da alça, a arma precisa de lugar no corpo).</summary>
-        public bool PodeMover(ushort id, int x, int y, bool girado)
-        {
-            if (!Achar(id, out var it) || !Cabe(it.item, girado, x, y, id)) return false;
-            return !it.naAlca || !Itens.EhArma(it.item) || ArmaCabeNaGrade(it.item, id);
-        }
-
-        /// <summary>O item pode ir para a alça (uma arma, e a alça livre).</summary>
-        public bool PodeIrParaAlca(ushort id) => Achar(id, out var it) && !it.naAlca && Itens.EhArma(it.item) && AlcaLivre(id);
+        /// <summary>O item pode ir para esta posição da grade.</summary>
+        public bool PodeMover(ushort id, int x, int y, bool girado) => Achar(id, out var it) && Cabe(it.item, girado, x, y, id);
 
         /// <summary>
-        /// O jogador pode pegar o item agora? Se não, o motivo (para a dica). A arma vai para a alça, se ela estiver
-        /// livre; senão, para a grade, se houver lugar no corpo e espaço. A mochila nova troca a vestida (que cai no chão).
+        /// O jogador pode pegar o item agora? Se não, o motivo (para a dica). Tudo vai para a grade, se houver espaço
+        /// (as armas também: sem limite de armas). A mochila nova troca a vestida (que cai no chão).
         /// </summary>
         public bool PodeReceber(Item item, out string motivo)
         {
             motivo = null;
             if (item == Item.Nada) return false;
-            bool mochila = MochilaVestida.Value != Item.Nada, coldre = ComColdre.Value;
-            if (Itens.EhEquipamento(item))
+            bool mochila = MochilaVestida.Value != Item.Nada;
+            if (Itens.EhEquipamento(item)) return true;
+            if (!Itens.NoJogo(item))
             {
-                if (item == Item.Coldre && coldre)
-                {
-                    motivo = "Você já usa um coldre";
-                    return false;
-                }
-                return true;
+                motivo = $"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(item))} saiu do jogo";
+                return false;
             }
-            if (Itens.EhArma(item))
-            {
-                if (AlcaLivre()) return true;
-                if (!ArmaCabeNaGrade(item))
-                {
-                    bool curta = Itens.EhCurta(item);
-                    motivo = !mochila && !coldre ? (curta ? "Para levar outra arma, ache uma mochila ou um coldre" : "Para levar outra arma, ache uma mochila")
-                        : !curta && !mochila ? "Arma longa vai nas costas: ache uma mochila"
-                        : "Sem lugar no corpo para outra arma";
-                    return false;
-                }
-            }
-            // a caixa de munição completa primeiro as do mesmo calibre
-            if (Itens.EhMunicao(item) && FaltaNasCaixas(Itens.CalibreDa(item)) > 0) return true;
+            // a pilha completa primeiro as do mesmo item (a caixa de munição, as do mesmo calibre)
+            if (Itens.EmPilha(item) && FaltaNasPilhas(item) > 0) return true;
             if (TemEspaco(item)) return true;
             // o pneu que não cabe vai para as mãos (pesado)
             if (item == Item.Pneu && !CarregandoPneu) return true;
@@ -379,6 +303,7 @@ namespace ZombieCityCleaner.Player
                 return $"[E] Trocar a sua {Itens.Nome(MochilaVestida.Value)} pela {Itens.Nome(item)}";
             if (item == Item.Pneu && PneuVaiParaAsMaos) return $"[E] Carregar o pneu{(qtd >= 0 ? $" ({qtd}%)" : "")} nas mãos (pesado)";
             string balas = qtd < 0 ? "" : Itens.EhMunicao(item) ? $" ({qtd} {(qtd == 1 ? "bala" : "balas")})"
+                : Itens.EmPilha(item) ? (qtd > 1 ? $" ({qtd})" : "")
                 : Itens.EhArma(item) ? $" ({qtd}/{Itens.QuantidadePadrao(item)})" : Itens.ComEstado(item) ? $" ({qtd}%)" : "";
             return $"[E] {(Itens.EhEquipamento(item) ? "Vestir" : "Pegar")} {Itens.NomeComArtigo(item)}{balas}";
         }
@@ -398,14 +323,51 @@ namespace ZombieCityCleaner.Player
             return Mathf.Max(0, n);
         }
 
-        // quantas balas ainda cabem nas caixas deste calibre que já estão na mochila
-        int FaltaNasCaixas(Calibre calibre)
+        // quantos ainda cabem nas pilhas deste item que já estão na mochila (as balas nas caixas do calibre)
+        int FaltaNasPilhas(Item item)
         {
-            var caixa = Itens.CaixaDe(calibre);
+            int max = Itens.Pilha(item), n = 0;
+            foreach (var it in Mochila)
+                if (it.item == item) n += Mathf.Max(0, max - Itens.Quantos(item, it.qtd));
+            return n;
+        }
+
+        /// <summary>Quantos deste item há na mochila (somando as pilhas).</summary>
+        public int Quantos(Item item)
+        {
             int n = 0;
             foreach (var it in Mochila)
-                if (it.item == caixa) n += Itens.MaxPorCaixa - it.qtd;
+                if (it.item == item) n += Itens.Quantos(item, it.qtd);
             return n;
+        }
+
+        /// <summary>
+        /// A receita pode sair agora? Se não, o que falta (para a tela): os ingredientes, a ferramenta (que não gasta) e,
+        /// nas da bancada, estar perto de uma.
+        /// </summary>
+        public bool PodeCriar(Receita r, out string falta)
+        {
+            falta = null;
+            if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
+            else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
+            else
+                foreach (var g in r.gasta)
+                    if (Quantos(g.item) < g.qtd)
+                    {
+                        falta = $"Falta {Itens.ComNumero(g.item, g.qtd - Quantos(g.item))}";
+                        break;
+                    }
+            return falta == null;
+        }
+
+        /// <summary>O item da mochila pode ser desmontado agora? Se não, o motivo (a ferramenta que falta).</summary>
+        public bool PodeDesmontar(ushort id, out Desmontagem d, out string falta)
+        {
+            falta = null;
+            d = Achar(id, out var it) ? Receitas.DesmontagemDe(it.item) : null;
+            if (d == null) return false;
+            if (d.ferramenta != Item.Nada && Quantos(d.ferramenta) == 0) falta = $"precisa ter {Itens.Nome(d.ferramenta)}";
+            return falta == null;
         }
 
         /// <summary>
@@ -421,15 +383,15 @@ namespace ZombieCityCleaner.Player
             GastarRpc(calibre, (ushort)balas);
         }
 
-        /// <summary>Junta a caixa 'de' na caixa 'para' (do mesmo calibre), até encher a 'para'.</summary>
+        /// <summary>Junta a pilha 'de' na pilha 'para' (do mesmo item; as caixas, do mesmo calibre), até encher a 'para'.</summary>
         public void Juntar(ushort de, ushort para)
         {
             if (PodeJuntar(de, para)) JuntarRpc(de, para);
         }
 
-        /// <summary>As duas são caixas do mesmo calibre, e a 'para' ainda não está cheia.</summary>
+        /// <summary>As duas são pilhas do mesmo item (as caixas, do mesmo calibre), e a 'para' ainda não está cheia.</summary>
         public bool PodeJuntar(ushort de, ushort para) =>
-            de != para && Achar(de, out var a) && Achar(para, out var b) && Itens.EhMunicao(a.item) && a.item == b.item && b.qtd < Itens.MaxPorCaixa;
+            de != para && Achar(de, out var a) && Achar(para, out var b) && Itens.EmPilha(a.item) && a.item == b.item && Itens.Quantos(b.item, b.qtd) < Itens.Pilha(b.item);
 
         /// <summary>O dono guarda no anfitrião as balas do pente de uma arma (quando ela sai da mão, é largada ou guardada).</summary>
         public void GuardarPente(ushort id, int balas)
@@ -453,21 +415,16 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// Só no anfitrião: o item entra. A arma vai para a alça (livre) ou para a grade (com lugar no corpo); o resto,
-        /// para a primeira posição da grade em que cabe (deitado, ou girado). O equipamento é vestido. Sem lugar, devolve false.
+        /// Só no anfitrião: o item entra na primeira posição da grade em que cabe (deitado, ou girado). O equipamento é
+        /// vestido. Sem lugar, devolve false.
         /// </summary>
-        public bool Receber(Item item, int qtd = -1)
+        public bool Receber(Item item, int qtd = -1, int desgaste = 0)
         {
             if (!IsServer || item == Item.Nada) return false;
             if (Itens.EhEquipamento(item)) return Vestir(item);
             if (qtd < 0) qtd = Itens.QuantidadePadrao(item);
-            if (Itens.EhMunicao(item)) return ReceberMunicao(item, qtd) == 0;
-            if (Itens.EhArma(item) && AlcaLivre())
-            {
-                Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, naAlca = true, qtd = (ushort)qtd });
-                return true;
-            }
-            if (Itens.EhArma(item) && !ArmaCabeNaGrade(item)) return false;
+            if (Itens.EmPilha(item)) return ReceberEmPilha(item, Itens.Quantos(item, qtd)) == 0;
+            if (!Itens.NoJogo(item)) return false;
             if (!Espaco(item, out int x, out int y, out bool girado))
             {
                 // o pneu que não cabe vai para as mãos, se elas estão livres
@@ -475,33 +432,115 @@ namespace ZombieCityCleaner.Player
                 PneuNasMaos.Value = (byte)Mathf.Clamp(qtd, 0, 100);
                 return true;
             }
-            Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)qtd });
+            Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)qtd,
+                                            desgaste = (byte)Mathf.Clamp(desgaste, 0, 100) });
             return true;
         }
 
         /// <summary>
-        /// Só no anfitrião: as balas de uma caixa entram. Primeiro completam as caixas do mesmo calibre que já estão na
-        /// mochila; o resto vai numa caixa nova, se houver espaço. Devolve as que sobraram (que ficam no chão).
+        /// Só no anfitrião: os de uma pilha entram (as balas de uma caixa de munição, os do saque). Primeiro completam as
+        /// pilhas do mesmo item que já estão na mochila; o resto vai em pilhas novas, enquanto houver espaço. Devolve
+        /// quantos sobraram (que ficam no chão).
         /// </summary>
-        public int ReceberMunicao(Item caixa, int balas)
+        public int ReceberEmPilha(Item item, int qtd)
         {
-            if (!IsServer || !Itens.EhMunicao(caixa)) return balas;
-            for (int i = 0; i < Mochila.Count && balas > 0; i++)
+            if (!IsServer || !Itens.EmPilha(item) || !Itens.NoJogo(item)) return qtd;
+            int max = Itens.Pilha(item);
+            for (int i = 0; i < Mochila.Count && qtd > 0; i++)
             {
                 var it = Mochila[i];
-                if (it.item != caixa || it.qtd >= Itens.MaxPorCaixa) continue;
-                int n = Mathf.Min(balas, Itens.MaxPorCaixa - it.qtd);
-                it.qtd = (ushort)(it.qtd + n);
+                int tem = Itens.Quantos(item, it.qtd);
+                if (it.item != item || tem >= max) continue;
+                int n = Mathf.Min(qtd, max - tem);
+                it.qtd = (ushort)(tem + n);
                 Mochila[i] = it;
-                balas -= n;
+                qtd -= n;
             }
-            while (balas > 0 && Espaco(caixa, out int x, out int y, out bool girado))
+            while (qtd > 0 && Espaco(item, out int x, out int y, out bool girado))
             {
-                int n = Mathf.Min(balas, Itens.MaxPorCaixa);
-                Mochila.Add(new ItemNaMochila { id = NovoId(), item = caixa, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)n });
-                balas -= n;
+                int n = Mathf.Min(qtd, max);
+                Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)n });
+                qtd -= n;
             }
-            return balas;
+            return qtd;
+        }
+
+        /// <summary>Só no anfitrião: as balas de uma caixa entram (<see cref="ReceberEmPilha"/>). Devolve as que sobraram.</summary>
+        public int ReceberMunicao(Item caixa, int balas) => Itens.EhMunicao(caixa) ? ReceberEmPilha(caixa, balas) : balas;
+
+        /// <summary>
+        /// Só no anfitrião: tira um da pilha (ou o item, se ele não vai em pilha ou é o último). Devolve o que ele era
+        /// (Nada, se não estava).
+        /// </summary>
+        public Item TirarUm(ushort id)
+        {
+            int k = IsServer ? Indice(id) : -1;
+            if (k < 0) return Item.Nada;
+            var it = Mochila[k];
+            int tem = Itens.Quantos(it.item, it.qtd);
+            if (!Itens.EmPilha(it.item) || tem <= 1) Mochila.RemoveAt(k);
+            else
+            {
+                it.qtd = (ushort)(tem - 1);
+                Mochila[k] = it;
+            }
+            return it.item;
+        }
+
+        /// <summary>Só no anfitrião: gasta n do item (das pilhas), se ele tiver; devolve se gastou.</summary>
+        public bool GastarItem(Item item, int n)
+        {
+            if (!IsServer || Quantos(item) < n) return false;
+            TirarQuantos(item, n);
+            return true;
+        }
+
+        /// <summary>Só no anfitrião: n do item vão para a mochila; o que não couber cai aos pés.</summary>
+        public void EntregarItem(Item item, int n)
+        {
+            if (IsServer) Entregar(item, n);
+        }
+
+        // só no anfitrião: tira n do item, das pilhas menores primeiro (sobram as cheias)
+        void TirarQuantos(Item item, int n)
+        {
+            while (n > 0)
+            {
+                int k = -1;
+                for (int i = 0; i < Mochila.Count; i++)
+                    if (Mochila[i].item == item && (k < 0 || Itens.Quantos(item, Mochila[i].qtd) < Itens.Quantos(item, Mochila[k].qtd))) k = i;
+                if (k < 0) return;
+                var it = Mochila[k];
+                int tem = Itens.Quantos(item, it.qtd), tira = Mathf.Min(n, tem);
+                n -= tira;
+                if (tira >= tem) Mochila.RemoveAt(k);
+                else
+                {
+                    it.qtd = (ushort)(tem - tira);
+                    Mochila[k] = it;
+                }
+            }
+        }
+
+        // só no anfitrião: o que saiu (de uma receita ou de uma desmontagem) vai para a mochila; o que não couber cai aos
+        // pés. A mochila feita é vestida, se ele estiver sem nenhuma (senão, fica no chão)
+        void Entregar(Item item, int qtd)
+        {
+            int caidos = 0;
+            if (Itens.EhMochila(item))
+            {
+                if (MochilaVestida.Value == Item.Nada) Vestir(item);
+                else ItensNoMundo.Instancia?.Criar(item, PontoAosPes(++caidos), transform.eulerAngles.y + 90f, 0);
+                return;
+            }
+            if (Itens.EmPilha(item))
+            {
+                int sobra = ReceberEmPilha(item, qtd);
+                if (sobra > 0) ItensNoMundo.Instancia?.Criar(item, PontoAosPes(++caidos), transform.eulerAngles.y + 40f, sobra);
+                return;
+            }
+            for (int i = 0; i < qtd; i++)
+                if (!Receber(item)) ItensNoMundo.Instancia?.Criar(item, PontoAosPes(++caidos), transform.eulerAngles.y + caidos * 70f, -1);
         }
 
         /// <summary>
@@ -510,12 +549,6 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         bool Vestir(Item item)
         {
-            if (item == Item.Coldre)
-            {
-                if (ComColdre.Value) return false;
-                ComColdre.Value = true;
-                return true;
-            }
             if (!Itens.EhMochila(item)) return false;
             var antes = MochilaVestida.Value;
             MochilaVestida.Value = item;
@@ -568,34 +601,22 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// Só no anfitrião, depois de trocar ou tirar a mochila ou o coldre: o que ainda cabe fica onde está; o resto
-        /// procura outro lugar na grade nova (os maiores primeiro), e o que não couber (ou a arma sem lugar no corpo) cai no
-        /// chão, em volta do ponto.
+        /// Só no anfitrião, depois de trocar ou tirar a mochila: o que ainda cabe fica onde está; o resto procura outro
+        /// lugar na grade nova (os maiores primeiro), e o que não couber cai no chão, em volta do ponto.
         /// </summary>
         void Arrumar(Vector3 onde)
         {
             var espaco = TamanhoDaGrade;
-            bool mochila = MochilaVestida.Value != Item.Nada, coldre = ComColdre.Value;
             var fica = new List<ItemNaMochila>();
             var sobra = new List<ItemNaMochila>();
             foreach (var it in Mochila)
-            {
-                if (it.naAlca)
-                {
-                    fica.Add(it);
-                    continue;
-                }
-                bool ok = CabeEm(fica, espaco, it.item, it.girado, it.x, it.y, 0)
-                          && (!Itens.EhArma(it.item) || ArmaCabeEm(fica, mochila, coldre, it.item, 0));
-                (ok ? fica : sobra).Add(it);
-            }
+                (CabeEm(fica, espaco, it.item, it.girado, it.x, it.y, 0) ? fica : sobra).Add(it);
             sobra.Sort((a, b) => (b.Tamanho.x * b.Tamanho.y).CompareTo(a.Tamanho.x * a.Tamanho.y));
             var mudou = new Dictionary<ushort, ItemNaMochila>();
             var cai = new HashSet<ushort>();
             foreach (var it in sobra)
             {
-                if ((!Itens.EhArma(it.item) || ArmaCabeEm(fica, mochila, coldre, it.item, 0))
-                    && EspacoEm(fica, espaco, it.item, out int x, out int y, out bool girado))
+                if (EspacoEm(fica, espaco, it.item, out int x, out int y, out bool girado))
                 {
                     var novo = it;
                     novo.x = (byte)x;
@@ -613,7 +634,7 @@ namespace ZombieCityCleaner.Player
                 if (cai.Contains(it.id))
                 {
                     Mochila.RemoveAt(i);
-                    ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++caidos, onde), transform.eulerAngles.y + caidos * 70f, it.qtd);
+                    ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++caidos, onde), transform.eulerAngles.y + caidos * 70f, it.qtd, it.desgaste);
                 }
                 else if (mudou.TryGetValue(it.id, out var novo)) Mochila[i] = novo;
             }
@@ -628,8 +649,8 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// Só no anfitrião, quando o jogador sai da partida: as armas voltam para o painel do bunker (se houver vaga do
-        /// tipo delas, com o pente que tinham), e a comida, a água, a munição, a mochila e o coldre ficam no chão, onde ele
-        /// estava.
+        /// tipo delas, com o pente que tinham), e o resto (a comida, a água, a munição, os materiais, a mochila...) fica no
+        /// chão, onde ele estava.
         /// </summary>
         public void Esvaziar()
         {
@@ -638,35 +659,23 @@ namespace ZombieCityCleaner.Player
             {
                 var it = Mochila[i];
                 if (Itens.EhArma(it.item)) ParedeDeArmas.Instancia?.Devolver(Itens.Arma(it.item), it.qtd);
-                else if (Itens.EhConsumivel(it.item) || Itens.EhMunicao(it.item) || Itens.EhPeca(it.item) || Itens.EhSinuca(it.item)) ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd);
+                else ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd, it.desgaste);
             }
             if (MochilaVestida.Value != Item.Nada) ItensNoMundo.Instancia?.Criar(MochilaVestida.Value, PontoAosPes(++k), k * 90f, 0);
-            if (ComColdre.Value) ItensNoMundo.Instancia?.Criar(Item.Coldre, PontoAosPes(++k), k * 90f, 0);
             if (TirarPneuDasMaos(out int pneu)) ItensNoMundo.Instancia?.Criar(Item.Pneu, PontoAosPes(++k), k * 90f, pneu);
         }
 
         [Rpc(SendTo.Server)]
-        void MoverRpc(ushort id, byte x, byte y, bool girado, bool paraAlca, RpcParams parametros = default)
+        void MoverRpc(ushort id, byte x, byte y, bool girado, RpcParams parametros = default)
         {
             int k = Indice(id);
             if (parametros.Receive.SenderClientId != OwnerClientId || k < 0) return;
             var it = Mochila[k];
-            if (paraAlca)
-            {
-                if (!PodeIrParaAlca(id)) return;
-                it.naAlca = true;
-                it.x = it.y = 0;
-                it.girado = false;
-            }
-            else
-            {
-                if (!it.naAlca && it.x == x && it.y == y && it.girado == girado) return;
-                if (!PodeMover(id, x, y, girado)) return;
-                it.naAlca = false;
-                it.x = x;
-                it.y = y;
-                it.girado = girado;
-            }
+            if (it.x == x && it.y == y && it.girado == girado) return;
+            if (!PodeMover(id, x, y, girado)) return;
+            it.x = x;
+            it.y = y;
+            it.girado = girado;
             Mochila[k] = it;
         }
 
@@ -674,16 +683,8 @@ namespace ZombieCityCleaner.Player
         void TirarEquipamentoRpc(Item qual, Vector3 ponto, float giro, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
-            if (qual == Item.Coldre)
-            {
-                if (!ComColdre.Value) return;
-                ComColdre.Value = false;
-            }
-            else
-            {
-                if (!Itens.EhMochila(qual) || MochilaVestida.Value != qual) return;
-                MochilaVestida.Value = Item.Nada;
-            }
+            if (!Itens.EhMochila(qual) || MochilaVestida.Value != qual) return;
+            MochilaVestida.Value = Item.Nada;
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
             ItensNoMundo.Instancia?.Criar(qual, ponto, giro, 0);
             Arrumar(ponto);
@@ -693,8 +694,94 @@ namespace ZombieCityCleaner.Player
         void ConsumirRpc(ushort id, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId || !Itens.EhConsumivel(Do(id))) return;
-            var item = Tirar(id);
-            GetComponent<FomeESede>().Consumir(Itens.Consumivel(item));
+            var item = TirarUm(id);
+            var d = Itens.Consumivel(item);
+            GetComponent<FomeESede>().Consumir(d);
+            if (d.vida > 0f) GetComponent<VidaJogador>().Curar(d.vida);
+        }
+
+        [Rpc(SendTo.Server)]
+        void DesgastarRpc(ushort id, byte n, RpcParams parametros = default)
+        {
+            int k = Indice(id);
+            if (parametros.Receive.SenderClientId != OwnerClientId || k < 0) return;
+            var it = Mochila[k];
+            if (!Itens.ComDesgaste(it.item)) return;
+            int novo = Mathf.Min(100, it.desgaste + n);
+            // a branca gasta até quebrar (some); a de fogo fica, quebrada, esperando o kit de reparo
+            if (novo >= 100 && Itens.EhBranca(it.item))
+            {
+                Mochila.RemoveAt(k);
+                AvisoRpc(it.item == Item.Tocha ? "A tocha se apagou" : $"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} quebrou");
+                return;
+            }
+            if (novo >= 100 && it.desgaste < 100) AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} quebrou: conserte com um kit de reparo");
+            it.desgaste = (byte)novo;
+            Mochila[k] = it;
+        }
+
+        [Rpc(SendTo.Server)]
+        void RepararRpc(ushort id, RpcParams parametros = default)
+        {
+            int k = Indice(id);
+            if (parametros.Receive.SenderClientId != OwnerClientId || k < 0 || !PodeReparar(id)) return;
+            if (!GastarItem(Item.KitDeReparo, 1)) return;
+            k = Indice(id);
+            var it = Mochila[k];
+            it.desgaste = 0;
+            Mochila[k] = it;
+            AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada");
+        }
+
+        [Rpc(SendTo.Owner)]
+        void AvisoRpc(string texto)
+        {
+            Feito?.Invoke(texto);
+            _avisoNoHud = texto;
+            _avisoNoHudAte = Time.time + 2.8f;
+        }
+
+        [Rpc(SendTo.Server)]
+        void LargarUmRpc(ushort id, Vector3 ponto, float giro, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || ItensNoMundo.Instancia == null) return;
+            if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
+            if (!Achar(id, out var it) || !Itens.EmPilha(it.item)) return;
+            TirarUm(id);
+            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, 1);
+        }
+
+        [Rpc(SendTo.Server)]
+        void CriarRpc(byte k, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || k >= Receitas.Todas.Length) return;
+            var r = Receitas.Todas[k];
+            if (!PodeCriar(r, out _)) return;
+            foreach (var g in r.gasta) TirarQuantos(g.item, g.qtd);
+            Entregar(r.resultado, r.qtd);
+            CriouRpc(k);
+        }
+
+        [Rpc(SendTo.Owner)]
+        void CriouRpc(byte k) => Feito?.Invoke($"Feito: {Itens.ComNumero(Receitas.Todas[k].resultado, Receitas.Todas[k].qtd)}");
+
+        [Rpc(SendTo.Server)]
+        void DesmontarRpc(ushort id, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !PodeDesmontar(id, out var d, out _)) return;
+            Achar(id, out var it);
+            // a arma desmontada devolve as balas do pente numa caixa
+            if (Itens.EhArma(it.item) && it.qtd > 0) Entregar(Itens.CaixaDe(Itens.CalibreDaArma(it.item)), it.qtd);
+            TirarUm(id);
+            foreach (var v in d.vira) Entregar(v.item, v.qtd);
+            DesmontouRpc(d.vira.Length > 0 ? (byte)d.item : (byte)0);
+        }
+
+        [Rpc(SendTo.Owner)]
+        void DesmontouRpc(byte item)
+        {
+            var d = Receitas.DesmontagemDe((Item)item);
+            if (d != null) Feito?.Invoke($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(d.item))} virou {Receitas.Lista(d.vira)}");
         }
 
         [Rpc(SendTo.Server)]
@@ -704,7 +791,7 @@ namespace ZombieCityCleaner.Player
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
             if (!Achar(id, out var it)) return;
             Tirar(id);
-            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd);
+            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd, it.desgaste);
         }
 
         [Rpc(SendTo.Server)]
@@ -747,13 +834,14 @@ namespace ZombieCityCleaner.Player
             var origem = Mochila[Indice(de)];
             int b = Indice(para);
             var destino = Mochila[b];
-            int n = Mathf.Min(origem.qtd, Itens.MaxPorCaixa - destino.qtd);
-            destino.qtd = (ushort)(destino.qtd + n);
+            int tem = Itens.Quantos(origem.item, origem.qtd), la = Itens.Quantos(destino.item, destino.qtd);
+            int n = Mathf.Min(tem, Itens.Pilha(destino.item) - la);
+            destino.qtd = (ushort)(la + n);
             Mochila[b] = destino;
-            if (n >= origem.qtd) Mochila.RemoveAt(Indice(de));
+            if (n >= tem) Mochila.RemoveAt(Indice(de));
             else
             {
-                origem.qtd = (ushort)(origem.qtd - n);
+                origem.qtd = (ushort)(tem - n);
                 Mochila[Indice(de)] = origem;
             }
         }
@@ -776,19 +864,13 @@ namespace ZombieCityCleaner.Player
         /// <summary>Move o item para outra posição da grade, girado ou não (o anfitrião confere se cabe).</summary>
         public void Mover(ushort id, int x, int y, bool girado)
         {
-            if (x >= 0 && y >= 0 && x < Colunas && y < Linhas) MoverRpc(id, (byte)x, (byte)y, girado, false);
+            if (x >= 0 && y >= 0 && x < Colunas && y < Linhas) MoverRpc(id, (byte)x, (byte)y, girado);
         }
 
-        /// <summary>Pendura a arma na alça (o anfitrião confere se ela está livre).</summary>
-        public void PorNaAlca(ushort id)
-        {
-            if (PodeIrParaAlca(id)) MoverRpc(id, 0, 0, false, true);
-        }
-
-        /// <summary>Tira a mochila vestida ou o coldre e larga no chão (o que não couber mais na grade cai junto).</summary>
+        /// <summary>Tira a mochila vestida e larga no chão (o que não couber mais na grade cai junto).</summary>
         public void TirarEquipamento(Item qual)
         {
-            bool veste = qual == Item.Coldre ? ComColdre.Value : Itens.EhMochila(qual) && MochilaVestida.Value == qual;
+            bool veste = Itens.EhMochila(qual) && MochilaVestida.Value == qual;
             if (!veste || _arma.Usando) return;
             TirarEquipamentoRpc(qual, PontoParaLargar(_rede.Olho), transform.eulerAngles.y + Random.Range(-50f, 50f));
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
@@ -835,9 +917,86 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
         }
 
+        readonly Dictionary<ushort, float> _desgastePendente = new Dictionary<ushort, float>();
+        string _avisoNoHud;
+        float _avisoNoHudAte;
+
         /// <summary>
-        /// O dono terminou de comer ou beber o item: ele acaba, e a fome e a sede caem. Depois, a mão volta para o
-        /// atalho da última arma (se ela ainda estiver num).
+        /// O dono usou a arma (um tiro, um golpe que pegou): o desgaste sobe. O anfitrião recebe de 1 em 1 (o resto fica
+        /// guardado aqui).
+        /// </summary>
+        public void Desgastar(ushort id, float quanto)
+        {
+            if (id == 0 || quanto <= 0f || !Itens.ComDesgaste(Do(id))) return;
+            _desgastePendente.TryGetValue(id, out float p);
+            p += quanto;
+            if (p >= 1f)
+            {
+                int n = Mathf.Min(255, (int)p);
+                p -= n;
+                DesgastarRpc(id, (byte)n);
+            }
+            _desgastePendente[id] = p;
+        }
+
+        /// <summary>O desgaste do item da mochila (0, novo; 100, quebrado).</summary>
+        public int DesgasteDe(ushort id) => Achar(id, out var it) ? it.desgaste : 0;
+
+        /// <summary>A arma pode ser consertada agora: gasta e há um kit de reparo na mochila.</summary>
+        public bool PodeReparar(ushort id) => Achar(id, out var it) && Itens.ComDesgaste(it.item) && it.desgaste > 0 && Quantos(Item.KitDeReparo) > 0;
+
+        /// <summary>Conserta a arma com um kit de reparo (o anfitrião confere e gasta o kit).</summary>
+        public void Reparar(ushort id)
+        {
+            if (!PodeReparar(id)) return;
+            _desgastePendente.Remove(id);
+            RepararRpc(id);
+            Efeitos.Som(Efeitos.Recarga, transform.position + Vector3.up * 1.2f, 0.6f, false);
+        }
+
+        /// <summary>Larga um só da pilha, no mesmo lugar do <see cref="Largar"/>.</summary>
+        public void LargarUm(ushort id)
+        {
+            if (!Itens.EmPilha(Do(id)) || (_arma.Usando && id == IdNaMao)) return;
+            LargarUmRpc(id, PontoParaLargar(_rede.Olho), transform.eulerAngles.y + Random.Range(-50f, 50f));
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.5f, false);
+        }
+
+        /// <summary>
+        /// Come, bebe ou usa um da pilha direto da mochila (o menu do botão direito da tela): na hora, com o som de abrir e
+        /// de uma mordida ou de um gole (pela mão, o clique faz o clipe inteiro).
+        /// </summary>
+        public void UsarDaMochila(ushort id)
+        {
+            var item = Do(id);
+            if (!Itens.EhConsumivel(item) || _arma.Usando) return;
+            bool bebe = Itens.Consumivel(item).tipo == TipoDeLoot.Bebida;
+            var ouvido = _rede.cameraMundo != null ? _rede.cameraMundo.transform.position : transform.position + Vector3.up * 1.6f;
+            Efeitos.Som(bebe || Itens.EhRemedio(item) ? Efeitos.AbrirTampa : Efeitos.AbrirLata, ouvido, 0.45f, false);
+            Efeitos.Som(bebe ? Efeitos.Gole : Efeitos.Mastigar, ouvido, 0.5f, false);
+            ConsumirRpc(id);
+        }
+
+        /// <summary>Faz a receita (o índice em <see cref="Receitas.Todas"/>; o anfitrião confere).</summary>
+        public void Criar(int receita)
+        {
+            if (receita < 0 || receita >= Receitas.Todas.Length || !PodeCriar(Receitas.Todas[receita], out _)) return;
+            CriarRpc((byte)receita);
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.6f, false);
+        }
+
+        /// <summary>Desmonta um item da mochila (um da pilha; o anfitrião confere a ferramenta).</summary>
+        public void Desmontar(ushort id)
+        {
+            if (!PodeDesmontar(id, out _, out _) || (_arma.Usando && id == IdNaMao)) return;
+            if (Itens.EhArma(Do(id))) GuardarPente(id, _arma.MunicaoDe(id, Do(id)));   // as balas do pente voltam numa caixa
+            DesmontarRpc(id);
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.6f, false);
+        }
+
+        /// <summary>
+        /// O dono terminou de comer ou beber o item: um da pilha acaba, e a fome e a sede caem. Se era o último, a mão
+        /// volta para o atalho da última arma (se ela ainda estiver num).
         /// </summary>
         public void Consumir(ushort id, ushort voltarPara)
         {
@@ -902,7 +1061,7 @@ namespace ZombieCityCleaner.Player
         {
             if (IsSpawned) PneuQueSeVe();
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
-            if (_arma.Usando) return;   // comendo ou bebendo: nem troca nem larga
+            if (_arma.Usando || _arma.Montando) return;   // comendo, bebendo ou montando: nem troca nem larga
             var teclado = Keyboard.current;
             var mouse = Mouse.current;
             int escolher = -1;
@@ -1009,6 +1168,8 @@ namespace ZombieCityCleaner.Player
         {
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
+            int l = Itens.IndiceDoLoot(item);
+            if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length ? iconesDeLoot[l] : null;
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return iconesDePeca != null && p < iconesDePeca.Length ? iconesDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1023,6 +1184,8 @@ namespace ZombieCityCleaner.Player
         {
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return fotosDaSinuca != null && s < fotosDaSinuca.Length ? fotosDaSinuca[s] : null;
+            int l = Itens.IndiceDoLoot(item);
+            if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length ? fotosDeLoot[l] : null;
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return fotosDePeca != null && p < fotosDePeca.Length ? fotosDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1065,16 +1228,31 @@ namespace ZombieCityCleaner.Player
                 numero.normal.textColor = escolhido ? new Color(0.95f, 0.92f, 0.8f) : new Color(0.7f, 0.68f, 0.62f, 0.8f);
                 GUI.Label(new Rect(x + 5 * u, y + 2 * u, 20 * u, 18 * u), (i + 1).ToString(), numero);
             }
+            // o aviso (a arma quebrou, foi consertada), em cima da barra
+            if (_avisoNoHud != null && Time.time < _avisoNoHudAte)
+            {
+                var aviso = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(16 * u), alignment = TextAnchor.LowerCenter, fontStyle = FontStyle.Bold };
+                var ra = new Rect(0f, y - 60 * u, Screen.width, 26 * u);
+                aviso.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
+                GUI.Label(new Rect(ra.x + 1.5f * u, ra.y + 1.5f * u, ra.width, ra.height), _avisoNoHud, aviso);
+                aviso.normal.textColor = new Color(1f, 0.78f, 0.45f);
+                GUI.Label(ra, _avisoNoHud, aviso);
+            }
             // o nome do que está na mão, logo depois de trocar; e, com comida ou água, como usar
             var texto = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), alignment = TextAnchor.LowerCenter };
             var naMao = NaMao;
             string linha = null;
             float alfa = 1f;
-            if (Itens.EhConsumivel(naMao)) linha = $"{Itens.Nome(naMao)}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
+            if (Itens.EhConsumivel(naMao))
+            {
+                int n = Achar(IdNaMao, out var pilha) ? Itens.Quantos(naMao, pilha.qtd) : 1;
+                linha = $"{Itens.Nome(naMao)}{(n > 1 ? $" ({n})" : "")}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
+            }
             else if (Itens.EhTaco(naMao)) linha = $"{Itens.Nome(naMao)}   ·   E na mesa de sinuca: jogar   ·   G: largar";
             else if (Time.time < _nomeAte)
             {
-                linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco" : Itens.Nome(naMao);
+                linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco"
+                    : Itens.EhBranca(naMao) ? $"{Itens.Nome(naMao)}   ·   clique: golpear   ·   G: largar" : Itens.Nome(naMao);
                 alfa = Mathf.Clamp01((_nomeAte - Time.time) / 0.4f);
             }
             if (linha != null)

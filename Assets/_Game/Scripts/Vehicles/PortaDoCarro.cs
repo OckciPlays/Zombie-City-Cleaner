@@ -68,19 +68,36 @@ namespace ZombieCityCleaner.Vehicles
             folha.localRotation = _repouso * Quaternion.Euler(0f, -lado * abertura * aberta, 0f);
         }
 
+        [Tooltip("O lugar de trás que esta porta também serve (no carro de 2 portas: o banco de trás do mesmo lado), usado " +
+                 "quando o da frente está ocupado. -1: nenhum.")]
+        public int lugarDeTras = -1;
+
+        // o lugar que o E pede: o desta porta; ocupado, o de trás que ela também serve (no cupê, a mira na porta comprida
+        // ia ora para o volante, ora para o banco de trás, a pedido em 29/10/2026). -1: nenhum livre
+        int LugarLivre()
+        {
+            if (lugar >= carro.lugaresUsados) return -1;
+            if (!carro.Ocupado(lugar)) return lugar;
+            return lugarDeTras >= 0 && lugarDeTras < carro.lugaresUsados && !carro.Ocupado(lugarDeTras) ? lugarDeTras : -1;
+        }
+
         public override string Dica(ArmaJogador quem)
         {
-            if (carro == null || !carro.IsSpawned || carro.Ocupado(lugar) || carro.Velocidade > Carro.VelocidadeParaEntrar) return null;
+            if (carro == null || !carro.IsSpawned || carro.Velocidade > Carro.VelocidadeParaEntrar) return null;
+            int livre = LugarLivre();
+            if (livre < 0) return null;
             var p = quem.GetComponent<PassageiroDoCarro>();
             if (p != null && p.Sentado) return null;
             if (carro.MacacoNaRoda >= 0) return "Tire o macaco para entrar no carro";
             if (quem.Inventario != null && quem.Inventario.CarregandoPneu) return "Largue o pneu (G) para entrar no carro";
-            return lugar == 0 ? "[E] Dirigir" : "[E] Entrar no carro";
+            return livre == 0 ? "[E] Dirigir" : livre == lugarDeTras ? "[E] Entrar no banco de trás" : "[E] Entrar no carro";
         }
 
         public override void Usar(ArmaJogador quem)
         {
-            if (carro != null && carro.MacacoNaRoda < 0 && !(quem.Inventario != null && quem.Inventario.CarregandoPneu)) carro.PedirEntrar(lugar);
+            if (carro == null || !carro.IsSpawned || carro.MacacoNaRoda >= 0 || (quem.Inventario != null && quem.Inventario.CarregandoPneu)) return;
+            int livre = LugarLivre();
+            if (livre >= 0) carro.PedirEntrar(livre);
         }
     }
 }

@@ -10,6 +10,8 @@ namespace ZombieCityCleaner.Zombies
     [CreateAssetMenu(menuName = "Zombie City Cleaner/Sons do Oco", fileName = "SonsDoOco")]
     public class SonsDoOco : ScriptableObject
     {
+        [Tooltip("O volume de todas as vozes do Oco: a fala, o golpe, o chamado, a resposta, a agonia, a dor e o grito ao morrer. Na madrugada de 29/10/2026 desceu para 60%; na tarde do mesmo dia voltou a 100%, a pedido, e quem quer mais baixo usa Configurações > Zumbis (ZombieManager.VolumeDosZumbis).")]
+        [Range(0f, 1f)] public float volume = 1f;
         [Tooltip("O som padrão: o gemido rouco e oco, com a inspiração chocalhada no fim.")]
         public AudioClip[] voz;
         [Tooltip("Ao atacar (o rosnado curto).")]

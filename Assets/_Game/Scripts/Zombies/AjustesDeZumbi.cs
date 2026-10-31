@@ -45,19 +45,50 @@ namespace ZombieCityCleaner.Zombies
         [Tooltip("Do começo do golpe até o dano: o momento em que a animação agarra (s).")]
         public float atrasoDoDano = 0.45f;
 
-        [Header("Vida (em tiros de pistola)")]
-        [Tooltip("Um tiro na cabeça explode a cabeça e mata; no tronco, cada tiro tira 1.")]
-        public float vidaDoCorpo = 6f;
-        [Tooltip("Quanto de cada tiro nos braços e nas pernas conta para o corpo.")]
+        // a escala de 100 (31/10/2026, a pedido: "mudar o sistema de vida dos zumbis... futuramente... alguns especiais";
+        // antes a vida era 6, em tiros de pistola, e qualquer tiro na cabeça matava). Cada tipo de zumbi terá a sua vida
+        [Header("Vida (de 100: o Oco)")]
+        [Tooltip("A vida do Oco. Cada acerto tira o dano da arma (a pistola, 15) vezes o da parte do corpo.")]
+        public float vidaDoCorpo = 100f;
+        [Tooltip("Na cabeça, o dano vale tantas vezes (3). A cabeça só explode no acerto que mata.")]
+        public float multiplicadorNaCabeca = 3f;
+        [Tooltip("Quanto de cada acerto nos braços e nas pernas conta para o corpo.")]
         public float danoNosMembros = 0.5f;
-        [Tooltip("A vida de cada braço e de cada perna: acabou, o membro cai (3 tiros de pistola; 1 de sniper).")]
-        public float vidaDoMembro = 3f;
+        [Tooltip("A vida de cada braço e de cada perna: acabou, o membro cai (4 tiros de pistola; 1 de sniper; 1 golpe de machado, que corta em dobro).")]
+        public float vidaDoMembro = 50f;
 
         [Header("Sem pernas")]
         [Tooltip("A velocidade mancando (sem uma perna), em proporção da normal.")]
         public float fatorMancando = 0.55f;
         [Tooltip("A velocidade rastejando (sem as duas pernas), em proporção da normal.")]
         public float fatorRastejando = 0.35f;
+
+        // o equilíbrio sem uma perna (31/10/2026, a pedido: "ele vai começar a tombar pros lados, cair no chão, pode começar a
+        // se arrastar mesmo com uma perna, pode tentar se levantar e cair novamente..."; Zumbi.Equilibrio.cs)
+        [Header("Equilíbrio (sem uma perna)")]
+        [Tooltip("Perdendo a perna, a chance de cair na hora; o resto cambaleia.")]
+        [Range(0f, 1f)] public float chanceDeCairNaHora = 0.4f;
+        [Tooltip("Cambaleando, a chance de cair (o resto se firma e segue pulando).")]
+        [Range(0f, 1f)] public float chanceDeCairCambaleando = 0.5f;
+        [Tooltip("Quanto tempo ele cambaleia até cair ou se firmar (s).")]
+        public Vector2 tempoCambaleando = new Vector2(1.2f, 2.8f);
+        [Tooltip("A inclinação máxima cambaleando, antes de cair (graus).")]
+        public float inclinacaoDeQueda = 34f;
+        [Tooltip("Firme (pulando numa perna), a chance de um acerto fazer ele cambalear de novo.")]
+        [Range(0f, 1f)] public float chanceDeCambalearComTiro = 0.45f;
+        [Tooltip("A queda com física (o boneco) dura isto (s); depois ele fica deitado um pouco antes de decidir.")]
+        public float tempoDaQueda = 2f;
+        public Vector2 tempoDeitado = new Vector2(0.6f, 2f);
+        [Tooltip("No chão, a chance de tentar levantar (o resto rasteja numa perna).")]
+        [Range(0f, 1f)] public float chanceDeTentarLevantar = 0.5f;
+        [Tooltip("A chance de cada tentativa de levantar dar certo (falhando, ele cai de novo no meio do caminho).")]
+        [Range(0f, 1f)] public float chanceDeLevantar = 0.6f;
+        [Tooltip("Depois de tantas tentativas, ele desiste e só rasteja.")]
+        public int tentativasDeLevantar = 3;
+        [Tooltip("Rastejando numa perna, de tempos em tempos (s) ele pensa em tentar levantar de novo.")]
+        public Vector2 rastejandoAteTentar = new Vector2(5f, 10f);
+        [Tooltip("Levantar dura isto (s): o clipe do levantar numa perna (LevantarE/D, ~4,5 s no tempo dele) esticado ou encolhido para caber.")]
+        public float tempoParaLevantar = 4.45f;
 
         [Header("O sol (os Ocos são fotossensíveis)")]
         [Tooltip("No sol, a pedra sobe dos pés à cabeça neste tempo (s): aí ele fica petrificado até a noite.")]

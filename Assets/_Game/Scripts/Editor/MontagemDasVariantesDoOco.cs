@@ -59,7 +59,7 @@ namespace ZombieCityCleaner.EditorTools
                 feitas++;
             }
             AssetDatabase.SaveAssets();
-            Debug.Log($"Versões do Oco montadas: {feitas} de {OcoDeTeste.Versoes.Length - 1}. No jogo, F1 > O Oco > escolha a versão.");
+            Debug.Log($"Versões do Oco montadas: {feitas} de {OcoDeTeste.Versoes.Length}. No jogo, F1 > O Oco > escolha a versão.");
         }
 
         static Avatar ImportarModelo(string caminho)

@@ -12,18 +12,19 @@ namespace ZombieCityCleaner.Combat
     public enum Calibre : byte { Nove, Cinco56, Doze, Sete62 }
 
     /// <summary>
-    /// O dano de uma arma até uma distância: no tronco (a vida do corpo é 6) e num braço ou numa perna (a vida de cada
-    /// membro é 3, e o membro cai quando ela acaba).
+    /// O dano de uma arma até uma distância (a espingarda). A parte do corpo multiplica no zumbi (AjustesDeZumbi): a
+    /// cabeça 3 vezes, os braços e as pernas metade.
     /// </summary>
     public struct FaixaDeDano
     {
-        public float ate, corpo, membro;
-        public FaixaDeDano(float ate, float corpo, float membro) { this.ate = ate; this.corpo = corpo; this.membro = membro; }
+        public float ate, dano;
+        public FaixaDeDano(float ate, float dano) { this.ate = ate; this.dano = dano; }
     }
 
     /// <summary>
-    /// Os números de uma arma. A vida dos zumbis é contada em tiros de pistola: o corpo aguenta 6 e cada membro, 3. Na
-    /// cabeça, qualquer acerto explode a cabeça.
+    /// Os números de uma arma. O dano é na escala de 100 (31/10/2026, a pedido: a vida do Oco é 100; antes era 6, em
+    /// tiros de pistola): a pistola tira 15 (7 tiros no corpo, 3 na cabeça, que vale 3 vezes), a submetralhadora 18, o
+    /// rifle 25 e a sniper 50 (2 no corpo, 1 na cabeça). Cada braço e cada perna tem 50 de vida (4 tiros de pistola).
     /// </summary>
     public class DadosDaArma
     {
@@ -41,8 +42,8 @@ namespace ZombieCityCleaner.Combat
         /// <summary>Quando o carregador sai e quando o novo entra, desde o começo da recarga (s), para o som.</summary>
         public float carregadorSai, carregadorEntra;
         public int chumbos = 1;
-        /// <summary>Dano de cada tiro no tronco e num membro (as armas que não mudam com a distância).</summary>
-        public float dano, danoNoMembro;
+        /// <summary>Dano de cada tiro (as armas que não mudam com a distância), antes do multiplicador da parte do corpo.</summary>
+        public float dano;
         /// <summary>
         /// Se tiver, o dano muda com a distância: vale a primeira faixa que alcança o alvo (a espingarda).
         /// </summary>
@@ -83,19 +84,19 @@ namespace ZombieCityCleaner.Combat
             new DadosDaArma
             {
                 nome = "pistola", nomeComArtigo = "a pistola", capacidade = 12, calibre = Calibre.Nove, intervalo = 0.18f, tempoRecarga = 40 / 24f,
-                carregadorSai = 5 / 24f, carregadorEntra = 27 / 24f, dano = 1f, danoNoMembro = 1f, dispersao = 0.3f, dispersaoAndando = 1.2f,
+                carregadorSai = 5 / 24f, carregadorEntra = 27 / 24f, dano = 15f, dispersao = 0.3f, dispersaoAndando = 1.2f,
                 coiceGraus = 1.6f, alcance = 80f, som = SomDeTiro.Pistola, boca = new Vector3(0f, 0.093f, 0.188f),
             },
             new DadosDaArma
             {
                 nome = "rifle", nomeComArtigo = "o rifle", capacidade = 30, calibre = Calibre.Cinco56, intervalo = 0.1f, automatica = true,
-                tempoRecarga = 46 / 24f, carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 1.5f, danoNoMembro = 1.5f, dispersao = 0.5f,
+                tempoRecarga = 46 / 24f, carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 25f, dispersao = 0.5f,
                 dispersaoAndando = 1.8f, coiceGraus = 0.9f, alcance = 120f, som = SomDeTiro.Rifle, boca = new Vector3(0f, 0.105f, 0.732f),
             },
             new DadosDaArma
             {
                 nome = "submetralhadora", nomeComArtigo = "a submetralhadora", capacidade = 25, calibre = Calibre.Nove, intervalo = 0.075f,
-                automatica = true, tempoRecarga = 40 / 24f, carregadorSai = 10 / 24f, carregadorEntra = 31 / 24f, dano = 1f, danoNoMembro = 1f,
+                automatica = true, tempoRecarga = 40 / 24f, carregadorSai = 10 / 24f, carregadorEntra = 31 / 24f, dano = 18f,
                 dispersao = 0.9f, dispersaoAndando = 1.6f, coiceGraus = 0.6f, alcance = 60f, som = SomDeTiro.Submetralhadora,
                 boca = new Vector3(0f, 0.105f, 0.291f),
             },
@@ -103,17 +104,19 @@ namespace ZombieCityCleaner.Combat
             {
                 nome = "espingarda", nomeComArtigo = "a espingarda", capacidade = 6, calibre = Calibre.Doze, intervalo = 22 / 24f, tempoRecarga = 13 / 24f,
                 cartuchoACartucho = true, chumbos = 8, chumbosJuntos = true, arremessoAte = 5f,
-                // de perto (até 5 m) mata com um tiro no corpo e arranca um membro; na média (até 15 m), dois; de longe, pouco
-                faixas = new[] { new FaixaDeDano(5f, 7f, 3f), new FaixaDeDano(15f, 3f, 1.5f), new FaixaDeDano(float.MaxValue, 1f, 0.5f) },
+                // de perto (até 5 m) mata com um tiro no corpo (115: sobra para um pouco de pedra) e arranca um membro; na
+                // média (até 15 m), 4 no corpo e 2 na cabeça (com os chumbos juntos, um chumbo na cabeça era fácil demais
+                // para valer um tiro só); de longe, pouco
+                faixas = new[] { new FaixaDeDano(5f, 115f), new FaixaDeDano(15f, 30f), new FaixaDeDano(float.MaxValue, 17f) },
                 dispersao = 3.5f, dispersaoAndando = 1f, coiceGraus = 4f,
                 alcance = 35f, som = SomDeTiro.Espingarda, boca = new Vector3(0f, 0.056f, 0.892f),
             },
             new DadosDaArma
             {
-                // de ferrolho, com luneta: um tiro no corpo mata e arranca um membro; cinco no pente; o tiro inclui puxar o
-                // ferrolho (a animação Fire tem 1,25 s). Sem a luneta, espalha muito.
+                // de ferrolho, com luneta: um tiro na cabeça mata, no corpo são dois, e um tiro arranca um membro; cinco no
+                // pente; o tiro inclui puxar o ferrolho (a animação Fire tem 1,25 s). Sem a luneta, espalha muito.
                 nome = "sniper", nomeComArtigo = "a sniper", capacidade = 5, calibre = Calibre.Sete62, intervalo = 30 / 24f, tempoRecarga = 46 / 24f,
-                carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 8f, danoNoMembro = 8f,
+                carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 50f,
                 dispersao = 0f, dispersaoSemLuneta = 4f, dispersaoAndando = 2.5f, coiceGraus = 5f, alcance = 160f,
                 fovLuneta = 12f, ferrolho = true, corpoComo = TipoDeArma.Rifle,
                 som = SomDeTiro.Sniper, boca = new Vector3(0f, 0.115f, 0.905f),
@@ -125,13 +128,13 @@ namespace ZombieCityCleaner.Combat
 
         public static DadosDaArma Dados(TipoDeArma t) => Todas[Mathf.Clamp((int)t, 0, Quantas - 1)];
 
-        /// <summary>O dano desta arma a esta distância, no tronco e num membro.</summary>
-        public static FaixaDeDano Dano(DadosDaArma d, float distancia)
+        /// <summary>O dano desta arma a esta distância (antes do multiplicador da parte do corpo).</summary>
+        public static float Dano(DadosDaArma d, float distancia)
         {
             if (d.faixas != null)
                 foreach (var f in d.faixas)
-                    if (distancia <= f.ate) return f;
-            return new FaixaDeDano(float.MaxValue, d.dano, d.danoNoMembro);
+                    if (distancia <= f.ate) return f.dano;
+            return d.dano;
         }
     }
 }

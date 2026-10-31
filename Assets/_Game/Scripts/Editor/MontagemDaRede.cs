@@ -167,6 +167,12 @@ namespace ZombieCityCleaner.EditorTools
                 animadoresFP[i] = anim;
                 bocasFP[i] = Buscar(fp.transform, "Boca_FP_" + modelo);
                 smrBracos[i] = Buscar(fp.transform, "FP_Bracos_" + modelo).GetComponent<SkinnedMeshRenderer>();
+                // as armas novas (Blender/Armas) no lugar das antigas, nos mesmos ossos
+                ArmasNovas.NosBracos(modelo, smrBracos[i]);
+                // a lata e a garrafa levam também os itens do saque, com a malha deles no lugar
+                if (i < n && MontagemDoItemNaMao.Leva(i)) MontagemDoItemNaMao.NosBracos(fp, i, smrBracos[i]);
+                // a tocha: a boca (onde a chama nasce) na ponta queimada (a célula (3, 2) da paleta), presa ao osso dela
+                if (i == Itens.Modelo(Item.Tocha)) bocasFP[i] = MontagemDoItemNaMao.BocaNaPonta(smrBracos[i], bocasFP[i], new Vector2(2.5f / 16f, 1f - 3.5f / 16f));
                 fp.SetActive(i == 0);
             }
 
@@ -220,6 +226,9 @@ namespace ZombieCityCleaner.EditorTools
             int ns = Itens.QuantosDaSinuca;
             inventario.iconesDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDaSinuca(k))).ToArray();
             inventario.fotosDaSinuca = Enumerable.Range(0, ns).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDaSinuca(k))).ToArray();
+            int nl = Itens.QuantosLoots;
+            inventario.iconesDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.IconeDoLoot(k))).ToArray();
+            inventario.fotosDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(MontagemDasArmas.FotoDoLoot(k))).ToArray();
             tela.rede = rede; tela.inventario = inventario; tela.arma = arma;
             telaDoCapo.rede = rede; telaDoCapo.inventario = inventario; telaDoCapo.telaDoInventario = tela;
             terceira.rede = rede; terceira.movimento = movimento; terceira.arma = arma; terceira.capo = telaDoCapo;
@@ -268,15 +277,21 @@ namespace ZombieCityCleaner.EditorTools
             for (int i = 0; i < n; i++)
             {
                 string modelo = Itens.Modelos[i];
-                var a = Buscar(corpo.transform, "Arma_" + modelo).gameObject;
+                var achada = todos.FirstOrDefault(t => t.name == "Arma_" + modelo);
+                var a = (achada != null ? achada : ArmaBrancaNoCorpo(corpo.transform, i)).gameObject;
                 var pecas = todos.Where(t => t.name.StartsWith($"P_{modelo}_") && !t.IsChildOf(a.transform)).Select(t => t.gameObject).ToArray();
                 if (pecas.Length > 0) a.AddComponent<PecasDaArma>().pecas = pecas;
                 foreach (var peca in pecas) peca.SetActive(i == 0);
                 if (i < Armas.Quantas) bocas[i] = Buscar(corpo.transform, "Boca_" + modelo);
+                // a lata e a garrafa levam também os itens do saque, com a malha deles no lugar
+                if (MontagemDoItemNaMao.Leva(i)) MontagemDoItemNaMao.NoCorpo(a, i);
                 renderersArmas.AddRange(PecasDaArma.Renderers(a));
                 naMao[i] = a;
                 a.SetActive(i == 0);
             }
+
+            // as armas novas (Blender/Armas) nas peças P_<arma>_*
+            ArmasNovas.NoCorpo(corpo.transform);
 
             var c = corpo.AddComponent<CorpoDoPersonagem>();
             c.animador = anim;
@@ -342,6 +357,44 @@ namespace ZombieCityCleaner.EditorTools
             renderers = lista.ToArray();
             return v;
         }
+
+        /// A faca no corpo (31/10/2026): ela não vem no FBX do personagem. Uma peça nova no weapon.R, no encaixe da lata
+        /// (o punho fecha em volta dela do mesmo jeito: o eixo da lata, o Z da peça, atravessa a mão), com a malha avulsa
+        /// (Item_Faca, a lâmina em +Z) e o material dos itens. Na guarda dos punhos, a lâmina sai por cima do punho.
+        /// </summary>
+        static Transform ArmaBrancaNoCorpo(Transform corpo, int modelo)
+        {
+            if (!Itens.ModeloBranco(modelo)) throw new System.Exception($"Arma_{Itens.Modelos[modelo]} não está no corpo.");
+            var lata = Buscar(corpo, "Arma_" + Itens.Modelos[Itens.Modelo(Item.Comida)]);
+            var a = new GameObject("Arma_" + Itens.Modelos[modelo]).transform;
+            a.SetParent(lata.parent, false);
+            a.localPosition = lata.localPosition;
+            a.localRotation = lata.localRotation;
+            a.localScale = lata.localScale;
+            var peca = new GameObject($"P_{Itens.Modelos[modelo]}_corpo");
+            peca.transform.SetParent(a, false);
+            peca.transform.localRotation = Quaternion.Euler(GiroNoCorpo(modelo));
+            // a mão mais alta no cabo (o machado: 18 cm, como nos braços de primeira pessoa; a malha tem a cabeça em +Z)
+            peca.transform.localPosition = -(peca.transform.localRotation * new Vector3(0f, 0f, PegadaNoCorpo(modelo)));
+            peca.AddComponent<MeshFilter>().sharedMesh = Carregar<Mesh>(MontagemDasArmas.MalhaDo(modelo));
+            peca.AddComponent<MeshRenderer>().sharedMaterial = Carregar<Material>(MontagemDasArmas.MaterialArma);
+            return a;
+        }
+
+        /// <summary>
+        /// O giro da arma branca dentro do encaixe da lata (graus): a faca, a lâmina para cima do punho; o machado, deitado
+        /// 80° (achado no jogo: em pé, a cabeça dele ficava atrás da cabeça do personagem, na guarda dos punhos).
+        /// </summary>
+        public static Vector3 GiroNoCorpo(int modelo) =>
+            // o machado (31/10/2026, a pedido, com a imagem de referência): em pé na mão direita, a cabeça para cima e um
+            // pouco para a frente e o fio para a esquerda, como nos braços de primeira pessoa (achado no jogo, pela
+            // direção da cabeça e do fio no corpo, na guarda dos punhos); o bastão, do mesmo jeito (a pedido: "pegado da mesma
+            // maneira")
+            modelo == Itens.Modelo(Item.Machado) || modelo == Itens.Modelo(Item.Bastao) ? new Vector3(115f, -135f, 150f)
+            : modelo == Itens.Modelo(Item.Lanca) ? new Vector3(80f, 0f, 0f) : Vector3.zero;
+
+        /// <summary>Quanto a mão sobe no cabo da arma branca, no corpo (m, da ponta de baixo para a cabeça).</summary>
+        public static float PegadaNoCorpo(int modelo) => modelo == Itens.Modelo(Item.Machado) ? 0.18f : modelo == Itens.Modelo(Item.Bastao) ? 0.05f : 0f;
 
         static Material MaterialParticula(string nome, bool aditivo, Texture2D textura)
         {

@@ -36,6 +36,8 @@ namespace ZombieCityCleaner.World
         public float raioPronto = 40f;
         [Tooltip("O carro que se dirige (Prefabs/Veiculos/Carro), posto pelo anfitrião ao lado da partida.")]
         public GameObject carro;
+        [Tooltip("Um segundo carro que se dirige (Prefabs/Veiculos/Cupe), posto pelo anfitrião ao lado da laje da partida. Vazio: só o carro da família.")]
+        public GameObject segundoCarro;
 
         readonly NetworkVariable<int> _semente = new NetworkVariable<int>();
         readonly NetworkVariable<byte> _tamanho = new NetworkVariable<byte>();
@@ -240,6 +242,43 @@ namespace ZombieCityCleaner.World
             }
             var novo = Instantiate(carro, ponto, giro);
             novo.name = "Carro";
+            novo.GetComponent<NetworkObject>().Spawn(true);
+
+            // a chave da perua no chão da sala, entre os dois primeiros que nascem (a pedido em 29/10/2026: com a chave, a
+            // partida é direta; sem ela, a ligação direta). Os nascimentos ficam 5 cm acima do piso
+            var chave = Vector3.Lerp(Dados.Nascimentos[0], Dados.Nascimentos[1], 0.5f) + Vector3.down * 0.05f;
+            Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.ChaveDaPerua, chave, Dados.GiroDaPartida + 35f);
+            CriarSegundoCarro(novo);
+        }
+
+        // o segundo carro (o cupê) ao lado da laje da partida, virado para o mesmo lado dela: o primeiro lugar (dos dois
+        // lados da laje) a mais de 5,5 m do carro da família e sem nada no caminho (uma parede, uma árvore, outro carro).
+        // Na vaga da casa, o carro da família às vezes fica alinhado com o primeiro lugar (no teste, encostado)
+        void CriarSegundoCarro(GameObject familia)
+        {
+            if (segundoCarro == null) return;
+            var giro = Quaternion.Euler(0f, Dados.GiroDaPartida, 0f);
+            Physics.SyncTransforms();
+            float lado = DadosDoMundo.LadoDaPartida * 0.5f + 3.2f;
+            Vector3 ponto = Vector3.zero;
+            bool achou = false;
+            foreach (float x in new[] { lado, lado + 3.5f, -lado, -lado - 3.5f, lado + 7f })
+            {
+                var p = Dados.Partida + giro * new Vector3(x, 0f, 0f);
+                p.y = Dados.Altura(p.x, p.z) + 0.4f;
+                if (familia != null && Vector3.Distance(p, familia.transform.position) < 5.5f) continue;
+                if (Physics.CheckBox(p + Vector3.up * 0.75f, new Vector3(1.0f, 0.45f, 2.45f), giro, ~0, QueryTriggerInteraction.Ignore)) continue;
+                ponto = p;
+                achou = true;
+                break;
+            }
+            if (!achou)
+            {
+                ponto = Dados.Partida + giro * new Vector3(lado + 3.5f, 0f, 0f);
+                ponto.y = Dados.Altura(ponto.x, ponto.z) + 0.4f;
+            }
+            var novo = Instantiate(segundoCarro, ponto, giro);
+            novo.name = segundoCarro.name;
             novo.GetComponent<NetworkObject>().Spawn(true);
         }
 

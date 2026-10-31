@@ -504,6 +504,7 @@ namespace ZombieCityCleaner.EditorTools
                 ida.hasExitTime = false;
                 ida.duration = destino == caindo ? 0.1f : 0.2f;
             }
+            EstadoDeLevantar(ctrl, c);
 
             ctrl.AddLayer("Ações");
             var camadas = ctrl.layers;
@@ -539,6 +540,31 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
+        /// O equilíbrio sem uma perna (31/10/2026; Zumbi.Equilibrio.cs): os estados "LevantandoE" e "LevantandoD" na camada
+        /// base, o levantar de bruços numa perna só (sem a esquerda, sem a direita; os clipes LevantarE e LevantarD, feitos no
+        /// Blender, MontagemDosZumbis.Equilibrio.cs), com a velocidade pelo parâmetro "Levantar". Sem transição: o código
+        /// entra neles, com "Pernas" em 5 (deitado, parado no primeiro quadro, com "Levantar" em 0; levantando, em 1), e sai
+        /// pondo "Pernas" de volta. O "Levantando" de antes (o clipe Cair de trás para a frente) sai.
+        /// </summary>
+        internal static void EstadoDeLevantar(AnimatorController ctrl, Dictionary<string, AnimationClip> c)
+        {
+            if (!ctrl.parameters.Any(p => p.name == "Levantar")) ctrl.AddParameter("Levantar", AnimatorControllerParameterType.Float);
+            var sm = ctrl.layers[0].stateMachine;
+            var velho = sm.states.Select(s => s.state).FirstOrDefault(s => s.name == "Levantando");
+            if (velho != null) sm.RemoveState(velho);
+            foreach (var (clipe, estado) in new[] { ("LevantarE", "LevantandoE"), ("LevantarD", "LevantandoD") })
+            {
+                if (c == null || !c.TryGetValue(clipe, out var animacao)) continue;
+                var e = sm.states.Select(s => s.state).FirstOrDefault(s => s.name == estado) ?? Estado(sm, estado, animacao);
+                e.motion = animacao;
+                e.speed = 1f;
+                e.speedParameter = "Levantar";
+                e.speedParameterActive = true;
+            }
+            EditorUtility.SetDirty(ctrl);
+        }
+
+        /// <summary>
         /// Os outros modelos usam o mesmo Animator com os clipes deles: cada FBX traz as animações assadas no próprio
         /// esqueleto (as posições dos ossos são as dele), então os clipes de um modelo não servem no outro.
         /// </summary>
@@ -547,7 +573,8 @@ namespace ZombieCityCleaner.EditorTools
             string caminho = $"{Arte}/Zombie_{m.nome}.overrideController";
             AssetDatabase.DeleteAsset(caminho);
             var aoc = new AnimatorOverrideController(baseCtrl) { name = "Zombie_" + m.nome };
-            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Where(c => primeiro.clipes.ContainsKey(c.nome) && m.clipes.ContainsKey(c.nome))
+            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio)
+                .Where(c => primeiro.clipes.ContainsKey(c.nome) && m.clipes.ContainsKey(c.nome))
                 .Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
             AssetDatabase.CreateAsset(aoc, caminho);
             return aoc;

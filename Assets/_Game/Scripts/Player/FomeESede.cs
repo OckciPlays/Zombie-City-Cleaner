@@ -77,11 +77,11 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>Só no anfitrião: o jogador comeu ou bebeu.</summary>
-        public void Consumir(DadosDoConsumivel d)
+        public void Consumir(DadosDoLoot d)
         {
             if (!IsServer) return;
-            _fome = Mathf.Min(100f, _fome + d.fome);
-            _sede = Mathf.Min(100f, _sede + d.sede);
+            _fome = Mathf.Clamp(_fome + d.fome, 0f, 100f);
+            _sede = Mathf.Clamp(_sede + d.sede, 0f, 100f);
             Gravar();
         }
 

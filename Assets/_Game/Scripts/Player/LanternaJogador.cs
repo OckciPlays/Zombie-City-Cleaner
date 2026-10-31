@@ -89,10 +89,12 @@ namespace ZombieCityCleaner.Player
             _pitch = rede.Pitch.Value;
             _estavaLigada = Ligada.Value;
             // a lanterna do dono não faz sombra do corpo dele (invisível na primeira pessoa: as mãos e os braços faziam
-            // sombra no facho, sobretudo mirando e dentro do carro); a dos outros, nesta máquina, faz sombra de tudo
+            // sombra no facho, sobretudo mirando e dentro do carro); a dos outros, nesta máquina, faz sombra de tudo menos
+            // da arma da mão deles (colada na lanterna, o cano das longas fazia sombra no facho; ela também não a ilumina,
+            // porque a camada da arma não está na luz dela: veja JogadorRede.MascaraDaArmaDosOutros)
             var dados = luz.GetUniversalAdditionalLightData();
             dados.customShadowLayers = true;
-            dados.shadowRenderingLayers = IsOwner ? ~JogadorRede.MascaraDoDono : uint.MaxValue;
+            dados.shadowRenderingLayers = IsOwner ? ~JogadorRede.MascaraDoDono : ~JogadorRede.MascaraDaArmaDosOutros;
         }
 
         void AntesDaCamera(ScriptableRenderContext contexto, Camera camera)

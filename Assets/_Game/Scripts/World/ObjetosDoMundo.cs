@@ -310,12 +310,7 @@ namespace ZombieCityCleaner.World
             dentro.transform.SetParent(go.transform, false);
             dentro.transform.localPosition = m.CentroDeDentro;
             dentro.AddComponent<AreaInterna>().tamanho = m.TamanhoDeDentro;
-            var eco = new GameObject("Eco").AddComponent<AudioReverbZone>();
-            eco.transform.SetParent(go.transform, false);
-            eco.transform.localPosition = m.CentroDeDentro;
-            eco.reverbPreset = AudioReverbPreset.Room;
-            eco.minDistance = Mathf.Min(m.TamanhoDeDentro.x, m.TamanhoDeDentro.z) * 0.4f;
-            eco.maxDistance = Mathf.Max(m.TamanhoDeDentro.x, m.TamanhoDeDentro.z) * 0.6f;
+            EcoSoDentro.Criar(go.transform, new Bounds(m.CentroDeDentro, m.TamanhoDeDentro));   // o eco só de dentro
         }
 
         // a lente do poste (uma peça à parte no Cidade_Rua.fbx), apagada: anos depois do apocalipse, não há energia
@@ -439,6 +434,18 @@ namespace ZombieCityCleaner.World
             var malha = carros[o.Variante % carros.Length];
             if (kit == null || malha == null) return false;
             posicao = Posicao(o, malha, out giro);
+            return true;
+        }
+
+        /// <summary>
+        /// Onde está o carro do mundo e a caixa dele (a da colisão, no espaço do carro), pelos dados: o alarme confere se o
+        /// tiro pegou nele e põe o pisca-alerta nos cantos (Vehicles/PecasDosCarrosDoMundo.Alarme.cs).
+        /// </summary>
+        public bool CaixaDoCarro(int indice, out Vector3 posicao, out Quaternion giro, out Bounds caixa)
+        {
+            caixa = default;
+            if (!PoseDoCarro(indice, out posicao, out giro, out _)) return false;
+            caixa = carros[_dados.Objetos.Todos[indice].Variante % carros.Length].bounds;
             return true;
         }
 

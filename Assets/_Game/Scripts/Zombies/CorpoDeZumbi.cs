@@ -31,6 +31,8 @@ namespace ZombieCityCleaner.Zombies
 
         internal float caiuEm;
         internal bool emUso;
+        /// <summary>O boneco de um zumbi vivo caindo sem uma perna (Zumbi.Equilibrio.cs): volta ao pool quando ele levanta.</summary>
+        internal bool vivo;
         bool _parado;
         int _passosSemInterpolar;
         // os zumbis leves: a cópia do material, com a aparência do zumbi que caiu e o rosto de morto
@@ -41,6 +43,7 @@ namespace ZombieCityCleaner.Zombies
         internal void Guardar()
         {
             emUso = false;
+            vivo = false;
             foreach (var p in partes)
             {
                 p.isKinematic = true;
@@ -98,13 +101,15 @@ namespace ZombieCityCleaner.Zombies
         /// Toma o lugar do zumbi: a mesma pose (osso a osso), a velocidade dele em todas as partes e o empurrão do tiro
         /// na parte atingida. Sem cabeça, troca a malha (a tampa de carne no pescoço) e o pescoço jorra. Com membros
         /// perdidos, a malha é a cortada e as partes que caíram não colidem (seguem invisíveis, presas às juntas).
-        /// Nos zumbis leves, o corpo copia a aparência do zumbi (o material dele) e fica com o rosto de morto.
+        /// Nos zumbis leves, o corpo copia a aparência do zumbi (o material dele) e fica com o rosto de morto (vivo: o boneco
+        /// de um zumbi caindo sem uma perna, com o rosto que ele tinha).
         /// </summary>
         internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes,
-                           Material aparencia = null, float pedra = 0f)
+                           Material aparencia = null, float pedra = 0f, bool vivo = false)
         {
             Estatua(pedra >= 0.5f);
             emUso = true;
+            this.vivo = vivo;
             _parado = false;
             caiuEm = Time.time;
             transform.SetPositionAndRotation(modelo.position, modelo.rotation);
@@ -122,7 +127,7 @@ namespace ZombieCityCleaner.Zombies
                     _semCabeca = new[] { _material, materiaisSemCabeca[1] };
                 }
                 _material.CopyPropertiesFromMaterial(aparencia);
-                _material.SetVector(Aparencia.QuadrosId, Aparencia.Morto(aparencia.GetVector(Aparencia.QuadrosId)));
+                if (!vivo) _material.SetVector(Aparencia.QuadrosId, Aparencia.Morto(aparencia.GetVector(Aparencia.QuadrosId)));
                 inteira = _inteira;
                 cortada = _semCabeca;
             }
@@ -154,6 +159,25 @@ namespace ZombieCityCleaner.Zombies
             if (semCabeca) Sangue.Jorro(pescoco, pescoco.up, 4f);
             _passosSemInterpolar = 2;
             enabled = true;
+        }
+
+        /// <summary>
+        /// O zumbi morreu enquanto o boneco dele caía (sem uma perna): o boneco passa a ser o corpo (conta o tempo do corpo
+        /// a partir de agora), com o rosto de morto, a cabeça trocada se explodiu e o empurrão do tiro.
+        /// </summary>
+        internal void VirarMorto(bool semCabeca, int parte, Vector3 empurrao, byte cortes, Material aparencia)
+        {
+            vivo = false;
+            caiuEm = Time.time;
+            if (_material != null && Aparencia.Leve(aparencia))
+                _material.SetVector(Aparencia.QuadrosId, Aparencia.Morto(aparencia.GetVector(Aparencia.QuadrosId)));
+            if (semCabeca)
+            {
+                pele.sharedMesh = Membros.Variante(malhaSemCabeca, esqueleto, cortes);
+                pele.sharedMaterials = _semCabeca ?? materiaisSemCabeca;
+                Sangue.Jorro(pescoco, pescoco.up, 4f);
+            }
+            if (parte >= 0 && parte < partes.Length && !partes[parte].isKinematic) partes[parte].AddForce(empurrao, ForceMode.Impulse);
         }
 
         void Colidir(int parte, bool sim)

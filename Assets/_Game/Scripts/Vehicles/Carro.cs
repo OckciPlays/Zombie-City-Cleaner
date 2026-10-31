@@ -64,6 +64,9 @@ namespace ZombieCityCleaner.Vehicles
         public Transform[] assentos;
         [Tooltip("Onde quem sai fica de pé, no chão, do lado da porta de cada lugar.")]
         public Transform[] saidas;
+        [Tooltip("Quantos lugares este carro usa: os primeiros (0 o motorista, 1 o do lado, 2 e 3 atrás). A perua usa os 4; o " +
+                 "cupê, só os 2 da frente (a pedido em 29/10/2026). Os outros ficam no prefab, mas ninguém entra neles.")]
+        [Range(1, Lugares)] public int lugaresUsados = Lugares;
 
         [Header("Luzes")]
         public Light[] farois;
@@ -148,7 +151,11 @@ namespace ZombieCityCleaner.Vehicles
         [Header("Direção")]
         [Tooltip("Torque em cada roda da frente (N·m), com o acelerador no fundo e o carro parado.")]
         public float torque = 700f;
+        [Tooltip("A força do motor cai a zero nesta velocidade (m/s); com o atrito, o carro para um pouco antes (o cupê, com " +
+                 "42 e 1.000 N·m, chega a ~110 km/h).")]
         public float velocidadeMaxima = 22f;
+        [Tooltip("Onde acaba a 4ª marcha imaginária do som do motor (m/s): perto da velocidade que o carro alcança. A perua: 23.")]
+        public float fimDasMarchas = 23f;
         public float velocidadeDeRe = 7f;
         public float freio = 2400f;
         public float freioDeMao = 4500f;
@@ -159,8 +166,15 @@ namespace ZombieCityCleaner.Vehicles
         public float velocidadeDoVolante = 110f;
         [Tooltip("A barra estabilizadora (N): segura o carro nas curvas, sem capotar.")]
         public float antiCapotar = 7000f;
-        [Tooltip("Quantas vezes o volante gira mais que as rodas.")]
-        public float voltasDoVolante = 12f;
+        // o volante desenhado (a pedido em 29/10/2026: "gira muito rápido na visão em primeira pessoa... só o visual"): gira
+        // menos (era 12 vezes as rodas: 384° no máximo) e segue as rodas com um pouco de atraso, no máximo a tantos graus
+        // por segundo (as rodas viram na mesma hora: a direção do carro não mudou)
+        [Tooltip("Quantas vezes o volante desenhado gira mais que as rodas (só o visual).")]
+        public float relacaoDoVolante = 7f;
+        [Tooltip("O máximo que o volante desenhado gira por segundo (graus; só o visual).")]
+        public float giroMaximoDoVolanteVisto = 320f;
+        [Tooltip("A chave deste veículo (o item que dá a partida direta; sem ela, só a ligação direta).")]
+        public Loot.Item chaveDoVeiculo = Loot.Item.ChaveDaPerua;
 
         /// <summary>Quem está em cada lugar: o id do cliente + 1 (0 = vazio).</summary>
         public struct Ocupantes : INetworkSerializeByMemcpy
@@ -183,6 +197,8 @@ namespace ZombieCityCleaner.Vehicles
         readonly NetworkVariable<bool> _buzina = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>A chave e o motor (<see cref="EstadoDoMotor"/>), escritos pelo dono (o motorista).</summary>
         readonly NetworkVariable<byte> _motorRede = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>Ligado sem a chave (a ligação direta): a chave não aparece na ignição. Escrito pelo dono (o motorista).</summary>
+        readonly NetworkVariable<bool> _direta = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>As peças do motor (a vela, a carga da bateria e o radiador), escritas pelo anfitrião.</summary>
         readonly NetworkVariable<PecasDoMotor> _pecas = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>A temperatura do motor (0 a 1,25, vezes 200) e se ele ferveu (até esfriar), do anfitrião.</summary>
@@ -227,7 +243,7 @@ namespace ZombieCityCleaner.Vehicles
         // a velocidade medida pela posição (nos que não simulam)
         Vector3 _posAntes;
         Vector3 _velocidadeMedida;
-        float _giroDasRodas;
+        float _giroDasRodas, _volanteVisto;
         readonly float[] _mudouEm = { -99f, -99f, -99f, -99f };
         readonly Dictionary<int, float> _atropelados = new Dictionary<int, float>();
         static readonly Collider[] _encostados = new Collider[32];
@@ -440,7 +456,7 @@ namespace ZombieCityCleaner.Vehicles
         void EntrarRpc(byte lugar, RpcParams parametros = default)
         {
             ulong cliente = parametros.Receive.SenderClientId;
-            if (lugar >= Lugares || MacacoNaRoda >= 0) return;   // no macaco, ninguém entra
+            if (lugar >= Mathf.Min(Lugares, lugaresUsados) || MacacoNaRoda >= 0) return;   // no macaco, ninguém entra
             var o = _ocupantes.Value;
             if (o[lugar] != 0) return;
             var jogador = Jogador(cliente);
@@ -623,6 +639,36 @@ namespace ZombieCityCleaner.Vehicles
             Efeitos.Som(SomDoCarro.Tossida, motor != null ? motor.transform.position : transform.position, 0.6f, true, 30f);
         }
 
+        /// <summary>Ligado (ou tentando ligar) pela ligação direta, sem a chave: a chave não aparece na ignição.</summary>
+        public bool LigacaoDireta => IsSpawned && _direta.Value && Estado != EstadoDoMotor.SemChave;
+
+        /// <summary>
+        /// A ligação direta (a pedido em 29/10/2026: sem a chave do veículo, "esse mini-game como se fosse um ligar direto,
+        /// pra roubar o carro"): os fios juntos, o painel acende e o motor de arranque gira na hora, como a chave presa na
+        /// partida; o mini-game do motorista decide se pega (<see cref="PegarAgora"/>). Com os fios juntos e o motor
+        /// parado (a ignição), tenta de novo. Puxar para a esquerda desiste, como com a chave.
+        /// </summary>
+        public void FazerLigacaoDireta()
+        {
+            if (!IsSpawned || !IsOwner || _estadoLocal == EstadoDoMotor.Ligado) return;
+            if (_estadoLocal != EstadoDoMotor.SemChave && !_direta.Value) return;   // com a chave posta, é pela chave
+            _direta.Value = true;
+            _anguloDaChave = ChavePartida;
+            _presaNaPartida = true;
+            _puxando = 0f;
+            MudarEstado(EstadoDoMotor.Arranque);
+        }
+
+        /// <summary>Desfaz a ligação direta (separa os fios): o motor apaga, e não fica chave nenhuma.</summary>
+        public void DesfazerLigacaoDireta()
+        {
+            if (!IsSpawned || !IsOwner || !_direta.Value) return;
+            _anguloDaChave = 0f;
+            _presaNaPartida = false;
+            _direta.Value = false;
+            MudarEstado(EstadoDoMotor.SemChave);
+        }
+
         void MudarEstado(EstadoDoMotor e)
         {
             _estadoLocal = e;
@@ -642,6 +688,7 @@ namespace ZombieCityCleaner.Vehicles
             {
                 _anguloDaChave = 0f;
                 _presaNaPartida = false;
+                if (_direta.Value) _direta.Value = false;
                 if (e != EstadoDoMotor.SemChave) MudarEstado(EstadoDoMotor.SemChave);
                 return;
             }
@@ -654,6 +701,12 @@ namespace ZombieCityCleaner.Vehicles
             else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
             else if (_presaNaPartida) novo = EstadoDoMotor.Arranque;
             else novo = EstadoDoMotor.Ignicao;
+            // na ligação direta não há "desligado com a chave": puxada até o fim, os fios se soltam
+            if (novo == EstadoDoMotor.Desligado && _direta.Value)
+            {
+                _direta.Value = false;
+                novo = EstadoDoMotor.SemChave;
+            }
             if (novo != e) MudarEstado(novo);
         }
 
@@ -677,7 +730,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (antes == EstadoDoMotor.SemChave)
                 {
                     _chaveEntrouEm = Time.time;
-                    Efeitos.Som(SomDoCarro.ChaveEntra, naChave, 0.55f, true, 6f);
+                    if (!_direta.Value) Efeitos.Som(SomDoCarro.ChaveEntra, naChave, 0.55f, true, 6f);   // na direta, não há chave
                 }
                 else if (e != EstadoDoMotor.SemChave)
                     Efeitos.Som(SomDoCarro.CliqueDaChave, naChave, 0.5f, true, 6f);
@@ -711,7 +764,7 @@ namespace ZombieCityCleaner.Vehicles
 
             // a chave: some sem motorista, entra pelo miolo e gira (nos outros, devagar até a posição do estado)
             if (chave == null) return;
-            bool comChave = e != EstadoDoMotor.SemChave;
+            bool comChave = e != EstadoDoMotor.SemChave && !_direta.Value;   // na ligação direta, sem chave na ignição
             if (pecasDaChave != null)
                 foreach (var p in pecasDaChave)
                     if (p != null && p.enabled != comChave) p.enabled = comChave;
@@ -1252,10 +1305,12 @@ namespace ZombieCityCleaner.Vehicles
             if (noChaoD) _corpo.AddForceAtPosition(d.transform.up * f, d.transform.position);
         }
 
-        // a rotação do motor (0 a 1): 4 marchas imaginárias; parado, a marcha lenta sobe com o acelerador
-        static float Rotacao(float v, float acelerar)
+        // a rotação do motor (0 a 1): 4 marchas imaginárias; parado, a marcha lenta sobe com o acelerador. As marchas são
+        // as da perua (a 4ª acaba em 23 m/s) esticadas até o fimDasMarchas deste carro (o cupê, mais rápido)
+        float Rotacao(float v, float acelerar)
         {
             if (v < 0.6f) return 0.12f + acelerar * 0.3f;
+            v *= 23f / Mathf.Max(1f, fimDasMarchas);
             float[] marchas = { 0f, 5f, 10f, 15.5f, 23f };
             int m = 0;
             while (m < marchas.Length - 2 && v > marchas[m + 1]) m++;
@@ -1263,7 +1318,12 @@ namespace ZombieCityCleaner.Vehicles
             return Mathf.Lerp(m == 0 ? 0.2f : 0.38f, 0.92f, dentro) + acelerar * 0.06f;
         }
 
-        // os zumbis na frente do carro (ou atrás, de ré) levam o acerto, como um tiro no tronco do motorista
+        /// <summary>Quanto o carro tira de vida (na escala de 100) por km/h acima de <see cref="KmhSemDano"/>.</summary>
+        public const float DanoPorKmh = 5f, KmhSemDano = 10f;
+
+        // os zumbis na frente do carro (ou atrás, de ré) levam o acerto, como um tiro no tronco do motorista. O dano vem da
+        // velocidade, sem teto (31/10/2026, a pedido: o atropelamento no sistema de vida de 100, pensando nos zumbis
+        // especiais): (km/h - 10) x 5; o Oco (100) morre a partir de 30 km/h, e um especial de 300, a partir de 70
         void Atropelar(float v)
         {
             if (Mathf.Abs(v) < 3f) return;
@@ -1279,7 +1339,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (_atropelados.TryGetValue(chave, out float ate) && Time.time < ate) continue;
                 _atropelados[chave] = Time.time + 0.7f;
                 float rapidez = Mathf.Abs(v);
-                float dano = Mathf.Clamp((rapidez - 2.5f) * 1.6f, 1f, 10f);
+                float dano = Mathf.Max(1f, (rapidez * 3.6f - KmhSemDano) * DanoPorKmh);
                 Vector3 ponto = h.zumbi.transform.position + Vector3.up * 1.0f;
                 // o zumbi de pedra (o sol) quebra com a batida (o "arremesso" quebra a estátua), e pesa mais
                 bool pedra = h.zumbi.Petrificado;
@@ -1294,7 +1354,7 @@ namespace ZombieCityCleaner.Vehicles
                     Efeitos.Som(Efeitos.SocoCarne, ponto, 1f, true, 30f);
                     Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
                 }
-                _corpo.linearVelocity *= pedra ? 0.8f : dano >= 6f ? 0.9f : 0.96f;
+                _corpo.linearVelocity *= pedra ? 0.8f : dano >= 100f ? 0.9f : 0.96f;
             }
             if (_atropelados.Count > 64) _atropelados.Clear();
         }
@@ -1451,7 +1511,9 @@ namespace ZombieCityCleaner.Vehicles
         void Rodas(float dt)
         {
             float giro = IsOwner ? _giro : _direcao.Value / 127f * giroMaximo;
-            if (volante != null) volante.localRotation = _volanteRepouso * Quaternion.Euler(0f, 0f, -giro * voltasDoVolante);
+            // o volante desenhado: menos voltas que antes e um pouco atrás das rodas (só o visual)
+            _volanteVisto = Mathf.MoveTowards(_volanteVisto, -giro * relacaoDoVolante, giroMaximoDoVolanteVisto * dt);
+            if (volante != null) volante.localRotation = _volanteRepouso * Quaternion.Euler(0f, 0f, _volanteVisto);
             if (rodasVisuais == null) return;
             _giroDasRodas += VelocidadeParaFrente * dt / 0.3f * Mathf.Rad2Deg;
             for (int i = 0; i < rodasVisuais.Length && i < rodas.Length; i++)

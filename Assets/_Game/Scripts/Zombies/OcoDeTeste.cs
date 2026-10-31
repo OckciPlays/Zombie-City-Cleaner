@@ -28,11 +28,14 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>
         /// As versões que o F1 põe (a pedido em 28/10/2026): o prefab (em Resources) e o nome do botão, ~5 mil triângulos
         /// cada, montadas pelo menu Zombie City Cleaner > Zumbis > Montar as versões do Oco (teste)
-        /// (Editor/MontagemDasVariantesDoOco).
+        /// (Editor/MontagemDasVariantesDoOco). Desde 29/10/2026, também o original com ~2 mil e ~1 mil triângulos (teste
+        /// de quanto dá para tirar: a roupa vira parte da casca do corpo e os detalhes ficam só na textura).
         /// </summary>
         public static readonly (string prefab, string nome)[] Versoes =
         {
             ("Oco_00_Original", "Original 5k"),
+            ("Oco_00_Original_2k", "Original 2k"),
+            ("Oco_00_Original_1k", "Original 1k"),
             ("Oco_01_O_Observador", "01 Observador"),
             ("Oco_02_O_Desviante", "02 Desviante"),
             ("Oco_03_O_Residuo", "03 Resíduo"),

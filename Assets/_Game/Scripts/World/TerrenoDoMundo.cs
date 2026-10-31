@@ -821,12 +821,7 @@ namespace ZombieCityCleaner.World
                 dentro.transform.SetParent(go.transform, false);
                 dentro.transform.localPosition = c.CentroDeDentro;
                 dentro.AddComponent<AreaInterna>().tamanho = c.TamanhoDeDentro;
-                var eco = new GameObject("Eco").AddComponent<AudioReverbZone>();
-                eco.transform.SetParent(go.transform, false);
-                eco.transform.localPosition = c.CentroDeDentro;
-                eco.reverbPreset = AudioReverbPreset.Room;
-                eco.minDistance = Mathf.Min(c.Largura, c.Fundo) * 0.4f;
-                eco.maxDistance = Mathf.Max(c.Largura, c.Fundo) * 0.6f;
+                EcoSoDentro.Criar(go.transform, new Bounds(c.CentroDeDentro, c.TamanhoDeDentro));   // o eco só de dentro
             }
             // os prédios (Parte M6, segunda fatia): a colisão da casca, os pisos do térreo, a caixa de dentro, as janelas
             // escuras de cada andar e quem carrega os andares por dentro

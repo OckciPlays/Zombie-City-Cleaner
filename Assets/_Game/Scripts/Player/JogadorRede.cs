@@ -33,6 +33,16 @@ namespace ZombieCityCleaner.Player
         public const int CamadaDeRenderDoDono = 1;
         public const uint MascaraDoDono = 1u << CamadaDeRenderDoDono;
 
+        /// <summary>
+        /// A camada de render da arma (ou do item) na mão dos outros jogadores, nesta máquina (31/10/2026): a lanterna de
+        /// cada um fica no peito, colada na coronha das armas longas, e estourava a arma dele de branco e fazia a sombra do
+        /// cano no facho. A lanterna dos outros não ilumina nem faz sombra desta camada (a do dono não ilumina; a sombra
+        /// dela é de outra luz, longe); o sol e a lua continuam. A do dono, na terceira pessoa, fica na
+        /// <see cref="CamadaDeRenderDoDono"/>.
+        /// </summary>
+        public const int CamadaDaArmaDosOutros = 2;
+        public const uint MascaraDaArmaDosOutros = 1u << CamadaDaArmaDosOutros;
+
         [Header("Primeira pessoa (só o dono)")]
         public Camera cameraMundo;
         public Camera cameraBracos;
@@ -103,6 +113,11 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>As roupas do corpo (a aparência e, depois, as roupas achadas).</summary>
         public ZombieCityCleaner.Roupas.Vestimenta Vestimenta { get; private set; }
+        /// <summary>
+        /// A distância de visão que este jogador escolheu (Configurações > Gráficos, <see cref="Graficos.Visao"/>: 0 Curta a 3
+        /// Máxima), escrita pelo dono: o anfitrião manda os zumbis até ela e faz os novos nascerem mais longe dele.
+        /// </summary>
+        public readonly NetworkVariable<byte> Visao = new(2, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>O corpo mudou (o personagem chegou pela rede): quem guarda os ossos dele lê de novo.</summary>
         public event System.Action CorpoMudou;
@@ -159,7 +174,11 @@ namespace ZombieCityCleaner.Player
         /// sombra da própria lanterna), ou visível e na camada normal (a terceira pessoa e a câmera de trás do carro). O
         /// que está na mão do corpo fica desligado na primeira pessoa, nem sombra: a ponta das armas longas passa dos 60 cm
         /// em que a sombra da lanterna começa (shadowNearPlane), e a sombra do cano aparecia no facho, na frente da arma de
-        /// primeira pessoa. Só muda o que mudou (a câmera de terceira pessoa chama a cada quadro).
+        /// primeira pessoa. Na terceira pessoa, a arma da mão aparece, mas fica na camada do dono (31/10/2026, a pedido: o
+        /// bug da lanterna voltava na terceira pessoa com a sniper, o rifle e a espingarda): a lanterna dele, no peito,
+        /// fica colada na coronha das armas longas; ela estourava a arma de branco na mão e o cano fazia sombra no facho.
+        /// Nessa camada a lanterna do dono nem a ilumina nem faz a sombra dela; o sol e a lua continuam (eles iluminam e
+        /// fazem sombra de todas as camadas). Só muda o que mudou (a câmera de terceira pessoa chama a cada quadro).
         /// </summary>
         public void CorpoDoDono(bool visivel)
         {
@@ -175,7 +194,11 @@ namespace ZombieCityCleaner.Player
             if (naMaoCorpo != null)
                 foreach (var a in naMaoCorpo)
                     if (a != null)
-                        foreach (var r in PecasDaArma.Renderers(a)) r.enabled = visivel;
+                        foreach (var r in PecasDaArma.Renderers(a))
+                        {
+                            r.enabled = visivel;
+                            r.renderingLayerMask = MascaraDoDono;
+                        }
             var pneu = Inventario != null ? Inventario.PneuNoCorpo : null;
             if (pneu != null)
             {
@@ -321,7 +344,15 @@ namespace ZombieCityCleaner.Player
                 _corpoDoDonoAplicado = false;
                 CorpoDoDono(false);
             }
-            else foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;
+            else
+            {
+                foreach (var r in renderersCorpo) r.shadowCastingMode = ShadowCastingMode.On;
+                // a arma da mão dele fora da luz e da sombra da lanterna dele (veja MascaraDaArmaDosOutros)
+                if (naMaoCorpo != null)
+                    foreach (var a in naMaoCorpo)
+                        if (a != null)
+                            foreach (var r in PecasDaArma.Renderers(a)) r.renderingLayerMask = MascaraDaArmaDosOutros;
+            }
             AplicarCor(indice);
             AplicarAparencia();
             _naMaoAplicado = (Item)255;   // o corpo novo pega a arma da mão e o controlador dela
@@ -353,8 +384,23 @@ namespace ZombieCityCleaner.Player
             if (item == _naMaoAplicado && (id == _idAplicado || !IsOwner)) return;
             _naMaoAplicado = item;
             _idAplicado = id;
-            int m = Itens.Modelo(item);
+            int m = Itens.MaoDe(item);
             for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(i == m && !_naMaoEscondida);
+            // os do saque vão com a malha deles no lugar da lata ou da garrafa
+            if (m >= 0 && m < naMaoCorpo.Length) ItemNaMaoProprio.Aplicar(naMaoCorpo[m], item);
+            // a tocha: a chama e a luz na ponta (a malha dela tem a ponta em +Z)
+            if (item == Item.Tocha && m >= 0 && m < naMaoCorpo.Length && Loot.ConstrucoesNoMundo.Instancia != null)
+            {
+                var peca = naMaoCorpo[m].GetComponentInChildren<MeshFilter>(true);
+                if (peca != null && peca.sharedMesh != null && peca.transform.Find("Fogo") == null)
+                {
+                    var b = peca.sharedMesh.bounds;
+                    // a luz é a dos outros (no dono, a dos braços de primeira pessoa)
+                    var fogo = Loot.ConstrucoesNoMundo.Fogo(peca.transform, new Vector3(b.center.x, b.center.y, b.max.z - 0.03f),
+                        Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, IsOwner ? 0f : 8f, true, naMaoCorpo[m].layer);
+                    if (fogo.TryGetComponent<Light>(out var luz)) luz.intensity = 1.6f;
+                }
+            }
             int k = m - Armas.Quantas;
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)]
                 : Itens.EhTaco(item) && controladorDoTaco != null ? controladorDoTaco
@@ -368,13 +414,14 @@ namespace ZombieCityCleaner.Player
         public void EsconderNaMao(bool esconder)
         {
             _naMaoEscondida = esconder;
-            int m = Itens.Modelo(Inventario != null ? Inventario.NaMao : Item.Nada);
+            int m = Itens.MaoDe(Inventario != null ? Inventario.NaMao : Item.Nada);
             for (int i = 0; i < naMaoCorpo.Length; i++) naMaoCorpo[i].SetActive(!esconder && i == m);
         }
 
         void Update()
         {
             if (!IsSpawned) return;
+            if (IsOwner && Visao.Value != Graficos.Visao) Visao.Value = (byte)Graficos.Visao;   // a escolha dos Gráficos, para o anfitrião
             // Velocidade no chão: o dono usa a do próprio controle; os outros medem a posição recebida a cada 0,1 s
             // (quadro a quadro a medida oscila, porque a posição chega em degraus).
             float medida;
@@ -433,7 +480,11 @@ namespace ZombieCityCleaner.Player
         public void AnunciarTiro(TipoDeArma arma, Impacto[] impactos)
         {
             animadorCorpo.SetTrigger(FireId);
-            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+            if (IsServer)
+            {
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);   // o tiro num carro com alarme dispara
+            }
             TiroRpc((byte)arma, impactos);
         }
 
@@ -441,8 +492,12 @@ namespace ZombieCityCleaner.Player
         void TiroRpc(byte qual, Impacto[] impactos)
         {
             TirosRecebidos++;
-            // no anfitrião, o tiro de um amigo chama os zumbis em volta dele
-            if (IsServer) ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+            // no anfitrião, o tiro de um amigo chama os zumbis em volta dele (e dispara o alarme do carro em que pegou)
+            if (IsServer)
+            {
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);
+            }
             animadorCorpo.SetTrigger(FireId);
             var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);
             var boca = bocasCorpo[(int)arma];
@@ -495,21 +550,23 @@ namespace ZombieCityCleaner.Player
         /// <summary>
         /// O dono acertou um zumbi (a cópia dele, ou o zumbi de verdade no anfitrião). Quem decide o dano é o anfitrião:
         /// o acerto vai para ele com o Id, a geração, a região, o membro, o dano, o ponto e se o corpo deve ser
-        /// arremessado (a espingarda de perto). A região, o membro e o arremesso vão num byte só.
+        /// arremessado (a espingarda de perto). A região, o membro e o arremesso vão num byte só. O corte: quanto o acerto
+        /// vale contra a vida de um braço ou de uma perna (o machado, 2: decepa com um golpe; o resto, 1).
         /// </summary>
-        public void AcertarZumbi(Zumbi zumbi, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso)
+        public void AcertarZumbi(Zumbi zumbi, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, float corte = 1f)
         {
-            if (IsServer) ZombieManager.Acertar(zumbi.Id, zumbi.Geracao, regiao, membro, dano, ponto, arremesso, this);
-            else AcertoRpc((ushort)zumbi.Id, zumbi.Geracao, (byte)((byte)regiao | ((byte)membro << 3) | (arremesso ? 128 : 0)), dano, ponto);
+            if (IsServer) ZombieManager.Acertar(zumbi.Id, zumbi.Geracao, regiao, membro, dano, ponto, arremesso, this, corte);
+            else AcertoRpc((ushort)zumbi.Id, zumbi.Geracao, (byte)((byte)regiao | ((byte)membro << 3) | (arremesso ? 128 : 0)), dano, ponto,
+                           (byte)Mathf.Clamp(Mathf.RoundToInt(corte * 10f), 0, 255));
         }
 
         [Rpc(SendTo.Server)]
-        void AcertoRpc(ushort id, byte geracao, byte parte, float dano, Vector3 ponto, RpcParams parametros = default)
+        void AcertoRpc(ushort id, byte geracao, byte parte, float dano, Vector3 ponto, byte corte, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;   // só o dono atira com este jogador
             var regiao = (RegiaoDoCorpo)(parte & 7);
             var membro = (Membro)Mathf.Min((parte >> 3) & 15, (int)Membro.CanelaD);
-            ZombieManager.Acertar(id, geracao, regiao, membro, dano, ponto, (parte & 128) != 0, this);
+            ZombieManager.Acertar(id, geracao, regiao, membro, dano, ponto, (parte & 128) != 0, this, corte / 10f);
         }
     }
 }

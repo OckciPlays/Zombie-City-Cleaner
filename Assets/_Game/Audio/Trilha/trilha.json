@@ -1,0 +1,113 @@
+{
+ "neblina": {
+  "bpm": 56,
+  "comprimento": 17.142857142857142
+ },
+ "noite": {
+  "bpm": 46,
+  "comprimento": 20.869565217391305
+ },
+ "perigo": {
+  "bpm": 88,
+  "comprimento": 10.909090909090908
+ },
+ "encaixeDaEntrada": 1.3636,
+ "sobreposicaoDoVento": 4.0,
+ "rajadasDeDia": [
+  {
+   "tempos": []
+  },
+  {
+   "tempos": [
+    12.58
+   ]
+  },
+  {
+   "tempos": []
+  },
+  {
+   "tempos": [
+    7.66
+   ]
+  },
+  {
+   "tempos": [
+    8.6
+   ]
+  },
+  {
+   "tempos": [
+    9.1
+   ]
+  },
+  {
+   "tempos": [
+    7.53
+   ]
+  },
+  {
+   "tempos": [
+    14.91
+   ]
+  },
+  {
+   "tempos": [
+    9.72
+   ]
+  },
+  {
+   "tempos": [
+    10.42
+   ]
+  }
+ ],
+ "rajadasDeNoite": [
+  {
+   "tempos": []
+  },
+  {
+   "tempos": [
+    18.05
+   ]
+  },
+  {
+   "tempos": [
+    16.96
+   ]
+  },
+  {
+   "tempos": [
+    13.98
+   ]
+  },
+  {
+   "tempos": [
+    15.82
+   ]
+  },
+  {
+   "tempos": [
+    16.75
+   ]
+  },
+  {
+   "tempos": []
+  },
+  {
+   "tempos": [
+    14.18
+   ]
+  },
+  {
+   "tempos": [
+    22.26
+   ]
+  },
+  {
+   "tempos": [
+    10.47,
+    20.32
+   ]
+  }
+ ]
+}

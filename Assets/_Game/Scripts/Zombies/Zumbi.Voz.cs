@@ -1,4 +1,5 @@
 using UnityEngine;
+using ZombieCityCleaner.Combat;
 
 namespace ZombieCityCleaner.Zombies
 {
@@ -29,6 +30,8 @@ namespace ZombieCityCleaner.Zombies
         float _falaAte, _volumeDaVoz = -1f, _responderEm = -1f, _pedraAntes, _pedraSubiuEm = -100f, _proximoGritoDeAgonia;
         int _temAgonia = -1;   // o Animator tem o parâmetro "Agonia"? (-1: ainda não sabe)
         AudioSource _somDaPedra;
+        AudioLowPassFilter _filtroDaVoz;
+        float _volumeDaFala = -1f, _abafado, _alvoDoAbafado, _proximoAbafamento;
 
         /// <summary>
         /// O jeito de agonizar no sol, pelo Id e a geração (igual em todas as máquinas): 0 como antes (só se debate), 1 as
@@ -62,7 +65,11 @@ namespace ZombieCityCleaner.Zombies
             voz.Stop();
             voz.clip = clip;
             voz.pitch = tom * Random.Range(0.93f, 1.06f);
-            voz.volume = _volumeDaVoz * volume;
+            _volumeDaFala = _volumeDaVoz * volume * (Sons != null ? Sons.volume : 1f);
+            _abafado = _alvoDoAbafado = Abafamento.Ouvido(out var ouvido) ? Abafamento.Quanto(ouvido, transform.position + Vector3.up * 1.5f) : 0f;
+            _proximoAbafamento = Time.time + 0.2f;
+            voz.volume = _volumeDaFala * ZombieManager.VolumeDosZumbis * Mathf.Lerp(1f, Abafamento.VolumeTapado, _abafado);
+            Filtro().cutoffFrequency = Abafamento.Corte(_abafado);
             voz.time = 0f;
             voz.Play();
             float duracao = clip.length / voz.pitch;
@@ -102,6 +109,34 @@ namespace ZombieCityCleaner.Zombies
                 if (s != null) Falar(s.resposta, Fala.Resposta, 0.85f);
             }
             Agonizar();
+            Abafar();
+        }
+
+        // o som abafado (Combat/Abafamento): com parede, laje ou o telhado entre quem escuta e o zumbi, a voz e a crosta
+        // chegam sem os agudos e mais baixas; refeito 5 vezes por segundo enquanto ele fala, e devagar (sem estalar)
+        void Abafar()
+        {
+            bool fala = voz != null && voz.isPlaying, crosta = _somDaPedra != null && _somDaPedra.isPlaying;
+            if (!fala && !crosta) return;
+            if (Time.time >= _proximoAbafamento)
+            {
+                _proximoAbafamento = Time.time + 0.2f;
+                _alvoDoAbafado = Abafamento.Ouvido(out var ouvido) ? Abafamento.Quanto(ouvido, transform.position + Vector3.up * 1.5f) : 0f;
+            }
+            _abafado = Mathf.MoveTowards(_abafado, _alvoDoAbafado, Time.deltaTime * 4f);
+            Filtro().cutoffFrequency = Abafamento.Corte(_abafado);
+            if (fala && _volumeDaFala >= 0f) voz.volume = _volumeDaFala * ZombieManager.VolumeDosZumbis * Mathf.Lerp(1f, Abafamento.VolumeTapado, _abafado);
+        }
+
+        // o filtro dos agudos (no mesmo objeto da voz e da crosta: vale para as duas)
+        AudioLowPassFilter Filtro()
+        {
+            if (_filtroDaVoz == null)
+            {
+                _filtroDaVoz = GetComponent<AudioLowPassFilter>();
+                if (_filtroDaVoz == null) _filtroDaVoz = gameObject.AddComponent<AudioLowPassFilter>();
+            }
+            return _filtroDaVoz;
         }
 
         // enquanto a pedra sobe (no sol): o tronco agoniza, ele grita de tempos em tempos e a crosta estala
@@ -131,7 +166,7 @@ namespace ZombieCityCleaner.Zombies
                     _somDaPedra.time = Random.Range(0f, s.petrificando.length * 0.9f);
                     _somDaPedra.Play();
                 }
-                _somDaPedra.volume = Mathf.Lerp(0.3f, 0.75f, Pedra);
+                _somDaPedra.volume = Mathf.Lerp(0.3f, 0.75f, Pedra) * ZombieManager.VolumeDosZumbis * Mathf.Lerp(1f, Abafamento.VolumeTapado, _abafado);
             }
             else if (_somDaPedra != null && _somDaPedra.isPlaying) _somDaPedra.Stop();
         }

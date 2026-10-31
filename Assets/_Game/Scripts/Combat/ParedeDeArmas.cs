@@ -142,6 +142,10 @@ namespace ZombieCityCleaner.Combat
             return v == 0 ? null : (TipoDeArma)(v - 1);
         }
 
+        // não serializado: no editor, ao entrar no Play, a Unity guardava o campo como uma lista vazia (e o ??= não criava a
+        // de verdade: o índice estourava e o painel não aparecia)
+        [System.NonSerialized] Material[] _paleta;
+
         // cada arma em pé no apoio da vaga: o cano ao longo do painel, o lado esquerdo para fora, a parte de baixo (o
         // carregador ou o cabo) no apoio e o meio dela no meio da vaga
         void Aplicar(long conteudo)
@@ -157,6 +161,11 @@ namespace ZombieCityCleaner.Combat
                 if (!r.enabled) continue;
                 var malha = malhas[(int)tipo.Value];
                 vaga.filtro.sharedMesh = malha;
+                // a paleta (o material da montagem) ou o material com a textura própria da arma (a pistola nova)
+                if (_paleta == null || _paleta.Length != vagas.Length) _paleta = new Material[vagas.Length];
+                if (_paleta[i] == null) _paleta[i] = r.sharedMaterial;
+                var proprio = Loot.Itens.MaterialProprio((int)tipo.Value);
+                r.sharedMaterial = proprio != null ? proprio : _paleta[i];
                 var b = malha.bounds;
                 var t = vaga.filtro.transform;
                 t.localRotation = Quaternion.LookRotation(Vector3.right, Vector3.up);

@@ -184,6 +184,153 @@ MonoBehaviour:
   manchas: 40
   furos: 40
   jorros: 10
+--- !u!1 &580034046
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 580034048}
+  - component: {fileID: 580034047}
+  - component: {fileID: 580034049}
+  m_Layer: 0
+  m_Name: Itens no mundo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &580034047
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 580034046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 139328757
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &580034048
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 580034046}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &580034049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 580034046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  malhas:
+  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
+  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
+  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
+  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
+  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
+  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
+  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
+  - {fileID: 4300000, guid: b2fde4281bec0d342bbd6cdcbacb82aa, type: 2}
+  - {fileID: 4300000, guid: be71b95f80e8a124f9680c9a21859b22, type: 2}
+  - {fileID: 4300000, guid: 9371a1323ec9bef48804c5178f66cbe1, type: 2}
+  - {fileID: 4300000, guid: 98031e9a09e6b1a4ba9806b703b5c0e8, type: 2}
+  - {fileID: 4300000, guid: d0fffca3f40dd2640a130e87db100bd8, type: 2}
+  malhasDeEquipamento:
+  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
+  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
+  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
+  malhasDeMunicao:
+  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
+  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
+  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
+  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
+  malhasDePeca:
+  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
+  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
+  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
+  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
+  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
+  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
+  malhasDeLoot:
+  - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
+  - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
+  - {fileID: 4300000, guid: 35a112fcb0577c8428170c2ec05af24e, type: 2}
+  - {fileID: 4300000, guid: 7dfa4668b9d3c0e44b367ae2d9250319, type: 2}
+  - {fileID: 4300000, guid: b07640019f4d2754ea217b1515ddd3c8, type: 2}
+  - {fileID: 4300000, guid: afa4f34d998139743b2421d23e678e4d, type: 2}
+  - {fileID: 4300000, guid: 56878774c76d6d0439a7fb208b4d61f7, type: 2}
+  - {fileID: 4300000, guid: 535318737f4b0104183fa4e41b0b591f, type: 2}
+  - {fileID: 4300000, guid: 07a8454e9bb4fa742b7560479823accb, type: 2}
+  - {fileID: 4300000, guid: d5942f9298d5b4f4bbd62a2971295641, type: 2}
+  - {fileID: 4300000, guid: df9b68ec30f601540a367b541a2a3d55, type: 2}
+  - {fileID: 4300000, guid: 2c1441a1472f38a448df863d99c3c6a4, type: 2}
+  - {fileID: 4300000, guid: 45917ba29e2ffb74681d07e26ebb8202, type: 2}
+  - {fileID: 4300000, guid: c809312b44594dc40890199d7c8af87e, type: 2}
+  - {fileID: 4300000, guid: 63aff94268958bd4d9dc3532b76183dc, type: 2}
+  - {fileID: 4300000, guid: fce0b4c7de2ec6444aef849b78ddf893, type: 2}
+  - {fileID: 4300000, guid: f212852944b5d4b4eb9b4b47a389ff78, type: 2}
+  - {fileID: 4300000, guid: 65789b015c0ff5a4db417bc34cc070f6, type: 2}
+  - {fileID: 4300000, guid: 96f2e1ce0000a534dac898d9238780b8, type: 2}
+  - {fileID: 4300000, guid: 78bc40fbde1bf7749af79db90416f198, type: 2}
+  - {fileID: 4300000, guid: 05d2166127abd7441842f2fb36d3ef81, type: 2}
+  - {fileID: 4300000, guid: 740a4ef79b7adc74889a6e4b9b141b03, type: 2}
+  - {fileID: 4300000, guid: fff62f02918b6654aa6fcb782584f84d, type: 2}
+  - {fileID: 4300000, guid: 3bd9031d7f9c60348881712abfc0cd17, type: 2}
+  - {fileID: 4300000, guid: ed7bc76d9a9c97e4d833d1d42a7812a9, type: 2}
+  - {fileID: 4300000, guid: 21c635ecec593d34aae13bba19f1405e, type: 2}
+  - {fileID: 4300000, guid: c3db8e2dfa8364340b5e6d2c6ed77500, type: 2}
+  - {fileID: 4300000, guid: c665eb8cca3f51a459db0e850f818169, type: 2}
+  - {fileID: 4300000, guid: fa07e8e2a6f64714684afc29ca969289, type: 2}
+  - {fileID: 4300000, guid: 0b13b73e5c8d1e64cbf2b44751e9109d, type: 2}
+  - {fileID: 4300000, guid: d37cee0e616142d4da21a9c0c75c1b8f, type: 2}
+  - {fileID: 4300000, guid: 5ce38085cf653774aa90e18ce0379215, type: 2}
+  - {fileID: 4300000, guid: 266a25193b0b21849a6550427cf3b9bc, type: 2}
+  - {fileID: 4300000, guid: 242f9af21b4087b4483659e503affd9d, type: 2}
+  - {fileID: 4300000, guid: 97fbb1fa7e3e9de488c6dcebd6d4d3bd, type: 2}
+  - {fileID: 4300000, guid: 729e0642d1bd0af4abfba276c6b4ba7d, type: 2}
+  - {fileID: 4300000, guid: eee0a604d37ac1849b3f81b5857c1832, type: 2}
+  - {fileID: 4300000, guid: 050727802383bf14488e9dbdb3595867, type: 2}
+  - {fileID: 4300000, guid: 0a04e812f64497c4597c97e03acfdea6, type: 2}
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  lugares: []
+  itensDosLugares: 
+  girosDosLugares: []
+  distanciaMaxima: 3.5
 --- !u!1 &621969962
 GameObject:
   m_ObjectHideFlags: 0
@@ -284,16 +431,18 @@ MonoBehaviour:
   celulaDoPovoamento: 40
   alcanceDoPovoamento: 52
   longeDoJogador: 22
-  acordadosNaCidade: {x: 3, y: 6}
-  estatuasNaCidade: {x: 1, y: 3}
-  acordadoForaDaCidade: 0.25
-  estatuaForaDaCidade: 0.12
+  acordadosNaCidade: {x: 1, y: 4}
+  estatuasNaCidade: {x: 0, y: 2}
+  acordadoForaDaCidade: 0.15
+  estatuaForaDaCidade: 0.06
   arvoresParaAMata: 4
   acordadosNaMata: {x: 1, y: 3}
   distanciaDeRecolher: 130
   umRastejanteEmCadaCarros: 10
+  acordadosPorAndar: {x: 0, y: 1}
   intervaloDeEnvio: 0.1
   divisorMedio: 3
+  divisorLonge: 5
   tempoParaSumir: 1.5
   modelos:
   - {fileID: 7504586512184035756, guid: f6e5e0eb08331c6478a84dade158807f, type: 3}
@@ -336,7 +485,6 @@ MonoBehaviour:
   intervaloPerto: 0.1
   intervaloMedio: 0.5
   orcamentoPorQuadro: 40
-  distanciaDeDesenho: 65
   distanciaDoLOD1: 12
   distanciaDoLOD2: 26
   ajustes:
@@ -361,9 +509,10 @@ MonoBehaviour:
     intervaloDoGolpe: 1.4
     danoDoGolpe: 12
     atrasoDoDano: 0.45
-    vidaDoCorpo: 6
+    vidaDoCorpo: 100
+    multiplicadorNaCabeca: 3
     danoNosMembros: 0.5
-    vidaDoMembro: 3
+    vidaDoMembro: 50
     fatorMancando: 0.55
     fatorRastejando: 0.35
     tempoParaPetrificar: 10
@@ -383,109 +532,6 @@ MonoBehaviour:
     distanciaDaEsquiva: 2.2
     velocidadeDaEsquiva: 3.2
     intervaloDaEsquiva: 1
---- !u!1 &692325279
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 692325281}
-  - component: {fileID: 692325280}
-  - component: {fileID: 692325282}
-  m_Layer: 0
-  m_Name: Itens no mundo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &692325280
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 692325279}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 747309002
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  m_InScenePlacedDisabledByDefault: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  m_InScenePlaced: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
---- !u!4 &692325281
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 692325279}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &692325282
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 692325279}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
-  ShowTopMostFoldoutHeaderGroup: 1
-  malhas:
-  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
-  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
-  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
-  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
-  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
-  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
-  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
-  malhasDeEquipamento:
-  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
-  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
-  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
-  - {fileID: 4300000, guid: f8a6b875800549640bfb6c663f76fb73, type: 2}
-  malhasDeMunicao:
-  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
-  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
-  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
-  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
-  malhasDePeca:
-  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
-  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
-  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
-  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
-  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
-  malhasDaSinuca: []
-  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
-  lugares: []
-  itensDosLugares: 
-  girosDosLugares: []
-  distanciaMaxima: 3.5
 --- !u!1 &841882170
 GameObject:
   m_ObjectHideFlags: 0
@@ -517,6 +563,85 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1519397510}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &946186966
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 946186968}
+  - component: {fileID: 946186967}
+  - component: {fileID: 946186969}
+  m_Layer: 0
+  m_Name: "Constru\xE7\xF5es no mundo"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &946186967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946186966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 2810896900
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &946186968
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946186966}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &946186969
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 946186966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 339b759b9fe2f614da61d8079b9283de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ConstrucoesNoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  malhas:
+  - {fileID: 4300000, guid: f16ef70b90b576a4682a0b712e7fde96, type: 2}
+  - {fileID: 4300000, guid: 22f3eb6efd2a90b4e92af80410cb6983, type: 2}
+  - {fileID: 4300000, guid: d686fb5278069ae47932c0a981d22b47, type: 2}
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  materialDoFogo: {fileID: 2100000, guid: 17316e6e05c1aae4bb668c1edeba31d3, type: 2}
 --- !u!1 &1000869171
 GameObject:
   m_ObjectHideFlags: 0
@@ -3670,6 +3795,7 @@ MonoBehaviour:
   terreno: {fileID: 2005601267}
   raioPronto: 40
   carro: {fileID: 7941846832386056945, guid: 3ce65d8700700834a801f19558159d9a, type: 3}
+  segundoCarro: {fileID: 8502286537706648564, guid: 6417562996a05514c891099c73c50323, type: 3}
 --- !u!114 &2005601269
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3894,6 +4020,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.PecasDosCarrosDoMundo
   ShowTopMostFoldoutHeaderGroup: 1
+  umAlarmeEmCada: 10
+  duracaoDoAlarme: 40
+  raioDoAlarme: 60
+  chamarACada: 3
+  alcanceDaSirene: 130
+  volumeDaSirene: 0.6
   chance:
   - 0.55
   - 0.5
@@ -4148,6 +4280,7 @@ SceneRoots:
   - {fileID: 1384007035}
   - {fileID: 571145536}
   - {fileID: 1519397510}
-  - {fileID: 692325281}
   - {fileID: 2005601261}
   - {fileID: 621969964}
+  - {fileID: 580034048}
+  - {fileID: 946186968}

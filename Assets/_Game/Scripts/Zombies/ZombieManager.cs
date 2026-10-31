@@ -49,6 +49,11 @@ namespace ZombieCityCleaner.Zombies
             /// </summary>
             public bool exposto;
             public float aumento, meioCone;
+            /// <summary>
+            /// A distância de visão deste jogador (UI/Graficos): até onde os zumbis são desenhados e mandados para ele, e de
+            /// onde os novos nascem perto dele (m).
+            /// </summary>
+            public float visao, nascer;
         }
 
         /// <summary>O campo de visão normal da câmera do mundo (o aumento da luneta conta a partir dele).</summary>
@@ -86,8 +91,8 @@ namespace ZombieCityCleaner.Zombies
         public float intervaloMedio = 0.5f;
         [Tooltip("Quantos zumbis pensam por quadro, no máximo.")]
         public int orcamentoPorQuadro = 40;
-        [Tooltip("Além disto o anfitrião nem desenha o zumbi: a neblina já esconde.")]
-        public float distanciaDeDesenho = 65f;
+        // até onde o zumbi é desenhado nesta máquina: a distância de visão de quem joga aqui (UI/Graficos). Era 65 m fixos,
+        // mas os de longe (além de 40 m) nem eram desenhados: apareciam do nada a ~37 m, sobretudo de carro
         [Tooltip("Até onde o zumbi usa a malha inteira (LOD0) e a do LOD1; depois, a do LOD2 (os zumbis em blocos).")]
         public float distanciaDoLOD1 = 12f;
         public float distanciaDoLOD2 = 26f;
@@ -108,6 +113,8 @@ namespace ZombieCityCleaner.Zombies
         public int Mortos { get; private set; }
 
         readonly List<Zumbi> _ativos = new List<Zumbi>();
+        /// <summary>Os zumbis em jogo agora (só no anfitrião: as barricadas contam os que estão nelas).</summary>
+        public IReadOnlyList<Zumbi> Ativos => _ativos;
         Stack<Zumbi>[] _pools;
         readonly Zumbi[] _porId = new Zumbi[MaxZumbis];
         readonly byte[] _geracoes = new byte[MaxZumbis];
@@ -191,6 +198,16 @@ namespace ZombieCityCleaner.Zombies
             GemidosAoAcaso();
         }
 
+        // depois da animação: o equilíbrio sem uma perna (o corpo inclinado no pé que sobrou e a pose saindo do boneco da
+        // queda; Zumbi.Equilibrio.cs). A conta de quem não está numa fase sai na primeira linha
+        void LateUpdate()
+        {
+            if (!IsSpawned) return;
+            float dt = Time.deltaTime;
+            var lista = IsServer ? _ativos : _copias;
+            for (int i = 0; i < lista.Count; i++) lista[i].DepoisDaAnimacao(dt);
+        }
+
         // ------------------------------------------------------------------ jogadores e percepção
 
         void AtualizarJogadores()
@@ -221,6 +238,8 @@ namespace ZombieCityCleaner.Zombies
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
+                visao = Graficos.Metros(j.Visao.Value),
+                nascer = Graficos.NascerAPartirDe(j.Visao.Value),
             };
             var dados = Armas.Dados(j.ArmaNaMao);
             if (j.Luneta.Value && dados.fovLuneta > 0f)
@@ -249,8 +268,11 @@ namespace ZombieCityCleaner.Zombies
         internal Alvo AlvoLocal()
         {
             var j = JogadorRede.Local;
-            if (j == null || !j.IsSpawned) return new Alvo { pes = PontoDeVista(), aumento = 1f };
-            return AlvoDe(j, false, j.cameraMundo != null ? j.Olho.forward : j.transform.forward);
+            if (j == null || !j.IsSpawned)
+                return new Alvo { pes = PontoDeVista(), aumento = 1f, visao = Graficos.Metros(Graficos.Visao), nascer = Graficos.NascerAPartirDe(Graficos.Visao) };
+            var a = AlvoDe(j, false, j.cameraMundo != null ? j.Olho.forward : j.transform.forward);
+            a.visao = Graficos.Metros(Graficos.Visao);   // a desta máquina, sem esperar a rede
+            return a;
         }
 
         /// <summary>Até onde um zumbi enxerga este jogador: de dia longe; à noite pouco, a não ser com luz nele.</summary>
@@ -292,7 +314,7 @@ namespace ZombieCityCleaner.Zombies
         /// atrasada, então a conferência é tolerante (é co-op): o zumbi tem que existir (mesmo Id e geração), estar
         /// vivo e perto do ponto do acerto.
         /// </summary>
-        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor)
+        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor, float corte = 1f)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
@@ -301,7 +323,8 @@ namespace ZombieCityCleaner.Zombies
             if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
             // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
-            z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 10f), ponto, direcao, arremesso, autor, Time.time);
+            // o limite (é co-op, mas um número absurdo não passa): o maior acerto é o carro muito rápido (500 a 110 km/h)
+            z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 1000f), ponto, direcao, arremesso, autor, Time.time, Mathf.Clamp(corte, 0f, 4f));
         }
 
         internal void Golpear(JogadorRede alvo, float dano, Vector3 de)
@@ -374,7 +397,7 @@ namespace ZombieCityCleaner.Zombies
                     if (z.Engajado) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
                     float daqui = Mathf.Min(Distancia(local, p), doVideo);
-                    z.DefinirVisivel(daqui < distanciaDeDesenho);
+                    z.DefinirVisivel(daqui < local.visao);
                     z.DefinirDetalhe(daqui, distanciaDoLOD1, distanciaDoLOD2);
                 }
             }

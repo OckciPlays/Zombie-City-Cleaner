@@ -116,3 +116,9 @@ InitTestScene*.unity*
 # o zumbi antigo, tirado do histórico só para gerar as animações do desmembramento (veja Blender/README.md)
 /Blender/NovoZombie_antigo.fbx
 /Blender/__pycache__/
+
+# Zombie City Cleaner: as cópias de segurança locais, a recuperação da Unity e o cache do Python dos scripts do Blender
+/Backups/
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
+__pycache__/
