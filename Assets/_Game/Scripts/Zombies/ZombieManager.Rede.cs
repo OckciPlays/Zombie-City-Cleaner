@@ -22,10 +22,11 @@ namespace ZombieCityCleaner.Zombies
     {
         const string NomeDaMensagem = "ZCC.Zumbis";
         // ~1,2 KB por mensagem: abaixo do limite das mensagens não confiáveis (1.300 bytes)
-        const int PorPacote = 75;
+        const int PorPacote = 65;
         // (o 15º, desde 28/10/2026: a pedra do sol, de 0 a 255; o 16º, desde 31/10/2026: o equilíbrio sem uma perna, a fase
-        // em 3 bits e a inclinação em 5)
-        const int BytesPorZumbi = 16;
+        // em 3 bits e a inclinação em 5; o 17º e o 18º, desde 01/11/2026: o modelo (os especiais não saem do Id, como os
+        // Ocos) e o byte do especial: a fase e a vida do Brutamonte, o cuspe e o grito do Long)
+        const int BytesPorZumbi = 18;
 
         [Header("Rede")]
         [Tooltip("Intervalo entre envios (s). Os zumbis perto de cada cliente vão em todos.")]
@@ -87,7 +88,7 @@ namespace ZombieCityCleaner.Zombies
                     {
                         // a distância conta a luneta: na linha dela, os zumbis de longe vão como se estivessem perto
                         float d = Distancia(Jogadores[j], z.transform.position);
-                        var n = NivelPara(d, (Zumbi.Nivel)niveis[z.Id]);
+                        var n = z.SempreDePerto(d) ? Zumbi.Nivel.Perto : NivelPara(d, (Zumbi.Nivel)niveis[z.Id]);
                         niveis[z.Id] = (byte)n;
                         // os do nível médio se revezam (pelo Id), para não irem todos no mesmo envio; os de longe também, mais
                         // devagar, só até a distância de visão do cliente (lá ele os desenha parados, como o anfitrião)
@@ -128,6 +129,8 @@ namespace ZombieCityCleaner.Zombies
                     w.WriteValueSafe(z.Cortes);
                     w.WriteValueSafe((byte)Mathf.RoundToInt(z.Pedra * 255f));
                     w.WriteValueSafe(z.EquilibrioNaRede);
+                    w.WriteValueSafe((byte)z.modelo);
+                    w.WriteValueSafe(z.EspecialNaRede);
                 }
                 NetworkManager.CustomMessagingManager.SendNamedMessage(NomeDaMensagem, cliente, w, NetworkDelivery.UnreliableSequenced);
                 BytesEnviados += w.Length;
@@ -159,24 +162,26 @@ namespace ZombieCityCleaner.Zombies
                     r.ReadValueSafe(out byte cortes);
                     r.ReadValueSafe(out byte pedra);
                     r.ReadValueSafe(out byte equilibrio);
-                    if (id >= MaxZumbis) continue;
+                    r.ReadValueSafe(out byte modelo);
+                    r.ReadValueSafe(out byte especial);
+                    if (id >= MaxZumbis || modelo >= modelos.Length) continue;
                     var c = _porId[id];
-                    if (c == null || c.Geracao != geracao)
+                    if (c == null || c.Geracao != geracao || c.modelo != modelo)
                     {
                         // Id novo, ou o mesmo Id reaproveitado por outro zumbi
                         if (c != null) DevolverCopia(c);
-                        c = NovaCopia(id, geracao);
+                        c = NovaCopia(id, geracao, modelo);
                     }
                     var e = (Zumbi.Estado)(estado & 15);
                     c.Receber(tempo, origem + new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
-                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra, equilibrio);
+                              morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra, equilibrio, especial);
                 }
             }
         }
 
-        Zumbi NovaCopia(int id, byte geracao)
+        Zumbi NovaCopia(int id, byte geracao, int modelo)
         {
-            var c = PegarDoPool(ModeloDe(id, geracao));
+            var c = PegarDoPool(modelo);
             _porId[id] = c;
             _copias.Add(c);
             c.PrepararCopia(id, geracao, this);
@@ -213,7 +218,7 @@ namespace ZombieCityCleaner.Zombies
                     c.QuadroDaCopia(agora, dt);
                     // hitboxes e sombra pela distância de quem joga aqui (a cópia só existe até ~40 m, ou mais na luneta)
                     float daqui = Distancia(local, c.transform.position);
-                    var n = NivelPara(daqui, c.NivelAtual);
+                    var n = c.SempreDePerto(daqui) ? Zumbi.Nivel.Perto : NivelPara(daqui, c.NivelAtual);
                     c.AplicarNivel(n == Zumbi.Nivel.Longe ? Zumbi.Nivel.Medio : n);
                     c.DefinirDetalhe(daqui, distanciaDoLOD1, distanciaDoLOD2);
                 }

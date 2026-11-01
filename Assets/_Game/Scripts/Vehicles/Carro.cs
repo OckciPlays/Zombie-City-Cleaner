@@ -40,9 +40,14 @@ namespace ZombieCityCleaner.Vehicles
     /// As rodas (<see cref="PneusDoCarro"/>, do anfitrião): o pneu furado baixa a roda, segura menos e arrasta (o carro
     /// puxa para aquele lado); o gasto escorrega mais; sem a roda, o cubo arrasta no chão.
     /// </para>
+    /// <para>
+    /// O desgaste e a gasolina (01/11/2026): os pneus gastam rodando e furam por sorteio (um problema por vez), a vela e o
+    /// radiador gastam com o motor ligado, as batidas estragam, e a gasolina gasta e se repõe com o galão
+    /// (Carro.Desgaste.cs).
+    /// </para>
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public class Carro : NetworkBehaviour, ICapo
+    public partial class Carro : NetworkBehaviour, ICapo
     {
         public const int Lugares = 4;
         /// <summary>A camada do carro: não bate nos zumbis (eles são atropelados por código) nem na cápsula de perto deles.</summary>
@@ -111,7 +116,7 @@ namespace ZombieCityCleaner.Vehicles
         public MeshRenderer lenteDoTeto;
         public Material tetoApagado, tetoAceso;
         public float intensidadeDoTeto = 0.5f;
-        [Tooltip("Quanto o ponteiro da gasolina mostra (ainda não gasta: o jogo não tem combustível).")]
+        [Tooltip("O tanque no começo da partida (de 0 a 1 do tanque; a gasolina gasta com o motor ligado: Carro.Desgaste.cs).")]
         [Range(0f, 1f)] public float combustivel = 0.68f;
 
         [Header("O capô e as peças do motor")]
@@ -190,6 +195,8 @@ namespace ZombieCityCleaner.Vehicles
 
         readonly NetworkVariable<Ocupantes> _ocupantes = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         readonly NetworkVariable<bool> _farois = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        // a gosma do Long nos faróis (01/11/2026): até esta hora (no relógio do servidor), eles não acendem
+        readonly NetworkVariable<float> _faroisSujosAte = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>O giro das rodas da frente (-127 a 127 = todo para a esquerda ou a direita), para os outros verem.</summary>
         readonly NetworkVariable<sbyte> _direcao = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>A rotação do motor (0 a 255), para o som.</summary>
@@ -282,7 +289,15 @@ namespace ZombieCityCleaner.Vehicles
         public bool Virado => transform.up.y < 0.35f;
         /// <summary>Virado há mais de 1,5 s e quase parado: o motorista pode desvirar.</summary>
         public bool PodeDesvirar => Virado && _viradoDesde >= 0f && Time.time - _viradoDesde > 1.5f && Velocidade < 2f;
-        public bool FaroisLigados => IsSpawned && _farois.Value;
+        public bool FaroisLigados => IsSpawned && _farois.Value && !FaroisSujos;
+        /// <summary>A gosma do Long cobriu os faróis (eles não acendem até ela escorrer).</summary>
+        public bool FaroisSujos => IsSpawned && NetworkManager.ServerTime.TimeAsFloat < _faroisSujosAte.Value;
+
+        /// <summary>Só no anfitrião: a gosma cobre os faróis por este tempo (s).</summary>
+        public void SujarFarois(float segundos)
+        {
+            if (IsServer) _faroisSujosAte.Value = NetworkManager.ServerTime.TimeAsFloat + segundos;
+        }
         bool Simula => !IsSpawned || IsOwner;
         /// <summary>A chave e o motor: o do dono na hora, o da rede nos outros.</summary>
         public EstadoDoMotor Estado => !IsSpawned ? EstadoDoMotor.SemChave : IsOwner ? _estadoLocal : (EstadoDoMotor)_motorRede.Value;
@@ -367,6 +382,7 @@ namespace ZombieCityCleaner.Vehicles
             }
             AplicarFarois(false);
             _posAntes = transform.position;
+            PrepararDesgaste();
         }
 
         void OnEnable() => Todos.Add(this);
@@ -389,6 +405,7 @@ namespace ZombieCityCleaner.Vehicles
                 _macacoEm.Value = PneusDoCarro.Vazio;
                 _erguido.Value = false;
                 _ergueu = 0f;
+                DesgasteAoNascer();
             }
             _erguidoVisto = _erguido.Value;
             _erguidoMudouEm = -99f;
@@ -620,10 +637,11 @@ namespace ZombieCityCleaner.Vehicles
             motivo = null;
             if (!IsSpawned || !IsOwner || _estadoLocal != EstadoDoMotor.Arranque) return false;
             var p = Pecas;
-            if (!p.VelaBoa || Fervendo)
+            if (!p.VelaBoa || Fervendo || SemGasolina)
             {
                 Tossir();
                 motivo = Fervendo ? "O motor está quente demais: espere esfriar"
+                    : SemGasolina && p.VelaBoa ? "O motor não pega: acabou a gasolina (abasteça com um galão)"
                     : p.Tem(PecasDoMotor.Vela) ? "O motor não pega: a vela está queimada (abra o capô)" : "O motor não pega: falta a vela (abra o capô)";
                 return false;
             }
@@ -697,8 +715,8 @@ namespace ZombieCityCleaner.Vehicles
                 _anguloDaChave = Mathf.MoveTowards(_anguloDaChave, ChaveLiga, molaDaPartida * dt);
             EstadoDoMotor novo;
             if (_anguloDaChave < ChaveDesliga) novo = EstadoDoMotor.Desligado;
-            // ferveu (ou tiraram a vela): o motor apaga, e a chave fica na ignição
-            else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
+            // ferveu (ou tiraram a vela, ou acabou a gasolina): o motor apaga, e a chave fica na ignição
+            else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa || SemGasolina ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
             else if (_presaNaPartida) novo = EstadoDoMotor.Arranque;
             else novo = EstadoDoMotor.Ignicao;
             // na ligação direta não há "desligado com a chave": puxada até o fim, os fios se soltam
@@ -803,6 +821,7 @@ namespace ZombieCityCleaner.Vehicles
                 return;
             }
             if (!Simula || rodas == null || rodas.Length < 4) return;
+            MedirBatida();   // as batidas estragam (Carro.Desgaste.cs)
             bool comMotorista = IsSpawned && _ocupantes.Value[0] != 0;
             float acelerar = comMotorista ? _acelerar : 0f, virar = comMotorista ? _virar : 0f, mao = comMotorista ? _maoPuxada : 1f;
             float v = Vector3.Dot(_corpo.linearVelocity, transform.forward);
@@ -820,8 +839,8 @@ namespace ZombieCityCleaner.Vehicles
             // freio funciona, e o carro rola devagar até parar)
             bool ligado = MotorLigado;
             float forca = 0f, frear = 0f;
-            // a vela gasta tira força do motor
-            float torque = this.torque * Pecas.FatorDeForca;
+            // a vela gasta tira força do motor; o engasgo (a vela muito gasta, a gasolina na reserva) corta por um instante
+            float torque = this.torque * Pecas.FatorDeForca * FatorDoEngasgo();
             if (acelerar > 0.05f)
             {
                 if (v < -0.8f) frear = freio * acelerar;
@@ -862,7 +881,7 @@ namespace ZombieCityCleaner.Vehicles
             {
                 var direcao = (sbyte)Mathf.RoundToInt(Mathf.Clamp(_giro / giroMaximo, -1f, 1f) * 127f);
                 if (direcao != _direcao.Value) _direcao.Value = direcao;
-                _rotacaoLocal = ligado ? Rotacao(Mathf.Abs(v), Mathf.Abs(acelerar)) : 0f;
+                _rotacaoLocal = ligado ? Rotacao(Mathf.Abs(v), Mathf.Abs(acelerar)) * (Engasgando ? 0.55f : 1f) : 0f;
                 byte rot = (byte)Mathf.RoundToInt(_rotacaoLocal * 255f);
                 if (Mathf.Abs(rot - _rotacao.Value) > 4 && Time.time - _enviouRotacao > 0.1f)
                 {
@@ -872,6 +891,7 @@ namespace ZombieCityCleaner.Vehicles
             }
 
             if (comMotorista) Atropelar(v);
+            RodarNoDono(dt);
         }
 
         // o pneu furado e o cubo sem a roda arrastam no chão: uma força contra o movimento daquele canto (o carro puxa
@@ -1087,6 +1107,7 @@ namespace ZombieCityCleaner.Vehicles
             }
             p[roda] = (byte)Mathf.Clamp(estado, 0, 100);
             _pneus.Value = p;
+            NovoPneu(roda);
             SomDoMacacoRpc(2, rodas[roda].transform.position);
         }
 
@@ -1259,8 +1280,9 @@ namespace ZombieCityCleaner.Vehicles
         {
             var p = _pneus.Value;
             if (roda >= PneusDoCarro.Quantas || !p.Tem(roda) || p.Furado(roda) || Jogador(parametros.Receive.SenderClientId) == null) return;
-            p[roda] = 0;
+            p[roda] = 5;   // o furo da bala tem remendo (de 1 a 9%: furado, mas não rasgado)
             _pneus.Value = p;
+            PararDeMurchar(roda);
             FurouRpc(roda);
         }
 
@@ -1344,6 +1366,7 @@ namespace ZombieCityCleaner.Vehicles
                 // o zumbi de pedra (o sol) quebra com a batida (o "arremesso" quebra a estátua), e pesa mais
                 bool pedra = h.zumbi.Petrificado;
                 motorista.AcertarZumbi(h.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, rapidez > 8f || pedra);
+                Atropelou(h.zumbi.transform.position);   // os ossos podem furar o pneu da frente (Carro.Desgaste.cs)
                 if (pedra)
                 {
                     Efeitos.Impacto(ponto, transform.forward * Mathf.Sign(v));
@@ -1414,6 +1437,7 @@ namespace ZombieCityCleaner.Vehicles
             if (!p.Por(peca, inventario, id)) return;
             _pecas.Value = p;
             if (peca == PecasDoMotor.Bateria) _carga = p.Estado(PecasDoMotor.Bateria);
+            NovaPeca(peca);
         }
 
         [Rpc(SendTo.Server)]
@@ -1464,6 +1488,7 @@ namespace ZombieCityCleaner.Vehicles
                 });
             bool aberto = _olhandoOCapo.Count > 0;
             if (_capoAberto.Value != aberto) _capoAberto.Value = aberto;
+            DesgasteNoServidor(dt);
         }
 
         // o capô sobe enquanto alguém olha o motor (quem olha desta máquina já vê subir, sem esperar a rede), e desce batendo
@@ -1493,7 +1518,7 @@ namespace ZombieCityCleaner.Vehicles
             AplicarPneus();
             Rodas(dt);
             // os faróis precisam da bateria
-            bool farois = _farois.Value && Pecas.BateriaAcende;
+            bool farois = _farois.Value && Pecas.BateriaAcende && !FaroisSujos;
             if (_faroisAplicados != farois) AplicarFarois(farois);
             if (IsServer) Desgaste(dt);
             Capo(dt);
@@ -1506,6 +1531,7 @@ namespace ZombieCityCleaner.Vehicles
             if (IsOwner && _ocupantes.Value[0] == 0 && (_buzinaLocal || _buzina.Value)) Buzinar(false);
             Buzina(dt);
             Painel(dt);
+            SonsDoDesgaste(dt);
         }
 
         void Rodas(float dt)
@@ -1601,7 +1627,7 @@ namespace ZombieCityCleaner.Vehicles
 
             float kmh = ignicao ? Mathf.Abs(VelocidadeParaFrente) * 3.6f : 0f;
             _ponteiroVel = Mathf.Lerp(_ponteiroVel, kmh, 1f - Mathf.Exp(-6f * dt));
-            _ponteiroComb = Mathf.MoveTowards(_ponteiroComb, ignicao ? combustivel : 0f, dt * 0.5f);
+            _ponteiroComb = Mathf.MoveTowards(_ponteiroComb, ignicao ? Gasolina / Mathf.Max(1f, Tanque) : 0f, dt * 0.5f);
             // o ponteiro aponta para +Y; o painel olha para o motorista (-Z): no sentido do relógio é o giro negativo em Z
             if (ponteiroVelocidade != null) ponteiroVelocidade.localRotation = Quaternion.Euler(0f, 0f, -AnguloDoVelocimetro(_ponteiroVel));
             if (ponteiroCombustivel != null) ponteiroCombustivel.localRotation = Quaternion.Euler(0f, 0f, -AnguloDoCombustivel(_ponteiroComb));

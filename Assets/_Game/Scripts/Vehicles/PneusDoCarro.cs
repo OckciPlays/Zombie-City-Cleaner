@@ -89,6 +89,11 @@ namespace ZombieCityCleaner.Vehicles
 
         /// <summary>O que o pneu faz neste estado (uma frase curta, para o inventário).</summary>
         public static string Efeito(int estado) =>
-            estado < Minimo ? "furado: o carro puxa e anda mal" : estado < 40 ? "gasto: escorrega nas curvas" : "segura bem";
+            estado <= 0 ? "rasgado: não tem remendo, só trocando"
+            : estado < Minimo ? "furado: o carro puxa e anda mal (o kit de reparo remenda)"
+            : estado < 40 ? "gasto: escorrega nas curvas e fura mais" : "segura bem";
+
+        /// <summary>O pneu furado (de 1 a 9%) remendado com o kit de reparo fica com isto (%). Rasgado (0%), não tem remendo.</summary>
+        public const int Remendo = 40;
     }
 }

@@ -7,6 +7,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 > **Novidades de 29 a 31/10/2026** (as armas novas, as armas brancas, a vida dos zumbis em 100, o saque e a fabricação,
 > e o zumbi sem uma perna): o resumo para o Gustavo está em [`Docs/09-Novidades-29-a-31-10.md`](Docs/09-Novidades-29-a-31-10.md).
+>
+> **Os zumbis especiais (01/11/2026):** o Brutamonte, o Long e o Corredor, a lanterna com pilhas e as luzes maiores da
+> fogueira e da tocha estão em [`Docs/10-Zumbis-Especiais.md`](Docs/10-Zumbis-Especiais.md) e na seção "Os zumbis especiais".
+>
+> **O desgaste do carro e a gasolina (01/11/2026):** os pneus que gastam e furam por sorteio (um problema por vez), a vela e
+> o radiador que gastam, as batidas, a gasolina e o galão estão em [`Docs/11-Desgaste-do-Carro.md`](Docs/11-Desgaste-do-Carro.md)
+> e na seção "O desgaste do carro e a gasolina".
 
 ## Branches
 
@@ -1508,6 +1515,164 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   - o jorro do pescoço, preso ao osso do corpo que cai;
   - manchas de sangue no chão (40 decals) e furos de tiro no cenário (40 decals), reaproveitando o mais antigo.
 - **Na rede:** o estado do zumbi (a morte com a parte e a direção do tiro, as contagens de golpes e de tiros) vai em todos os pacotes de zumbis. Cada máquina transforma o que mudou em efeito, então todos veem o mesmo zumbi cair, para o mesmo lado.
+
+## Os zumbis especiais (01/11/2026, a pedido)
+
+O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiais.md`. Aqui, o técnico.
+
+- **Os modelos:** 9, a partir dos FBX da pasta `D:\teste blender` (o outro chat que os modelou; só leitura): o Brutamonte, o
+  Long (o Guspidor) e o Corredor, cada um em 3 roupas (`V1` a `V3`).
+  - **`Blender/Especiais/especiais.py`:** encaixa o esqueleto do Oco em cada um. As medidas da malha (`Medidas`: virilha,
+    axila, pescoço, braços, pernas) levam as juntas do Oco para as proporções dele. Os pesos saem do calor dos ossos numa casca
+    de voxels, com tudo 10× maior (na escala real o calor falha), e são copiados para a malha (`DATA_TRANSFER`); se mais de 30%
+    da casca fica sem peso, ele tenta de novo com outro voxel.
+  - **Os ossos próprios:** o olho e as pálpebras do Brutamonte (`olho`, `palpebra_sup`, `palpebra_inf`, filhos do `chest`) e o
+    papo do Long (`papo`, filho do `neck`).
+  - **`texturas.py`:** a cor, a normal e o metal/liso. A íris do Brutamonte fica na faixa de baixo da textura.
+  - **A saída:** `Art/Characters/Zombie/Especiais/<Tipo>_V<n>.fbx`.
+- **A montagem** (`Editor/MontagemDosZumbis.Especiais.cs`, menu **Zumbis > Montar os zumbis especiais**; a montagem inteira
+  também os faz): entram como os Ocos (Humanoid, os clipes do `Oco_Original` gravados no esqueleto de cada um, a cabeça
+  separada, o corpo que cai), depois dos 12 Ocos na lista do `ZombieManager`:
+  - índices 12–14: o Brutamonte;
+  - 15–17: o Long;
+  - 18–20: o Corredor.
+
+  `MontarEspecial` marca o `tipo`, liga os ossos e põe as hitboxes esféricas do olho (raio 0,12; região `Olho`) e do papo
+  (0,13; `Papo`). O Brutamonte tem a cápsula e o agente de raio 0,55.
+- **O código:** a parte comum em `Zumbi.Especiais.cs` (o `TipoDeZumbi`, a vida, a velocidade e o ritmo da animação de cada
+  um, o byte da rede, o `Decisao` em palavras para os testes), `Zumbi.Brutamonte.cs`, `Zumbi.Long.cs`,
+  `ZombieManager.Especiais.cs` (nascer, voltar para a terra, o grito, os sons) e `ZombieManager.Gosma.cs`. Os números estão
+  em `AjustesDeZumbi` (`corredor`, `cuspidor`, `brutamonte`; as classes em `TipoDeZumbi.cs`).
+  - **A rede:** cada zumbi tem 18 bytes (`PorPacote` 65): o 17º é o modelo (a cópia é recriada se o modelo muda) e o 18º é o
+    especial:
+    - o Brutamonte manda a fase em 3 bits e a vida em 5 bits;
+    - o Long manda os contadores de cuspe e de grito (2 bits cada) e o papo estourado.
+  - **O nível Perto de mais longe:** o Brutamonte fica Perto até 75 m e o Long até 50 m (`SempreDePerto`), porque o olho e o
+    papo são hitboxes, e as hitboxes só existem nesse nível.
+  - **O Brutamonte:** a máquina de fases fica em `BrutamonteNoQuadro`.
+    - O olho (`JogadorNoOlho`) é um cone de 110° para trás, com a linha livre.
+    - O avanço é `agente.Move` em linha reta. Uma borda do NavMesh (um `NavMesh.Raycast` saindo do `agente.nextPosition`)
+      ou um tranco de 0,25 s conta como a parede, e ele fica Tonto.
+    - Ele não reage ao sol nem à luz (`ImuneALuz`).
+    - O olho e as pálpebras são girados depois da animação (`OlhoDepoisDaAnimacao`). A hitbox do olho só fica ligada com o
+      olho aberto.
+    - Emergindo e na fúria, `GarantirAcaoDoBruto` põe o Animator no estado (a cópia que nasce já emergindo também).
+  - **O Long:** pensa em `PensarLong`, no lugar de perceber e perseguir. A gosma sai na hora (`LongNoQuadro`), e a lanterna
+    de perto é o ponto fraco (`NaLanternaDePerto`: os fachos de jogador até 7 m, cone de 22°). O papo incha e murcha em
+    `PapoDepoisDaAnimacao`. Ele não pula para fora do facho da lanterna a menos de 8 m.
+  - **O Corredor:** é o Oco com outros números (`VidaDoCorpo`, `VidaDoMembro`, `VelocidadeDePerseguir`, `FatorAndando`,
+    `TempoParaPetrificar`, `VelocidadeNoBote`). Ele nasce no lugar de um Oco (`ModeloParaNascer`).
+- **As animações:** `Blender/especiais_animacoes.py` faz `Correr`, `Emergir`, `Furia`, `Cuspir` e `Gritar`.
+  - Usa o esqueleto, o IK, as curvas e o espelho do `equilibrio_oco.py`.
+  - Os laços (`Laco`) dão a volta sem tranco.
+  - O `Correr` e a `Furia` são meio ciclo mais o espelho.
+  - Saem em `Art/Characters/Oco/Oco_AnimacoesEspeciais.fbx`.
+  - **A gravação:** `Editor/MontagemDosZumbis.AnimacoesEspeciais.cs`, menu **Zumbis > Gravar as animações dos especiais (sem
+    remontar)**. Grava nos 21 modelos e põe os estados no `Zombie.controller`:
+    - **"Andar dos especiais"** (`Pernas` = 7: Idle, Walk, Chase e Correr a 3,8 m/s). Só o Corredor e o Brutamonte usam
+      (`CorreComoEspecial`), então os Ocos não mudam;
+    - `Emergir`, `Furia`, `Cuspir` e `Gritar` (`Pernas` = 6, sem transição; o código toca com `Tocar`).
+  - **O ritmo:** `RitmoDoEspecial` acelera o Animator: 1,8× no avanço do Brutamonte e até 1,3× no bote do Corredor (multiplica
+    o `animador.speed` do `MostrarPedra`).
+- **A lanterna e as pilhas** (`Item.Lanterna`, `Item.Pilhas`; `InventarioJogador`, a parte "a lanterna e as pilhas"):
+  - a carga é o desgaste da lanterna; `DuracaoDasPilhas` é 480 s acesa;
+  - `TrocarPilhas` fica no menu da mochila;
+  - `EsvaziarLanterna` e `ApagarTochaNaMao` são a gosma;
+  - `LanternaDoComeco` larga a lanterna e as pilhas na frente de quem nasce.
+
+  A `LanternaJogador` só acende com lanterna e carga (vazia, pisca 1,3 s e apaga). A cena de vídeo continua com a lanterna.
+  Os modelos estão no `Blender/loot.py`; o menu é **Itens > Montar só o saque (lanterna, pilhas)**.
+- **A gosma no jogador:**
+  - `MovimentoPrimeiraPessoa.PresoNaGosma` e `PrenderNaGosma`: segurar Interagir (E) solta;
+  - `JogadorRede.PrenderNaGosma` é chamado no servidor e manda o `PresoNaGosmaRpc` para o dono;
+  - no carro, `Carro.SujarFarois` (uma `NetworkVariable`) apaga os faróis por um tempo;
+  - as fogueiras: `ConstrucoesNoMundo.ApagarFogueiras` e `FogueirasAcesas`.
+- **As luzes:** a fogueira tem alcance 16 (era 7), intensidade 3,6 e tremor. A tocha tem 14 (era 8), na mão e no corpo.
+- **Os testes:** o F1 cria cada especial (`CriarEspecialRpc`). Os testes no Play de 01/11 conferiram:
+  - **o Brutamonte:** o emergir, o olho, o avanço com dano, a fúria, o tonto e a morte pelo olho;
+  - **o Corredor:** a perseguição a até 5 m/s;
+  - **o Long:** o cuspe na fogueira (apagou) e no jogador (preso; a poça zerou a lanterna), o grito, a busca e a morte na
+    lanterna depois de trocar as pilhas;
+  - **a sombra das construções.**
+
+## O desgaste do carro e a gasolina (01/11/2026, a pedido)
+
+O resumo para gente (os números, como testar) está em `Docs/11-Desgaste-do-Carro.md`. O pedido: os pneus furando na estrada
+para o jogador parar e trocar, sem tudo quebrar de uma vez (os 4 pneus não podem estourar juntos por km rodado). Por isso o
+desgaste é lento e diferente em cada peça, e a falha é um sorteio cuja chance cresce com o desgaste, com uma carência
+depois de cada falha.
+
+- **Onde:** `Vehicles/Carro.Desgaste.cs` (o `Carro` virou `partial`) e `AjustesDoDesgaste` (os números, no campo
+  `desgaste` de cada prefab de carro, com tooltips). Os ganchos no `Carro.cs`:
+  - `PrepararDesgaste` no `Awake`: a mira da tampa do tanque e os sons;
+  - `DesgasteAoNascer` no `OnNetworkSpawn` do anfitrião;
+  - `FatorDoEngasgo` no torque e `RodarNoDono` no fim do `FixedUpdate`;
+  - `DesgasteNoServidor` no fim do `Desgaste` (o da bateria e da temperatura);
+  - `SonsDoDesgaste` no `Update`;
+  - `NovoPneu` no `PorRodaRpc` e `NovaPeca` no `PorPecaRpc`;
+  - `Atropelou` no `Atropelar`;
+  - `SemGasolina` no `Ignicao` e no `PegarAgora`;
+  - o ponteiro da gasolina mostra `Gasolina / Tanque`.
+- **A rede:** a física é do dono (quem dirige), as peças são do anfitrião.
+  - O dono mede, a cada passo, quanto cada roda rodou: a distância (ou o giro, patinando), vezes (1 + 5 × a derrapagem do
+    `WheelHit`), vezes o eixo. A cada segundo manda ao anfitrião (`RodouRpc`, em decímetros), com o chão do momento
+    (`ForaDoAsfalto`: fora das cidades e a mais de 5,5 m de uma estrada da `RedeDeEstradas`, ×1,6).
+  - O anfitrião aplica o desgaste e sorteia os furos.
+  - As batidas vão pelo `BateuRpc`, medidas no dono por `OnCollisionEnter` e `MedirBatida`: a maior mudança de velocidade
+    do carro nos 0,15 s depois do contato (o impulso do primeiro contato é só uma parte), sem os contatos de cima para
+    baixo. A roda presa num meio-fio não conta (o `WheelCollider` não gera colisão).
+  - Os atropelamentos vão pelo `AtropelouRpc`.
+  - O engasgo é decidido no dono (o torque a 12% e o giro do som a 55% por 0,35 a 0,8 s) e tocado em todos (`EngasgouRpc`).
+  - `_gasolina` (float, litros) e `_vazando` (bits 0 a 3 os pneus murchando, o 4 o radiador) são `NetworkVariable` do
+    anfitrião.
+- **Os pneus:**
+  - a resistência é sorteada por pneu posto (0,7 a 1,3);
+  - o desgaste para no `pisoDoDesgaste` (12%);
+  - os furos são por km com a chance de `kmPorFuroNovo` (90) a `kmPorFuroGasto` (7), pelo `SmoothStep` de 100% a 30%;
+  - a `carencia` (180 s dirigindo, contados acima de 2 m/s) vale para o furo sorteado, o do atropelo e o vazamento sorteado
+    do radiador; o tiro, as batidas e a gosma não esperam.
+  - O `Furo` decide entre o estouro (`chanceDeEstouro` + 35% × o gasto + 20% acima de 18 m/s: 0%, `FurouRpc` e
+    `ZombieManager.Barulho`) e o furo lento (murcha até 5% em `tempoDoFuroLento`, com o chiado).
+  - Rodar furado tira `furadoPor100m` até 0 (rasgado). O tiro agora deixa o pneu em 5% (com remendo).
+  - O remendo (`InventarioJogador.Remendar`, `PneusDoCarro.Remendo` = 40%): o pneu de 1 a 9% na mochila (botão direito)
+    ou nas mãos (Id 0; R, com o aviso no HUD da `ArmaJogador`).
+- **O motor:**
+  - a vela e o radiador gastam com o motor ligado (`minutosDaVela` 150, `minutosDoRadiador` 300, divididos pela
+    resistência sorteada da peça);
+  - a vela abaixo de `velaQueEngasga` (35%) e a gasolina na `reserva` (3 L) fazem o engasgo, mais seguido quanto pior;
+  - o radiador vaza por sorteio (`minutosPorVazamento`, até 6× no gasto) ou numa batida de frente (`local.z` > 1,25),
+    perdendo `vazamentoPorMinuto` (10%);
+  - a batida do lado de uma roda pode estourar o pneu.
+- **A gasolina:**
+  - o tanque é `desgaste.tanque` (a perua 45 L, o cupê 40 L); o `combustivel` do prefab é o começo (0,68);
+  - o gasto é de `gastoParado` (0,12 L/min) a `gastoNoMaximo` (2,4 L/min), pelo giro do motor na rede (`_rotacao`) ^ 1,5;
+  - sem gasolina, o motor apaga e não pega.
+  - **O galão** (`Item.Galao` = 118, `Itens.LitrosDoGalao` 10, 2 × 2 na mochila): a gasolina vai no `desgaste` do item
+    (0 cheio, 100 vazio; `InventarioJogador.LitrosDe`), como a carga da lanterna. Ele fica vazio, não some (o posto vem
+    depois).
+  - **A tampa do tanque** (`TanqueDoCarro`, um gatilho criado no `Awake` em `tampaDoTanque`, com um disco escuro se
+    `desenharTampa`): na perua (-0,862; 0,88; -1,62), à esquerda, atrás, em cima do arco da roda; no cupê, a do modelo
+    (-0,894; 0,83; -1,86), sem o disco. E despeja o galão mais cheio (`AbastecerRpc`, a 3,2 m da tampa).
+  - O modelo do galão está no `Blender/loot.py` (`_galao`); o menu é **Itens > Montar só o saque**.
+- **Os avisos** (`PassageiroDoCarro.AvisosDoDesgaste`, só para o motorista): a mensagem no meio da tela quando a coisa
+  começa, e as linhas do HUD ("PNEU MURCHANDO", "RADIADOR VAZANDO", "GASOLINA NA RESERVA", "SEM GASOLINA").
+  `Carro.NomesDasRodas` dá os nomes.
+- **Os sons** são provisórios, gerados no `SomDoCarro` como os outros: `ArVazando` e `Vapor` (laços de 1 s, por
+  `GerarChiado`) e `Abastecer` (o gorgolejo, 2,2 s).
+- **O teste:** o F1 tem o painel "Carro (teste)" (`MenuDoDesenvolvedor.Carro.cs`, `Carro.Teste`: furo lento, estouro,
+  pneus a 30%, pneus novos, vazar o radiador, vela a 25%, motor novo, gasolina 1 L, tanque cheio, sem carência), e
+  `PassageiroDoCarro.DirecaoDeTeste` deixa um teste automático dirigir sem o teclado (null no jogo). Os testes no Play de
+  01/11 conferiram:
+  - o abastecimento (30,6 → 40,6 L, o galão vazio);
+  - o remendo na mochila e nas mãos (5% → 40%);
+  - a troca do pneu rasgado pelo estepe com o macaco;
+  - o desgaste rodando, diferente em cada pneu (com os números acelerados: 86, 92, 97 e 96%);
+  - os engasgos (vela gasta e reserva);
+  - o furo lento (de 70% a 5% em 45 s, com o chiado) e o estouro;
+  - o radiador vazando (10%/min);
+  - a gasolina acabando (o motor apaga e não pega);
+  - a batida de frente contra uma parede (o radiador perde %).
+  A perua começa encostada na casa da família, com um meio-fio uns 7 m à frente (as voltas do teste esbarravam nele).
 
 ## A trilha sonora (29/10/2026, a pedido; `Scripts/Music/`, `Ferramentas/trilha/`)
 

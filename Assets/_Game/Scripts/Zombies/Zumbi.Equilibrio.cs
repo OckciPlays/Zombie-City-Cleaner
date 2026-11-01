@@ -91,11 +91,11 @@ namespace ZombieCityCleaner.Zombies
         /// O valor de "Pernas" no Animator: deitado e levantando (5, sem transição) são o levantar, tocado pelo código
         /// (deitado, parado no primeiro quadro); rastejando, o rastejar (4).
         /// </summary>
-        int PernasNoAnimador => FaseDoEquilibrio switch
+        int PernasNoAnimador => _acaoNoAnimador ? 6 : FaseDoEquilibrio switch   // 6: uma ação de especial (sem transição)
         {
             Fase.Rastejando => 4,
             Fase.Deitado or Fase.Levantando => 5,
-            _ => _pernas,
+            _ => _pernas == 0 && CorreComoEspecial ? 7 : _pernas,   // 7: o andar dos especiais (com a disparada)
         };
 
         /// <summary>O estado do levantar pela perna que falta (sem a direita, o espelho).</summary>
@@ -461,6 +461,7 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         internal void DepoisDaAnimacao(float dt)
         {
+            EspecialDepoisDaAnimacao(dt);   // o olho do Brutamonte, o papo do Long (Zumbi.Especiais.cs)
             float agora = Time.time;
             bool misturando = agora < _misturaAte;
             if (FaseDoEquilibrio == Fase.Nenhuma && !_inclinado && !misturando) return;

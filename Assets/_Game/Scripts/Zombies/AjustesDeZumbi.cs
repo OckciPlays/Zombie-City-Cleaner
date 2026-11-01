@@ -123,5 +123,11 @@ namespace ZombieCityCleaner.Zombies
         public float velocidadeDaEsquiva = 3.2f;
         [Tooltip("Entre uma esquiva e outra (s): com a luz parada nele, ele pula de novo.")]
         public float intervaloDaEsquiva = 1f;
+
+        [Header("Os especiais (01/11/2026; TipoDeZumbi.cs)")]
+        public AjustesDoCorredor corredor = new AjustesDoCorredor();
+        [Tooltip("O Long (o cuspidor).")]
+        public AjustesDoLong cuspidor = new AjustesDoLong();
+        public AjustesDoBrutamonte brutamonte = new AjustesDoBrutamonte();
     }
 }

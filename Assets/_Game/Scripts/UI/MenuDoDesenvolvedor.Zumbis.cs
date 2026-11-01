@@ -18,7 +18,7 @@ namespace ZombieCityCleaner.UI
     {
         Rect PainelDosZumbis(float u, Rect aoLado)
         {
-            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 410 * u);
+            var area = new Rect(aoLado.xMax + 8 * u, aoLado.y, 250 * u, 440 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -45,6 +45,24 @@ namespace ZombieCityCleaner.UI
             {
                 CriarZumbiNaFrenteRpc(true);
                 Avisar("Um zumbi de pedra 5 m à frente.");
+            }
+            y += 30 * u;
+            // os especiais (01/11/2026): um na sua frente
+            float terco = (w - 12 * u) / 3f;
+            if (GUI.Button(new Rect(x, y, terco, 26 * u), "Corredor", _botao))
+            {
+                CriarEspecialRpc(TipoDeZumbi.Corredor);
+                Avisar("Um Corredor 6 m à frente: frágil e muito rápido.");
+            }
+            if (GUI.Button(new Rect(x + terco + 6 * u, y, terco, 26 * u), "Long", _botao))
+            {
+                CriarEspecialRpc(TipoDeZumbi.Long);
+                Avisar("Um Long 18 m à frente: fica longe e cospe a gosma. A lanterna nele, de perto, o petrifica.");
+            }
+            if (GUI.Button(new Rect(x + 2f * (terco + 6 * u), y, terco, 26 * u), "Brutamonte", _botao))
+            {
+                CriarEspecialRpc(TipoDeZumbi.Brutamonte);
+                Avisar("O Brutamonte brota da terra 9 m à frente. O ponto fraco é o olho nas costas, aberto.");
             }
             y += 30 * u;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Petrificar (30 m)", _botao))
@@ -163,6 +181,12 @@ namespace ZombieCityCleaner.UI
             frente.y = 0f;
             frente.Normalize();
             ZombieManager.Instancia.CriarHordaPerseguindo(GetComponent<Player.JogadorRede>(), transform.position + frente * 14f, quantos);
+        }
+
+        [Rpc(SendTo.Server)]
+        void CriarEspecialRpc(TipoDeZumbi tipo, RpcParams parametros = default)
+        {
+            if (Aceita(parametros) && ZombieManager.Instancia != null) ZombieManager.Instancia.CriarEspecialPerto(tipo, transform.position, transform.forward);
         }
 
         // arranca a coxa (a perna inteira) de um lado sorteado do zumbi de pé, com as duas pernas, mais perto (até 25 m)

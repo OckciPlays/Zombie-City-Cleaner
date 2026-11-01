@@ -5186,6 +5186,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.Carro
   ShowTopMostFoldoutHeaderGroup: 1
+  desgaste:
+    kmAteCareca: 60
+    pisoDoDesgaste: 12
+    resistenciaDoPneu: {x: 0.7, y: 1.3}
+    naFrente: 1.2
+    atras: 0.85
+    derrapar: 5
+    foraDoAsfalto: 1.6
+    furadoPor100m: 3
+    kmPorFuroNovo: 90
+    kmPorFuroGasto: 7
+    carencia: 180
+    chanceDeEstouro: 0.15
+    tempoDoFuroLento: {x: 40, y: 60}
+    furoNoAtropelo: 0.04
+    minutosDaVela: 150
+    minutosDoRadiador: 300
+    resistenciaDaPeca: {x: 0.7, y: 1.3}
+    velaQueEngasga: 35
+    vazamentoPorMinuto: 10
+    minutosPorVazamento: 360
+    batidaQueEstraga: 5
+    tanque: 40
+    gastoParado: 0.12
+    gastoNoMaximo: 2.4
+    reserva: 3
+  tampaDoTanque: {x: -0.894, y: 0.83, z: -1.86}
+  desenharTampa: 0
   rodas:
   - {fileID: 3471912381726076458}
   - {fileID: 6834780825509340706}
