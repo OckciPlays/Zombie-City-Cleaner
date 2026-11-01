@@ -429,6 +429,23 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
 - **Os sons são provisórios** (sintetizados), para o Pedro trocar depois.
 - O resumo está em [10 – Os zumbis especiais](10-Zumbis-Especiais.md).
 
+## O desgaste do carro e a gasolina (01/11/2026, a pedido)
+
+- **O carro se gasta com o uso, sem quebrar tudo de uma vez.** O Pedro pediu os pneus furando na estrada, mas não os 4 de
+  uma vez. Por isso:
+  - o desgaste é lento e diferente em cada pneu (a resistência sorteada, o eixo, a derrapagem, o chão);
+  - os furos são sorteados, mais prováveis no pneu gasto;
+  - depois de cada falha, 3 minutos dirigindo sem outra.
+- **O furo lento** murcha em 40 a 60 s, com o chiado. **O estouro** é na hora e chama os zumbis.
+- **O remendo** usa o kit de reparo: R com o pneu nas mãos, ou pelo botão direito na mochila.
+- **A vela e o radiador** gastam com o motor ligado. A vela gasta faz o motor engasgar, e o radiador pode vazar (sorteado ou
+  numa batida de frente). As batidas do lado podem estourar um pneu.
+- **A gasolina gasta** pelo giro do motor (a perua tem 45 L). Na reserva, o motor engasga; sem ela, não pega.
+- **O galão de gasolina** (10 L, item de saque) abastece pela tampa do tanque, com E.
+- **O painel "Carro (teste)"** no F1 provoca cada falha.
+- Conferido num teste no Play, que dirigiu a perua sozinho.
+- O resumo está em [11 – O desgaste do carro e a gasolina](11-Desgaste-do-Carro.md).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

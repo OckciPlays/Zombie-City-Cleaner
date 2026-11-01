@@ -1180,6 +1180,67 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        // ------------------------------------------------------------------ o galão e o remendo do pneu (01/11/2026)
+
+        /// <summary>A gasolina de um galão (litros; o desgaste é o quanto ele está vazio: 0 cheio, 100 vazio).</summary>
+        public static float LitrosDe(ItemNaMochila it) =>
+            it.item == Item.Galao ? Itens.LitrosDoGalao * (100 - Mathf.Clamp(it.desgaste, 0, 100)) / 100f : 0f;
+
+        public float LitrosNoGalao(ushort id) => Achar(id, out var it) ? LitrosDe(it) : 0f;
+
+        /// <summary>No anfitrião: tira gasolina do galão (o carro abastecendo, Carro.Desgaste.cs). O galão vazio fica.</summary>
+        internal void TirarDoGalao(ushort id, float litros)
+        {
+            if (!IsServer) return;
+            int k = Indice(id);
+            if (k < 0 || Mochila[k].item != Item.Galao) return;
+            var it = Mochila[k];
+            float sobra = Mathf.Max(0f, LitrosDe(it) - litros);
+            it.desgaste = (byte)Mathf.Clamp(Mathf.RoundToInt(100f - sobra / Itens.LitrosDoGalao * 100f), 0, 100);
+            Mochila[k] = it;
+            AvisoRpc(sobra < 0.05f ? $"Abasteceu {litros:0.#} L: o galão ficou vazio" : $"Abasteceu {litros:0.#} L: sobrou {sobra:0.#} L no galão");
+        }
+
+        /// <summary>
+        /// O pneu furado (de 1 a 9%, fora do carro) tem remendo, com um kit de reparo; o rasgado (0%), não. O Id 0 é o pneu
+        /// das mãos (sem mochila, o pneu vai para as mãos: R remenda).
+        /// </summary>
+        public bool PodeRemendar(ushort id)
+        {
+            if (Quantos(Item.KitDeReparo) <= 0) return false;
+            if (id == 0) return CarregandoPneu && PneuNasMaos.Value > 0 && PneuNasMaos.Value < Vehicles.PneusDoCarro.Minimo;
+            return Achar(id, out var it) && it.item == Item.Pneu && it.qtd > 0 && it.qtd < Vehicles.PneusDoCarro.Minimo;
+        }
+
+        /// <summary>O pneu das mãos está furado (com ou sem kit de reparo): o HUD mostra o R.</summary>
+        public bool PneuDasMaosFurado => CarregandoPneu && PneuNasMaos.Value > 0 && PneuNasMaos.Value < Vehicles.PneusDoCarro.Minimo;
+
+        public void Remendar(ushort id)
+        {
+            if (!PodeRemendar(id)) return;
+            RemendarRpc(id);
+            Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 1.1f, 0.6f, false);
+        }
+
+        [Rpc(SendTo.Server)]
+        void RemendarRpc(ushort id, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !PodeRemendar(id)) return;
+            if (!GastarItem(Item.KitDeReparo, 1)) return;
+            if (id == 0)
+            {
+                PneuNasMaos.Value = Vehicles.PneusDoCarro.Remendo;
+                AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%");
+                return;
+            }
+            int k = Indice(id);
+            if (k < 0) return;
+            var it = Mochila[k];
+            it.qtd = Vehicles.PneusDoCarro.Remendo;
+            Mochila[k] = it;
+            AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%");
+        }
+
         /// <summary>Um aviso no HUD de quem joga nesta máquina.</summary>
         public static void AvisoLocal(string texto)
         {
@@ -1224,6 +1285,12 @@ namespace ZombieCityCleaner.Player
             {
                 if (CarregandoPneu) LargarPneu();
                 else Largar(IdNaMao);
+            }
+            // com o pneu furado nas mãos, R remenda (com um kit de reparo; a arma está guardada)
+            if (teclado != null && teclado.rKey.wasPressedThisFrame && PneuDasMaosFurado)
+            {
+                if (PodeRemendar(0)) Remendar(0);
+                else AvisoLocal("Para remendar o pneu, precisa de um kit de reparo");
             }
         }
 

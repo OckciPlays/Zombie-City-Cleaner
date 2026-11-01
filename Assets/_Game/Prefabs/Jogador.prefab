@@ -11551,6 +11551,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 98171d80abd60694e84bfc353748b8bb, type: 3}
   - {fileID: 2800000, guid: d608c60e6ef803b45b7a7da05934101d, type: 3}
   - {fileID: 2800000, guid: 7410abfe817b6964b848057178ceab84, type: 3}
+  - {fileID: 2800000, guid: 3bf43c673df562e45ba5e2c7583554a7, type: 3}
   fotosDeLoot:
   - {fileID: 2800000, guid: 9b455d59a6e5c9644a25c42e84a47aaf, type: 3}
   - {fileID: 2800000, guid: 96927f4431c82524eb9a8fe2e491acad, type: 3}
@@ -11593,6 +11594,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 78bcbcd804b741c499e1403801820166, type: 3}
   - {fileID: 2800000, guid: 4e425942ca69e164aa9af924dfc8fd96, type: 3}
   - {fileID: 2800000, guid: a409c5ecaab6df94989056f22f3c4587, type: 3}
+  - {fileID: 2800000, guid: ed91bebf5baa06f43871cf5e65434193, type: 3}
 --- !u!114 &4620897733806836672
 MonoBehaviour:
   m_ObjectHideFlags: 0

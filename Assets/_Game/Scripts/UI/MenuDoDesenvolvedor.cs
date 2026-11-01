@@ -55,7 +55,7 @@ namespace ZombieCityCleaner.UI
             ("Materiais", new[]
             {
                 Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
-                Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas,
+                Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas, Item.Galao,
             }),
             ("Outros", new[]
             {
@@ -268,6 +268,9 @@ namespace ZombieCityCleaner.UI
             // o Oco de teste, ao lado do último painel
             var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, oco.xMax, Mathf.Max(Area.yMax, oco.yMax));
+            // o carro (o desgaste e a gasolina), embaixo do Oco
+            var carro = PainelDoCarro(u, oco);
+            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Area.xMax, Mathf.Max(Area.yMax, carro.yMax));
             // os zumbis (teste: criar um na frente, a pedra do sol), ao lado
             var zumbis = PainelDosZumbis(u, oco);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));

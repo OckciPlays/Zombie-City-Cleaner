@@ -36,6 +36,13 @@ namespace ZombieCityCleaner.Vehicles
         public static AudioClip PortaFechar => _fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", GerarFechar(10));
         /// <summary>A buzina, em laço (1 s).</summary>
         public static AudioClip Buzina => _buzina != null ? _buzina : _buzina = SomGerado.Clip("Buzina do carro", GerarBuzina(11));
+        /// <summary>O ar escapando do pneu furado (o furo lento), em laço (1 s). 01/11/2026, provisório.</summary>
+        public static AudioClip ArVazando => _ar != null ? _ar : _ar = SomGerado.Clip("Ar do pneu vazando", GerarChiado(20, 3600f, 1.3f, 7f, 0.12f, 0f));
+        /// <summary>O vapor do radiador vazando, em laço (1 s). 01/11/2026, provisório.</summary>
+        public static AudioClip Vapor => _vapor != null ? _vapor : _vapor = SomGerado.Clip("Vapor do radiador", GerarChiado(21, 1900f, 0.8f, 3f, 0.25f, 0.35f));
+        /// <summary>A gasolina caindo do galão no tanque (2,2 s): o gorgolejo e o jorro. 01/11/2026, provisório.</summary>
+        public static AudioClip Abastecer => _abastecer != null ? _abastecer : _abastecer = SomGerado.Clip("Abastecendo com o galão", GerarAbastecer(22));
+        static AudioClip _ar, _vapor, _abastecer;
 
         /// <summary>
         /// Um motor de 4 cilindros: os harmônicos das explosões (32 por segundo, todos inteiros em 1 s, para o laço não ter
@@ -480,6 +487,75 @@ namespace ZombieCityCleaner.Vehicles
         }
 
         static float Degrau(float x) => x >= 0f ? 1f : 0f;
+
+        /// <summary>
+        /// Um chiado em laço de 1 s (o ar do pneu, o vapor): ruído numa faixa (centro e Q), com um tremor de amplitude
+        /// (inteiro em Hz, para o laço não ter emenda) e, se pedido, um ronco grave por baixo. O ruído roda 2 s e só o
+        /// segundo é usado (o filtro já assentado); a emenda é cruzada nos últimos 50 ms.
+        /// </summary>
+        static float[] GerarChiado(int semente, float centro, float q, float tremor, float profundidade, float ronco)
+        {
+            var r = new System.Random(semente);
+            var faixa = new SomDePasso.Faixa(centro, q);
+            var grave = new SomDePasso.PassaBaixa(260f, 2);
+            int n = Taxa;
+            var d = new float[2 * n];
+            for (int i = 0; i < 2 * n; i++)
+            {
+                float t = (i % n) / (float)Taxa;
+                float ruido = (float)(r.NextDouble() * 2 - 1);
+                float am = 1f - profundidade + profundidade * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * tremor * t));
+                d[i] = faixa.Passar(ruido) * am + grave.Passar(ruido) * ronco * 3f;
+            }
+            var laco = new float[n];
+            int emenda = Taxa / 20;
+            for (int i = 0; i < n; i++)
+            {
+                float x = d[n + i];
+                if (i < emenda)
+                {
+                    float k = i / (float)emenda;
+                    x = x * k + d[i] * (1f - k);   // o fim do primeiro segundo entra no começo do segundo
+                }
+                laco[i] = x;
+            }
+            return Normalizar(laco, 0.7f);
+        }
+
+        /// <summary>
+        /// A gasolina do galão: o jorro (ruído numa faixa média, que entra e sai) e o gorgolejo do ar entrando no galão, um
+        /// "glub" a cada 0,16 a 0,26 s (um tom grave que sobe e some, com um respingo).
+        /// </summary>
+        static float[] GerarAbastecer(int semente)
+        {
+            var r = new System.Random(semente);
+            const float dura = 2.2f;
+            int n = Mathf.RoundToInt(dura * Taxa);
+            var d = new float[n];
+            var jorro = new SomDePasso.Faixa(1300f, 0.9f);
+            var respingo = new SomDePasso.Faixa(2600f, 1.5f);
+            var lp = new SomDePasso.PassaBaixa(7000f);
+            float proximo = 0.12f, ultimo = -1f, fase = 0f, tom = 200f;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)Taxa;
+                float ruido = (float)(r.NextDouble() * 2 - 1);
+                if (t >= proximo && t < dura - 0.3f)
+                {
+                    ultimo = t;
+                    proximo = t + 0.16f + (float)r.NextDouble() * 0.1f;
+                    tom = 150f + (float)r.NextDouble() * 120f;
+                }
+                float desde = ultimo < 0f ? 9f : t - ultimo;
+                fase += 2f * Mathf.PI * tom * (1f + desde * 6f) / Taxa;
+                float glub = Mathf.Sin(fase) * Mathf.Exp(-desde * 28f) * Mathf.Clamp01(desde / 0.004f);
+                float envelope = Mathf.Clamp01(t / 0.15f) * Mathf.Clamp01((dura - t) / 0.35f);
+                float corrente = jorro.Passar(ruido) * (0.55f + 0.2f * Mathf.Sin(t * 23f)) * envelope;
+                float gota = respingo.Passar(ruido) * Mathf.Exp(-desde * 40f) * 0.5f;
+                d[i] = lp.Passar(corrente * 0.6f + (glub * 0.9f + gota) * envelope);
+            }
+            return Normalizar(d, 0.8f);
+        }
 
         static float[] Normalizar(float[] d, float pico)
         {

@@ -10,6 +10,10 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 >
 > **Os zumbis especiais (01/11/2026):** o Brutamonte, o Long e o Corredor, a lanterna com pilhas e as luzes maiores da
 > fogueira e da tocha estão em [`Docs/10-Zumbis-Especiais.md`](Docs/10-Zumbis-Especiais.md) e na seção "Os zumbis especiais".
+>
+> **O desgaste do carro e a gasolina (01/11/2026):** os pneus que gastam e furam por sorteio (um problema por vez), a vela e
+> o radiador que gastam, as batidas, a gasolina e o galão estão em [`Docs/11-Desgaste-do-Carro.md`](Docs/11-Desgaste-do-Carro.md)
+> e na seção "O desgaste do carro e a gasolina".
 
 ## Branches
 
@@ -1494,6 +1498,85 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
   - **o Long:** o cuspe na fogueira (apagou) e no jogador (preso; a poça zerou a lanterna), o grito, a busca e a morte na
     lanterna depois de trocar as pilhas;
   - **a sombra das construções.**
+
+## O desgaste do carro e a gasolina (01/11/2026, a pedido)
+
+O resumo para gente (os números, como testar) está em `Docs/11-Desgaste-do-Carro.md`. O pedido: os pneus furando na estrada
+para o jogador parar e trocar, sem tudo quebrar de uma vez (os 4 pneus não podem estourar juntos por km rodado). Por isso o
+desgaste é lento e diferente em cada peça, e a falha é um sorteio cuja chance cresce com o desgaste, com uma carência
+depois de cada falha.
+
+- **Onde:** `Vehicles/Carro.Desgaste.cs` (o `Carro` virou `partial`) e `AjustesDoDesgaste` (os números, no campo
+  `desgaste` de cada prefab de carro, com tooltips). Os ganchos no `Carro.cs`:
+  - `PrepararDesgaste` no `Awake`: a mira da tampa do tanque e os sons;
+  - `DesgasteAoNascer` no `OnNetworkSpawn` do anfitrião;
+  - `FatorDoEngasgo` no torque e `RodarNoDono` no fim do `FixedUpdate`;
+  - `DesgasteNoServidor` no fim do `Desgaste` (o da bateria e da temperatura);
+  - `SonsDoDesgaste` no `Update`;
+  - `NovoPneu` no `PorRodaRpc` e `NovaPeca` no `PorPecaRpc`;
+  - `Atropelou` no `Atropelar`;
+  - `SemGasolina` no `Ignicao` e no `PegarAgora`;
+  - o ponteiro da gasolina mostra `Gasolina / Tanque`.
+- **A rede:** a física é do dono (quem dirige), as peças são do anfitrião.
+  - O dono mede, a cada passo, quanto cada roda rodou: a distância (ou o giro, patinando), vezes (1 + 5 × a derrapagem do
+    `WheelHit`), vezes o eixo. A cada segundo manda ao anfitrião (`RodouRpc`, em decímetros), com o chão do momento
+    (`ForaDoAsfalto`: fora das cidades e a mais de 5,5 m de uma estrada da `RedeDeEstradas`, ×1,6).
+  - O anfitrião aplica o desgaste e sorteia os furos.
+  - As batidas vão pelo `BateuRpc`, medidas no dono por `OnCollisionEnter` e `MedirBatida`: a maior mudança de velocidade
+    do carro nos 0,15 s depois do contato (o impulso do primeiro contato é só uma parte), sem os contatos de cima para
+    baixo. A roda presa num meio-fio não conta (o `WheelCollider` não gera colisão).
+  - Os atropelamentos vão pelo `AtropelouRpc`.
+  - O engasgo é decidido no dono (o torque a 12% e o giro do som a 55% por 0,35 a 0,8 s) e tocado em todos (`EngasgouRpc`).
+  - `_gasolina` (float, litros) e `_vazando` (bits 0 a 3 os pneus murchando, o 4 o radiador) são `NetworkVariable` do
+    anfitrião.
+- **Os pneus:**
+  - a resistência é sorteada por pneu posto (0,7 a 1,3);
+  - o desgaste para no `pisoDoDesgaste` (12%);
+  - os furos são por km com a chance de `kmPorFuroNovo` (90) a `kmPorFuroGasto` (7), pelo `SmoothStep` de 100% a 30%;
+  - a `carencia` (180 s dirigindo, contados acima de 2 m/s) vale para o furo sorteado, o do atropelo e o vazamento sorteado
+    do radiador; o tiro, as batidas e a gosma não esperam.
+  - O `Furo` decide entre o estouro (`chanceDeEstouro` + 35% × o gasto + 20% acima de 18 m/s: 0%, `FurouRpc` e
+    `ZombieManager.Barulho`) e o furo lento (murcha até 5% em `tempoDoFuroLento`, com o chiado).
+  - Rodar furado tira `furadoPor100m` até 0 (rasgado). O tiro agora deixa o pneu em 5% (com remendo).
+  - O remendo (`InventarioJogador.Remendar`, `PneusDoCarro.Remendo` = 40%): o pneu de 1 a 9% na mochila (botão direito)
+    ou nas mãos (Id 0; R, com o aviso no HUD da `ArmaJogador`).
+- **O motor:**
+  - a vela e o radiador gastam com o motor ligado (`minutosDaVela` 150, `minutosDoRadiador` 300, divididos pela
+    resistência sorteada da peça);
+  - a vela abaixo de `velaQueEngasga` (35%) e a gasolina na `reserva` (3 L) fazem o engasgo, mais seguido quanto pior;
+  - o radiador vaza por sorteio (`minutosPorVazamento`, até 6× no gasto) ou numa batida de frente (`local.z` > 1,25),
+    perdendo `vazamentoPorMinuto` (10%);
+  - a batida do lado de uma roda pode estourar o pneu.
+- **A gasolina:**
+  - o tanque é `desgaste.tanque` (a perua 45 L, o cupê 40 L); o `combustivel` do prefab é o começo (0,68);
+  - o gasto é de `gastoParado` (0,12 L/min) a `gastoNoMaximo` (2,4 L/min), pelo giro do motor na rede (`_rotacao`) ^ 1,5;
+  - sem gasolina, o motor apaga e não pega.
+  - **O galão** (`Item.Galao` = 118, `Itens.LitrosDoGalao` 10, 2 × 2 na mochila): a gasolina vai no `desgaste` do item
+    (0 cheio, 100 vazio; `InventarioJogador.LitrosDe`), como a carga da lanterna. Ele fica vazio, não some (o posto vem
+    depois).
+  - **A tampa do tanque** (`TanqueDoCarro`, um gatilho criado no `Awake` em `tampaDoTanque`, com um disco escuro se
+    `desenharTampa`): na perua (-0,862; 0,88; -1,62), à esquerda, atrás, em cima do arco da roda; no cupê, a do modelo
+    (-0,894; 0,83; -1,86), sem o disco. E despeja o galão mais cheio (`AbastecerRpc`, a 3,2 m da tampa).
+  - O modelo do galão está no `Blender/loot.py` (`_galao`); o menu é **Itens > Montar só o saque**.
+- **Os avisos** (`PassageiroDoCarro.AvisosDoDesgaste`, só para o motorista): a mensagem no meio da tela quando a coisa
+  começa, e as linhas do HUD ("PNEU MURCHANDO", "RADIADOR VAZANDO", "GASOLINA NA RESERVA", "SEM GASOLINA").
+  `Carro.NomesDasRodas` dá os nomes.
+- **Os sons** são provisórios, gerados no `SomDoCarro` como os outros: `ArVazando` e `Vapor` (laços de 1 s, por
+  `GerarChiado`) e `Abastecer` (o gorgolejo, 2,2 s).
+- **O teste:** o F1 tem o painel "Carro (teste)" (`MenuDoDesenvolvedor.Carro.cs`, `Carro.Teste`: furo lento, estouro,
+  pneus a 30%, pneus novos, vazar o radiador, vela a 25%, motor novo, gasolina 1 L, tanque cheio, sem carência), e
+  `PassageiroDoCarro.DirecaoDeTeste` deixa um teste automático dirigir sem o teclado (null no jogo). Os testes no Play de
+  01/11 conferiram:
+  - o abastecimento (30,6 → 40,6 L, o galão vazio);
+  - o remendo na mochila e nas mãos (5% → 40%);
+  - a troca do pneu rasgado pelo estepe com o macaco;
+  - o desgaste rodando, diferente em cada pneu (com os números acelerados: 86, 92, 97 e 96%);
+  - os engasgos (vela gasta e reserva);
+  - o furo lento (de 70% a 5% em 45 s, com o chiado) e o estouro;
+  - o radiador vazando (10%/min);
+  - a gasolina acabando (o motor apaga e não pega);
+  - a batida de frente contra uma parede (o radiador perde %).
+  A perua começa encostada na casa da família, com um meio-fio uns 7 m à frente (as voltas do teste esbarravam nele).
 
 ## A trilha sonora (29/10/2026, a pedido; `Scripts/Music/`, `Ferramentas/trilha/`)
 

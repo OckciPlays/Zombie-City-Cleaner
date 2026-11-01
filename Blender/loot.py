@@ -540,6 +540,30 @@ def _pilhas():
     return p
 
 
+# ------------------------------------------------------------------ a gasolina (01/11/2026: o galão repõe o tanque do carro)
+
+def _galao():
+    # o galão de plástico vermelho de 10 litros, em pé: o corpo com os painéis em relevo dos lados, a faixa escura de
+    # baixo, a alça em cima (dois pés e a pega), o bico na quina da frente com a tampa amarela, o respiro preto atrás e
+    # o rótulo amarelo na frente
+    p = [
+        C("vermelho", (0.30, 0.17, 0.25), (0, 0, 0.125), chanfro=0.025),
+        C("vermelho", (0.26, 0.15, 0.03), (0, 0, 0.258), chanfro=0.012),
+        C("vermelho_escuro", (0.302, 0.172, 0.014), (0, 0, 0.007), chanfro=0.004),
+        C("vermelho", (0.022, 0.03, 0.05), (-0.10, 0, 0.29), chanfro=0.006),
+        C("vermelho", (0.022, 0.03, 0.05), (0.02, 0, 0.29), chanfro=0.006),
+        C("vermelho", (0.16, 0.032, 0.024), (-0.04, 0, 0.318), chanfro=0.008),
+        Z("vermelho", 0.024, 0.035, (0.112, 0, 0.285), 12),
+        Z("amarelo", 0.028, 0.03, (0.112, 0, 0.315), 12),
+        Z("preto", 0.011, 0.012, (-0.125, 0.045, 0.279), 8),
+        C("amarelo", (0.11, 0.004, 0.07), (0.0, -0.0905, 0.15), chanfro=0.002),
+        C("preto", (0.08, 0.004, 0.012), (0.0, -0.0925, 0.15)),
+    ]
+    for y in (-0.086, 0.086):
+        p.append(C("vermelho_escuro", (0.22, 0.006, 0.16), (0.0, y, 0.12), chanfro=0.004))
+    return p
+
+
 # nome do modelo -> (as peças, as células do ícone, onde a câmera do ícone olha de, onde a da foto)
 MODELOS = {
     "Feijao": _feijao, "Carne": _carne, "Milho": _milho, "Sopa": _sopa, "Salgadinho": _salgadinho,
@@ -553,6 +577,7 @@ MODELOS = {
     "KitDeReparo": _kit_reparo, "Roupa": _roupa,
     "Fogueira": _kit_fogueira, "Cama": _kit_cama, "Barricada": _kit_barricada,
     "Lanterna": _lanterna, "Pilhas": _pilhas,
+    "Galao": _galao,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {

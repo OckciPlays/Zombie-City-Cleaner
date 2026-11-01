@@ -28,6 +28,8 @@ namespace ZombieCityCleaner.Loot
         Fogueira = 112, Cama, Barricada,
         // a luz (01/11/2026, a pedido: a lanterna só funciona achada, e gasta as pilhas)
         Lanterna = 116, Pilhas,
+        // a gasolina (01/11/2026, a pedido: o galão é o saque que repõe o tanque do carro)
+        Galao = 118,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
     }
@@ -216,7 +218,7 @@ namespace ZombieCityCleaner.Loot
             Material(Item.Pregos, "Pregos", "pregos", "os pregos", "pregos", "Um punhado de pregos.", 50),
             Material(Item.Isca, "Isca", "isca", "a isca", "iscas", "Para pescar (a pesca ainda não existe).", 20),
             Material(Item.VaraDePesca, "VaraDePesca", "vara de pesca", "a vara de pesca", "varas de pesca", "Com linha e anzol (a pesca ainda não existe).", 1),
-            Material(Item.KitDeReparo, "KitDeReparo", "kit de reparo", "o kit de reparo", "kits de reparo", "Conserta uma arma.", 3),
+            Material(Item.KitDeReparo, "KitDeReparo", "kit de reparo", "o kit de reparo", "kits de reparo", "Conserta uma arma ou remenda um pneu furado.", 3),
             Material(Item.Roupa, "Roupa", "roupa", "a roupa", "roupas", "Roupa velha. Desmontada, vira pano.", 5),
             // os kits de montar (a fogueira, a cama e a barricada)
             Material(Item.Fogueira, "Fogueira", "fogueira", "a fogueira", "fogueiras", "Lenha arrumada. Monte no chão: luz e calor.", 1, TipoDeLoot.Construcao),
@@ -225,6 +227,8 @@ namespace ZombieCityCleaner.Loot
             // a luz (01/11/2026): no fim da lista, para os índices dos outros modelos não mudarem
             Material(Item.Lanterna, "Lanterna", "lanterna", "a lanterna", "lanternas", "Vai presa no peito: F liga e desliga. Gasta as pilhas.", 1),
             Material(Item.Pilhas, "Pilhas", "par de pilhas", "o par de pilhas", "pares de pilhas", "Botão direito na lanterna: trocar as pilhas.", 6),
+            // a gasolina (01/11/2026)
+            Material(Item.Galao, "Galao", "galão de gasolina", "o galão de gasolina", "galões de gasolina", "10 litros. Na tampa do tanque do carro, E abastece.", 1),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -419,6 +423,10 @@ namespace ZombieCityCleaner.Loot
         public static bool ComDesgaste(Item i) => EhArma(i) || EhBranca(i);
         /// <summary>A lanterna gasta as pilhas: o desgaste dela é a carga que já foi (0, pilhas novas; 100, acabaram).</summary>
         public static bool EhLanterna(Item i) => i == Item.Lanterna;
+        /// <summary>O galão de gasolina: a gasolina vai no desgaste (0, cheio; 100, vazio), como a carga da lanterna.</summary>
+        public static bool EhGalao(Item i) => i == Item.Galao;
+        /// <summary>Quantos litros cabem no galão.</summary>
+        public const float LitrosDoGalao = 10f;
         /// <summary>Quanto um uso gasta: um tiro (as de fogo: 400 tiros) ou um golpe que pega (as brancas).</summary>
         public static float DesgastePorUso(Item i) => EhArma(i) ? 0.25f : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;
@@ -505,6 +513,7 @@ namespace ZombieCityCleaner.Loot
         {
             if (EhMunicao(i)) return new UnityEngine.Vector2Int(1, 1);
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
+            if (i == Item.Galao) return new UnityEngine.Vector2Int(2, 2);   // o galão: maior que o resto do saque
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

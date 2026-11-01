@@ -50,6 +50,8 @@ namespace ZombieCityCleaner.Player
         public bool Sentado => Carro != null;
         /// <summary>Entrando, sentado ou saindo: não anda, não atira, não larga nada.</summary>
         public bool NoCarro => _fase != Fase.Fora;
+        /// <summary>Para os testes automáticos no Play (o motorista "aperta" o WASD sem o teclado); null no jogo.</summary>
+        public static Vector2? DirecaoDeTeste;
 
         enum Fase { Fora, Entrando, Dentro, Saindo }
         Fase _fase;
@@ -82,6 +84,10 @@ namespace ZombieCityCleaner.Player
         float _avisoAte;
         // a chave: pega (um clique nela), o mouse gira a chave e não olha; na partida, o mini-game
         bool _segurandoChave, _naPartidaAntes, _fervendoAntes;
+        // os avisos do desgaste (01/11/2026): o que estava assim no quadro anterior
+        int _murchandoAntes, _furadosAntes = -1;
+        bool _vazandoAntes, _reservaAntes, _semGasolinaAntes;
+        float _engasgoAvisado = -99f;
         float _semForcaDesde = -1f;
         /// <summary>Graus que a chave gira por pixel do mouse, arrastando para a direita (da ignição para a partida ela pesa: <see cref="Carro.pesoDaPartida"/>).</summary>
         const float GrausPorPixel = 0.35f;
@@ -324,11 +330,12 @@ namespace ZombieCityCleaner.Player
             var teclado = Keyboard.current;
             if (Lugar == 0 && Carro.IsOwner)
             {
-                Vector2 m = controla ? _mover.ReadValue<Vector2>() : Vector2.zero;
+                Vector2 m = DirecaoDeTeste ?? (controla ? _mover.ReadValue<Vector2>() : Vector2.zero);
                 Carro.Comandar(m.y, m.x, controla && _pular.IsPressed());
                 Chave(controla);
                 if (Carro.Fervendo && !_fervendoAntes) Avisar("O motor ferveu e apagou: espere esfriar e troque o radiador (capô)", 4f);
                 _fervendoAntes = Carro.Fervendo;
+                AvisosDoDesgaste();
                 if (m.y > 0.3f && !Carro.MotorLigado && !_segurandoChave && Time.time > _avisoAte)
                     Avisar(Carro.Estado == Carro.EstadoDoMotor.SemChave ? "O motor está desligado: ponha a chave na ignição" : "O motor está desligado: gire a chave");
                 if (controla && teclado != null && teclado.lKey.wasPressedThisFrame) Carro.AlternarFarois();
@@ -623,6 +630,45 @@ namespace ZombieCityCleaner.Player
         // muda o que mudou; a terceira pessoa a pé também mexe nele)
         void CorpoVisivel(bool visivel) => _rede.CorpoDoDono(visivel);
 
+        /// <summary>
+        /// Os avisos do desgaste para o motorista (Carro.Desgaste.cs), quando a coisa começa: o pneu murchando, o pneu que
+        /// estoura ou esvazia, o radiador vazando, a reserva, o fim da gasolina e o motor falhando (a vela ou a gasolina).
+        /// </summary>
+        void AvisosDoDesgaste()
+        {
+            var c = Carro;
+            int murchando = c.PneusMurchando;
+            int novos = murchando & ~_murchandoAntes;
+            var p = c.Pneus;
+            int furados = 0;
+            for (int i = 0; i < Vehicles.PneusDoCarro.Quantas; i++) if (p.Tem(i) && p.Furado(i)) furados |= 1 << i;
+            if (novos != 0)
+            {
+                int r = 0;
+                while ((novos & (1 << r)) == 0) r++;
+                Avisar($"O pneu {Carro.NomesDasRodas[r]} está murchando: pare para trocar (macaco e estepe)", 4f);
+            }
+            else if (_furadosAntes >= 0 && (furados & ~_furadosAntes) != 0)
+            {
+                int f = furados & ~_furadosAntes, r = 0;
+                while ((f & (1 << r)) == 0) r++;
+                Avisar((_murchandoAntes & (1 << r)) != 0 ? $"O pneu {Carro.NomesDasRodas[r]} esvaziou" : $"O pneu {Carro.NomesDasRodas[r]} estourou!", 4f);
+            }
+            _murchandoAntes = murchando;
+            _furadosAntes = furados;
+            if (c.RadiadorVazando && !_vazandoAntes) Avisar("O radiador está vazando: o motor vai esquentar (troque no capô)", 4f);
+            _vazandoAntes = c.RadiadorVazando;
+            if (c.SemGasolina && !_semGasolinaAntes) Avisar("Acabou a gasolina: abasteça com um galão na tampa do tanque", 4f);
+            else if (c.NaReserva && !_reservaAntes && !c.SemGasolina) Avisar("A gasolina está na reserva", 3f);
+            _semGasolinaAntes = c.SemGasolina;
+            _reservaAntes = c.NaReserva;
+            if (c.UltimoEngasgo > _engasgoAvisado + 25f && Time.time - c.UltimoEngasgo < 0.5f)
+            {
+                _engasgoAvisado = c.UltimoEngasgo;
+                Avisar(c.NaReserva ? "O motor está falhando: a gasolina está acabando" : "O motor está falhando: a vela está gasta (troque no capô)", 3.5f);
+            }
+        }
+
         void Avisar(string texto, float tempo = 1.6f)
         {
             _aviso = texto;
@@ -724,6 +770,24 @@ namespace ZombieCityCleaner.Player
                 if (Carro.Pecas.Estado(Vehicles.PecasDoMotor.Bateria) < 20)
                 {
                     Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), Carro.Pecas.Tem(Vehicles.PecasDoMotor.Bateria) ? "BATERIA FRACA" : "SEM BATERIA", f, new Color(1f, 0.75f, 0.3f));
+                    ly -= 20 * u;
+                }
+                // a gasolina e o radiador (01/11/2026)
+                if (Carro.SemGasolina || Carro.NaReserva)
+                {
+                    if (Carro.SemGasolina || Mathf.Repeat(Time.time, 1.2f) < 0.8f)
+                        Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), Carro.SemGasolina ? "SEM GASOLINA" : "GASOLINA NA RESERVA", f, Carro.SemGasolina ? new Color(1f, 0.4f, 0.3f) : new Color(1f, 0.75f, 0.3f));
+                    ly -= 20 * u;
+                }
+                if (Carro.RadiadorVazando)
+                {
+                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), "RADIADOR VAZANDO", f, new Color(1f, 0.55f, 0.3f));
+                    ly -= 20 * u;
+                }
+                if (Carro.PneusMurchando != 0)
+                {
+                    if (Mathf.Repeat(Time.time, 0.8f) < 0.5f)
+                        Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), "PNEU MURCHANDO", f, new Color(1f, 0.75f, 0.3f));
                     ly -= 20 * u;
                 }
                 // as rodas: furada ou faltando

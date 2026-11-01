@@ -17,6 +17,7 @@ Esta pasta explica o que o jogo vai ser, o que já está pronto e como trabalhar
 | [Arte](Arte/README.md) | a cópia das notas da pasta de arte: o `CLAUDE.md` de lá (as convenções de cada modelo do Blender) e os planos da demo, do mapa, da mobília, do mapa fixo, das roupas e do personagem |
 | [09 – O que mudou de 29 a 31/10](09-Novidades-29-a-31-10.md) | para o Gustavo: as armas novas, as armas brancas, a vida em 100, o saque e a fabricação, e o zumbi sem uma perna |
 | [10 – Os zumbis especiais](10-Zumbis-Especiais.md) | o Brutamonte, o Long e o Corredor (os números, as animações, como testar), a lanterna com pilhas e as luzes maiores da fogueira e da tocha |
+| [11 – O desgaste do carro e a gasolina](11-Desgaste-do-Carro.md) | os pneus que gastam e furam (um problema por vez), a vela, o radiador, as batidas, a gasolina e o galão; como testar pelo F1 |
 
 A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz do repositório. Ele é escrito para o assistente de IA que trabalha no projeto, mas é um texto comum, em português, e descreve cada sistema em detalhe. Esta pasta é o resumo para gente.
 

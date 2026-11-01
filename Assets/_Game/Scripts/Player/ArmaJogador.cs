@@ -832,7 +832,10 @@ namespace ZombieCityCleaner.Player
                 var pesado = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
                 pesado.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
                 GUI.Label(new Rect(Screen.width - 420 * u, Screen.height - 50 * u, 400 * u, 30 * u),
-                    $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR", pesado);
+                    Inventario.PneuDasMaosFurado
+                        ? $"PNEU FURADO NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  R: REMENDAR  ·  G: LARGAR"
+                        : Inventario.EstadoDoPneuNasMaos == 0 ? "PNEU RASGADO NAS MÃOS (SEM REMENDO)  ·  G: LARGAR"
+                        : $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR", pesado);
             }
             else if (ComArma)
             {
