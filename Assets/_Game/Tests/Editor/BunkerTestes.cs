@@ -49,6 +49,45 @@ namespace ZombieCityCleaner.Testes
             }
         }
 
+        /// <summary>
+        /// Os vãos onde as compras do Dia 0 ficam guardadas (<see cref="DepositosDasCompras"/>) estão dentro de um depósito,
+        /// fora dos móveis do andar (o tamanho inteiro, sem o recuo da colisão) e a mais de 1,2 m das portas dele.
+        /// </summary>
+        [Test]
+        public void AsComprasDoDiaZeroFicamNoChaoLivreDosDepositos()
+        {
+            foreach (var (f, area) in DepositosDasCompras)
+            {
+                var r = new Rect(area.x + X0, area.y + Z0, area.width, area.height);   // nas coordenadas da obra
+                var an = DoAndar(f);
+                var k = an.Em(r.center.x, r.center.y);
+                Assert.IsTrue(k != null && k.tipo == "deposito" && r.xMin >= k.x0 && r.xMax <= k.x1 && r.yMin >= k.z0 && r.yMax <= k.z1,
+                    $"{Codigos[f]}: o vão {area} das compras não fica dentro de um depósito");
+                foreach (var m in MoveisDoBunker.DoAndar(f))
+                {
+                    if (!m.caixa || !MedidasDaMobilia.Tem(m.modelo)) continue;
+                    Vector3 t = MedidasDaMobilia.Real(m.modelo) * m.escala;
+                    Vector2 meio = MedidasDaMobilia.Meio(m.modelo) * m.escala;
+                    var giro = Quaternion.Euler(0f, m.giro, 0f);
+                    Vector3 c = m.lugar + giro * new Vector3(meio.x, 0f, meio.y);
+                    Vector3 lado = giro * new Vector3(t.x / 2f, 0f, 0f), fundo = giro * new Vector3(0f, 0f, t.z / 2f);
+                    float ex = Mathf.Abs(lado.x) + Mathf.Abs(fundo.x), ez = Mathf.Abs(lado.z) + Mathf.Abs(fundo.z);
+                    bool cruza = c.x + ex > r.xMin && c.x - ex < r.xMax && c.z + ez > r.yMin && c.z - ez < r.yMax;
+                    Assert.IsFalse(cruza, $"{Codigos[f]}: o vão {area} das compras pega o {m.modelo} em ({m.lugar.x - X0:0.##}, {m.lugar.z - Z0:0.##})");
+                }
+                foreach (var l in an.ligacoes)
+                {
+                    if (l.a != k && l.b != k) continue;
+                    var o = l.a == k ? l.b : l.a;
+                    bool vertical = Mathf.Abs(k.x1 - o.x0) < 0.01f || Mathf.Abs(o.x1 - k.x0) < 0.01f;
+                    var porta = vertical ? new Vector2(Mathf.Abs(k.x1 - o.x0) < 0.01f ? k.x1 : k.x0, l.pos)
+                                         : new Vector2(l.pos, Mathf.Abs(k.z1 - o.z0) < 0.01f ? k.z1 : k.z0);
+                    float dx = Mathf.Max(r.xMin - porta.x, 0f, porta.x - r.xMax), dz = Mathf.Max(r.yMin - porta.y, 0f, porta.y - r.yMax);
+                    Assert.Greater(Mathf.Sqrt(dx * dx + dz * dz), 1.2f, $"{Codigos[f]}: o vão {area} das compras fica na frente da porta para {an.nomes[o]}");
+                }
+            }
+        }
+
         [Test]
         public void TodoComodoTemCaminhoDoPatio()
         {

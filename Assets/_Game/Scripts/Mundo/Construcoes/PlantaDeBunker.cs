@@ -66,6 +66,17 @@ namespace ZombieCityCleaner.Mundo
         public static readonly Vector2[] Nascimentos = { new Vector2(2.4f, 3.6f), new Vector2(2.4f, 5.6f), new Vector2(9.5f, 4.6f), new Vector2(4.2f, 7.4f) };
         public static readonly Vector2 MesaDeReuniao = new Vector2(6.8f, 4.8f), MeioDasOperacoes = new Vector2(6f, 4.3f);
         public static readonly Vector2 VagaDaPerua = new Vector2(18.1f, 20.6f), VagaDoCupe = new Vector2(21.9f, 20.6f);
+        /// <summary>
+        /// Onde as compras do Dia 0 ficam guardadas (a pedido, 01/11/2026: "os itens vão estar alocados nos depósitos do
+        /// bunker"): os vãos do chão dos depósitos, na ordem (o andar e o retângulo do esboço), fora das estantes (em ×1,30:
+        /// as de aço com 0,53 m de fundo) e da porta abrindo; o do B1 primeiro, o do B3 de sobra.
+        /// </summary>
+        public static readonly (int andar, Rect area)[] DepositosDasCompras =
+        {
+            (1, Rect.MinMaxRect(1.05f, 1.05f, 7.95f, 3.75f)),   // entre as estantes das paredes, a ilha do meio e a de madeira
+            (1, Rect.MinMaxRect(1.05f, 5.4f, 6.3f, 8.1f)),      // atrás da ilha, longe da porta (em x = 7,5)
+            (3, Rect.MinMaxRect(29.8f, 14.5f, 31.15f, 18.6f)),  // o corredor entre as estantes do depósito do B3
+        };
         /// <summary>A casinha da saída de cima, em cima do núcleo: do alto do morro até o teto dela.</summary>
         public const float AlturaDaCasinha = 3.0f;
 

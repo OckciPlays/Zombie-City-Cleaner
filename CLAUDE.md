@@ -1698,9 +1698,16 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - o relógio vai para as 8h, e o `AcabarODiaZero` solta a geração.
   - **A passagem** (`ComecarAPassagem`, em cada máquina): o cinema; o jogador parado no ar (`Voando`); a tela preta "5
     ANOS DEPOIS", com a barra da geração; e a rua sai.
-  - **Com o mundo pronto** (`FicouPronto`): cada um vai para o nascimento dele na casa da família. O anfitrião entrega as
-    compras (`Entregar`): o lugar de cada uma, nas coordenadas da casa, pela `MatrizDaCasa` do lote da família, no
-    `ItensNoMundo`.
+  - **Com o mundo pronto** (`FicouPronto`): cada um vai para o nascimento dele, que no mundo com o bunker é a sala de
+    operações (o mundo só fica pronto com a casca e o B0 com a colisão). O anfitrião entrega as compras (`Entregar`):
+    - **no bunker** (a pedido, 01/11/2026: "No bunker e os itens vão estar alocados nos depósitos do bunker";
+      `EntregarNoBunker`): em fileiras pelo chão dos vãos dos depósitos (`PlantaDeBunker.DepositosDasCompras`: dois no
+      B1, entre as estantes, e o do B3 de sobra), as do mesmo tipo juntas, cada uma deitada ao longo da fileira (o giro de
+      0 ou 90 que deixa ela mais curta para dentro, pela malha do `ItensNoMundo.MalhaDe`). O teste do Editor
+      `BunkerTestes.AsComprasDoDiaZeroFicamNoChaoLivreDosDepositos` confere que os vãos ficam fora das estantes e das
+      portas;
+    - sem o bunker (um mapa sem ele): o lugar de cada uma, nas coordenadas da casa, pela `MatrizDaCasa` do lote da
+      família, no `ItensNoMundo`.
 - **Os NPCs** (`NpcsDoDiaZero` e `NpcDoDiaZero`, só no Play):
   - **a roupa:** o `Prefabs/Roupas/NPC`, vestido por `VestirSorteado(tipo, semente)`;
   - **quem anda** está onde o relógio da partida diz (`NetworkManager.ServerTime`): o caminho em laço, com as paradas do

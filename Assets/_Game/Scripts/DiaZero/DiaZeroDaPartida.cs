@@ -64,9 +64,10 @@ namespace ZombieCityCleaner.DiaZero
     ///  - o caixa manda o carrinho ao anfitrião (<see cref="PagarRpc"/>), que confere o dinheiro pela tabela e guarda as
     ///    compras (aparecem no chão da casa, para todos);
     ///  - a porta do abrigo (<see cref="FecharAPortaRpc"/>, ou o F1): quem está fora de casa perde as compras; o mundo
-    ///    começa a ser gerado, e a tela dos "5 anos depois" cobre a geração. Com o mundo pronto, cada um vai para a sala
-    ///    da casa da família (a mesma casa, abandonada), e o anfitrião põe as compras no mesmo lugar delas, no chão
-    ///    (<see cref="ItensNoMundo"/>). O dinheiro que sobrou fica guardado (para os acampamentos, depois).
+    ///    começa a ser gerado, e a tela dos "5 anos depois" cobre a geração. Com o mundo pronto, cada um vai para o seu
+    ///    ponto de nascimento (no mundo com o bunker, a sala de operações dele), e o anfitrião guarda as compras nos
+    ///    depósitos do bunker (<see cref="EntregarNoBunker"/>; sem o bunker, no mesmo lugar delas no chão da casa da
+    ///    família, <see cref="ItensNoMundo"/>). O dinheiro que sobrou fica guardado (para os acampamentos, depois).
     /// </summary>
     public partial class DiaZeroDaPartida : NetworkBehaviour
     {
@@ -583,9 +584,15 @@ namespace ZombieCityCleaner.DiaZero
             if (IsServer) Entregar(dados);
         }
 
-        // as compras no chão da casa da família, no mesmo lugar delas na casa do Dia 0 (é a mesma casa)
+        // as compras no chão da casa da família, no mesmo lugar delas na casa do Dia 0 (é a mesma casa); com o bunker no
+        // mundo (onde a partida começa), nos depósitos dele
         void Entregar(DadosDoMundo d)
         {
+            if (d.TemBunker)
+            {
+                EntregarNoBunker(d);
+                return;
+            }
             var lote = d.Plano?.LoteDaFamilia;
             var tracado = d.Plano?.CidadeDaFamilia?.Tracado;
             var itens = ItensNoMundo.Instancia;
@@ -603,6 +610,81 @@ namespace ZombieCityCleaner.DiaZero
             }
             Debug.Log($"[Dia 0] {_levar.Count} compras entregues na casa da família.");
             _levar.Clear();
+        }
+
+        /// <summary>
+        /// As compras guardadas nos depósitos do bunker (a pedido, 01/11/2026), em fileiras pelo chão dos vãos deles
+        /// (<see cref="PlantaDeBunker.DepositosDasCompras"/>), as do mesmo tipo juntas e cada uma deitada ao longo da
+        /// fileira. Cheios os vãos (umas 100 compras), as que sobram recomeçam do primeiro, por cima.
+        /// </summary>
+        void EntregarNoBunker(DadosDoMundo d)
+        {
+            var itens = ItensNoMundo.Instancia;
+            if (itens == null)
+            {
+                if (_levar.Count > 0) Debug.LogWarning($"[Dia 0] Sem os itens no mundo: {_levar.Count} compras não foram entregues.");
+                return;
+            }
+            const float Folga = 0.08f, EntreFileiras = 0.12f;
+            var compras = new List<CompraDoDia>(_levar);
+            compras.Sort((a, b) => a.item != b.item ? a.item.CompareTo(b.item) : a.id.CompareTo(b.id));
+            var vaos = PlantaDeBunker.DepositosDasCompras;
+            int v = 0;
+            float x = vaos[0].area.xMin, z = vaos[0].area.yMin, fundo = 0f;
+            int noB3 = 0;
+            foreach (var c in compras)
+            {
+                // deitada ao longo da fileira: o giro (0 ou 90) que deixa ela mais curta para dentro
+                var (giro, largura, funda) = Pegada(itens, c.item);
+                var area = vaos[v].area;
+                if (x + largura > area.xMax && x > area.xMin)
+                {
+                    x = area.xMin;
+                    z += fundo + EntreFileiras;
+                    fundo = 0f;
+                }
+                if (z + funda > area.yMax && z > area.yMin)
+                {
+                    v = (v + 1) % vaos.Length;
+                    area = vaos[v].area;
+                    x = area.xMin;
+                    z = area.yMin;
+                    fundo = 0f;
+                }
+                int andar = vaos[v].andar;
+                if (andar == 3) noB3++;
+                var local = new Vector3(x + largura / 2f + PlantaDeBunker.X0, PlantaDeBunker.Base(andar) + 0.01f, z + funda / 2f + PlantaDeBunker.Z0);
+                itens.Criar(c.item, d.NoBunker(local), d.GiroDoBunker + giro, c.qtd > 0 ? c.qtd : -1, c.desgaste);
+                x += largura + Folga;
+                fundo = Mathf.Max(fundo, funda);
+            }
+            Debug.Log($"[Dia 0] {compras.Count} compras guardadas nos depósitos do bunker ({compras.Count - noB3} no B1, {noB3} no B3).");
+            _levar.Clear();
+        }
+
+        // o tamanho do item no chão (como o ItensNoMundo o deita: as armas de lado), ao longo da fileira e para dentro, no
+        // giro (0 ou 90) que deixa ele mais curto para dentro
+        static (float giro, float largura, float funda) Pegada(ItensNoMundo itens, Item item)
+        {
+            var malha = itens.MalhaDe(item);
+            if (malha == null) return (0f, 0.3f, 0.3f);
+            var b = malha.bounds;
+            var deitada = Itens.EhArma(item) || Itens.EhBranca(item) ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
+            (float giro, float largura, float funda) melhor = default;
+            for (int g = 0; g <= 90; g += 90)
+            {
+                var rot = Quaternion.Euler(0f, g, 0f) * deitada;
+                Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+                for (int k = 0; k < 8; k++)
+                {
+                    var p = rot * new Vector3((k & 1) == 0 ? b.min.x : b.max.x, (k & 2) == 0 ? b.min.y : b.max.y, (k & 4) == 0 ? b.min.z : b.max.z);
+                    min = Vector3.Min(min, p);
+                    max = Vector3.Max(max, p);
+                }
+                float l = max.x - min.x, f = max.z - min.z;
+                if (g == 0 || f < melhor.funda) melhor = (g, l, f);
+            }
+            return melhor;
         }
     }
 }

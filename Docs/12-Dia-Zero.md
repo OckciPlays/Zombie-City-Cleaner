@@ -8,7 +8,7 @@ O jogo novo agora começa no **Dia 0**: o mundo normal, antes do apocalipse. A i
   carros passando;
 - cada um tem **1.000 dólares** (as economias) para gastar nas lojas;
 - quando alguém fecha a **porta do abrigo** na nossa casa, a tela mostra **"5 anos depois"**, e o jogo continua no mundo
-  de hoje, abandonado. É a mesma casa, e as compras estão no chão dela.
+  de hoje, abandonado. Todos começam no bunker da família, com as compras guardadas nos depósitos dele.
 
 Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção "O Dia 0".
 
@@ -55,8 +55,10 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 - **E** mostra quem ainda está fora de casa; **E de novo** fecha. O dia acaba para todos.
 - **Quem estiver fora de casa** quando a porta fechar **perde as compras** (a pedido). Todo mundo vai para o mundo do
   mesmo jeito.
-- **5 anos depois:** cada um aparece na sala da casa da família, às 8h da manhã, com as compras no chão, no mesmo lugar em
-  que estavam no Dia 0.
+- **5 anos depois:** cada um aparece na sala de operações do bunker da família (perto da cidade da nossa casa), às 8h
+  da manhã, e as compras estão guardadas nos depósitos do bunker (a pedido, no merge com o bunker novo: o do B1 e, se
+  faltar lugar, o do B3), em fileiras no chão, as do mesmo tipo juntas. Num mapa sem o bunker, elas ficam no chão da
+  casa, no mesmo lugar em que estavam no Dia 0.
 
 ## Os NPCs
 
