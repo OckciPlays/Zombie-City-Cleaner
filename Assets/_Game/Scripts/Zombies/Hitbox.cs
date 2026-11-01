@@ -2,8 +2,11 @@ using UnityEngine;
 
 namespace ZombieCityCleaner.Zombies
 {
-    /// <summary>Corpo é a cápsula inteira (nível médio); o resto são as hitboxes presas nos ossos (nível perto).</summary>
-    public enum RegiaoDoCorpo : byte { Corpo, Cabeca, Tronco, Braco, Perna }
+    /// <summary>
+    /// Corpo é a cápsula inteira (nível médio); o resto são as hitboxes presas nos ossos (nível perto). Olho e Papo são dos
+    /// especiais: o olho nas costas do Brutamonte (o ponto fraco, só aberto) e o papo do Long (a gosma estoura).
+    /// </summary>
+    public enum RegiaoDoCorpo : byte { Corpo, Cabeca, Tronco, Braco, Perna, Olho, Papo }
 
     /// <summary>
     /// O pedaço de um membro (ou nenhum, no tronco e na cabeça). O de cima é o braço ou a coxa, o de baixo é o antebraço

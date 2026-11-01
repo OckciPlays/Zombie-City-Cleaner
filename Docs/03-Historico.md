@@ -412,6 +412,23 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
 - **Sem a roda, o canto do carro cai até a lataria quase encostar no chão** (antes ficava no ar, como se houvesse uma roda invisível), e a colisão dos carros do mapa inclina junto. A perua sem roda também fica mais baixa (no cubo de 7 cm).
 - **Desempenho:** com o capô fechado, o cofre do motor não é desenhado (95 carros com o kit em volta da casa: 207 peças, eram 337).
 
+## Os zumbis especiais (01/11/2026, a pedido)
+
+- **Três zumbis novos, cada um com 3 roupas:** o **Brutamonte** (o mini-chefe: 500 de vida, casco ×0,3, o olho nas costas ×3,
+  brota da terra, avança em linha reta e bate em volta), o **Long** (o cuspidor: só de noite, fica longe, cospe a gosma que
+  apaga luzes e prende o jogador, grita e chama a horda, morre na lanterna de perto) e o **Corredor** (60 de vida, 3,8 m/s e o
+  bote a 4,6). Os modelos vieram de outro chat; aqui eles ganharam o esqueleto do Oco, os pesos, as texturas e a montagem.
+- **As animações próprias**, feitas no Blender pose a pose: a disparada, o emergir, a fúria, o cuspe e o grito. Os Ocos
+  continuam com o andar deles.
+- **A lanterna virou item**, com pilhas que duram uma noite e a troca pelo menu da mochila. A gosma do Long a apaga, e ela
+  só volta com pilhas novas.
+- **A fogueira e a tocha iluminam mais longe** (16 m e 14 m).
+- **Conferido no Play**, com fotos e o motivo de cada decisão no log:
+  - **o Brutamonte:** o avanço acabava na hora em "tonto", porque a linha reta saía de um ponto fora do NavMesh;
+  - **o Long:** nascendo atrás de uma casa, ele nunca via ninguém. Agora vai na direção do jogador até ver.
+- **Os sons são provisórios** (sintetizados), para o Pedro trocar depois.
+- O resumo está em [10 – Os zumbis especiais](10-Zumbis-Especiais.md).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

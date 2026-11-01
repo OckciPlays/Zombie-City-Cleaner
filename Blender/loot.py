@@ -506,6 +506,40 @@ def _bancada():
     return p
 
 
+# ------------------------------------------------------------------ a luz (01/11/2026: a lanterna vira item, com pilhas)
+
+def _lanterna():
+    # a lanterna de mão deitada (o comprido em X): o cabo de alumínio preto com os anéis da pega, a cabeça mais larga
+    # com a lente amarelada, o botão de borracha vermelho, a tampa de trás e a argola da cordinha
+    r, z = 0.018, 0.0275
+    p = [
+        Z("preto", r, 0.15, (-0.01, 0, z), 12, "X"),
+        Z("aco_escuro", 0.027, 0.045, (0.085, 0, z + 0.004), 12, "X"),
+        Z("aco_escuro", 0.024, 0.012, (0.06, 0, z + 0.002), 12, "X"),
+        Z("creme", 0.023, 0.004, (0.109, 0, z + 0.004), 12, "X"),
+        Z("aco_escuro", 0.0195, 0.014, (-0.09, 0, z), 12, "X"),
+        C("vermelho", (0.014, 0.01, 0.006), (0.03, 0, z + r + 0.001), chanfro=0.002),
+        C("aco", (0.006, 0.012, 0.012), (-0.101, 0, z), chanfro=0.001),
+    ]
+    for x in (-0.06, -0.045, -0.03, -0.015, 0.0):
+        p.append(Z("cinza_escuro", r * 1.04, 0.005, (x, 0, z), 12, "X"))
+    return p
+
+
+def _pilhas():
+    # um par de pilhas grandes deitadas lado a lado: o corpo preto, a faixa cor de cobre e os polos de metal
+    p = []
+    for y in (-0.0135, 0.0135):
+        r = 0.013
+        p += [
+            Z("preto", r, 0.05, (0, y, r), 12, "X"),
+            Z("dourado", r * 1.005, 0.017, (0.0165, y, r), 12, "X"),
+            Z("prata", 0.0045, 0.004, (0.027, y, r), 8, "X"),
+            Z("prata", r * 0.85, 0.002, (-0.0255, y, r), 12, "X"),
+        ]
+    return p
+
+
 # nome do modelo -> (as peças, as células do ícone, onde a câmera do ícone olha de, onde a da foto)
 MODELOS = {
     "Feijao": _feijao, "Carne": _carne, "Milho": _milho, "Sopa": _sopa, "Salgadinho": _salgadinho,
@@ -518,6 +552,7 @@ MODELOS = {
     "PecasDeMetal": _pecas, "Fios": _fios, "Pregos": _pregos, "Isca": _isca, "VaraDePesca": _vara,
     "KitDeReparo": _kit_reparo, "Roupa": _roupa,
     "Fogueira": _kit_fogueira, "Cama": _kit_cama, "Barricada": _kit_barricada,
+    "Lanterna": _lanterna, "Pilhas": _pilhas,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -526,7 +561,7 @@ MONTADAS = {
 }
 # os deitados (vistos mais de cima no ícone)
 DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "PecasDeMetal", "Fios", "Pregos", "VaraDePesca",
-            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem"}
+            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas"}
 
 SAIDA = os.path.join(eq.UNITY, "Loot.fbx")
 
@@ -559,6 +594,7 @@ def imagens(so=None):
     """Os ícones (128 x 128) e as fotos (600 x 500, de 3/4), no estilo dos outros: o Workbench com a textura, a
     cavidade, o contorno e o fundo transparente."""
     cena = _cena()
+    bpy.context.view_layer.update()   # as posições dos objetos (sem isto, a câmera mirava a origem e saía vazio)
     r = cena.render
     try:
         r.engine = "BLENDER_WORKBENCH"

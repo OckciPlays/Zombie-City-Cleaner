@@ -26,6 +26,8 @@ namespace ZombieCityCleaner.Loot
         Madeira = 96, Toras, Pano, Corda, FitaAdesiva, Ferramenta, PecasDeMetal, Fios, Pregos, Isca, VaraDePesca, KitDeReparo, Roupa,
         // o que se monta no mundo (os kits: na mochila, um item; montados, a construção)
         Fogueira = 112, Cama, Barricada,
+        // a luz (01/11/2026, a pedido: a lanterna só funciona achada, e gasta as pilhas)
+        Lanterna = 116, Pilhas,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
     }
@@ -220,6 +222,9 @@ namespace ZombieCityCleaner.Loot
             Material(Item.Fogueira, "Fogueira", "fogueira", "a fogueira", "fogueiras", "Lenha arrumada. Monte no chão: luz e calor.", 1, TipoDeLoot.Construcao),
             Material(Item.Cama, "Cama", "cama improvisada", "a cama improvisada", "camas improvisadas", "Monte no chão: você volta nela quando cair.", 1, TipoDeLoot.Construcao),
             Material(Item.Barricada, "Barricada", "barricada", "a barricada", "barricadas", "Tábuas pregadas. Monte numa porta: segura os zumbis.", 1, TipoDeLoot.Construcao),
+            // a luz (01/11/2026): no fim da lista, para os índices dos outros modelos não mudarem
+            Material(Item.Lanterna, "Lanterna", "lanterna", "a lanterna", "lanternas", "Vai presa no peito: F liga e desliga. Gasta as pilhas.", 1),
+            Material(Item.Pilhas, "Pilhas", "par de pilhas", "o par de pilhas", "pares de pilhas", "Botão direito na lanterna: trocar as pilhas.", 6),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -412,6 +417,8 @@ namespace ZombieCityCleaner.Loot
         /// que pega. O desgaste vai de 0 (nova) a 100: a de fogo quebrada não atira (o kit conserta); a branca quebra e some.
         /// </summary>
         public static bool ComDesgaste(Item i) => EhArma(i) || EhBranca(i);
+        /// <summary>A lanterna gasta as pilhas: o desgaste dela é a carga que já foi (0, pilhas novas; 100, acabaram).</summary>
+        public static bool EhLanterna(Item i) => i == Item.Lanterna;
         /// <summary>Quanto um uso gasta: um tiro (as de fogo: 400 tiros) ou um golpe que pega (as brancas).</summary>
         public static float DesgastePorUso(Item i) => EhArma(i) ? 0.25f : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;

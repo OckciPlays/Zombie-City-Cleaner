@@ -168,7 +168,7 @@ namespace ZombieCityCleaner.EditorTools
         public static (Zumbi[] prefabs, CorpoDeZumbi[] corpos) MontarPrefabs()
         {
             CamadasDosZumbis();
-            var modelos = Modelos.Select(ImportarModelo).ToArray();
+            var modelos = TodosOsModelos.Select(ImportarModelo).ToArray();   // os Ocos e, depois, os especiais
             var controlador = ControladorDoZumbi(modelos[0].clipes, MascaraDoTronco(modelos[0].fbx));
             var prefabs = new Zumbi[modelos.Length];
             var corpos = new CorpoDeZumbi[modelos.Length];
@@ -211,8 +211,8 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>O "Zumbis" sem hordas na cena (com os prefabs da pasta, na ordem da lista), e o sangue.</summary>
         public static void PorOsZumbisNaCena(Scene cena)
         {
-            var prefabs = Modelos.Select(n => AssetDatabase.LoadAssetAtPath<Zumbi>($"{Prefabs}/Zumbi_{n}.prefab")).ToArray();
-            var corpos = Modelos.Select(n => AssetDatabase.LoadAssetAtPath<CorpoDeZumbi>($"{Prefabs}/Corpo_{n}.prefab")).ToArray();
+            var prefabs = TodosOsModelos.Select(n => AssetDatabase.LoadAssetAtPath<Zumbi>($"{Prefabs}/Zumbi_{n}.prefab")).ToArray();
+            var corpos = TodosOsModelos.Select(n => AssetDatabase.LoadAssetAtPath<CorpoDeZumbi>($"{Prefabs}/Corpo_{n}.prefab")).ToArray();
             if (prefabs.Any(p => p == null) || corpos.Any(c => c == null)) (prefabs, corpos) = MontarPrefabs();
             var decals = MateriaisDosDecals();
             DecalsNoRenderizador();
@@ -505,6 +505,7 @@ namespace ZombieCityCleaner.EditorTools
                 ida.duration = destino == caindo ? 0.1f : 0.2f;
             }
             EstadoDeLevantar(ctrl, c);
+            EstadosDosEspeciais(ctrl, c);
 
             ctrl.AddLayer("Ações");
             var camadas = ctrl.layers;
@@ -573,7 +574,7 @@ namespace ZombieCityCleaner.EditorTools
             string caminho = $"{Arte}/Zombie_{m.nome}.overrideController";
             AssetDatabase.DeleteAsset(caminho);
             var aoc = new AnimatorOverrideController(baseCtrl) { name = "Zombie_" + m.nome };
-            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio)
+            aoc.ApplyOverrides(Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio).Concat(ClipesEspeciais)
                 .Where(c => primeiro.clipes.ContainsKey(c.nome) && m.clipes.ContainsKey(c.nome))
                 .Select(c => new KeyValuePair<AnimationClip, AnimationClip>(primeiro.clipes[c.nome], m.clipes[c.nome])).ToList());
             AssetDatabase.CreateAsset(aoc, caminho);
@@ -750,6 +751,8 @@ namespace ZombieCityCleaner.EditorTools
             z.malhasDeLonge = m.longe;
             z.materialPele = m.material;
             z.materialCarne = Carregar<Material>(Arte + "/Materials/Zombie_Flesh.mat");
+            MontarEspecial(z, m, smr, hitboxes);   // o tipo, o olho e o papo (MontagemDosZumbis.Especiais.cs)
+            z.hitboxes = hitboxes.ToArray();
 
             var salvo = PrefabUtility.SaveAsPrefabAsset(raiz, $"{Prefabs}/Zumbi_{m.nome}.prefab");
             Object.DestroyImmediate(raiz);

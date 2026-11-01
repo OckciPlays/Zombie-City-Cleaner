@@ -114,6 +114,9 @@ namespace ZombieCityCleaner.Player
         void LateUpdate()
         {
             if (!IsSpawned) return;
+            // desde 01/11/2026, a lanterna é um item: sem ela (ou sem pilhas), não acende; as pilhas acabando, ela falha antes
+            // de apagar (a gosma do Long esvazia as pilhas de uma vez)
+            int carga = Video.ModoVideo.Ligado || rede.Inventario == null ? 100 : rede.Inventario.CargaDaLanterna;   // a cena de vídeo tem a lanterna de sempre
             if (IsOwner)
             {
                 bool controla = MenuOnline.Controla;
@@ -121,9 +124,19 @@ namespace ZombieCityCleaner.Player
                 if (MenuOnline.Bot && trocar) _proximaTrocaBot = Time.time + 5f;
                 if (trocar)
                 {
-                    Ligada.Value = !Ligada.Value;
+                    if (!Ligada.Value && carga < 0) InventarioJogador.AvisoLocal("Você não tem uma lanterna");
+                    else if (!Ligada.Value && carga == 0) InventarioJogador.AvisoLocal("A lanterna está sem pilhas");
+                    else Ligada.Value = !Ligada.Value;
                     Efeitos.Som(Efeitos.Lanterna, luz.transform.position, 0.6f, false);
                 }
+                // sem lanterna: apaga na hora; sem pilhas: falha um pouco e apaga
+                if (Ligada.Value && carga < 0) Ligada.Value = false;
+                if (Ligada.Value && carga == 0)
+                {
+                    if (_semCargaDesde < 0f) _semCargaDesde = Time.time;
+                    else if (Time.time - _semCargaDesde > 1.3f) Ligada.Value = false;
+                }
+                else _semCargaDesde = -1f;
             }
 
             bool ligada = Ligada.Value;
@@ -132,7 +145,7 @@ namespace ZombieCityCleaner.Player
             luz.enabled = ligada;
             if (!ligada) return;
             bool noCarro = rede.Passageiro != null && rede.Passageiro.NoCarro;
-            luz.intensity = intensidade * Piscada(Time.time - _ligouEm) * (noCarro ? fatorNoCarro : 1f);
+            luz.intensity = intensidade * Piscada(Time.time - _ligouEm) * Falha(carga) * (noCarro ? fatorNoCarro : 1f);
             luz.shadowNearPlane = noCarro ? 0.1f : _sombraPerto;
 
             // de onde o jogador olha, e para onde
@@ -162,6 +175,17 @@ namespace ZombieCityCleaner.Player
             Vector3 peito = noCarro ? olho + olhar * new Vector3(0f, -0.06f, 0.1f) : transform.TransformPoint(posicaoNoPeito);
             Vector3 ponto = olho + frente * _distancia;
             luz.transform.SetPositionAndRotation(peito, Quaternion.LookRotation(ponto - peito, olhar * Vector3.up));
+        }
+
+        float _semCargaDesde = -1f;
+
+        /// <summary>As pilhas no fim (abaixo de 8%) ou acabando de vez: a luz enfraquece e falha.</summary>
+        float Falha(int carga)
+        {
+            if (carga > 8) return 1f;
+            float ruido = Mathf.PerlinNoise(Time.time * (carga <= 0 ? 14f : 6f), 3.7f);
+            if (carga <= 0) return ruido > 0.55f ? 0.6f : 0.05f;
+            return Mathf.Lerp(0.35f, 1f, carga / 8f) * (ruido > 0.85f ? 0.3f : 1f);
         }
 
         /// <summary>Ao ligar, a lâmpada falha duas vezes antes de firmar.</summary>

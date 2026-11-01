@@ -190,6 +190,8 @@ namespace ZombieCityCleaner.Vehicles
 
         readonly NetworkVariable<Ocupantes> _ocupantes = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         readonly NetworkVariable<bool> _farois = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        // a gosma do Long nos faróis (01/11/2026): até esta hora (no relógio do servidor), eles não acendem
+        readonly NetworkVariable<float> _faroisSujosAte = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         /// <summary>O giro das rodas da frente (-127 a 127 = todo para a esquerda ou a direita), para os outros verem.</summary>
         readonly NetworkVariable<sbyte> _direcao = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>A rotação do motor (0 a 255), para o som.</summary>
@@ -282,7 +284,15 @@ namespace ZombieCityCleaner.Vehicles
         public bool Virado => transform.up.y < 0.35f;
         /// <summary>Virado há mais de 1,5 s e quase parado: o motorista pode desvirar.</summary>
         public bool PodeDesvirar => Virado && _viradoDesde >= 0f && Time.time - _viradoDesde > 1.5f && Velocidade < 2f;
-        public bool FaroisLigados => IsSpawned && _farois.Value;
+        public bool FaroisLigados => IsSpawned && _farois.Value && !FaroisSujos;
+        /// <summary>A gosma do Long cobriu os faróis (eles não acendem até ela escorrer).</summary>
+        public bool FaroisSujos => IsSpawned && NetworkManager.ServerTime.TimeAsFloat < _faroisSujosAte.Value;
+
+        /// <summary>Só no anfitrião: a gosma cobre os faróis por este tempo (s).</summary>
+        public void SujarFarois(float segundos)
+        {
+            if (IsServer) _faroisSujosAte.Value = NetworkManager.ServerTime.TimeAsFloat + segundos;
+        }
         bool Simula => !IsSpawned || IsOwner;
         /// <summary>A chave e o motor: o do dono na hora, o da rede nos outros.</summary>
         public EstadoDoMotor Estado => !IsSpawned ? EstadoDoMotor.SemChave : IsOwner ? _estadoLocal : (EstadoDoMotor)_motorRede.Value;
@@ -1493,7 +1503,7 @@ namespace ZombieCityCleaner.Vehicles
             AplicarPneus();
             Rodas(dt);
             // os faróis precisam da bateria
-            bool farois = _farois.Value && Pecas.BateriaAcende;
+            bool farois = _farois.Value && Pecas.BateriaAcende && !FaroisSujos;
             if (_faroisAplicados != farois) AplicarFarois(farois);
             if (IsServer) Desgaste(dt);
             Capo(dt);

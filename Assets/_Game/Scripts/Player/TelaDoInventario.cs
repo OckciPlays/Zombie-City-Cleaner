@@ -487,6 +487,9 @@ namespace ZombieCityCleaner.Player
             if (Itens.ComDesgaste(item) && it.desgaste > 0)
                 Opcao(inventario.PodeReparar(id) ? $"Reparar ({100 - it.desgaste}% → 100%, gasta 1 kit de reparo)" : "Reparar (precisa de um kit de reparo)",
                       inventario.PodeReparar(id) ? () => inventario.Reparar(id) : (System.Action)null);
+            if (Itens.EhLanterna(item) && it.desgaste > 0)
+                Opcao(inventario.PodeTrocarPilhas(id) ? $"Trocar as pilhas ({100 - it.desgaste}% → 100%, gasta 1 par)" : "Trocar as pilhas (precisa de pilhas)",
+                      inventario.PodeTrocarPilhas(id) ? () => inventario.TrocarPilhas(id) : (System.Action)null);
             if (!inventario.PodeDesmontar(id, out var d, out var falta) && d != null)
                 Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(d.vira)} ({falta})", null);
             else if (d != null)
@@ -836,7 +839,7 @@ namespace ZombieCityCleaner.Player
                 PorCor(_direita, antes);
             }
             // o estado da arma gasta: a barra fina em cima (verde, amarela, vermelha)
-            if (Itens.ComDesgaste(it.item) && it.desgaste > 0)
+            if ((Itens.ComDesgaste(it.item) || Itens.EhLanterna(it.item)) && it.desgaste > 0)
             {
                 float f = (100 - it.desgaste) / 100f;
                 Ret(new Rect(r.x + 3 * u, r.y + 3 * u, (r.width - 24 * u), 4 * u), new Color(0f, 0f, 0f, 0.5f));
@@ -1115,6 +1118,7 @@ namespace ZombieCityCleaner.Player
             }
             if (Itens.ComDesgaste(item))
                 Linha("Estado", $"{100 - it.desgaste}%" + (it.desgaste >= 100 ? " (quebrada)" : it.desgaste >= Itens.DesgasteQueEmperra && Itens.EhArma(item) ? " (emperra)" : ""));
+            if (Itens.EhLanterna(item)) Linha("Pilhas", it.desgaste >= 100 ? "acabaram (troque)" : $"{100 - it.desgaste}%");
             var desmonta = Receitas.DesmontagemDe(item);
             if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(desmonta.vira));
             if (!Itens.EhLoot(item)) Linha("Tamanho", $"{t.x} × {t.y}");

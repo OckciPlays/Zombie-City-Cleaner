@@ -1057,8 +1057,150 @@ namespace ZombieCityCleaner.Player
             Mudou?.Invoke();
         }
 
+        // ------------------------------------------------------------------ a lanterna e as pilhas (01/11/2026)
+
+        /// <summary>Uma lanterna com pilhas novas dura isto aceso (s): mais ou menos uma noite.</summary>
+        public const float DuracaoDasPilhas = 480f;
+        float _gastoDaLanterna;
+        bool _lanternaDoComeco;
+
+        /// <summary>A melhor lanterna da mochila: a carga dela (0 a 100; sem lanterna, -1).</summary>
+        public int CargaDaLanterna
+        {
+            get
+            {
+                int melhor = -1;
+                if (Mochila == null) return melhor;
+                foreach (var it in Mochila)
+                    if (it.item == Item.Lanterna) melhor = Mathf.Max(melhor, 100 - it.desgaste);
+                return melhor;
+            }
+        }
+
+        int IndiceDaLanternaEmUso()
+        {
+            int k = -1, melhor = -1;
+            for (int i = 0; i < Mochila.Count; i++)
+                if (Mochila[i].item == Item.Lanterna && 100 - Mochila[i].desgaste > melhor)
+                {
+                    melhor = 100 - Mochila[i].desgaste;
+                    k = i;
+                }
+            return k;
+        }
+
+        /// <summary>Só no anfitrião: a gosma do Long queimou as pilhas (todas as lanternas da mochila).</summary>
+        public void EsvaziarLanterna()
+        {
+            if (!IsServer) return;
+            bool havia = false;
+            for (int i = 0; i < Mochila.Count; i++)
+            {
+                var it = Mochila[i];
+                if (it.item != Item.Lanterna || it.desgaste >= 100) continue;
+                it.desgaste = 100;
+                Mochila[i] = it;
+                havia = true;
+            }
+            if (havia) AvisoRpc("A gosma apagou a sua lanterna: troque as pilhas");
+        }
+
+        /// <summary>Só no anfitrião: a gosma apagou a tocha da mão (ela se perde).</summary>
+        public void ApagarTochaNaMao()
+        {
+            if (!IsServer || NaMao != Item.Tocha) return;
+            int k = Indice(IdNaMao);
+            if (k < 0) return;
+            Mochila.RemoveAt(k);
+            AvisoRpc("A gosma apagou a tocha");
+        }
+
+        /// <summary>A lanterna pode ganhar pilhas novas (tem um par na mochila e ela não está cheia).</summary>
+        public bool PodeTrocarPilhas(ushort id) => Achar(id, out var it) && it.item == Item.Lanterna && it.desgaste > 0 && Quantos(Item.Pilhas) > 0;
+
+        public void TrocarPilhas(ushort id)
+        {
+            if (!PodeTrocarPilhas(id)) return;
+            TrocarPilhasRpc(id);
+            Efeitos.Som(Efeitos.Lanterna, transform.position + Vector3.up * 1.2f, 0.7f, false);
+        }
+
+        [Rpc(SendTo.Server)]
+        void TrocarPilhasRpc(ushort id, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !PodeTrocarPilhas(id)) return;
+            if (!GastarItem(Item.Pilhas, 1)) return;
+            int k = Indice(id);
+            if (k < 0) return;
+            var it = Mochila[k];
+            it.desgaste = 0;
+            Mochila[k] = it;
+            AvisoRpc("Pilhas novas na lanterna");
+        }
+
+        /// <summary>No anfitrião: a lanterna acesa gasta as pilhas (a de mais carga da mochila).</summary>
+        void GastarPilhas(float dt)
+        {
+            var lanterna = _rede != null ? _rede.Lanterna : null;
+            if (lanterna == null || !lanterna.Ligada.Value) return;
+            _gastoDaLanterna += dt * 100f / DuracaoDasPilhas;
+            if (_gastoDaLanterna < 1f) return;
+            int n = Mathf.FloorToInt(_gastoDaLanterna);
+            _gastoDaLanterna -= n;
+            int k = IndiceDaLanternaEmUso();
+            if (k < 0) return;
+            var it = Mochila[k];
+            if (it.desgaste >= 100) return;
+            it.desgaste = (byte)Mathf.Min(100, it.desgaste + n);
+            Mochila[k] = it;
+            if (it.desgaste >= 100) AvisoRpc("As pilhas da lanterna acabaram");
+        }
+
+        /// <summary>
+        /// No anfitrião, no começo da partida: uma lanterna e um par de pilhas no chão, perto de onde o jogador nasceu (por
+        /// enquanto o saque não está nos móveis: o Gustavo põe depois).
+        /// </summary>
+        System.Collections.IEnumerator LanternaDoComeco()
+        {
+            float ate = Time.time + 60f;
+            while (Time.time < ate && (Loot.ItensNoMundo.Instancia == null || !Loot.ItensNoMundo.Instancia.IsSpawned)) yield return null;
+            yield return new WaitForSeconds(4f);
+            var mundo = Loot.ItensNoMundo.Instancia;
+            if (mundo == null) yield break;
+            Vector3 frente = transform.forward;
+            frente.y = 0f;
+            frente = frente.sqrMagnitude > 0.01f ? frente.normalized : Vector3.forward;
+            Vector3 lado = Vector3.Cross(Vector3.up, frente);
+            for (int i = 0; i < 2; i++)
+            {
+                Vector3 p = transform.position + frente * 1.1f + lado * (i == 0 ? -0.25f : 0.25f) + Vector3.up * 1f;
+                if (Physics.Raycast(p, Vector3.down, out var hit, 3f, ~((1 << JogadorRede.CamadaJogador) | (1 << 2)), QueryTriggerInteraction.Ignore)) p = hit.point;
+                else p -= Vector3.up;
+                mundo.Criar(i == 0 ? Item.Lanterna : Item.Pilhas, p, transform.eulerAngles.y + 90f, i == 0 ? 1 : 2);
+            }
+        }
+
+        /// <summary>Um aviso no HUD de quem joga nesta máquina.</summary>
+        public static void AvisoLocal(string texto)
+        {
+            var inv = JogadorRede.Local != null ? JogadorRede.Local.Inventario : null;
+            if (inv == null) return;
+            inv.Feito?.Invoke(texto);
+            inv._avisoNoHud = texto;
+            inv._avisoNoHudAte = Time.time + 2.8f;
+        }
+
         void Update()
         {
+            if (IsSpawned && IsServer)
+            {
+                GastarPilhas(Time.deltaTime);
+                if (!_lanternaDoComeco && !ModoVideo.SemArma)
+                {
+                    _lanternaDoComeco = true;
+                    StartCoroutine(LanternaDoComeco());
+                }
+            }
             if (IsSpawned) PneuQueSeVe();
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
             if (_arma.Usando || _arma.Montando) return;   // comendo, bebendo ou montando: nem troca nem larga

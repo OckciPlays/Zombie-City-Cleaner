@@ -186,8 +186,8 @@ namespace ZombieCityCleaner.Player
             // e, no dono, a luz dela ali, na frente dos braços (a do corpo, perto do rosto, estourava os braços de laranja)
             if (novo == Item.Tocha && m >= 0 && m < bocas.Length && bocas[m] != null && bocas[m].Find("Fogo") == null && Loot.ConstrucoesNoMundo.Instancia != null)
             {
-                var fogo = Loot.ConstrucoesNoMundo.Fogo(bocas[m], Vector3.zero, Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.28f, 8f, false, JogadorRede.CamadaBracos);
-                fogo.GetComponent<Light>().intensity = 1.3f;
+                var fogo = Loot.ConstrucoesNoMundo.Fogo(bocas[m], Vector3.zero, Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.28f, 14f, false, JogadorRede.CamadaBracos);   // a luz maior (01/11/2026: era 8 m)
+                fogo.GetComponent<Light>().intensity = 2.1f;
             }
             if (ComArma)
             {
@@ -445,6 +445,8 @@ namespace ZombieCityCleaner.Player
                     bool naCabeca = hitbox.regiao == RegiaoDoCorpo.Cabeca;
                     _marcaNaCabeca = naCabeca;
                     if (naCabeca) rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Cabeca, Membro.Nenhum, dano, ponto, false, corte);
+                    // o olho do Brutamonte e o papo do Long (os especiais) contam como eles mesmos
+                    else if (hitbox.regiao == RegiaoDoCorpo.Olho || hitbox.regiao == RegiaoDoCorpo.Papo) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, Membro.Nenhum, dano, ponto, false, corte);
                     else if (porRegiao) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, hitbox.membro, dano, ponto, false, corte);
                     else rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, false);
                     rede.AnunciarPancada(ponto, !pedra);
@@ -561,7 +563,7 @@ namespace ZombieCityCleaner.Player
                 {
                     if (_carne[k].hitbox.zumbi != zumbi) continue;
                     if (_carne[k].centro && doCentro < 0) doCentro = k;
-                    naCabeca |= _carne[k].hitbox.regiao == RegiaoDoCorpo.Cabeca;
+                    naCabeca |= _carne[k].hitbox.regiao == RegiaoDoCorpo.Cabeca || _carne[k].hitbox.regiao == RegiaoDoCorpo.Olho;
                 }
                 for (int k = i; k < _carne.Count; k++)
                 {
@@ -571,7 +573,7 @@ namespace ZombieCityCleaner.Player
                     for (int j = i; j < _carne.Count; j++)
                         if (_carne[j].hitbox.zumbi == zumbi && _carne[j].hitbox.regiao == h.regiao && _carne[j].hitbox.membro == h.membro) chumbos++;
                     // a conta vale o dobro mais o desempate: cabeça, depois tronco, depois membro
-                    if (h.regiao == RegiaoDoCorpo.Cabeca) chumbos = dePerto ? 1000 : chumbos * 3 + 2;
+                    if (h.regiao == RegiaoDoCorpo.Cabeca || h.regiao == RegiaoDoCorpo.Olho) chumbos = dePerto ? 1000 : chumbos * 3 + 2;
                     else if (!EhMembro(h.regiao)) chumbos = chumbos * 3 + 1;
                     else chumbos *= 3;
                     if (chumbos > maisChumbos) { maisChumbos = chumbos; melhor = k; }
@@ -675,7 +677,8 @@ namespace ZombieCityCleaner.Player
 
         // um acerto num zumbi: sangue aqui na hora e a marca na mira; o acerto vai para o anfitrião no fim do disparo
         // o Oco de pedra (o sol): o tiro solta faíscas e poeira, não sangue (os outros veem um impacto "outro")
-        static bool DePedra(Hitbox hitbox) => hitbox.zumbi != null && hitbox.zumbi.Pedra >= 0.5f;
+        // a pedra do sol, e o casco do Brutamonte (fora do olho): o acerto faz poeira e faíscas, sem sangue
+        static bool DePedra(Hitbox hitbox) => hitbox.zumbi != null && (hitbox.zumbi.Pedra >= 0.5f || (hitbox.zumbi.tipo == TipoDeZumbi.Brutamonte && hitbox.regiao != RegiaoDoCorpo.Olho));
         static JogadorRede.TipoDeAcerto TipoNoZumbi(Hitbox hitbox) => DePedra(hitbox) ? JogadorRede.TipoDeAcerto.Outro : JogadorRede.TipoDeAcerto.Carne;
 
         void Carne(Hitbox hitbox, Vector3 ponto, Vector3 normal, float distancia)
@@ -684,7 +687,7 @@ namespace ZombieCityCleaner.Player
             else Sangue.Respingo(ponto, normal);
             _carne.Add(new NaCarne { hitbox = hitbox, ponto = ponto, distancia = distancia, centro = _chumboDoCentro });
             _marcaAte = Time.time + 0.18f;
-            _marcaNaCabeca |= hitbox.regiao == RegiaoDoCorpo.Cabeca;
+            _marcaNaCabeca |= hitbox.regiao == RegiaoDoCorpo.Cabeca || hitbox.regiao == RegiaoDoCorpo.Olho;
         }
 
         // À queima-roupa a cabeça do zumbi (no bote) pode chegar até a câmera, e um raio que começa dentro de um colisor

@@ -159,6 +159,40 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
+        /// Só o saque (01/11/2026, quando entraram a lanterna e as pilhas): as malhas Loot_* do Loot.fbx (Blender/loot.py), os
+        /// ícones e as fotos, os ícones no prefab do jogador e as malhas no "Itens no mundo" da cena Mundo. Sem refazer as
+        /// armas, os braços, os controladores e o resto da "Montar armas".
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Itens/Montar só o saque (lanterna, pilhas)")]
+        public static void MontarSoOSaque()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de montar o saque.");
+                return;
+            }
+            AssetDatabase.Refresh();
+            ImportarIcones();
+            JuntarLoot();
+            // os ícones no prefab do jogador
+            var raiz = PrefabUtility.LoadPrefabContents("Assets/_Game/Prefabs/Jogador.prefab");
+            var inventario = raiz.GetComponent<InventarioJogador>();
+            int nl = Itens.QuantosLoots;
+            inventario.iconesDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(IconeDoLoot(k))).ToArray();
+            inventario.fotosDeLoot = Enumerable.Range(0, nl).Select(k => AssetDatabase.LoadAssetAtPath<Texture2D>(FotoDoLoot(k))).ToArray();
+            PrefabUtility.SaveAsPrefabAsset(raiz, "Assets/_Game/Prefabs/Jogador.prefab");
+            PrefabUtility.UnloadPrefabContents(raiz);
+            // as malhas no "Itens no mundo" da cena Mundo
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != MontagemDoMundo.Cena) cena = EditorSceneManager.OpenScene(MontagemDoMundo.Cena);
+            MontarItensNoMundo(cena);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Saque montado: {nl} itens com modelo (a lanterna e as pilhas no fim).");
+        }
+
+        /// <summary>
         /// Só as peças do carro (a pedido em 29/10/2026, quando entrou a chave da perua): as malhas Peca_* do Pecas.fbx
         /// (Blender/pecas.py), os ícones e as fotos, os ícones no prefab do jogador e as malhas no "Itens no mundo" da cena
         /// aberta. Sem refazer as armas, os braços, os controladores e o resto da "Montar armas".

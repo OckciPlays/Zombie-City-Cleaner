@@ -136,6 +136,7 @@ namespace ZombieCityCleaner.Zombies
         {
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
             PrepararCorpos();
+            if (GetComponent<UI.BarraDoChefe>() == null) gameObject.AddComponent<UI.BarraDoChefe>();   // a barra do Brutamonte
             StartCoroutine(PreaquecerCortes());
             if (IsServer)
             {
@@ -186,6 +187,8 @@ namespace ZombieCityCleaner.Zombies
                     OrganizarCerco();
                 }
                 PovoarEmVolta(agora);   // o mundo gerado (ZombieManager.Povoamento.cs)
+                EspeciaisNoServidor(agora);   // o Long e o Brutamonte aparecem (ZombieManager.Especiais.cs)
+                GosmaNoServidor(agora);   // a gosma do Long (ZombieManager.Gosma.cs)
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)
                     if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe) _ativos[i].QuadroNoServidor(dt);
@@ -394,7 +397,7 @@ namespace ZombieCityCleaner.Zombies
                     float menor = doVideo;
                     for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, Distancia(Jogadores[k], p));
                     var nivel = menor < float.MaxValue ? NivelPara(menor, z.NivelAtual) : Zumbi.Nivel.Longe;
-                    if (z.Engajado) nivel = Zumbi.Nivel.Perto;
+                    if (z.Engajado || z.SempreDePerto(menor)) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
                     float daqui = Mathf.Min(Distancia(local, p), doVideo);
                     z.DefinirVisivel(daqui < local.visao);
@@ -556,14 +559,24 @@ namespace ZombieCityCleaner.Zombies
             _povoando = null;
         }
 
-        /// <summary>O modelo de um zumbi: sai do Id e da geração, igual no anfitrião e nos clientes.</summary>
-        int ModeloDe(int id, byte geracao) => (id * 7 + geracao * 3) % modelos.Length;
+        /// <summary>
+        /// O modelo de um Oco: sai do Id e da geração. Desde 01/11/2026 o modelo vai pela rede (os especiais são escolhidos,
+        /// não sorteados pelo Id): os Ocos são sorteados só entre os modelos comuns.
+        /// </summary>
+        int ModeloDe(int id, byte geracao)
+        {
+            var comuns = ModelosDoTipo(TipoDeZumbi.Oco);
+            return comuns.Length == 0 ? (id * 7 + geracao * 3) % modelos.Length : comuns[(id * 7 + geracao * 3) % comuns.Length];
+        }
 
-        Zumbi Nascer(Vector3 posicao)
+        Zumbi Nascer(Vector3 posicao) => Nascer(posicao, -1);
+
+        /// <summary>Um zumbi novo: o modelo dado, ou um Oco (às vezes um Corredor: ZombieManager.Especiais.cs).</summary>
+        Zumbi Nascer(Vector3 posicao, int modelo)
         {
             int id = _idsLivres.Count > 0 ? _idsLivres.Pop() : _proximoId++;
             if (id >= MaxZumbis) return null;
-            var z = PegarDoPool(ModeloDe(id, _geracoes[id]));
+            var z = PegarDoPool(modelo >= 0 ? modelo : ModeloParaNascer(id, _geracoes[id]));
             _porId[id] = z;
             _ativos.Add(z);
             z.PrepararNoServidor(id, _geracoes[id], posicao, Random.Range(0f, 360f), this);

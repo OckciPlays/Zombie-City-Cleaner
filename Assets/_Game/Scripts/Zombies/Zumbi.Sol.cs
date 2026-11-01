@@ -59,7 +59,7 @@ namespace ZombieCityCleaner.Zombies
             // a pedra subindo prende o corpo (a animação fica lenta); quebrando a casca ao se soltar, não: ele se debate
             // na velocidade normal (a câmera lenta enquanto a pedra descia parecia um movimento errado)
             bool soltando = _m != null && Time.time - _soltouEm < _m.ajustes.tempoDeQuebrar;
-            if (animador.enabled) animador.speed = _m != null && !soltando ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, _pedraVista) : 1f;
+            if (animador.enabled) animador.speed = (_m != null && !soltando ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, _pedraVista) : 1f) * RitmoDoEspecial;
             if (_pedraVista <= 0.001f)
             {
                 if (_comPedra)
@@ -161,7 +161,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>A cada quadro, no anfitrião, para todos os vivos (também os de longe: o relógio de soltar à noite).</summary>
         internal void SolNoServidor(float agora, float dt)
         {
-            if (Morto || _m == null) return;
+            if (Morto || _m == null || tipo == TipoDeZumbi.Brutamonte) return;   // o casco do Brutamonte não liga para o sol
             var a = _m.ajustes;
             if (!_m.EDia)
             {
@@ -193,7 +193,7 @@ namespace ZombieCityCleaner.Zombies
             }
             if (_noSol)
             {
-                MudarPedra(Pedra + dt / Mathf.Max(0.5f, a.tempoParaPetrificar));
+                MudarPedra(Pedra + dt / Mathf.Max(0.5f, TempoParaPetrificar));   // o Corredor, mais rápido
                 if (Pedra >= 1f)
                 {
                     Petrificar();
@@ -287,7 +287,7 @@ namespace ZombieCityCleaner.Zombies
         void ComecarAbrigo(AjustesDeZumbi a)
         {
             if (!NoNavMesh || !AcharAbrigo(a, out var abrigo)) return;   // sem abrigo por perto: tenta de novo daqui a pouco
-            Ir(abrigo, a.velocidadeInvestigando, 0.5f);
+            Ir(abrigo, a.velocidadeInvestigando * FatorAndando, 0.5f);
             Atual = Estado.Abrigando;
             _alvo = null;
             _casa = abrigo;

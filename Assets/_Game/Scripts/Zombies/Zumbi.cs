@@ -429,7 +429,8 @@ namespace ZombieCityCleaner.Zombies
         {
             _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f; _ameacadoAte = 0f; _feridoAte = 0f; _temCerco = false; _noAlcanceDesde = -1f; ZerarLuz();
             _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f; _arremessado = false;
-            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? _m.ajustes.vidaDoMembro : 3f;
+            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? VidaDoMembro : 3f;
+            ZerarEspecial();
             if (Cortes != 0)
             {
                 Cortes = 0;
@@ -470,7 +471,7 @@ namespace ZombieCityCleaner.Zombies
         internal void PrepararNoServidor(int id, byte geracao, Vector3 posicao, float yaw, ZombieManager m)
         {
             Id = id; Geracao = geracao; Copia = false; _m = m;
-            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = m.ajustes.vidaDoMembro;
+            for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = VidaDoMembro;
             transform.SetPositionAndRotation(posicao, Quaternion.Euler(0f, yaw, 0f));
             _casa = posicao;
             _preguica = Random.value < 0.33f ? 3f : 1f;
@@ -482,6 +483,7 @@ namespace ZombieCityCleaner.Zombies
             SortearRitmo();
             AplicarAparencia();
             AplicarNivel(Nivel.Longe, true);
+            PrepararEspecial();   // os especiais (Zumbi.Especiais.cs)
         }
 
         /// <summary>Muda o nível de detalhe no anfitrião: além do visual, liga ou desliga a navegação.</summary>
@@ -522,6 +524,7 @@ namespace ZombieCityCleaner.Zombies
             PassarDoTempoDasPernas();
             EquilibrioNoServidor(Time.time, dt);
             Velocidade = agente.enabled ? agente.velocity.magnitude : 0f;
+            EspecialNoServidor(Time.time, dt);   // o avanço do Brutamonte, o cuspe e a luz no Long
             if (_girando && !Morto)
             {
                 Vector3 dir = _olharPara - transform.position;
@@ -540,6 +543,11 @@ namespace ZombieCityCleaner.Zombies
         {
             if (Morto || Petrificado || !NoNavMesh) return;
             if (Deitado) return;   // caindo, deitado ou levantando (sem uma perna): o equilíbrio decide (Zumbi.Equilibrio.cs)
+            if (tipo == TipoDeZumbi.Brutamonte)
+            {
+                PensarBrutamonte(agora);   // cego e surdo: só o olho (Zumbi.Brutamonte.cs)
+                return;
+            }
             var a = _m.ajustes;
             if (_golpeEm > 0f && agora >= _golpeEm) Acertar(a);
             Destravar(agora);
@@ -548,6 +556,11 @@ namespace ZombieCityCleaner.Zombies
             if (Atual == Estado.Fugindo)
             {
                 FugirDoSol(agora, a);
+                return;
+            }
+            if (tipo == TipoDeZumbi.Long)
+            {
+                PensarLong(agora);   // fica longe e cospe (Zumbi.Long.cs)
                 return;
             }
             if (NivelAtual == Nivel.Perto && Atual != Estado.Perseguindo && Atual != Estado.Atacando) Perceber(agora, dt, a);
@@ -648,7 +661,7 @@ namespace ZombieCityCleaner.Zombies
                     && !(_m.ProtegerDoSol && _m.Exposto(hit.position))   // de dia e ao amanhecer, só vaga onde o sol não bate
                     && !(_m.Fachos.Count > 0 && _m.NoFacho(hit.position + Vector3.up * 1.2f, out _)))   // nem para dentro da luz
                 {
-                    Ir(hit.position, a.velocidadeVagando, 0.4f);
+                    Ir(hit.position, a.velocidadeVagando * FatorAndando, 0.4f);
                     Atual = Estado.Vagando;
                     return;
                 }
@@ -694,16 +707,22 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Foi ver um barulho: anda até lá, olha em volta e passa a vagar ali.</summary>
         internal void Investigar(Vector3 ponto, float agora)
         {
-            if (!NoNavMesh || Morto || Petrificado) return;
+            if (!NoNavMesh || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte é surdo
             _alvo = null;
             if (NavMesh.SamplePosition(ponto, out var hit, 3f, NavMesh.AllAreas)) ponto = hit.position;
-            Ir(ponto, _m.ajustes.velocidadeInvestigando, 1f);
+            Ir(ponto, _m.ajustes.velocidadeInvestigando * FatorAndando, 1f);
             Atual = Estado.Investigando;
         }
 
         internal void ComecarPerseguicao(JogadorRede jogador, float agora)
         {
-            if (jogador == null || Morto || Petrificado) return;
+            if (jogador == null || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte só vê pelo olho
+            if (tipo == TipoDeZumbi.Long)
+            {
+                _alvo = jogador;   // o Long não persegue: fica longe e cospe
+                _engajadoAte = agora + 8f;
+                return;
+            }
             bool novo = Atual != Estado.Perseguindo && Atual != Estado.Atacando;
             _alvo = jogador;
             _alerta = 1f;
@@ -712,7 +731,7 @@ namespace ZombieCityCleaner.Zombies
             _proximoCaminho = 0f;
             Atual = Estado.Perseguindo;
             _m.Engajou(this);   // sobe direto para o nível Perto (liga o agente, se estava desligado)
-            if (NoNavMesh) Ir(_ultimaPosicao, _m.ajustes.velocidadePerseguindo, 0.9f);
+            if (NoNavMesh) Ir(_ultimaPosicao, VelocidadeDePerseguir, 0.9f);
             if (novo) Chamar();   // achou alguém: o chamado (os de perto respondem)
         }
 
@@ -759,7 +778,7 @@ namespace ZombieCityCleaner.Zombies
             if (agora >= _proximoCaminho)
             {
                 // a horda cerca: cada um vai para o lugar dele em volta do alvo (Zumbi.Cerco.cs), não todos para o mesmo ponto
-                Ir(DestinoNoCerco(_ultimaPosicao, d), a.velocidadePerseguindo, _temCerco ? ParadaNoCerco : 0.9f);
+                Ir(DestinoNoCerco(_ultimaPosicao, d), VelocidadeNoBote(d, VelocidadeDePerseguir), _temCerco ? ParadaNoCerco : 0.9f);
                 _proximoCaminho = agora + 0.25f;
             }
         }
@@ -824,6 +843,11 @@ namespace ZombieCityCleaner.Zombies
         internal void LevarTiro(RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, Vector3 direcao, bool arremesso, JogadorRede autor, float agora, float corte = 1f)
         {
             if (Morto) return;
+            if (tipo == TipoDeZumbi.Brutamonte)
+            {
+                LevarTiroNoBrutamonte(regiao, dano, ponto, direcao, autor, agora);   // o casco e o olho (Zumbi.Brutamonte.cs)
+                return;
+            }
             var a = _m.ajustes;
             var faseAntes = FaseDoEquilibrio;
             // a estátua: o carro (acima de 3 m/s) e a espingarda de perto (o arremesso) a quebram de uma vez
@@ -848,12 +872,12 @@ namespace ZombieCityCleaner.Zombies
                     int novo = Membros.DeBaixo(membro) ? 1 : 2;
                     if (novo > Membros.Estado(Cortes, limbo))
                     {
-                        _vidaDosMembros[limbo] = a.vidaDoMembro;   // o que sobrou do membro (o braço ou a coxa) tem vida nova
+                        _vidaDosMembros[limbo] = VidaDoMembro;   // o que sobrou do membro (o braço ou a coxa) tem vida nova
                         MudarCortes(Membros.ComEstado(Cortes, limbo, novo), true, direcao);
                     }
                 }
             }
-            if (_danoNoCorpo >= a.vidaDoCorpo)
+            if (_danoNoCorpo >= VidaDoCorpo)
             {
                 // morreu da cabeça: ela explode, se o acerto corta ou fura (o tiro, a faca, o machado, a lança); o que não tem
                 // fio (corte 0: o soco, o bastão, a tocha) derruba com a cabeça no lugar
@@ -863,6 +887,7 @@ namespace ZombieCityCleaner.Zombies
             if (Petrificado) return;   // a estátua não reage nem vai atrás
             // sem uma perna desde antes deste acerto: ele pode se desequilibrar (Zumbi.Equilibrio.cs)
             if (faseAntes != Fase.Nenhuma && faseAntes == FaseDoEquilibrio) EquilibrioComTiro(direcao);
+            if (tipo == TipoDeZumbi.Long) LongFerido(regiao, autor, agora);   // o grito e o papo (Zumbi.Long.cs)
             Reacoes++;
             MostrarReacao();
             _engajadoAte = agora + 5f;
@@ -930,7 +955,7 @@ namespace ZombieCityCleaner.Zombies
         }
 
         internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade, byte cortes, byte pedra,
-                              byte equilibrio)
+                              byte equilibrio, byte especial)
         {
             ultimoRecebido = Time.unscaledTime;
             bool primeira = _qtd == 0;
@@ -955,6 +980,8 @@ namespace ZombieCityCleaner.Zombies
             if (cortes != Cortes && Atual != Estado.Morto) MudarCortes(cortes, !primeira, -transform.forward);
             // sem uma perna: a fase do equilíbrio e a inclinação (Zumbi.Equilibrio.cs)
             if (Atual != Estado.Morto) ReceberEquilibrio(equilibrio, !primeira);
+            // o especial: a fase e a vida do Brutamonte, o cuspe e o grito do Long (Zumbi.Especiais.cs)
+            if (Atual != Estado.Morto) ReceberEspecial(especial, !primeira);
             bool morreu = estado == Estado.Morto && Atual != Estado.Morto;
             if (morreu)
             {

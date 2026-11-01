@@ -55,7 +55,7 @@ namespace ZombieCityCleaner.UI
             ("Materiais", new[]
             {
                 Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
-                Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada,
+                Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas,
             }),
             ("Outros", new[]
             {

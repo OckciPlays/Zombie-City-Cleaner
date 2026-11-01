@@ -207,6 +207,47 @@ namespace ZombieCityCleaner.Loot
         /// <summary>A fogueira está acesa (o fogo ainda não acabou, no relógio do servidor).</summary>
         public bool Acesa(Construcao c) => c.tipo == Item.Fogueira && c.valor > Agora;
 
+        // ------------------------------------------------------------------ os zumbis especiais (01/11/2026)
+
+        /// <summary>As fogueiras acesas até a distância (o Long cospe nelas: odeia a luz).</summary>
+        public void FogueirasAcesas(Vector3 centro, float alcance, List<Vector3> saida)
+        {
+            foreach (var c in _lista)
+                if (Acesa(c) && (c.pos - centro).sqrMagnitude <= alcance * alcance) saida.Add(c.pos);
+        }
+
+        /// <summary>Só no anfitrião: a gosma apaga as fogueiras até o raio (a lenha que sobrava se perde; E acende de novo).</summary>
+        public int ApagarFogueiras(Vector3 ponto, float raio)
+        {
+            if (!IsServer) return 0;
+            int n = 0;
+            for (int k = 0; k < _lista.Count; k++)
+            {
+                var c = _lista[k];
+                if (!Acesa(c) || (c.pos - ponto).sqrMagnitude > raio * raio) continue;
+                c.valor = Agora;
+                _lista[k] = c;
+                n++;
+            }
+            return n;
+        }
+
+        /// <summary>Só no anfitrião: o Brutamonte passa por cima das barricadas (elas caem e sobram tábuas).</summary>
+        public void QuebrarBarricadasPerto(Vector3 ponto, float raio)
+        {
+            if (!IsServer) return;
+            for (int k = _lista.Count - 1; k >= 0; k--)
+            {
+                var c = _lista[k];
+                if (c.tipo != Item.Barricada) continue;
+                Vector3 d = c.pos - ponto;
+                d.y = 0f;
+                if (d.sqrMagnitude > raio * raio) continue;
+                _lista.RemoveAt(k);
+                ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
+            }
+        }
+
         void Update()
         {
             // cada cópia: o fogo das fogueiras acende e apaga pelo relógio
@@ -217,7 +258,7 @@ namespace ZombieCityCleaner.Loot
                     bool acesa = Acesa(c);
                     if (fogo != null && fogo.gameObject.activeSelf != acesa) fogo.gameObject.SetActive(acesa);
                     if (acesa && fogo != null && fogo.TryGetComponent<Light>(out var luz))
-                        luz.intensity = 2.2f + 0.6f * Mathf.PerlinNoise(Time.time * 3.1f, c.id) + 0.3f * Mathf.Sin(Time.time * 17f + c.id);
+                        luz.intensity = 3.6f + 0.9f * Mathf.PerlinNoise(Time.time * 3.1f, c.id) + 0.4f * Mathf.Sin(Time.time * 17f + c.id);
                 }
             if (!IsServer || !IsSpawned || Time.time < _proximoTique) return;
             // o anfitrião, a cada meio segundo: o calor das fogueiras e os zumbis nas barricadas
@@ -319,7 +360,7 @@ namespace ZombieCityCleaner.Loot
                 obstaculo.carving = true;
                 obstaculo.carveOnlyStationary = false;
             }
-            if (c.tipo == Item.Fogueira) Fogo(go.transform, new Vector3(0f, 0.12f, 0f), materialDoFogo, 1f, 7f, true, go.layer);
+            if (c.tipo == Item.Fogueira) Fogo(go.transform, new Vector3(0f, 0.12f, 0f), materialDoFogo, 1f, 16f, true, go.layer);   // a luz maior (01/11/2026, a pedido: era 7 m)
             return go;
         }
 

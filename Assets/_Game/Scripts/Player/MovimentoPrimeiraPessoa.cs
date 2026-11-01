@@ -59,7 +59,20 @@ namespace ZombieCityCleaner.Player
         }
 
         CharacterController _controle;
-        InputAction _mover, _olhar, _pular, _correr;
+        InputAction _mover, _olhar, _pular, _correr, _interagir;
+
+        // preso na gosma do Long (01/11/2026): sem andar, correr nem pular até segurar E o bastante
+        float _presoPrecisa, _presoFeito;
+        /// <summary>Preso na gosma do Long (segurando E por um tempo, ele se solta).</summary>
+        public bool PresoNaGosma { get; private set; }
+
+        /// <summary>A gosma prendeu o jogador no chão: segurar E por este tempo (s) o solta.</summary>
+        public void PrenderNaGosma(float tempoParaSoltar)
+        {
+            PresoNaGosma = true;
+            _presoPrecisa = Mathf.Max(0.3f, tempoParaSoltar);
+            _presoFeito = 0f;
+        }
         InventarioJogador _inventario;
         PuloDaJanela _janela;
         Vector3 _velocidade;
@@ -74,6 +87,7 @@ namespace ZombieCityCleaner.Player
             _mover = acoes.FindAction("Player/Move", true);
             _olhar = acoes.FindAction("Player/Look", true);
             _pular = acoes.FindAction("Player/Jump", true);
+            _interagir = acoes.FindAction("Player/Interact", true);
             _correr = acoes.FindAction("Player/Sprint", true);
             _yaw = transform.eulerAngles.y;
         }
@@ -179,6 +193,15 @@ namespace ZombieCityCleaner.Player
                 Correndo = false;
                 return;
             }
+            // preso na gosma: se debate (segurando E) até soltar
+            if (PresoNaGosma)
+            {
+                mover = Vector2.zero;
+                correr = pular = false;
+                if (bot || (controla && _interagir.IsPressed())) _presoFeito += dt;
+                else _presoFeito = Mathf.Max(0f, _presoFeito - dt * 0.5f);
+                if (_presoFeito >= _presoPrecisa) PresoNaGosma = false;
+            }
             // com o pneu nas mãos (pesado): devagar, sem correr nem pular
             if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
             bool pesado = _inventario != null && _inventario.CarregandoPneu;
@@ -206,6 +229,29 @@ namespace ZombieCityCleaner.Player
                 var ponto = Network.PontosDeNascimento.Ponto(rede.OwnerClientId);
                 Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
             }
+        }
+    
+        static GUIStyle _estiloDoPreso;
+
+        void OnGUI()
+        {
+            if (!PresoNaGosma) return;
+            if (_estiloDoPreso == null)
+                _estiloDoPreso = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
+            _estiloDoPreso.fontSize = Mathf.RoundToInt(20 * u);
+            var r = new Rect(Screen.width / 2f - 260 * u, Screen.height * 0.62f, 520 * u, 30 * u);
+            var cor = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.8f);
+            GUI.Label(new Rect(r.x + 2, r.y + 2, r.width, r.height), "PRESO NA GOSMA!  Segure E para se soltar", _estiloDoPreso);
+            GUI.color = new Color(0.95f, 0.9f, 0.85f);
+            GUI.Label(r, "PRESO NA GOSMA!  Segure E para se soltar", _estiloDoPreso);
+            var barra = new Rect(Screen.width / 2f - 150 * u, r.yMax + 6 * u, 300 * u, 8 * u);
+            GUI.color = new Color(0f, 0f, 0f, 0.6f);
+            GUI.DrawTexture(barra, Texture2D.whiteTexture);
+            GUI.color = new Color(0.75f, 0.12f, 0.12f);
+            GUI.DrawTexture(new Rect(barra.x, barra.y, barra.width * Mathf.Clamp01(_presoFeito / _presoPrecisa), barra.height), Texture2D.whiteTexture);
+            GUI.color = cor;
         }
     }
 }

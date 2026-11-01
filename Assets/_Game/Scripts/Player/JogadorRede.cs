@@ -128,6 +128,20 @@ namespace ZombieCityCleaner.Player
         public float Velocidade => _velocidade;
         public LanternaJogador Lanterna { get; private set; }
         public VidaJogador Vida { get; private set; }
+
+        /// <summary>Só no anfitrião: a gosma do Long prendeu este jogador (na máquina dele, ele se debate com E).</summary>
+        public void PrenderNaGosma(float tempoParaSoltar)
+        {
+            if (IsServer) PresoNaGosmaRpc(tempoParaSoltar);
+        }
+
+        [Rpc(SendTo.Owner)]
+        void PresoNaGosmaRpc(float tempoParaSoltar)
+        {
+            var m = GetComponent<MovimentoPrimeiraPessoa>();
+            if (m != null) m.PrenderNaGosma(tempoParaSoltar);
+            InventarioJogador.AvisoLocal("A gosma te prendeu no chão!");
+        }
         public InventarioJogador Inventario { get; private set; }
         /// <summary>O jogador num carro (entrando, sentado ou saindo).</summary>
         public PassageiroDoCarro Passageiro { get; private set; }
@@ -397,8 +411,8 @@ namespace ZombieCityCleaner.Player
                     var b = peca.sharedMesh.bounds;
                     // a luz é a dos outros (no dono, a dos braços de primeira pessoa)
                     var fogo = Loot.ConstrucoesNoMundo.Fogo(peca.transform, new Vector3(b.center.x, b.center.y, b.max.z - 0.03f),
-                        Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, IsOwner ? 0f : 8f, true, naMaoCorpo[m].layer);
-                    if (fogo.TryGetComponent<Light>(out var luz)) luz.intensity = 1.6f;
+                        Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, IsOwner ? 0f : 14f, true, naMaoCorpo[m].layer);   // a luz maior (01/11/2026: era 8 m)
+                    if (fogo.TryGetComponent<Light>(out var luz)) luz.intensity = 2.4f;
                 }
             }
             int k = m - Armas.Quantas;

@@ -7,6 +7,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 
 > **Novidades de 29 a 31/10/2026** (as armas novas, as armas brancas, a vida dos zumbis em 100, o saque e a fabricação,
 > e o zumbi sem uma perna): o resumo para o Gustavo está em [`Docs/09-Novidades-29-a-31-10.md`](Docs/09-Novidades-29-a-31-10.md).
+>
+> **Os zumbis especiais (01/11/2026):** o Brutamonte, o Long e o Corredor, a lanterna com pilhas e as luzes maiores da
+> fogueira e da tocha estão em [`Docs/10-Zumbis-Especiais.md`](Docs/10-Zumbis-Especiais.md) e na seção "Os zumbis especiais".
 
 ## Branches
 
@@ -1412,6 +1415,85 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   - o jorro do pescoço, preso ao osso do corpo que cai;
   - manchas de sangue no chão (40 decals) e furos de tiro no cenário (40 decals), reaproveitando o mais antigo.
 - **Na rede:** o estado do zumbi (a morte com a parte e a direção do tiro, as contagens de golpes e de tiros) vai em todos os pacotes de zumbis. Cada máquina transforma o que mudou em efeito, então todos veem o mesmo zumbi cair, para o mesmo lado.
+
+## Os zumbis especiais (01/11/2026, a pedido)
+
+O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiais.md`. Aqui, o técnico.
+
+- **Os modelos:** 9, a partir dos FBX da pasta `D:\teste blender` (o outro chat que os modelou; só leitura): o Brutamonte, o
+  Long (o Guspidor) e o Corredor, cada um em 3 roupas (`V1` a `V3`).
+  - **`Blender/Especiais/especiais.py`:** encaixa o esqueleto do Oco em cada um. As medidas da malha (`Medidas`: virilha,
+    axila, pescoço, braços, pernas) levam as juntas do Oco para as proporções dele. Os pesos saem do calor dos ossos numa casca
+    de voxels, com tudo 10× maior (na escala real o calor falha), e são copiados para a malha (`DATA_TRANSFER`); se mais de 30%
+    da casca fica sem peso, ele tenta de novo com outro voxel.
+  - **Os ossos próprios:** o olho e as pálpebras do Brutamonte (`olho`, `palpebra_sup`, `palpebra_inf`, filhos do `chest`) e o
+    papo do Long (`papo`, filho do `neck`).
+  - **`texturas.py`:** a cor, a normal e o metal/liso. A íris do Brutamonte fica na faixa de baixo da textura.
+  - **A saída:** `Art/Characters/Zombie/Especiais/<Tipo>_V<n>.fbx`.
+- **A montagem** (`Editor/MontagemDosZumbis.Especiais.cs`, menu **Zumbis > Montar os zumbis especiais**; a montagem inteira
+  também os faz): entram como os Ocos (Humanoid, os clipes do `Oco_Original` gravados no esqueleto de cada um, a cabeça
+  separada, o corpo que cai), depois dos 12 Ocos na lista do `ZombieManager`:
+  - índices 12–14: o Brutamonte;
+  - 15–17: o Long;
+  - 18–20: o Corredor.
+
+  `MontarEspecial` marca o `tipo`, liga os ossos e põe as hitboxes esféricas do olho (raio 0,12; região `Olho`) e do papo
+  (0,13; `Papo`). O Brutamonte tem a cápsula e o agente de raio 0,55.
+- **O código:** a parte comum em `Zumbi.Especiais.cs` (o `TipoDeZumbi`, a vida, a velocidade e o ritmo da animação de cada
+  um, o byte da rede, o `Decisao` em palavras para os testes), `Zumbi.Brutamonte.cs`, `Zumbi.Long.cs`,
+  `ZombieManager.Especiais.cs` (nascer, voltar para a terra, o grito, os sons) e `ZombieManager.Gosma.cs`. Os números estão
+  em `AjustesDeZumbi` (`corredor`, `cuspidor`, `brutamonte`; as classes em `TipoDeZumbi.cs`).
+  - **A rede:** cada zumbi tem 18 bytes (`PorPacote` 65): o 17º é o modelo (a cópia é recriada se o modelo muda) e o 18º é o
+    especial:
+    - o Brutamonte manda a fase em 3 bits e a vida em 5 bits;
+    - o Long manda os contadores de cuspe e de grito (2 bits cada) e o papo estourado.
+  - **O nível Perto de mais longe:** o Brutamonte fica Perto até 75 m e o Long até 50 m (`SempreDePerto`), porque o olho e o
+    papo são hitboxes, e as hitboxes só existem nesse nível.
+  - **O Brutamonte:** a máquina de fases fica em `BrutamonteNoQuadro`.
+    - O olho (`JogadorNoOlho`) é um cone de 110° para trás, com a linha livre.
+    - O avanço é `agente.Move` em linha reta. Uma borda do NavMesh (um `NavMesh.Raycast` saindo do `agente.nextPosition`)
+      ou um tranco de 0,25 s conta como a parede, e ele fica Tonto.
+    - Ele não reage ao sol nem à luz (`ImuneALuz`).
+    - O olho e as pálpebras são girados depois da animação (`OlhoDepoisDaAnimacao`). A hitbox do olho só fica ligada com o
+      olho aberto.
+    - Emergindo e na fúria, `GarantirAcaoDoBruto` põe o Animator no estado (a cópia que nasce já emergindo também).
+  - **O Long:** pensa em `PensarLong`, no lugar de perceber e perseguir. A gosma sai na hora (`LongNoQuadro`), e a lanterna
+    de perto é o ponto fraco (`NaLanternaDePerto`: os fachos de jogador até 7 m, cone de 22°). O papo incha e murcha em
+    `PapoDepoisDaAnimacao`. Ele não pula para fora do facho da lanterna a menos de 8 m.
+  - **O Corredor:** é o Oco com outros números (`VidaDoCorpo`, `VidaDoMembro`, `VelocidadeDePerseguir`, `FatorAndando`,
+    `TempoParaPetrificar`, `VelocidadeNoBote`). Ele nasce no lugar de um Oco (`ModeloParaNascer`).
+- **As animações:** `Blender/especiais_animacoes.py` faz `Correr`, `Emergir`, `Furia`, `Cuspir` e `Gritar`.
+  - Usa o esqueleto, o IK, as curvas e o espelho do `equilibrio_oco.py`.
+  - Os laços (`Laco`) dão a volta sem tranco.
+  - O `Correr` e a `Furia` são meio ciclo mais o espelho.
+  - Saem em `Art/Characters/Oco/Oco_AnimacoesEspeciais.fbx`.
+  - **A gravação:** `Editor/MontagemDosZumbis.AnimacoesEspeciais.cs`, menu **Zumbis > Gravar as animações dos especiais (sem
+    remontar)**. Grava nos 21 modelos e põe os estados no `Zombie.controller`:
+    - **"Andar dos especiais"** (`Pernas` = 7: Idle, Walk, Chase e Correr a 3,8 m/s). Só o Corredor e o Brutamonte usam
+      (`CorreComoEspecial`), então os Ocos não mudam;
+    - `Emergir`, `Furia`, `Cuspir` e `Gritar` (`Pernas` = 6, sem transição; o código toca com `Tocar`).
+  - **O ritmo:** `RitmoDoEspecial` acelera o Animator: 1,8× no avanço do Brutamonte e até 1,3× no bote do Corredor (multiplica
+    o `animador.speed` do `MostrarPedra`).
+- **A lanterna e as pilhas** (`Item.Lanterna`, `Item.Pilhas`; `InventarioJogador`, a parte "a lanterna e as pilhas"):
+  - a carga é o desgaste da lanterna; `DuracaoDasPilhas` é 480 s acesa;
+  - `TrocarPilhas` fica no menu da mochila;
+  - `EsvaziarLanterna` e `ApagarTochaNaMao` são a gosma;
+  - `LanternaDoComeco` larga a lanterna e as pilhas na frente de quem nasce.
+
+  A `LanternaJogador` só acende com lanterna e carga (vazia, pisca 1,3 s e apaga). A cena de vídeo continua com a lanterna.
+  Os modelos estão no `Blender/loot.py`; o menu é **Itens > Montar só o saque (lanterna, pilhas)**.
+- **A gosma no jogador:**
+  - `MovimentoPrimeiraPessoa.PresoNaGosma` e `PrenderNaGosma`: segurar Interagir (E) solta;
+  - `JogadorRede.PrenderNaGosma` é chamado no servidor e manda o `PresoNaGosmaRpc` para o dono;
+  - no carro, `Carro.SujarFarois` (uma `NetworkVariable`) apaga os faróis por um tempo;
+  - as fogueiras: `ConstrucoesNoMundo.ApagarFogueiras` e `FogueirasAcesas`.
+- **As luzes:** a fogueira tem alcance 16 (era 7), intensidade 3,6 e tremor. A tocha tem 14 (era 8), na mão e no corpo.
+- **Os testes:** o F1 cria cada especial (`CriarEspecialRpc`). Os testes no Play de 01/11 conferiram:
+  - **o Brutamonte:** o emergir, o olho, o avanço com dano, a fúria, o tonto e a morte pelo olho;
+  - **o Corredor:** a perseguição a até 5 m/s;
+  - **o Long:** o cuspe na fogueira (apagou) e no jogador (preso; a poça zerou a lanterna), o grito, a busca e a morte na
+    lanterna depois de trocar as pilhas;
+  - **a sombra das construções.**
 
 ## A trilha sonora (29/10/2026, a pedido; `Scripts/Music/`, `Ferramentas/trilha/`)
 

@@ -35,8 +35,9 @@ namespace ZombieCityCleaner.EditorTools
         const string ClipesDosOcos = PastaOco + "/Clipes";
         const string MateriaisDosOcos = PastaOco + "/Materiais";
 
-        static bool EhOco(string nome) => nome.StartsWith("Oco_");
-        static string FbxDe(string nome) => EhOco(nome) ? $"{PastaOco}/{nome}.fbx" : $"{Arte}/{nome}.fbx";
+        // os especiais (MontagemDosZumbis.Especiais.cs) são montados como os Ocos (os modelos na pasta deles)
+        static bool EhOco(string nome) => nome.StartsWith("Oco_") || EhEspecial(nome);
+        static string FbxDe(string nome) => EhEspecial(nome) ? $"{PastaEspeciais}/{nome}.fbx" : EhOco(nome) ? $"{PastaOco}/{nome}.fbx" : $"{Arte}/{nome}.fbx";
         static bool EhDedo(string osso) =>
             osso.StartsWith("thumb_") || osso.StartsWith("index_") || osso.StartsWith("middle_") || osso.StartsWith("ring_") || osso.StartsWith("pinky_");
 
@@ -103,6 +104,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var c in ClipesHumanoidesDaAgonia(FbxDe("Oco_Original"), clipes["Idle"])) clipes[c.Key] = c.Value;
             // o levantar numa perna (Blender/equilibrio_oco.py), se o FBX já existe
             foreach (var c in ClipesHumanoidesDoEquilibrio()) clipes[c.Key] = c.Value;
+            // as animações dos especiais (Blender/especiais_animacoes.py), se o FBX já existe
+            foreach (var c in ClipesHumanoidesEspeciais()) clipes[c.Key] = c.Value;
             return clipes;
         }
 
@@ -154,7 +157,8 @@ namespace ZombieCityCleaner.EditorTools
         {
             var fontes = ClipesHumanoides();
             return Gravar(m.nome, m.fbx, humano, fontes,
-                          Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio.Where(c => fontes.ContainsKey(c.nome))));
+                          Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio.Where(c => fontes.ContainsKey(c.nome)))
+                                 .Concat(ClipesEspeciais.Where(c => fontes.ContainsKey(c.nome))));
         }
 
         /// <summary>Grava os clipes da lista (das fontes Humanoid) no esqueleto do modelo, em Oco/Clipes/&lt;modelo&gt;/.</summary>
@@ -374,7 +378,8 @@ namespace ZombieCityCleaner.EditorTools
         static Material MaterialDoOco(string nome)
         {
             Directory.CreateDirectory(MateriaisDosOcos);
-            string cor = $"{PastaOco}/{nome}_BaseColor.png", normal = $"{PastaOco}/{nome}_Normal.png", liso = $"{PastaOco}/{nome}_MetalLiso.png";
+            string pasta = EhEspecial(nome) ? PastaEspeciais : PastaOco;
+            string cor = $"{pasta}/{nome}_BaseColor.png", normal = $"{pasta}/{nome}_Normal.png", liso = $"{pasta}/{nome}_MetalLiso.png";
             TexturaDoOco(cor, TextureImporterType.Default, true);
             TexturaDoOco(normal, TextureImporterType.NormalMap, false);
             TexturaDoOco(liso, TextureImporterType.Default, false);
@@ -394,7 +399,7 @@ namespace ZombieCityCleaner.EditorTools
             m.SetFloat("_BumpScale", 1f);
             m.SetTexture("_MetallicGlossMap", Carregar<Texture2D>(liso));
             m.SetFloat("_Petrificacao", 0f);
-            m.SetFloat("_AlturaDoCorpo", 1.85f);
+            m.SetFloat("_AlturaDoCorpo", EhEspecial(nome) ? 2.25f : 1.85f);   // a pedra sobe até o alto da cabeça
             // com o mapa, a lisura é o alfa dele vezes este valor. O mapa do Blender dá 0,5 a 0,7 em média (a pele molhada):
             // de perto, a lanterna estourava o Oco de branco. Com 0,35, fica em ~0,2, perto dos zumbis de antes (0,15)
             m.SetFloat("_Smoothness", 0.35f);

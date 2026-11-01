@@ -33,6 +33,7 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         bool Luz(float agora, AjustesDeZumbi a)
         {
+            if (ImuneALuz) return false;   // o Brutamonte não liga para a luz
             if (Atual == Estado.Esquivando)
             {
                 if (agora < _esquivaAte && !Chegou()) return true;
@@ -42,6 +43,8 @@ namespace ZombieCityCleaner.Zombies
             // fugindo do sol, o desespero vence a luz
             if (agora < _proximaEsquiva || Atual == Estado.Fugindo || _m.Fachos.Count == 0) return false;
             if (!_m.NoFacho(transform.position + Vector3.up * 1.2f, out var f)) return false;
+            // o Long, de perto, não foge da lanterna: ela o petrifica (Zumbi.Long.cs)
+            if (tipo == TipoDeZumbi.Long && !f.carro && (transform.position - f.origem).magnitude < A.cuspidor.alcanceDaLanterna + 1f) return false;
 
             Vector3 frente = f.direcao;
             frente.y = 0f;

@@ -119,6 +119,85 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &285739262
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 285739264}
+  - component: {fileID: 285739263}
+  - component: {fileID: 285739265}
+  m_Layer: 0
+  m_Name: "Constru\xE7\xF5es no mundo"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &285739263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 285739262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 1889911480
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &285739264
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 285739262}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &285739265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 285739262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 339b759b9fe2f614da61d8079b9283de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ConstrucoesNoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  malhas:
+  - {fileID: 4300000, guid: f16ef70b90b576a4682a0b712e7fde96, type: 2}
+  - {fileID: 4300000, guid: 22f3eb6efd2a90b4e92af80410cb6983, type: 2}
+  - {fileID: 4300000, guid: d686fb5278069ae47932c0a981d22b47, type: 2}
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  materialDoFogo: {fileID: 2100000, guid: 17316e6e05c1aae4bb668c1edeba31d3, type: 2}
 --- !u!1 &571145534
 GameObject:
   m_ObjectHideFlags: 0
@@ -184,153 +263,6 @@ MonoBehaviour:
   manchas: 40
   furos: 40
   jorros: 10
---- !u!1 &580034046
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 580034048}
-  - component: {fileID: 580034047}
-  - component: {fileID: 580034049}
-  m_Layer: 0
-  m_Name: Itens no mundo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &580034047
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 580034046}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 139328757
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  m_InScenePlacedDisabledByDefault: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  m_InScenePlaced: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
---- !u!4 &580034048
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 580034046}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &580034049
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 580034046}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
-  ShowTopMostFoldoutHeaderGroup: 1
-  malhas:
-  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
-  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
-  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
-  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
-  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
-  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
-  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
-  - {fileID: 4300000, guid: b2fde4281bec0d342bbd6cdcbacb82aa, type: 2}
-  - {fileID: 4300000, guid: be71b95f80e8a124f9680c9a21859b22, type: 2}
-  - {fileID: 4300000, guid: 9371a1323ec9bef48804c5178f66cbe1, type: 2}
-  - {fileID: 4300000, guid: 98031e9a09e6b1a4ba9806b703b5c0e8, type: 2}
-  - {fileID: 4300000, guid: d0fffca3f40dd2640a130e87db100bd8, type: 2}
-  malhasDeEquipamento:
-  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
-  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
-  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
-  malhasDeMunicao:
-  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
-  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
-  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
-  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
-  malhasDePeca:
-  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
-  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
-  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
-  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
-  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
-  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
-  malhasDeLoot:
-  - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
-  - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
-  - {fileID: 4300000, guid: 35a112fcb0577c8428170c2ec05af24e, type: 2}
-  - {fileID: 4300000, guid: 7dfa4668b9d3c0e44b367ae2d9250319, type: 2}
-  - {fileID: 4300000, guid: b07640019f4d2754ea217b1515ddd3c8, type: 2}
-  - {fileID: 4300000, guid: afa4f34d998139743b2421d23e678e4d, type: 2}
-  - {fileID: 4300000, guid: 56878774c76d6d0439a7fb208b4d61f7, type: 2}
-  - {fileID: 4300000, guid: 535318737f4b0104183fa4e41b0b591f, type: 2}
-  - {fileID: 4300000, guid: 07a8454e9bb4fa742b7560479823accb, type: 2}
-  - {fileID: 4300000, guid: d5942f9298d5b4f4bbd62a2971295641, type: 2}
-  - {fileID: 4300000, guid: df9b68ec30f601540a367b541a2a3d55, type: 2}
-  - {fileID: 4300000, guid: 2c1441a1472f38a448df863d99c3c6a4, type: 2}
-  - {fileID: 4300000, guid: 45917ba29e2ffb74681d07e26ebb8202, type: 2}
-  - {fileID: 4300000, guid: c809312b44594dc40890199d7c8af87e, type: 2}
-  - {fileID: 4300000, guid: 63aff94268958bd4d9dc3532b76183dc, type: 2}
-  - {fileID: 4300000, guid: fce0b4c7de2ec6444aef849b78ddf893, type: 2}
-  - {fileID: 4300000, guid: f212852944b5d4b4eb9b4b47a389ff78, type: 2}
-  - {fileID: 4300000, guid: 65789b015c0ff5a4db417bc34cc070f6, type: 2}
-  - {fileID: 4300000, guid: 96f2e1ce0000a534dac898d9238780b8, type: 2}
-  - {fileID: 4300000, guid: 78bc40fbde1bf7749af79db90416f198, type: 2}
-  - {fileID: 4300000, guid: 05d2166127abd7441842f2fb36d3ef81, type: 2}
-  - {fileID: 4300000, guid: 740a4ef79b7adc74889a6e4b9b141b03, type: 2}
-  - {fileID: 4300000, guid: fff62f02918b6654aa6fcb782584f84d, type: 2}
-  - {fileID: 4300000, guid: 3bd9031d7f9c60348881712abfc0cd17, type: 2}
-  - {fileID: 4300000, guid: ed7bc76d9a9c97e4d833d1d42a7812a9, type: 2}
-  - {fileID: 4300000, guid: 21c635ecec593d34aae13bba19f1405e, type: 2}
-  - {fileID: 4300000, guid: c3db8e2dfa8364340b5e6d2c6ed77500, type: 2}
-  - {fileID: 4300000, guid: c665eb8cca3f51a459db0e850f818169, type: 2}
-  - {fileID: 4300000, guid: fa07e8e2a6f64714684afc29ca969289, type: 2}
-  - {fileID: 4300000, guid: 0b13b73e5c8d1e64cbf2b44751e9109d, type: 2}
-  - {fileID: 4300000, guid: d37cee0e616142d4da21a9c0c75c1b8f, type: 2}
-  - {fileID: 4300000, guid: 5ce38085cf653774aa90e18ce0379215, type: 2}
-  - {fileID: 4300000, guid: 266a25193b0b21849a6550427cf3b9bc, type: 2}
-  - {fileID: 4300000, guid: 242f9af21b4087b4483659e503affd9d, type: 2}
-  - {fileID: 4300000, guid: 97fbb1fa7e3e9de488c6dcebd6d4d3bd, type: 2}
-  - {fileID: 4300000, guid: 729e0642d1bd0af4abfba276c6b4ba7d, type: 2}
-  - {fileID: 4300000, guid: eee0a604d37ac1849b3f81b5857c1832, type: 2}
-  - {fileID: 4300000, guid: 050727802383bf14488e9dbdb3595867, type: 2}
-  - {fileID: 4300000, guid: 0a04e812f64497c4597c97e03acfdea6, type: 2}
-  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
-  lugares: []
-  itensDosLugares: 
-  girosDosLugares: []
-  distanciaMaxima: 3.5
 --- !u!1 &621969962
 GameObject:
   m_ObjectHideFlags: 0
@@ -457,6 +389,15 @@ MonoBehaviour:
   - {fileID: 4530023603336238551, guid: 80ca20c84250f4847b0bcfb00a5fdc72, type: 3}
   - {fileID: 6833495527358214738, guid: fe93e4a56e7ccad409cb763b33f00b2b, type: 3}
   - {fileID: 8588024638294765473, guid: bfda416ff09bac54c8e4233d7c4e1824, type: 3}
+  - {fileID: 5584267380851222161, guid: 9cc0e762eefc4f048b6c5732ae2cdda8, type: 3}
+  - {fileID: 4998241511841565613, guid: 804e7d7d1043b3142af10952907e8e58, type: 3}
+  - {fileID: 1711290490742869046, guid: 9704be453c9eaeb4796bec1d6410926d, type: 3}
+  - {fileID: 7391013268275837010, guid: 9afbcc7f2e34798408fc8a05ef425881, type: 3}
+  - {fileID: 7899744590594690941, guid: c4e6c3a5900a6ef4caf1bd945e208c65, type: 3}
+  - {fileID: 664957891146554155, guid: 02ab893aa759c6640858d0d94c5fb793, type: 3}
+  - {fileID: 2003650380181147993, guid: 592005e42c52efb4c8fad234a8822fd3, type: 3}
+  - {fileID: 4170754077781816424, guid: a66a9bb3ebaa20e4da303bafbc625ded, type: 3}
+  - {fileID: 3190866106142723428, guid: 218a7afd67b45624394f1696eb1983ef, type: 3}
   corpos:
   - {fileID: 7202344746257357654, guid: 1876a85186922af4b9875b960e9a10b9, type: 3}
   - {fileID: 1630130910964538740, guid: 498de446a2aa05c4aa8263c97740135c, type: 3}
@@ -470,6 +411,15 @@ MonoBehaviour:
   - {fileID: 5202672733574261382, guid: 00802630338bac346b48f12577646ba7, type: 3}
   - {fileID: 1392073283663179667, guid: 4a2061ce6ad3a5948b00ef13e9ead234, type: 3}
   - {fileID: 3021658302543256054, guid: e3bd35148c8e5a54d86c13c842b63e93, type: 3}
+  - {fileID: 8575519653015312024, guid: 97386ef9ac21373439070d873d6b9694, type: 3}
+  - {fileID: 2574776872515597364, guid: 087127e4095e9774a86718628891d321, type: 3}
+  - {fileID: 7661503337804449080, guid: 532cd1e5b2e5df944bbe82bd1ed7431b, type: 3}
+  - {fileID: 9220052390370005073, guid: 8b6ef67d2f2518e438c9d797ffcfb288, type: 3}
+  - {fileID: 2340093438232341975, guid: 2d1b9526c2331fe48bbb531f1c30ea75, type: 3}
+  - {fileID: 9191004455365158728, guid: 899de31c401bb0646aa23bbea1a34bf6, type: 3}
+  - {fileID: 3463592161332521095, guid: 8ec125bc923048e49b191116a1f024ec, type: 3}
+  - {fileID: 2532262091311513132, guid: fe12a05c0339c28439eee2fc142865bd, type: 3}
+  - {fileID: 6546333639640190890, guid: decd30c8eda26e04c90c0b8aeaaf9f37, type: 3}
   vozDoZumbi: {fileID: 8300000, guid: 70cca28de9d7bf84c9e8ac77e082eeb8, type: 3}
   trechosDaVoz:
   - {x: 0.1, y: 1}
@@ -515,6 +465,18 @@ MonoBehaviour:
     vidaDoMembro: 50
     fatorMancando: 0.55
     fatorRastejando: 0.35
+    chanceDeCairNaHora: 0.4
+    chanceDeCairCambaleando: 0.5
+    tempoCambaleando: {x: 1.2, y: 2.8}
+    inclinacaoDeQueda: 34
+    chanceDeCambalearComTiro: 0.45
+    tempoDaQueda: 2
+    tempoDeitado: {x: 0.6, y: 2}
+    chanceDeTentarLevantar: 0.5
+    chanceDeLevantar: 0.6
+    tentativasDeLevantar: 3
+    rastejandoAteTentar: {x: 5, y: 10}
+    tempoParaLevantar: 4.45
     tempoParaPetrificar: 10
     tempoParaRecuar: 20
     lentidaoNaPedra: 0.1
@@ -532,6 +494,57 @@ MonoBehaviour:
     distanciaDaEsquiva: 2.2
     velocidadeDaEsquiva: 3.2
     intervaloDaEsquiva: 1
+    corredor:
+      vida: 60
+      vidaDoMembro: 30
+      velocidadePerseguindo: 3.8
+      velocidadeDoBote: 4.6
+      distanciaDoBote: 4
+      fatorAndando: 1.6
+      tempoParaPetrificar: 5
+      fracaoDeDia: 0.02
+      fracaoDeNoite: 0.08
+    cuspidor:
+      vida: 150
+      vidaDoMembro: 60
+      distancia: {x: 14, y: 30}
+      velocidade: 1.5
+      alcanceDoCuspe: 26
+      intervaloDoCuspe: {x: 6, y: 9}
+      velocidadeDaGosma: 16
+      raioDaPoca: 2.2
+      tempoDaPoca: 20
+      tempoParaSoltar: 2
+      raioDoGrito: 60
+      intervaloDoGrito: 20
+      chamadosPeloGrito: {x: 5, y: 9}
+      alcanceDaLanterna: 7
+      tempoNaLuz: 2
+      chance: 0.35
+      intervaloDoNascimento: 120
+      maximo: 2
+    brutamonte:
+      vida: 500
+      danoNoCasco: 0.3
+      danoNoOlho: 3
+      alcanceDoOlho: 35
+      tempoParaTravar: 1
+      preparo: 0.6
+      velocidadeDoAvanco: 9
+      danoDoAvanco: 50
+      avancoMaximo: 30
+      tonto: 4
+      tempoDaFuria: 3
+      raioDaFuria: 2.6
+      danoDaFuria: 35
+      intervaloDaFuria: 0.6
+      cansado: 2
+      velocidade: 1.3
+      chanceDeNoite: 0.3
+      chanceDeDia: 0.05
+      intervaloDoNascimento: 180
+      voltaParaATerra: 120
+      tempoSemNinguem: 60
 --- !u!1 &841882170
 GameObject:
   m_ObjectHideFlags: 0
@@ -563,85 +576,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1519397510}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &946186966
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 946186968}
-  - component: {fileID: 946186967}
-  - component: {fileID: 946186969}
-  m_Layer: 0
-  m_Name: "Constru\xE7\xF5es no mundo"
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &946186967
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 946186966}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2810896900
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  m_InScenePlacedDisabledByDefault: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  m_InScenePlaced: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
---- !u!4 &946186968
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 946186966}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &946186969
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 946186966}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 339b759b9fe2f614da61d8079b9283de, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ConstrucoesNoMundo
-  ShowTopMostFoldoutHeaderGroup: 1
-  malhas:
-  - {fileID: 4300000, guid: f16ef70b90b576a4682a0b712e7fde96, type: 2}
-  - {fileID: 4300000, guid: 22f3eb6efd2a90b4e92af80410cb6983, type: 2}
-  - {fileID: 4300000, guid: d686fb5278069ae47932c0a981d22b47, type: 2}
-  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
-  materialDoFogo: {fileID: 2100000, guid: 17316e6e05c1aae4bb668c1edeba31d3, type: 2}
 --- !u!1 &1000869171
 GameObject:
   m_ObjectHideFlags: 0
@@ -3317,6 +3251,162 @@ Transform:
   - {fileID: 841882171}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1525660686
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1525660688}
+  - component: {fileID: 1525660687}
+  - component: {fileID: 1525660689}
+  m_Layer: 0
+  m_Name: Itens no mundo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1525660687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525660686}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 1293903372
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &1525660688
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525660686}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1525660689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1525660686}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  malhas:
+  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
+  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
+  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
+  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
+  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
+  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
+  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
+  - {fileID: 4300000, guid: b2fde4281bec0d342bbd6cdcbacb82aa, type: 2}
+  - {fileID: 4300000, guid: be71b95f80e8a124f9680c9a21859b22, type: 2}
+  - {fileID: 4300000, guid: 9371a1323ec9bef48804c5178f66cbe1, type: 2}
+  - {fileID: 4300000, guid: 98031e9a09e6b1a4ba9806b703b5c0e8, type: 2}
+  - {fileID: 4300000, guid: d0fffca3f40dd2640a130e87db100bd8, type: 2}
+  malhasDeEquipamento:
+  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
+  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
+  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
+  malhasDeMunicao:
+  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
+  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
+  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
+  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
+  malhasDePeca:
+  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
+  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
+  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
+  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
+  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
+  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
+  malhasDaSinuca:
+  - {fileID: 4300000, guid: 293272ab3de3e1e4eacc87570df5f724, type: 2}
+  - {fileID: 4300000, guid: 98f8d89c81403e1439120223a137c74b, type: 2}
+  - {fileID: 4300000, guid: aa20132c70ae96842a34839b0cfab0d2, type: 2}
+  - {fileID: 4300000, guid: 77208c546e9eb7e4ebd978d6334f10ff, type: 2}
+  - {fileID: 4300000, guid: ce0e066e0dc5cf64d8a522d0e0672e77, type: 2}
+  - {fileID: 4300000, guid: de2243a39ff4b5d4f8c4d3f3376a81fa, type: 2}
+  malhasDeLoot:
+  - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
+  - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
+  - {fileID: 4300000, guid: 35a112fcb0577c8428170c2ec05af24e, type: 2}
+  - {fileID: 4300000, guid: 7dfa4668b9d3c0e44b367ae2d9250319, type: 2}
+  - {fileID: 4300000, guid: b07640019f4d2754ea217b1515ddd3c8, type: 2}
+  - {fileID: 4300000, guid: afa4f34d998139743b2421d23e678e4d, type: 2}
+  - {fileID: 4300000, guid: 56878774c76d6d0439a7fb208b4d61f7, type: 2}
+  - {fileID: 4300000, guid: 535318737f4b0104183fa4e41b0b591f, type: 2}
+  - {fileID: 4300000, guid: 07a8454e9bb4fa742b7560479823accb, type: 2}
+  - {fileID: 4300000, guid: d5942f9298d5b4f4bbd62a2971295641, type: 2}
+  - {fileID: 4300000, guid: df9b68ec30f601540a367b541a2a3d55, type: 2}
+  - {fileID: 4300000, guid: 2c1441a1472f38a448df863d99c3c6a4, type: 2}
+  - {fileID: 4300000, guid: 45917ba29e2ffb74681d07e26ebb8202, type: 2}
+  - {fileID: 4300000, guid: c809312b44594dc40890199d7c8af87e, type: 2}
+  - {fileID: 4300000, guid: 63aff94268958bd4d9dc3532b76183dc, type: 2}
+  - {fileID: 4300000, guid: fce0b4c7de2ec6444aef849b78ddf893, type: 2}
+  - {fileID: 4300000, guid: f212852944b5d4b4eb9b4b47a389ff78, type: 2}
+  - {fileID: 4300000, guid: 65789b015c0ff5a4db417bc34cc070f6, type: 2}
+  - {fileID: 4300000, guid: 96f2e1ce0000a534dac898d9238780b8, type: 2}
+  - {fileID: 4300000, guid: 78bc40fbde1bf7749af79db90416f198, type: 2}
+  - {fileID: 4300000, guid: 05d2166127abd7441842f2fb36d3ef81, type: 2}
+  - {fileID: 4300000, guid: 740a4ef79b7adc74889a6e4b9b141b03, type: 2}
+  - {fileID: 4300000, guid: fff62f02918b6654aa6fcb782584f84d, type: 2}
+  - {fileID: 4300000, guid: 3bd9031d7f9c60348881712abfc0cd17, type: 2}
+  - {fileID: 4300000, guid: ed7bc76d9a9c97e4d833d1d42a7812a9, type: 2}
+  - {fileID: 4300000, guid: 21c635ecec593d34aae13bba19f1405e, type: 2}
+  - {fileID: 4300000, guid: c3db8e2dfa8364340b5e6d2c6ed77500, type: 2}
+  - {fileID: 4300000, guid: c665eb8cca3f51a459db0e850f818169, type: 2}
+  - {fileID: 4300000, guid: fa07e8e2a6f64714684afc29ca969289, type: 2}
+  - {fileID: 4300000, guid: 0b13b73e5c8d1e64cbf2b44751e9109d, type: 2}
+  - {fileID: 4300000, guid: d37cee0e616142d4da21a9c0c75c1b8f, type: 2}
+  - {fileID: 4300000, guid: 5ce38085cf653774aa90e18ce0379215, type: 2}
+  - {fileID: 4300000, guid: 266a25193b0b21849a6550427cf3b9bc, type: 2}
+  - {fileID: 4300000, guid: 242f9af21b4087b4483659e503affd9d, type: 2}
+  - {fileID: 4300000, guid: 97fbb1fa7e3e9de488c6dcebd6d4d3bd, type: 2}
+  - {fileID: 4300000, guid: 729e0642d1bd0af4abfba276c6b4ba7d, type: 2}
+  - {fileID: 4300000, guid: eee0a604d37ac1849b3f81b5857c1832, type: 2}
+  - {fileID: 4300000, guid: 050727802383bf14488e9dbdb3595867, type: 2}
+  - {fileID: 4300000, guid: 0a04e812f64497c4597c97e03acfdea6, type: 2}
+  - {fileID: 4300000, guid: 4c865afa75c77174e87d92843c4f0292, type: 2}
+  - {fileID: 4300000, guid: be0f8124a2fcc5d429a605f9aa68cb86, type: 2}
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  lugares: []
+  itensDosLugares: 
+  girosDosLugares: []
+  distanciaMaxima: 3.5
 --- !u!1 &1546445156
 GameObject:
   m_ObjectHideFlags: 0
@@ -4282,5 +4372,5 @@ SceneRoots:
   - {fileID: 1519397510}
   - {fileID: 2005601261}
   - {fileID: 621969964}
-  - {fileID: 580034048}
-  - {fileID: 946186968}
+  - {fileID: 1525660688}
+  - {fileID: 285739264}
