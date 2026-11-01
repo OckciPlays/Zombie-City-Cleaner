@@ -227,7 +227,15 @@ namespace ZombieCityCleaner.Player
             GetComponent<MovimentoPrimeiraPessoa>().enabled = dono;
             GetComponent<ArmaJogador>().enabled = dono;
             Inventario.Mudou += AplicarNaMao;
+            Inventario.RoupasMudaram += AplicarAparencia;
             if (GetComponent<TacoNaMao>() == null) gameObject.AddComponent<TacoNaMao>();
+            if (dono)
+            {
+                // o nome em cima da cabeça dos outros e as roupas nos braços de primeira pessoa (as partes 3 e 5 do
+                // Plano_Personagem.md da pasta de arte)
+                if (GetComponent<NomesDosJogadores>() == null) gameObject.AddComponent<NomesDosJogadores>();
+                if (GetComponent<RoupasNosBracos>() == null) gameObject.AddComponent<RoupasNosBracos>();
+            }
             AplicarPersonagem(Personagem.Value);
             if (dono)
             {
@@ -255,6 +263,7 @@ namespace ZombieCityCleaner.Player
             Personagem.OnValueChanged -= AoMudarPersonagem;
             Aparencia.OnValueChanged -= AoMudarAparencia;
             Inventario.Mudou -= AplicarNaMao;
+            Inventario.RoupasMudaram -= AplicarAparencia;
             if (Local == this)
             {
                 Local = null;
@@ -264,11 +273,17 @@ namespace ZombieCityCleaner.Player
 
         void AoMudarPersonagem(byte antes, byte depois) => AplicarPersonagem(depois);
 
-        void AoMudarAparencia(AparenciaDoJogador antes, AparenciaDoJogador depois) => AplicarAparencia();
+        void AoMudarAparencia(AparenciaDoJogador antes, AparenciaDoJogador depois)
+        {
+            // criado o personagem, o anfitrião veste as roupas do começo no inventário (uma vez por partida)
+            if (IsServer && depois.definida != 0 && Inventario != null) Inventario.VestirOComeco(depois);
+            AplicarAparencia();
+        }
 
         /// <summary>
-        /// Veste o corpo pela aparência (o corpo, a pele e as peças) e, no dono, pinta os braços de primeira pessoa com a
-        /// pele dela. Sem aparência ainda (antes de o dono escrever), o corpo fica como está.
+        /// Veste o corpo pela aparência (o corpo, a pele, o cabelo e a barba) e pelas roupas vestidas do inventário e, no
+        /// dono, pinta os braços de primeira pessoa com a pele dela. Sem aparência ainda (antes de o dono escrever), o
+        /// corpo fica como está.
         /// </summary>
         void AplicarAparencia()
         {
@@ -286,7 +301,7 @@ namespace ZombieCityCleaner.Player
             var catalogo = Vestimenta.Catalogo;
             Vestimenta.corpo = a.Corpo;
             Vestimenta.pele = a.Pele(catalogo);
-            Vestimenta.Vestir(a.Pecas(catalogo));
+            Vestimenta.Vestir(a.Pecas(catalogo, Inventario != null && Inventario.IsSpawned ? Inventario.Roupas.Value : default));
             if (IsOwner) PintarBracos(Vestimenta.pele);
         }
 

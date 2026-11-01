@@ -7,6 +7,8 @@ namespace ZombieCityCleaner.Mundo
     {
         CidadeGrande, CidadePequena, Vila, Fazenda, BaseMilitar, ComunidadeAliada, ComunidadeInimiga, Laboratorio, Cabana,
         Posto, Bunker, CasaDoLago, CasaDaFamilia, Barreira,
+        /// <summary>O bunker da família (o Plano_Bunker.md da pasta de arte): o morro com o portão, fora da cidade dela.</summary>
+        BunkerDaFamilia
     }
 
     public enum TipoDeBairro : byte { Centro, Comercio, Residencial }
@@ -138,6 +140,11 @@ namespace ZombieCityCleaner.Mundo
         public readonly List<LinhaDeMetro> Metro = new List<LinhaDeMetro>();
         /// <summary>O traçado de cada cidade e vila (Parte M5), na ordem de <see cref="Cidades"/>.</summary>
         public readonly List<TracadoDaCidade> Tracados = new List<TracadoDaCidade>();
+        /// <summary>
+        /// O bunker da família (o Plano_Bunker.md da pasta de arte, a parte 5): o meio da caixa no Centro e o giro em y (a
+        /// frente da planta, o portão, olha para a estrada de terra); null num mapa sem a cidade da família.
+        /// </summary>
+        public Lugar BunkerDaFamilia;
         public Lugar CasaDaFamilia, CasaDoLago, Laboratorio;
         /// <summary>O lote da casa da família (no traçado da cidade dela).</summary>
         public Lote LoteDaFamilia;

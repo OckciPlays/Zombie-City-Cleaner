@@ -35,6 +35,7 @@ namespace ZombieCityCleaner.Zombies
         float _pedraVista, _proximoSol, _soltarEm = -1f, _quebrandoAte, _proximaSombra, _proximaAgonia, _longeDesde, _soltouEm = -100f;
         bool _noSol, _comPedra;
         MaterialPropertyBlock _blocoDaPedra;
+        float _pedraNoBloco, _pesNoBloco;   // o que está no bloco dos renderers agora
 
         void ZerarPedra()
         {
@@ -69,9 +70,14 @@ namespace ZombieCityCleaner.Zombies
                 }
                 return;
             }
+            // só quando muda (a estátua de dia fica igual por minutos: o bloco ia de novo para os renderers a cada quadro)
+            float pes = transform.position.y;
+            if (_comPedra && Mathf.Abs(_pedraVista - _pedraNoBloco) < 1e-4f && Mathf.Abs(pes - _pesNoBloco) < 1e-3f) return;
+            _pedraNoBloco = _pedraVista;
+            _pesNoBloco = pes;
             _blocoDaPedra ??= new MaterialPropertyBlock();
             _blocoDaPedra.SetFloat(PetrificacaoId, _pedraVista);
-            _blocoDaPedra.SetFloat(AlturaDosPesId, transform.position.y);
+            _blocoDaPedra.SetFloat(AlturaDosPesId, pes);
             foreach (var r in renderers) r.SetPropertyBlock(_blocoDaPedra);
             _comPedra = true;
         }

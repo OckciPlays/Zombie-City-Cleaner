@@ -704,10 +704,10 @@ namespace ZombieCityCleaner.Player
             float u = Screen.height / 720f;
             if (Lugar == 0)
             {
-                var vel = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(30 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight, richText = true };
+                var vel = EstilosDoHud.Rotulo(Mathf.RoundToInt(30 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                 string texto = $"{Mathf.RoundToInt(Carro.Velocidade * 3.6f)}<size={Mathf.RoundToInt(14 * u)}> km/h</size>";
                 Sombra(new Rect(Screen.width - 260 * u, Screen.height - 58 * u, 240 * u, 44 * u), texto, vel, new Color(0.9f, 0.88f, 0.8f));
-                var f = new GUIStyle(vel) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Normal };
+                var f = EstilosDoHud.Rotulo(Mathf.RoundToInt(13 * u), FontStyle.Normal, TextAnchor.LowerRight, true);
                 float ly = Screen.height - 80 * u;
                 if (Carro.FaroisLigados && Carro.Pecas.BateriaAcende)
                 {
@@ -735,7 +735,7 @@ namespace ZombieCityCleaner.Player
                     Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), falta ? "FALTA UMA RODA" : pneus.Ruins > 1 ? "PNEUS FURADOS" : "PNEU FURADO", f, new Color(1f, 0.75f, 0.3f));
                 }
             }
-            var dica = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14 * u), alignment = TextAnchor.LowerCenter };
+            var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Normal, TextAnchor.LowerCenter);
             string linha = Lugar == 0 ? "WASD: dirigir   ·   Espaço: freio de mão   ·   L: faróis   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   E: sair"
                 : "F: lanterna   ·   V: câmera   ·   E: sair";
             Sombra(new Rect(Screen.width / 2f - 400 * u, Screen.height - 34 * u, 800 * u, 24 * u), linha, dica, new Color(0.8f, 0.78f, 0.72f));
@@ -743,7 +743,7 @@ namespace ZombieCityCleaner.Player
             string aviso = Lugar == 0 && Carro.PodeDesvirar ? "[R] Desvirar o carro" : Time.time < _avisoAte ? _aviso : null;
             if (aviso != null)
             {
-                var a = new GUIStyle(dica) { fontSize = Mathf.RoundToInt(18 * u), alignment = TextAnchor.MiddleCenter };
+                var a = EstilosDoHud.Rotulo(Mathf.RoundToInt(18 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
                 // com o mostrador da chave aberto, o aviso vai para cima dele (embaixo ficam as instruções)
                 float y = Lugar == 0 && _segurandoChave && !_terceira ? Screen.height / 2f - 140f * u - 40f * u : Screen.height / 2f + 130 * u;
                 Sombra(new Rect(Screen.width / 2f - 300 * u, y, 600 * u, 30 * u), aviso, a, new Color(0.95f, 0.93f, 0.85f));
@@ -759,7 +759,7 @@ namespace ZombieCityCleaner.Player
             var e = Carro.Estado;
             bool ligado = Carro.MotorLigado;
             float cx = Screen.width / 2f, cy = Screen.height / 2f;
-            var meio = new GUIStyle(dica) { fontSize = Mathf.RoundToInt(16 * u), alignment = TextAnchor.MiddleCenter };
+            var meio = EstilosDoHud.Rotulo(Mathf.RoundToInt(16 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
             if (_terceira)
             {
                 if (!ligado) Sombra(new Rect(cx - 300 * u, Screen.height - 62 * u, 600 * u, 24 * u), "Para dar a partida, volte para dentro do carro (V)", dica, new Color(0.95f, 0.85f, 0.55f));
@@ -817,7 +817,7 @@ namespace ZombieCityCleaner.Player
             var antes = GUI.matrix;
             if (!direta)
             {
-            var rotulo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(10 * u), alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            var rotulo = EstilosDoHud.Rotulo(Mathf.RoundToInt(10 * u), FontStyle.Bold, TextAnchor.MiddleCenter);
             Rotulo(centro, r * 0.66f, 0f, "DESL", rotulo, u, angulo < Carro.ChaveDesliga ? Color.white : new Color(0.7f, 0.7f, 0.68f));
             Rotulo(centro, r * 0.66f, Carro.ChaveLiga, "LIGA", rotulo, u, angulo >= Carro.ChaveDesliga && angulo < Carro.ChavePartida - 8f ? new Color(0.7f, 1f, 0.7f) : new Color(0.5f, 0.75f, 0.5f));
             Rotulo(centro, r * 0.66f, Carro.ChavePartida + 12f, "PARTIDA", rotulo, u, angulo >= Carro.ChavePartida - 8f ? new Color(1f, 0.75f, 0.45f) : new Color(0.85f, 0.5f, 0.25f));
@@ -832,7 +832,7 @@ namespace ZombieCityCleaner.Player
             else
             {
                 // os dois fios, um vermelho e um preto, cruzados no miolo
-                var fio = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11 * u), alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+                var fio = EstilosDoHud.Rotulo(Mathf.RoundToInt(11 * u), FontStyle.Bold, TextAnchor.MiddleCenter);
                 GUIUtility.RotateAroundPivot(35f, centro);
                 Retangulo(new Rect(cx - 0.42f * r, cy - 0.025f * r, 0.84f * r, 0.05f * r), new Color(0.8f, 0.15f, 0.12f));
                 GUI.matrix = antes;
@@ -852,8 +852,8 @@ namespace ZombieCityCleaner.Player
             }
 
             // o que fazer
-            var titulo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * u), alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold, richText = true };
-            var linha = new GUIStyle(titulo) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Normal };
+            var titulo = EstilosDoHud.Rotulo(Mathf.RoundToInt(17 * u), FontStyle.Bold, TextAnchor.UpperCenter, true);
+            var linha = EstilosDoHud.Rotulo(Mathf.RoundToInt(13 * u), FontStyle.Normal, TextAnchor.UpperCenter, true);
             string t1, t2;
             Color cor = new Color(0.97f, 0.95f, 0.88f);
             if (miniGame)

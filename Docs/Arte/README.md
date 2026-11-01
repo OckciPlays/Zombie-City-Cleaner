@@ -1,7 +1,7 @@
 # As notas da pasta de arte
 
 Uma cópia das notas da pasta de arte do projeto (`Projeto Zombie City Cleaner`, fora deste repositório), para o contexto
-ficar no git. O original fica lá; antes de cada commit, as sete são copiadas de novo.
+ficar no git. O original fica lá; antes de cada commit, as oito são copiadas de novo.
 
 | Arquivo | O que tem |
 |---|---|
@@ -12,3 +12,4 @@ ficar no git. O original fica lá; antes de cada commit, as sete são copiadas d
 | [Plano_Mapa_Fixo.md](Plano_Mapa_Fixo.md) | o plano do mapa fixo de 15 km (as partes F0 a F9) |
 | [Plano_Roupas.md](Plano_Roupas.md) | o plano das roupas e dos NPCs (as peças à parte, os lotes e as etapas) |
 | [Plano_Personagem.md](Plano_Personagem.md) | o plano do personagem do jogador (a tela de criar e as roupas achadas) |
+| [Plano_Bunker.md](Plano_Bunker.md) | o plano do bunker novo (as 12 decisões, o esboço e as partes 1 a 5) |

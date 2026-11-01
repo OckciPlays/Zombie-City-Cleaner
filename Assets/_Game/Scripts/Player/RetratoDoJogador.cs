@@ -51,6 +51,9 @@ namespace ZombieCityCleaner.Player
         static readonly int SpeedId = Animator.StringToHash("Speed");
         long _vestido = -1;
         RenderTexture _imagem;
+        // as roupas: a cópia é vestida de novo quando as do jogador mudam (vestir e tirar com a tela aberta)
+        readonly ZombieCityCleaner.Roupas.Vestimenta _vestimenta, _vestimentaDoJogador;
+        int _versaoVestida;
 
         // os ossos da pose e a rotação de repouso deles
         readonly Transform _peito, _bracoD, _antebracoD, _maoD, _bracoE, _antebracoE, _maoE;
@@ -76,7 +79,13 @@ namespace ZombieCityCleaner.Player
             copia.transform.localRotation = Quaternion.identity;
             // as roupas: as mesmas peças e cores do jogador (a cópia não leva as cores, que ficam fora do material)
             var vestimenta = copia.GetComponent<ZombieCityCleaner.Roupas.Vestimenta>();
-            if (vestimenta != null && rede.Vestimenta != null) vestimenta.VestirComo(rede.Vestimenta);
+            if (vestimenta != null && rede.Vestimenta != null)
+            {
+                vestimenta.VestirComo(rede.Vestimenta);
+                _vestimenta = vestimenta;
+                _vestimentaDoJogador = rede.Vestimenta;
+                _versaoVestida = rede.Vestimenta.Versao;
+            }
             _modelo = copia.transform;
             // sem animação: a pose é feita à mão (abaixo), a partir da de repouso do prefab
             _animador = copia.GetComponent<Animator>();
@@ -229,6 +238,11 @@ namespace ZombieCityCleaner.Player
                 if (ligado) naMao = _naMao[i];
             }
             Vestir();
+            if (_vestimenta != null && _vestimentaDoJogador != null && _vestimentaDoJogador.Versao != _versaoVestida)
+            {
+                _versaoVestida = _vestimentaDoJogador.Versao;
+                _vestimenta.VestirComo(_vestimentaDoJogador);
+            }
             Posar(naMao);
         }
 
@@ -317,6 +331,16 @@ namespace ZombieCityCleaner.Player
                 var v = _camera.WorldToViewportPoint(Lugar);
                 return new Vector2(v.x, 1f - v.y);
             }
+        }
+
+        /// <summary>O tamanho pedido (a imagem tem o dobro): com outro, o retrato é feito de novo.</summary>
+        public bool DoTamanho(int largura, int altura) => _imagem != null && _imagem.width == Mathf.Max(16, largura * 2) && _imagem.height == Mathf.Max(16, altura * 2);
+
+        /// <summary>Mostra ou esconde a cópia e a câmera (escondido, nada é desenhado nem animado).</summary>
+        public void Mostrar(bool mostrar)
+        {
+            if (_raiz != null && _raiz.activeSelf != mostrar) _raiz.SetActive(mostrar);
+            if (mostrar) Atualizar();
         }
 
         public void Destruir()

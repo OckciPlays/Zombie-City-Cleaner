@@ -153,6 +153,26 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public Vector3? LugarDoCarro;
         public float GiroDoCarro;
+        /// <summary>O lugar do segundo carro (o cupê), no chão, com o giro do da família; null: ao lado da laje da partida.</summary>
+        public Vector3? LugarDoSegundoCarro;
+
+        /// <summary>O chão da garagem do bunker fica este tanto acima do pátio plano do terreno (o terreno não aparece no piso).</summary>
+        public const float AcimaDoPatio = 0.05f;
+        /// <summary>O mapa tem o bunker da família (o lugar e o pátio dele).</summary>
+        public bool TemBunker => Plano?.BunkerDaFamilia != null && Rede?.PlataformaDoBunker != null;
+        /// <summary>A origem da planta do bunker no mundo: o meio da caixa, no chão da garagem.</summary>
+        public Vector3 PosicaoDoBunker
+        {
+            get
+            {
+                var c = Plano.BunkerDaFamilia.Centro;
+                return new Vector3(c.x, Rede.PlataformaDoBunker.Altura + AcimaDoPatio, c.y);
+            }
+        }
+        /// <summary>O giro do bunker em y (graus): o +z da planta, o fundo; o portão olha para o -z.</summary>
+        public float GiroDoBunker => Plano.BunkerDaFamilia.Giro;
+        /// <summary>Um ponto da planta do bunker (as coordenadas da obra) no mundo.</summary>
+        public Vector3 NoBunker(Vector3 local) => PosicaoDoBunker + Quaternion.Euler(0f, GiroDoBunker, 0f) * local;
 
         /// <summary>O resumo dos números (checksum): igual em todas as máquinas se a geração bateu.</summary>
         public ulong Resumo;

@@ -27,11 +27,13 @@ namespace ZombieCityCleaner.Player
         public ushort qtd;
         /// <summary>O desgaste das armas (0, nova; 100, quebrada: <see cref="Itens.ComDesgaste"/>).</summary>
         public byte desgaste;
+        /// <summary>As cores da roupa (<see cref="Itens.Cores(string[])"/>; 0, as do catálogo).</summary>
+        public ulong cores;
 
         /// <summary>As células que ele ocupa, com o giro.</summary>
         public Vector2Int Tamanho => InventarioJogador.TamanhoNaGrade(item, girado);
 
-        public bool Equals(ItemNaMochila o) => id == o.id && item == o.item && x == o.x && y == o.y && girado == o.girado && qtd == o.qtd && desgaste == o.desgaste;
+        public bool Equals(ItemNaMochila o) => id == o.id && item == o.item && x == o.x && y == o.y && girado == o.girado && qtd == o.qtd && desgaste == o.desgaste && cores == o.cores;
     }
 
     /// <summary>
@@ -62,7 +64,7 @@ namespace ZombieCityCleaner.Player
     /// A mochila é do anfitrião (pegar, largar, comer, mover e o painel de armas passam por ele); os atalhos e o lugar
     /// escolhido são do dono. A tela da mochila (TAB) é a <see cref="TelaDoInventario"/>; aqui fica a barra do HUD.
     /// </summary>
-    public class InventarioJogador : NetworkBehaviour
+    public partial class InventarioJogador : NetworkBehaviour
     {
         public const int Atalhos = 3;
 
@@ -153,6 +155,7 @@ namespace ZombieCityCleaner.Player
                 PneuNasMaos.Value = SemPneu;
                 if (!ModoVideo.SemArma) Receber(Item.Pistola);   // na cena de vídeo, de mãos vazias
             }
+            NascerRoupas();
             // a pistola do começo no primeiro atalho
             if (IsOwner && _atalhos.Value == 0 && Mochila.Count > 0) _atalhos.Value = Mochila[0].id;
             Mudou?.Invoke();
@@ -165,6 +168,7 @@ namespace ZombieCityCleaner.Player
             Escolhido.OnValueChanged -= AoMudarEscolhido;
             MochilaVestida.OnValueChanged -= AoMudarEquipamento;
             PneuNasMaos.OnValueChanged -= AoMudarPneu;
+            SumirRoupas();
             if (_pneuNoCorpo != null) Destroy(_pneuNoCorpo);
             if (_pneuNoOlho != null) Destroy(_pneuNoOlho);
         }
@@ -416,9 +420,9 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// Só no anfitrião: o item entra na primeira posição da grade em que cabe (deitado, ou girado). O equipamento é
-        /// vestido. Sem lugar, devolve false.
+        /// vestido. Sem lugar, devolve false. <paramref name="cores"/>: as da roupa (0, as do catálogo).
         /// </summary>
-        public bool Receber(Item item, int qtd = -1, int desgaste = 0)
+        public bool Receber(Item item, int qtd = -1, int desgaste = 0, ulong cores = 0)
         {
             if (!IsServer || item == Item.Nada) return false;
             if (Itens.EhEquipamento(item)) return Vestir(item);
@@ -433,7 +437,7 @@ namespace ZombieCityCleaner.Player
                 return true;
             }
             Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)qtd,
-                                            desgaste = (byte)Mathf.Clamp(desgaste, 0, 100) });
+                                            desgaste = (byte)Mathf.Clamp(desgaste, 0, 100), cores = cores });
             return true;
         }
 
@@ -634,7 +638,7 @@ namespace ZombieCityCleaner.Player
                 if (cai.Contains(it.id))
                 {
                     Mochila.RemoveAt(i);
-                    ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++caidos, onde), transform.eulerAngles.y + caidos * 70f, it.qtd, it.desgaste);
+                    ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++caidos, onde), transform.eulerAngles.y + caidos * 70f, it.qtd, it.desgaste, it.cores);
                 }
                 else if (mudou.TryGetValue(it.id, out var novo)) Mochila[i] = novo;
             }
@@ -659,8 +663,13 @@ namespace ZombieCityCleaner.Player
             {
                 var it = Mochila[i];
                 if (Itens.EhArma(it.item)) ParedeDeArmas.Instancia?.Devolver(Itens.Arma(it.item), it.qtd);
-                else ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd, it.desgaste);
+                else ItensNoMundo.Instancia?.Criar(it.item, PontoAosPes(++k), k * 90f, it.qtd, it.desgaste, it.cores);
             }
+            // as roupas vestidas também
+            var roupas = Roupas.Value;
+            for (int l = 0; l < Itens.QuantosLugaresDeRoupa; l++)
+                if (roupas.Peca((LugarDaRoupa)l) != Item.Nada)
+                    ItensNoMundo.Instancia?.Criar(roupas.Peca((LugarDaRoupa)l), PontoAosPes(++k), k * 90f, 0, 0, roupas.Cores((LugarDaRoupa)l));
             if (MochilaVestida.Value != Item.Nada) ItensNoMundo.Instancia?.Criar(MochilaVestida.Value, PontoAosPes(++k), k * 90f, 0);
             if (TirarPneuDasMaos(out int pneu)) ItensNoMundo.Instancia?.Criar(Item.Pneu, PontoAosPes(++k), k * 90f, pneu);
         }
@@ -791,7 +800,7 @@ namespace ZombieCityCleaner.Player
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
             if (!Achar(id, out var it)) return;
             Tirar(id);
-            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd, it.desgaste);
+            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd, it.desgaste, it.cores);
         }
 
         [Rpc(SendTo.Server)]
@@ -1163,9 +1172,16 @@ namespace ZombieCityCleaner.Player
             return transform.position;
         }
 
+        /// <summary>O ícone do item da mochila (as roupas com as cores delas).</summary>
+        public Texture2D IconeDe(ItemNaMochila it) => Itens.EhRoupa(it.item) ? ZombieCityCleaner.Roupas.IconesDasRoupas.Icone(it.item, it.cores) : IconeDe(it.item);
+
+        /// <summary>A foto do item da mochila (das roupas, um ícone grande, com as cores delas).</summary>
+        public Texture2D FotoDe(ItemNaMochila it) => Itens.EhRoupa(it.item) ? ZombieCityCleaner.Roupas.IconesDasRoupas.Icone(it.item, it.cores, true) : FotoDe(it.item);
+
         /// <summary>O ícone colorido do item (null, nada).</summary>
         public Texture2D IconeDe(Item item)
         {
+            if (Itens.EhRoupa(item)) return ZombieCityCleaner.Roupas.IconesDasRoupas.Icone(item, 0);
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
@@ -1203,7 +1219,7 @@ namespace ZombieCityCleaner.Player
             float u = Screen.height / 720f;
             float w = 112 * u, h = 56 * u, vao = 8 * u;
             float x0 = (Screen.width - (w * Atalhos + vao * (Atalhos - 1))) / 2f, y = Screen.height - h - 16 * u;
-            var numero = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(12 * u), fontStyle = FontStyle.Bold };
+            var numero = EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold);
             for (int i = 0; i < Atalhos; i++)
             {
                 float x = x0 + i * (w + vao);
@@ -1226,12 +1242,12 @@ namespace ZombieCityCleaner.Player
                     GUI.color = antes;
                 }
                 numero.normal.textColor = escolhido ? new Color(0.95f, 0.92f, 0.8f) : new Color(0.7f, 0.68f, 0.62f, 0.8f);
-                GUI.Label(new Rect(x + 5 * u, y + 2 * u, 20 * u, 18 * u), (i + 1).ToString(), numero);
+                GUI.Label(new Rect(x + 5 * u, y + 2 * u, 20 * u, 18 * u), EstilosDoHud.Numero(i + 1), numero);
             }
             // o aviso (a arma quebrou, foi consertada), em cima da barra
             if (_avisoNoHud != null && Time.time < _avisoNoHudAte)
             {
-                var aviso = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(16 * u), alignment = TextAnchor.LowerCenter, fontStyle = FontStyle.Bold };
+                var aviso = EstilosDoHud.Rotulo(Mathf.RoundToInt(16 * u), FontStyle.Bold, TextAnchor.LowerCenter);
                 var ra = new Rect(0f, y - 60 * u, Screen.width, 26 * u);
                 aviso.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
                 GUI.Label(new Rect(ra.x + 1.5f * u, ra.y + 1.5f * u, ra.width, ra.height), _avisoNoHud, aviso);
@@ -1239,7 +1255,7 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(ra, _avisoNoHud, aviso);
             }
             // o nome do que está na mão, logo depois de trocar; e, com comida ou água, como usar
-            var texto = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), alignment = TextAnchor.LowerCenter };
+            var texto = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Normal, TextAnchor.LowerCenter);
             var naMao = NaMao;
             string linha = null;
             float alfa = 1f;

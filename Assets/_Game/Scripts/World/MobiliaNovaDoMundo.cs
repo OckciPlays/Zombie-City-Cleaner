@@ -45,6 +45,9 @@ namespace ZombieCityCleaner.World
         readonly Dictionary<ulong, ParteDoMovel> _vivas = new Dictionary<ulong, ParteDoMovel>();
         readonly Dictionary<string, Molde> _moldes = new Dictionary<string, Molde>();
         readonly Dictionary<(Mesh, int), Mesh> _pintadas = new Dictionary<(Mesh, int), Mesh>();
+        // as malhas dos moldes (do projeto) e as pintadas (veja Guarda). Estática e esvaziada só ao nascer: ao sair do Play,
+        // o mundo pode ser apagado depois desta
+        static readonly HashSet<Mesh> _guardadas = new HashSet<Mesh>();
         Transform _guardados;
 
         sealed class Molde
@@ -59,6 +62,7 @@ namespace ZombieCityCleaner.World
         {
             _abertas = new NetworkList<ulong>();
             Instancia = this;
+            _guardadas.Clear();
             _guardados = new GameObject("Moldes da mobília nova").transform;
             _guardados.SetParent(transform, false);
             _guardados.gameObject.SetActive(false);
@@ -80,7 +84,11 @@ namespace ZombieCityCleaner.World
                 }
                 var filtros = go.GetComponentsInChildren<MeshFilter>(true);
                 var molde = new Molde { objeto = go, malhas = new Mesh[filtros.Length] };
-                for (int i = 0; i < filtros.Length; i++) molde.malhas[i] = filtros[i].sharedMesh;
+                for (int i = 0; i < filtros.Length; i++)
+                {
+                    molde.malhas[i] = filtros[i].sharedMesh;
+                    if (molde.malhas[i] != null) _guardadas.Add(molde.malhas[i]);
+                }
                 _moldes[prefab.name] = molde;
                 if (Material == null) Material = go.GetComponentInChildren<MeshRenderer>(true)?.sharedMaterial;
                 var longe = go.transform.Find(prefab.name + "_Longe");
@@ -173,28 +181,52 @@ namespace ZombieCityCleaner.World
 
         // ------------------------------------------------------------ os moldes
 
+        /// <summary>
+        /// A malha é da mobília nova (a de um molde, do projeto, ou uma pintada, que serve aos outros móveis e à próxima
+        /// partida): quem apaga o mundo não pode apagá-la (apagadas, na segunda partida os móveis de perto ficavam sem malha).
+        /// </summary>
+        public static bool Guarda(Mesh m) => _guardadas.Contains(m);
+
         /// <summary>Um móvel de perto do modelo, na variação, filho de 'pai' (null sem o prefab).</summary>
         internal GameObject Novo(string modelo, int variacao, Transform pai)
         {
             if (!_moldes.TryGetValue(modelo, out var molde)) return null;
             var go = Instantiate(molde.objeto, pai, false);
             go.name = modelo;
-            var t = CatalogoDaMobilia.DoModelo(modelo);
-            var v = t?.variacoes != null && variacao < t.variacoes.Length ? t.variacoes[variacao] : null;
+            var v = VariacaoDe(modelo, variacao);
             if (v == null) return go;
             var filtros = go.GetComponentsInChildren<MeshFilter>(true);
             for (int i = 0; i < filtros.Length && i < molde.malhas.Length; i++)
-            {
-                var orig = molde.malhas[i];
-                if (orig == null) continue;
-                if (!_pintadas.TryGetValue((orig, variacao), out var pintada))
-                {
-                    pintada = CatalogoDaMobilia.Pintar(orig, v);
-                    _pintadas[(orig, variacao)] = pintada;
-                }
-                filtros[i].sharedMesh = pintada;
-            }
+                if (molde.malhas[i] != null) filtros[i].sharedMesh = Pintada(molde.malhas[i], variacao, v);
             return go;
+        }
+
+        /// <summary>
+        /// A malha de perto do modelo (a do objeto de cima do prefab), na variação, sem criar o móvel: o bunker da família
+        /// junta os canos de um andar numa malha só. Null sem o prefab. É da mobília nova (<see cref="Guarda"/>).
+        /// </summary>
+        internal Mesh Malha(string modelo, int variacao)
+        {
+            if (!_moldes.TryGetValue(modelo, out var molde) || molde.malhas.Length == 0 || molde.malhas[0] == null) return null;
+            var v = VariacaoDe(modelo, variacao);
+            return v == null ? molde.malhas[0] : Pintada(molde.malhas[0], variacao, v);
+        }
+
+        static CatalogoDaMobilia.Variacao VariacaoDe(string modelo, int variacao)
+        {
+            var t = CatalogoDaMobilia.DoModelo(modelo);
+            return t?.variacoes != null && variacao < t.variacoes.Length ? t.variacoes[variacao] : null;
+        }
+
+        Mesh Pintada(Mesh orig, int variacao, CatalogoDaMobilia.Variacao v)
+        {
+            if (!_pintadas.TryGetValue((orig, variacao), out var pintada))
+            {
+                pintada = CatalogoDaMobilia.Pintar(orig, v);
+                _pintadas[(orig, variacao)] = pintada;
+                _guardadas.Add(pintada);
+            }
+            return pintada;
         }
     }
 }

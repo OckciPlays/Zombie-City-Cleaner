@@ -136,6 +136,7 @@ namespace ZombieCityCleaner.Mundo
             PorPostos(d, plano, nomes, s, q);
             foreach (var t in plano.Tracados) t.Lotear(plano);
             PorACasaDaFamilia(plano, s);
+            PorOBunkerDaFamilia(d, plano);
             PorBunkers(plano, s, q);
             foreach (var t in plano.Tracados) t.Indexar();
 
@@ -177,6 +178,7 @@ namespace ZombieCityCleaner.Mundo
             foreach (var l in plano.Lugares)
             {
                 bool pequeno = l.Tipo == TipoDeLugar.Cabana || l.Tipo == TipoDeLugar.Posto || l.Tipo == TipoDeLugar.Bunker;
+                // (o bunker da família conta como os grandes: o morro e o pátio passam de 60 m)
                 float minimo = l.Raio + raio + (pequeno ? 30f : folga);
                 if ((l.Centro - c).sqrMagnitude < minimo * minimo) return false;
             }
@@ -699,6 +701,88 @@ namespace ZombieCityCleaner.Mundo
             for (int k = 1; k < linhas.Length; k++)
                 if (Mathf.Abs(linhas[k] - x) < Mathf.Abs(linhas[melhor] - x)) melhor = k;
             return melhor;
+        }
+
+        /// <summary>A estrada de terra do bunker da família, da estrada até o vão da cerca do pátio (m).</summary>
+        public const float RamalDoBunker = 100f;
+        /// <summary>O raio do bunker da família (a caixa, o morro e o pátio, com folga): a mata fica fora dele.</summary>
+        public const float RaioDoBunker = 55f;
+
+        // o bunker da família (o Plano_Bunker.md da pasta de arte, a parte 5): fora da cidade da família, de 300 a 800 m da
+        // beira dela, ao lado de uma rodovia ou estrada, com a estrada de terra reta de 100 m até o vão da cerca do pátio (o
+        // portão olha para a estrada), no chão mais liso dos lugares que cabem, longe das outras estradas e das cidades. O
+        // morro é feito pelo jogo (o pátio e o pé do morro ficam planos, como o pátio de um posto, na RedeDeEstradas). Sem
+        // lugar a 300–800 m, tenta de 150 a 1.500 m. O sorteio é só dele (os bunkers espalhados e o metrô não mudam)
+        static void PorOBunkerDaFamilia(DadosDoMundo d, PlanoDoMapa plano)
+        {
+            var cidade = plano.CidadeDaFamilia;
+            if (cidade == null) return;
+            var s = Sorteio.Da(d.Semente, "bunker-da-familia");
+            var chegada = PlantaDeBunker.ChegadaDaEstrada;
+            var pegada = PlantaDeBunker.Pegada;
+            float meiaDiagonal = new Vector2(pegada.width, pegada.height).magnitude * 0.5f;
+            foreach (var (de, ate) in new[] { (300f, 800f), (150f, 1500f) })
+            {
+                Lugar melhor = null;
+                Vector2 melhorChegada = default, melhorPonto = default;
+                float melhorNota = float.MaxValue;
+                foreach (var e in plano.Estradas)
+                {
+                    if (e.Conector || e.Tipo == TipoDeEstrada.Terra) continue;
+                    for (int i = 2; i + 2 < e.Pontos.Count; i += 2)
+                    {
+                        var p = e.Pontos[i];
+                        float longe = Vector2.Distance(p, cidade.Centro) - cidade.Raio;
+                        if (longe < de || longe > ate) continue;
+                        var dir = (e.Pontos[i + 1] - e.Pontos[i - 1]).normalized;
+                        for (int lado = -1; lado <= 1; lado += 2)
+                        {
+                            // fz: da estrada para o fundo do bunker (o +z da planta); fx: o +x da planta
+                            var fz = new Vector2(-dir.y, dir.x) * lado;
+                            var fx = new Vector2(fz.y, -fz.x);
+                            var a = p + fz * RamalDoBunker;
+                            var centro = a - fx * chegada.x - fz * chegada.y;
+                            var meio = centro + fx * pegada.center.x + fz * pegada.center.y;
+                            if (!Cabe(d, plano, centro, RaioDoBunker + 8f, 0.9f, 30f)) continue;
+                            if (d.Borda(meio.x, meio.y) > 0.02f || !d.DentroDaCerca(meio.x, meio.y, 150f)) continue;
+                            bool ruim = false;
+                            foreach (var c in plano.Cidades)
+                                if (c.Q(meio.x, meio.y) < 1.25f || c.Q(a.x, a.y) < 1.1f) { ruim = true; break; }
+                            // a estrada de terra fora do lago e das cidades
+                            for (int k = 0; k <= 8 && !ruim; k++)
+                            {
+                                var q = Vector2.Lerp(a, p, k / 8f);
+                                if (d.Lago != null && d.Lago.Q(q.x, q.y) < 1.3f) ruim = true;
+                                if (plano.CidadeEm(q.x, q.y) != null) ruim = true;
+                            }
+                            if (ruim) continue;
+                            // as outras estradas longe da pegada (a mais perto é a do ponto, a uns 130 m)
+                            CaminhosDoMapa.MaisPerto(plano, meio, out float aEstrada, d);
+                            if (aEstrada < meiaDiagonal + 25f) continue;
+                            float subida = Mathf.Abs(GeradorDoMundo.AlturaComLago(d, a.x, a.y) - GeradorDoMundo.AlturaComLago(d, p.x, p.y));
+                            if (subida > RamalDoBunker * 0.12f) continue;
+                            float nota = Aspereza(d, meio, 50f) + subida * 0.3f + s.Fracao() * 0.5f;
+                            if (nota >= melhorNota) continue;
+                            melhorNota = nota;
+                            melhorChegada = a;
+                            melhorPonto = p;
+                            melhor = new Lugar
+                            {
+                                Tipo = TipoDeLugar.BunkerDaFamilia, Nome = "Bunker da família", Raio = RaioDoBunker, Centro = centro,
+                                Giro = Mathf.Atan2(fz.x, fz.y) * Mathf.Rad2Deg,
+                            };
+                        }
+                    }
+                }
+                if (melhor == null) continue;
+                plano.Lugares.Add(melhor);
+                plano.BunkerDaFamilia = melhor;
+                var ramal = new Estrada { Tipo = TipoDeEstrada.Terra, De = plano.Indice(melhor), Comprimento = RamalDoBunker };
+                int n = Mathf.CeilToInt(RamalDoBunker / 12f);
+                for (int k = 0; k <= n; k++) ramal.Pontos.Add(Vector2.Lerp(melhorChegada, melhorPonto, k / (float)n));
+                plano.Estradas.Add(ramal);
+                return;
+            }
         }
 
         // os bunkers: nas cabanas de preparador, nas fazendas e no quintal de casas das cidades

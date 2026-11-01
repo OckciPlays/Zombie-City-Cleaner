@@ -55,6 +55,8 @@ namespace ZombieCityCleaner.Roupas
 
         /// <summary>As peças vestidas agora (o nome e as cores).</summary>
         public List<CatalogoDasRoupas.PecaVestida> Vestidas { get; } = new List<CatalogoDasRoupas.PecaVestida>();
+        /// <summary>Muda a cada troca (as peças, as cores, o corpo, a pele): quem copia (o retrato do inventário, as roupas nos braços de primeira pessoa) sabe quando refazer.</summary>
+        public int Versao { get; private set; }
 
         /// <summary>Os triângulos desenhados agora (o corpo e as peças, sem as faces cobertas).</summary>
         public int Triangulos { get; private set; }
@@ -164,6 +166,7 @@ namespace ZombieCityCleaner.Roupas
             Formas();
             foreach (var p in pedidas) Pintar(p.nome, p.cores);
             PintarCorpo();
+            Versao++;
         }
 
         /// <summary>
@@ -205,6 +208,7 @@ namespace ZombieCityCleaner.Roupas
         {
             corpo = novo;
             Formas();
+            Versao++;
         }
 
         /// <summary>Troca o tom de pele (hex).</summary>
@@ -212,6 +216,7 @@ namespace ZombieCityCleaner.Roupas
         {
             pele = hex;
             PintarCorpo();
+            Versao++;
         }
 
         // as blend shapes das formas: a do corpo pedido a 100, as outras a 0 (no corpo e em cada peça ligada)
@@ -265,6 +270,7 @@ namespace ZombieCityCleaner.Roupas
             var v = Vestidas.Find(x => x.nome == peca);
             if (v != null) v.cores = (string[])cores.Clone();
             if (Catalogo.DaPeca(peca)?.pelos == true) PintarCorpo();
+            Versao++;
         }
 
         /// <summary>A malha sem as faces pedidas (o UV1.x de cada vértice é o número da face), guardada por combinação.</summary>

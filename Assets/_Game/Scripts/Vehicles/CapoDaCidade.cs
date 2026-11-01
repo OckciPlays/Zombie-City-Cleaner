@@ -75,9 +75,48 @@ namespace ZombieCityCleaner.Vehicles
 
         public void PedirTirar(int peca) => pecas.PedirTirar(indice, peca);
         public void PedirPor(int peca, ushort idNaMochila) => pecas.PedirPor(indice, peca, idNaMochila);
-        public void Olhando(bool olhando) => pecas?.Olhar(indice, olhando);
+        public void Olhando(bool olhando)
+        {
+            enabled = true;   // o jogador desta máquina abre o capô na hora, sem esperar a rede
+            pecas?.Olhar(indice, olhando);
+        }
 
-        void OnDisable() => Mostrar(false);
+        // desligado (o objeto saiu), o carro inteiro volta; dormindo, o que está à mostra fica (o carro sem uma roda)
+        void OnDisable()
+        {
+            if (!_dormindo) Mostrar(false);
+        }
+
+        void OnEnable() => _dormindo = false;
+
+        bool _dormindo;
+
+        void Dormir()
+        {
+            _dormindo = true;
+            enabled = false;
+        }
+
+        // parado (o capô fechado, as 4 rodas, sem macaco), o capô dorme (o Update desligado) e acorda quando alguma coisa
+        // dos carros muda (FonteDasPecas.Mudou) ou quando o jogador daqui olha o motor (31/10/2026)
+        FonteDasPecas _avisando;
+
+        void Start()
+        {
+            if (pecas == null || !pecas.AvisaAsMudancas) return;
+            _avisando = pecas;
+            _avisando.Mudou += Acordar;
+        }
+
+        void OnDestroy()
+        {
+            if (_avisando != null) _avisando.Mudou -= Acordar;
+        }
+
+        void Acordar()
+        {
+            if (this != null) enabled = true;
+        }
 
         void Update()
         {
@@ -92,13 +131,20 @@ namespace ZombieCityCleaner.Vehicles
                 _erguidoVisto = erguido;
                 _erguidoMudouEm = Time.time;
             }
-            _ergueu = Mathf.MoveTowards(_ergueu, m >= 0 && erguido ? 1f : 0f, Time.deltaTime / PecasDosCarros.TempoDoMacaco);
+            float alvoDoMacaco = m >= 0 && erguido ? 1f : 0f;
+            _ergueu = Mathf.MoveTowards(_ergueu, alvoDoMacaco, Time.deltaTime / PecasDosCarros.TempoDoMacaco);
             bool mexido = m >= 0 || !pneus.Tem(0) || !pneus.Tem(1) || !pneus.Tem(2) || !pneus.Tem(3);
             MostrarMacaco(m);
             if (!abrir && _visto == 0f && !mexido)
             {
                 Mostrar(false);
                 if (colisao != null && colisao.localRotation != Quaternion.identity) colisao.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                // nada a mostrar: dorme até a próxima mudança (sem o macaco, a altura dele já é zero)
+                if (_avisando != null && pecas != null && pecas.IsSpawned)
+                {
+                    _ergueu = 0f;
+                    Dormir();
+                }
                 return;
             }
             Mostrar(true);
@@ -107,6 +153,8 @@ namespace ZombieCityCleaner.Vehicles
             MostrarCofre(abrir || _visto > 0f);
             Pose(pneus, m);
             if (_visto == 0f && !mexido) Mostrar(false);
+            // parado de vez (o capô fechado, o carro já na altura do macaco): a pose não muda até a próxima mudança
+            if (!abrir && _visto == 0f && _ergueu == alvoDoMacaco && _avisando != null && pecas != null && pecas.IsSpawned) Dormir();
         }
 
         // a cópia inclina pelo plano que passa mais perto da altura de cada canto:

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.Video;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.UI
 {
@@ -17,7 +19,8 @@ namespace ZombieCityCleaner.UI
     /// Acima de 100%, desenhado maior e reduzido: mais nítido (sem serrilhado nas bordas finas) e mais pesado;</item>
     /// <item>a qualidade (Baixa, Média, Alta, Ultra): as sombras (a distância, o tamanho do mapa, as cascatas), o
     /// anti-serrilhado (o da câmera do jogador e o MSAA), as texturas e a distância em que os detalhes somem. A Alta é o
-    /// jogo como era antes desta tela.</item>
+    /// jogo como era antes desta tela. A Média e a Baixa também aliviam o SSAO, a sombra suave, as lanternas, os móveis,
+    /// a distância de desenho, a hera, a grama e as texturas grandes (veja "a Média e a Baixa", embaixo).</item>
     /// <item>a distância de visão dos zumbis (Curta 40 m, Média 55 m, Longa 70 m, Máxima 85 m; a pedido: "ajustar o spawn
     /// dependendo do gráfico e render distance selecionado do jogador"): até onde os zumbis são desenhados (os de longe,
     /// parados, respirando) e mandados pela rede para este jogador, e a partir de onde os novos nascem perto dele
@@ -39,6 +42,12 @@ namespace ZombieCityCleaner.UI
         public static float Escala { get; private set; } = 1f;
         /// <summary>A qualidade: 0 Baixa, 1 Média, 2 Alta (o jogo como era), 3 Ultra.</summary>
         public static int Qualidade { get; private set; } = Alta;
+
+        /// <summary>
+        /// Muda a cada vez que as opções são aplicadas: quem segue a qualidade (o sol, as lanternas, os móveis de perto, a
+        /// mata) confere a cada quadro e refaz o seu.
+        /// </summary>
+        public static int Versao { get; private set; }
 
         public static readonly string[] NomesDaVisao = { "Curta", "Média", "Longa", "Máxima" };
         static readonly float[] MetrosDaVisao = { 40f, 55f, 70f, 85f };
@@ -62,8 +71,8 @@ namespace ZombieCityCleaner.UI
         // o asset do URP e a qualidade como vieram (a Alta usa estes; no Editor, voltam ao sair do Play)
         static UniversalRenderPipelineAsset _urp;
         static bool _guardado;
-        static float _escala0, _sombra0, _lod0;
-        static int _msaa0, _mapaDaSombra0, _cascatas0, _texturas0, _aa0;
+        static float _escala0, _sombra0, _lod0, _desenho0;
+        static int _msaa0, _mapaDaSombra0, _cascatas0, _texturas0, _aa0, _atlas0;
         static Camera _camera;
         static int _qualidadeNaCamera = -1;
 
@@ -137,9 +146,13 @@ namespace ZombieCityCleaner.UI
             _msaa0 = _urp.msaaSampleCount;
             _mapaDaSombra0 = _urp.mainLightShadowmapResolution;
             _cascatas0 = _urp.shadowCascadeCount;
+            _atlas0 = _urp.additionalLightsShadowmapResolution;
             _lod0 = QualitySettings.lodBias;
             _texturas0 = QualitySettings.globalTextureMipmapLimit;
             _aa0 = QualitySettings.antiAliasing;
+            GuardarSsao();
+            _comGrupo = TextureMipmapLimitGroups.HasGroup(GrupoDasTexturas);
+            if (_comGrupo) _grupo0 = QualitySettings.GetTextureMipmapLimitSettings(GrupoDasTexturas);
 #if UNITY_EDITOR
             // ao sair do Play (o Application.quitting não chegava sempre: o asset do URP ficava com o MSAA 4x da Ultra na
             // memória do Editor, e ele gravava o 4x nas configurações de qualidade do projeto)
@@ -181,10 +194,114 @@ namespace ZombieCityCleaner.UI
                         _urp.msaaSampleCount = _msaa0;
                         break;
                 }
+                // a Baixa: o mapa das sombras das lanternas menor (lá, só a lanterna de quem joga aqui faz sombra)
+                _urp.additionalLightsShadowmapResolution = Qualidade == 0 ? Mathf.Min(_atlas0, 1024) : _atlas0;
             }
             QualitySettings.globalTextureMipmapLimit = Qualidade == 0 ? Mathf.Max(_texturas0, 1) : _texturas0;   // Baixa: texturas pela metade
             QualitySettings.lodBias = _lod0 * (Qualidade == 0 ? 0.6f : Qualidade == 1 ? 0.8f : Qualidade == 3 ? 1.5f : 1f);
+            AplicarSsao();
+            AplicarTexturas();
             _qualidadeNaCamera = -1;   // o anti-serrilhado da câmera, no próximo quadro
+            Versao++;
+        }
+
+        // ------------------------------------------------------------------ a Média e a Baixa
+
+        // A pedido (31/10/2026, "os ajustes do Médio e do Baixo", da análise de desempenho): além da sombra do sol, do
+        // anti-serrilhado, das texturas e do LOD, a Média e a Baixa aliviam o que mais pesa num computador fraco, perdendo um
+        // pouco do visual. A Alta e a Ultra ficam como eram.
+
+        /// <summary>Até onde a câmera do jogador desenha (m), para a da Alta: 90 m na Média e 70 na Baixa.</summary>
+        public static float Desenho(float alta) => Qualidade == 1 ? Mathf.Min(alta, 90f) : Qualidade == 0 ? Mathf.Min(alta, 70f) : alta;
+        /// <summary>Até onde a hera das paredes aparece (m), para a da Alta: 50 na Média e 35 na Baixa.</summary>
+        public static float Hera(float alta) => Qualidade == 1 ? Mathf.Min(alta, 50f) : Qualidade == 0 ? Mathf.Min(alta, 35f) : alta;
+        /// <summary>Até onde a grama baixa da mata aparece (m), para a da Alta: 28 na Média e 18 na Baixa.</summary>
+        public static float Grama(float alta) => Qualidade == 1 ? Mathf.Min(alta, 28f) : Qualidade == 0 ? Mathf.Min(alta, 18f) : alta;
+        /// <summary>
+        /// Os móveis de perto fazem a sombra do sol (a que entra pela janela): só na Alta e na Ultra. Os andares dos prédios
+        /// continuam fazendo: sem a sombra das lajes, o sol de uma janela de cima iluminaria o andar de baixo.
+        /// </summary>
+        public static bool SombraDosMoveis => Qualidade >= Alta;
+
+        public enum Luz { Sol, MinhaLanterna, LanternaDosOutros }
+
+        /// <summary>
+        /// A sombra de uma luz nesta qualidade ('original': a dela na Alta). Na Média, o sol fica com a sombra suave média, a
+        /// lanterna de quem joga aqui com a sombra dura e a dos outros sem sombra; na Baixa, tudo duro, e a dos outros sem.
+        /// </summary>
+        public static void Sombra(Light luz, Luz tipo, LightShadows original)
+        {
+            var sombra = original;
+            var suavidade = SoftShadowQuality.UsePipelineSettings;
+            if (original != LightShadows.None && Qualidade < Alta)
+            {
+                if (tipo == Luz.LanternaDosOutros) sombra = LightShadows.None;
+                else if (Qualidade == 0 || tipo == Luz.MinhaLanterna) sombra = LightShadows.Hard;
+                else suavidade = SoftShadowQuality.Medium;
+            }
+            if (luz.shadows != sombra) luz.shadows = sombra;
+            var dados = luz.GetUniversalAdditionalLightData();
+            if (dados != null && dados.softShadowQuality != suavidade) dados.softShadowQuality = suavidade;
+        }
+
+        // o SSAO (a sombra nos cantos) dos renderers do URP em uso: na Média em meia resolução, na Baixa desligado. A meia
+        // resolução é um campo interno do URP (o Downsample dos ajustes do ScreenSpaceAmbientOcclusion), mudado por reflexão
+        // (ele relê os ajustes a cada quadro)
+        struct Ssao
+        {
+            public ScreenSpaceAmbientOcclusion efeito;
+            public object ajustes;
+            public FieldInfo meia;
+            public bool ativo0, meia0;
+        }
+        static readonly List<Ssao> _ssaos = new List<Ssao>();
+
+        static void GuardarSsao()
+        {
+            _ssaos.Clear();
+            foreach (var dados in _urp.rendererDataList)
+            {
+                if (dados == null) continue;
+                foreach (var f in dados.rendererFeatures)
+                {
+                    if (!(f is ScreenSpaceAmbientOcclusion efeito)) continue;
+                    var s = new Ssao { efeito = efeito, ativo0 = efeito.isActive };
+                    s.ajustes = typeof(ScreenSpaceAmbientOcclusion).GetField("m_Settings", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(efeito);
+                    s.meia = s.ajustes?.GetType().GetField("Downsample", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                    if (s.meia != null) s.meia0 = (bool)s.meia.GetValue(s.ajustes);
+                    _ssaos.Add(s);
+                }
+            }
+        }
+
+        static void AplicarSsao()
+        {
+            foreach (var s in _ssaos)
+            {
+                if (s.efeito == null) continue;
+                s.efeito.SetActive(Qualidade != 0 && s.ativo0);
+                if (s.meia != null) s.meia.SetValue(s.ajustes, Qualidade == 1 || s.meia0);
+            }
+        }
+
+        /// <summary>
+        /// O grupo das texturas grandes (2048 px) dos carros dirigíveis e das armas (o mipmap limit group delas, na
+        /// importação): 1024 px na Média (a Baixa já corta todas as texturas pela metade).
+        /// </summary>
+        public const string GrupoDasTexturas = "Carros e armas";
+        static bool _comGrupo;
+        static TextureMipmapLimitSettings _grupo0;
+
+        static void AplicarTexturas()
+        {
+            if (!_comGrupo) return;
+            var s = _grupo0;
+            if (Qualidade == 1)
+            {
+                s.limitBiasMode = TextureMipmapLimitBiasMode.OffsetGlobalLimit;
+                s.limitBias = _grupo0.limitBias + 1;
+            }
+            QualitySettings.SetTextureMipmapLimitSettings(GrupoDasTexturas, s);
         }
 
         /// <summary>
@@ -196,7 +313,12 @@ namespace ZombieCityCleaner.UI
             if (ModoVideo.Ligado) return;
             var eu = JogadorRede.Local;
             var cam = eu != null ? eu.cameraMundo : null;
-            if (cam == null || (cam == _camera && _qualidadeNaCamera == Qualidade)) return;
+            if (cam == null) return;
+            if (cam != _camera) _desenho0 = cam.farClipPlane;   // a do prefab (a da Alta)
+            // a distância de desenho (a Média e a Baixa); pela luneta, a de sempre (a neblina afina, e o alvo pode estar longe)
+            float longe = AmbienteDoDia.NaLuneta ? _desenho0 : Desenho(_desenho0);
+            if (cam.farClipPlane != longe) cam.farClipPlane = longe;
+            if (cam == _camera && _qualidadeNaCamera == Qualidade) return;
             _camera = cam;
             _qualidadeNaCamera = Qualidade;
             var dados = cam.GetUniversalAdditionalCameraData();
@@ -224,7 +346,15 @@ namespace ZombieCityCleaner.UI
                 _urp.msaaSampleCount = _msaa0;
                 _urp.mainLightShadowmapResolution = _mapaDaSombra0;
                 _urp.shadowCascadeCount = _cascatas0;
+                _urp.additionalLightsShadowmapResolution = _atlas0;
             }
+            foreach (var s in _ssaos)
+            {
+                if (s.efeito == null) continue;
+                s.efeito.SetActive(s.ativo0);
+                if (s.meia != null) s.meia.SetValue(s.ajustes, s.meia0);
+            }
+            if (_comGrupo) QualitySettings.SetTextureMipmapLimitSettings(GrupoDasTexturas, _grupo0);
             QualitySettings.lodBias = _lod0;
             QualitySettings.globalTextureMipmapLimit = _texturas0;
             // o MSAA do asset do URP passa para o anti-serrilhado das configurações de qualidade, e o Editor gravava o 4x da

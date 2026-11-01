@@ -59,6 +59,9 @@ namespace ZombieCityCleaner.Player
         InputAction _alternar;
         float _pitch, _distancia;
         float _proximaTrocaBot, _ligouEm = -10f, _sombraPerto;
+        // a sombra pela qualidade (UI/Graficos): a da lanterna como veio, e a versão das opções já aplicada
+        LightShadows _sombras0;
+        int _versaoDosGraficos = -1;
         bool _desligadaNosBracos, _estavaLigada;
 
         void Awake()
@@ -70,6 +73,7 @@ namespace ZombieCityCleaner.Player
             luz.spotAngle = abertura;
             luz.innerSpotAngle = aberturaInterna;
             _sombraPerto = luz.shadowNearPlane;
+            _sombras0 = luz.shadows;
         }
 
         void OnEnable()
@@ -126,6 +130,12 @@ namespace ZombieCityCleaner.Player
                 }
             }
 
+            // na Média e na Baixa, a lanterna dos outros não faz sombra, e a daqui faz a dura
+            if (_versaoDosGraficos != Graficos.Versao)
+            {
+                _versaoDosGraficos = Graficos.Versao;
+                Graficos.Sombra(luz, IsOwner ? Graficos.Luz.MinhaLanterna : Graficos.Luz.LanternaDosOutros, _sombras0);
+            }
             bool ligada = Ligada.Value;
             if (ligada && !_estavaLigada) _ligouEm = Time.time;
             _estavaLigada = ligada;

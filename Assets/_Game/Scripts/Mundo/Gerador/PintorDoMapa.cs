@@ -52,6 +52,7 @@ namespace ZombieCityCleaner.Mundo
                     case TipoDeLugar.CidadePequena: nivel = 1; break;
                     case TipoDeLugar.Vila: case TipoDeLugar.BaseMilitar: case TipoDeLugar.ComunidadeAliada: case TipoDeLugar.ComunidadeInimiga:
                     case TipoDeLugar.Laboratorio: case TipoDeLugar.Fazenda: case TipoDeLugar.CasaDoLago: case TipoDeLugar.CasaDaFamilia:
+                    case TipoDeLugar.BunkerDaFamilia:
                         nivel = 2; break;
                     default: continue;
                 }
@@ -271,6 +272,12 @@ namespace ZombieCityCleaner.Mundo
                     Disco(px, lado, d, mpp, p, 5.5f * e, Contorno);
                     Disco(px, lado, d, mpp, p, 4.2f * e, new Color(1f, 0.85f, 0.15f));
                     Disco(px, lado, d, mpp, p, 1.6f * e, Contorno);
+                    break;
+                case TipoDeLugar.BunkerDaFamilia:
+                    // o bunker dos espalhados, maior, com o miolo amarelo da família
+                    Quadrado(px, lado, d, mpp, p, 5.2f * e, Contorno);
+                    Quadrado(px, lado, d, mpp, p, 4.2f * e, new Color(0.12f, 0.12f, 0.12f));
+                    Disco(px, lado, d, mpp, p, 2.2f * e, new Color(1f, 0.85f, 0.15f));
                     break;
             }
         }

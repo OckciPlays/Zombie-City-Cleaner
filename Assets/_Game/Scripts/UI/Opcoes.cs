@@ -82,13 +82,18 @@ namespace ZombieCityCleaner.UI
             estilo.normal.textColor = estilo.hover.textColor = estilo.active.textColor = estilo.focused.textColor = cor;
         }
 
+        static string _textoDoFps;
+        static int _fpsNoTexto = -1;
+
         /// <summary>O contador de FPS no canto de cima, à direita (se ligado).</summary>
         public static void Contador(float u)
         {
             if (!MostrarFps) return;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperRight };
+            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.UpperRight);
             var r = new Rect(Screen.width - 160 * u, 10 * u, 146 * u, 24 * u);
-            string texto = $"{Mathf.RoundToInt(_fps)} FPS";
+            int fps = Mathf.RoundToInt(_fps);
+            if (fps != _fpsNoTexto || _textoDoFps == null) { _fpsNoTexto = fps; _textoDoFps = $"{fps} FPS"; }
+            string texto = _textoDoFps;
             Cor(estilo, new Color(0f, 0f, 0f, 0.75f));
             GUI.Label(new Rect(r.x + 1.5f * u, r.y + 1.5f * u, r.width, r.height), texto, estilo);
             Cor(estilo, _fps >= 50f ? new Color(0.75f, 0.9f, 0.65f) : _fps >= 30f ? new Color(0.95f, 0.85f, 0.5f) : new Color(1f, 0.5f, 0.42f));
@@ -99,8 +104,8 @@ namespace ZombieCityCleaner.UI
         static readonly string[] Abas = { "Geral", "Gráficos" };
         static readonly string[] SobreAQualidade =
         {
-            "Sombras só perto e simples, sem anti-serrilhado, texturas pela metade e menos detalhes ao longe. Para computadores fracos.",
-            "Sombras até 30 m, anti-serrilhado leve (FXAA) e os detalhes sumindo um pouco mais perto.",
+            "Sombras duras e só perto, sem a sombra nos cantos (SSAO) nem anti-serrilhado, texturas pela metade e o mundo desenhado até 70 m. Para computadores fracos.",
+            "Sombras até 30 m e menos suaves, a sombra nos cantos (SSAO) mais simples, anti-serrilhado leve (FXAA) e o mundo desenhado até 90 m.",
             "O jogo como foi feito: sombras até 40 m e anti-serrilhado SMAA.",
             "Sombras mais longe e mais definidas, anti-serrilhado SMAA com MSAA 4x e mais detalhes ao longe. Pesado.",
         };

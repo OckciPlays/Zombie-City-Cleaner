@@ -1,41 +1,69 @@
+using System;
+using System.Threading.Tasks;
 using UnityEngine;
 using ZombieCityCleaner.Combat;
 
 namespace ZombieCityCleaner.Vehicles
 {
     /// <summary>
-    /// Os sons do carro, gerados por código (como os do tiro e dos passos), feitos na primeira vez que são pedidos:
-    /// o motor (um laço de 1 s, tocado com o pitch da rotação), a partida (a chave entrando e girando, o solenoide, o
-    /// motor de arranque em laço, o pinhão soltando e o motor pegando), a buzina, a porta abrindo e a porta batendo.
+    /// Os sons do carro, gerados por código (como os do tiro e dos passos): o motor (um laço de 1 s, tocado com o pitch
+    /// da rotação), a partida (a chave entrando e girando, o solenoide, o motor de arranque em laço, o pinhão soltando e
+    /// o motor pegando), a buzina, a porta abrindo e a porta batendo. As amostras são geradas em outra thread no começo
+    /// da partida (<see cref="Preparar"/>, na tela de carregamento), e cada clipe sai delas na primeira vez que é pedido:
+    /// geradas na hora, o motor e a buzina paravam o jogo por uns 150 ms no primeiro quadro do carro (31/10/2026).
     /// </summary>
     public static class SomDoCarro
     {
         const int Taxa = 44100;
         static AudioClip _motor, _arranque, _pegar, _solenoide, _soltar, _clique, _entra, _abrir, _fechar, _buzina;
 
+        // as amostras de cada som, pela semente dele (7 a 19: a posição aqui mais 7)
+        static readonly Func<float[]>[] Receitas =
+        {
+            () => GerarMotor(7), () => GerarArranque(8), () => GerarAbrir(9), () => GerarFechar(10), () => GerarBuzina(11),
+            () => GerarPegar(12), () => GerarSolenoide(13), () => GerarSoltar(14), () => GerarCliqueDaChave(15),
+            () => GerarChaveEntra(16), () => GerarTossida(17), () => GerarPneuFurando(18), () => GerarMacaco(19),
+        };
+        static Task<float[][]> _preparadas;
+
+        /// <summary>Gera as amostras de todos os sons em outra thread (uma vez: elas ficam guardadas).</summary>
+        public static void Preparar()
+        {
+            if (_preparadas != null) return;
+            _preparadas = Task.Run(() =>
+            {
+                var todas = new float[Receitas.Length][];
+                for (int i = 0; i < todas.Length; i++) todas[i] = Receitas[i]();
+                return todas;
+            });
+        }
+
+        // as amostras do som desta semente: as preparadas (esperando por elas, se ainda estão sendo geradas) ou geradas agora
+        static float[] Dados(int semente) => _preparadas != null && !_preparadas.IsFaulted ? _preparadas.Result[semente - 7] : Receitas[semente - 7]();
+
         /// <summary>O motor em marcha lenta, em laço (1 s; com pitch 1 são 32 explosões por segundo).</summary>
-        public static AudioClip Motor => _motor != null ? _motor : _motor = SomGerado.Clip("Motor do carro", GerarMotor(7));
+        public static AudioClip Motor => _motor != null ? _motor : _motor = SomGerado.Clip("Motor do carro", Dados(7));
         /// <summary>O motor de arranque girando o motor, em laço (1 s): toca enquanto a chave fica na partida.</summary>
-        public static AudioClip Arranque => _arranque != null ? _arranque : _arranque = SomGerado.Clip("Arranque do carro", GerarArranque(8));
+        public static AudioClip Arranque => _arranque != null ? _arranque : _arranque = SomGerado.Clip("Arranque do carro", Dados(8));
         /// <summary>O motor pegando e caindo para a marcha lenta (o laço do motor entra em <see cref="LacoEntra"/>).</summary>
-        public static AudioClip Pegar => _pegar != null ? _pegar : _pegar = SomGerado.Clip("Motor pegando", GerarPegar(12));
-        public static AudioClip Solenoide => _solenoide != null ? _solenoide : _solenoide = SomGerado.Clip("Solenoide do arranque", GerarSolenoide(13));
-        public static AudioClip SoltarArranque => _soltar != null ? _soltar : _soltar = SomGerado.Clip("Arranque soltando", GerarSoltar(14));
-        public static AudioClip CliqueDaChave => _clique != null ? _clique : _clique = SomGerado.Clip("Chave girando", GerarCliqueDaChave(15));
-        public static AudioClip ChaveEntra => _entra != null ? _entra : _entra = SomGerado.Clip("Chave entrando", GerarChaveEntra(16));
+        public static AudioClip Pegar => _pegar != null ? _pegar : _pegar = SomGerado.Clip("Motor pegando", Dados(12));
+        public static AudioClip Solenoide => _solenoide != null ? _solenoide : _solenoide = SomGerado.Clip("Solenoide do arranque", Dados(13));
+        public static AudioClip SoltarArranque => _soltar != null ? _soltar : _soltar = SomGerado.Clip("Arranque soltando", Dados(14));
+        public static AudioClip CliqueDaChave => _clique != null ? _clique : _clique = SomGerado.Clip("Chave girando", Dados(15));
+        public static AudioClip ChaveEntra => _entra != null ? _entra : _entra = SomGerado.Clip("Chave entrando", Dados(16));
         /// <summary>O motor tossindo (quase pegando): um acerto no mini-game da partida.</summary>
-        public static AudioClip Tossida => _tossida != null ? _tossida : _tossida = SomGerado.Clip("Motor tossindo", GerarTossida(17));
+        public static AudioClip Tossida => _tossida != null ? _tossida : _tossida = SomGerado.Clip("Motor tossindo", Dados(17));
         static AudioClip _tossida;
         /// <summary>O pneu furado por um tiro: o estouro e o ar escapando.</summary>
-        public static AudioClip PneuFurando => _furando != null ? _furando : _furando = SomGerado.Clip("Pneu furando", GerarPneuFurando(18));
+        public static AudioClip PneuFurando => _furando != null ? _furando : _furando = SomGerado.Clip("Pneu furando", Dados(18));
         static AudioClip _furando;
         /// <summary>O macaco sanfona girando (2,2 s, o tempoDoMacaco do carro): a catraca da manivela e o fuso rangendo.</summary>
-        public static AudioClip Macaco => _macaco != null ? _macaco : _macaco = SomGerado.Clip("Macaco do carro", GerarMacaco(19));
+        public static AudioClip Macaco => _macaco != null ? _macaco : _macaco = SomGerado.Clip("Macaco do carro", Dados(19));
         static AudioClip _macaco;
-        public static AudioClip PortaAbrir => _abrir != null ? _abrir : _abrir = SomGerado.Clip("Porta do carro abrindo", GerarAbrir(9));
-        public static AudioClip PortaFechar => _fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", GerarFechar(10));
+        public static AudioClip PortaAbrir => _abrir != null ? _abrir : _abrir = SomGerado.Clip("Porta do carro abrindo", Dados(9));
+        public static AudioClip PortaFechar => _fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", Dados(10));
         /// <summary>A buzina, em laço (1 s).</summary>
-        public static AudioClip Buzina => _buzina != null ? _buzina : _buzina = SomGerado.Clip("Buzina do carro", GerarBuzina(11));
+        public static AudioClip Buzina => _buzina != null ? _buzina : _buzina = SomGerado.Clip("Buzina do carro", Dados(11));
 
         /// <summary>
         /// Um motor de 4 cilindros: os harmônicos das explosões (32 por segundo, todos inteiros em 1 s, para o laço não ter

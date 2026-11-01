@@ -165,6 +165,9 @@ namespace ZombieCityCleaner.EditorTools
                 AssetDatabase.CreateAsset(mat, ArquivoDoMaterial);
             }
             mat.SetTexture("_Texturas", array);
+            // fosca: a lisura do alfa das texturas vezes 0 (31/10/2026, a pedido: os móveis "meio brilhosos", como as armas e
+            // os itens; a louça, o metal, o esmalte e o granito chegavam a 0,6 e 0,75)
+            mat.SetFloat("_Suavidade", 0f);
             EditorUtility.SetDirty(mat);
             return mat;
         }

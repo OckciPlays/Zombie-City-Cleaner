@@ -12,9 +12,9 @@ namespace ZombieCityCleaner.UI
     /// <summary>
     /// O menu do desenvolvedor (F1; no Editor, nas builds de desenvolvimento e no jogo compilado com a opção ligada,
     /// <see cref="Opcoes.LiberarF1"/>): sempre de dia ou sempre de noite (o meio-dia ou a meia-noite com o relógio parado,
-    /// para todos), criar itens (as armas, a lata, a
-    /// garrafa, as mochilas, as caixas de munição cheias e as peças do motor a 100%) na mochila ou no chão à
-    /// frente, ver quantos zumbis há, matar todos e criar mais em volta do jogador. Fica
+    /// para todos), ver quantos zumbis há, matar todos e criar mais em volta do jogador, e o boneco equipado. Os itens (as
+    /// armas, a comida, as mochilas, as caixas de munição cheias, as peças do motor a 100%, o saque e as roupas) ficam no
+    /// F3 desde 31/10/2026 (MenuDoDesenvolvedor.Itens.cs), na mochila ou no chão à frente. Fica
     /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz. Na cena Mundo, também o painel do mundo
     /// (MenuDoDesenvolvedor.Mundo.cs: a semente, voar com F2 e ir para um ponto).
     /// </summary>
@@ -64,7 +64,6 @@ namespace ZombieCityCleaner.UI
                 Item.CaixaDeBolas, Item.TacoMadeira, Item.TacoEscuro, Item.TacoPreto, Item.TacoVermelho,
             }),
         };
-        static readonly string[] NomesDasEspecies = System.Array.ConvertAll(ItensDoMenu, e => e.nome);
         int _especie;
         static readonly string[] Destinos = { "Na mochila", "No chão" };
 
@@ -100,13 +99,17 @@ namespace ZombieCityCleaner.UI
             if (_aberto) Abrir(false);
         }
 
-        void Fechar() => Abrir(false);
+        void Fechar()
+        {
+            Abrir(false);
+            AbrirItens(false);
+        }
 
         void Abrir(bool abrir)
         {
             _aberto = abrir;
             MenuOnline.Tela(this, abrir);
-            if (!abrir) Area = default;
+            if (!abrir && !_abertoItens) Area = default;
         }
 
         void Update()
@@ -114,7 +117,17 @@ namespace ZombieCityCleaner.UI
             if (IsSpawned && IsServer && LiberadoNoAnfitriao.Value != Disponivel) LiberadoNoAnfitriao.Value = Disponivel;
             if (!IsSpawned || !IsOwner || !Disponivel || MenuOnline.Bot) return;
             var teclado = Keyboard.current;
-            if (teclado != null && teclado.f1Key.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!_aberto);
+            // o F1 ou o F3 (os itens): um de cada vez, no mesmo canto
+            if (teclado != null && teclado.f1Key.wasPressedThisFrame && !MenuOnline.Aberto)
+            {
+                if (_abertoItens) AbrirItens(false);
+                Abrir(!_aberto);
+            }
+            if (teclado != null && teclado.f3Key.wasPressedThisFrame && !MenuOnline.Aberto)
+            {
+                if (_aberto) Abrir(false);
+                AbrirItens(!_abertoItens);
+            }
             AtalhosDoMundo(teclado);
             AtalhosDoMapaFixo(teclado);
         }
@@ -141,12 +154,17 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
-            if (!_aberto || !IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
+            if ((!_aberto && !_abertoItens) || !IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
             GUI.depth = -10;   // por cima da tela do inventário
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
+            if (_abertoItens)
+            {
+                PainelDosItens(u);
+                return;
+            }
             bool semAnfitriao = !IsServer && !LiberadoNoAnfitriao.Value;
-            var area = new Rect(12 * u, 40 * u, 300 * u, (semAnfitriao ? 712 : 658) * u);
+            var area = new Rect(12 * u, 40 * u, 300 * u, (semAnfitriao ? 394 : 340) * u);
             Area = area;
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
@@ -163,7 +181,7 @@ namespace ZombieCityCleaner.UI
                 // os pedidos (itens, relógio, zumbis) valem pela opção do anfitrião
                 var cor = _texto.normal.textColor;
                 _texto.normal.textColor = new Color(1f, 0.45f, 0.35f);
-                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens, o relógio e os zumbis daqui não valem. Lá: ESC > Configurações > Menu do desenvolvedor (F1).", _texto);
+                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens (F3), o relógio e os zumbis daqui não valem. Lá: ESC > Configurações > Menu do desenvolvedor (F1).", _texto);
                 _texto.normal.textColor = cor;
                 y += 54 * u;
             }
@@ -216,34 +234,10 @@ namespace ZombieCityCleaner.UI
             }
             y += 44 * u;
 
-            // os itens
-            GUI.Label(new Rect(x, y, w, 22 * u), "Itens", _titulo);
-            y += 26 * u;
-            _destino = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _destino, Destinos, 2, _botao);
-            y += 34 * u;
-            _especie = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _especie, NomesDasEspecies, NomesDasEspecies.Length, _botao);
-            y += 34 * u;
+            // os itens ficam no F3
+            GUI.Label(new Rect(x, y, w, 20 * u), "Os itens e as roupas: F3", _texto);
+            y += 24 * u;
             float bw = (w - 8 * u) / 2f;
-            var inventario = GetComponent<InventarioJogador>();
-            var lista = ItensDoMenu[_especie].itens;
-            for (int i = 0; i < lista.Length; i++)
-            {
-                var item = lista[i];
-                var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
-                string nome = Itens.Nome(item);
-                if (!GUI.Button(r, char.ToUpper(nome[0]) + nome.Substring(1), _botao)) continue;
-                bool noChao = _destino == 1;
-                if (!noChao && inventario != null && !inventario.PodeReceber(item, out var motivo))
-                {
-                    noChao = true;
-                    Avisar($"{motivo}: {Itens.NomeComArtigo(item)} foi para o chão.");
-                }
-                CriarItemRpc(item, noChao);
-            }
-            // a altura da maior espécie (a janela não pula ao trocar)
-            int maior = 0;
-            foreach (var e in ItensDoMenu) maior = Mathf.Max(maior, e.itens.Length);
-            y += (maior + 1) / 2 * 32 * u + 4 * u;
 
             // o boneco de teste
             GUI.Label(new Rect(x, y, w, 22 * u), "Boneco equipado (teste)", _titulo);
@@ -332,20 +326,21 @@ namespace ZombieCityCleaner.UI
 
         bool Aceita(RpcParams parametros) => Disponivel && parametros.Receive.SenderClientId == OwnerClientId;
 
+        /// <summary>Cria o item (com as cores, se for uma roupa: 0, as do catálogo) na mochila ou no chão à frente.</summary>
         [Rpc(SendTo.Server)]
-        void CriarItemRpc(Item item, bool noChao, RpcParams parametros = default)
+        void CriarItemRpc(Item item, bool noChao, ulong cores, RpcParams parametros = default)
         {
             if (!Aceita(parametros) || item == Item.Nada) return;
             var inventario = GetComponent<InventarioJogador>();
             // o saque vem numa pilha cheia (os materiais da fabricação, de uma vez)
             int qtd = Itens.EmPilha(item) && !Itens.EhMunicao(item) ? Itens.Pilha(item) : -1;
-            if (!noChao && inventario != null && inventario.Receber(item, qtd)) return;
+            if (!noChao && inventario != null && inventario.Receber(item, qtd, 0, cores)) return;
             if (ItensNoMundo.Instancia == null) return;
             // no chão, 1,2 m à frente (onde um raio de cima bater)
             Vector3 frente = transform.position + transform.forward * 1.2f;
             var ponto = Physics.Raycast(frente + Vector3.up * 1.5f, Vector3.down, out var chao, 4f, ~((1 << 2) | (1 << JogadorRede.CamadaJogador)), QueryTriggerInteraction.Ignore)
                 ? chao.point : transform.position;
-            ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f, qtd);
+            ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f, qtd, 0, cores);
         }
 
         [Rpc(SendTo.Server)]

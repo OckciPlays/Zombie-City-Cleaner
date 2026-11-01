@@ -200,7 +200,13 @@ namespace ZombieCityCleaner.UI
             _campo = new GUIStyle(GUI.skin.textField) { fontSize = Mathf.RoundToInt(20 * u), alignment = TextAnchor.MiddleCenter };
             _erro = new GUIStyle(_texto);
             Opcoes.Cor(_erro, new Color(1f, 0.45f, 0.4f));
+            _linhaDaPartida = new GUIStyle(_texto) { alignment = TextAnchor.UpperLeft };
         }
+
+        // a linha da partida (o código, os jogadores e o mundo), refeita só quando muda
+        GUIStyle _linhaDaPartida;
+        string _textoDaPartida, _codigoNoTexto;
+        int _jogadoresNoTexto, _sementeNoTexto;
 
         void OnGUI()
         {
@@ -220,11 +226,20 @@ namespace ZombieCityCleaner.UI
             {
                 // com a tela de criar o personagem aberta, só o menu (ESC)
                 if (_obrigatorias.Count > 0 && !_pausa) return;
-                string codigo = _sessao.Local ? "partida local" : $"código {_sessao.Codigo}";
                 // na cena Mundo, o nome, a semente e o tamanho do mundo
                 var m = MundoDaPartida.Instancia;
-                string mundo = m != null && m.Semente != 0 ? $"  ·  {m.Nome}: semente {m.Semente}, {Tamanhos.Lado(m.Tamanho) / 1000} km" : "";
-                GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}  ·  ESC: menu", new GUIStyle(_texto) { alignment = TextAnchor.UpperLeft });
+                string codigoAgora = _sessao.Local ? null : _sessao.Codigo;
+                int semente = m != null ? m.Semente : 0;
+                if (_textoDaPartida == null || codigoAgora != _codigoNoTexto || _sessao.Jogadores != _jogadoresNoTexto || semente != _sementeNoTexto)
+                {
+                    _codigoNoTexto = codigoAgora;
+                    _jogadoresNoTexto = _sessao.Jogadores;
+                    _sementeNoTexto = semente;
+                    string codigo = _sessao.Local ? "partida local" : $"código {_sessao.Codigo}";
+                    string mundo = m != null && m.Semente != 0 ? $"  ·  {m.Nome}: semente {m.Semente}, {Tamanhos.Lado(m.Tamanho) / 1000} km" : "";
+                    _textoDaPartida = $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}  ·  ESC: menu";
+                }
+                GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), _textoDaPartida, _linhaDaPartida);
                 if (_pausa) Pausa(u);
                 return;
             }

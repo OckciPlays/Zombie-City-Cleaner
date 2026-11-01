@@ -34,6 +34,11 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>Nas lojas: a largura do vão (0 = a da porta ou da passagem) e a porta de aço (a do depósito da loja de armas).</summary>
         public float largura;
         public bool deAco;
+        /// <summary>
+        /// A folha é um modelo da mobília nova (a câmara fria do bunker): o kit faz o vão e a moldura, sem a folha, e quem
+        /// monta a construção põe o modelo no meio do vão.
+        /// </summary>
+        public string modelo;
     }
 
     /// <summary>

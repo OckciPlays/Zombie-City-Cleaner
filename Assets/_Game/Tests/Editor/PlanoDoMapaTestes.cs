@@ -184,10 +184,54 @@ namespace ZombieCityCleaner.Testes
                 Assert.Less(c.Q(p.CasaDaFamilia.Centro.x, p.CasaDaFamilia.Centro.y), 1f);
                 Assert.AreEqual(TipoDeBairro.Residencial, c.ZonaEm(p.CasaDaFamilia.Centro.x, p.CasaDaFamilia.Centro.y));
                 Assert.AreEqual(p.BairroDaFamilia, c.BairroEm(p.CasaDaFamilia.Centro.x, p.CasaDaFamilia.Centro.y));
-                Assert.AreEqual(p.CasaDaFamilia.Centro.x, d.Partida.x, 0.01f);
-                Assert.AreEqual(p.CasaDaFamilia.Centro.y, d.Partida.z, 0.01f);
+                // a partida é no bunker da família (a parte 5 do Plano_Bunker.md); sem ele, na casa
+                if (!d.TemBunker)
+                {
+                    Assert.AreEqual(p.CasaDaFamilia.Centro.x, d.Partida.x, 0.01f);
+                    Assert.AreEqual(p.CasaDaFamilia.Centro.y, d.Partida.z, 0.01f);
+                }
                 if (d.Tamanho != TamanhoDoMundo.Pequeno || p.Quantos(TipoDeLugar.CidadePequena) > 0)
                     Assert.AreEqual(TipoDeLugar.CidadePequena, c.Tipo);
+            }
+        }
+
+        [Test]
+        public void OBunkerDaFamiliaFicaForaDaCidadeDelaComOPatioPlano()
+        {
+            foreach (var d in Todos())
+            {
+                var p = d.Plano;
+                string onde = $"{d.Tamanho}, semente {d.Semente}";
+                Assert.IsNotNull(p.BunkerDaFamilia, onde);
+                Assert.IsTrue(d.TemBunker, onde);
+                var b = p.BunkerDaFamilia;
+                var cidade = p.CidadeDaFamilia;
+                float longe = Vector2.Distance(b.Centro, cidade.Centro) - cidade.Raio;
+                Assert.That(longe, Is.InRange(150f, 1500f + 150f), onde);
+                Assert.IsNull(p.CidadeEm(b.Centro.x, b.Centro.y), onde);
+                // a estrada de terra dele
+                bool temRamal = false;
+                foreach (var e in p.Estradas) if (e.De == p.Indice(b) && e.Tipo == TipoDeEstrada.Terra) temRamal = true;
+                Assert.IsTrue(temRamal, $"{onde}: sem a estrada de terra");
+                // o pátio e o pé do morro planos, na altura da plataforma
+                var pegada = PlantaDeBunker.Pegada;
+                float y0 = d.Rede.PlataformaDoBunker.Altura;
+                for (int i = 0; i <= 6; i++)
+                for (int j = 0; j <= 6; j++)
+                {
+                    var q = d.NoBunker(new Vector3(Mathf.Lerp(pegada.xMin, pegada.xMax, i / 6f), 0f, Mathf.Lerp(pegada.yMin, pegada.yMax, j / 6f)));
+                    Assert.AreEqual(y0, d.Altura(q.x, q.z), 0.05f, $"{onde}: o chão em ({q.x:F0}, {q.z:F0})");
+                }
+                // a partida e os nascimentos na sala de operações, no chão da garagem
+                var sala = PlantaDeBunker.DoAndar(0).comodos.Find(k => k.tipo == "operacoes");
+                var M = Matrix4x4.TRS(d.PosicaoDoBunker, Quaternion.Euler(0f, d.GiroDoBunker, 0f), Vector3.one).inverse;
+                foreach (var n in d.Nascimentos)
+                {
+                    var l = M.MultiplyPoint3x4(n);
+                    Assert.IsTrue(sala.Contem(l.x, l.z), $"{onde}: o nascimento {l} fora da sala de operações");
+                    Assert.AreEqual(0.05f, l.y, 0.01f, onde);
+                }
+                Assert.IsTrue(d.LugarDoCarro.HasValue && d.LugarDoSegundoCarro.HasValue, onde);
             }
         }
 

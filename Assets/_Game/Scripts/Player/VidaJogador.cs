@@ -108,14 +108,14 @@ namespace ZombieCityCleaner.Player
             float vermelho = Mathf.Max(_clarao * 0.35f, (1f - fracao) * 0.18f);
             if (vermelho > 0.01f) Retangulo(0, 0, Screen.width, Screen.height, new Color(0.55f, 0f, 0f, vermelho));
             float x = 20 * u, y = Screen.height - 44 * u, w = 200 * u, h = 10 * u;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14 * u), fontStyle = FontStyle.Bold };
+            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Bold);
             estilo.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
             GUI.Label(new Rect(x, y - 22 * u, w, 20 * u), "VIDA", estilo);
             Retangulo(x, y, w, h, new Color(0f, 0f, 0f, 0.5f));
             Retangulo(x, y, w * fracao, h, fracao > 0.35f ? new Color(0.78f, 0.74f, 0.62f, 0.9f) : new Color(0.85f, 0.25f, 0.2f, 0.95f));
             if (Time.time < _caiuAte)
             {
-                var aviso = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(30 * u), alignment = TextAnchor.MiddleCenter };
+                var aviso = EstilosDoHud.Rotulo(Mathf.RoundToInt(30 * u), FontStyle.Bold, TextAnchor.MiddleCenter);
                 aviso.normal.textColor = new Color(0.85f, 0.3f, 0.25f);
                 GUI.Label(new Rect(0, Screen.height * 0.4f, Screen.width, 50 * u), "VOCÊ CAIU", aviso);
             }

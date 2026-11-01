@@ -109,7 +109,7 @@ namespace ZombieCityCleaner.Player
             float x = 20 * u, w = 150 * u, h = 7 * u;
             float fracao = Mathf.Clamp01(valor / 100f);
             bool baixa = valor < pouca;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Bold };
+            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(13 * u), FontStyle.Bold);
             estilo.normal.textColor = baixa ? new Color(0.95f, 0.42f, 0.36f) : new Color(0.86f, 0.84f, 0.76f);
             GUI.Label(new Rect(x, y - 19 * u, 260 * u, 18 * u), baixa ? $"{nome}  ·  {aviso}" : nome, estilo);
             // com a barra vazia, o fundo pisca vermelho (está tirando vida)

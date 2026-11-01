@@ -124,7 +124,7 @@ namespace ZombieCityCleaner.Player
         {
             if (_kit == 0) return;
             float u = Screen.height / 720f;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), alignment = TextAnchor.MiddleCenter };
+            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
             string texto = !_noChao ? $"Montando {Itens.NomeComArtigo(_tipo)}: mire no chão"
                 : _cabe ? $"Clique: montar {Itens.NomeComArtigo(_tipo)}   ·   R ou roda: girar   ·   botão direito: desistir"
                 : "Não cabe aqui   ·   R ou roda: girar   ·   botão direito: desistir";

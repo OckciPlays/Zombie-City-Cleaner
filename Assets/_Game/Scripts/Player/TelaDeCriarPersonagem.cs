@@ -43,6 +43,9 @@ namespace ZombieCityCleaner.Player
         int _paginaDoCabelo, _paginaDaBarba;
         Texture2D[] _cabelos, _barbas, _camisetas, _calcas;
         AparenciaDoJogador _dasMiniaturas;
+        // a próxima miniatura a fazer (contando os cabelos, as barbas, as camisetas e as calças em fila)
+        int _proximaMiniatura;
+        const int MiniaturasPorQuadro = 4;
         // (nada disso é guardado pela Unity: a fonte é do sistema, criada na hora)
         [System.NonSerialized] Texture2D _brilho;
         [System.NonSerialized] Font _fonte;
@@ -118,7 +121,7 @@ namespace ZombieCityCleaner.Player
             _estudio.Atualizar();
             var teclado = Keyboard.current;
             if (teclado != null && teclado.rKey.wasPressedThisFrame && !_digitando && !MenuOnline.Pausado) Aleatorio();
-            if (_miniaturasSujas) Miniaturas();
+            Miniaturas();
         }
 
         void Aleatorio()
@@ -148,14 +151,27 @@ namespace ZombieCityCleaner.Player
                 _miniaturasSujas = true;
         }
 
-        // as miniaturas das opções (fora do OnGUI: as câmeras desenham aqui), e o corpo volta a vestir a escolha
+        // as miniaturas das opções (fora do OnGUI: as câmeras desenham aqui), poucas por quadro (MiniaturasPorQuadro): todas
+        // de uma vez (umas 30 câmeras e as leituras), o quadro parava uns 50 ms ao abrir a tela e a cada troca da pele ou da
+        // cor dos pelos (31/10/2026). No fim, o corpo volta a vestir a escolha
         void Miniaturas()
         {
-            _miniaturasSujas = false;
             var catalogo = _estudio.Catalogo;
             if (catalogo == null) return;
-            var a = _escolha;
-            _dasMiniaturas = a;
+            if (_miniaturasSujas)
+            {
+                _miniaturasSujas = false;
+                _dasMiniaturas = _escolha;
+                _proximaMiniatura = 0;
+                _cabelos ??= new Texture2D[AparenciaDoJogador.Cabelos.Length];
+                _barbas ??= new Texture2D[AparenciaDoJogador.Barbas.Length];
+                _camisetas ??= new Texture2D[AparenciaDoJogador.Camisetas.Length];
+                _calcas ??= new Texture2D[AparenciaDoJogador.Calcas.Length];
+            }
+            if (_cabelos == null) return;
+            int total = _cabelos.Length + _barbas.Length + _camisetas.Length + _calcas.Length;
+            if (_proximaMiniatura >= total) return;
+            var a = _dasMiniaturas;
             List<CatalogoDasRoupas.PecaVestida> Da(AparenciaDoJogador x, bool cabelo, bool barba, bool camiseta, bool calca)
             {
                 var todas = x.Pecas(catalogo);
@@ -165,28 +181,33 @@ namespace ZombieCityCleaner.Player
                     (camiseta && p.nome == "Camiseta") ||
                     (calca && System.Array.Exists(AparenciaDoJogador.Calcas, c => c.peca == p.nome)));
             }
-            _cabelos ??= new Texture2D[AparenciaDoJogador.Cabelos.Length];
-            for (int i = 0; i < _cabelos.Length; i++)
+            // na ordem: os cabelos, as barbas, as camisetas e as calças
+            for (int feitas = 0; feitas < MiniaturasPorQuadro && _proximaMiniatura < total; feitas++, _proximaMiniatura++)
             {
-                var x = a; x.cabelo = (byte)i; x.barba = 0;
-                _cabelos[i] = _estudio.Miniatura(x, Da(x, true, false, false, false), EstudioDoPersonagem.Parte.Cabeca, _cabelos[i]);
-            }
-            _barbas ??= new Texture2D[AparenciaDoJogador.Barbas.Length];
-            for (int i = 0; i < _barbas.Length; i++)
-            {
-                var x = a; x.mulher = 0; x.barba = (byte)i;
-                _barbas[i] = _estudio.Miniatura(x, Da(x, true, true, false, false), EstudioDoPersonagem.Parte.Cabeca, _barbas[i]);
-            }
-            _camisetas ??= new Texture2D[AparenciaDoJogador.Camisetas.Length];
-            for (int i = 0; i < _camisetas.Length; i++)
-            {
-                var x = a; x.camiseta = (byte)i;
-                _camisetas[i] = _estudio.Miniatura(x, Da(x, false, false, true, false), EstudioDoPersonagem.Parte.Tronco, _camisetas[i]);
-            }
-            _calcas ??= new Texture2D[AparenciaDoJogador.Calcas.Length];
-            for (int i = 0; i < _calcas.Length; i++)
-            {
-                var x = a; x.calca = (byte)i;
+                int i = _proximaMiniatura;
+                var x = a;
+                if (i < _cabelos.Length)
+                {
+                    x.cabelo = (byte)i; x.barba = 0;
+                    _cabelos[i] = _estudio.Miniatura(x, Da(x, true, false, false, false), EstudioDoPersonagem.Parte.Cabeca, _cabelos[i]);
+                    continue;
+                }
+                i -= _cabelos.Length;
+                if (i < _barbas.Length)
+                {
+                    x.mulher = 0; x.barba = (byte)i;
+                    _barbas[i] = _estudio.Miniatura(x, Da(x, true, true, false, false), EstudioDoPersonagem.Parte.Cabeca, _barbas[i]);
+                    continue;
+                }
+                i -= _barbas.Length;
+                if (i < _camisetas.Length)
+                {
+                    x.camiseta = (byte)i;
+                    _camisetas[i] = _estudio.Miniatura(x, Da(x, false, false, true, false), EstudioDoPersonagem.Parte.Tronco, _camisetas[i]);
+                    continue;
+                }
+                i -= _camisetas.Length;
+                x.calca = (byte)i;
                 _calcas[i] = _estudio.Miniatura(x, Da(x, false, false, false, true), EstudioDoPersonagem.Parte.Pernas, _calcas[i]);
             }
             _estudio.Vestir(_escolha);

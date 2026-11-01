@@ -826,7 +826,7 @@ namespace ZombieCityCleaner.Player
             }
             if (MaosOcupadas)
             {
-                var pesado = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
+                var pesado = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.LowerRight);
                 pesado.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
                 GUI.Label(new Rect(Screen.width - 420 * u, Screen.height - 50 * u, 400 * u, 30 * u),
                     $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR", pesado);
@@ -834,29 +834,24 @@ namespace ZombieCityCleaner.Player
             else if (ComArma)
             {
                 var d = Dados;
-                var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
+                var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(22 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                 estilo.normal.textColor = Municao == 0 ? new Color(1f, 0.45f, 0.4f) : new Color(0.9f, 0.88f, 0.8f);
-                // o pente e, menor, as balas do calibre dela nas caixas da mochila
-                int reserva = Reserva;
-                string texto = Recarregando && !d.cartuchoACartucho ? "RECARREGANDO"
-                    : $"{Municao}<size={Mathf.RoundToInt(15 * u)}> / {(SemFim ? "∞" : reserva.ToString())}</size>";
-                estilo.richText = true;
-                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), texto, estilo);
-                var nome = new GUIStyle(estilo) { fontSize = Mathf.RoundToInt(14 * u) };
+                // o pente e, menor, as balas do calibre dela nas caixas da mochila (o texto só é refeito quando muda)
+                GUI.Label(new Rect(Screen.width - 260 * u, Screen.height - 50 * u, 240 * u, 36 * u), TextoDaMunicao(d, Mathf.RoundToInt(15 * u)), estilo);
+                var nome = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                 nome.normal.textColor = new Color(0.75f, 0.73f, 0.66f);
                 int desgaste = Inventario != null ? Inventario.DesgasteDe(_id) : 0;
-                GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 74 * u, 340 * u, 24 * u),
-                    $"{d.nome.ToUpperInvariant()}  ·  {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}{(desgaste > 0 ? $"  ·  {100 - desgaste}%" : "")}", nome);
+                GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 74 * u, 340 * u, 24 * u), NomeDaArma(d, desgaste), nome);
                 if (desgaste >= 100 || Time.time < _emperrouAte)
                 {
-                    var aviso = new GUIStyle(nome) { fontSize = Mathf.RoundToInt(15 * u) };
+                    var aviso = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                     aviso.normal.textColor = new Color(1f, 0.5f, 0.42f);
                     GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 122 * u, 340 * u, 24 * u),
                         desgaste >= 100 ? "ARMA QUEBRADA: USE UM KIT DE REPARO" : "EMPERROU", aviso);
                 }
                 if (Time.time < _semMunicaoAte)
                 {
-                    var aviso = new GUIStyle(nome) { fontSize = Mathf.RoundToInt(15 * u) };
+                    var aviso = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                     aviso.normal.textColor = new Color(1f, 0.5f, 0.42f);
                     GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 98 * u, 340 * u, 24 * u), $"SEM MUNIÇÃO {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}", aviso);
                 }
@@ -865,13 +860,43 @@ namespace ZombieCityCleaner.Player
             if (_dica != null)
             {
                 // com uma sombra embaixo, para ler na frente de coisa clara (a porta na luz da lanterna)
-                var dica = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(17 * u), alignment = TextAnchor.UpperCenter };
+                var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(17 * u), FontStyle.Normal, TextAnchor.UpperCenter);
                 dica.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
                 float s = Mathf.Max(1f, Mathf.Round(1.5f * u));
                 GUI.Label(new Rect(cx - 300 * u + s, cy + 40 * u + s, 600 * u, 30 * u), _dica, dica);
                 dica.normal.textColor = new Color(0.95f, 0.93f, 0.85f);
                 GUI.Label(new Rect(cx - 300 * u, cy + 40 * u, 600 * u, 30 * u), _dica, dica);
             }
+        }
+
+        // os textos do HUD da arma, refeitos só quando o que eles mostram muda (eram novos a cada quadro)
+        string _textoDaMunicao, _nomeDaArma;
+        int _municaoNoTexto = int.MinValue, _reservaNoTexto, _tamanhoNoTexto, _desgasteNoNome = -1;
+        object _armaNoNome;
+
+        string TextoDaMunicao(DadosDaArma d, int tamanho)
+        {
+            if (Recarregando && !d.cartuchoACartucho) return "RECARREGANDO";
+            int reserva = SemFim ? -1 : Reserva;
+            if (_textoDaMunicao == null || Municao != _municaoNoTexto || reserva != _reservaNoTexto || tamanho != _tamanhoNoTexto)
+            {
+                _municaoNoTexto = Municao;
+                _reservaNoTexto = reserva;
+                _tamanhoNoTexto = tamanho;
+                _textoDaMunicao = $"{Municao}<size={tamanho}> / {(reserva < 0 ? "∞" : reserva.ToString())}</size>";
+            }
+            return _textoDaMunicao;
+        }
+
+        string NomeDaArma(DadosDaArma d, int desgaste)
+        {
+            if (_nomeDaArma == null || !ReferenceEquals(d, _armaNoNome) || desgaste != _desgasteNoNome)
+            {
+                _armaNoNome = d;
+                _desgasteNoNome = desgaste;
+                _nomeDaArma = $"{d.nome.ToUpperInvariant()}  ·  {Itens.NomeDoCalibre(d.calibre).ToUpperInvariant()}{(desgaste > 0 ? $"  ·  {100 - desgaste}%" : "")}";
+            }
+            return _nomeDaArma;
         }
 
         /// <summary>

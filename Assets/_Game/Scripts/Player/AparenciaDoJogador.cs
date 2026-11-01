@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Roupas;
 
 namespace ZombieCityCleaner.Player
@@ -10,8 +11,9 @@ namespace ZombieCityCleaner.Player
     /// A aparência do jogador (o Plano_Personagem.md da pasta de arte, 31/10/2026): o nome e o que ele escolheu ao criar o
     /// personagem (o sexo, a cor da pele, o cabelo, a barba, a cor dos dois, a camiseta e a calça; o tênis de cano é o
     /// de todos). Vai pela rede (<see cref="JogadorRede.Aparencia"/>, escrita pelo dono quando ele entra), em uns 40
-    /// bytes: cada escolha é o índice numa das listas abaixo, as mesmas em todas as máquinas. As roupas achadas no mapa
-    /// vão pelo inventário (a parte 4 do plano).
+    /// bytes: cada escolha é o índice numa das listas abaixo, as mesmas em todas as máquinas. A camiseta, a calça e o tênis
+    /// são só as roupas do começo: o anfitrião veste elas no inventário quando o personagem é criado
+    /// (<see cref="InventarioJogador.VestirOComeco"/>), e daí em diante as roupas vão pelo inventário (a parte 4 do plano).
     /// </summary>
     public struct AparenciaDoJogador : INetworkSerializeByMemcpy, System.IEquatable<AparenciaDoJogador>
     {
@@ -65,26 +67,61 @@ namespace ZombieCityCleaner.Player
         public string Pele(CatalogoDasRoupas catalogo) =>
             catalogo.peles != null && catalogo.peles.Length > 0 ? catalogo.peles[Mathf.Min(pele, catalogo.peles.Length - 1)] : "#D08A63";
 
-        /// <summary>As peças vestidas pela aparência (o cabelo, a barba, os cílios da mulher, a camiseta, a calça e o tênis).</summary>
-        public List<CatalogoDasRoupas.PecaVestida> Pecas(CatalogoDasRoupas catalogo)
+        /// <summary>O que é do corpo: o cabelo, a barba e os cílios da mulher (com a cor dos pelos).</summary>
+        public List<CatalogoDasRoupas.PecaVestida> PecasDoCorpo(CatalogoDasRoupas catalogo)
         {
             var pecas = new List<CatalogoDasRoupas.PecaVestida>();
             string pelos = CorDosPelos;
-            void Por(string nome, string[] cores)
+            void Por(string nome)
             {
                 var dados = catalogo.DaPeca(nome);
-                if (dados == null) return;
-                pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = nome, cores = cores ?? SorteioDosNPCs.CoresDoPelo(dados, pelos) });
+                if (dados != null) pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = nome, cores = SorteioDosNPCs.CoresDoPelo(dados, pelos) });
             }
-            if (cabelo > 0 && cabelo < Cabelos.Length) Por(Cabelos[cabelo], null);
-            if (!EhMulher && barba > 0 && barba < Barbas.Length) Por(Barbas[barba], null);
-            if (EhMulher) Por("Cilios", null);
+            if (cabelo > 0 && cabelo < Cabelos.Length) Por(Cabelos[cabelo]);
+            if (!EhMulher && barba > 0 && barba < Barbas.Length) Por(Barbas[barba]);
+            if (EhMulher) Por("Cilios");
+            return pecas;
+        }
+
+        /// <summary>As roupas do começo, como itens com as cores: a camiseta, a calça e o tênis de cano.</summary>
+        public (Item item, ulong cores)[] RoupasDoComeco()
+        {
             string c = Camisetas[Mathf.Min(camiseta, Camisetas.Length - 1)].cor;
             string costura = "#" + ColorUtility.ToHtmlStringRGB(CatalogoDasRoupas.Cor(c) * 0.9f);
-            Por("Camiseta", new[] { c, costura, costura });
             var calcaEscolhida = Calcas[Mathf.Min(calca, Calcas.Length - 1)];
-            Por(calcaEscolhida.peca, (string[])calcaEscolhida.cores.Clone());
-            Por(Tenis, (string[])CoresDoTenis.Clone());
+            return new[]
+            {
+                (Itens.RoupaDaPeca("Camiseta"), Itens.Cores(new[] { c, costura, costura })),
+                (Itens.RoupaDaPeca(calcaEscolhida.peca), Itens.Cores(calcaEscolhida.cores)),
+                (Itens.RoupaDaPeca(Tenis), Itens.Cores(CoresDoTenis)),
+            };
+        }
+
+        /// <summary>As peças vestidas pela aparência, com as roupas do começo (a tela de criar o personagem).</summary>
+        public List<CatalogoDasRoupas.PecaVestida> Pecas(CatalogoDasRoupas catalogo)
+        {
+            var pecas = PecasDoCorpo(catalogo);
+            foreach (var (item, cores) in RoupasDoComeco())
+                if (Itens.Roupa(item) is DadosDaRoupa r) pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = r.peca, cores = Itens.CoresEmHex(cores) });
+            return pecas;
+        }
+
+        /// <summary>
+        /// As peças vestidas no jogo: as do corpo e as roupas vestidas (as cores delas, ou as do catálogo). A mulher sem
+        /// nada no tronco fica com o top.
+        /// </summary>
+        public List<CatalogoDasRoupas.PecaVestida> Pecas(CatalogoDasRoupas catalogo, RoupasVestidas roupas)
+        {
+            var pecas = PecasDoCorpo(catalogo);
+            for (int k = 0; k < Itens.QuantosLugaresDeRoupa; k++)
+            {
+                var l = (LugarDaRoupa)k;
+                var r = Itens.Roupa(roupas.Peca(l));
+                var dados = r != null ? catalogo.DaPeca(r.peca) : null;
+                if (dados != null) pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = r.peca, cores = Itens.CoresEmHex(roupas.Cores(l)) ?? (string[])dados.cores.Clone() });
+            }
+            if (EhMulher && roupas.Peca(LugarDaRoupa.Camiseta) == Item.Nada && catalogo.DaPeca("Top") is CatalogoDasRoupas.Peca top)
+                pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = "Top", cores = (string[])top.cores.Clone() });
             return pecas;
         }
 

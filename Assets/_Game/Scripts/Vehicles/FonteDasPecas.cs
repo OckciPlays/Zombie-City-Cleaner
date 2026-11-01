@@ -31,5 +31,14 @@ namespace ZombieCityCleaner.Vehicles
         public abstract void PedirTirarRoda(int carro, int roda);
         /// <summary>Um pneu da mochila (pelo Id; 0, o das mãos) vai para a roda vazia do lado erguido.</summary>
         public abstract void PedirPorRoda(int carro, int roda, ushort idNaMochila);
+
+        /// <summary>
+        /// Avisa quando alguma coisa de algum carro muda (as peças, as rodas, o macaco, o capô aberto): com ele, o
+        /// <see cref="CapoDaCidade"/> parado dorme e só acorda com a mudança (eram ~190 Updates por quadro numa cidade).
+        /// Sem ele (<see cref="AvisaAsMudancas"/> falso, a Demo_Cidade), o capô confere tudo a cada quadro, como antes.
+        /// </summary>
+        public event System.Action Mudou;
+        public virtual bool AvisaAsMudancas => false;
+        protected void AvisarMudanca() => Mudou?.Invoke();
     }
 }

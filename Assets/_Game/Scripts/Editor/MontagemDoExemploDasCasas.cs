@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.EditorTools
     ///    Fotos das variações.
     /// Os menus refazem a cena. Foto() tira fotos da cena aberta sem dar Play.
     /// </summary>
-    public static class MontagemDoExemploDasCasas
+    public static partial class MontagemDoExemploDasCasas
     {
         const string PastaCena = "Assets/_Game/Scenes/Exemplos";
         const string Cena = PastaCena + "/Exemplo_Casas.unity";

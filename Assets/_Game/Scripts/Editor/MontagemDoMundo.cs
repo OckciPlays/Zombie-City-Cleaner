@@ -133,6 +133,8 @@ namespace ZombieCityCleaner.EditorTools
             MontagemDosVeiculos.PorOsCarrosNoMundo(mundo);
             // a mobília (os móveis nos pontos das casas, das lojas e dos prédios)
             PorAMobilia(mundo);
+            // o bunker da família (o Plano_Bunker.md, a parte 5) e a parede de armas dele
+            PorOBunker(mundo, cena);
             // os zumbis, sem hordas (o F1 cria perto do jogador)
             MontagemDosZumbis.PorOsZumbisNaCena(cena);
 
@@ -235,6 +237,60 @@ namespace ZombieCityCleaner.EditorTools
             if (nova.prefabs.Length == 0) Debug.LogWarning($"Sem os prefabs da mobília nova em {MontagemDaMobiliaNova.PastaDosPrefabs}: rode a montagem dela.");
             EditorUtility.SetDirty(nova);
             return nova;
+        }
+
+        public const string MaterialDoBunker = "Assets/_Game/Art/Materials/Cidade.mat";
+        public const string FbxDosMoveis = "Assets/_Game/Art/Cidade/Cidade_Moveis.fbx";
+        public const string MaterialDosFundadores = "Assets/_Game/Art/Materials/Fundadores.mat";
+
+        /// <summary>
+        /// O bunker da família no objeto "Mundo" (o Plano_Bunker.md da pasta de arte, a parte 5): o <see cref="BunkerDoMundo"/>
+        /// com o material (o Cidade.mat), o painel de armas, o interruptor e os fundadores, e a "Parede de armas" da cena (um
+        /// NetworkObject, montado na origem; no jogo, o bunker leva ela para o arsenal). Os modelos do bunker são os prefabs
+        /// da mobília nova (a <see cref="MobiliaNovaDoMundo"/>). Serve para a montagem da cena e para o menu Zombie City
+        /// Cleaner > Mundo > Pôr o bunker na cena.
+        /// </summary>
+        public static BunkerDoMundo PorOBunker(GameObject mundo, UnityEngine.SceneManagement.Scene cena)
+        {
+            var b = mundo.GetComponent<BunkerDoMundo>();
+            if (b == null) b = mundo.AddComponent<BunkerDoMundo>();
+            var moveis = AssetDatabase.LoadAllAssetsAtPath(FbxDosMoveis).OfType<Mesh>().ToArray();
+            Mesh DoFbx(string nome) => moveis.FirstOrDefault(m => m.name == nome);
+            b.material = AssetDatabase.LoadAssetAtPath<Material>(MaterialDoBunker);
+            b.painelDeArmas = DoFbx("Painel_Armas");
+            b.interruptor = DoFbx("Interruptor");
+            b.alavanca = DoFbx("Interruptor_Alavanca");
+            b.fundadores = AssetDatabase.LoadAssetAtPath<Material>(MaterialDosFundadores);
+            EditorUtility.SetDirty(b);
+            // a parede de armas: montada no lugar de um painel de mentira na origem (o MontarSuporte acha pelo nome)
+            var provisorio = new GameObject("Painel_Armas");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(provisorio, cena);
+            MontagemDasArmas.MontarSuporte(cena);
+            Object.DestroyImmediate(provisorio);
+            return b;
+        }
+
+        [MenuItem("Zombie City Cleaner/Mundo/Pôr o bunker na cena")]
+        public static void PorOBunkerNaCena()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de mexer na cena do mundo.");
+                return;
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != Cena) cena = EditorSceneManager.OpenScene(Cena);
+            var mundo = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Mundo");
+            if (mundo == null)
+            {
+                Debug.LogWarning("A cena do mundo não tem o objeto \"Mundo\": monte a cena antes.");
+                return;
+            }
+            PorAMobiliaNova(mundo);
+            PorOBunker(mundo, cena);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log($"Bunker posto na cena: {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} prefabs da mobília nova e a parede de armas.");
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a mobília na cena")]

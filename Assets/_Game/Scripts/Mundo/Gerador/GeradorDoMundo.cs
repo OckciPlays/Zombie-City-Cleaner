@@ -32,9 +32,11 @@ namespace ZombieCityCleaner.Mundo
         /// casa da família (Parte M6, primeira fatia, 26/10/2026). 7 = os prédios de verdade: a planta de cada um, do
         /// tamanho do lote, e o chão dele (Parte M6, segunda fatia, 26/10/2026). 8 = as lojas de verdade (o tipo e a planta
         /// de cada uma) e o hospital (Parte M6, terceira fatia, 27/10/2026). 9 = a floresta: as manchas, os plantios e as
-        /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026).
+        /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026). 10 = o bunker da família: o
+        /// lugar fora da cidade dela, a estrada de terra, o pátio plano, o buraco da caixa e a partida nele (o
+        /// Plano_Bunker.md da pasta de arte, a parte 5, 01/11/2026).
         /// </summary>
-        public const int Versao = 9;
+        public const int Versao = 10;
 
         /// <summary>As etapas para a tela de carregamento (de 0 a 1, e o texto). Pode ser chamado de outras threads.</summary>
         public delegate void Progresso(float fracao, string etapa);
@@ -52,6 +54,8 @@ namespace ZombieCityCleaner.Mundo
             progresso?.Invoke(0.31f, "Assentando as estradas");
             d.Rede = RedeDeEstradas.Montar(d);
             AbrirOsPoroes(d);
+            AbrirOBunker(d);
+            PartidaNoBunker(d);
             progresso?.Invoke(0.32f, "Levantando as colinas e as serras");
             int feitas = 0, linhas = d.Vertices;
             Parallel.For(0, linhas, j =>
@@ -202,6 +206,54 @@ namespace ZombieCityCleaner.Mundo
                         d.MarcarBuracoEm(cantos);
                     }
                 }
+        }
+
+        /// <summary>
+        /// O buraco do bunker da família: o terreno sai de baixo da caixa inteira (a laje do B0 e a do pátio cobrem, e as
+        /// encostas do morro passam por cima da beirada). Com o buraco só no núcleo, os rodapés dos blocos do terreno (as
+        /// faixas de 3 m nas emendas de 64 m) atravessavam os andares de baixo como paredes; o buraco tira os rodapés também.
+        /// </summary>
+        static void AbrirOBunker(DadosDoMundo d)
+        {
+            if (!d.TemBunker) return;
+            const float meia = PlantaDeBunker.ParedeDeFora / 2f;
+            var caixa = Rect.MinMaxRect(PlantaDeBunker.X0 - meia, PlantaDeBunker.Z0 - meia, PlantaDeBunker.X1 + meia, PlantaDeBunker.Z1 + meia);
+            var cantos = new Vector2[4];
+            Vector2 Mundo(float x, float z)
+            {
+                var p = d.NoBunker(new Vector3(x, 0f, z));
+                return new Vector2(p.x, p.z);
+            }
+            cantos[0] = Mundo(caixa.xMin, caixa.yMin);
+            cantos[1] = Mundo(caixa.xMax, caixa.yMin);
+            cantos[2] = Mundo(caixa.xMax, caixa.yMax);
+            cantos[3] = Mundo(caixa.xMin, caixa.yMax);
+            d.MarcarBuracoEm(cantos);
+        }
+
+        /// <summary>
+        /// A partida no bunker da família (o Plano_Bunker.md, a decisão 3): os 4 na sala de operações, olhando para a mesa
+        /// de reunião, a perua e o cupê de ré nas vagas da garagem (a frente para o portão). A casa da família fica como era
+        /// (a da cidade, sem nada especial).
+        /// </summary>
+        static void PartidaNoBunker(DadosDoMundo d)
+        {
+            if (!d.TemBunker) return;
+            Vector3 Local(Vector2 esboco, float y) => new Vector3(esboco.x + PlantaDeBunker.X0, y, esboco.y + PlantaDeBunker.Z0);
+            var mesa = Local(PlantaDeBunker.MesaDeReuniao, 0f);
+            for (int i = 0; i < DadosDoMundo.Jogadores; i++)
+            {
+                var p = Local(PlantaDeBunker.Nascimentos[i], 0.05f);
+                d.Nascimentos[i] = d.NoBunker(p);
+                d.GirosDosNascimentos[i] = Mathf.Repeat(d.GiroDoBunker + Mathf.Atan2(mesa.x - p.x, mesa.z - p.z) * Mathf.Rad2Deg, 360f);
+            }
+            d.Partida = d.NoBunker(Local(PlantaDeBunker.MeioDasOperacoes, 0f));
+            d.GiroDaPartida = d.GiroDoBunker;
+            d.ComPlato = false;
+            d.FundoDaPartida = d.Partida.y;
+            d.LugarDoCarro = d.NoBunker(Local(PlantaDeBunker.VagaDaPerua, 0f));
+            d.LugarDoSegundoCarro = d.NoBunker(Local(PlantaDeBunker.VagaDoCupe, 0f));
+            d.GiroDoCarro = Mathf.Repeat(d.GiroDoBunker + 180f, 360f);
         }
 
         /// <summary>
@@ -528,6 +580,12 @@ namespace ZombieCityCleaner.Mundo
                 Somar(d.Rede.Nos.Count);
                 Somar(d.Rede.Trechos.Count);
                 foreach (var pl in d.Rede.Plataformas) SomarNumero(pl.Altura);
+                // o bunker da família: o giro (o do lugar não entra acima) e a origem
+                if (d.TemBunker)
+                {
+                    SomarNumero(d.GiroDoBunker);
+                    SomarPonto(d.PosicaoDoBunker);
+                }
             }
             if (d.Objetos != null)
                 foreach (var o in d.Objetos.Todos)

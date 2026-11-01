@@ -68,8 +68,16 @@ namespace ZombieCityCleaner.Vehicles
             _mexidos = new NetworkList<CarroMexido>();
             _abertos = new NetworkList<int>();
             _alarmes = new NetworkList<int>();   // os alarmes tocando (PecasDosCarrosDoMundo.Alarme.cs)
-            _mexidos.OnListChanged += _ => _lugarVelho = true;
+            _mexidos.OnListChanged += _ =>
+            {
+                _lugarVelho = true;
+                AvisarMudanca();
+            };
+            _abertos.OnListChanged += _ => AvisarMudanca();
         }
+
+        // todo o estado de cada carro está no _mexidos e no _abertos (os dois avisam): o capô parado pode dormir
+        public override bool AvisaAsMudancas => true;
 
         public override void OnDestroy()
         {

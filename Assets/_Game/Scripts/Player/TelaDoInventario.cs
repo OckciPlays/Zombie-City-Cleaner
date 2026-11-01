@@ -12,9 +12,9 @@ namespace ZombieCityCleaner.Player
     /// <summary>
     /// A tela do inventário (TAB, só no dono; fecha com TAB, ESC ou o X do canto). OnGUI, como o resto do HUD: uma janela
     /// de 1160 × 590 (a 720p) com o fundo do concreto do chão do bunker e a borda escura com rebites.
-    /// - À esquerda, o retrato do jogador (<see cref="RetratoDoJogador"/>; gira arrastando), os lugares da armadura (ainda
-    ///   vazios), o da mochila (a vestida; arrastar para fora, ou G, tira e larga no chão) e, embaixo dos pés, a barra de
-    ///   atalhos.
+    /// - À esquerda, o retrato do jogador (<see cref="RetratoDoJogador"/>; gira arrastando), os lugares das roupas em volta
+    ///   dele (TelaDoInventario.Roupas.cs), o da mochila (a vestida; arrastar para fora, ou G, tira e larga no chão) e,
+    ///   embaixo dos pés, a barra de atalhos.
     /// - No meio, as abas Mochila (a grade do <see cref="InventarioJogador"/>, do tamanho dos bolsos ou da mochila vestida;
     ///   desde 31/10/2026 sem a alça: as armas vão na grade, quantas couberem) e Criar (as receitas de
     ///   <see cref="Receitas"/>: o que gasta, o que tem e o botão de criar; as da bancada só perto de uma).
@@ -28,7 +28,7 @@ namespace ZombieCityCleaner.Player
     /// todos). Passando o mouse, o nome aparece ao lado. Com a tela aberta, o jogador não anda, não olha nem atira
     /// (<see cref="MenuOnline.Tela"/>).
     /// </summary>
-    public class TelaDoInventario : MonoBehaviour
+    public partial class TelaDoInventario : MonoBehaviour
     {
         public JogadorRede rede;
         public InventarioJogador inventario;
@@ -58,14 +58,9 @@ namespace ZombieCityCleaner.Player
         static readonly Rect AbaMochila = new Rect(336, 14, 150, 36), AbaCriar = new Rect(492, 14, 150, 36);
         static readonly Rect BotaoFechar = new Rect(W - 52, 12, 36, 36);
         const float AtalhoY = 478f, AtalhoW = 92f, AtalhoH = 60f, AtalhoVao = 12f;
-        // os lugares da armadura, em volta do retrato (ainda sem armadura no jogo)
-        static readonly (Rect r, string nome)[] Armadura =
-        {
-            (new Rect(28, 80, 54, 54), "Cabeça"), (new Rect(28, 168, 54, 54), "Colete"),
-            (new Rect(254, 80, 54, 54), "Calças"), (new Rect(254, 168, 54, 54), "Botas"),
-        };
-        // o que se veste e já existe: a mochila (o coldre saiu em 31/10/2026)
-        static readonly Rect LugarDaMochila = new Rect(28, 256, 54, 54);
+        // o que se veste e já existe: a mochila (o coldre saiu em 31/10/2026), embaixo das roupas da direita (os lugares das
+        // roupas: TelaDoInventario.Roupas.cs)
+        static readonly Rect LugarDaMochila = new Rect(ColunaDaDireita, LinhaDasRoupas + 4 * PassoDasRoupas, 54, 54);
 
         // as cores: o concreto do chão do bunker (Concreto, #6A6A64), a borda escura e o amarelo das paredes de lá (na
         // borda da dica)
@@ -95,7 +90,7 @@ namespace ZombieCityCleaner.Player
         static readonly CultureInfo Br = new CultureInfo("pt-BR");
 
         enum Aba { Mochila, Criar }
-        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento }
+        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa }
 
         Aba _aba;
         RetratoDoJogador _retrato;
@@ -160,15 +155,25 @@ namespace ZombieCityCleaner.Player
             if (abrir)
             {
                 _u = Escala();
-                if (materialDoRetrato != null)
-                    _retrato = new RetratoDoJogador(rede, materialDoRetrato, Mathf.RoundToInt(AreaDoRetrato.width * _u), Mathf.RoundToInt(AreaDoRetrato.height * _u));
+                // o retrato é feito uma vez (a cópia do corpo, os materiais e a imagem) e só escondido ao fechar (31/10/2026:
+                // era feito do zero a cada TAB); com a tela de outro tamanho, de novo
+                int largura = Mathf.RoundToInt(AreaDoRetrato.width * _u), altura = Mathf.RoundToInt(AreaDoRetrato.height * _u);
+                if (_retrato != null && !_retrato.DoTamanho(largura, altura))
+                {
+                    _retrato.Destruir();
+                    _retrato = null;
+                }
+                if (_retrato != null) _retrato.Mostrar(true);
+                else if (materialDoRetrato != null) _retrato = new RetratoDoJogador(rede, materialDoRetrato, largura, altura);
                 if (inventario.Do(_escolhido) == Item.Nada) _escolhido = inventario.IdNaMao;
             }
-            else
-            {
-                _retrato?.Destruir();
-                _retrato = null;
-            }
+            else _retrato?.Mostrar(false);
+        }
+
+        void OnDestroy()
+        {
+            _retrato?.Destruir();
+            _retrato = null;
         }
 
         static float Escala() => Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
@@ -200,6 +205,11 @@ namespace ZombieCityCleaner.Player
                 {
                     inventario.TirarEquipamento(_equipEscolhido);
                     _equipEscolhido = Item.Nada;
+                }
+                else if (RoupaEscolhida(out var lugarEscolhido))
+                {
+                    inventario.LargarRoupa(lugarEscolhido);
+                    _roupaEscolhida = -1;
                 }
                 else if (inventario.Do(_escolhido) != Item.Nada) inventario.Largar(_escolhido);
             }
@@ -348,8 +358,10 @@ namespace ZombieCityCleaner.Player
                     {
                         _equipEscolhido = vestidoDoMenu;
                         _escolhido = 0;
+                        _roupaEscolhida = -1;
                         Opcao("Tirar e largar no chão", () => inventario.TirarEquipamento(vestidoDoMenu));
                     }
+                    else if (RoupaEm(m, out var lugarDoMenu) && inventario.Roupas.Value.Peca(lugarDoMenu) != Item.Nada) MenuDaRoupa(lugarDoMenu);
                     _menuEm = m;
                     e.Use();
                     break;
@@ -402,6 +414,12 @@ namespace ZombieCityCleaner.Player
                         _equipApertado = vestido;
                         _pega = Vector2.one * (27f * _u);
                     }
+                    else if (RoupaEm(m, out var lugarApertado) && inventario.Roupas.Value.Peca(lugarApertado) != Item.Nada)
+                    {
+                        _apertou = Origem.Roupa;
+                        _lugarApertado = lugarApertado;
+                        _pega = Vector2.one * (27f * _u);
+                    }
                     else if (AtalhoEm(m, out int k))
                     {
                         _apertou = Origem.Atalho;
@@ -424,6 +442,13 @@ namespace ZombieCityCleaner.Player
                     {
                         _equipEscolhido = _equipApertado;
                         _escolhido = 0;
+                        _roupaEscolhida = -1;
+                    }
+                    else if (_apertou == Origem.Roupa)
+                    {
+                        _roupaEscolhida = (int)_lugarApertado;
+                        _escolhido = 0;
+                        _equipEscolhido = Item.Nada;
                     }
                     _apertou = Origem.Nada;
                     _arrastando = false;
@@ -436,6 +461,7 @@ namespace ZombieCityCleaner.Player
         {
             _escolhido = id;
             _equipEscolhido = Item.Nada;
+            _roupaEscolhida = -1;
             _receita = -1;
         }
 
@@ -465,6 +491,7 @@ namespace ZombieCityCleaner.Player
             ushort id = it.id;
             int n = Itens.Quantos(item, it.qtd);
             bool ocupado = arma != null && arma.Usando;
+            if (Itens.EhRoupa(item)) OpcaoDeVestir(it);
             if (Itens.EhConsumivel(item))
                 Opcao(Maiuscula(Itens.Consumivel(item).verbo) + (ocupado ? " (ocupado)" : ""), ocupado ? null : () => inventario.UsarDaMochila(id));
             if (Itens.EhConstrucao(item))
@@ -541,6 +568,8 @@ namespace ZombieCityCleaner.Player
             if (_apertou == Origem.Mochila)
             {
                 if (!inventario.Achar(_idApertado, out var it)) return;
+                // a roupa solta no lugar dela (ou no retrato): veste
+                if (Itens.EhRoupa(it.item) && SoltarRoupaNoCorpo(m, it)) return;
                 if (AtalhoEm(m, out int k)) inventario.PorNoAtalho(k, it.id);
                 // uma pilha solta em cima de outra do mesmo item (a caixa de munição, do mesmo calibre): passa para ela
                 else if (_aba == Aba.Mochila && Itens.EmPilha(it.item) && ItemEm(m, out var outra, out _) && outra.id != it.id && outra.item == it.item)
@@ -572,6 +601,7 @@ namespace ZombieCityCleaner.Player
                 if (AtalhoEm(m, out int k)) inventario.TrocarAtalhos(_atalhoApertado, k);
                 else inventario.TirarDoAtalho(_atalhoApertado);
             }
+            else if (_apertou == Origem.Roupa) SoltarRoupaVestida(m);
         }
 
         // ------------------------------------------------------------------ o desenho
@@ -641,15 +671,8 @@ namespace ZombieCityCleaner.Player
                 GUI.color = antes;
                 GUI.DrawTexture(area, _retrato.Imagem, ScaleMode.StretchToFill, true);
             }
-            // a armadura: ainda não há (os lugares ficam apagados)
-            foreach (var (r, nome) in Armadura)
-            {
-                var a = Em(r);
-                Ret(a, new Color(0f, 0f, 0f, 0.28f));
-                Moldura(a, Mathf.Max(1f, Mathf.Round(u)), new Color(1f, 1f, 1f, 0.08f));
-                GUI.Label(new Rect(a.x - 10 * u, a.yMax + 1 * u, a.width + 20 * u, 16 * u), nome, _centro);
-                if (a.Contains(mouse) && !_arrastando) _dicaTexto = nome + " (em breve)";
-            }
+            // as roupas vestidas, em volta do retrato
+            DesenharRoupas(mouse);
             // a mochila: o ícone da vestida (arrastar para fora tira e larga no chão)
             foreach (var (r, nome, vestido) in new[] { (LugarDaMochila, "Mochila", inventario.MochilaVestida.Value) })
             {
@@ -708,7 +731,8 @@ namespace ZombieCityCleaner.Player
                     Ret(new Rect(g.x + x * c + 1, g.y + y * c + 1, c - 2, c - 2), CorDaCelula);
             // onde o item arrastado cairia: verde se cabe, vermelho se não (a arma que sai da alça também precisa de
             // lugar no corpo)
-            if (_arrastando && _apertou == Origem.Mochila && inventario.Achar(_idApertado, out var caixa) && Itens.EmPilha(caixa.item)
+            if (_arrastando && _apertou == Origem.Roupa) CelulaDaRoupaArrastada(mouse);
+            else if (_arrastando && _apertou == Origem.Mochila && inventario.Achar(_idApertado, out var caixa) && Itens.EmPilha(caixa.item)
                 && ItemEm(mouse, out var outra, out var ro) && outra.id != caixa.id && outra.item == caixa.item)
             {
                 // juntar duas pilhas do mesmo item (as caixas, do mesmo calibre)
@@ -775,7 +799,7 @@ namespace ZombieCityCleaner.Player
             Ret(r, fundo);
             if (sobMouse) Ret(r, new Color(1f, 1f, 1f, 0.07f));
             Moldura(r, Mathf.Max(1f, Mathf.Round(u)), new Color(1f, 1f, 1f, 0.12f * alfa));
-            var icone = inventario.IconeDe(it.item);
+            var icone = inventario.IconeDe(it);
             if (icone != null)
             {
                 var antes = GUI.color;
@@ -853,6 +877,7 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhMunicao(item)) return FundoDeMunicao;
             if (Itens.EhPeca(item)) return FundoDePeca;
             if (Itens.EhSinuca(item)) return FundoDaSinuca;
+            if (Itens.EhRoupa(item)) return FundoDeRoupa;
             var l = Itens.Loot(item);
             if (l == null) return FundoDeEquipamento;
             return l.tipo == TipoDeLoot.Comida ? FundoDeComida : l.tipo == TipoDeLoot.Bebida ? FundoDeAgua : l.tipo == TipoDeLoot.Remedio ? FundoDeRemedio
@@ -1011,6 +1036,11 @@ namespace ZombieCityCleaner.Player
                 DetalhesDoEquipamento(_equipEscolhido, nome, foto, det);
                 return;
             }
+            if (RoupaEscolhida(out var lugarEscolhido))
+            {
+                DetalhesDaRoupaVestida(lugarEscolhido, nome, foto, det);
+                return;
+            }
             if (_aba == Aba.Criar && _receita >= 0 && _receita < Receitas.Todas.Length)
             {
                 DetalhesDaReceita(Receitas.Todas[_receita], nome, foto, det);
@@ -1024,8 +1054,8 @@ namespace ZombieCityCleaner.Player
             }
             var item = it.item;
             GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
-            var imagem = inventario.FotoDe(item);
-            if (imagem == null) imagem = inventario.IconeDe(item);
+            var imagem = inventario.FotoDe(it);
+            if (imagem == null) imagem = inventario.IconeDe(it);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
 
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;
@@ -1162,6 +1192,7 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(new Rect(mouse.x + 14 * u, mouse.y - 20 * u, 200 * u, 20 * u),
                     Janela.Contains(mouse) ? "solte fora da janela para tirar" : "soltar: tirar e largar no chão", _dica);
             }
+            else if (_apertou == Origem.Roupa) ArrastoDaRoupa(mouse);
             else if (_apertou == Origem.Atalho)
             {
                 var icone = inventario.IconeDe(inventario[_atalhoApertado]);

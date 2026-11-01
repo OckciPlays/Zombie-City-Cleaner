@@ -19,6 +19,7 @@ namespace ZombieCityCleaner.World
         }
 
         public Light sol;
+        Camera[] _cameras = new Camera[8];
         public Volume volumeDia;
         public Volume volumeNoite;
         public Tons dia = new Tons
@@ -64,7 +65,17 @@ namespace ZombieCityCleaner.World
         /// </summary>
         public static bool SemNeblina { get; set; }
 
+        /// <summary>
+        /// Dentro do bunker da família (<see cref="BunkerDoMundo"/>): o quanto da luz de fora chega (1 fora; na garagem
+        /// e na casinha um pouco, embaixo quase nada) e o quanto da neblina fica (0 dentro).
+        /// </summary>
+        public static float LuzNoBunker { get; set; } = 1f;
+        public static float NeblinaNoBunker { get; set; } = 1f;
+
         float _dentro, _dentroVel, _luneta;
+        // a sombra do sol pela qualidade (UI/Graficos): a dele como veio, e a versão das opções já aplicada
+        LightShadows _sombraDoSol0;
+        int _versaoDosGraficos = -1;
 
         void OnEnable() => NaLuneta = false;
 
@@ -83,14 +94,15 @@ namespace ZombieCityCleaner.World
             var olho = Camera.main;
             float fundo = olho != null ? Mathf.InverseLerp(subsolo.x, subsolo.y, olho.transform.position.y) : 0f;
             fundo = Mathf.Max(fundo, ModoVideo.Subsolo);   // o corte do bunker na cena de vídeo olha do alto, com a luz de dentro
-            float fora = Mathf.Lerp(1f, sobraNoSubsolo, fundo);
+            float fora = Mathf.Min(Mathf.Lerp(1f, sobraNoSubsolo, fundo), LuzNoBunker);
             // dentro de casa a neblina de fora fica rala (sem mexer na luz)
             bool dentro = olho != null && AreaInterna.Contem(olho.transform.position);
             _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
             // pela luneta a neblina afina (rápido: a luneta já fecha em ~0,2 s)
             _luneta = Mathf.MoveTowards(_luneta, NaLuneta ? 1f : 0f, Time.deltaTime * 8f);
             // e a cena de vídeo afina a neblina por tomada (vista do alto, ela cobria tudo)
-            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina * (SemNeblina ? 0f : 1f);
+            float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina * (SemNeblina ? 0f : 1f)
+                                * NeblinaNoBunker;
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;
@@ -100,6 +112,12 @@ namespace ZombieCityCleaner.World
             RenderSettings.ambientGroundColor = Color.Lerp(dia.chao, noite.chao, n) * fora;
             if (sol != null)
             {
+                if (_versaoDosGraficos != UI.Graficos.Versao)
+                {
+                    if (_versaoDosGraficos < 0) _sombraDoSol0 = sol.shadows;
+                    _versaoDosGraficos = UI.Graficos.Versao;
+                    UI.Graficos.Sombra(sol, UI.Graficos.Luz.Sol, _sombraDoSol0);
+                }
                 sol.color = Color.Lerp(dia.luz, noite.luz, n);
                 // no meio da troca (amanhecer e anoitecer) a luz quase some: o sol se põe e a lua nasce
                 float transicao = 1f - Mathf.Abs(n - 0.5f) * 2f;
@@ -109,8 +127,13 @@ namespace ZombieCityCleaner.World
             if (volumeDia != null) volumeDia.weight = 1f - n;
             if (volumeNoite != null) volumeNoite.weight = n;
             // o fundo das câmeras do mundo é a neblina (as que desenham numa textura, como o retrato do inventário, não)
-            foreach (var cam in Camera.allCameras)
+            if (_cameras.Length < Camera.allCamerasCount) _cameras = new Camera[Camera.allCamerasCount + 4];
+            int quantas = Camera.GetAllCameras(_cameras);   // (o Camera.allCameras fazia uma lista nova a cada quadro)
+            for (int i = 0; i < quantas; i++)
+            {
+                var cam = _cameras[i];
                 if (cam.clearFlags == CameraClearFlags.SolidColor && cam.targetTexture == null) cam.backgroundColor = neblina;
+            }
 
             float alturaFixa = Mathf.Lerp(dia.neblinaDeAltura, noite.neblinaDeAltura, n) * neblinaAqui;
             Shader.SetGlobalColor(CorId, new Color(neblina.r * 1.05f, neblina.g * 1.05f, neblina.b * 1.08f, 1f));

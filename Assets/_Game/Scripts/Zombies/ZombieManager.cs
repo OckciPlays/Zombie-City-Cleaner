@@ -78,6 +78,8 @@ namespace ZombieCityCleaner.Zombies
         [Header("População")]
         public bool povoarAoComecar = true;
         public int criadosPorQuadro = 6;
+        [Tooltip("Zumbis de cada modelo criados no começo da partida, um por quadro (na tela de carregamento), já guardados no pool. O primeiro de cada modelo carrega a malha, as texturas e as animações: na hora de nascer, no jogo, isso parava tudo por até 1,2 s no Editor (31/10/2026).")]
+        public int aquecerPorModelo = 6;
         [Tooltip("Onde não nasce zumbi: a casa da família (com o bunker) e a frente dela, onde os jogadores aparecem.")]
         public AreaLivre[] areasLivres;
 
@@ -137,6 +139,7 @@ namespace ZombieCityCleaner.Zombies
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
             PrepararCorpos();
             StartCoroutine(PreaquecerCortes());
+            StartCoroutine(PreaquecerOPool());
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += AoSairCliente;
@@ -586,14 +589,19 @@ namespace ZombieCityCleaner.Zombies
             _cursor = 0;
         }
 
-        Zumbi PegarDoPool(int modelo)
+        Stack<Zumbi> Pool(int modelo)
         {
             if (_pools == null)
             {
                 _pools = new Stack<Zumbi>[modelos.Length];
                 for (int i = 0; i < _pools.Length; i++) _pools[i] = new Stack<Zumbi>();
             }
-            var pool = _pools[modelo];
+            return _pools[modelo];
+        }
+
+        Zumbi PegarDoPool(int modelo)
+        {
+            var pool = Pool(modelo);
             if (pool.Count > 0)
             {
                 var z = pool.Pop();
@@ -609,6 +617,21 @@ namespace ZombieCityCleaner.Zombies
             z.Zerar();
             z.gameObject.SetActive(false);
             _pools[z.modelo].Push(z);
+        }
+
+        // os primeiros do pool (aquecerPorModelo), um por quadro, enquanto o mundo é gerado; os que já estão no pool (de uma
+        // partida anterior) contam
+        IEnumerator PreaquecerOPool()
+        {
+            for (int m = 0; m < modelos.Length; m++)
+            {
+                if (modelos[m] == null) continue;
+                for (int k = Pool(m).Count; k < aquecerPorModelo; k++)
+                {
+                    GuardarNoPool(Instantiate(modelos[m], _vivos));
+                    yield return null;
+                }
+            }
         }
 
         // ------------------------------------------------------------------ voz
@@ -658,7 +681,7 @@ namespace ZombieCityCleaner.Zombies
             if (!_info || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado) return;
             ContarNiveis(out int perto, out int medio, out int longe);
             float u = Screen.height / 720f;
-            var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u) };
+            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u));
             estilo.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
             string texto = IsServer
                 ? $"Zumbis: {_ativos.Count}  ·  perto {perto}  ·  médio {medio}  ·  longe {longe}  ·  mortos {Mortos}  ·  rede {KbPorSegundo:F1} KB/s"

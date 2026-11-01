@@ -21,8 +21,10 @@ namespace ZombieCityCleaner.Loot
         public ushort qtd;
         /// <summary>O desgaste da arma (0, nova).</summary>
         public byte desgaste;
+        /// <summary>As cores da roupa (<see cref="Itens.Cores(string[])"/>; 0, as do catálogo).</summary>
+        public ulong cores;
 
-        public bool Equals(ItemNoChao o) => id == o.id && item == o.item && apoio == o.apoio && giro == o.giro && qtd == o.qtd && desgaste == o.desgaste;
+        public bool Equals(ItemNoChao o) => id == o.id && item == o.item && apoio == o.apoio && giro == o.giro && qtd == o.qtd && desgaste == o.desgaste && cores == o.cores;
     }
 
     /// <summary>
@@ -101,15 +103,15 @@ namespace ZombieCityCleaner.Loot
 
         /// <summary>
         /// Só no anfitrião: um item novo no mundo, apoiado no ponto. <paramref name="qtd"/>: as balas (da caixa, ou do pente
-        /// da arma); -1, cheio.
+        /// da arma); -1, cheio. <paramref name="cores"/>: as da roupa (0, as do catálogo).
         /// </summary>
-        public void Criar(Item item, Vector3 apoio, float giro, int qtd = -1, int desgaste = 0)
+        public void Criar(Item item, Vector3 apoio, float giro, int qtd = -1, int desgaste = 0, ulong cores = 0)
         {
             if (!IsServer || !IsSpawned || item == Item.Nada) return;
             if (qtd < 0) qtd = Itens.QuantidadePadrao(item);
             if (Itens.EhMunicao(item) && qtd <= 0) return;   // a caixa vazia não fica no chão
             if (Itens.EmPilha(item)) qtd = Mathf.Max(1, qtd);
-            _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = apoio, giro = giro, qtd = (ushort)qtd, desgaste = (byte)Mathf.Clamp(desgaste, 0, 100) });
+            _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = apoio, giro = giro, qtd = (ushort)qtd, desgaste = (byte)Mathf.Clamp(desgaste, 0, 100), cores = cores });
         }
 
         /// <summary>O jogador local pede para pegar o item.</summary>
@@ -142,7 +144,7 @@ namespace ZombieCityCleaner.Loot
                 return;
             }
             // sem espaço na mochila, ele fica no chão (a dica avisa)
-            if (inventario.Receber(it.item, it.qtd, it.desgaste)) _itens.RemoveAt(k);
+            if (inventario.Receber(it.item, it.qtd, it.desgaste, it.cores)) _itens.RemoveAt(k);
         }
 
         int Indice(ushort id)
@@ -229,7 +231,10 @@ namespace ZombieCityCleaner.Loot
             o.item = it.item;
             int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item), pc = Itens.IndiceDaPeca(it.item);
             int sn = Itens.IndiceDaSinuca(it.item);
-            var malha = MalhaDoLoot(it.item) is Mesh l ? l
+            // a roupa: a malha parada dela (deitada, as do tronco e as calças), no material das roupas, com as cores dela
+            var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
+            var malha = roupas != null ? roupas.Malha(it.item)
+                : MalhaDoLoot(it.item) is Mesh l ? l
                 : e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
                 : mun >= 0 ? (malhasDeMunicao != null && mun < malhasDeMunicao.Length ? malhasDeMunicao[mun] : null)
                 : pc >= 0 ? (malhasDePeca != null && pc < malhasDePeca.Length ? malhasDePeca[pc] : null)
@@ -238,7 +243,10 @@ namespace ZombieCityCleaner.Loot
             o.GetComponent<MeshFilter>().sharedMesh = malha;
             // a paleta, ou o material com a textura própria do modelo (a pistola nova)
             var proprio = m >= 0 && e < 0 && mun < 0 && pc < 0 ? Itens.MaterialProprio(m) : null;
-            o.GetComponent<MeshRenderer>().sharedMaterial = proprio != null ? proprio : material;
+            var render = o.GetComponent<MeshRenderer>();
+            render.sharedMaterial = roupas != null ? roupas.material : proprio != null ? proprio : material;
+            if (roupas != null) roupas.Pintar(render, it.item, it.cores);
+            else render.SetPropertyBlock(null);
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";
             if (malha == null) return;
             var b = malha.bounds;

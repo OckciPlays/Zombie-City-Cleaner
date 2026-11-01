@@ -120,6 +120,8 @@ Fica para depois:
      - Conferido no Play (na cena da sinuca, hospedando): a tela abre sozinha, a escolha veste o personagem do meio, o nome comprido é cortado em 16 letras, e o "Confirmar" cria: a tela fecha, o corpo e a pistola aparecem no mundo e os comandos voltam; sem erros.
      - A foto: `Imgs/Renders/Personagem_P2_Tela.png`.
 3. **O nome em cima da cabeça.**
+   - **O estado (31/10/2026): feito, esperando o teste do usuário com dois jogadores** (sozinho não dá para ver: o nome é só dos outros).
+     - Na tela de cada jogador, em cima da cabeça de cada outro que já criou o personagem (o dele não), até 30 m da câmera, só quando dá para ver a cabeça (as paredes e o chão tapam; os carros não, para ver quem vai dentro). Menor com a distância (de 17 a 11 px, a 720p), com a sombra, e some aos poucos nos últimos 6 m. Some com o menu, a tela de criar e o vídeo. No projeto Unity: `Player/NomesDosJogadores`.
 4. **As roupas como itens:**
    - pegar (para a mochila, 1 célula), vestir, trocar, tirar e largar;
    - os lugares da roupa na tela do inventário, 5 de cada lado do retrato (com a luva e o cinto);
@@ -127,5 +129,18 @@ Fica para depois:
    - o F3, com as roupas e os outros itens.
 
    Onde elas aparecem no mundo vem com o saque.
+   - **O estado (31/10/2026): feito, esperando a aprovação.** Pedido junto: o cinto e o coldre são o mesmo lugar ("Cinto e coldre vai ser o mesmo slot").
+     - **Os lugares** (em volta do retrato da tela do inventário, 5 de cada lado): à esquerda o chapéu, os óculos, a máscara, a camiseta e as luvas; à direita a jaqueta ou o colete (um dos dois), o cinto ou o coldre, a calça, o sapato e a mochila. Cada um mostra o ícone da roupa vestida, com as cores dela; o mouse em cima diz o nome, e o lugar vazio diz o que vai nele.
+     - **As roupas como itens:** as 73 do `Roupas_Itens.fbx` (cada uma o seu item, com as cores dela), 1 célula da mochila. Pegar vai para a mochila, se houver espaço. **Vestir:** arrastar para o lugar dela (ou para o retrato), ou "Vestir" no botão direito; a que estava no lugar vai para a célula da vestida. **Tirar:** arrastar do lugar para a mochila (para a célula, se livre) ou "Tirar (para a mochila)" no botão direito. **Largar:** arrastar para fora da janela, G com ela escolhida ou "Tirar e largar no chão"; no chão, a roupa deitada, com as cores dela. Clicar escolhe: os detalhes mostram o nome, a foto (com as cores) e onde ela vai.
+     - **As do começo:** a camiseta, a calça e o tênis da tela de criar são vestidos nos lugares deles quando o personagem é criado, e daí em diante são roupas como as outras (tirar, trocar, largar). A mulher sem nada no tronco fica com o top; o homem, sem.
+     - **Pela rede:** o anfitrião guarda as vestidas (e as cores) e as da mochila e do chão; todos veem o corpo vestido. Quem sai da partida deixa as vestidas no chão, com o resto.
+     - **Os ícones** são feitos no jogo, pela malha do item com as cores dele e a luz do retrato (as do tronco e as calças de cima, deitadas, com a gola e o cós para cima: na primeira versão saíram de cabeça para baixo, o usuário viu; os óculos quase de frente; as luvas, uma só; o resto de três quartos).
+     - **O F3** (o F1 estava grande): os itens saíram do F1 e foram para ele, com as espécies de antes e as roupas, por lugar, com as cores do catálogo ou sorteadas (as receitas dos tipos e dos NPCs). Na mochila ou no chão. O F1 e o F3 ficam um de cada vez, no mesmo canto.
+     - Conferido no Play (na cena da sinuca, hospedando): as do começo vestidas na criação; a jaqueta de couro, as luvas, o boné e a camisa xadrez da mochila vestidos (a camiseta foi para a célula da camisa); a jaqueta e as luvas tiradas para a mochila (as luvas na célula pedida) e o boné largado no chão, com a malha e as cores dele; o retrato vestido de novo a cada troca; a tela com os 10 lugares e os detalhes da roupa vestida; o F3. Sem erros. Não conferido: o arrasto com o mouse de verdade (as funções foram chamadas direto) e as cores sorteadas do F3.
+     - As fotos: `Imgs/Renders/Personagem_P4_Inventario.png`, `_Icones.png` (os 73 ícones) e `_F3.png`.
 5. **As mangas e as luvas na primeira pessoa.**
+   - **O estado (31/10/2026): feito, esperando a aprovação.**
+     - Os braços de primeira pessoa deixaram de ser a pele do personagem principal: agora são os braços do próprio corpo vestido (a pele escolhida, as mangas da camiseta, da camisa e da jaqueta e as luvas, com as cores delas), presos aos ossos dos braços de primeira pessoa, que são 12% mais compridos (a cópia estica junto). Na mulher, eles ficam com a forma dela, mais finos. A pele antiga dos braços não se desenha mais (um material que não desenha nada), e a arma e o item da mão continuam os mesmos. Feito no jogo, sem mexer no Blender.
+     - Conferido no Play: com a pistola, os punhos, a lata e a garrafa; a jaqueta de couro e a de lona nas mangas, as luvas sem dedos e as táticas segurando a pistola e a garrafa, e sem elas a pele com a cor escolhida. Com os punhos, a manga fica logo abaixo da tela (aparecem a mão e o punho).
+     - As fotos: `Imgs/Renders/Personagem_P5_Bracos_Lado.png` (os braços de lado, com a jaqueta de lona e as luvas táticas), `_Pistola.png` e `_Garrafa.png` (pelo olho).
 6. **Depois:** salvar o personagem e as roupas com o mundo (quando o mundo for salvo).

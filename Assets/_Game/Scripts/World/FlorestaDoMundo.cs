@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.Vehicles;
@@ -182,6 +183,19 @@ namespace ZombieCityCleaner.World
         readonly System.Diagnostics.Stopwatch _relogio = new System.Diagnostics.Stopwatch();
         Matrix4x4[][] _listas;
         int[] _contagem;
+        // as plantas cuja sombra pode cair na área que recebe sombra (31/10/2026): desenhadas só na sombra, e as listas de
+        // cima, sem sombra. Antes, toda planta que faz sombra ia para todas as cascatas da sombra até 165 m, e a sombra só
+        // vai até 40 m (a do URP; 20 a 70 m pela qualidade)
+        Matrix4x4[][] _listasDaSombra;
+        int[] _contagemDaSombra;
+        // a sombra de agora: perto (ao quadrado) sempre entra (as lanternas também fazem sombra); o risco da sombra do sol
+        // (a direção e o comprimento, no chão) e a área sombreada (ao quadrado); com o sol baixo, todas entram
+        float _sombraPerto2, _areaDaSombra2, _alturaDasSombras;
+        Vector2 _sombraDoSol;
+        bool _todasAsSombras, _comSol;
+        Light _sol;
+        int _proximaBuscaDoSol;
+        int _versaoDosGraficos = -1;
         // por espécie: o alcance, as trocas de LOD (ao quadrado), quais LODs fazem sombra e o bloco do _Some
         float[] _alcance2, _troca1, _troca2;
         bool[,] _sombra;
@@ -248,6 +262,10 @@ namespace ZombieCityCleaner.World
             _listas = new Matrix4x4[n * 3][];
             for (int k = 0; k < _listas.Length; k++) _listas[k] = new Matrix4x4[64];
             _contagem = new int[n * 3];
+            _listasDaSombra = new Matrix4x4[n * 3][];
+            for (int k = 0; k < _listasDaSombra.Length; k++) _listasDaSombra[k] = new Matrix4x4[64];
+            _contagemDaSombra = new int[n * 3];
+            _alturaDasSombras = 0f;
             _alcance2 = new float[n];
             _troca1 = new float[n];
             _troca2 = new float[n];
@@ -258,7 +276,7 @@ namespace ZombieCityCleaner.World
                 var esp = (Especie)e;
                 float alcance = raio, t1 = lod1, t2 = lod2;
                 bool sombra0 = true, sombra1 = true;
-                if (Floresta.EhGrama(esp)) { alcance = alcanceDaGrama; t1 = 18f; t2 = 30f; sombra0 = sombra1 = false; }
+                if (Floresta.EhGrama(esp)) { alcance = UI.Graficos.Grama(alcanceDaGrama); t1 = 18f; t2 = 30f; sombra0 = sombra1 = false; }
                 else if (esp == Especie.CapimA || esp == Especie.CapimB || esp == Especie.Taboa || esp == Especie.SamambaiaA || esp == Especie.SamambaiaB)
                 {
                     alcance = esp == Especie.CapimA || esp == Especie.CapimB ? alcanceDoCapim : alcanceDoChao;
@@ -334,7 +352,7 @@ namespace ZombieCityCleaner.World
                 }
                 b.QueridoEm = agora;
                 // a grama: os blocos que encostam no alcance dela (com uma folga, para já estar pronta ao chegar)
-                if (d < alcanceDaGrama + 24f)
+                if (d < UI.Graficos.Grama(alcanceDaGrama) + 24f)
                 {
                     b.QuerGrama = true;
                     if (b.Grama == null && b.MontandoGrama == null) b.MontandoGrama = Task.Run(() => Montar(dados, floresta, x, z, true));
@@ -497,16 +515,28 @@ namespace ZombieCityCleaner.World
             var c = cam.transform.position;
             const float perto = 48f;
             System.Array.Clear(_contagem, 0, _contagem.Length);
+            System.Array.Clear(_contagemDaSombra, 0, _contagemDaSombra.Length);
+            Sombra(perto);
+            // a qualidade mudou (UI/Graficos): o alcance da grama (28 m na Média, 18 na Baixa)
+            float grama = UI.Graficos.Grama(alcanceDaGrama);
+            if (_versaoDosGraficos != UI.Graficos.Versao)
+            {
+                _versaoDosGraficos = UI.Graficos.Versao;
+                for (int e = 0; e < _alcance2.Length; e++)
+                    if (Floresta.EhGrama((Especie)e)) _alcance2[e] = grama * grama;
+            }
             int vistas = 0;
             foreach (var b in _prontos)
             {
-                // fora da vista, só os blocos de perto (as sombras deles podem cair na frente)
+                // fora da vista, só os blocos de perto, e só para a sombra (as sombras deles podem cair na frente)
                 var caixa = b.Plantas.Caixa;
-                float dx0 = Mathf.Max(0f, Mathf.Max(caixa.min.x - c.x, c.x - caixa.max.x));
-                float dz0 = Mathf.Max(0f, Mathf.Max(caixa.min.z - c.z, c.z - caixa.max.z));
-                if (dx0 * dx0 + dz0 * dz0 > perto * perto && !GeometryUtility.TestPlanesAABB(_planos, caixa)) continue;
-                vistas += Juntar(b.Plantas, c);
-                if (b.Grama != null) vistas += Juntar(b.Grama, c);
+                bool naVista = GeometryUtility.TestPlanesAABB(_planos, caixa);
+                if (!naVista && Distancia2(caixa, c) > perto * perto) continue;
+                vistas += Juntar(b.Plantas, c, naVista);
+                // a grama não faz sombra: só a dos blocos na vista e ao alcance dela (ela vai até 38 m, e os blocos dela
+                // são montados até uns 100 m)
+                if (b.Grama != null && Distancia2(b.Grama.Caixa, c) <= grama * grama && GeometryUtility.TestPlanesAABB(_planos, b.Grama.Caixa))
+                    vistas += Juntar(b.Grama, c, true);
             }
             PlantasNaVista = vistas;
 
@@ -524,15 +554,85 @@ namespace ZombieCityCleaner.World
                 var malha = malhas[k];
                 if (n == 0 || malha == null) continue;
                 int e = k / 3;
-                rp.shadowCastingMode = _sombra[e, k % 3] ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                rp.shadowCastingMode = ShadowCastingMode.Off;
                 rp.matProps = _blocosDoSome[e];
                 for (int ini = 0; ini < n; ini += 1023)
                     Graphics.RenderMeshInstanced(rp, malha, 0, _listas[k], Mathf.Min(1023, n - ini), ini);
             }
+            // a sombra: só as plantas que podem fazer sombra na área sombreada
+            for (int k = 0; k < _listasDaSombra.Length; k++)
+            {
+                int n = _contagemDaSombra[k];
+                var malha = malhas[k];
+                if (n == 0 || malha == null) continue;
+                rp.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+                rp.matProps = _blocosDoSome[k / 3];
+                for (int ini = 0; ini < n; ini += 1023)
+                    Graphics.RenderMeshInstanced(rp, malha, 0, _listasDaSombra[k], Mathf.Min(1023, n - ini), ini);
+            }
+        }
+
+        static float Distancia2(Bounds caixa, Vector3 c)
+        {
+            float dx = Mathf.Max(0f, Mathf.Max(caixa.min.x - c.x, c.x - caixa.max.x));
+            float dz = Mathf.Max(0f, Mathf.Max(caixa.min.z - c.z, c.z - caixa.max.z));
+            return dx * dx + dz * dz;
+        }
+
+        // a sombra de agora (veja _listasDaSombra): a área que recebe sombra é a distância da sombra do URP (mais 5 m) em
+        // volta da câmera; de perto (48 m, ou essa distância, se maior) toda planta que faz sombra entra (a lanterna faz
+        // sombra também); mais longe, só as que têm o risco da sombra do sol (do pé da planta até onde a sombra da mais alta
+        // acaba, com 20 m de folga pelo morro) passando pela área. Com o sol a menos de ~3° do horizonte, todas entram
+        void Sombra(float perto)
+        {
+            var urp = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            float area = urp != null ? urp.shadowDistance + 5f : raio;
+            _sombraPerto2 = Mathf.Max(perto, area) * Mathf.Max(perto, area);
+            _areaDaSombra2 = area * area;
+            if (_alturaDasSombras <= 0f)
+            {
+                for (int k = 0; k < malhas.Length && k < _listas.Length; k++)
+                    if (malhas[k] != null && _sombra[k / 3, k % 3]) _alturaDasSombras = Mathf.Max(_alturaDasSombras, malhas[k].bounds.max.y);
+                _alturaDasSombras = _alturaDasSombras * 1.3f + 20f;
+            }
+            if (_sol == null && Time.frameCount >= _proximaBuscaDoSol)
+            {
+                _proximaBuscaDoSol = Time.frameCount + 120;
+                var ambiente = FindAnyObjectByType<AmbienteDoDia>();
+                _sol = ambiente != null && ambiente.sol != null ? ambiente.sol : RenderSettings.sun;
+            }
+            // sem achar o sol, todas (como era)
+            _todasAsSombras = _sol == null;
+            _comSol = false;
+            if (_sol == null || !_sol.isActiveAndEnabled || _sol.shadows == LightShadows.None) return;
+            var frente = _sol.transform.forward;
+            float seno = -frente.y;
+            if (seno < 0.05f)
+            {
+                _todasAsSombras = true;
+                return;
+            }
+            float comprimento = Mathf.Min(_alturaDasSombras * Mathf.Sqrt(1f - seno * seno) / seno, raio * 2f);
+            var chao = new Vector2(frente.x, frente.z);
+            if (chao.sqrMagnitude < 1e-6f) return;   // o sol a pino: a sombra fica embaixo da planta (só as de perto)
+            _sombraDoSol = chao.normalized * comprimento;
+            _comSol = true;
+        }
+
+        // o risco da sombra do sol desta planta passa pela área sombreada?
+        bool CaiNaSombra(Vector3 pos, Vector3 c)
+        {
+            if (!_comSol) return false;
+            float vx = _sombraDoSol.x, vz = _sombraDoSol.y;
+            float px = c.x - pos.x, pz = c.z - pos.z;
+            float t = Mathf.Clamp01((px * vx + pz * vz) / (vx * vx + vz * vz));
+            float qx = px - t * vx, qz = pz - t * vz;
+            return qx * qx + qz * qz <= _areaDaSombra2;
         }
 
         // as plantas de um bloco nas listas da espécie e do LOD de cada uma
-        int Juntar(Plantas p, Vector3 c)
+        // (fora da vista, só as listas da sombra)
+        int Juntar(Plantas p, Vector3 c, bool naVista)
         {
             int n = 0;
             for (int i = 0; i < p.Especies.Length; i++)
@@ -542,17 +642,21 @@ namespace ZombieCityCleaner.World
                 float d2 = dx * dx + dz * dz;
                 int e = p.Especies[i];
                 if (d2 > _alcance2[e]) continue;
-                int k = e * 3 + (d2 < _troca1[e] ? 0 : d2 < _troca2[e] ? 1 : 2);
-                var lista = _listas[k];
-                if (_contagem[k] == lista.Length)
-                {
-                    System.Array.Resize(ref lista, lista.Length * 2);
-                    _listas[k] = lista;
-                }
-                lista[_contagem[k]++] = p.Matrizes[i];
+                int lod = d2 < _troca1[e] ? 0 : d2 < _troca2[e] ? 1 : 2;
+                int k = e * 3 + lod;
+                if (_sombra[e, lod] && (_todasAsSombras || d2 <= _sombraPerto2 || CaiNaSombra(pos, c)))
+                    Por(ref _listasDaSombra[k], ref _contagemDaSombra[k], in p.Matrizes[i]);
+                if (!naVista) continue;
+                Por(ref _listas[k], ref _contagem[k], in p.Matrizes[i]);
                 n++;
             }
             return n;
+        }
+
+        static void Por(ref Matrix4x4[] lista, ref int quantas, in Matrix4x4 m)
+        {
+            if (quantas == lista.Length) System.Array.Resize(ref lista, lista.Length * 2);
+            lista[quantas++] = m;
         }
 
         // quem dobra a grama (Parte M9d): cada jogador no pé dele e nos 4 pontos do rastro (um a cada 0,2 s, o raio

@@ -160,6 +160,10 @@ namespace ZombieCityCleaner.World
                 _etapaDaThread = etapa;
             }));
             Debug.Log($"[Mundo] Gerando \"{Nome}\": semente {semente}, {Tamanhos.NomeComLado(tamanho)}, gerador versão {GeradorDoMundo.Versao}.");
+            // enquanto o mundo é gerado, o que pararia o jogo na primeira vez que fosse usado: os sons do carro (em outra
+            // thread) e as roupas que viram itens (do Resources). Os zumbis do pool, no ZombieManager
+            Vehicles.SomDoCarro.Preparar();
+            Roupas.ItensDasRoupas.Carregar();
         }
 
         void Update()
@@ -184,6 +188,8 @@ namespace ZombieCityCleaner.World
                 terreno.Pedir(this, Dados.Partida, raioPronto + 24f, true);
                 Progresso = 0.8f + 0.2f * Mathf.Clamp01(terreno.BlocosComColisao / 9f);
                 if (!terreno.Pronto(Dados.Partida, raioPronto)) return;
+                // a partida no bunker da família (o Plano_Bunker.md, a parte 5): a casca, o morro e a garagem com a colisão
+                if (Dados.TemBunker && (BunkerDoMundo.Instancia == null || !BunkerDoMundo.Instancia.Pronto)) return;
                 _esperandoOChao = false;
                 FicarPronto();
             }
@@ -211,11 +217,17 @@ namespace ZombieCityCleaner.World
 
         void FicarPronto()
         {
+            // o lixo da geração (e do mundo anterior) sai agora, ainda na tela de carregamento: sem isso, a coleta inteira
+            // vinha sozinha nos primeiros segundos de jogo, às vezes, e parava tudo por até meio segundo (31/10/2026)
+            float antesDaColeta = Time.realtimeSinceStartup;
+            System.GC.Collect();
+            float coleta = Time.realtimeSinceStartup - antesDaColeta;
             Pronto = true;
             Progresso = 1f;
             Etapa = IsServer ? "Pronto" : "Esperando o anfitrião";
             SegundosAtePronto = Time.realtimeSinceStartup - _comecou;
-            Debug.Log($"[Mundo] Pronto para jogar em {SegundosAtePronto * 1000f:F0} ms ({terreno.Blocos} blocos de terreno, {terreno.BlocosComColisao} com colisão).");
+            Debug.Log($"[Mundo] Pronto para jogar em {SegundosAtePronto * 1000f:F0} ms ({terreno.Blocos} blocos de terreno, {terreno.BlocosComColisao} com colisão; " +
+                      $"a coleta do lixo, {coleta * 1000f:F0} ms).");
             if (IsServer)
             {
                 CriarJogador(NetworkManager.LocalClientId);
@@ -257,6 +269,14 @@ namespace ZombieCityCleaner.World
         void CriarSegundoCarro(GameObject familia)
         {
             if (segundoCarro == null) return;
+            // na vaga do lado da perua, no bunker da família
+            if (Dados.LugarDoSegundoCarro.HasValue)
+            {
+                var cupe = Instantiate(segundoCarro, Dados.LugarDoSegundoCarro.Value + Vector3.up * 0.45f, Quaternion.Euler(0f, Dados.GiroDoCarro, 0f));
+                cupe.name = segundoCarro.name;
+                cupe.GetComponent<NetworkObject>().Spawn(true);
+                return;
+            }
             var giro = Quaternion.Euler(0f, Dados.GiroDaPartida, 0f);
             Physics.SyncTransforms();
             float lado = DadosDoMundo.LadoDaPartida * 0.5f + 3.2f;
@@ -286,11 +306,16 @@ namespace ZombieCityCleaner.World
         /// A rede de segurança: se o jogador local atravessou o chão (chegou num lugar antes da colisão do bloco), volta
         /// para a superfície assim que a colisão dali estiver pronta. Só o dono move o personagem.
         /// </summary>
+        MovimentoPrimeiraPessoa _movimento;   // o do jogador local (era um GetComponent a cada quadro)
+
         void ManterNoChao(JogadorRede jogador)
         {
-            var mov = jogador.GetComponent<MovimentoPrimeiraPessoa>();
+            if (_movimento == null || _movimento.gameObject != jogador.gameObject) _movimento = jogador.GetComponent<MovimentoPrimeiraPessoa>();
+            var mov = _movimento;
             if (mov == null || mov.Voando || (jogador.Passageiro != null && jogador.Passageiro.Carro != null)) return;
             var p = jogador.transform.position;
+            // no bunker da família, os andares ficam embaixo do chão (e do morro)
+            if (BunkerDoMundo.Dentro(p)) return;
             float chao = Dados.Altura(p.x, p.z);
             if (p.y > chao - 3f || !terreno.Pronto(p, 4f)) return;
             mov.Teleportar(new Vector3(p.x, chao + 0.3f, p.z), jogador.transform.eulerAngles.y);

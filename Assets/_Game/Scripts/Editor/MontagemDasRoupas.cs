@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Roupas;
 
 namespace ZombieCityCleaner.EditorTools
@@ -125,7 +126,52 @@ namespace ZombieCityCleaner.EditorTools
                 string c = AssetDatabase.GUIDToAssetPath(guid);
                 if (!feitos.Contains(c)) AssetDatabase.DeleteAsset(c);
             }
+            MontarItensDasRoupas();
             return malhas.Length;
+        }
+
+        public const string AssetDosItens = Arte + "/Resources/" + ItensDasRoupas.Nome + ".asset";
+
+        /// <summary>
+        /// O <see cref="ItensDasRoupas"/> (as roupas como itens no jogo, a parte 4 do Plano_Personagem.md da pasta de arte):
+        /// as malhas do <c>Roupas_Itens.fbx</c> na ordem de <see cref="Itens.Roupa(int)"/>, o material e o catálogo, em
+        /// Resources. Confere a lista das roupas do <c>Itens.Roupas.cs</c> com o catálogo (a mesma ordem; a peça nova vai
+        /// no fim dos dois).
+        /// </summary>
+        public static void MontarItensDasRoupas()
+        {
+            var json = AssetDatabase.LoadAssetAtPath<TextAsset>(Json);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(ArquivoDoMaterial);
+            if (json == null || material == null)
+            {
+                Debug.LogWarning("Os itens das roupas: falta o catálogo ou o material (rode a montagem das roupas).");
+                return;
+            }
+            var catalogo = CatalogoDasRoupas.Ler(json);
+            var malhas = AssetDatabase.LoadAllAssetsAtPath(FbxDosItens).OfType<Mesh>().Where(m => m.name.StartsWith("Item_")).ToDictionary(m => m.name.Substring(5));
+            // a ordem do catálogo, sem o que não é item (os cabelos, as barbas, os cílios e as versões de baixo do chapéu)
+            var doCatalogo = catalogo.pecas.Where(p => p.lugar != "Cabelo" && p.lugar != "Barba" && p.lugar != "Cilios" && string.IsNullOrEmpty(p.de))
+                .Select(p => p.nome).ToList();
+            var daLista = Enumerable.Range(0, Itens.QuantasRoupas).Select(k => Itens.Roupa(k).peca).ToList();
+            if (!doCatalogo.SequenceEqual(daLista))
+                Debug.LogWarning("As roupas do Itens.Roupas.cs não batem com o catálogo: falta " +
+                                 string.Join(", ", doCatalogo.Except(daLista)) + "; sobra " + string.Join(", ", daLista.Except(doCatalogo)) +
+                                 " (ou a ordem mudou). Acerte a lista lá.");
+            var faltam = daLista.Where(p => !malhas.ContainsKey(p)).ToList();
+            if (faltam.Count > 0) Debug.LogWarning("Os itens das roupas sem malha no Roupas_Itens.fbx: " + string.Join(", ", faltam));
+            var asset = AssetDatabase.LoadAssetAtPath<ItensDasRoupas>(AssetDosItens);
+            if (asset == null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(AssetDosItens));
+                asset = ScriptableObject.CreateInstance<ItensDasRoupas>();
+                AssetDatabase.CreateAsset(asset, AssetDosItens);
+            }
+            asset.malhas = daLista.Select(p => malhas.TryGetValue(p, out var m) ? m : null).ToArray();
+            asset.material = material;
+            asset.catalogo = json;
+            asset.invisivel = AssetDatabase.LoadAssetAtPath<Shader>("Assets/_Game/Shaders/Invisivel.shader");
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssets();
         }
 
         /// <summary>Os prefabs dos itens das roupas, na ordem do catálogo, e o lugar de cada um (para as mesas da cena das

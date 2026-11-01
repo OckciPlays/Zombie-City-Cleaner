@@ -39,7 +39,7 @@ namespace ZombieCityCleaner.Zombies
         Material _material;
         Material[] _inteira, _semCabeca;
 
-        /// <summary>Recém-criado ou de volta ao pool: cinemático, sem colisão e invisível.</summary>
+        /// <summary>Recém-criado ou de volta ao pool: cinemático, sem colisão, sem a interpolação e invisível.</summary>
         internal void Guardar()
         {
             emUso = false;
@@ -48,6 +48,9 @@ namespace ZombieCityCleaner.Zombies
             {
                 p.isKinematic = true;
                 p.detectCollisions = false;
+                // parado, a interpolação não serve para nada, e a física interpolava os ~1.000 corpos guardados a cada
+                // quadro (~0,5 ms, 31/10/2026); ela volta um passo depois de cair (FixedUpdate)
+                p.interpolation = RigidbodyInterpolation.None;
                 var c = p.GetComponent<Collider>();
                 if (c != null) c.enabled = true;
             }
@@ -203,6 +206,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 p.isKinematic = true;
                 p.detectCollisions = false;
+                p.interpolation = RigidbodyInterpolation.None;   // parado no chão (ele afunda pelo transform)
             }
         }
 

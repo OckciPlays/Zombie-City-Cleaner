@@ -223,6 +223,24 @@ namespace ZombieCityCleaner.Testes
                 var tracado = d.Plano.CidadeDaFamilia.Tracado;
                 var r = lote.RetDaCasa;
                 Assert.IsTrue(r.xMin >= lote.U0 - 0.01f && r.xMax <= lote.U1 + 0.01f && r.yMin >= lote.V0 - 0.01f && r.yMax <= lote.V1 + 0.01f, $"{t}: a casa fora do lote");
+                // com o bunker da família (o Plano_Bunker.md, a parte 5), os 4 nascem na sala de operações dele e os carros
+                // ficam nas vagas da garagem
+                if (d.TemBunker)
+                {
+                    var noBunker = Matrix4x4.TRS(d.PosicaoDoBunker, Quaternion.Euler(0f, d.GiroDoBunker, 0f), Vector3.one).inverse;
+                    var operacoes = PlantaDeBunker.DoAndar(0).comodos.Find(k => k.tipo == "operacoes");
+                    for (int i = 0; i < DadosDoMundo.Jogadores; i++)
+                    {
+                        var q = noBunker.MultiplyPoint3x4(d.Nascimentos[i]);
+                        Assert.IsTrue(q.x > operacoes.x0 + 0.5f && q.x < operacoes.x1 - 0.5f && q.z > operacoes.z0 + 0.5f && q.z < operacoes.z1 - 0.5f,
+                            $"{t}: o jogador {i} fora da sala de operações");
+                        Assert.AreEqual(d.PosicaoDoBunker.y + 0.05f, d.Nascimentos[i].y, 0.01f);
+                        for (int j = 0; j < i; j++) Assert.Greater(Vector3.Distance(d.Nascimentos[i], d.Nascimentos[j]), 1.5f);
+                    }
+                    Assert.IsTrue(d.LugarDoCarro.HasValue && d.LugarDoSegundoCarro.HasValue, $"{t}: sem os lugares dos carros");
+                    Assert.AreEqual(d.PosicaoDoBunker.y, d.LugarDoCarro.Value.y, 0.01f);
+                    continue;
+                }
                 var paraACasa = tracado.MatrizDaCasa(lote).inverse;
                 var sala = lote.Casa.comodos.Find(k => k.tipo == "sala");
                 float piso = lote.ChaoDaCasa + Casa.PisoDe(lote.Casa);

@@ -28,6 +28,9 @@ namespace ZombieCityCleaner.Loot
         Fogueira = 112, Cama, Barricada,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
+        // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
+        // daqui em diante (Itens.Roupa; 73 hoje: até o 232)
+        PrimeiraRoupa = 160,
     }
 
     /// <summary>Uma coisa da sinuca (a caixa das bolas e os tacos): o nome do modelo (Sinuca.fbx, Icone_ e Foto_), o tamanho na mochila e o resumo.</summary>
@@ -107,7 +110,7 @@ namespace ZombieCityCleaner.Loot
         public int mao = -1;
     }
 
-    public static class Itens
+    public static partial class Itens
     {
         /// <summary>
         /// Os modelos de tudo o que vai na mão: as armas (na ordem de <see cref="TipoDeArma"/>), a lata, a garrafa e as
@@ -377,7 +380,7 @@ namespace ZombieCityCleaner.Loot
         /// Vai para a mão e para os atalhos? As caixas de munição e as peças, não (só ficam na mochila); o que se veste
         /// também não.
         /// </summary>
-        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0);
+        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0);
         public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.Municao762;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;
@@ -496,7 +499,7 @@ namespace ZombieCityCleaner.Loot
         /// <summary>As células que o item ocupa na mochila (largura × altura).</summary>
         public static UnityEngine.Vector2Int Tamanho(Item i)
         {
-            if (EhMunicao(i)) return new UnityEngine.Vector2Int(1, 1);
+            if (EhMunicao(i) || EhRoupa(i)) return new UnityEngine.Vector2Int(1, 1);
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
@@ -521,13 +524,14 @@ namespace ZombieCityCleaner.Loot
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].resumo;
             if (EhLoot(i)) return Loot(i).resumo;
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].resumo;
+            if (EhRoupa(i)) return _resumosDasRoupas[(int)Roupa(i).lugar];
             int m = Modelo(i);
             return m >= 0 ? _resumos[m] : "";
         }
 
         public static string Nome(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nome : EhBranca(i) ? Branca(i).nome : EhLoot(i) ? Loot(i).nome : EhEquipamento(i) ? DadosDe(i).nome
-            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nome : "";
+            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nome : EhRoupa(i) ? Roupa(i).nome : "";
         public static string NomeComArtigo(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nomeComArtigo : EhBranca(i) ? Branca(i).nomeComArtigo : EhLoot(i) ? Loot(i).nomeComArtigo : EhEquipamento(i) ? DadosDe(i).nomeComArtigo
-            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nomeComArtigo : "";
+            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nomeComArtigo : EhRoupa(i) ? Roupa(i).nomeComArtigo : "";
     }
 }

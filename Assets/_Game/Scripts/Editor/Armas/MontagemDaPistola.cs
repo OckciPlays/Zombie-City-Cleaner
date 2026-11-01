@@ -110,7 +110,8 @@ namespace ZombieCityCleaner.EditorTools
             m.SetTexture("_MetallicGlossMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Texturas}/Pistola_MS.png"));
             m.EnableKeyword("_METALLICSPECGLOSSMAP");
             m.SetFloat("_Metallic", 1f);
-            m.SetFloat("_Smoothness", 1f);
+            // fosca: sem a lisura do mapa (31/10/2026, a pedido, como as outras armas: ArmasNovas.Arma.lisura)
+            m.SetFloat("_Smoothness", 0f);
             m.SetFloat("_SmoothnessTextureChannel", 0f);
             m.SetShaderPassEnabled("MotionVectors", false);
             m.enableInstancing = true;

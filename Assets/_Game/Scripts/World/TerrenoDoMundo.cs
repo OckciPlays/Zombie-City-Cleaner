@@ -173,7 +173,9 @@ namespace ZombieCityCleaner.World
             {
                 var malhas = new List<Mesh>();
                 foreach (var f in _raiz.GetComponentsInChildren<MeshFilter>(true))
-                    if (f.sharedMesh != null) malhas.Add(f.sharedMesh);
+                    // menos as dos móveis novos de perto (as do projeto e as pintadas que a MobiliaNovaDoMundo guarda para a
+                    // próxima partida: apagadas, na segunda partida os móveis de perto ficavam sem malha)
+                    if (f.sharedMesh != null && !MobiliaNovaDoMundo.Guarda(f.sharedMesh)) malhas.Add(f.sharedMesh);
                 Destroy(_raiz.gameObject);
                 foreach (var m in malhas) Destroy(m);
             }
@@ -343,7 +345,7 @@ namespace ZombieCityCleaner.World
             }
             foreach (var b in _blocos.Values)
             {
-                if (b.Hera != null) b.Hera.enabled = Perto(b, raioDaHera);
+                if (b.Hera != null) b.Hera.enabled = Perto(b, UI.Graficos.Hera(raioDaHera));
                 if (b.Mobilia != null) b.Mobilia.enabled = Perto(b, raioDaMobilia);
             }
         }
@@ -367,7 +369,7 @@ namespace ZombieCityCleaner.World
             }
             foreach (var b in _blocos.Values)
             {
-                if (b.HeraPorFazer == null || b.Casas == null || !Perto(b, raioDaHera)) continue;
+                if (b.HeraPorFazer == null || b.Casas == null || !Perto(b, UI.Graficos.Hera(raioDaHera))) continue;
                 var h = new GameObject("Hera");
                 h.transform.SetParent(b.Casas.transform, false);
                 b.MalhaDaHera = b.HeraPorFazer.ParaMesh($"Hera {b.Chave.x}, {b.Chave.y}");

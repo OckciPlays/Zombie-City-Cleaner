@@ -161,12 +161,19 @@ namespace ZombieCityCleaner.EditorTools
                 ("Cabana", new Color(0.55f, 0.38f, 0.22f)), ("Barreira e cerca", new Color(0.8f, 0.1f, 0.1f)), ("Base militar", new Color(0.45f, 0.48f, 0.36f)),
                 ("Comunidade aliada", new Color(0.22f, 0.5f, 0.26f)), ("Comunidade inimiga", new Color(0.68f, 0.17f, 0.14f)),
                 ("Laboratório", new Color(0.5f, 0.46f, 0.56f)), ("Casa da família", new Color(1f, 0.85f, 0.15f)),
+                ("Bunker da família", new Color(0.86f, 0.84f, 0.78f)),
             };
             float x = 14f, y = Rodape - 26f;
             foreach (var (nome, cor) in itens)
             {
                 var quadrado = Elemento<Image>(pai, x, y + 4f, 14f, 14f);
                 quadrado.color = cor;
+                // o do bunker da família como no mapa: o quadrado escuro com o miolo amarelo, de borda clara
+                if (nome == "Bunker da família")
+                {
+                    Elemento<Image>(pai, x + 2f, y + 6f, 10f, 10f).color = new Color(0.12f, 0.12f, 0.12f);
+                    Elemento<Image>(pai, x + 5f, y + 9f, 4f, 4f).color = new Color(1f, 0.85f, 0.15f);
+                }
                 var t = Elemento<Text>(pai, x + 18f, y, 160f, 22f);
                 t.font = fonte;
                 t.text = nome;

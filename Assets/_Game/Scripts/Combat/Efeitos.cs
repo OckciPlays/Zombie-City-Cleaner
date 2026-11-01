@@ -181,39 +181,60 @@ namespace ZombieCityCleaner.Combat
 
         System.Collections.IEnumerator ClaraoRotina(Transform boca, int camada)
         {
-            var go = new GameObject("Clarão");
+            var (go, luz, brilho) = PegarClarao();
             go.layer = camada;
+            brilho.gameObject.layer = camada;
             go.transform.SetPositionAndRotation(boca.position, boca.rotation);
+            luz.intensity = 5f;
+            go.SetActive(true);
+            for (int i = 0; i < 3; i++)
+            {
+                if (boca != null) go.transform.position = boca.position;
+                var cam = Camera.main;
+                if (cam != null) brilho.rotation = Quaternion.LookRotation(brilho.position - cam.transform.position) * Quaternion.Euler(0, 0, Random.Range(0f, 360f));
+                luz.intensity *= 0.6f;
+                yield return null;
+            }
+            if (go != null) go.SetActive(false);
+        }
+
+        // os clarões guardados (31/10/2026: eram um objeto novo, com a luz e o quadrado, a cada tiro, ~10 por segundo numa
+        // automática, em todas as máquinas); um livre é reaproveitado, e só faltando um é feito outro
+        readonly List<(GameObject go, Light luz, Transform brilho)> _claroes = new List<(GameObject, Light, Transform)>();
+
+        (GameObject go, Light luz, Transform brilho) PegarClarao()
+        {
+            for (int i = _claroes.Count - 1; i >= 0; i--)
+            {
+                var c = _claroes[i];
+                if (c.go == null) _claroes.RemoveAt(i);
+                else if (!c.go.activeSelf) return c;
+            }
+            var go = new GameObject("Clarão");
+            go.SetActive(false);
             var luz = go.AddComponent<Light>();
             luz.type = LightType.Point; luz.color = new Color(1f, 0.75f, 0.4f); luz.intensity = 5f; luz.range = 6f; luz.shadows = LightShadows.None;
             var brilho = GameObject.CreatePrimitive(PrimitiveType.Quad);
             // na hora: com Destroy o colisor só sumiria no fim do quadro, e o raio do tiro, feito logo depois, podia batê-lo
             DestroyImmediate(brilho.GetComponent<Collider>());
-            brilho.layer = camada;
             brilho.transform.SetParent(go.transform, false);
             brilho.transform.localScale = Vector3.one * 0.12f;
             var r = brilho.GetComponent<MeshRenderer>();
             r.sharedMaterial = materialClarao; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            for (int i = 0; i < 3; i++)
-            {
-                if (boca != null) go.transform.position = boca.position;
-                var cam = Camera.main;
-                if (cam != null) brilho.transform.rotation = Quaternion.LookRotation(brilho.transform.position - cam.transform.position) * Quaternion.Euler(0, 0, Random.Range(0f, 360f));
-                luz.intensity *= 0.6f;
-                yield return null;
-            }
-            Destroy(go);
+            var novo = (go, luz, brilho.transform);
+            _claroes.Add(novo);
+            return novo;
         }
 
         /// <summary>Marca de tiro no cenário: faíscas e poeira saindo da superfície.</summary>
         public static void Impacto(Vector3 ponto, Vector3 normal)
         {
             if (_instancia == null) return;
-            foreach (var (ps, n) in new[] { (_instancia._faiscas, 8), (_instancia._poeira, 10) })
-            {
-                ps.transform.SetPositionAndRotation(ponto + normal * 0.02f, Quaternion.LookRotation(normal));
-                ps.Emit(n);
-            }
+            var giro = Quaternion.LookRotation(normal);
+            _instancia._faiscas.transform.SetPositionAndRotation(ponto + normal * 0.02f, giro);
+            _instancia._faiscas.Emit(8);
+            _instancia._poeira.transform.SetPositionAndRotation(ponto + normal * 0.02f, giro);
+            _instancia._poeira.Emit(10);
         }
     }
 }

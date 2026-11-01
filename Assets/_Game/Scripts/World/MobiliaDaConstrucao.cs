@@ -92,7 +92,25 @@ namespace ZombieCityCleaner.World
         /// </summary>
         public static void Revisar(Vector3 olho, float raioDeLonge, float raioDePerto, int pecas, int malhas)
         {
+            // a qualidade mudou (UI/Graficos): a sombra dos móveis de perto que já estão postos
+            if (_versaoDosGraficos != UI.Graficos.Versao)
+            {
+                _versaoDosGraficos = UI.Graficos.Versao;
+                for (int i = 0; i < Todas.Count; i++)
+                    if (Todas[i]._perto != null) SombraDoMovel(Todas[i]._perto, UI.Graficos.SombraDosMoveis);
+            }
             for (int i = 0; i < Todas.Count; i++) Todas[i].Revisar(olho, raioDeLonge, raioDePerto, ref pecas, ref malhas);
+        }
+
+        static int _versaoDosGraficos = -1;
+        static readonly List<MeshRenderer> _renderers = new List<MeshRenderer>();
+
+        // na Média e na Baixa, os móveis de perto não fazem a sombra do sol (os prefabs vêm com ela ligada em tudo)
+        static void SombraDoMovel(GameObject go, bool sombra)
+        {
+            go.GetComponentsInChildren(true, _renderers);
+            var modo = sombra ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            foreach (var r in _renderers) r.shadowCastingMode = modo;
         }
 
         void Revisar(Vector3 olho, float raioDeLonge, float raioDePerto, ref int pecas, ref int malhas)
@@ -154,6 +172,7 @@ namespace ZombieCityCleaner.World
                     if (go == null) continue;
                     go.transform.SetLocalPositionAndRotation(peca.origem, Quaternion.Euler(0f, peca.giro, 0f));
                     go.transform.localScale = Vector3.one * MedidasDaMobilia.Escala;
+                    if (!UI.Graficos.SombraDosMoveis) SombraDoMovel(go, false);
                     pecas--;
                     _dePerto++;
                     QuantosDePerto++;

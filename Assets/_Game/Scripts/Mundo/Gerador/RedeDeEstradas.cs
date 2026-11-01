@@ -66,6 +66,12 @@ namespace ZombieCityCleaner.Mundo
             internal float Cos, Sen;
         }
 
+        /// <summary>
+        /// O pátio do bunker da família (null sem ele): o chão plano do pé do morro e do pátio, na altura do fim da estrada
+        /// de terra dele (o chão da garagem fica nela, mais <see cref="DadosDoMundo.AcimaDoPatio"/>).
+        /// </summary>
+        public Plataforma PlataformaDoBunker;
+
         public readonly List<No> Nos = new List<No>();
         public readonly List<Trecho> Trechos = new List<Trecho>();
         public readonly List<Plataforma> Plataformas = new List<Plataforma>();
@@ -374,6 +380,39 @@ namespace ZombieCityCleaner.Mundo
                     Giro = l.Giro, Altura = altura, Cos = frente.x, Sen = frente.y,
                 });
             }
+            PorOPatioDoBunker();
+        }
+
+        // o bunker da família: a pegada (o pé do morro e o pátio) plana, com 2 m de folga, na altura do ponto de estrada mais
+        // perto da chegada (o começo da estrada de terra dele). O u da plataforma é o +z da planta
+        void PorOPatioDoBunker()
+        {
+            var b = _plano.BunkerDaFamilia;
+            if (b == null) return;
+            float g = b.Giro * Mathf.Deg2Rad;
+            var fz = new Vector2(Mathf.Sin(g), Mathf.Cos(g));
+            var fx = new Vector2(fz.y, -fz.x);
+            var pegada = PlantaDeBunker.Pegada;
+            var chegada = PlantaDeBunker.ChegadaDaEstrada;
+            var a = b.Centro + fx * chegada.x + fz * chegada.y;
+            float melhor = float.MaxValue, altura = Borrada(a);
+            foreach (var e in _plano.Estradas)
+                for (int i = 0; i < e.Pontos.Count && !e.Conector; i++)
+                {
+                    float dist = (e.Pontos[i] - a).sqrMagnitude;
+                    if (dist < melhor)
+                    {
+                        melhor = dist;
+                        altura = e.Alturas[i];
+                    }
+                }
+            PlataformaDoBunker = new Plataforma
+            {
+                Centro = b.Centro + fx * pegada.center.x + fz * pegada.center.y,
+                Meia = new Vector2(pegada.height * 0.5f + 2f, pegada.width * 0.5f + 2f),
+                Giro = Mathf.Atan2(fz.y, fz.x) * Mathf.Rad2Deg, Altura = altura, Cos = fz.x, Sen = fz.y,
+            };
+            Plataformas.Add(PlataformaDoBunker);
         }
 
         // ------------------------------------------------------------------ a consulta por bloco

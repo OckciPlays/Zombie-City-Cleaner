@@ -41,6 +41,12 @@ namespace ZombieCityCleaner.EditorTools
             /// <c>_MS</c>, sem filtro), sem normal map.
             /// </summary>
             public bool paleta;
+            /// <summary>
+            /// O quanto vale a lisura do mapa de metal (o <c>_Smoothness</c> do material, que multiplica o alfa dele): 1, a do
+            /// mapa; 0, fosca, sem o brilho. Todas em 0 desde 31/10/2026 (a pedido: "muitos itens ... estão com um smooth,
+            /// deixando eles meio brilhosos"; o rifle primeiro, para comparar, e depois as outras: "Sim, aplica").
+            /// </summary>
+            public float lisura = 0f;
         }
 
         public static readonly Arma Pistola = new Arma
@@ -230,7 +236,7 @@ namespace ZombieCityCleaner.EditorTools
                 m.SetColor("_BaseColor", Color.white);
                 m.SetTexture("_MetallicGlossMap", msp);
                 m.SetFloat("_Metallic", 1f);
-                m.SetFloat("_Smoothness", 1f);
+                m.SetFloat("_Smoothness", a.lisura);
                 m.SetFloat("_SmoothnessTextureChannel", 0f);
                 m.EnableKeyword("_METALLICSPECGLOSSMAP");
                 m.SetTexture("_BumpMap", null);
@@ -249,7 +255,7 @@ namespace ZombieCityCleaner.EditorTools
             m.SetColor("_BaseColor", Color.white);
             m.SetTexture("_MetallicGlossMap", ms);
             m.SetFloat("_Metallic", 1f);
-            m.SetFloat("_Smoothness", 1f);
+            m.SetFloat("_Smoothness", a.lisura);
             m.SetFloat("_SmoothnessTextureChannel", 0f);
             m.EnableKeyword("_METALLICSPECGLOSSMAP");
             m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>($"{Texturas}/{a.nome}_Normal.png"));
