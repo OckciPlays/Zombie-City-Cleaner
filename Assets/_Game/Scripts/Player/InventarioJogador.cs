@@ -153,7 +153,10 @@ namespace ZombieCityCleaner.Player
                 Mochila.Clear();
                 MochilaVestida.Value = Item.Nada;
                 PneuNasMaos.Value = SemPneu;
-                if (!ModoVideo.SemArma) Receber(Item.Pistola);   // na cena de vídeo, de mãos vazias
+                // na cena de vídeo, de mãos vazias; no Dia 0 também (a vida normal: o que tiver, foi comprado)
+                var mundo = World.MundoDaPartida.Instancia;
+                bool diaZero = mundo != null && mundo.NoDiaZero;
+                if (!ModoVideo.SemArma && !diaZero) Receber(Item.Pistola);
             }
             NascerRoupas();
             // a pistola do começo no primeiro atalho
@@ -1424,7 +1427,7 @@ namespace ZombieCityCleaner.Player
         // a barra de atalhos, embaixo, no meio (com a tela do inventário aberta, ela fica lá dentro)
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado || (_tela != null && _tela.Aberta)) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || (_tela != null && _tela.Aberta)) return;
             float u = Screen.height / 720f;
             float w = 112 * u, h = 56 * u, vao = 8 * u;
             float x0 = (Screen.width - (w * Atalhos + vao * (Atalhos - 1))) / 2f, y = Screen.height - h - 16 * u;

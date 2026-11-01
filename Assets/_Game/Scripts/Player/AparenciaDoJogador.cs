@@ -26,8 +26,76 @@ namespace ZombieCityCleaner.Player
         public byte camiseta;       // o índice em Camisetas
         public byte calca;          // o índice em Calcas
         public byte definida;       // 1 depois que o dono escreveu (antes, o corpo fica sem roupa)
+        // a loja de roupas do Dia 0 (01/11/2026): a peça comprada em cada lugar de LugaresDaLoja (o índice + 1; 0: nada, ou,
+        // no tronco, nas pernas e nos pés, a camiseta, a calça e o tênis da criação)
+        public byte cabeca, oculos, mascara, tronco, porCima, colete, cintura, pernas, pes, maos;
 
         public const int LetrasDoNome = 16;
+
+        /// <summary>
+        /// Os lugares da loja de roupas do Dia 0 (o lugar do catálogo, o nome para a tela e as peças à venda, na ordem). O
+        /// tronco, as pernas e os pés trocam a camiseta, a calça e o tênis da criação; o colete e o "por cima" não vão juntos.
+        /// </summary>
+        public static readonly (string lugar, string nome, string[] pecas)[] LugaresDaLoja =
+        {
+            ("Cabeca", "cabeça", new[] { "Bone", "Bone_Militar", "Gorro", "Capacete", "Chapeu_Cauboi", "Capacete_Militar", "Bandana" }),
+            ("Oculos", "óculos", new[] { "Oculos_Sol", "Oculos_Aviador", "Oculos_Protecao", "Oculos_Esportivo", "Oculos_Tatico", "Visao_Noturna" }),
+            ("Mascara", "rosto", new[] { "Mascara_Cirurgica", "Mascara_Pano", "Bandana_Rosto", "Gola_Tubular", "Respirador", "Mascara_Gas", "Balaclava" }),
+            ("Tronco", "camisa", new[] { "Camiseta_V", "Camisa_Xadrez", "Camisa_Social", "Regata", "Camisa_Militar" }),
+            ("Por_Cima", "jaqueta", new[] { "Jaqueta_Capuz", "Jaqueta_Lona", "Jaqueta_Couro", "Jaqueta_Esportiva", "Moletom", "Moletom_Ziper" }),
+            ("Colete", "colete", new[] { "Colete_Refletivo", "Colete_Tatico" }),
+            ("Cintura", "cinto", new[] { "Cinto_Ferramentas", "Cinto_Tatico" }),
+            ("Pernas", "calça", new[] { "Calca_Cargo", "Calca_Militar", "Calca_Trabalho", "Jardineira", "Jeans_Rasgado" }),
+            ("Pes", "calçado", new[] { "Bota_Trabalho", "Bota_Couro", "Coturno", "Tenis_Baixo", "Bota_Cauboi" }),
+            ("Maos", "luvas", new[] { "Luva_Tatica", "Luva_Sem_Dedos" }),
+        };
+
+        public const int LugarPorCima = 4, LugarColete = 5;
+
+        /// <summary>A peça comprada no lugar (o índice + 1 em <see cref="LugaresDaLoja"/>; 0: nada).</summary>
+        public byte DaLoja(int lugar) => lugar switch
+        {
+            0 => cabeca, 1 => oculos, 2 => mascara, 3 => tronco, 4 => porCima, 5 => colete, 6 => cintura, 7 => pernas, 8 => pes, 9 => maos, _ => 0,
+        };
+
+        /// <summary>A mesma aparência com a peça 'valor' no lugar (o colete tira o "por cima", e vice-versa).</summary>
+        public AparenciaDoJogador ComDaLoja(int lugar, byte valor)
+        {
+            var a = this;
+            switch (lugar)
+            {
+                case 0: a.cabeca = valor; break;
+                case 1: a.oculos = valor; break;
+                case 2: a.mascara = valor; break;
+                case 3: a.tronco = valor; break;
+                case 4: a.porCima = valor; if (valor > 0) a.colete = 0; break;
+                case 5: a.colete = valor; if (valor > 0) a.porCima = 0; break;
+                case 6: a.cintura = valor; break;
+                case 7: a.pernas = valor; break;
+                case 8: a.pes = valor; break;
+                case 9: a.maos = valor; break;
+            }
+            return a;
+        }
+
+        /// <summary>O lugar da loja de uma peça (-1: não está à venda) e o valor dela (o índice + 1).</summary>
+        public static int LugarDaPeca(string peca, out byte valor)
+        {
+            for (int l = 0; l < LugaresDaLoja.Length; l++)
+            {
+                int i = System.Array.IndexOf(LugaresDaLoja[l].pecas, peca);
+                if (i >= 0)
+                {
+                    valor = (byte)(i + 1);
+                    return l;
+                }
+            }
+            valor = 0;
+            return -1;
+        }
+
+        static string PecaDaLoja(int lugar, byte valor) =>
+            valor > 0 && valor <= LugaresDaLoja[lugar].pecas.Length ? LugaresDaLoja[lugar].pecas[valor - 1] : null;
 
         /// <summary>Os cabelos: todos servem nos dois corpos (a cabeça é a mesma).</summary>
         public static readonly string[] Cabelos =
@@ -83,6 +151,31 @@ namespace ZombieCityCleaner.Player
             return pecas;
         }
 
+        /// <summary>
+        /// As roupas da loja do Dia 0 (as compradas e as que estão sendo provadas), como itens. Até a porta do abrigo elas
+        /// ficam aqui, na aparência (o dono prova e tira na hora), e vão no corpo por cima das vestidas; com a porta
+        /// fechada, viram roupas vestidas do inventário (<see cref="InventarioJogador.VestirAsDaLoja"/>).
+        /// </summary>
+        public List<Item> RoupasDaLoja()
+        {
+            var r = new List<Item>();
+            for (int l = 0; l < LugaresDaLoja.Length; l++)
+            {
+                string nome = PecaDaLoja(l, DaLoja(l));
+                var item = nome != null ? Itens.RoupaDaPeca(nome) : Item.Nada;
+                if (Itens.Roupa(item) != null) r.Add(item);
+            }
+            return r;
+        }
+
+        /// <summary>A mesma aparência sem as roupas da loja do Dia 0.</summary>
+        public AparenciaDoJogador SemAsDaLoja()
+        {
+            var a = this;
+            for (int l = 0; l < LugaresDaLoja.Length; l++) a = a.ComDaLoja(l, 0);
+            return a;
+        }
+
         /// <summary>As roupas do começo, como itens com as cores: a camiseta, a calça e o tênis de cano.</summary>
         public (Item item, ulong cores)[] RoupasDoComeco()
         {
@@ -100,19 +193,20 @@ namespace ZombieCityCleaner.Player
         /// <summary>As peças vestidas pela aparência, com as roupas do começo (a tela de criar o personagem).</summary>
         public List<CatalogoDasRoupas.PecaVestida> Pecas(CatalogoDasRoupas catalogo)
         {
-            var pecas = PecasDoCorpo(catalogo);
+            var comeco = default(RoupasVestidas);
             foreach (var (item, cores) in RoupasDoComeco())
-                if (Itens.Roupa(item) is DadosDaRoupa r) pecas.Add(new CatalogoDasRoupas.PecaVestida { nome = r.peca, cores = Itens.CoresEmHex(cores) });
-            return pecas;
+                if (Itens.Roupa(item) is DadosDaRoupa r) comeco.Por(r.lugar, item, cores);
+            return Pecas(catalogo, comeco);
         }
 
         /// <summary>
-        /// As peças vestidas no jogo: as do corpo e as roupas vestidas (as cores delas, ou as do catálogo). A mulher sem
-        /// nada no tronco fica com o top.
+        /// As peças vestidas no jogo: as do corpo e as roupas vestidas (as cores delas, ou as do catálogo), com as da loja
+        /// do Dia 0 por cima (no lugar delas). A mulher sem nada no tronco fica com o top.
         /// </summary>
         public List<CatalogoDasRoupas.PecaVestida> Pecas(CatalogoDasRoupas catalogo, RoupasVestidas roupas)
         {
             var pecas = PecasDoCorpo(catalogo);
+            foreach (var item in RoupasDaLoja()) roupas.Por(Itens.Roupa(item).lugar, item, 0);
             for (int k = 0; k < Itens.QuantosLugaresDeRoupa; k++)
             {
                 var l = (LugarDaRoupa)k;
@@ -151,9 +245,13 @@ namespace ZombieCityCleaner.Player
 
         public bool Equals(AparenciaDoJogador o) =>
             nome.Equals(o.nome) && mulher == o.mulher && pele == o.pele && cabelo == o.cabelo && corDosPelos == o.corDosPelos &&
-            barba == o.barba && camiseta == o.camiseta && calca == o.calca && definida == o.definida;
+            barba == o.barba && camiseta == o.camiseta && calca == o.calca && definida == o.definida &&
+            cabeca == o.cabeca && oculos == o.oculos && mascara == o.mascara && tronco == o.tronco && porCima == o.porCima &&
+            colete == o.colete && cintura == o.cintura && pernas == o.pernas && pes == o.pes && maos == o.maos;
 
         public override bool Equals(object o) => o is AparenciaDoJogador a && Equals(a);
-        public override int GetHashCode() => System.HashCode.Combine(nome, mulher, pele, cabelo, corDosPelos, barba, camiseta, calca);
+        public override int GetHashCode() => System.HashCode.Combine(System.HashCode.Combine(nome, mulher, pele, cabelo, corDosPelos, barba, camiseta, calca),
+                                                                     System.HashCode.Combine(cabeca, oculos, mascara, tronco, porCima, colete, cintura, pernas),
+                                                                     pes, maos);
     }
 }

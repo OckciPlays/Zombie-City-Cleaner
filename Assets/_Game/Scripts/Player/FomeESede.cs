@@ -55,6 +55,9 @@ namespace ZombieCityCleaner.Player
         void Update()
         {
             if (!IsSpawned || !IsServer) return;
+            // no Dia 0 e nos 5 anos depois (o mundo ainda não está pronto), a fome e a sede não descem: a vida é normal
+            var mundo = World.MundoDaPartida.Instancia;
+            if (mundo != null && !mundo.Pronto) return;
             float dt = Time.deltaTime * (_rede.Velocidade > 3f ? correndo : 1f);
             _fome = Mathf.Max(0f, _fome - 100f / (minutosDaFome * 60f) * dt);
             _sede = Mathf.Max(0f, _sede - 100f / (minutosDaSede * 60f) * dt);
@@ -96,7 +99,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || ModoVideo.Ligado) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado) return;
             float u = Screen.height / 720f;
             // em cima da barra da vida (VidaJogador): a sede logo acima, a fome acima dela
             float yVida = Screen.height - 44 * u;

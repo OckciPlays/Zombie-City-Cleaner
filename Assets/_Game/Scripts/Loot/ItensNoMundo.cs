@@ -226,25 +226,44 @@ namespace ZombieCityCleaner.Loot
             return malhasDeLoot != null && k >= 0 && k < malhasDeLoot.Length ? malhasDeLoot[k] : null;
         }
 
-        void Montar(ItemNoChaoNaMira o, ItemNoChao it)
+        /// <summary>A malha do item como ele fica no chão (null: sem modelo).</summary>
+        public Mesh MalhaDe(Item item)
         {
-            o.item = it.item;
-            int m = Itens.Modelo(it.item), e = Itens.Equipamento(it.item), mun = Itens.IndiceDaMunicao(it.item), pc = Itens.IndiceDaPeca(it.item);
-            int sn = Itens.IndiceDaSinuca(it.item);
-            // a roupa: a malha parada dela (deitada, as do tronco e as calças), no material das roupas, com as cores dela
-            var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
-            var malha = roupas != null ? roupas.Malha(it.item)
-                : MalhaDoLoot(it.item) is Mesh l ? l
+            int m = Itens.Modelo(item), e = Itens.Equipamento(item), mun = Itens.IndiceDaMunicao(item), pc = Itens.IndiceDaPeca(item);
+            int sn = Itens.IndiceDaSinuca(item);
+            // a roupa: a malha parada dela (deitada, as do tronco e as calças)
+            var roupas = Itens.EhRoupa(item) ? Roupas.ItensDasRoupas.Carregar() : null;
+            return roupas != null ? roupas.Malha(item)
+                : MalhaDoLoot(item) is Mesh l ? l
                 : e >= 0 ? (malhasDeEquipamento != null && e < malhasDeEquipamento.Length ? malhasDeEquipamento[e] : null)
                 : mun >= 0 ? (malhasDeMunicao != null && mun < malhasDeMunicao.Length ? malhasDeMunicao[mun] : null)
                 : pc >= 0 ? (malhasDePeca != null && pc < malhasDePeca.Length ? malhasDePeca[pc] : null)
                 : sn >= 0 ? (malhasDaSinuca != null && sn < malhasDaSinuca.Length ? malhasDaSinuca[sn] : null)
                 : malhas != null && m >= 0 && m < malhas.Length ? malhas[m] : null;
-            o.GetComponent<MeshFilter>().sharedMesh = malha;
-            // a paleta, ou o material com a textura própria do modelo (a pistola nova)
+        }
+
+        /// <summary>
+        /// O material do item: a paleta, o da textura própria do modelo (a pistola nova) ou o das roupas (as cores vão no
+        /// renderer: <see cref="Roupas.ItensDasRoupas.Pintar"/>).
+        /// </summary>
+        public Material MaterialDe(Item item)
+        {
+            var roupas = Itens.EhRoupa(item) ? Roupas.ItensDasRoupas.Carregar() : null;
+            if (roupas != null) return roupas.material;
+            int m = Itens.Modelo(item), e = Itens.Equipamento(item), mun = Itens.IndiceDaMunicao(item), pc = Itens.IndiceDaPeca(item);
             var proprio = m >= 0 && e < 0 && mun < 0 && pc < 0 ? Itens.MaterialProprio(m) : null;
+            return proprio != null ? proprio : material;
+        }
+
+        void Montar(ItemNoChaoNaMira o, ItemNoChao it)
+        {
+            o.item = it.item;
+            var malha = MalhaDe(it.item);
+            o.GetComponent<MeshFilter>().sharedMesh = malha;
             var render = o.GetComponent<MeshRenderer>();
-            render.sharedMaterial = roupas != null ? roupas.material : proprio != null ? proprio : material;
+            render.sharedMaterial = MaterialDe(it.item);
+            // a roupa com as cores dela
+            var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
             if (roupas != null) roupas.Pintar(render, it.item, it.cores);
             else render.SetPropertyBlock(null);
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";

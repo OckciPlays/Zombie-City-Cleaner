@@ -39,6 +39,8 @@ namespace ZombieCityCleaner.UI
             var mundo = MundoDaPartida.Instancia;
             var sessao = SessaoOnline.Instancia;
             if (mundo == null || sessao == null || sessao.Atual != SessaoOnline.Estado.Conectado || ModoVideo.Ligado) return;
+            // no Dia 0 (e na passagem dos 5 anos), o DiaZeroDaPartida desenha as telas dele
+            if (mundo.NoDiaZero || DiaZero.DiaZeroDaPartida.NaPassagem) return;
             GUI.depth = -20;   // por cima do menu e do HUD
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);

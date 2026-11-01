@@ -18,6 +18,7 @@ Esta pasta explica o que o jogo vai ser, o que já está pronto e como trabalhar
 | [09 – O que mudou de 29 a 31/10](09-Novidades-29-a-31-10.md) | para o Gustavo: as armas novas, as armas brancas, a vida em 100, o saque e a fabricação, e o zumbi sem uma perna |
 | [10 – Os zumbis especiais](10-Zumbis-Especiais.md) | o Brutamonte, o Long e o Corredor (os números, as animações, como testar), a lanterna com pilhas e as luzes maiores da fogueira e da tocha |
 | [11 – O desgaste do carro e a gasolina](11-Desgaste-do-Carro.md) | os pneus que gastam e furam (um problema por vez), a vela, o radiador, as batidas, a gasolina e o galão; como testar pelo F1 |
+| [12 – O Dia 0](12-Dia-Zero.md) | o começo do jogo novo: a introdução na TV, a rua normal com os NPCs (os 5 doentes), as lojas e os 1.000 dólares, a porta do abrigo e os 5 anos depois; o F1 do Dia 0 |
 
 A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz do repositório. Ele é escrito para o assistente de IA que trabalha no projeto, mas é um texto comum, em português, e descreve cada sistema em detalhe. Esta pasta é o resumo para gente.
 

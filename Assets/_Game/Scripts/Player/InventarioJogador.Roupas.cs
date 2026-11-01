@@ -115,6 +115,22 @@ namespace ZombieCityCleaner.Player
             Roupas.Value = r;
         }
 
+        /// <summary>
+        /// O dono, quando a porta do abrigo fecha (o Dia 0 acabou): as roupas da loja do Dia 0 saem da aparência e o
+        /// anfitrião veste elas no inventário (<see cref="AparenciaDoJogador.RoupasDaLoja"/>), com as cores do catálogo.
+        /// </summary>
+        public void VestirAsDaLoja()
+        {
+            if (!IsOwner || _rede == null) return;
+            var a = _rede.Aparencia.Value;
+            var itens = a.RoupasDaLoja();
+            if (itens.Count == 0) return;
+            var bytes = new byte[itens.Count];
+            for (int i = 0; i < bytes.Length; i++) bytes[i] = (byte)itens[i];
+            VestirAsDaLojaRpc(bytes);
+            _rede.Aparencia.Value = a.SemAsDaLoja();
+        }
+
         /// <summary>Há uma célula livre na grade (as roupas ocupam uma)?</summary>
         public bool CabeUmaRoupa => TemEspaco(Item.PrimeiraRoupa);
 
@@ -159,6 +175,26 @@ namespace ZombieCityCleaner.Player
             // a que estava no lugar vai para a célula da que foi vestida (as duas ocupam uma)
             if (antes != Item.Nada) Mochila[k] = new ItemNaMochila { id = NovoId(), item = antes, x = it.x, y = it.y, cores = coresAntes };
             else Mochila.RemoveAt(k);
+            Roupas.Value = r;
+        }
+
+        // as roupas da loja do Dia 0 vestidas; a que estava no lugar (a do começo) vai para a grade, se couber
+        [Rpc(SendTo.Server)]
+        void VestirAsDaLojaRpc(byte[] itens, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || itens == null) return;
+            var r = Roupas.Value;
+            foreach (byte b in itens)
+            {
+                var item = (Item)b;
+                var dados = Itens.Roupa(item);
+                if (dados == null) continue;
+                var antes = r.Peca(dados.lugar);
+                ulong coresAntes = r.Cores(dados.lugar);
+                r.Por(dados.lugar, item, 0);
+                if (antes != Item.Nada && antes != item && Espaco(antes, out int cx, out int cy, out bool girado))
+                    Mochila.Add(new ItemNaMochila { id = NovoId(), item = antes, x = (byte)cx, y = (byte)cy, girado = girado, cores = coresAntes });
+            }
             Roupas.Value = r;
         }
 

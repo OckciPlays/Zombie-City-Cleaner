@@ -803,7 +803,7 @@ namespace ZombieCityCleaner.Player
         void OnGUI()
         {
             // com o inventário ou o menu do desenvolvedor, sem mira; gravando um vídeo, só no das armas
-            if (MenuOnline.Aberto || MenuOnline.ComTela || (ModoVideo.Ligado && !ModoVideo.MostrarMira)) return;
+            if (MenuOnline.Aberto || MenuOnline.ComTela || MenuOnline.Cinema || (ModoVideo.Ligado && !ModoVideo.MostrarMira)) return;
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
             float t = Mathf.Max(1f, Mathf.Round(2 * u));
             if (NaLuneta) Luneta(cx, cy, u);

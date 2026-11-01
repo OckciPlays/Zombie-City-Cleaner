@@ -34,9 +34,10 @@ namespace ZombieCityCleaner.Mundo
         /// de cada uma) e o hospital (Parte M6, terceira fatia, 27/10/2026). 9 = a floresta: as manchas, os plantios e as
         /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026). 10 = o bunker da família: o
         /// lugar fora da cidade dela, a estrada de terra, o pátio plano, o buraco da caixa e a partida nele (o
-        /// Plano_Bunker.md da pasta de arte, a parte 5, 01/11/2026).
+        /// Plano_Bunker.md da pasta de arte, a parte 5, 01/11/2026). 11 = a casa da família sempre a mesma (a do Dia 0,
+        /// 01/11/2026; as duas foram feitas como a 10, em lados diferentes, e juntadas no merge).
         /// </summary>
-        public const int Versao = 10;
+        public const int Versao = 11;
 
         /// <summary>As etapas para a tela de carregamento (de 0 a 1, e o texto). Pode ser chamado de outras threads.</summary>
         public delegate void Progresso(float fracao, string etapa);
