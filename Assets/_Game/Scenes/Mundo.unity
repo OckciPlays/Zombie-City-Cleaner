@@ -3665,6 +3665,16 @@ MonoBehaviour:
     intensidadeLuz: 0.4
     alturaLuz: 38
     neblinaDeAltura: 0.05
+  limpo:
+    neblina: {r: 0.7, g: 0.78, b: 0.86, a: 1}
+    ceu: {r: 0.6, g: 0.68, b: 0.78, a: 1}
+    horizonte: {r: 0.56, g: 0.58, b: 0.56, a: 1}
+    chao: {r: 0.36, g: 0.34, b: 0.3, a: 1}
+    luz: {r: 1, g: 0.95, b: 0.84, a: 1}
+    densidade: 0.0045
+    intensidadeLuz: 1.35
+    alturaLuz: 47
+    neblinaDeAltura: 0.003
   alturaBase: 0.2
   queda: 0.32
   vento: {x: 0.6, y: 0.25}
@@ -3708,6 +3718,7 @@ GameObject:
   - component: {fileID: 2005601270}
   - component: {fileID: 2005601271}
   - component: {fileID: 2005601272}
+  - component: {fileID: 2005601273}
   m_Layer: 0
   m_Name: Mundo
   m_TagString: Untagged
@@ -4232,6 +4243,19 @@ MonoBehaviour:
   raioDePerto: 8
   pecasPorQuadro: 12
   malhasPorQuadro: 2
+--- !u!114 &2005601273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8adb9d263c4d3e84c9e446d936bde247, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.DiaZero.DiaZeroDaPartida
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &2056384982
 GameObject:
   m_ObjectHideFlags: 0

@@ -1006,7 +1006,7 @@ namespace ZombieCityCleaner.Mundo
             }
             // manchas: sangue (altura de gente) e mofo (perto do teto), nas faces de dentro das paredes de fora
             var internas = paredes.FindAll(w => w.ext);
-            for (int i = 0; i < p.sangue + 3 * p.andares; i++)
+            for (int i = 0; !nova && i < p.sangue + 3 * p.andares; i++)
             {
                 var w = internas[rnd.Next(internas.Count)];
                 var cheias = new List<Vector4>();

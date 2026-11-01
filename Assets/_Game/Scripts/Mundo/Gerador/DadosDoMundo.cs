@@ -46,6 +46,11 @@ namespace ZombieCityCleaner.Mundo
         public TamanhoDoMundo tamanho;
         public int semente;
         public string nome;
+        /// <summary>
+        /// O jogo novo começa pelo Dia 0 (01/11/2026, a pedido: a cidade normal, as compras e a porta dos 5 anos); o mundo
+        /// só é gerado depois. O Continuar (o mesmo mundo de novo) vai direto para o mundo.
+        /// </summary>
+        public bool diaZero;
 
         public static PedidoDoMundo Padrao => new PedidoDoMundo { tamanho = TamanhoDoMundo.Grande, nome = "Mundo novo" };
     }

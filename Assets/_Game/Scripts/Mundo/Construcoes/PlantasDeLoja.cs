@@ -28,6 +28,8 @@ namespace ZombieCityCleaner.Mundo
         public float ex0, ex1;
         /// <summary>As cores: a fachada, as faixas (a borda das lajes), a placa e o toldo (null: sem toldo).</summary>
         public string cor, faixa, placa, toldo;
+        /// <summary>O nome escrito na placa (o Dia 0); vazio: as letras em blocos.</summary>
+        public string nome;
         public float peDireitoDoTerreo, peDireito, laje;
         public readonly List<Comodo> comodos = new List<Comodo>();
         public readonly List<Ligacao> ligacoes = new List<Ligacao>();

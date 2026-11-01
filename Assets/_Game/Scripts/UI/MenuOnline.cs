@@ -34,7 +34,13 @@ namespace ZombieCityCleaner.UI
         /// o foco), um clique o prende de novo, e esse clique não vale como tiro: os comandos só voltam depois de soltar os
         /// botões do mouse. O estado do mouse é lido na hora, para não depender da ordem dos scripts no quadro do clique.
         /// </summary>
-        public static bool Controla => !Aberto && _telas.Count == 0 && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar;
+        public static bool Controla => !Aberto && _telas.Count == 0 && Cursor.lockState == CursorLockMode.Locked && !_esperarSoltar && !Cinema;
+
+        /// <summary>
+        /// Uma cena de cinema (a introdução e os 5 anos depois do Dia 0, 01/11/2026): o jogador local não recebe comandos,
+        /// mas o mouse continua preso (sem telas).
+        /// </summary>
+        public static bool Cinema { get; set; }
 
         /// <summary>
         /// Uma tela do jogo aberta por cima da partida (o inventário, o menu do desenvolvedor): o mouse fica solto e o
@@ -424,7 +430,8 @@ namespace ZombieCityCleaner.UI
             int semente = 0;
             if (texto.Length > 0 && (!int.TryParse(texto, out semente) || semente <= 0))
                 semente = (int)(Sorteio.Fnv(texto.ToLowerInvariant()) % 999999UL) + 1;
-            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo };
+            // o jogo novo começa pelo Dia 0 (01/11/2026); o Continuar vai direto para o mundo
+            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = true };
         }
 
         void Pausa(float u)

@@ -446,6 +446,24 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
 - Conferido num teste no Play, que dirigiu a perua sozinho.
 - O resumo está em [11 – O desgaste do carro e a gasolina](11-Desgaste-do-Carro.md).
 
+## O Dia 0 (01/11/2026, a pedido)
+
+- **O jogo novo começa no mundo normal**, numa cena separada (`Scenes/DiaZero.unity`, carregada por cima da do mundo): o
+  mundo só é gerado depois da porta do abrigo. O Continuar vai direto para o mundo.
+- **A introdução** na TV (uns 90 s, sem voz): a trilha estilo cinema (feita por código, no `Ferramentas/trilha`), o
+  jornal na tela da TV da sala e as imagens (o hospital no Brasil, o homem de pedra, a praça das estátuas, o ataque no
+  dia 30), com o texto da história; Enter ou Espaço pula.
+- **A rua:** 10 casas, o mercado, a farmácia, a loja de armas, a de ferragens, a de roupas e o posto, tudo novo (sem o
+  abandono), num dia de sol.
+- **28 NPCs** com as roupas do Gustavo: regando, cortando a grama, conversando, passeando, atendendo; acenam e olham
+  para quem chega. 5 doentes (os olhos vermelhos, a tosse, a coceira).
+- **1.000 dólares** para cada um: o carrinho nas prateleiras, o caixa, as compras aparecendo em casa; a loja de roupas
+  (provar e pagar).
+- **A porta do abrigo** na nossa casa: quem está fora perde as compras; "5 anos depois", todos na mesma casa, abandonada,
+  com as compras no chão.
+- **A casa da família é sempre a mesma** (o gerador passou para a versão 10).
+- O resumo está em [12 – O Dia 0](12-Dia-Zero.md).
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

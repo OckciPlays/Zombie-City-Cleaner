@@ -166,6 +166,15 @@ namespace ZombieCityCleaner.Mundo
         }
 
         /// <summary>
+        /// A semente da casa da família (o Dia 0, 01/11/2026, a pedido: "vamos usar a mesma casa"): é sempre a mesma casa,
+        /// em todo mundo, a do Dia 0 e a de 5 anos depois. Mudar a semente muda a casa (e a versão do gerador).
+        /// </summary>
+        public const int SementeDaFamilia = 8;
+
+        /// <summary>A casa da família, sempre a mesma (<see cref="SementeDaFamilia"/>).</summary>
+        public static Planta DaFamilia(Medidas m) => DaFamilia(new System.Random(SementeDaFamilia), m);
+
+        /// <summary>
         /// Quanto os moldes esticam: eles foram desenhados na escala 1,15 (a do jogo), e os cômodos, os corredores e
         /// as posições das portas crescem com a escala das medidas (a sala de medidas da Parte M0 compara 1, 1,15 e 1,30).
         /// </summary>

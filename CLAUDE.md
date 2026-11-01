@@ -14,6 +14,9 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 > **O desgaste do carro e a gasolina (01/11/2026):** os pneus que gastam e furam por sorteio (um problema por vez), a vela e
 > o radiador que gastam, as batidas, a gasolina e o galão estão em [`Docs/11-Desgaste-do-Carro.md`](Docs/11-Desgaste-do-Carro.md)
 > e na seção "O desgaste do carro e a gasolina".
+>
+> **O Dia 0 (01/11/2026):** o começo do jogo novo no mundo normal (a introdução na TV, a rua com os NPCs e as lojas, os
+> 1.000 dólares, a porta do abrigo e os 5 anos depois) está em [`Docs/12-Dia-Zero.md`](Docs/12-Dia-Zero.md) e na seção "O Dia 0".
 
 ## Branches
 
@@ -1498,6 +1501,163 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
   - **o Long:** o cuspe na fogueira (apagou) e no jogador (preso; a poça zerou a lanterna), o grito, a busca e a morte na
     lanterna depois de trocar as pilhas;
   - **a sombra das construções.**
+
+## O Dia 0 (01/11/2026, a pedido; `Scripts/DiaZero/`, `Scenes/DiaZero.unity`)
+
+O resumo para gente está em `Docs/12-Dia-Zero.md`. O pedido: o jogo novo começa no mundo normal (a introdução na TV, a rua
+com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo leva para o mundo de hoje, 5 anos depois.
+
+- **A cena separada:** `Scenes/DiaZero.unity` (nas Build Settings), refeita pelo menu **Zombie City Cleaner > Dia 0 >
+  Montar a cena** (`Editor/MontagemDoDiaZero`):
+  - o objeto "Dia zero", com a `RuaDoDiaZero`, os `NpcsDoDiaZero` e a `IntroDoDiaZero`;
+  - o volume "Pós-processamento (Dia 0)" (`Settings/DiaZero_Volume.asset`: as cores vivas, sem a dessaturação do dia do
+    mundo);
+  - a luz da prévia (`LuzDaPrevia`, desligada no Play).
+  A montagem também põe o `DiaZeroDaPartida` no "Mundo" da cena do mundo (a `MontagemDoMundo` põe ao montar a cena).
+- **O encaixe com o mundo:**
+  - **O pedido.** O "Criar o mundo" e o "Criar local" do menu põem o `PedidoDoMundo.diaZero`; o Continuar, não.
+  - **A geração espera.** O pedido vira o `MundoDaPartida._diaZero` (NetworkVariable, o anfitrião escreve no spawn). Com
+    ele ligado (`NoDiaZero`), o `MundoDaPartida` não começa a geração. `AcabarODiaZero()`, no anfitrião, solta, e cada
+    máquina gera o mundo (`AoMudarODiaZero`). `VeioDoDiaZero` diz que a partida desta máquina começou no Dia 0.
+  - **A cena carrega por cima.** O `DiaZeroDaPartida` é um NetworkBehaviour no "Mundo". Com o `NoDiaZero`, cada máquina
+    carrega a cena `DiaZero` por cima (`LoadSceneAsync` aditivo e local; a cena não tem NetworkObject nenhum).
+  - **Os jogadores nascem na sala.** Com a rua pronta, cada máquina põe os nascimentos (`PontosDeNascimento.Definir`: na
+    sala da nossa casa, de frente para a TV). O anfitrião cria os jogadores (`CriarNaRua`; os clientes pedem com o
+    `ProntoNaRuaRpc`), cada um com a carteira de 1.000.
+  - **O que muda nos sistemas de hoje:**
+    - o `InventarioJogador`: no Dia 0, o jogador nasce sem a pistola;
+    - o `FomeESede`: a fome e a sede param enquanto o mundo não está pronto;
+    - a `TelaDeCarregamento`: sai no Dia 0 e na passagem (o `DiaZeroDaPartida` desenha as telas dele).
+  - **O relógio.** O anfitrião para o relógio às 10h30 (`CicloDoDia.SempreDeDia` + `MudarHora`). A porta solta o relógio
+    às 8h (`HoraDaSaida`).
+  - **A luz.** O `AmbienteDoDia.DiaLimpo` (estático, de 0 a 1) troca o perfil do dia pelo `limpo` (o sol, a neblina rala)
+    e tira o volume do dia. O `AmbienteDoDia.Escurecer` escurece a luz nas cenas de cinema.
+  - **O cinema.** Com o `MenuOnline.Cinema` (estático), o jogador local não recebe comandos e o mouse continua preso. Os
+    HUDs somem: a mira, a vida, a fome, os atalhos e o do Dia 0.
+- **A casa da família é sempre a mesma:**
+  - `PlantasDeCasa.SementeDaFamilia` = 8 e `DaFamilia(Medidas)`: a térrea verde, com a garagem e a porta para dentro;
+  - o `PlanejadorDoMapa` usa ela, e o gerador passou para a versão 10;
+  - a rua do Dia 0 monta a mesma planta, espelhada do mesmo jeito: as coordenadas da casa são as mesmas nos dois.
+- **As obras novas:**
+  - `Obra.nova`: sem as tábuas nas janelas (o `TratarJanela` sorteia igual e não põe) e sem as manchas de sangue e de mofo
+    (na `Casa`);
+  - `PlantaDeLoja.nome`: com o nome, a fachada fica sem as letras em blocos (o `RuaDoDiaZero.Placa` escreve por cima, com
+    o `Letreiro`).
+- **`RuaDoDiaZero`** (uma `CenaDeExemplo`, `[ExecuteAlways]`): tudo `DontSave`, montado ao abrir a cena.
+  - **As casas** (`PorCasaNova`): a `Casa` nova, a mobília antiga e, com a `MobiliaNova` registrada, a nova (pela
+    `MobiliaDaConstrucao`, com as portas e as gavetas); os pisos, a área de dentro e o eco.
+  - **A nossa casa** (`ACasaDaFamilia`):
+    - os nascimentos na frente do sofá, olhando a TV (e o `OlhoNoSofa` e a `Tv`);
+    - os `LugaresDasCompras`, no chão da sala, da cozinha e do corredor, fora dos móveis;
+    - a `PortaDoAbrigo`, no fim do corredor, na parede de x0.
+    `DentroDaCasa(ponto)` é a caixa da planta, com a garagem coberta.
+  - **As lojas** (`PorLojaDoDia`):
+    - o mercado, a farmácia e a loja de armas, com os tipos delas;
+    - a de ferragens, com os móveis da 24 horas;
+    - a de roupas, comum, com o caixa ao lado da porta (`BalcaoPertoDaPorta`);
+    - em todas, os pisos e a placa.
+  - **O posto:** o `ModelosDaEstrada.Posto(2)`, com a loja de conveniência pela mesma planta e pela mesma matriz.
+  - **A rua** (`Rua`).
+  - **As pontas** (`Fechar`): as cercas atrás dos lotes, a 44 m; a obra nas duas pontas, só nas calçadas; as paredes
+    invisíveis; os hidrantes e as lixeiras.
+  - **Os lugares dos NPCs** (`PorNpcs`).
+- **`LojaDoDiaZero`** (no objeto de cada loja):
+  - **os caixas:** os balcões da planta (`CaixaDaLoja`), com a registradora;
+  - **os atendentes:** atrás do balcão;
+  - **as fileiras dos móveis do salão** (as alturas medidas nas malhas do `Cidade_Mobilia.fbx`):
+    - as prateleiras;
+    - as gôndolas, dos dois lados;
+    - as geladeiras, só com as bebidas;
+    - os expositores de armas, só com as armas;
+    - as vitrines, com o que é pequeno;
+  - **os produtos** (`ProdutoNaPrateleira`): cada produto numa fileira primeiro, e depois o resto repetindo; sem modelo,
+    uma caixinha de papelão;
+  - **as roupas:** as de `Prefabs/Roupas/Itens` que estão à venda, até 4 por fileira (`RoupaNaLoja`);
+  - **a seção das mochilas** da loja de roupas (`Mochilas`, a pedido): a mesa de exposição no primeiro lugar livre do meio
+    do salão (1 m de passagem em volta), a frente para a porta, com o degrau atrás, a placa "MOCHILAS" no poste
+    (`RuaDoDiaZero.Escrever`) e as três mochilas em dois andares (`SecaoDasMochilas`);
+  - **o corredor do mercado**, em volta das gôndolas;
+  - **as lâmpadas do salão**: acesas, sem sombra.
+- **`PrecosDoDiaZero`:** os produtos de cada loja (o item, o preço e o desgaste: o galão vazio é 100) e o preço de cada
+  roupa.
+- **`AparenciaDoJogador`** ganhou um byte por lugar da loja (`LugaresDaLoja`; `DaLoja`, `ComDaLoja`, `LugarDaPeca`):
+  - os lugares: a cabeça, os óculos, o rosto, a camisa, a jaqueta, o colete, o cinto, a calça, o calçado e as luvas;
+  - a camisa, a calça e o calçado trocam os da criação;
+  - o colete e a jaqueta não vão juntos.
+- **O carrinho** (`Carrinho`, estático, desta máquina): os produtos e as roupas provadas de uma loja só (as roupas são a
+  diferença para a aparência de antes de provar). Sair da loja (0,8 m de folga) devolve tudo.
+- **A tela do caixa** (`TelaDoCaixa`: uma tela do jogo; ESC fecha):
+  - manda o `PedidoDeCompra` (`PagarRpc`);
+  - o anfitrião soma pela tabela, confere a `CarteiraDoDia` e guarda as `CompraDoDia` (a pilha completa a anterior; cada
+    uma tem o lugar dela na casa);
+  - o anfitrião responde (`ResultadoRpc`);
+  - as compras aparecem no chão da casa em todas as máquinas (só o desenho).
+- **A porta** (`PortaDoAbrigo`: E duas vezes; `FecharAPortaRpc`, só de dentro de casa; o F1 pula com `pular`):
+  - quem está fora perde as compras, e o `PortaFechouRpc` avisa quem ficou;
+  - o relógio vai para as 8h, e o `AcabarODiaZero` solta a geração.
+  - **A passagem** (`ComecarAPassagem`, em cada máquina): o cinema; o jogador parado no ar (`Voando`); a tela preta "5
+    ANOS DEPOIS", com a barra da geração; e a rua sai.
+  - **Com o mundo pronto** (`FicouPronto`): cada um vai para o nascimento dele na casa da família. O anfitrião entrega as
+    compras (`Entregar`): o lugar de cada uma, nas coordenadas da casa, pela `MatrizDaCasa` do lote da família, no
+    `ItensNoMundo`.
+- **Os NPCs** (`NpcsDoDiaZero` e `NpcDoDiaZero`, só no Play):
+  - **a roupa:** o `Prefabs/Roupas/NPC`, vestido por `VestirSorteado(tipo, semente)`;
+  - **quem anda** está onde o relógio da partida diz (`NetworkManager.ServerTime`): o caminho em laço, com as paradas do
+    faxineiro e de quem compra;
+  - **os gestos** vão por cima da animação, no `LateUpdate`. O `Apontar` aponta o osso pela ponta dele, sem depender do
+    eixo. Os gestos:
+    - a mangueira: o bico, a água em partículas, o canteiro e o rolo;
+    - o cortador, com o som do motor;
+    - o esfregão e o balde;
+    - a conversa;
+    - o aceno, para o jogador local que chega perto, e o olhar;
+  - **os 5 doentes:**
+    - a tosse: o som, o peito e a mão na boca;
+    - a coceira;
+    - os olhos vermelhos: duas manchas transparentes na cabeça, postas no primeiro quadro animado (`OlhoNaCabeca`);
+  - **os carros:** 3 passando, nas duas mãos, de neblina a neblina;
+  - **os sons:** em `SonsDoDiaZero`, gerados por código.
+- **O lobby na casa** (`DiaZeroDaPartida.Lobby.cs`, a pedido: "isso funcionaria como um lobby pré-jogo"): a `FaseDoDia`
+  (`_fase`, NetworkVariable do anfitrião): `Casa`, `Tv` e `Rua`.
+  - **Casa:** cada um nasce na sala e cria o personagem; a festa toca (`IntroDoDiaZero.Festa`); quem sai da caixa da
+    casa (`DentroDaCasa`) volta para o último ponto de dentro (`NoLobby`, com o aviso); a porta do abrigo não aparece;
+    em cima da tela, quantos estão na casa (`DesenharOLobby`).
+  - **Tv:** o E na TV da sala (`TelevisaoDoDiaZero`, a caixa na frente da tela, posta pela `IntroDoDiaZero.PrepararATv`
+    quando a TV de perto entra) chama o `LigarATvRpc`: o anfitrião guarda o começo (`_tvDesde`, no
+    `NetworkManager.ServerTime`), e a introdução de cada um começa do ponto em que está (`TempoDaTv`; a trilha também).
+    Quem acaba ou pula avisa (`AcabeiATvRpc`).
+  - **Rua:** com todos que têm o jogador tendo visto (ou o tempo da introdução passado, `ConferirATv`), as compras e a
+    porta são liberadas. Daí, E na TV reprisa a introdução só nesta máquina (`Reprisar`). O F1 libera na hora
+    (`PedirLiberarARua`).
+- **A introdução** (`IntroDoDiaZero`): uns 91 s, ligada pela TV (o lobby), para todos. Enter ou Espaço pula (só aqui).
+  - **A tela da TV:** medida no modelo (`Telas`: o meio e o tamanho da face de esmalte da TV de tubo e da TV de chão, nas
+    coordenadas dela; a da TV de tubo fica à esquerda dos botões), levada pela escala da mobília de perto.
+  - **Os doentes do hospital** ficam deitados de costas na cama (os pés na ponta de baixo, a cabeça na cabeceira, as costas
+    no colchão a 0,52 m).
+  - **A câmera:** a dela, com a profundidade 60 e sem as camadas 6 e 10.
+  - **A trilha:** `Audio/DiaZero/IntroDoDiaZero.ogg`, do `Ferramentas/trilha/intro_dia0.py` (ré menor, o tema do jogo, os
+    "braams" e os tambores). Os tempos dela casam com as cenas. Junto, a festa (`SonsDoDiaZero.Festa`) e a TV ligando.
+  - **As cenas:**
+    - a TV de tubo da sala, de frente (a da mobília de perto, "TVTubo"); a tela é um quad com a `RenderTexture` da câmera
+      do estúdio (`Art/Materials/TelaDaTV.mat`);
+    - o quarto do hospital;
+    - a rua do homem de pedra;
+    - a praça das estátuas;
+    - o corredor do hospital, no escuro, com a luz vermelha (o ataque);
+    - a TV de novo (os Estados Unidos).
+  - **Os cenários** ficam 420 m ao sul da rua, montados no começo e apagados no fim. Os NPCs deles são `NpcDoCinema`: as
+    poses, a pedra cinza pintada pela `Vestimenta` e o `AlwaysAnimate`.
+  - **Na tela** (OnGUI): as faixas pretas, o texto da história (`Falas`, letra a letra), o "AO VIVO" e a faixa do jornal
+    nas imagens.
+- **O F1** (`MenuDoDesenvolvedor.DiaZero.cs`): o painel "DIA 0", no lugar do painel do mundo, com o dinheiro, o "pular o
+  Dia 0", o "+ 1.000" e o "ir para" (a casa ou cada loja).
+- **Conferido no Play (01/11/2026, um jogador, no Editor), sem erro nenhum:**
+  - a rua: 16 construções, 6 lojas com todos os produtos à mostra e 28 NPCs;
+  - a introdução inteira (91 s, com a TV, o estúdio e as cenas) e a volta do controle;
+  - as compras no mercado, na loja de armas e na de roupas, com o dinheiro certo;
+  - sair da loja sem pagar;
+  - a porta e os 5 anos depois: o mundo da semente 7 em ~4 s, o jogador na sala às 8h, as compras no chão da casa.
+  Falta testar com dois jogadores.
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 

@@ -32,9 +32,10 @@ namespace ZombieCityCleaner.Mundo
         /// casa da família (Parte M6, primeira fatia, 26/10/2026). 7 = os prédios de verdade: a planta de cada um, do
         /// tamanho do lote, e o chão dele (Parte M6, segunda fatia, 26/10/2026). 8 = as lojas de verdade (o tipo e a planta
         /// de cada uma) e o hospital (Parte M6, terceira fatia, 27/10/2026). 9 = a floresta: as manchas, os plantios e as
-        /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026).
+        /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026). 10 = a casa da família sempre a
+        /// mesma (a do Dia 0, 01/11/2026).
         /// </summary>
-        public const int Versao = 9;
+        public const int Versao = 10;
 
         /// <summary>As etapas para a tela de carregamento (de 0 a 1, e o texto). Pode ser chamado de outras threads.</summary>
         public delegate void Progresso(float fracao, string etapa);

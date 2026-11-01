@@ -641,7 +641,8 @@ namespace ZombieCityCleaner.Mundo
                     l.V0 = Mathf.Min(l.V0, o.V0);
                     l.V1 = Mathf.Max(l.V1, o.V1);
                     l.Tipo = TipoDeLote.Familia;
-                    var planta = PlantasDeCasa.DaFamilia(new System.Random((int)(l.Semente & 0x7fffffff)), Medidas.DoJogo);
+                    // sempre a mesma casa (a do Dia 0, 01/11/2026; antes, sorteada pelo lote)
+                    var planta = PlantasDeCasa.DaFamilia(Medidas.DoJogo);
                     var lim = Casa.Limites(planta, Medidas.DoJogo);
                     float frenteDoLote = l.Frente.y != 0f ? l.U1 - l.U0 : l.V1 - l.V0;
                     t.PorCasa(l, planta, 4f, Mathf.Max(0.5f, (frenteDoLote - (lim.y - lim.x)) * 0.5f));

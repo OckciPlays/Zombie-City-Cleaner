@@ -504,7 +504,8 @@ namespace ZombieCityCleaner.Mundo
             }
             int n = Mathf.Clamp(Mathf.FloorToInt((fim - ini) / 0.42f), 3, 14);
             float largura = Mathf.Min(fim - ini, n * 0.42f), x = (ini + fim) / 2 - largura / 2;
-            for (int k = 0; k < n; k++)
+            // com o nome escrito (o Dia 0: as letras de verdade vêm por cima, do letreiro), sem os blocos
+            for (int k = 0; string.IsNullOrEmpty(p.nome) && k < n; k++)
                 Caixa(new Vector3(x + largura * (k + 0.5f) / n, (y0 + y1) / 2, zf - 0.13f), new Vector3(0.24f, 0.42f, 0.03f), letra);
             if (p.toldo != null)
             {

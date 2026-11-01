@@ -218,6 +218,8 @@ namespace ZombieCityCleaner.EditorTools
             if (faltam > 0) Debug.LogWarning($"Faltam {faltam} modelos da mobília no {FbxDaMobilia}.");
             EditorUtility.SetDirty(mobilia);
             PorAMobiliaNova(mundo);
+            // o Dia 0 (01/11/2026): a rua normal antes do mundo, no jogo novo
+            MontagemDoDiaZero.PorNoMundo(mundo);
             return mobilia;
         }
 

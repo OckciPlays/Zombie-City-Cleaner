@@ -130,6 +130,12 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public readonly List<Vector4> tapadas = new List<Vector4>();
 
+        /// <summary>
+        /// A obra nova, de antes do apocalipse (o Dia 0, 01/11/2026): sem as tábuas nas janelas e sem as manchas de sangue e
+        /// de mofo. O sorteio continua o mesmo (a casa da família do Dia 0 sai igual à do mundo, só que nova).
+        /// </summary>
+        public bool nova;
+
         /// <summary>A abertura ab da parede w já foi tapada pela obra.</summary>
         public bool Tapada(Parede w, Abertura ab)
         {
@@ -396,7 +402,7 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public bool TratarJanela(Parede w, Abertura ab, int[] pesos, bool tabuasPorDentro = false)
         {
-            if (rnd.Next(pesos[0] + pesos[1]) < pesos[0]) return false;
+            if (rnd.Next(pesos[0] + pesos[1]) < pesos[0] || nova) return false;
             float h = ab.alto - ab.baixo;
             float fora = (tabuasPorDentro ? -1 : 1) * (m.esp / 2 + 0.05f);
             float[] ys = { 0.25f, h / 2, h - 0.25f };

@@ -261,7 +261,9 @@ namespace ZombieCityCleaner.UI
             if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
 
             // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
-            var mundo = PainelDoMundo(u, area);
+            // (no Dia 0, o painel dele no lugar)
+            var mundo = PainelDoDiaZero(u, area);
+            if (mundo.width <= 0f) mundo = PainelDoMundo(u, area);
             // ou, na cena do mapa fixo, o painel dele
             if (mundo.width <= 0f) mundo = PainelDoMapaFixo(u, area);
             if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(area.yMax, mundo.yMax));

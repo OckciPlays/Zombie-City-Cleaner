@@ -43,6 +43,13 @@ namespace ZombieCityCleaner.World
         readonly NetworkVariable<byte> _tamanho = new NetworkVariable<byte>();
         readonly NetworkVariable<int> _versao = new NetworkVariable<int>();
         readonly NetworkVariable<FixedString64Bytes> _nome = new NetworkVariable<FixedString64Bytes>();
+        // o Dia 0 (01/11/2026): enquanto ele dura, o mundo espera (a geração começa quando a porta da casa fecha)
+        readonly NetworkVariable<bool> _diaZero = new NetworkVariable<bool>();
+
+        /// <summary>A partida está no Dia 0 (a rua normal, antes do apocalipse): o mundo ainda não foi gerado.</summary>
+        public bool NoDiaZero => IsSpawned && _diaZero.Value;
+        /// <summary>A partida desta máquina começou no Dia 0 (para a tela dos 5 anos depois).</summary>
+        public bool VeioDoDiaZero { get; private set; }
 
         public DadosDoMundo Dados { get; private set; }
         public bool Gerado => Dados != null;
@@ -106,14 +113,30 @@ namespace ZombieCityCleaner.World
                 _versao.Value = GeradorDoMundo.Versao;
                 string nome = string.IsNullOrWhiteSpace(p.nome) ? "Mundo novo" : p.nome.Trim();
                 _nome.Value = new FixedString64Bytes(nome.Length > 30 ? nome.Substring(0, 30) : nome);
+                _diaZero.Value = p.diaZero;
                 NetworkManager.OnClientDisconnectCallback += AoSair;
             }
-            if (_semente.Value != 0) Comecar();
+            VeioDoDiaZero = _diaZero.Value;
+            _diaZero.OnValueChanged += AoMudarODiaZero;
+            if (_diaZero.Value) Etapa = "No Dia 0";
+            else if (_semente.Value != 0) Comecar();
             else _semente.OnValueChanged += AoChegarASemente;
+        }
+
+        void AoMudarODiaZero(bool antes, bool depois)
+        {
+            if (!depois && _geracao == null && Dados == null && _semente.Value != 0) Comecar();
+        }
+
+        /// <summary>No anfitrião: o Dia 0 acabou (a porta da casa fechou, ou o F1 pulou): todos geram o mundo.</summary>
+        public void AcabarODiaZero()
+        {
+            if (IsServer && IsSpawned) _diaZero.Value = false;
         }
 
         public override void OnNetworkDespawn()
         {
+            _diaZero.OnValueChanged -= AoMudarODiaZero;
             _semente.OnValueChanged -= AoChegarASemente;
             if (NetworkManager != null) NetworkManager.OnClientDisconnectCallback -= AoSair;
             Reiniciar();
@@ -122,7 +145,7 @@ namespace ZombieCityCleaner.World
         void AoChegarASemente(int antes, int depois)
         {
             _semente.OnValueChanged -= AoChegarASemente;
-            if (depois != 0 && _geracao == null && Dados == null) Comecar();
+            if (depois != 0 && _geracao == null && Dados == null && !_diaZero.Value) Comecar();
         }
 
         // a partida acabou (ou outra começou): sem a cena recarregar, o mundo da anterior sai
