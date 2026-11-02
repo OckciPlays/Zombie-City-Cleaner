@@ -273,8 +273,10 @@ namespace ZombieCityCleaner.UI
             // o carro (o desgaste e a gasolina), embaixo do Oco
             var carro = PainelDoCarro(u, oco);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Area.xMax, Mathf.Max(Area.yMax, carro.yMax));
-            // os zumbis (teste: criar um na frente, a pedra do sol), ao lado
-            var zumbis = PainelDosZumbis(u, oco);
+            // os zumbis (teste: criar um na frente, a pedra do sol) ou o clima (02/11/2026: a chuva, os raios e o tornado),
+            // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
+            var zumbis = _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
+            AbasDosZumbisEDoClima(u, zumbis);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
             // a trilha sonora (teste), embaixo dos zumbis
             var trilha = PainelDaTrilha(u, zumbis);

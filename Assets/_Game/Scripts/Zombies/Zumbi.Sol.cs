@@ -193,7 +193,8 @@ namespace ZombieCityCleaner.Zombies
             }
             if (_noSol)
             {
-                MudarPedra(Pedra + dt / Mathf.Max(0.5f, TempoParaPetrificar));   // o Corredor, mais rápido
+                // o Corredor, mais rápido; no chuvisco (as nuvens tapando o sol), mais devagar
+                MudarPedra(Pedra + dt * World.Tempo.Sol / Mathf.Max(0.5f, TempoParaPetrificar));
                 if (Pedra >= 1f)
                 {
                     Petrificar();

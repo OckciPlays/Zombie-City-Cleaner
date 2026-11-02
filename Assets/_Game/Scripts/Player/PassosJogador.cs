@@ -84,6 +84,16 @@ namespace ZombieCityCleaner.Player
             if (Efeitos.Passos == null) return;
             Vector3 pe = transform.position;
             if (!Physics.Raycast(pe + Vector3.up * 0.3f, Vector3.down, out var chao, 0.6f, MascaraDoChao, QueryTriggerInteraction.Ignore)) return;
+            // numa poça da chuva forte (World/ClimaNaTela): o respingo no lugar do passo; no anfitrião, o barulho chama os
+            // zumbis mais perto
+            if (ClimaNaTela.NaPoca(chao.point))
+            {
+                var agua = ClimaNaTela.SonsDaPoca;
+                if (rede.IsOwner) Efeitos.Som(agua, chao.point, 0.55f * forca, false);
+                else Efeitos.Som(agua, chao.point, 0.9f * forca, true, 30f);
+                if (rede.IsServer) Zombies.ZombieManager.BarulhoDaPoca(chao.point, rede, correndo);
+                return;
+            }
             var clips = Efeitos.Passos[(int)Do(chao.collider, chao.point)][correndo ? 1 : 0];
             if (rede.IsOwner) Efeitos.Som(clips, chao.point, volumeProprio * forca, false);
             else Efeitos.Som(clips, chao.point, volumeDosOutros * forca, true, 25f);
@@ -106,7 +116,7 @@ namespace ZombieCityCleaner.Player
             return chao.fixa;
         }
 
-        static bool NaEstrada(Vector3 p)
+        internal static bool NaEstrada(Vector3 p)
         {
             var mundo = ZombieCityCleaner.World.MundoDaPartida.Instancia;
             var dados = mundo != null ? mundo.Dados : null;

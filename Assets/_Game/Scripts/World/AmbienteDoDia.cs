@@ -38,6 +38,22 @@ namespace ZombieCityCleaner.World
             neblina = new Color(0.70f, 0.78f, 0.86f), ceu = new Color(0.60f, 0.68f, 0.78f), horizonte = new Color(0.56f, 0.58f, 0.56f), chao = new Color(0.36f, 0.34f, 0.30f),
             luz = new Color(1.0f, 0.95f, 0.84f), densidade = 0.0045f, intensidadeLuz = 1.35f, alturaLuz = 47f, neblinaDeAltura = 0.003f,
         };
+        [Header("O tempo fechado (a chuva e a tempestade: World/CicloDoDia.Tempo.cs)")]
+        [Tooltip("O dia com o céu fechado (pelas nuvens do Tempo): mais escuro, cinza-azulado, a neblina mais densa e o sol sem sombra.")]
+        public Tons tempestadeDia = new Tons
+        {
+            neblina = new Color(0.40f, 0.43f, 0.45f), ceu = new Color(0.30f, 0.32f, 0.35f), horizonte = new Color(0.26f, 0.28f, 0.30f), chao = new Color(0.17f, 0.17f, 0.17f),
+            luz = new Color(0.62f, 0.66f, 0.72f), densidade = 0.05f, intensidadeLuz = 0.25f, alturaLuz = 55f, neblinaDeAltura = 0.1f,
+        };
+        [Tooltip("A noite com o céu fechado: ainda mais escura (sem a lua), a neblina mais densa.")]
+        public Tons tempestadeNoite = new Tons
+        {
+            neblina = new Color(0.05f, 0.06f, 0.07f), ceu = new Color(0.07f, 0.085f, 0.10f), horizonte = new Color(0.05f, 0.06f, 0.07f), chao = new Color(0.025f, 0.028f, 0.032f),
+            luz = new Color(0.4f, 0.46f, 0.56f), densidade = 0.05f, intensidadeLuz = 0.12f, alturaLuz = 38f, neblinaDeAltura = 0.07f,
+        };
+        [Tooltip("A cor do clarão do raio (Tempo.Clarao) na luz ambiente e na neblina.")]
+        public Color corDoClarao = new Color(0.75f, 0.8f, 1f);
+
         [Header("Neblina de altura")]
         [Tooltip("Altura (m) em que a densidade é a do chão.")]
         public float alturaBase = 0.2f;
@@ -79,7 +95,7 @@ namespace ZombieCityCleaner.World
         /// <summary>O escuro de uma cena de cinema (a introdução do Dia 0: o corredor do hospital à noite), de 0 a 1.</summary>
         public static float Escurecer { get; set; }
 
-        float _dentro, _dentroVel, _luneta;
+        float _dentro, _dentroVel, _luneta, _sombraDoSol = -1f;
 
         void OnEnable() => NaLuneta = false;
 
@@ -119,6 +135,10 @@ namespace ZombieCityCleaner.World
             // e a cena de vídeo afina a neblina por tomada (vista do alto, ela cobria tudo)
             // o Dia 0: o dia do perfil limpo no lugar do pesado
             var dia = Misturar(this.dia, limpo, DiaLimpo);
+            // o céu fechado (a chuva, a tempestade): o dia e a noite ficam mais escuros e a neblina, mais densa
+            float nuvens = Tempo.Nuvens;
+            dia = Misturar(dia, tempestadeDia, nuvens);
+            var noite = Misturar(this.noite, tempestadeNoite, nuvens);
             float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina * (SemNeblina ? 0f : 1f);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
@@ -127,6 +147,17 @@ namespace ZombieCityCleaner.World
             RenderSettings.ambientSkyColor = Color.Lerp(dia.ceu, noite.ceu, n) * fora;
             RenderSettings.ambientEquatorColor = Color.Lerp(dia.horizonte, noite.horizonte, n) * fora;
             RenderSettings.ambientGroundColor = Color.Lerp(dia.chao, noite.chao, n) * fora;
+            // o clarão do raio acende o céu, a neblina e tudo em volta por um instante (no bunker, quase nada)
+            float clarao = Tempo.Clarao * fora * (1f - fundo);
+            if (clarao > 0.001f)
+            {
+                RenderSettings.ambientSkyColor += corDoClarao * (clarao * 1.3f);
+                RenderSettings.ambientEquatorColor += corDoClarao * (clarao * 1.0f);
+                RenderSettings.ambientGroundColor += corDoClarao * (clarao * 0.5f);
+                neblina += corDoClarao * (clarao * 0.35f);
+                RenderSettings.fogColor = neblina;
+                CorDaNeblina = neblina;
+            }
             if (sol != null)
             {
                 sol.color = Color.Lerp(dia.luz, noite.luz, n);
@@ -134,6 +165,9 @@ namespace ZombieCityCleaner.World
                 float transicao = 1f - Mathf.Abs(n - 0.5f) * 2f;
                 sol.intensity = Mathf.Lerp(dia.intensidadeLuz, noite.intensidadeLuz, n) * (1f - 0.7f * transicao) * fora;
                 sol.transform.rotation = Quaternion.Euler(Mathf.Lerp(dia.alturaLuz, noite.alturaLuz, n), Mathf.Lerp(-30f, -35f, n), 0f);
+                // com o céu fechado, a luz fica difusa: quase sem sombra
+                if (_sombraDoSol < 0f) _sombraDoSol = sol.shadowStrength;
+                sol.shadowStrength = Mathf.Lerp(_sombraDoSol, 0.25f, nuvens);
             }
             if (volumeDia != null) volumeDia.weight = (1f - n) * (1f - DiaLimpo);
             if (volumeNoite != null) volumeNoite.weight = n;

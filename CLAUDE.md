@@ -1632,18 +1632,27 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
 - **A introdução** (`IntroDoDiaZero`): uns 91 s, ligada pela TV (o lobby), para todos. Enter ou Espaço pula (só aqui).
   - **A tela da TV:** medida no modelo (`Telas`: o meio e o tamanho da face de esmalte da TV de tubo e da TV de chão, nas
     coordenadas dela; a da TV de tubo fica à esquerda dos botões), levada pela escala da mobília de perto.
-  - **Os doentes do hospital** ficam deitados de costas na cama (os pés na ponta de baixo, a cabeça na cabeceira, as costas
-    no colchão a 0,52 m).
+  - **Os doentes do hospital** ficam recostados na cama (a pose `Deitado`): as pernas no colchão (a 0,5 m), os pés na ponta
+    de baixo e a coluna levantada 35°, nas costas do encosto.
+  - **A cama de hospital** da mobília (`CamaDeHospital`, no `Cidade_Mobilia.fbx` do Gustavo) tem o encosto virado ao
+    contrário: ele sobe da cabeceira para o meio da cama e ficava por cima da cabeça dos doentes (02/11/2026). Por isso,
+    a introdução usa uma cópia com o encosto espelhado no comprimento (`CamaConsertada`, a linha do meio dele medida no
+    modelo). As enfermarias do mundo ainda usam o modelo com o defeito.
   - **A câmera:** a dela, com a profundidade 60 e sem as camadas 6 e 10.
   - **A trilha:** `Audio/DiaZero/IntroDoDiaZero.ogg`, do `Ferramentas/trilha/intro_dia0.py` (ré menor, o tema do jogo, os
     "braams" e os tambores). Os tempos dela casam com as cenas. Junto, a festa (`SonsDoDiaZero.Festa`) e a TV ligando.
+    A trilha do jogo (o `MaestroDaTrilha`) não toca no Dia 0 inteiro (`MundoDaPartida.NoDiaZero`): ela começava de 6 a 12 s
+    depois de nascer e caía no começo do jornal (02/11/2026). Ela começa no mundo, depois da porta.
   - **As cenas:**
     - a TV de tubo da sala, de frente (a da mobília de perto, "TVTubo"); a tela é um quad com a `RenderTexture` da câmera
       do estúdio (`Art/Materials/TelaDaTV.mat`);
     - o quarto do hospital;
     - a rua do homem de pedra;
     - a praça das estátuas;
-    - o corredor do hospital, no escuro, com a luz vermelha (o ataque);
+    - o corredor do hospital, no escuro, com a luz vermelha: o Oco ataca o médico (02/11/2026, a pedido; era um NPC
+      esverdeado). É o `Resources/Oco_00_Original` sem o `OcoDeTeste`, sem colisão e sem som, com as animações dele
+      pelo tempo da cena (`MoverOOco`): parado até 2,5 s, andando até o alcance e golpeando a cada 1,4 s. Ele vem pela
+      esquerda da câmera, e o médico aparece ao lado dele;
     - a TV de novo (os Estados Unidos).
   - **Os cenários** ficam 420 m ao sul da rua, montados no começo e apagados no fim. Os NPCs deles são `NpcDoCinema`: as
     poses, a pedra cinza pintada pela `Vestimenta` e o `AlwaysAnimate`.
@@ -1747,7 +1756,7 @@ depois de cada falha.
   - O perigo (88 bpm, blocos de 10,9 s): 9 blocos (planos A, B e C), cada um em três camadas tocadas juntas: 1 a tensão, 2 a perseguição, 3 a horda. Mais as entradas ("te viram": dois tempos de piano ao contrário até o golpe, que cai no primeiro tempo do perigo), as saídas e as saídas pela pedra.
   - O vento (o silêncio, a pedido: "um silêncio com som de vento batendo em nossa direção e nada mais"): 10 blocos de dia e 10 de noite (mais escuros), de 24 a 36 s, com rajadas que vêm de um lado, batem e passam; um entra 4 s antes de o outro acabar.
   - O amanhecer e a morte: as faixas curtas, como o Pedro aprovou.
-- **O maestro** (`Music/MaestroDaTrilha`, criado sozinho ao abrir o jogo se houver o `Audio/Resources/TrilhaDoJogo.asset`): roda em cada jogador, sem rede, só durante a partida. As regras são as do `Ferramentas/trilha/maestro.py`:
+- **O maestro** (`Music/MaestroDaTrilha`, criado sozinho ao abrir o jogo se houver o `Audio/Resources/TrilhaDoJogo.asset`): roda em cada jogador, sem rede, só durante a partida (e fora do Dia 0, que tem os sons dele). As regras são as do `Ferramentas/trilha/maestro.py`:
   - A exploração vem em trechos: uma entrada, de 4 a 8 blocos do meio (na noite, de 3 a 6), escolhidos na hora por quem pode vir depois de quem e sem repetir os últimos, e uma saída. Depois, de 1 a 3 minutos só de vento. Neblina de dia, noite à noite (pelo `CicloDoDia.Noite`, no começo de cada trecho). O vento nunca para; com música, fica a 35%.
   - O nível do perigo, pelos zumbis em volta do jogador (`ZombieManager.Ameaca`, pelas cópias nos outros jogadores): 1 se um investiga ou procura a até 20 m; 2 se um caça (persegue, ataca ou se esquiva no meio da caça) a até 30 m; 3 com 4 caçando ou 2 atacando. Sobe na hora; desce um degrau a cada 4 s sem motivo. Cada camada sobe em 0,6 s e desce em 3 s.
   - Os momentos são do conjunto, não de cada zumbi (o Pedro: "cuidado!!"): o "te viram" toca uma vez por perigo, quando alguém começa a caçar (no meio da tensão, o golpe cai num tempo do perigo que já toca); se o último perigo acabou há menos de 40 s, o perigo volta sem o golpe. O fim espera o compasso: a saída, ou a saída pela pedra se um dos que caçavam virou estátua nos últimos 15 s. O amanhecer toca quando o sol chega (`Noite` passa de 0,5 para baixo); no meio de uma perseguição, espera e vira a saída dela. A morte (`VidaJogador.Caiu`, no dono) corta tudo; por 13 s o perigo não volta.
@@ -1847,3 +1856,90 @@ depois de cada falha.
   - **Conferido (29/10/2026, semente 7, o jogador andando reto a 15 m/s por 20 s, como de carro):** na Curta, 78 zumbis apareceram na tela, 36 deles a menos de 35 m (o mais perto a 23 m, a metade até 37 m); na Longa, 113 apareceram, nenhum a menos de 35 m (o mais perto a 42 m, a metade até 51 m). Parado, o quadro ficou igual (13,4 ms com 13 desenhados na Curta, 12,8 ms com 63 na Longa, no Editor).
 - **No Editor:** as opções mudam o asset do URP em uso (`PC_RPAsset`) e a `QualitySettings`; ao sair do Play (`Application.quitting`), tudo volta ao original, para o projeto não ficar com a escolha de quem testou. Conferido: depois do Play, o asset voltou (100%, 40 m, 2048, 2 cascatas, sem MSAA) e não ficou sujo.
 - **Conferido (29/10/2026, Editor):** a aba aparece com as quatro partes; a Ultra com 150% deixou o URP em 70 m, 4096, 4 cascatas, MSAA 4x e lodBias 3; a Baixa em 20 m, 1024, 1 cascata, texturas pela metade; na Média, a câmera do jogador que nasceu ficou com FXAA.
+
+## O clima (02/11/2026, a pedido; `World/CicloDoDia.Tempo.cs`, `World/ClimaNaTela.cs`)
+
+- **Os níveis:** sol (o padrão), chuvisco, chuva, tempestade e tempestade com raios, e o tornado no fim de algumas
+  tempestades com raios. As decisões do Pedro foram discutidas antes do código (a memória `zumbi-clima-chuva`).
+- **Quem manda é o anfitrião** (`CicloDoDia`, agora `partial`): o calendário, as nuvens, a chuva, o vento e as poças (de 0 a
+  1) vão aos outros a cada segundo (`NetworkVariable`); os raios vão na hora (`RaioRpc`); o tornado, a cada 0,2 s. Os
+  estáticos de `Tempo` (`Nivel`, `Nuvens`, `Chuva`, `Vento`, `Pocas`, `Tornado`, `PosicaoDoTornado`, `ForcaDoTornado`,
+  `Clarao`, `Sol`, `Ouvido`) são o que os outros scripts leem. Nada de clima no Dia 0 nem na cena de vídeo.
+- **O calendário (a "mini-estação"):** a calmaria (dias de sol; os primeiros, depois do Dia 0, sempre), a frente fraca (um
+  dia de chuva e um de chuvisco, em ordem sorteada), a calmaria curta, a frente forte (um dia de tempestade e um de
+  tempestade com raios, com o tornado no fim) e a calmaria de novo; às vezes uma frente fraca a mais; a ordem e as
+  durações variam a cada ciclo (pela semente do mundo). Cada evento ocupa só umas horas do dia, com os sinais antes (as
+  nuvens e o vento sobem 1,5 h antes; a chuva vem depois) e o fim aos poucos. Sem rádio nem aviso: só os sinais.
+  - **`ritmoDeTeste` (ligado em 02/11/2026, para o teste com os amigos):** as calmarias e os eventos bem mais curtos (a
+    primeira chuva vem uns 10 minutos depois de começar) e o tornado em `chanceDoTornado` = 60% das frentes fortes. **O
+    tornado é um evento bem raro no jogo:** depois do teste, desligar o ritmo e baixar a chance (o pedido do Pedro).
+- **O sol e os zumbis:** com o céu fechado, o sol não petrifica (`Tempo.Sol`: 1 no céu aberto, uns 0,5 no chuvisco, 0 da
+  chuva para cima). No chuvisco eles viram pedra mais devagar; na chuva e na tempestade, não viram, e andam onde quiserem,
+  como à noite (`ProtegerDoSol` desliga): o dia perigoso. As estátuas ficam até a noite.
+- **O barulho:** a chuva abafa o tiro para os zumbis (`Tempo.Ouvido`, até 0,55 na tempestade, no `ZombieManager.Barulho`).
+  Na chuva forte, as **poças** enchem (em uma hora do jogo; secam em três): um sorteio fixo por células de 7 m (o mesmo em
+  todas as máquinas), só no chão plano das ruas e das calçadas, fora das construções (`ClimaNaTela.NaPoca`). Pisar numa
+  poça cheia troca o passo pelo respingo (`PassosJogador`), e no anfitrião chama os três zumbis mais perto (até 12 m
+  andando, 18 m correndo: `ZombieManager.BarulhoDaPoca`). O carro não escorrega (por ora).
+- **O que se vê** (`ClimaNaTela`, em cada máquina, no objeto do `CicloDoDia`): as gotas caem numa caixa de 40 m em cima da
+  câmera (mais à frente quando ela anda), tortas com o vento da vegetação, morrem no que batem (o telhado, o carro, o chão)
+  com um respingo, e brilham na lanterna e nos postes (`Shaders/Resources/ClimaParticula.shader`; o sistema de partículas
+  fica em `AlwaysSimulate`: a caixa fica fora da vista, e pausada ela nunca começava). O céu, a luz e a neblina vão para
+  os tons de tempestade (`AmbienteDoDia.tempestadeDia` e `tempestadeNoite`, pelas nuvens; a sombra do sol quase some), e o
+  vento da vegetação balança até 3,2 vezes mais. As poças são quadrados recortados por ruído, escuros e lisos, com os
+  anéis das gotas (`ClimaPoca.shader`).
+- **Os sons** (`Audio/Resources/Clima`, do `Ferramentas/clima.py`): a chuva fina, a média e a forte, o vento forte e o
+  tornado em laço; dentro de uma casa ou de um prédio (ou debaixo de um teto), tudo abafado (sem os agudos, a 30%) e a
+  chuva no telhado por cima; no carro, abafado e a chuva na lata; no bunker, quase nada. O trovão vem atrasado pela
+  distância (343 m/s): longe, o ronco grave; no meio, o rolar; perto (a menos de 150 m), o estalo seco e o estrondo, e a
+  menos de 50 m o zumbido no ouvido (o resto abaixa e volta em 4 s). Dentro, o trovão também chega abafado.
+- **Os raios:** na chuva, raros e longe; na tempestade, longe a cada 7 a 18 s; na tempestade com raios, também os de perto
+  (a cada 12 a 30 s): de 8 a 40 m de um jogador, mais na frente, no ponto mais alto de uns sorteados (o telhado, o poste,
+  o carro). O clarão pisca (uma, duas ou três vezes) e acende o céu, a neblina e a luz ambiente; os de perto mostram o
+  risco (com galhos), uma luz forte no chão e faíscas. O raio de perto só assusta; o direto (raríssimo, 0,5% dos de perto,
+  em quem está no aberto) mata. Zumbi a 3,5 m vira cinza (morre jogado longe); carro a 5 m dispara o alarme.
+- **O tornado:** desce longe (650 m no calendário) e passa de 20 a 80 m de um jogador, reto, a uns 4 m/s, e some 650 m
+  depois (desce e se desfaz em 20 s). O funil são três cascas de cone girando (`ClimaFunil.shader`: o ruído em espiral, a
+  dança do pé, a neblina pela metade, para ele aparecer de longe como uma sombra), com a poeira no pé e os destroços
+  voando. Os raios de perto caem em volta dele. A menos de 70 m, o vento puxa o jogador (leve: correndo dá para fugir;
+  `MovimentoPrimeiraPessoa.Vento`); a menos de 13 m, tira 35 de vida a cada 2,5 s (pode matar; o dano é do
+  anfitrião), e a menos de 11 m joga o jogador para o alto (`Arremessar`). A casa protege em parte (o puxão a 35%; o dano
+  cai para 22 e só a menos de 8,5 m); o porão e o bunker (mais de 1,2 m abaixo do chão, com teto), inteiro. Os zumbis a 15 m são arrastados e morrem.
+- **A música:** no chuvisco e na chuva, a trilha de sempre. Na tempestade, a família da tempestade (52 bpm, 27 blocos: o
+  grave pesado, o cello batendo como a chuva, os tímpanos como trovão, o coro escuro, as cordas em tremolo). Com o tornado
+  perto, a do tornado (66 bpm, 20 blocos: as cordas subindo em espiral, o coração acelerado, o lamento do coro, o metal
+  raspando); quando quem joga avista o tornado, o que tocava da exploração dá lugar na hora a um trecho do tornado, que
+  abre com o golpe. O perigo dos zumbis continua por cima. Os blocos saem do `Ferramentas/trilha/clima.py` (`python
+  clima.py` e `python clima.py exportar`, que só mexe nestas duas famílias) e entram pelo Montar a trilha
+  (`MaestroDaTrilha.Clima.cs`).
+- **No F1, o painel "CLIMA"** (`UI/MenuDoDesenvolvedor.Clima.cs`): o tempo agora, o próximo
+  evento, onde quem joga está e os botões, que vão ao anfitrião: forçar cada nível, voltar ao calendário, tornado agora (a
+  300 m), acabar o tornado, raio perto, raio longe, encher as poças e pular para o próximo evento.
+- **No F1, o painel do clima** fica no lugar do painel dos zumbis, ao lado do Oco, pelas abas "Zumbis" e "Clima" no canto
+  de cima (embaixo do Oco ou do carro, ele passava da altura da tela e os botões não apareciam). A altura acompanha o texto.
+- **Os ajustes depois do primeiro teste do Pedro (02/11/2026):**
+  - **O tornado sumia olhando de frente** e aparecia olhando de lado: a câmera do jogador só desenha até 150 m de
+    profundidade, e de lado a profundidade é menor. Agora o que passa do fundo fica preso nele, atrás de tudo o que está
+    mais perto (`ClimaFunil` e `ClimaParticula`, no vértice), a caixa do funil é enorme (a câmera não descarta) e a
+    neblina vai pela distância de verdade, não pela profundidade. O risco do raio longe é desenhado trazido para 130 m,
+    no mesmo tamanho na tela.
+  - **A chuva entrava nas casas e no carro** (a colisão das partículas deixava passar pelos telhados finos): o mapa dos
+    tetos (`ClimaNaTela.Tetos`). A cada 0,25 s, 64 x 64 raios de cima para baixo (`RaycastCommand`, fora do quadro) acham
+    o que cobre cada célula de 0,75 m em volta da câmera; o shader apaga a gota e o respingo que estiverem abaixo
+    (`_ZccTeto`, `_ZccTetoArea`). O carro em que se está entra como uma caixa (`_ZccCarro`, pelas malhas da lataria).
+  - **Os três raios** (o pedido): o que é só o clarão (a 3 a 6 km: o trovão não chega; é também o sinal da tempestade
+    chegando, cada vez mais seguido, antes da chuva; na tempestade, um em cada quatro raios longe), o clarão com o
+    trovão longe (0,4 a 2,5 km) e o que cai perto. No F1, o botão "Só o clarão".
+  - **Os sons refeitos** (`Ferramentas/clima.py`), inspirados no planeta de tempestade do Missão Lázaro (o Pedro mandou os
+    sons de lá): a chuva virou pingos (centenas por segundo, em faixas diferentes, com o fundo da chuva longe e, na forte,
+    as gotas grossas e os plins nas poças; o volume não sobe nem desce em ondas); o telhado e o carro também em pingos (o
+    toc da telha, a chapa soando). Os trovões tinham quase tudo abaixo de 80 Hz (a caixa de som pequena e o fone não
+    tocam): agora o grave vai até 230 Hz e o ronco fica nos médios, rolando em trancos, com o tremor rápido no grave (8 a
+    13 Hz); o perto abre com o estalo em três rasgos e o estouro. O tornado virou o vento forte e constante (sem os
+    estalos de destroços, que soavam como granulado), com os raios em volta dele mais seguidos (os longe a cada 4 a 9 s,
+    metade em volta dele; os perto a cada 4 a 8 s).
+- **Conferido (02/11/2026, Mundo, semente 7, hospedando local, pelo roteiro de teste):** a chuva na rua (umas 7 mil gotas,
+  75 fps no Editor), as poças, o raio perto, o tornado de 200 m até o miolo (puxando a 2,7 m/s, o jogador jogado a 3,7 m, a
+  vida de 100 a 30 em 3 s), o fim dele no lugar e a música do tornado quando ele foi avistado. Sem erros do clima no
+  Console (o `Chao.shader` deu "out of memory" no compilador de shaders duas vezes, antes do clima; os "Destroying assets"
+  do terreno ao sair do Play são de antes). Falta ouvir no jogo e testar com dois jogadores.

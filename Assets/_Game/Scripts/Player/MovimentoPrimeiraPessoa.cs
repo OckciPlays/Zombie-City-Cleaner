@@ -101,6 +101,19 @@ namespace ZombieCityCleaner.Player
             _velocidade = Vector3.zero;
         }
 
+        /// <summary>
+        /// O vento que leva o jogador (m/s, no mundo), somado ao passo: o tornado puxando quem chega perto (World/ClimaNaTela,
+        /// só na máquina do dono). Zero no resto do tempo.
+        /// </summary>
+        public Vector3 Vento { get; set; }
+
+        /// <summary>Joga o jogador para o ar com esta velocidade (o tornado; o ar freia devagar e a gravidade traz de volta).</summary>
+        public void Arremessar(Vector3 velocidade)
+        {
+            if (_voando) return;
+            _velocidade = velocidade;
+        }
+
         /// <summary>Para onde o jogador olha (o giro e a inclinação, positiva para baixo), como se fosse o mouse.</summary>
         public void Olhar(float yaw, float pitch)
         {
@@ -221,7 +234,8 @@ namespace ZombieCityCleaner.Player
             }
             _velocidade.y += gravidade * dt;
             _velocidade = new Vector3(horizontal.x, _velocidade.y, horizontal.z);
-            _controle.Move(_velocidade * dt);
+            // o vento de fora (o tornado puxando, World/ClimaNaTela) soma no passo, sem mexer no que o jogador quer
+            _controle.Move((_velocidade + Vento) * dt);
 
             // Caiu para fora do mapa: volta ao ponto de nascimento.
             if (transform.position.y < alturaMinima)

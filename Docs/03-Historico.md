@@ -463,6 +463,36 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
   com as compras no chão.
 - **A casa da família é sempre a mesma** (o gerador passou para a versão 10).
 - O resumo está em [12 – O Dia 0](12-Dia-Zero.md).
+- **Os acertos da introdução (02/11/2026, a pedido):**
+  - os doentes recostados nas camas do hospital, com o encosto da cama virado para o lado certo (o modelo da mobília tem
+    o encosto ao contrário);
+  - o Oco atacando o médico no corredor, no lugar do NPC esverdeado;
+  - a trilha do jogo calada no Dia 0 (ela começava no meio do lobby e caía no começo do jornal).
+
+## O clima (02/11/2026, a pedido)
+
+- A chuva em níveis (chuvisco, chuva, tempestade, tempestade com raios) e o tornado, num calendário de frentes (a
+  "mini-estação": dias de sol, uma frente fraca, uma forte com o tornado no fim, em ordem e durações que variam), decidido
+  pelo anfitrião. As decisões foram discutidas com o Pedro antes do código.
+- Os raios com o trovão atrasado pela distância (longe, no meio e perto, com o estalo e o zumbido), o clarão no céu e o
+  risco do raio perto; o raio direto mata (raríssimo), o zumbi vira cinza e o carro dispara o alarme.
+- O tornado: o funil girando, a poeira e os destroços; puxa quem chega perto, joga e machuca no miolo; a casa protege em
+  parte, o porão e o bunker por inteiro.
+- O som abafado dentro das casas, dos prédios, do carro e do bunker (a chuva no telhado, a chuva na lata).
+- O céu fechado não petrifica os zumbis (o chuvisco, mais devagar); a chuva abafa o tiro; as poças da chuva forte fazem o
+  respingo e chamam os zumbis mais perto.
+- A trilha: as famílias novas da tempestade e do tornado (o golpe quando ele é avistado).
+- **Depois do primeiro teste do Pedro:** o tornado aparece também olhando de frente (a câmera só desenhava até 150 m), a
+  chuva não entra mais nas casas nem no carro (o mapa dos tetos), os três raios (só o clarão, o clarão com o trovão longe
+  e o raio perto) e os sons refeitos a partir do planeta de tempestade do Missão Lázaro (a chuva em pingos, os trovões
+  com o ronco nos médios e o tremor, o tornado com o vento forte e constante).
+- **Para o teste com os amigos (02/11/2026):** o `ritmoDeTeste` ligado (a primeira chuva em uns 10 minutos) e o tornado em
+  60% das frentes fortes. Depois, o tornado volta a ser raro.
+- **Conferido no Play (Mundo, semente 7, hospedando local):** a chuva na rua (umas 7 mil gotas, 75 fps no Editor), as
+  poças refletindo a neblina, o raio perto com o clarão, o tornado de 200 m até o miolo (o vento puxando a 2,7 m/s perto,
+  o jogador jogado a 3,7 m de altura e a vida de 100 a 30 em 3 s; quem fica no miolo morre), o fim do tornado no lugar, e a
+  música trocando para o tornado quando ele foi avistado. Falta: ouvir os sons no jogo, testar com dois jogadores e o
+  painel do F1 na tela.
 
 ## Mudanças de rumo, em resumo
 

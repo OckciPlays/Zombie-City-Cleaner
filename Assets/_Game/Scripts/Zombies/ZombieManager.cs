@@ -343,7 +343,10 @@ namespace ZombieCityCleaner.Zombies
             float agora = Time.time;
             // de dia e ao amanhecer, o tiro só tira da sombra quem está bem perto (5 m; à noite, 12 m)
             float direto = m.ProtegerDoSol ? m.ajustes.tiroAmeacaDeDia : m.ajustes.tiroChamaDireto;
-            float raio2 = m.ajustes.barulhoDoTiro * m.ajustes.barulhoDoTiro, direto2 = direto * direto;
+            // a chuva abafa o tiro (World/CicloDoDia.Tempo.cs): na tempestade, ele chega a pouco mais da metade
+            float ouvido = Tempo.Ouvido, alcance = m.ajustes.barulhoDoTiro * ouvido;
+            direto *= ouvido;
+            float raio2 = alcance * alcance, direto2 = direto * direto;
             foreach (var z in m._ativos)
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;

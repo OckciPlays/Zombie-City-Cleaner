@@ -8,6 +8,7 @@ using ZombieCityCleaner.Player;
 using ZombieCityCleaner.Roupas;
 using ZombieCityCleaner.UI;
 using ZombieCityCleaner.World;
+using ZombieCityCleaner.Zombies;
 
 namespace ZombieCityCleaner.DiaZero
 {
@@ -53,7 +54,15 @@ namespace ZombieCityCleaner.DiaZero
         List<ModelosDaEstrada.Texto> _textoDaFaixa;
         Transform _telaQuad;
         Vector3 _tvCentro, _tvFrente;
-        NpcDoCinema _atacante, _vitima;
+        NpcDoCinema _vitima;
+        // o Oco do corredor: onde ele começa, o médico que ele ataca e o andar dele (para, anda e golpeia, pelo tempo da cena)
+        // (o Oco vem pela esquerda da câmera, que fica à direita do corredor: o médico aparece ao lado dele)
+        static readonly Vector3 Medico = new Vector3(-0.2f, 0f, 1.8f), OcoDe = new Vector3(-0.45f, 0f, -0.5f);
+        const float OcoParte = 2.5f, OcoAnda = 0.55f, OcoAlcance = 0.95f, OcoGolpeCada = 1.4f;
+        Transform _oco;
+        Animator _ocoAnimador;
+        string _ocoEstado;
+        int _ocoGolpe;
 
         // ------------------------------------------------------------------ o roteiro
         // (o tempo de cada cena e o texto, no tempo da trilha)
@@ -290,7 +299,38 @@ namespace ZombieCityCleaner.DiaZero
             var alvo = _corredor.TransformPoint(new Vector3(-0.2f, 1.25f, 1.2f));
             _cam.transform.SetPositionAndRotation(p, Quaternion.LookRotation(alvo - p));
             _cam.fieldOfView = 60f;
-            if (_atacante != null) _atacante.Investida = Mathf.Clamp01((s - 2f) / 6f);
+            if (_oco != null) MoverOOco(s);
+        }
+
+        // o Oco parado no corredor, depois andando até o médico e golpeando (tudo pelo tempo da cena: quem entra no meio
+        // vê o mesmo)
+        void MoverOOco(float s)
+        {
+            var ate = Medico + (OcoDe - Medico).normalized * OcoAlcance;
+            float caminho = Vector3.Distance(OcoDe, ate);
+            var p = Vector3.MoveTowards(OcoDe, ate, Mathf.Max(0f, s - OcoParte) * OcoAnda);
+            var olhar = Medico - p;
+            olhar.y = 0f;
+            _oco.SetPositionAndRotation(_corredor.TransformPoint(p), _corredor.rotation * Quaternion.LookRotation(olhar));
+            float chega = OcoParte + caminho / OcoAnda;
+            if (s < OcoParte) TocarNoOco("Idle");
+            else if (s < chega) TocarNoOco("Walk");
+            else
+            {
+                // um golpe a cada 1,4 s, do começo da animação
+                int golpe = Mathf.FloorToInt((s - chega) / OcoGolpeCada);
+                if (golpe == _ocoGolpe || _ocoAnimador == null) return;
+                _ocoGolpe = golpe;
+                _ocoEstado = "Attack";
+                _ocoAnimador.CrossFadeInFixedTime("Attack", 0.1f, 0, 0f);
+            }
+        }
+
+        void TocarNoOco(string estado)
+        {
+            if (_ocoEstado == estado || _ocoAnimador == null) return;
+            _ocoEstado = estado;
+            _ocoAnimador.CrossFadeInFixedTime(estado, 0.2f);
         }
 
         void Final(float s)
@@ -461,14 +501,16 @@ namespace ZombieCityCleaner.DiaZero
                 for (int i = 0; i < 4; i++) o.Caixa(new Vector3(-4.2f + i * 2.8f, 1.6f, 2.93f), new Vector3(1.2f, 0.9f, 0.04f), "Vidro");
                 Peca("Quarto", o, _quarto, mat);
                 var cama = Movel("CamaDeHospital");
+                if (cama != null) cama = CamaConsertada(cama);
                 for (int i = 0; i < 4; i++)
                 {
                     var p = new Vector3(-4.2f + i * 2.8f, 0f, 1.6f);
-                    if (cama != null) Movel3(_quarto, cama, p, 180f, new Vector3(1.0f / 1.0f, 1f, 1f), mat);
+                    if (cama != null) Movel3(_quarto, cama, p, 180f, Vector3.one, mat);
                     if (npc == null) continue;
-                    // deitado de costas: os pés na ponta de baixo da cama (para o quarto), a cabeça na cabeceira (a cama está
-                    // girada: a cabeceira fica do lado da parede), as costas em cima do colchão (0,52 m)
-                    var d = Instantiate(npc, _quarto.TransformPoint(p + new Vector3(0f, 0.64f, -0.82f)), _quarto.rotation * Quaternion.Euler(-90f, 180f, 0f), _quarto);
+                    // deitado de costas, as pernas no colchão (0,5 m) e os pés para o quarto; o quadril logo antes do encosto,
+                    // e a coluna sobe com ele (a pose Deitado), com a cabeça para a cabeceira (a cama está girada: a cabeceira
+                    // fica do lado da parede)
+                    var d = Instantiate(npc, _quarto.TransformPoint(p + new Vector3(0f, 0.62f, -0.73f)), _quarto.rotation * Quaternion.Euler(-90f, 180f, 0f), _quarto);
                     var v = d.GetComponent<Vestimenta>();
                     if (v != null) { v.npc = ""; v.VestirSorteado(i % 2 == 0 ? "Civil" : "Idoso", 300 + i); }
                     d.AddComponent<NpcDoCinema>().Iniciar("Parado", NpcDoCinema.Pose.Deitado, doente: true);
@@ -562,7 +604,7 @@ namespace ZombieCityCleaner.DiaZero
                         if (_rua.arvores.Length > 0) Movel3(_praca, _rua.arvores[i % _rua.arvores.Length], new Vector3(-14f + i * 5.6f, 0f, 14f), i * 50f, Vector3.one * 1.2f, mat);
             }
 
-            // o corredor do hospital, à noite: a luz vermelha, a enfermeira e o doente que ataca
+            // o corredor do hospital, à noite: a luz vermelha, o médico e o Oco que ataca
             {
                 _corredor = Filho("Corredor do hospital", new Vector3(140f, 0f, 0f));
                 var o = new Obra(51, M);
@@ -589,16 +631,31 @@ namespace ZombieCityCleaner.DiaZero
                 _branca.color = new Color(0.85f, 0.95f, 1f);
                 if (npc != null)
                 {
-                    var vit = Instantiate(npc, _corredor.TransformPoint(new Vector3(-0.2f, 0f, 1.8f)), _corredor.rotation * Quaternion.Euler(0f, 180f, 0f), _corredor);
+                    var vit = Instantiate(npc, _corredor.TransformPoint(Medico), _corredor.rotation * Quaternion.Euler(0f, 180f, 0f), _corredor);
                     var vv = vit.GetComponent<Vestimenta>();
                     if (vv != null) { vv.npc = ""; vv.VestirSorteado("Médico", 81); }
                     _vitima = vit.AddComponent<NpcDoCinema>();
                     _vitima.Iniciar("Parado", NpcDoCinema.Pose.Defendendo);
-                    var at = Instantiate(npc, _corredor.TransformPoint(new Vector3(0.1f, 0f, 0.6f)), _corredor.rotation, _corredor);
-                    var va = at.GetComponent<Vestimenta>();
-                    if (va != null) { va.npc = ""; va.VestirSorteado("Civil", 82); va.TrocarPele("#6F7A62"); }
-                    _atacante = at.AddComponent<NpcDoCinema>();
-                    _atacante.Iniciar("Andar", NpcDoCinema.Pose.Atacando, doente: true);
+                }
+                // quem ataca é o Oco (02/11/2026, a pedido: era um NPC esverdeado), o modelo dos zumbis do jogo, com as
+                // animações dele e sem a voz; ele vem andando pelo corredor e golpeia o médico
+                var prefabDoOco = Resources.Load<GameObject>("Oco_00_Original");
+                if (prefabDoOco != null)
+                {
+                    var oco = Instantiate(prefabDoOco, _corredor.TransformPoint(OcoDe), _corredor.rotation, _corredor);
+                    oco.name = "O Oco";
+                    var teste = oco.GetComponent<OcoDeTeste>();   // o Oco de teste do F1 vai atrás do jogador
+                    if (teste != null) { teste.enabled = false; Destroy(teste); }
+                    foreach (var c in oco.GetComponentsInChildren<Collider>()) c.enabled = false;
+                    _oco = oco.transform;
+                    _ocoAnimador = oco.GetComponentInChildren<Animator>();
+                    if (_ocoAnimador != null)
+                    {
+                        _ocoAnimador.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                        _ocoAnimador.applyRootMotion = false;
+                    }
+                    _ocoEstado = null;
+                    _ocoGolpe = -1;
                 }
             }
         }
@@ -620,6 +677,51 @@ namespace ZombieCityCleaner.DiaZero
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
             MalhaDeObra.Devolver(o.vis);
             MalhaDeObra.Devolver(o.col);
+        }
+
+        // A cama de hospital da mobília (Cidade_Mobilia.fbx) tem o encosto virado ao contrário: ele sobe da cabeceira para o
+        // meio da cama e fica por cima da cabeça de quem deita (02/11/2026, visto pelo Pedro). Aqui vai uma cópia com o
+        // encosto espelhado no comprimento: a ponta baixa encosta no colchão e a alta fica na cabeceira, a 35°. A linha do
+        // meio do encosto, de lado (z, y), foi medida no modelo.
+        static Mesh _camaConsertada;
+        static Mesh CamaConsertada(Mesh cama)
+        {
+            if (_camaConsertada != null) return _camaConsertada;
+            var m = Instantiate(cama);
+            m.name = "CamaDeHospital (encosto consertado)";
+            var v = m.vertices;
+            var n = m.normals;
+            var tg = m.tangents;
+            Vector2 baixa = new Vector2(-0.87f, 0.45f), alta = new Vector2(-0.39f, 0.79f);
+            var u = (alta - baixa).normalized;
+            var perp = new Vector2(-u.y, u.x);
+            float comp = Vector2.Distance(baixa, alta), meio = (baixa.x + alta.x) / 2f;
+            var doEncosto = new bool[v.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                // só a placa do encosto (as grades do lado ficam mais para fora, e o colchão começa logo abaixo da ponta alta)
+                var q = new Vector2(v[i].z, v[i].y) - baixa;
+                float ao = Vector2.Dot(q, u), fora = Vector2.Dot(q, perp);
+                if (Mathf.Abs(v[i].x) > 0.475f || Mathf.Abs(fora) > 0.065f || ao < -0.08f || ao > comp + 0.08f) continue;
+                doEncosto[i] = true;
+                v[i].z = 2f * meio - v[i].z;
+                if (n.Length == v.Length) n[i].z = -n[i].z;
+                if (tg.Length == v.Length) tg[i] = new Vector4(tg[i].x, tg[i].y, -tg[i].z, -tg[i].w);
+            }
+            m.vertices = v;
+            if (n.Length == v.Length) m.normals = n;
+            if (tg.Length == v.Length) m.tangents = tg;
+            // espelhado, cada face vira para dentro: os triângulos do encosto mudam de sentido
+            for (int s = 0; s < m.subMeshCount; s++)
+            {
+                var tri = m.GetTriangles(s);
+                for (int k = 0; k < tri.Length; k += 3)
+                    if (doEncosto[tri[k]] && doEncosto[tri[k + 1]] && doEncosto[tri[k + 2]]) (tri[k + 1], tri[k + 2]) = (tri[k + 2], tri[k + 1]);
+                m.SetTriangles(tri, s);
+            }
+            m.RecalculateBounds();
+            _camaConsertada = m;
+            return m;
         }
 
         static void Movel3(Transform pai, Mesh malha, Vector3 local, float giro, Vector3 escala, Material mat)
@@ -747,22 +849,18 @@ namespace ZombieCityCleaner.DiaZero
 
     /// <summary>
     /// Um NPC dos cenários da introdução: a animação escolhida e uma pose por cima (deitado na cama, protegendo os olhos
-    /// do sol, a mão na boca, a prancheta, defendendo-se, atacando), e, se de pedra, cinza e parado (a animação para
-    /// depois da pose).
+    /// do sol, a mão na boca, a prancheta, defendendo-se), e, se de pedra, cinza e parado (a animação para depois da
+    /// pose).
     /// </summary>
     public class NpcDoCinema : MonoBehaviour
     {
-        public enum Pose { Nenhuma, Deitado, ProtegendoDoSol, MaoNaBoca, Prancheta, Correndo, BracosAbertos, Defendendo, Atacando }
-
-        /// <summary>Quanto o atacante já avançou (0 a 1): a investida.</summary>
-        public float Investida { get; set; }
+        public enum Pose { Nenhuma, Deitado, ProtegendoDoSol, MaoNaBoca, Prancheta, Correndo, BracosAbertos, Defendendo }
 
         Pose _pose;
         bool _pedra, _congelado;
         int _quadros;
         Animator _an;
-        Transform _peito, _cabeca, _bracoD, _anteD, _maoD, _bracoE, _anteE, _maoE;
-        Vector3 _inicio;
+        Transform _coluna, _peito, _bracoD, _anteD, _maoD, _bracoE, _anteE, _maoE;
 
         public void Iniciar(string animacao, Pose pose, bool pedra = false, bool doente = false)
         {
@@ -777,8 +875,8 @@ namespace ZombieCityCleaner.DiaZero
             foreach (var t in GetComponentsInChildren<Transform>(true))
                 switch (t.name)
                 {
+                    case "spine": _coluna = t; break;
                     case "chest": _peito = t; break;
-                    case "head": _cabeca = t; break;
                     case "upper_arm.R": _bracoD = t; break;
                     case "forearm.R": _anteD = t; break;
                     case "hand.R": _maoD = t; break;
@@ -786,7 +884,6 @@ namespace ZombieCityCleaner.DiaZero
                     case "forearm.L": _anteE = t; break;
                     case "hand.L": _maoE = t; break;
                 }
-            _inicio = transform.localPosition;
             if (pedra) Petrificar();
         }
 
@@ -812,10 +909,13 @@ namespace ZombieCityCleaner.DiaZero
             var f = transform.forward;
             var d = transform.right;
             var c = transform.up;
-            float t = Time.time;
             void A(Transform a, Transform b, Vector3 dir, float peso = 1f) => NpcDoDiaZero.Apontar(a, b, dir, peso);
             switch (_pose)
             {
+                case Pose.Deitado:
+                    // na cama de hospital: as pernas no colchão e as costas no encosto, a 35° (a coluna dobra para a frente)
+                    if (_coluna != null) _coluna.rotation = Quaternion.AngleAxis(35f, d) * _coluna.rotation;
+                    break;
                 case Pose.ProtegendoDoSol:
                     A(_bracoD, _anteD, f * 0.6f + c * 0.6f + d * 0.1f);
                     A(_anteD, _maoD, -d * 0.6f + c * 0.5f + f * 0.2f);
@@ -843,20 +943,6 @@ namespace ZombieCityCleaner.DiaZero
                     A(_anteE, _maoE, c * 0.9f + d * 0.2f);
                     if (_peito != null) _peito.rotation = Quaternion.AngleAxis(-14f, d) * _peito.rotation;
                     break;
-                case Pose.Atacando:
-                {
-                    // o doente avança com os braços esticados, em trancos
-                    float tranco = Mathf.Sin(t * 9f) * 0.12f;
-                    A(_bracoD, _anteD, f * 0.95f + c * (0.2f + tranco) + d * 0.1f);
-                    A(_anteD, _maoD, f * 0.95f + c * 0.1f);
-                    A(_bracoE, _anteE, f * 0.95f + c * (0.25f - tranco) - d * 0.1f);
-                    A(_anteE, _maoE, f * 0.95f + c * 0.1f);
-                    if (_peito != null) _peito.rotation = Quaternion.AngleAxis(16f + tranco * 30f, d) * _peito.rotation;
-                    if (_cabeca != null) _cabeca.rotation = Quaternion.AngleAxis(Mathf.Sin(t * 13f) * 9f, f) * _cabeca.rotation;
-                    transform.localPosition = _inicio + transform.parent.InverseTransformDirection(f) * Investida * 0.7f;
-                    if (_an != null) _an.speed = 0.6f;
-                    break;
-                }
             }
             // a pedra fica parada depois de dois quadros (a pose já posta)
             if (_pedra && ++_quadros > 10)

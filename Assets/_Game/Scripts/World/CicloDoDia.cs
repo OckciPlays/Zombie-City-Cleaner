@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.World
     /// o "Sempre de dia" e o "Sempre de noite" do menu do desenvolvedor (F1) põem meio-dia ou meia-noite e param o relógio
     /// (<see cref="SempreDeDia"/>, <see cref="SempreDeNoite"/>).
     /// </summary>
-    public class CicloDoDia : NetworkBehaviour
+    public partial class CicloDoDia : NetworkBehaviour
     {
         [Tooltip("Hora quando o jogo abre (0 a 24).")]
         public float horaInicial = 21f;
@@ -43,10 +43,13 @@ namespace ZombieCityCleaner.World
                 if (args[i] == "-hora" && float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float h))
                     Hora = Mathf.Repeat(h, 24f);
             Noite = CalcularNoite(Hora);
+            // o clima (o tempo: a chuva, os raios e o tornado; CicloDoDia.Tempo.cs) e o que ele mostra e toca nesta máquina
+            if (GetComponent<ClimaNaTela>() == null) gameObject.AddComponent<ClimaNaTela>();
         }
 
         public override void OnNetworkSpawn()
         {
+            TempoAoComecar();
             if (IsServer)
             {
                 HoraRede.Value = Hora;
@@ -60,6 +63,7 @@ namespace ZombieCityCleaner.World
         {
             HoraRede.OnValueChanged -= AoReceber;
             Parado = false;
+            TempoAoAcabar();
         }
 
         public override void OnDestroy()
@@ -106,6 +110,7 @@ namespace ZombieCityCleaner.World
                 _proximoEnvio = Time.unscaledTime + 1f;
             }
             Noite = CalcularNoite(Hora);
+            AtualizarTempo();
         }
 
         public static float CalcularNoite(float h)

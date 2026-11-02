@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.EditorTools
         {
             [System.Serializable]
             public class Familia { public float bpm, comprimento; }
-            public Familia neblina, noite, perigo;
+            public Familia neblina, noite, perigo, tempestade, tornado;
             public float encaixeDaEntrada, sobreposicaoDoVento;
             public TrilhaDoJogo.Rajadas[] rajadasDeDia, rajadasDeNoite;
         }
@@ -97,6 +97,9 @@ namespace ZombieCityCleaner.EditorTools
             if (novo) trilha = ScriptableObject.CreateInstance<TrilhaDoJogo>();
             trilha.neblina = Familia("neblina", info.neblina);
             trilha.noite = Familia("noite", info.noite);
+            // o clima (Ferramentas/trilha/clima.py): só se já foi exportado
+            if (info.tempestade != null && info.tempestade.bpm > 0f) trilha.tempestade = Familia("tempestade", info.tempestade);
+            if (info.tornado != null && info.tornado.bpm > 0f) trilha.tornado = Familia("tornado", info.tornado);
             trilha.bpmDoPerigo = info.perigo.bpm;
             trilha.comprimentoDoPerigo = info.perigo.comprimento;
             // perigo_A0_c1, perigo_A0_c2, perigo_A0_c3: um bloco, três camadas
@@ -133,7 +136,8 @@ namespace ZombieCityCleaner.EditorTools
             if (novo) AssetDatabase.CreateAsset(trilha, Asset);
             else EditorUtility.SetDirty(trilha);
             AssetDatabase.SaveAssets();
-            Debug.Log($"Trilha: neblina {trilha.neblina.blocos.Length} blocos, noite {trilha.noite.blocos.Length}, perigo {trilha.perigo.Length} (x3 camadas), " +
+            Debug.Log($"Trilha: neblina {trilha.neblina.blocos.Length} blocos, noite {trilha.noite.blocos.Length}, " +
+                      $"tempestade {trilha.tempestade?.blocos?.Length ?? 0}, tornado {trilha.tornado?.blocos?.Length ?? 0}, perigo {trilha.perigo.Length} (x3 camadas), " +
                       $"entradas {trilha.entradas.Length}, saídas {trilha.saidas.Length} + {trilha.saidasPelaPedra.Length} pela pedra, " +
                       $"vento {trilha.ventoDeDia.Length} + {trilha.ventoDeNoite.Length} (rajadas {trilha.rajadasDoVentoDeDia?.Length ?? 0}), " +
                       $"ambiente {trilha.grilos.Length} grilos, {trilha.latidos.Length + trilha.uivos.Length} cachorros, {trilha.janelas.Length + trilha.portas.Length + trilha.placas.Length + trilha.latas.Length} do vento, " +

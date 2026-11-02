@@ -142,6 +142,18 @@ namespace ZombieCityCleaner.Vehicles
             return true;
         }
 
+        /// <summary>
+        /// No anfitrião: um raio caiu no ponto (o clima, 02/11/2026); o carro abandonado a até 5 m dispara o alarme, se tiver
+        /// alarme e bateria (como com um tiro).
+        /// </summary>
+        public bool RaioNoCarro(Vector3 ponto)
+        {
+            int carro = CarroPerto(ponto, 5f, false);
+            if (carro < 0) return false;
+            Disparar(carro, "raio");
+            return true;
+        }
+
         /// <summary>Teste (F1): todo carro com alarme, ou 1 em cada 10.</summary>
         public void AlarmeEmTodosOsCarros(bool todos)
         {

@@ -49,6 +49,10 @@ namespace ZombieCityCleaner.Music
 
         public Familia neblina = new Familia();
         public Familia noite = new Familia();
+        [Tooltip("A tempestade (o clima, 02/11/2026: Ferramentas/trilha/clima.py): entrada, ostinato, tambores, coro, cordas, saida.")]
+        public Familia tempestade = new Familia();
+        [Tooltip("O tornado perto (a entrada é o golpe de quando ele é avistado): entrada, espiral, coracao, lamento, metal, saida.")]
+        public Familia tornado = new Familia();
 
         [Header("O perigo")]
         public float bpmDoPerigo = 88f;
