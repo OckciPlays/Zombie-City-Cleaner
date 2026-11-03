@@ -15,6 +15,8 @@ namespace ZombieCityCleaner.Salvar
     {
         public int item, x, y, qtd, desgaste;
         public bool girado;
+        /// <summary>As cores da roupa (0: as do catálogo).</summary>
+        public long cores;
     }
 
     /// <summary>
@@ -40,6 +42,12 @@ namespace ZombieCityCleaner.Salvar
         /// <summary>Os 3 atalhos: o índice do item em <see cref="itens"/> (-1, vazio).</summary>
         public int[] atalhos = { -1, -1, -1 };
         public int escolhido;
+        /// <summary>
+        /// As roupas vestidas, uma por lugar (na ordem do <see cref="LugarDaRoupa"/>; 0, vazio) e as cores de cada uma. Num
+        /// save de antes delas, vazias: ele entra com as do começo.
+        /// </summary>
+        public int[] roupas;
+        public long[] coresDasRoupas;
         /// <summary>Já entrou num mundo (tem mochila e dinheiro): pula o Dia 0. Falso só no personagem que acabou de ser criado.</summary>
         public bool jogou;
         public string criadoEm, salvoEm;

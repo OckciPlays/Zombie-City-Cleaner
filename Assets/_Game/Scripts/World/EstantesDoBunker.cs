@@ -138,6 +138,29 @@ namespace ZombieCityCleaner.World
             else Mudou?.Invoke(-1);
         }
 
+        /// <summary>Só no anfitrião: os itens guardados (o save, Salvar/Salvamento).</summary>
+        public List<ItemNaEstante> Copia()
+        {
+            var lista = new List<ItemNaEstante>(_itens.Count);
+            foreach (var it in _itens) lista.Add(it);
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: os itens guardados do mundo salvo no lugar dos de agora (os Ids são dados de novo).</summary>
+        public void Restaurar(List<ItemNaEstante> itens)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _itens.Clear();
+            _proximoId = 1;
+            foreach (var it in itens)
+            {
+                if (it.item == Item.Nada || !Itens.NoJogo(it.item) || FormaDa(it.estante) == null) continue;
+                var novo = it;
+                novo.id = NovoId();
+                _itens.Add(novo);
+            }
+        }
+
         // ------------------------------------------------------------------ a grade
 
         /// <summary>Quantos itens a estante tem.</summary>

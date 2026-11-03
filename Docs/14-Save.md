@@ -37,7 +37,8 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 ## O que fica salvo
 
 - **No personagem** (o computador de cada um): o nome, a aparência, o dinheiro, a vida, a fome, a sede, a mochila vestida,
-  tudo o que está nela (com o pente de cada arma e o desgaste), os atalhos e o pneu nas mãos.
+  tudo o que está nela (com o pente de cada arma, o desgaste e as cores das roupas), os atalhos, o pneu nas mãos e as
+  roupas vestidas (desde o merge com o saque e as portas).
 - **No mundo** (o computador de quem hospeda):
   - o dia e a hora, e o clima;
   - os itens no chão;
@@ -52,7 +53,10 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
     jogadores que caíram), desde a etapa 2 ([13 – Os sobreviventes](13-Sobreviventes-e-Acampamentos.md));
   - os acampamentos: os hostis, quem morreu, o estoque de cada comerciante e o dia da última reposição (a etapa 3);
   - os carros quebrados: o estado de cada um (esperando, trocando, ajudados, hostis ou mortos), quem morreu, o pneu dado e
-    o que faltava da troca (a etapa 4).
+    o que faltava da troca (a etapa 4);
+  - desde o merge com o saque e as portas (02/11/2026): o saque dos móveis já pego (não volta), as portas e as janelas das
+    casas abertas, fechadas, destrancadas ou arrombadas, os itens guardados nas estantes do bunker e as cores das roupas no
+    chão e nas mochilas caídas.
 
 ## O dinheiro
 

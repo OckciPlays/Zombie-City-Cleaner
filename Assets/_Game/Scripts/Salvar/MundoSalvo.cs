@@ -48,6 +48,12 @@ namespace ZombieCityCleaner.Salvar
         public List<AcampamentoSalvo> acampamentos = new List<AcampamentoSalvo>();
         /// <summary>Os carros quebrados, na ordem do gerador: o estado de cada cena, quem morreu, o pneu dado e o que falta da troca.</summary>
         public List<CarroQuebradoSalvo> carrosQuebrados = new List<CarroQuebradoSalvo>();
+        /// <summary>O saque dos móveis já pego (as chaves: o que foi pego não volta; o Plano_Saque.md da pasta de arte).</summary>
+        public List<long> saquePego = new List<long>();
+        /// <summary>As portas e as janelas das casas mexidas (abertas, fechadas, destrancadas ou arrombadas; o Plano_Portas.md).</summary>
+        public List<PortaSalva> portas = new List<PortaSalva>();
+        /// <summary>Os itens guardados nas estantes e nas prateleiras do bunker da família.</summary>
+        public List<ItemNaEstanteSalvo> estantes = new List<ItemNaEstanteSalvo>();
 
         public ModoDeSalvar Modo => (ModoDeSalvar)Mathf.Clamp(modo, 0, 2);
         public PedidoDoMundo Pedido => new PedidoDoMundo
@@ -181,6 +187,8 @@ namespace ZombieCityCleaner.Salvar
         public Vector3 apoio;
         public float giro;
         public int qtd, desgaste;
+        /// <summary>As cores da roupa (0: as do catálogo).</summary>
+        public long cores;
     }
 
     [Serializable]
@@ -255,6 +263,23 @@ namespace ZombieCityCleaner.Salvar
         public int diaDaReposicao = -1;
         /// <summary>O estoque, um número por produto: a banca (bits 16+), o produto (8 a 15) e a quantidade (0 a 7).</summary>
         public List<int> estoque = new List<int>();
+    }
+
+    /// <summary>Uma porta ou uma janela mexida: a chave dela e os bits (1 aberta, 2 destrancada).</summary>
+    [Serializable]
+    public class PortaSalva
+    {
+        public long chave;
+        public int bits;
+    }
+
+    /// <summary>Um item numa estante do bunker: a estante (o índice do móvel no MoveisDoBunker), a célula e o que vai com ele.</summary>
+    [Serializable]
+    public class ItemNaEstanteSalvo
+    {
+        public int estante, item, x, y, qtd, desgaste;
+        public bool girado;
+        public long cores;
     }
 
     [Serializable]

@@ -2023,8 +2023,9 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
     - o id (um GUID); a `Chave` (um `ulong`, o FNV do id: `Sorteio.Fnv`);
     - o nome e a aparência (`Aparencia()`, `Vestir(a)`);
     - o dinheiro, a vida, a fome, a sede;
-    - a mochila vestida, os itens (`ItemSalvo`: item, x, y, girado, qtd, desgaste), os atalhos (os índices nos itens) e o da
-      mão, o pneu nas mãos;
+    - a mochila vestida, os itens (`ItemSalvo`: item, x, y, girado, qtd, desgaste e as cores da roupa), os atalhos (os
+      índices nos itens) e o da mão, o pneu nas mãos;
+    - as roupas vestidas (`roupas` e `coresDasRoupas`, um por `LugarDaRoupa`; vazios num save de antes delas);
     - `jogou`: falso só antes da tela de criar;
     - `Todos()` (os salvos por último primeiro), `Gravar()`, `Apagar(id)`.
   - **`MundoSalvo`** (`persistentDataPath/Mundos/<id>.json`, no anfitrião):
@@ -2033,6 +2034,9 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
       clima e os eventos que vêm);
     - os itens no chão, as construções (a fogueira com os segundos que faltam), a perua e o cupê (`CarroSalvo`), os carros do
       mundo mexidos, a mobília aberta, os sustos, o painel de armas;
+    - o saque já pego (`saquePego`, as chaves), as portas e as janelas das casas mexidas (`portas`, `PortaSalva`: a chave e
+      os bits, 1 aberta e 2 destrancada) e os itens das estantes do bunker (`estantes`, `ItemNaEstanteSalvo`); as cores das
+      roupas nos itens do chão e nas mochilas caídas (merge da develop com o saque e as portas, 02/11/2026);
     - as posições de cada personagem, pela chave;
     - `temEstado`: só os já salvos entram na lista (`Todos()`, só o cabeçalho).
   - **`EscolhaDoPersonagem`** (estático): o personagem que o menu escolheu (`Atual`, `Novo`). O menu põe um salvo ou um
@@ -2052,6 +2056,8 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
       pela semente e pelo relógio do clima);
     - os itens (`ItensNoMundo.Restaurar`), as construções, os carros do mundo (o macaco erguido desce), a mobília, os sustos
       e o painel;
+    - o saque pego (`MobiliaNovaDoMundo.RestaurarOSaque`), as portas e as janelas (`PortasDoMundo.Restaurar`: as folhas vão
+      direto, sem o som) e as estantes (`EstantesDoBunker.Restaurar`, com os Ids de novo). Cada um tem o `Copia` do `Salvar`;
     - os dois carros (`CriarCarro`): nascem cinemáticos até o chão de lá ter colisão (`TerrenoDoMundo.Pedir`/`Pronto`), e
       `Carro.Restaurar` põe o estado. O macaco apoiado volta ao porta-malas.
   - **A posição:** quem entra com o personagem salvo vai para onde estava (`AoCarregarPersonagem` → `IrParaRpc` no dono,
@@ -2067,8 +2073,10 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
     ainda limpa a mochila), o dono manda `CarregarRpc(PacoteDoPersonagem)` (o salvo) ou `NovoRpc` (a pistola e a lanterna
     no chão; nada no Dia 0 e no vídeo). Antes, a pistola vinha no `OnNetworkSpawn` e a lanterna no `Update`.
   - **`Aplicar` (anfitrião):** a mochila vestida; os itens no lugar deles (o que não couber vai para outro lugar ou para o
-    chão), com Ids novos; o pneu; o dinheiro (somado); a vida, a fome e a sede (`FomeESede.Definir`). Depois, `CarregadoRpc`
-    põe os atalhos no dono.
+    chão), com Ids novos e as cores; o pneu; o dinheiro (somado); a vida, a fome e a sede (`FomeESede.Definir`); as roupas
+    vestidas (`VestirAsSalvas`, no `InventarioJogador.Roupas.cs`: as do começo que a criação vestiu saem, e uma outra que
+    ele já vestia, a da loja do Dia 0, fica num lugar vazio ou vai para a mochila). Depois, `CarregadoRpc` põe os atalhos
+    no dono.
   - **A chave do personagem** vai no `JogadorRede.Chave` (NetworkVariable do dono). Um personagem salvo entra sem a tela de
     criar (`Criar(escolhido.Aparencia())`). A tela de criar grava o novo (`jogou`) ao confirmar.
   - **Sair da partida não chama mais o `Esvaziar`** (que largava tudo no chão e devolvia as armas ao painel).
@@ -2091,6 +2099,12 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
   - o `UltimoMundo` dos PlayerPrefs saiu (o `GravarOUltimoMundo` ficou para os testes).
 - **O F1:** o painel "SAVE" (`MenuDoDesenvolvedor.Save.cs`, embaixo do carro), com o modo, quando salvou, o dinheiro,
   "Salvar agora" e "+ $ 1.000". A tela da mochila mostra o dinheiro ao lado de "DETALHES".
+- **Conferido (02/11/2026, no Editor, Médio 7, um jogador):** num mundo novo com save, a porta fechada aberta, a trancada
+  arrombada com a gazua, uma janela aberta por dentro, a corda pega de uma gaveta, 3 gazuas e uma calça colorida numa
+  estante do depósito, um chapéu de cores trocadas vestido, a camiseta largada (o lugar vazio), um colete colorido na
+  mochila e uma luva colorida no chão; salvo, saído do Play e carregado como o Continuar: tudo voltou igual (as folhas
+  abertas e a arrombada destrancada, a corda fora da gaveta, as cores, o lugar da camiseta vazio) e o jogador voltou
+  para onde estava, sem erro no Console. Com dois jogadores, não.
 - **Conferido** (02/11/2026, um jogador, no Editor; os arquivos de teste foram apagados no fim):
   - **um mundo novo:** o personagem novo, $ 1.234, a mochila média com 4 itens, um machado no chão, o dia 3 às 15h30, a
     perua com 1 L e o jogador 2 m ao lado do nascimento. Salvo, fora do Play e de volta pelo save, tudo igual: o chão (4

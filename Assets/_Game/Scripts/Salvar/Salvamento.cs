@@ -22,8 +22,9 @@ namespace ZombieCityCleaner.Salvar
     ///  - quando o anfitrião salva, ele grava o mundo e pede a todos que gravem o próprio personagem
     ///    (<see cref="SalvarPersonagensRpc"/>);
     ///  - carregando um mundo salvo, quando ele fica pronto: a hora, o dia, o clima, o chão, as construções, os carros do
-    ///    mundo mexidos, a mobília aberta, os sustos, o painel de armas e os dois carros (no lugar dos do começo, que o
-    ///    <see cref="MundoDaPartida"/> não cria); cada personagem que entra vai para onde estava (<see cref="AoCarregarPersonagem"/>);
+    ///    mundo mexidos, a mobília aberta, o saque já pego, as portas e as janelas das casas, as estantes do bunker, os
+    ///    sustos, o painel de armas e os dois carros (no lugar dos do começo, que o <see cref="MundoDaPartida"/> não cria);
+    ///    cada personagem que entra vai para onde estava (<see cref="AoCarregarPersonagem"/>);
     ///  - no Dia 0, o personagem salvo de quem entra espera a porta do abrigo (<see cref="GuardarParaDepois"/>).
     /// Sem <see cref="Atual"/> (os testes, a linha de comando, o robô), a partida não salva.
     /// </summary>
@@ -126,7 +127,7 @@ namespace ZombieCityCleaner.Salvar
             m.itens.Clear();
             if (ItensNoMundo.Instancia != null)
                 foreach (var it in ItensNoMundo.Instancia.Copia())
-                    m.itens.Add(new ItemNoChaoSalvo { item = (int)it.item, apoio = it.apoio, giro = it.giro, qtd = it.qtd, desgaste = it.desgaste });
+                    m.itens.Add(new ItemNoChaoSalvo { item = (int)it.item, apoio = it.apoio, giro = it.giro, qtd = it.qtd, desgaste = it.desgaste, cores = unchecked((long)it.cores) });
 
             m.construcoes.Clear();
             if (ConstrucoesNoMundo.Instancia != null)
@@ -154,6 +155,23 @@ namespace ZombieCityCleaner.Salvar
             m.mobiliaAberta.Clear();
             if (MobiliaNovaDoMundo.Instancia != null)
                 foreach (var k in MobiliaNovaDoMundo.Instancia.Copia()) m.mobiliaAberta.Add(unchecked((long)k));
+
+            m.saquePego.Clear();
+            if (MobiliaNovaDoMundo.Instancia != null)
+                foreach (var k in MobiliaNovaDoMundo.Instancia.CopiaDoSaque()) m.saquePego.Add(unchecked((long)k));
+
+            m.portas.Clear();
+            if (PortasDoMundo.Instancia != null)
+                foreach (var p in PortasDoMundo.Instancia.Copia()) m.portas.Add(new PortaSalva { chave = unchecked((long)p.chave), bits = p.bits });
+
+            m.estantes.Clear();
+            if (EstantesDoBunker.Instancia != null)
+                foreach (var it in EstantesDoBunker.Instancia.Copia())
+                    m.estantes.Add(new ItemNaEstanteSalvo
+                    {
+                        estante = it.estante, item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = it.qtd, desgaste = it.desgaste,
+                        cores = unchecked((long)it.cores),
+                    });
 
             m.sustos = ZombieManager.Instancia != null ? ZombieManager.Instancia.Sustos() : new List<int>();
             if (ParedeDeArmas.Instancia != null) ParedeDeArmas.Instancia.Copia(out m.armasNaParede, out m.pentesNaParede);
@@ -183,7 +201,7 @@ namespace ZombieCityCleaner.Salvar
                         colunas = mc.colunas, linhas = mc.linhas,
                     };
                     foreach (var it in itensDela)
-                        s.itens.Add(new ItemSalvo { item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = it.qtd, desgaste = it.desgaste });
+                        s.itens.Add(new ItemSalvo { item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = it.qtd, desgaste = it.desgaste, cores = unchecked((long)it.cores) });
                     m.mochilas.Add(s);
                 }
 
@@ -202,7 +220,8 @@ namespace ZombieCityCleaner.Salvar
             }
             SalvarPersonagensRpc(motivo == "dormindo");
             Debug.Log($"[Save] O mundo \"{m.nome}\" foi salvo ({motivo}): dia {m.dia}, {CicloDoDia.Relogio()}, {m.itens.Count} itens no chão, " +
-                      $"{m.construcoes.Count} construções, {m.carros.Count} carros, {m.carrosDoMundo.Count} carros do mundo mexidos, {m.posicoes.Count} posições.");
+                      $"{m.construcoes.Count} construções, {m.carros.Count} carros, {m.carrosDoMundo.Count} carros do mundo mexidos, {m.saquePego.Count} itens do saque pegos, " +
+                      $"{m.portas.Count} portas e janelas mexidas, {m.estantes.Count} itens nas estantes, {m.posicoes.Count} posições.");
             return true;
         }
 
@@ -337,7 +356,11 @@ namespace ZombieCityCleaner.Salvar
 
             var itens = new List<ItemNoChao>(m.itens.Count);
             foreach (var it in m.itens)
-                itens.Add(new ItemNoChao { item = (Item)it.item, apoio = it.apoio, giro = it.giro, qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100) });
+                itens.Add(new ItemNoChao
+                {
+                    item = (Item)it.item, apoio = it.apoio, giro = it.giro, qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100),
+                    cores = unchecked((ulong)it.cores),
+                });
             ItensNoMundo.Instancia?.Restaurar(itens);
 
             var construcoes = new List<Construcao>(m.construcoes.Count);
@@ -358,6 +381,24 @@ namespace ZombieCityCleaner.Salvar
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
             foreach (long k in m.mobiliaAberta) abertas.Add(unchecked((ulong)k));
             MobiliaNovaDoMundo.Instancia?.Restaurar(abertas);
+
+            var pegos = new List<ulong>(m.saquePego.Count);
+            foreach (long k in m.saquePego) pegos.Add(unchecked((ulong)k));
+            MobiliaNovaDoMundo.Instancia?.RestaurarOSaque(pegos);
+
+            var portas = new List<PortasDoMundo.Mudanca>(m.portas.Count);
+            foreach (var p in m.portas) portas.Add(new PortasDoMundo.Mudanca { chave = unchecked((ulong)p.chave), bits = (byte)(p.bits & 3) });
+            PortasDoMundo.Instancia?.Restaurar(portas);
+
+            var estantes = new List<ItemNaEstante>(m.estantes.Count);
+            foreach (var it in m.estantes)
+                estantes.Add(new ItemNaEstante
+                {
+                    estante = (ushort)Mathf.Clamp(it.estante, 0, ushort.MaxValue), item = (Item)it.item, x = (byte)Mathf.Clamp(it.x, 0, 255),
+                    y = (byte)Mathf.Clamp(it.y, 0, 255), girado = it.girado, qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue),
+                    desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100), cores = unchecked((ulong)it.cores),
+                });
+            EstantesDoBunker.Instancia?.Restaurar(estantes);
 
             ZombieManager.Instancia?.RestaurarSustos(m.sustos);
             if (m.armasNaParede != 0 || m.pentesNaParede != 0) ParedeDeArmas.Instancia?.Restaurar(m.armasNaParede, m.pentesNaParede);
@@ -397,6 +438,7 @@ namespace ZombieCityCleaner.Salvar
                     {
                         item = (Item)it.item, x = (byte)Mathf.Clamp(it.x, 0, 255), y = (byte)Mathf.Clamp(it.y, 0, 255), girado = it.girado,
                         qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100),
+                        cores = unchecked((ulong)it.cores),
                     });
                 mochilas.Add((mc, itensDela));
             }
@@ -404,7 +446,8 @@ namespace ZombieCityCleaner.Salvar
 
             foreach (var c in m.carros) StartCoroutine(CriarCarro(c));
             Debug.Log($"[Save] O mundo \"{m.nome}\" voltou: dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
-                      $"{m.carros.Count} carros, {mexidos.Count} carros do mundo mexidos.");
+                      $"{m.carros.Count} carros, {mexidos.Count} carros do mundo mexidos, {pegos.Count} itens do saque pegos, {portas.Count} portas e janelas mexidas, " +
+                      $"{estantes.Count} itens nas estantes.");
         }
 
         // um carro do save: nasce parado (sem a física) até o chão de lá ter colisão, para não cair por ele

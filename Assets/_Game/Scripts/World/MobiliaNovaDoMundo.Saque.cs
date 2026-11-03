@@ -41,6 +41,22 @@ namespace ZombieCityCleaner.World
 
         void AoPegar(NetworkListEvent<ulong> e) => SincronizarOSaque();
 
+        /// <summary>Só no anfitrião: as chaves do saque já pego (o save, Salvar/Salvamento).</summary>
+        public List<ulong> CopiaDoSaque()
+        {
+            var lista = new List<ulong>(_pegos.Count);
+            foreach (var k in _pegos) lista.Add(k);
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: o saque já pego do mundo salvo (o que foi pego não volta).</summary>
+        public void RestaurarOSaque(List<ulong> pegos)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _pegos.Clear();
+            foreach (var k in pegos) _pegos.Add(k);
+        }
+
         // os itens de perto somem quando são pegos
         void SincronizarOSaque()
         {

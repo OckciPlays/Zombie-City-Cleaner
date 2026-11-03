@@ -116,6 +116,35 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
+        /// Só no anfitrião, quando o personagem salvo entra (<see cref="Aplicar"/>): as roupas que ele vestia. As do começo
+        /// que a criação vestiu saem; uma outra que ele já vestia aqui (a da loja do Dia 0, quem entrou num Dia 0 com um
+        /// personagem salvo) fica num lugar que o save deixou vazio, ou vai para a mochila (sem espaço, para o chão).
+        /// </summary>
+        void VestirAsSalvas(RoupasVestidas salvas)
+        {
+            if (!IsServer) return;
+            var agora = Roupas.Value;
+            var comeco = _rede != null ? _rede.Aparencia.Value.RoupasDoComeco() : new (Item, ulong)[0];
+            var r = new RoupasVestidas();
+            int caidas = 0;
+            for (int k = 0; k < Itens.QuantosLugaresDeRoupa; k++)
+            {
+                var l = (LugarDaRoupa)k;
+                var item = salvas.Peca(l);
+                if (item != Item.Nada && Itens.Roupa(item) is DadosDaRoupa dados && dados.lugar == l) r.Por(l, item, salvas.Cores(l));
+                var antes = agora.Peca(l);
+                ulong coresAntes = agora.Cores(l);
+                if (antes == Item.Nada || (antes == r.Peca(l) && coresAntes == r.Cores(l)) || System.Array.IndexOf(comeco, (antes, coresAntes)) >= 0) continue;
+                if (r.Peca(l) == Item.Nada) r.Por(l, antes, coresAntes);
+                else if (Espaco(antes, out int x, out int y, out bool girado))
+                    Mochila.Add(new ItemNaMochila { id = NovoId(), item = antes, x = (byte)x, y = (byte)y, girado = girado, cores = coresAntes });
+                else ItensNoMundo.Instancia?.Criar(antes, PontoAosPes(++caidas), transform.eulerAngles.y + caidas * 70f, 0, 0, coresAntes);
+            }
+            Roupas.Value = r;
+            _comecoVestido = true;
+        }
+
+        /// <summary>
         /// O dono, quando a porta do abrigo fecha (o Dia 0 acabou): as roupas da loja do Dia 0 saem da aparência e o
         /// anfitrião veste elas no inventário (<see cref="AparenciaDoJogador.RoupasDaLoja"/>), com as cores do catálogo.
         /// </summary>

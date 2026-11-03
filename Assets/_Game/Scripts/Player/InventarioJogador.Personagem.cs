@@ -19,6 +19,9 @@ namespace ZombieCityCleaner.Player
         /// <summary>Os 3 atalhos: o índice do item em <see cref="itens"/> (-1, vazio).</summary>
         public sbyte a0, a1, a2;
         public byte escolhido;
+        /// <summary>As roupas vestidas (só com <see cref="comRoupas"/>: um save de antes delas entra com as do começo).</summary>
+        public RoupasVestidas roupas;
+        public bool comRoupas;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
@@ -36,6 +39,8 @@ namespace ZombieCityCleaner.Player
             s.SerializeValue(ref a1);
             s.SerializeValue(ref a2);
             s.SerializeValue(ref escolhido);
+            s.SerializeValue(ref roupas);
+            s.SerializeValue(ref comRoupas);
         }
 
         public static PacoteDoPersonagem De(PersonagemSalvo p)
@@ -48,13 +53,23 @@ namespace ZombieCityCleaner.Player
                 {
                     item = (Item)it.item, x = (byte)Mathf.Clamp(it.x, 0, 255), y = (byte)Mathf.Clamp(it.y, 0, 255), girado = it.girado,
                     qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100),
+                    cores = unchecked((ulong)it.cores),
                 };
             }
+            var roupas = new RoupasVestidas();
+            bool comRoupas = p.roupas != null && p.roupas.Length == Itens.QuantosLugaresDeRoupa;
+            if (comRoupas)
+                for (int k = 0; k < Itens.QuantosLugaresDeRoupa; k++)
+                {
+                    long cores = p.coresDasRoupas != null && k < p.coresDasRoupas.Length ? p.coresDasRoupas[k] : 0;
+                    roupas.Por((LugarDaRoupa)k, (Item)p.roupas[k], unchecked((ulong)cores));
+                }
             sbyte A(int k) => (sbyte)(p.atalhos != null && k < p.atalhos.Length ? Mathf.Clamp(p.atalhos[k], -1, 127) : -1);
             return new PacoteDoPersonagem
             {
                 itens = itens, mochila = (Item)p.mochila, pneu = (byte)Mathf.Clamp(p.pneu, 0, 255), dinheiro = p.dinheiro,
                 vida = p.vida, fome = p.fome, sede = p.sede, a0 = A(0), a1 = A(1), a2 = A(2), escolhido = (byte)Mathf.Clamp(p.escolhido, 0, 2),
+                roupas = roupas, comRoupas = comRoupas,
             };
         }
     }
@@ -255,6 +270,7 @@ namespace ZombieCityCleaner.Player
             var vida = GetComponent<VidaJogador>();
             if (vida != null) vida.Vida.Value = Mathf.Clamp(p.vida, 10f, vida.vidaMaxima);
             GetComponent<FomeESede>()?.Definir(p.fome, p.sede);
+            if (p.comRoupas) VestirAsSalvas(p.roupas);
             ushort A(int k) => k >= 0 && k < n ? ids[k] : (ushort)0;
             CarregadoRpc(A(p.a0), A(p.a1), A(p.a2), p.escolhido);
             Debug.Log($"[Save] O personagem de {_rede?.Aparencia.Value.nome} entrou: {Mochila.Count} itens, {Itens.Nome(MochilaVestida.Value)}, " +
@@ -289,7 +305,7 @@ namespace ZombieCityCleaner.Player
                 int qtd = it.qtd;
                 if (Itens.EhArma(it.item) && _arma != null) qtd = _arma.MunicaoDe(it.id, it.item);
                 indice[it.id] = p.itens.Count;
-                p.itens.Add(new ItemSalvo { item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = qtd, desgaste = it.desgaste });
+                p.itens.Add(new ItemSalvo { item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = qtd, desgaste = it.desgaste, cores = unchecked((long)it.cores) });
             }
             p.mochila = (int)MochilaVestida.Value;
             p.pneu = PneuNasMaos.Value;
@@ -301,6 +317,14 @@ namespace ZombieCityCleaner.Player
                 p.atalhos[i] = id != 0 && indice.TryGetValue(id, out int k) ? k : -1;
             }
             p.escolhido = Escolhido.Value;
+            var vestidas = Roupas.Value;
+            p.roupas = new int[Itens.QuantosLugaresDeRoupa];
+            p.coresDasRoupas = new long[Itens.QuantosLugaresDeRoupa];
+            for (int k = 0; k < Itens.QuantosLugaresDeRoupa; k++)
+            {
+                p.roupas[k] = (int)vestidas.Peca((LugarDaRoupa)k);
+                p.coresDasRoupas[k] = unchecked((long)vestidas.Cores((LugarDaRoupa)k));
+            }
             if (_rede != null)
             {
                 if (_rede.Vida != null) p.vida = _rede.Vida.Vida.Value;

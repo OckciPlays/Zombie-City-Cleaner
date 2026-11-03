@@ -89,7 +89,29 @@ namespace ZombieCityCleaner.World
             _sabidas.Clear();
         }
 
-        void AoMudar(NetworkListEvent<Mudanca> e) => Sincronizar(false);
+        void AoMudar(NetworkListEvent<Mudanca> e) => Sincronizar(_restaurando);
+
+        // o save voltando: as folhas vão direto, sem o som
+        bool _restaurando;
+
+        /// <summary>Só no anfitrião: as portas e as janelas mexidas (a chave e os bits: aberta e destrancada), para o save.</summary>
+        public List<Mudanca> Copia()
+        {
+            var lista = new List<Mudanca>(_mudadas.Count);
+            foreach (var m in _mudadas) lista.Add(m);
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: as portas e as janelas do mundo salvo (as que ninguém mexeu ficam como começam).</summary>
+        public void Restaurar(List<Mudanca> mudadas)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _restaurando = true;
+            _mudadas.Clear();
+            foreach (var m in mudadas) _mudadas.Add(m);
+            _restaurando = false;
+            Sincronizar(true);
+        }
 
         // as folhas de perto ficam como a lista da rede (com o som, quando não é o começo)
         void Sincronizar(bool ja)
