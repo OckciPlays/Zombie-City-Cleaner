@@ -21,6 +21,16 @@ namespace ZombieCityCleaner.Mundo
         public int andar;
         /// <summary>Pendurado na parede (a mobília nova: os quadros, o espelho, os armários de cima da cozinha): a altura da base sobre o chão; 0 no chão.</summary>
         public float altura;
+        /// <summary>
+        /// A moradia do ponto (o saque é contado por ela, o Plano_Saque.md da pasta de arte): 1 a casa; nas lojas, o andar do
+        /// apartamento mais 1; nos prédios, o apartamento mais 1; 0 fora de uma moradia (a loja, a portaria, o corredor, o
+        /// hospital, e os pontos que não saem daqui).
+        /// </summary>
+        public int unidade;
+        /// <summary>A moradia é um apartamento (de um prédio ou em cima de uma loja).</summary>
+        public bool apartamento;
+        /// <summary>O cômodo (um número pelo lugar dele: os pontos do mesmo cômodo têm o mesmo).</summary>
+        public int sala;
 
         /// <summary>Ocupa o chão (os pendurados e os tapetes, não: não mexem na passagem nem têm caixa).</summary>
         public bool OcupaOChao => altura <= 0f && (tipo == null || !tipo.StartsWith("Tapete"));
@@ -208,6 +218,8 @@ namespace ZombieCityCleaner.Mundo
         [System.ThreadStatic] static List<Rect> _bloqueios, _colocados, _frentes, _bocas, _solidos;
         [System.ThreadStatic] static int _soltasAntes, _longeAntes;
         [System.ThreadStatic] static List<int> _ordem;
+        [System.ThreadStatic] static int _unidade;
+        [System.ThreadStatic] static bool _apartamento;
 
         /// <summary>
         /// Os pontos dos móveis do cômodo k, com o chão em 'chao' (nas coordenadas da obra, sem espelhar), em 'saida'. A
@@ -217,6 +229,10 @@ namespace ZombieCityCleaner.Mundo
         {
             var receita = Receita(contexto, k.tipo);
             if (receita.Length == 0) return;
+            // a moradia dos pontos deste cômodo (a casa, o apartamento da loja ou do prédio, ou nenhuma)
+            bool morada = contexto == "casa";
+            _unidade = !morada ? 0 : k.apto >= 0 ? k.apto + 1 : obra is Loja ? k.andar + 1 : 1;
+            _apartamento = morada && (k.apto >= 0 || obra is Loja);
             float e = obra.m.esp / 2;
             var r = Rect.MinMaxRect(k.x0 + e, k.z0 + e, k.x1 - e, k.z1 - e);
             if (r.width < 0.8f || r.height < 0.8f) return;
@@ -645,7 +661,13 @@ namespace ZombieCityCleaner.Mundo
                 comodo = k.tipo,
                 andar = k.andar,
                 altura = altura,
+                unidade = _unidade,
+                apartamento = _apartamento,
+                sala = NumeroDaSala(k),
             });
         }
+
+        /// <summary>O número do cômodo: pelo andar e pelo canto dele (o mesmo em todas as máquinas).</summary>
+        static int NumeroDaSala(Comodo k) => (int)(Sorteio.Hash(k.andar, Mathf.RoundToInt(k.x0 * 10f), Mathf.RoundToInt(k.z0 * 10f)) & 0x7fffffff);
     }
 }

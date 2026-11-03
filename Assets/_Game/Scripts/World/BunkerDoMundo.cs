@@ -162,6 +162,19 @@ namespace ZombieCityCleaner.World
             return Mathf.Abs(q.x) < X1 + 1f && Mathf.Abs(q.z) < Z1 + 1f && q.y > Base(Andares - 1) - 3f && q.y < Morro + AlturaDaCasinha + 1f;
         }
 
+        /// <summary>
+        /// Onde fica, no mundo, o móvel <paramref name="ponto"/> do bunker (o índice em <see cref="MoveisDoBunker.Todos"/>):
+        /// o ponto de apoio dele, no chão do andar (as estantes, para a distância de quem guarda).
+        /// </summary>
+        public bool PontoDoMovel(int ponto, out Vector3 mundo)
+        {
+            mundo = default;
+            var todos = MoveisDoBunker.Todos;
+            if (_raiz == null || ponto < 0 || ponto >= todos.Length) return false;
+            mundo = _raiz.TransformPoint(todos[ponto].lugar);
+            return true;
+        }
+
         // ------------------------------------------------------------ o que cada quadro quer
 
         void Update()
@@ -696,6 +709,9 @@ namespace ZombieCityCleaner.World
                     mundo.Registrar(parte);
                     a.Partes.Add(parte);
                 }
+                // a mesa de sinuca da sala de jogos se joga; as estantes e as prateleiras guardam itens
+                if (m.modelo == "MesaSinuca") SinucaDoMundo.Ligar(go, MobiliaNova.ChaveDaParte(obra, ponto, 0, SinucaDoMundo.ParteDaMesa));
+                else if (EstantesDoBunker.EhEstante(m.modelo)) EstantesDoBunker.Ligar(go, ponto, m.modelo);
                 yield return null;
             }
             foreach (var (modelo, lugar, giro) in MoveisDoBunker.PortasDeModelo(f))

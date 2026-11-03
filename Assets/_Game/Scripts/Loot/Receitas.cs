@@ -107,8 +107,16 @@ namespace ZombieCityCleaner.Loot
         {
             foreach (var d in Desmontagens)
                 if (d.item == item) return d;
+            // as roupas de verdade também se desfiam em 2 panos, como a "roupa" (o Plano_Saque.md da pasta de arte, a decisão 7)
+            if (Itens.EhRoupa(item))
+            {
+                if (!_dasRoupas.TryGetValue(item, out var r)) _dasRoupas[item] = r = D(item, "desfiar", Item.Nada, P(Item.Pano, 2));
+                return r;
+            }
             return null;
         }
+
+        static readonly Dictionary<Item, Desmontagem> _dasRoupas = new Dictionary<Item, Desmontagem>();
 
         /// <summary>A lista do que sai ("2 panos, 1 corda").</summary>
         public static string Lista(IEnumerable<Parte> partes)

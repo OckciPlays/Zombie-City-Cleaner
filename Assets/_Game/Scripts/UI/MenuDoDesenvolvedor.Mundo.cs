@@ -226,7 +226,7 @@ namespace ZombieCityCleaner.UI
             var mundo = MundoDaPartida.Instancia;
             var d = Mapa;
             if (d == null) return default;
-            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, 658 * u);
+            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, 690 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -313,6 +313,19 @@ namespace ZombieCityCleaner.UI
             y += 32 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), MoveisDaConstrucao.Mostrar ? $"Esconder os pontos dos móveis ({MoveisDaConstrucao.Pontos})" : "Mostrar os pontos dos móveis", _botao))
                 MoveisDaConstrucao.Mostrar = !MoveisDaConstrucao.Mostrar;
+            y += 32 * u;
+            // o saque sorteado (o Plano_Saque.md, a parte 3): uma caixa da cor da raridade em cada item, nas construções carregadas
+            string saque = "Mostrar o saque (a cor da raridade)";
+            if (MobiliaDaConstrucao.MostrarOSaque)
+            {
+                var n = MobiliaDaConstrucao.SaqueAMostra();
+                saque = $"Esconder o saque ({n[0]}/{n[1]}/{n[2]}/{n[3]}/{n[4]}; {MobiliaNovaDoMundo.QuantosPegos} pegos)";
+            }
+            if (GUI.Button(new Rect(x, y, w, 26 * u), saque, _botao))
+            {
+                MobiliaDaConstrucao.MostrarOSaque = !MobiliaDaConstrucao.MostrarOSaque;
+                if (MobiliaDaConstrucao.MostrarOSaque) Avisar("O saque: cinza normal, verde incomum, azul raro, roxo épico, dourado lendário (os números no botão).");
+            }
             y += 32 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), "Copiar a semente", _botao))
             {

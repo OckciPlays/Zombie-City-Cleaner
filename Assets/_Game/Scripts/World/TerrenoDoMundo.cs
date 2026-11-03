@@ -806,6 +806,8 @@ namespace ZombieCityCleaner.World
                 // a mobília nova (os de longe ficam com ela)
                 MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100);
                 c.MobiliaNova = null;
+                // as portas que abrem (o Plano_Portas.md da pasta de arte)
+                PortasDaConstrucao.Por(go, c.Portas, c.Janelas, c.Semente);
                 var malha = c.Colisao.ParaMesh($"{c.Nome} (colisão)");
                 var colisor = go.AddComponent<MeshCollider>();
                 colisor.enabled = false;

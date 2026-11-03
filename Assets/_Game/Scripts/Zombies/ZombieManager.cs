@@ -62,7 +62,8 @@ namespace ZombieCityCleaner.Zombies
         // o Id vai pela rede em 16 bits; 2.048 dá folga para os 1.000 das hordas e os criados pelo menu do desenvolvedor
         public const int MaxZumbis = 2048;
         // só o cenário (camada Default) tapa a visão; as cápsulas e hitboxes dos zumbis ficam em outras camadas
-        const int MascaraDaVisao = 1 << 0;
+        // (a porta fechada também tapa a vista: o Plano_Portas.md da pasta de arte)
+        const int MascaraDaVisao = (1 << 0) | (1 << World.PortasDoMundo.Camada);
 
         public static ZombieManager Instancia { get; private set; }
 
@@ -338,15 +339,19 @@ namespace ZombieCityCleaner.Zombies
             if (!SemDano && alvo != null && alvo.Vida != null) alvo.Vida.Dano(dano, de);
         }
 
-        /// <summary>Um tiro, no anfitrião: quem está perto vai atrás de quem atirou; quem está mais longe vai ver o que foi.</summary>
-        public static void Barulho(Vector3 ponto, JogadorRede autor)
+        /// <summary>
+        /// Um tiro, no anfitrião: quem está perto vai atrás de quem atirou; quem está mais longe vai ver o que foi. 'raio': até
+        /// onde o barulho chega (m; o do tiro, sem ele; o pé de cabra arrombando uma porta, menos).
+        /// </summary>
+        public static void Barulho(Vector3 ponto, JogadorRede autor, float raio = -1f)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer) return;
             float agora = Time.time;
             // de dia e ao amanhecer, o tiro só tira da sombra quem está bem perto (5 m; à noite, 12 m)
             float direto = m.ProtegerDoSol ? m.ajustes.tiroAmeacaDeDia : m.ajustes.tiroChamaDireto;
-            float raio2 = m.ajustes.barulhoDoTiro * m.ajustes.barulhoDoTiro, direto2 = direto * direto;
+            if (raio < 0f) raio = m.ajustes.barulhoDoTiro;
+            float raio2 = raio * raio, direto2 = Mathf.Min(direto, raio) * Mathf.Min(direto, raio);
             foreach (var z in m._ativos)
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;

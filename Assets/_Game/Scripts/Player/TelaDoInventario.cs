@@ -90,7 +90,7 @@ namespace ZombieCityCleaner.Player
         static readonly CultureInfo Br = new CultureInfo("pt-BR");
 
         enum Aba { Mochila, Criar }
-        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa }
+        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa, Estante }
 
         Aba _aba;
         RetratoDoJogador _retrato;
@@ -112,7 +112,7 @@ namespace ZombieCityCleaner.Player
         string _aviso;
         float _avisoAte;
         Vector2 _origem;
-        GUIStyle _titulo, _nome, _texto, _pequeno, _direita, _centro, _numero, _dica, _fechar;
+        GUIStyle _titulo, _nome, _texto, _pequeno, _direita, _centro, _numero, _dica, _fechar, _raridade;
         static Texture2D _circulo;
 
         void OnEnable()
@@ -148,6 +148,7 @@ namespace ZombieCityCleaner.Player
         {
             if (abrir == Aberta) return;
             Aberta = abrir;
+            if (!abrir) _estante = -1;
             MenuOnline.Tela(this, abrir);
             _apertou = Origem.Nada;
             _arrastando = false;
@@ -184,6 +185,8 @@ namespace ZombieCityCleaner.Player
             var teclado = Keyboard.current;
             if (teclado != null && teclado.tabKey.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!Aberta);
             if (!Aberta) return;
+            ConferirEstante();
+            if (!Aberta) return;
             _retrato?.Atualizar();
             // arrastando, o botão solto fora da janela do jogo não chega ao OnGUI: solto há uns quadros, solta onde o
             // mouse estava (antes disso, o soltar de verdade ainda pode chegar)
@@ -213,7 +216,7 @@ namespace ZombieCityCleaner.Player
                 }
                 else if (inventario.Do(_escolhido) != Item.Nada) inventario.Largar(_escolhido);
             }
-            if (teclado.rKey.wasPressedThisFrame && _apertou == Origem.Mochila) Girar();
+            if (teclado.rKey.wasPressedThisFrame && (_apertou == Origem.Mochila || _apertou == Origem.Estante)) Girar();
             if (_sobMouse != 0)
             {
                 if (teclado.digit1Key.wasPressedThisFrame) inventario.PorNoAtalho(0, _sobMouse);
@@ -246,10 +249,14 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         void Girar()
         {
-            if (!inventario.Achar(_idApertado, out var it)) return;
-            var t = InventarioJogador.TamanhoNaGrade(it.item, _girado);
+            Item item;
+            if (EstanteApertada(out var daEstante)) item = daEstante.item;
+            else if (_apertou == Origem.Mochila && inventario.Achar(_idApertado, out var it)) item = it.item;
+            else return;
+            var t = InventarioJogador.TamanhoNaGrade(item, _girado);
             if (t.x == t.y) return;
-            float c = Celula * _u;
+            // o ponto em que ele foi pego está na medida da grade de onde ele saiu
+            float c = _celulaDaPega;
             // deitado para girado, no sentido do relógio; de volta, ao contrário
             _pega = _girado ? new Vector2(_pega.y, t.x * c - _pega.x) : new Vector2(t.y * c - _pega.y, _pega.x);
             _girado = !_girado;
@@ -306,7 +313,7 @@ namespace ZombieCityCleaner.Player
         {
             var g = Em(AreaDaGrade);
             float c = Celula * _u;
-            var canto = m - _pega - g.position;
+            var canto = m - PegaPara(c) - g.position;
             x = Mathf.RoundToInt(canto.x / c);
             y = Mathf.RoundToInt(canto.y / c);
             var t = InventarioJogador.TamanhoNaGrade(item, girado);
@@ -348,6 +355,13 @@ namespace ZombieCityCleaner.Player
                     {
                         Escolher(doMenu.id);
                         MenuDoItem(doMenu, -1);
+                    }
+                    else if (ItemDaEstanteEm(m, out var daEstanteDoMenu, out _))
+                    {
+                        // o item da estante: pegar para a mochila (no primeiro lugar livre)
+                        int estante = _estante;
+                        ushort idDaEstante = daEstanteDoMenu.id;
+                        Opcao("Pegar (para a mochila)", () => Estantes?.Pegar(estante, idDaEstante, -1, -1, false));
                     }
                     else if (AtalhoEm(m, out int atalhoDoMenu) && inventario.Achar(inventario.Atalho(atalhoDoMenu), out var noAtalho))
                     {
@@ -391,6 +405,7 @@ namespace ZombieCityCleaner.Player
                     _inicio = m;
                     _arrastando = false;
                     _apertou = Origem.Nada;
+                    _celulaDaPega = Celula * _u;
                     if (Em(BotaoFechar).Contains(m)) Abrir(false);
                     else if (Em(AbaMochila).Contains(m)) _aba = Aba.Mochila;
                     else if (Em(AbaCriar).Contains(m)) _aba = Aba.Criar;
@@ -406,7 +421,16 @@ namespace ZombieCityCleaner.Player
                         _apertou = Origem.Mochila;
                         _idApertado = it.id;
                         _pega = m - r.position;
+                        _celulaDaPega = Celula * _u;
                         _girado = Posicao(it).girado;
+                    }
+                    else if (ItemDaEstanteEm(m, out var naEstante, out var re))
+                    {
+                        _apertou = Origem.Estante;
+                        _idApertado = naEstante.id;
+                        _pega = m - re.position;
+                        _celulaDaPega = CelulaDaEstante(FormaAberta) * _u;
+                        _girado = naEstante.girado;
                     }
                     else if (EquipamentoEm(m, out var vestido) && vestido != Item.Nada)
                     {
@@ -491,6 +515,13 @@ namespace ZombieCityCleaner.Player
             ushort id = it.id;
             int n = Itens.Quantos(item, it.qtd);
             bool ocupado = arma != null && arma.Usando;
+            // com uma estante aberta: guardar nela (no primeiro lugar livre, completando as pilhas)
+            if (_estante >= 0 && Estantes != null)
+            {
+                int estante = _estante;
+                bool naMao = ocupado && id == inventario.IdNaMao;
+                Opcao("Guardar na estante" + (naMao ? " (ocupado)" : ""), naMao ? null : () => Estantes?.Guardar(estante, inventario, arma, id, -1, -1, false));
+            }
             if (Itens.EhRoupa(item)) OpcaoDeVestir(it);
             if (Itens.EhConsumivel(item))
                 Opcao(Maiuscula(Itens.Consumivel(item).verbo) + (ocupado ? " (ocupado)" : ""), ocupado ? null : () => inventario.UsarDaMochila(id));
@@ -591,12 +622,14 @@ namespace ZombieCityCleaner.Player
                         _pendentes[it.id] = (x, y, _girado, Time.unscaledTime + 0.8f);
                     }
                 }
+                else if (_estante >= 0 && SoltarNaEstante(m, it)) { }
                 else if (!Janela.Contains(m))
                 {
                     inventario.Largar(it.id);
                     if (_escolhido == it.id) _escolhido = 0;
                 }
             }
+            else if (_apertou == Origem.Estante) SoltarDaEstante(m);
             else if (_apertou == Origem.Equipamento)
             {
                 if (!Janela.Contains(m) && Vestido(_equipApertado))
@@ -636,7 +669,8 @@ namespace ZombieCityCleaner.Player
                 Rodape();
             }
             else Criar(mouse);
-            Detalhes();
+            if (_estante >= 0 && FormaAberta != null) DesenharEstante(mouse);
+            else Detalhes();
             Arrasto(mouse);
             if (MenuAberto) _dicaTexto = null;
             Dica(mouse);
@@ -657,7 +691,7 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(a, nome, new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter });
                 PorCor(_titulo, CorDoTexto);
             }
-            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), "DETALHES", _titulo);
+            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), _estante >= 0 && FormaAberta != null ? FormaAberta.nome.ToUpperInvariant() : "DETALHES", _titulo);
             var x = Em(BotaoFechar);
             Ret(x, x.Contains(mouse) ? new Color(0.62f, 0.16f, 0.12f, 0.95f) : new Color(0f, 0f, 0f, 0.35f));
             Moldura(x, Mathf.Max(1f, Mathf.Round(u)), BordaClara);
@@ -747,6 +781,12 @@ namespace ZombieCityCleaner.Player
                 // juntar duas pilhas do mesmo item (as caixas, do mesmo calibre)
                 Ret(ro, inventario.PodeJuntar(caixa.id, outra.id) ? new Color(0.35f, 0.85f, 0.35f, 0.4f) : new Color(0.9f, 0.25f, 0.2f, 0.35f));
             }
+            else if (_arrastando && EstanteApertada(out var daEstante) && CelulaDoArrasto(mouse, daEstante.item, _girado, out int ex, out int ey))
+            {
+                // um item da estante vindo para a mochila
+                Ret(RetanguloNaGrade(ex, ey, InventarioJogador.TamanhoNaGrade(daEstante.item, _girado)),
+                    inventario.Cabe(daEstante.item, _girado, ex, ey) ? new Color(0.35f, 0.85f, 0.35f, 0.3f) : new Color(0.9f, 0.25f, 0.2f, 0.35f));
+            }
             else if (_arrastando && _apertou == Origem.Mochila && inventario.Achar(_idApertado, out var arrastado)
                 && CelulaDoArrasto(mouse, arrastado.item, _girado, out int ax, out int ay))
             {
@@ -800,7 +840,7 @@ namespace ZombieCityCleaner.Player
 
         // um item: o fundo pela espécie (arma, comida, água), o ícone (girado 90° no sentido do relógio, se o item está
         // girado), o atalho em que ele está e o pente
-        void DesenharItem(ItemNaMochila it, Rect r, bool girado, float alfa, bool escolhido, bool sobMouse)
+        void DesenharItem(ItemNaMochila it, Rect r, bool girado, float alfa, bool escolhido, bool sobMouse, bool daEstante = false)
         {
             float u = _u;
             var fundo = FundoDo(it.item);
@@ -825,8 +865,17 @@ namespace ZombieCityCleaner.Player
                 else GUI.DrawTexture(area, icone, ScaleMode.ScaleToFit);
                 GUI.color = antes;
             }
+            // a raridade (o Plano_Saque.md da pasta de arte, a decisão 5): um filete da cor dela no canto de baixo, à esquerda
+            if (Mundo.CatalogoDoSaque.RaridadeDo((int)it.item, out var raridade))
+            {
+                var cor = Mundo.CatalogoDoSaque.Cores[(int)raridade];
+                cor.a = alfa;
+                float g = Mathf.Max(2f, Mathf.Round(3 * u)), c = Mathf.Min(14 * u, r.width / 3f);
+                Ret(new Rect(r.x + u, r.yMax - u - g, c, g), cor);
+                Ret(new Rect(r.x + u, r.yMax - u - c, g, c), cor);
+            }
             if (alfa < 1f) return;
-            int atalho = inventario.LugarDoAtalho(it.id);
+            int atalho = daEstante ? -1 : inventario.LugarDoAtalho(it.id);
             if (atalho >= 0)
             {
                 var b = new Rect(r.xMax - 16 * u, r.y + 2 * u, 14 * u, 14 * u);
@@ -837,7 +886,7 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhArma(it.item))
             {
                 int cap = Armas.Dados(Itens.Arma(it.item)).capacidade;
-                GUI.Label(new Rect(r.x, r.yMax - 17 * u, r.width - 4 * u, 16 * u), $"{arma.MunicaoDe(it.id, it.item)}/{cap}", _direita);
+                GUI.Label(new Rect(r.x, r.yMax - 17 * u, r.width - 4 * u, 16 * u), $"{(daEstante ? it.qtd : arma.MunicaoDe(it.id, it.item))}/{cap}", _direita);
             }
             else if (Itens.EhMunicao(it.item))
             {
@@ -1062,7 +1111,17 @@ namespace ZombieCityCleaner.Player
                 return;
             }
             var item = it.item;
-            GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+            // o nome na cor da raridade, e ela escrita à direita (o Plano_Saque.md da pasta de arte, a decisão 5)
+            if (Mundo.CatalogoDoSaque.RaridadeDo((int)item, out var raridade))
+            {
+                var cor = Mundo.CatalogoDoSaque.Cores[(int)raridade];
+                PorCor(_nome, cor);
+                PorCor(_raridade, cor);
+                GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 100 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+                GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Mundo.CatalogoDoSaque.NomesDasRaridades[(int)raridade].ToUpperInvariant(), _raridade);
+                PorCor(_nome, CorDoTexto);
+            }
+            else GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
             var imagem = inventario.FotoDe(it);
             if (imagem == null) imagem = inventario.IconeDe(it);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
@@ -1192,7 +1251,9 @@ namespace ZombieCityCleaner.Player
             if (_apertou == Origem.Mochila && inventario.Achar(_idApertado, out var it))
             {
                 var t = InventarioJogador.TamanhoNaGrade(it.item, _girado);
-                var r = new Rect(mouse - _pega, new Vector2(t.x * Celula * u, t.y * Celula * u));
+                // na medida da grade embaixo do mouse (a da estante tem outras células)
+                float c = (_estante >= 0 && FormaAberta != null && CelulaNaEstante(mouse, it.item, _girado, out _, out _) ? CelulaDaEstante(FormaAberta) : Celula) * u;
+                var r = new Rect(mouse - PegaPara(c), new Vector2(t.x * c, t.y * c));
                 DesenharItem(it, Encolher(r, 2 * u), _girado, 0.85f, false, false);
                 if (!Janela.Contains(mouse)) GUI.Label(new Rect(mouse.x + 14 * u, mouse.y - 20 * u, 160 * u, 20 * u), "soltar: largar no chão", _dica);
             }
@@ -1204,6 +1265,7 @@ namespace ZombieCityCleaner.Player
                     Janela.Contains(mouse) ? "solte fora da janela para tirar" : "soltar: tirar e largar no chão", _dica);
             }
             else if (_apertou == Origem.Roupa) ArrastoDaRoupa(mouse);
+            else if (_apertou == Origem.Estante) ArrastoDaEstante(mouse);
             else if (_apertou == Origem.Atalho)
             {
                 var icone = inventario.IconeDe(inventario[_atalhoApertado]);
@@ -1336,6 +1398,8 @@ namespace ZombieCityCleaner.Player
             _dica = Estilo(13, FontStyle.Bold, TextAnchor.MiddleCenter, CorDoTexto);
             _dica.wordWrap = false;
             _fechar = Estilo(18, FontStyle.Bold, TextAnchor.MiddleCenter, CorDoTexto);
+            _raridade = Estilo(12, FontStyle.Bold, TextAnchor.MiddleRight, CorDoTexto);
+            _raridade.wordWrap = false;
         }
     }
 }

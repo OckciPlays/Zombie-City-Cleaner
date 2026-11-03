@@ -257,7 +257,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Em Play, o "Jogador de exemplo" ficou no lugar em que o teste o deixou depois de sair do Play (a cena não voltou). Confira a posição dele antes de salvar a cena.
 - **Números:** de 6 a 10 mil triângulos por casa sorteada (a Casa_1 refeita: 4,7 mil; a do Blender: 4,8 mil). Para muitas casas, vão precisar do LOD de longe e de juntar as fachadas por bloco.
 
-## O bunker novo (o `Plano_Bunker.md` da pasta de arte, 01/11/2026; as partes 2, 3 e 4 aprovadas; a parte 5, no mundo sorteado, esperando o teste com dois jogadores)
+## O bunker novo (o `Plano_Bunker.md` da pasta de arte, 01/11/2026; as partes 2, 3 e 4 aprovadas; a parte 5, no mundo sorteado, e os ajustes depois dela, esperando o teste com dois jogadores)
 
 - **O pedido:** o bunker grande, de andares (para abrigar os NPCs depois), perto da cidade do começo e não mais embaixo da casa: a garagem rente ao terreno (B0, com a sala de operações), a sala comum (B1), a cozinha e o refeitório (B2), os dormitórios (B3) e a manutenção, de acesso restrito (B4). As 12 decisões e as 5 partes estão no `Plano_Bunker.md`; o esboço em `Imgs/Bunker/Bunker_Esboco.png` da pasta de arte. O bunker da Demo_Cidade continua o de antes (veja "Bunker").
 - **A planta (`Mundo/Construcoes/PlantaDeBunker`):** a caixa de 32 × 24 m (as linhas das paredes de fora em x de -16 a 16 e z de -12, a frente com o portão, a 12), a parede de fora de 40 cm, a laje de 60 cm, a garagem com 5 m de pé-direito e os outros com 3,4 m (`Base(f)` = -4 f; `Teto(f)`; `TopoDaCaixa` 5,6 m; `Morro` 7,1 m, com 1,5 m de terra e o `Talude` de 2 para 1). Os cômodos de cada andar (`DoAndar(f)`: os `Comodo`, o nome de cada um, as `Ligacao` e as janelas de dentro) são escritos com as coordenadas do esboço (x de 0 a 32, z de 0 a 24) e passados por `R`. Uma passagem mais larga que a parede tira a parede (a garagem e a oficina; os dois corredores do B3). O núcleo é igual em todos (`Escada`, `Poco`, `Duto`), e a escada sobe pelas `Subidas` (os 4 lances de 4 m e as duas metades da subida até o morro). Os nomes `Cobertura` e `Nomes` já existem no namespace (são tipos): as constantes daqui são `TopoDaCaixa` e `NomesDosAndares`.
@@ -321,7 +321,17 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - dentro, o quadro é o mesmo de fora (6,1 a 6,4 ms, o tempo da CPU);
     - a GPU dobra: 5,3 a 6,2 ms, contra 2,8 a 3,1 fora (as lâmpadas e a sombra do sol);
     - a 290 m, nada que se meça. A tabela está no `Plano_Bunker.md`.
-- **Falta:** os quartos com o nome de cada jogador e a volta na cama dele quando cai (a decisão 7), e guardar as portas e as luzes no disco (a M10).
+- **Os ajustes depois da parte 5 (01/11/2026, a pedido; esperando o teste do usuário):**
+  - **A barra no vão do portão:** o `ParedeExterna` desenhava a barra verde (`Barra`) também no pedaço de parede de baixo do chão, no vão do portão, e ela atravessava a entrada da garagem por dentro. Agora a barra só vai nos pedaços que sobem do chão até a altura dela.
+  - **A sinuca** na mesa da sala de jogos do B1 (veja "A sinuca").
+  - **Os guarda-roupas, as estantes de aço e as prateleiras de madeira vazios** (o `Mobilia_Nova.fbx` refeito; as medidas das estantes e das prateleiras ficaram menores, sem os objetos que passavam das tábuas).
+  - **As estantes guardam itens** (`World/EstantesDoBunker`, um NetworkBehaviour no "Mundo", posto pela `MontagemDoMundo.PorOBunker`):
+    - **As estantes** são os móveis do bunker (o índice em `MoveisDoBunker.Todos`) de quatro modelos, cada um com a forma dele (`EstantesDoBunker.Forma`: o nome, as colunas de cada tábua, a altura do tampo de cada tábua, a largura e o fundo úteis e o vão entre as tábuas, no tamanho real do modelo, as medidas do `mobilia_servico.py`): a estante de aço de 0,90 m (5 tábuas de 6 colunas) e a de 1,20 m (5 de 8), a prateleira de madeira de 0,90 m (4 de 6) e a de 1,50 m (4 de 10).
+    - **A grade:** cada tábua é uma faixa de 2 linhas (`LinhasPorTabua`: a de trás e a da frente), e as tábuas vêm de cima para baixo. Um item fica numa tábua só (`Cabe`), com as células da mochila (`Itens.Tamanho`), deitado ou girado. O primeiro lugar livre (`Espaco`) começa pela tábua mais perto de 1,1 m do chão.
+    - **A rede:** a `NetworkList<ItemNaEstante>` (a estante, o Id, o item, a célula, o giro, as balas, o desgaste e as cores). Os pedidos (`Guardar`, `Pegar` e `Mover`, com a célula ou, sem ela, o primeiro lugar livre) vão para o anfitrião, que confere o jogador perto da estante (`Perto`, pelo `BunkerDoMundo.PontoDoMovel`, até 3,5 m) e o lugar. Guardar sem a célula completa antes as pilhas do mesmo item na estante (o que não couber fica na mochila: `InventarioJogador.AcertarQuantidade`); pegar para uma célula usa o `InventarioJogador.PorNaGrade`. A arma leva o pente. Ainda não é salvo no disco.
+    - **Na cena:** quando a estante entra de perto (o `BunkerDoMundo.PorOsMoveis`), o `EstantesDoBunker.Ligar` põe o gatilho da mira em volta (a camada 2, com o `EstanteNaMira`: "[E] Abrir a estante de aço (3 itens)") e o `ItensNaEstante`, que refaz os itens dela quando a lista muda: a malha e o material do chão (`ItensNoMundo.MalhaDe` e `MaterialDe`, as roupas pintadas), no meio das células, na tábua (deitadas as armas, em pé o resto), virados ao longo do lado mais comprido e, se forem maiores que o lugar, um pouco menores. A coluna 0 fica à esquerda de quem olha de frente.
+    - **A tela** é a do inventário (`TelaDoInventario.Estante.cs`; veja lá).
+- **Falta:** os quartos com o nome de cada jogador e a volta na cama dele quando cai (a decisão 7), guardar no disco as portas, as luzes e o que está nas estantes (a M10), e juntar duas pilhas arrastando na estante.
 
 ## O mundo gerado (Partes M1 a M5 e as três primeiras fatias da M6 do gerador de mapas, 26 e 27/10/2026)
 
@@ -466,7 +476,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **No Play** (o `AndarNoExemplo`): ← e → levam à construção anterior e à próxima; P abre a planta (a câmera ortográfica de cima, 2,25 m acima do piso, abaixo do teto: as paredes saem cortadas e os móveis inteiros; o sol sem sombra e o pós-processamento desligado enquanto ela está aberta), com o nome e o tamanho de cada cômodo; ↑ e ↓ trocam o piso, a roda aproxima, H esconde o texto e R gera com outra semente (outro mapa: outra construção de cada variação). Os estilos do texto ficam fora da serialização (`[NonSerialized]`): a Unity os criava vazios, com a letra preta.
   - **As plantas** (Zombie City Cleaner > Exemplos > Fotos das variações, com a cena aberta): `Imgs/Renders/Variacoes_Casas.png`, `_Lojas.png` (cada piso de cada uma) e `_Predios.png` (o térreo e o primeiro andar), as plantas como as do P numa folha, com os rótulos dos cômodos e o título de cada piso (`TextMesh` deitados no chão, só durante a foto), e `_Rua.png` (a rua de cima). `MontarEFotografarVariacoes` faz as duas coisas sem a tela (batchmode).
   - **Conferido (29/10/2026):** no Médio 7, 13 casas, 10 lojas e 5 prédios (780 mil triângulos com os móveis), todas as variações achadas; a cena monta em 5 s. No Play, as setas, a planta e a ficha.
-  - **As mesas dos itens** (31/10/2026, o lote 6 das roupas, a pedido: "todos esses itens na nossa cena de comparação, tudo em cima de mesas, mais de um item na mesma mesa, para ter uma visão da quantidade de coisas"; a primeira parada, onde o jogador começa): `MesasDosItens`, antes do mostruário da mobília (no lado norte, terminando 4 m antes dele), com os campos `roupas` e `lugaresDasRoupas` (os prefabs de `Prefabs/Roupas/Itens` e o lugar de cada um: o assembly do mundo não vê o `RoupaComoItem`) e `coletaveis` e `materialDosColetaveis` (as malhas de `Art/Characters/Jogador/Malhas`, as do `ItensNoMundo`, e o `Pistola.mat`). Os grupos (`GruposDasRoupas`: as camisetas e as camisas, as jaquetas, os coletes, os cintos, as calças, os calçados, as luvas, os chapéus, os óculos e as máscaras; `GruposDosColetaveis`: as armas, a comida e a água, as mochilas e o coldre, a munição, as peças do carro e a sinuca), cada um a partir de uma mesa nova (a `Mesa6` da mobília nova em ×1,30), em fileiras no tampo, no meio dele (as roupas deitadas cabem em duas fileiras saindo um pouco do tampo; o que é mais fundo que a mesa vai virado de lado); as mesas em fileiras de 5. As roupas viradas para a rua (a gola das deitadas para o fundo); as armas deitadas de lado, como no chão do jogo, e o resto como é (os tacos já vêm deitados). Hoje: 73 roupas e 26 coletáveis em 23 mesas. A ficha lista os grupos e os itens; na planta (P), cada mesa com o grupo e quantos itens. A `MontarVariacoes` carrega os campos (`MontagemDasRoupas.CarregarItens`). As fotos: `Imgs/Renders/Roupas_Itens_Mesas.png` e `_1` a `_4.png` da pasta de arte.
+  - **As mesas dos itens** (31/10/2026, o lote 6 das roupas, a pedido: "todos esses itens na nossa cena de comparação, tudo em cima de mesas, mais de um item na mesma mesa, para ter uma visão da quantidade de coisas"; a primeira parada, onde o jogador começa): `MesasDosItens`, antes do mostruário da mobília (no lado norte, terminando 4 m antes dele), com os campos `roupas` e `lugaresDasRoupas` (os prefabs de `Prefabs/Roupas/Itens` e o lugar de cada um: o assembly do mundo não vê o `RoupaComoItem`) e `coletaveis` e `materialDosColetaveis` (cada coletável é um `Coletavel`: a malha de `Art/Characters/Jogador/Malhas`, a do `ItensNoMundo`, o nome do item no jogo, o material próprio, o grupo e se vai deitado; sem material próprio, o `Pistola.mat`, a paleta). Os grupos das roupas (`GruposDasRoupas`: as camisetas e as camisas, as jaquetas, os coletes, os cintos, as calças, os calçados, as luvas, os chapéus, os óculos e as máscaras) e os dos coletáveis, que vêm prontos do Editor (`MontagemDoExemploDasCasas.Coletaveis`, 01/11/2026, a pedido: "coloque os demais loots na cena de variações"; o assembly do mundo não vê o `Itens`): cada malha `Arma_`, `Item_`, `Loot_`, `Equip_`, `Mun_`, `Peca_` e `Sinuca_` vira o item dela (a `Item_Lata` e a `Item_Garrafa` são a comida e a água) e vai no grupo dele (`GruposDosColetaveis`: as armas, as armas brancas, a comida, a bebida, os remédios, os materiais, os kits de montar, a lanterna com as pilhas e o galão, as mochilas, a munição, as peças do carro e a sinuca), na ordem do enum `Item`; ficam de fora os braços e as armas de terceira pessoa (`FP_`, `TP_`), as construções montadas (`Construcao_`) e o coldre, que saiu do jogo. Cada grupo começa numa mesa nova (a `Mesa6` da mobília nova em ×1,30), em fileiras no tampo, no meio dele (as roupas deitadas cabem em duas fileiras saindo um pouco do tampo; o que é mais fundo que a mesa vai virado de lado); as mesas em fileiras de 5. As roupas viradas para a rua (a gola das deitadas para o fundo); as armas de fogo (com o material próprio de cada uma, a textura, como no chão do jogo) e as brancas deitadas de lado, e o resto como é (os tacos já vêm deitados). Hoje: 73 roupas e 73 coletáveis em 29 mesas. A ficha lista os grupos e os itens (os coletáveis com o nome do jogo, `Itens.Nome`); na planta (P), cada mesa com o grupo e quantos itens. A `MontarVariacoes` carrega os campos (`MontagemDasRoupas.CarregarItens` e `Coletaveis`). As fotos: `Imgs/Renders/Roupas_Itens_Mesas.png` e `_1` a `_4.png` da pasta de arte (as de 31/10/2026, com os 26 coletáveis de então) e `Variacoes_Mesas_Itens.png` (as 13 mesas dos coletáveis, 01/11/2026).
   - **O mostruário da mobília nova** (as paradas depois das mesas dos itens): o campo `mobiliaNova` (os prefabs de `Prefabs/MobiliaNova`), postos pelo `CatalogoDaMobilia`: um cômodo aberto para a rua no lado norte para cada grupo do catálogo que tem modelo (a sala, o quarto, a cozinha...), lado a lado, o último terminando em x = -14 (antes das casas), cada um uma parada (`Sala`, `Planejar` e `MontarComodo`). Em cada um, no chão da cena (`chao`): o piso de taco, a parede do fundo com a porta das construções à esquerda (1,27 × 2,42 m, com o batente) e o pé-direito delas (3,22 m), as paredes dos lados e o rodapé. Os móveis: os da parede (`Lugar.Parede`) com as costas no fundo, da esquerda para a direita na ordem do catálogo (os "juntos", `Tipo.junto`, colados: os módulos da cozinha formam a bancada, e os armários de parede juntos em cima dela); os pendurados (`Alto`, os quadros) na parede, só em cima dos que são mais baixos que eles; os soltos (`Meio`) numa fileira na frente (a mesa com as cadeiras em volta, uma puxada e torta, `Cadeiras`; na redonda, `Tipo.redonda`, por igual em volta); a mesa encostada na parede com a cadeira (a de escritório, com o meio do vão em `Tipo.vao`) ganha a cadeira na frente do vão, um pouco embaixo do tampo e virada de leve (`CadeiraNaFrente`), e o que vai em cima dela fica na frente do vão; e os que vão em cima de outro (`Sobre`: a TV de tubo nos três racks, o abajur na mesa de canto, o vasinho na mesa de centro), no tampo dele. Cada um num suporte que escala com o K (`TrocarEscala`: 1,00, 1,15 e 1,30; começa em 1,30, a escolhida para o jogo), com o espaço da maior, e com o `MovelDoMostruario` (o C troca a cor, mirando nele). A ficha do cômodo diz, de cada modelo, o tamanho real, os triângulos de perto e de longe, o que abre e quantas cores; na planta (P), o nome de cada um. O chão da cena ficou comprido: a física avisa dos triângulos de mais de 500 m na colisão do chão (só aviso).
 - **A mobília nova (29/10/2026; o plano está no `Plano_Mobilia.md` da pasta de arte):** os móveis com textura, as portas e as gavetas que abrem, as variações de cor e o de longe (o LOD), para substituir a mobília de hoje (o `Cidade_Mobilia.fbx`, que continua no mundo). O piloto foi aprovado; **os móveis vão para o jogo em ×1,30** (as construções em ×1,15). Agora, os lotes por cômodo (todos aprovados: a sala, o quarto, a cozinha, o banheiro e o escritório, a garagem e o porão; os móveis da lista estão todos feitos). No mostruário da cena das variações e, desde a etapa 4, no mundo (veja "No mundo" abaixo).
   - **Os modelos:** `Art/Mobilia/Mobilia_Nova.fbx` (o `mobilia_nova.py` e os lotes, `mobilia_sala.py`, `mobilia_quarto.py`, `mobilia_cozinha.py`, `mobilia_banheiro.py` e `mobilia_servico.py`, do `Mobilia.blend` da pasta de arte; 85 modelos: os do piloto, os da sala, os do quarto, os da cozinha, os do banheiro e os do escritório, da garagem e do porão), no tamanho real, com a origem no chão, no meio, e a frente para +z (os quadros: a origem embaixo, na parede); as partes que abrem são filhas do móvel, com a origem na dobradiça (`<nome>.Porta.<n>`) ou na frente da gaveta (`<nome>.Gaveta.<n>`), e o de longe é o `<nome>_Longe`. Cada vértice tem o UV1 (x: o índice da textura na Texture2DArray; y: a troca, 1 na parte principal, 2 na secundária, 0 no resto), o UV0 em metros vezes a escala da textura (ou o retângulo inteiro dela, nas pinturas, nos tapetes e nas lombadas) e a cor do vértice (linear) que tinge.
@@ -1075,6 +1085,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **A barra no HUD** (do dono, com a tela do inventário fechada): os 3 atalhos embaixo, no meio (112 × 56 a 720p), com o número e o ícone colorido (`icones`; o fundo claro, porque as armas são escuras; o escolhido com a borda clara, os outros com o ícone a 80%). Em cima deles, o nome do que está na mão por 1,6 s depois de trocar ("mãos vazias · clique: soco", se vazia) e, com comida ou água, "lata de comida · clique: comer · G: largar".
   - Quem sai da partida devolve as armas ao painel (se houver vaga do tipo delas) e deixa a comida, a água, a mochila e o coldre no chão (`Esvaziar`).
 - **A tela do inventário (`Player/TelaDoInventario`, TAB, só no dono; a pedido, 24/10/2026, pelo esboço do usuário):** OnGUI, como o resto do HUD, numa janela de 1160 × 590 (a 720p; `u` é o menor entre a altura / 720 e a largura / 1280).
+  - **Com uma estante do bunker** (`TelaDoInventario.Estante.cs`, 01/11/2026; E numa estante: `AbrirEstante`): a coluna da direita mostra a estante no lugar dos detalhes (o cabeçalho com o nome dela; quantos itens; uma faixa por tábua, de cima para baixo, com as 2 linhas e a tábua desenhada embaixo, as células de até 40). Arrastar da mochila para a estante guarda (verde onde cabe); da estante para a mochila, pega; dentro dela, move (a origem `Estante` do arrasto). O ponto em que o item foi pego fica na medida da grade de onde ele saiu (`_celulaDaPega`, `PegaPara`), porque as células da estante e as da mochila têm tamanhos diferentes. R gira o seguro. O botão direito: "Guardar na estante" (num item da mochila) e "Pegar (para a mochila)" (num da estante). Longe da estante (3,5 m mais 1), a tela fecha.
   - **O visual:** o fundo é o concreto do chão do bunker (`#6A6A64`); a borda é cinza-escura com um filete mais claro e os rebites (um círculo gerado na hora, com sombra e brilho). O friso amarelo por dentro da borda saiu a pedido; o amarelo ficou só na borda da dica do mouse e no destaque do item escolhido.
   - **Sem legendas** (tiradas a pedido): embaixo da grade, à direita, só "G: largar o escolhido" e, embaixo dela, "R: girar item" (pedida depois).
   - **À esquerda, o equipamento:** o retrato do jogador (`Player/RetratoDoJogador`, abaixo), os lugares das roupas em volta dele (desde 31/10/2026, no lugar dos 4 da armadura: veja "As roupas", abaixo), embaixo dos da direita a Mochila (o ícone da vestida; clique mostra os detalhes; G ou arrastar para fora da janela tira e larga) e, embaixo dos pés, a barra de atalhos.
@@ -1173,19 +1184,20 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **Prévias** (pasta de arte, `Sons/Previas/`; menu Zombie City Cleaner > Gravar prévias dos sons, `Editor/PreviasDosSons`): `Passos_<Concreto|Madeira|Grama|Carpete>_<andando|correndo>.wav` (6 passos seguidos), `Comer_lata.wav` e `Beber_garrafa.wav` (abrir e as três mordidas ou goles, nos quadros do clipe), `Largar.wav`, `Soco_no_ar.wav` e `Soco_acertando.wav`, como se ouve no jogo.
 - **Testado em Play** (anfitrião local): pegar a lata e a garrafa na mesa do depósito (a dica, os lugares 2 e 3), comer (a fome de 78 para 100, a lata some e a mão volta para a pistola), a roda (pula o lugar vazio), largar com G (a garrafa a 0,6 m no chão; o rifle deitado e a lata em pé), o painel (o rifle para a mão vazia, a sniper para o lugar livre e para a mão, a espingarda trocando com a sniper e a sniper voltando para a vaga dela), beber (a sede para 100, a mão volta para a sniper), as 5 armas correndo e o painel de opções com o contador. Depois (a segunda leva de pedidos): os pisos de cada cômodo das 5 casas e dos quartos do bunker (por raios de cima), o som depois de comer e beber (pelo ouvinte) e os socos num zumbi (3 socos, 3 recuos, e ele parte para cima). Na terceira leva: a roda com [pistola, vazio, vazio] (pistola ↔ mão vazia), com [pistola, vazio, rifle] (0 → 1 → 2 → 0, e ao contrário) e com tudo cheio (sem mão vazia), e a porta abrindo e fechando sem fonte de som. Na mochila em grade: pegar do painel (o rifle na grade, no atalho 2 e na mão), a dica sem espaço, a tela (TAB) com o retrato, os arrastos (para um atalho, mover, onde não cabe, para fora: no chão; trocar e tirar atalhos), o clique e G, o pente por arma (o rifle volta com 27), comer pelo atalho (a mão volta para o rifle), G no jogo, e o F1 (criar 10 zumbis no bunker e matar os 268).
 
-## A sinuca (a pedido, 29/10/2026; por enquanto só na cena de teste)
+## A sinuca (a pedido, 29/10/2026; na cena de teste e, desde 01/11/2026, em todas as mesas do jogo)
 
 - **A cena de teste** (`Scenes/Exemplos/Sinuca.unity`, menu Zombie City Cleaner > Exemplos > Sinuca (teste), `Editor/MontagemDaSinuca`; refaça depois de mudar a mesa, a mobília nova ou o prefab do jogador): um porão de 12 × 10 × 4 m (os materiais em `Art/Sinuca/Sala_*.mat`, as luzes de teto) com a mesa no meio e uns móveis da mobília nova em volta (as estantes de aço, o freezer, a prateleira de madeira, o colchonete, o saco de dormir, as latas, o fogareiro e as garrafas), a rede de sempre (`MontagemDaRede.MontarCena`: hospedar ou entrar pelo menu; os pontos de nascimento na frente da mesa) e os itens do chão (`MontagemDasArmas.MontarItensNoMundo`). Os itens vêm do F1 (a caixa de bolas e os 4 tacos estão em "Outros", no `ItensDoMenu`). Ela está na lista da build (a 4ª), mas o menu do jogo compilado não leva até ela: para testar com dois jogadores, a build precisa começar nela.
 - **Os itens** (`Loot/Itens`, de 128 em diante; eram do 80 ao 85 até o merge com o saque, em 31/10/2026, quando os remédios ficaram com o 80): `CaixaDeBolas` (3 × 1, "caixa de bolas de sinuca"), `CaixaDeBolasVazia` e os tacos `TacoMadeira`, `TacoEscuro`, `TacoPreto` e `TacoVermelho` (4 × 1; só a parte de trás muda: a base, o antebraço e os enfeites). `Itens.EhSinuca`, `EhTaco`, `EhCaixaDeBolas`, `IndiceDaSinuca` (a ordem do enum, a das malhas, dos ícones e das fotos), `IndiceDoTaco` e `ModeloDaSinuca`. A caixa não vai na mão (`VaiNaMao`): basta estar na mochila. O inventário troca a cheia pela vazia no mesmo lugar (`InventarioJogador.TrocarItem`, no anfitrião; `Primeiro(item)` acha o primeiro de um tipo); quem sai da partida deixa os dois no chão (`Esvaziar`).
   - **Os modelos** (`Blender/sinuca.py`): `Art/Characters/Jogador/Sinuca.fbx`, juntados pela montagem das armas em `Malhas/Sinuca_<modelo>.asset` (`MalhaDaSinuca`; no chão, `ItensNoMundo.malhasDaSinuca`), e os ícones e as fotos em `Art/UI/Icones` (`InventarioJogador.iconesDaSinuca` e `fotosDaSinuca`, postos pela `MontagemDaRede`). A ficha do inventário diz para que serve cada um.
   - **O taco na mão** (a pedido: "segurando o taco com somente uma mão, com o taco em pé"; aprovado: "Ficou bom"): a mão direita segura o taco pela empunhadura, em pé, como um cajado, e a esquerda fica solta (o `bloco_taco.py` da pasta de arte). No corpo, o override `Personagem_<p>_Taco` (o clipe `Taco_Segurar` no lugar de segurar, mirar e atirar; `CorpoDoPersonagem.controladorDoTaco`, escolhido pelo `JogadorRede.AplicarNaMao`); na primeira pessoa, os braços `Jogador_FP_Taco.fbx`, o modelo `Itens.TacoFP` (depois dos punhos: `Itens.ModeloNaMao` dá ele para os tacos), com o `Jogador_FP_Taco.overrideController` (Idle, Walk, Run e Sacar; o tiro, o gatilho sem bala e a recarga tocam o Idle). Os FBX não trazem o taco, só onde ele fica: a pegada (no corpo, o vazio `Arma_Taco` no `weapon.R`; na primeira pessoa, o osso `gun`) e a ponta (`Boca_Taco` e `Boca_FP_Taco`; `CorpoDoPersonagem.taco` e `pontaDoTaco`, copiados para o `JogadorRede.tacoCorpo` e `pontaDoTacoCorpo`). O `Player/TacoNaMao` (posto pelo `JogadorRede` quando ele nasce) põe o taco da mão, com a cor de cada um (a malha do chão, `ItensNoMundo.malhasDaSinuca`), entre os dois a cada quadro, depois da animação, com a pegada a 42 cm da base (a mesma do Blender). Segue as regras do que está na mão: no dono, o do corpo só aparece com o corpo à vista (a terceira pessoa); os dois somem no carro (`JogadorRede.NaMaoEscondida`) e na vista de cima da mesa (a câmera dos braços desligada). A linha da mão diz "E na mesa de sinuca: jogar".
-- **A mesa** (`World/Sinuca/MesaDeSinuca`, um `NetworkObject` da cena, com a mesa da mobília nova, `MesaSinuca`, em ×1,30, como filha `Mesa`; as 16 bolas são as partes `.Bola.<n>` dela, sem colisão). A mira acha a mesa pelo gatilho `Mira` (`MesaDeSinucaNaMira`, um `Interagivel`), e o E faz o que cabe:
+- **As mesas do jogo** (01/11/2026, a pedido: "colocar o sistema de sinuca já no bunker e no mapa também, nas mesas de sinuca que existirem"): a da sala de jogos do bunker (o `BunkerDoMundo.PorOsMoveis`) e as dos porões das casas (a receita do porão, 25%; o `MobiliaDaConstrucao.PorPerto`). Quando o móvel `MesaSinuca` entra de perto, o `SinucaDoMundo.Ligar` faz dele a mesa: a `MesaDeSinuca` com a chave (a da obra e do ponto, com a parte `SinucaDoMundo.ParteDaMesa`, 1000: a mesma em todas as máquinas), as bolas (escondidas até irem para a mesa) e o gatilho da mira (na camada 2, fora do NavMesh). O jogo de cada mesa fica no `SinucaDoMundo` (abaixo), então ela some e volta com os móveis e continua onde estava.
+- **A mesa** (`World/Sinuca/MesaDeSinuca`, um MonoBehaviour desde 01/11/2026; na cena de teste, a `Mesa de sinuca`, com a chave 1, e a mesa da mobília nova, `MesaSinuca`, em ×1,30, como filha `Mesa`; no mundo, o próprio móvel; as 16 bolas são as partes `.Bola.<n>` dela, sem colisão). A mira acha a mesa pelo gatilho `Mira` (`MesaDeSinucaNaMira`, um `Interagivel`), e o E faz o que cabe:
   - com a caixa cheia na mochila: "[E] Pôr as bolas na mesa" (as bolas no triângulo, e a caixa fica vazia);
   - com um taco na mão e as bolas na mesa: "[E] Jogar sinuca" (um jogador por vez: "Alguém está jogando sinuca");
   - com a caixa vazia (e ninguém jogando): "[E] Recolher as bolas" (a caixa volta a ficar cheia).
 - **Jogar** (`MesaDeSinuca.Jogo.cs`, só na máquina de quem joga): a câmera do jogador vai para cima da mesa (como a do capô, `DefaultExecutionOrder(200)`), olhando para baixo, com a mesa inteira na tela (50°), e o mouse fica solto (`MenuOnline.Tela`); o corpo fica parado onde estava (não há animação de jogar). O mouse mira (a branca vai para o ponto do pano embaixo dele): o taco da mão aparece atrás da branca, com a linha até a primeira bola ou tabela, a bola-fantasma onde a branca encosta e o rumo da bola acertada (`Art/Sinuca/LinhaDaMira.mat`). Segurar o clique enche a força (vai e volta em 1,1 s, o taco recua junto), soltar bate, o botão direito desiste; E ou ESC sai (também guardando o taco, abrindo o inventário ou se as bolas saírem da mesa). Na tela: o quadro "SINUCA" (quantas lisas e listradas ainda estão na mesa), a barra da força, os avisos ("Encaçapou a 15", "A branca caiu: ela volta para a marca", "A preta caiu: o jogo recomeça") e as teclas.
 - **A física** (`World/Sinuca/FisicaDaSinuca`, num plano, em metros do tamanho real; as medidas são as do `mobilia_servico.py` da pasta de arte): o pano livre de 1,89 × 0,90 m, as bolas de 2,86 cm de raio (a 0 é a branca, a 8 a preta, de 1 a 7 as lisas, de 9 a 15 as listradas), passos fixos de 1/600 s, o atrito (uma parte fixa e uma com a velocidade), as batidas entre as bolas (0,95) e nas tabelas (0,76) e as 6 caçapas: onde a tabela tem o vão (nas compridas, até 6 cm do meio e depois de 86 cm; nas curtas, depois de 37 cm do meio), a bola que passa da borda cai. A tacada mais forte dá 4,6 m/s; a quebra leva uns 5 s até parar. A branca que cai volta para a marca; a preta, ou as 15, recomeçam o jogo (`Arrumadas`: o triângulo com a preta no meio da terceira fileira e as outras sorteadas). Os sons são gerados (`SomDaSinuca`: a tacada, a tabela, a caçapa e 3 batidas de bola).
-- **A rede:** o anfitrião guarda o jogo (`ComBolas`, as posições numa `NetworkList<Vector2>`, as que caíram, quem joga e a rodada) e confere cada pedido (`PorBolasRpc`, `RecolherBolasRpc`, `JogarRpc` e `SairRpc`: o jogador perto da mesa, até 3,5 m, com o item certo). Quem joga simula a tacada na máquina dele e manda um quadro a cada 0,05 s para os outros (`QuadroRpc`, `QuadroDaSinuca`: as 16 posições, as que caíram e os sons), que movem as bolas até lá (rolando); quando as bolas param, ele manda o fim (`FimRpc`), e o anfitrião grava (ou arruma o jogo de novo). Se quem joga sai da partida, a mesa fica livre e as bolas voltam para o que o anfitrião gravou.
+- **A rede** (`World/Sinuca/SinucaDoMundo`, um NetworkBehaviour no "Mundo" da cena do mundo e no objeto "Sinuca" da cena de teste, com as malhas dos tacos e os materiais do taco que mira e das linhas; a montagem põe, `MontagemDaSinuca.PorASinuca`): o anfitrião guarda o jogo de todas as mesas já usadas, pela chave (`MesaNaRede`: a chave, o meio da mesa, se tem as bolas, quem joga, as que caíram e a rodada; as posições numa `NetworkList<Vector2>`, 16 por mesa, na ordem da lista). A mesa entra na lista no primeiro pedido. Ele confere cada pedido (`PorBolasRpc`, `RecolherBolasRpc`, `JogarRpc` e `SairRpc`, com a chave: o jogador perto da mesa, até 3,5 m, com o item certo; um jogador numa mesa só). Quem joga simula a tacada na máquina dele e manda um quadro a cada 0,05 s para os outros (`QuadroRpc`, com a chave, `QuadroDaSinuca`: as 16 posições, as que caíram e os sons; a mesa de cada um, se estiver de perto, mostra ele), que movem as bolas até lá (rolando); quando as bolas param, ele manda o fim (`FimRpc`), e o anfitrião grava (ou arruma o jogo de novo). Se quem joga sai da partida, a mesa fica livre e as bolas voltam para o que o anfitrião gravou.
 
 ## O saque, a fabricação e as construções (31/10/2026, a pedido)
 
@@ -1282,8 +1294,188 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   bancada; a fogueira acesa, a cama (o ponto de volta) e a barricada montadas no salão do bunker, a lenha posta e a cama
   recolhida; a tocha acesa na mão; o rifle gasto (25%, emperrando) consertado com o kit. Não conferido: os zumbis quebrando
   uma barricada (a conta está no `ConstrucoesNoMundo.ZumbisNa`) e o bastão e a lança no jogo (só nas fotos do Blender).
-- **Falta (próximos passos):** os itens nos móveis (o Gustavo), a pesca, as bancadas dos povoados, a animação dos zumbis
-  batendo na barricada e os sons próprios das armas brancas.
+- **Falta (próximos passos):** os itens nos móveis (o Gustavo; o plano do saque pelo mapa, abaixo), a pesca, as bancadas
+  dos povoados, a animação dos zumbis batendo na barricada e os sons próprios das armas brancas.
+
+### Os lugares do saque nos móveis (o `Plano_Saque.md` da pasta de arte, a parte 2, 01/11/2026; esperando a aprovação)
+
+O plano do saque pelo mapa (as 8 decisões aprovadas pela recomendação): o saque por cômodo e por móvel, a raridade de cada
+item, um mínimo e um máximo por casa e os itens nos móveis, sorteados pela semente (a rede só leva o que foi pego). Esta
+parte faz só os lugares; o sorteio é a parte 3, e o jogo, a 4.
+
+- **A tabela** (`Mundo/Mobilia/LugaresDoSaque.cs`, escrita; `LugaresDoSaque.Consulta.cs`, a consulta, segura em várias
+  threads): `LugaresDoSaque.Do(modelo)` dá os `LugarDoSaque` do modelo (o meio, em cima da superfície, e o tamanho: a
+  largura, a altura livre e o fundo, no espaço do modelo, no tamanho real, com as partes fechadas; a parte que precisa abrir,
+  "Gaveta.2", "Porta.1", "Tampa.1", ou null à vista; e `naParte`, o lugar que vai com ela: o chão da gaveta e a prateleira
+  da porta da geladeira). 197 lugares em 54 modelos.
+- **O gerador** (`Editor/MontagemDosLugaresDoSaque`, menu Zombie City Cleaner > Mobília nova > Escrever os lugares do
+  saque; o `MontagemDaMobiliaNova.MontarTudo` chama no fim, depois das medidas): mede as malhas dos prefabs
+  (`Prefabs/MobiliaNova`, as mesmas do `Mobilia_Nova.fbx`), com o que vai em cima no conjunto (a TV no rack, o computador na
+  mesa, o abajur e o vasinho, como no `MobiliaNova`). As superfícies são as faces para cima do corpo, das gavetas e das
+  portas, juntas pela altura (as da tampa e do forno não: o item cairia quando abrem); cada uma vira uma grade de 2 cm, e
+  cada célula precisa estar em cima da face, com 8 cm livres em cima (o raio para cima, com baldes de 5 cm por eixo). A
+  classe dela: a parte dona (na gaveta, só onde ela sai do móvel quando abre; na porta, só a coberta), a tampa que o raio
+  para cima acha, a parte que abre que o raio para a frente (+z) acha, ou à vista (nada em cima, ou a frente ou um lado
+  livre); fechada pelo móvel, sai. Os lugares são os maiores retângulos de células iguais (até 4 por superfície: o primeiro
+  de 8 × 10 cm, os outros de 10 cm de lado e 0,016 m²), até o máximo de cada móvel (`Moveis`: o que vale, em cima, dentro ou
+  no chão, e quantos). Fora: rente ao chão (menos de 4 cm, os livros caídos), acima de 1,55 m no jogo sem nada em cima
+  (`AteOOlho`: a cama de cima do beliche) e de 1,95 m coberto (`AteAMao`: a prateleira de cima do guarda-roupa), contando
+  a altura dos pendurados do catálogo. A mesa de sinuca não tem lugar (as bolas rolam no pano). O relatório diz os lugares
+  de cada modelo.
+- **No mostruário** (`Mundo/Exemplo/CenaDasVariacoes.Saque.cs`; a `CenaDasVariacoes` virou `partial`): cada móvel com
+  lugares ganha as caixas (só as arestas: verde à vista, amarela dentro; uma malha por pai, o corpo ou a parte) e um item de
+  teste por lugar, um que cabe no tamanho do jogo (×1,30), deitado ou girado 90°, dos grupos das mesas dos itens do cômodo
+  (`ItensDoGrupo`: no quarto as roupas e as mochilas, na cozinha a comida e a bebida, no banheiro os remédios...), no tamanho
+  real em qualquer escala do K (`AjustarOSaque`), preso à gaveta ou à porta do lugar. O L troca: nada, as caixas, as caixas
+  com os itens e só os itens. A ficha diz quantos lugares cada móvel tem. 194 lugares com item; nos 3 estreitos do
+  criado-mudo e da penteadeira não cabe nada do quarto.
+- **As fotos** (Zombie City Cleaner > Exemplos > Fotos dos lugares do saque, com a cena das variações aberta;
+  `MontagemDosLugaresDoSaque.FazerAsFotos`): cada móvel com lugares, de três quartos, com as partes abertas
+  (`ParteQueAbre.Pousar`, que abre na hora, também fora do Play), em `Imgs/Renders/Saque_Lugares_<grupo>.png` da pasta de
+  arte (e `_Itens.png`, só os itens).
+- **Os testes** (`Tests/Editor/LugaresDoSaqueTestes`): cada lugar dentro da caixa do móvel (`MedidasDaMobilia`), com o
+  tamanho mínimo e abaixo de 1,95 m no jogo; a parte de cada lugar de dentro existe no prefab e abre, e nenhum lugar fica em
+  cima de uma tampa.
+- **Ao mudar um móvel** (o Blender e a Mobília nova > Montar), os lugares são medidos de novo; um móvel novo com saque entra
+  na lista `Moveis` do gerador.
+
+### O sorteio do saque (o `Plano_Saque.md`, a parte 3, 01/11/2026; aprovada)
+
+Tudo no assembly do mundo (`Scripts/Mundo/Saque/`), seguro em várias threads: o gerador, os testes do Editor e o jogo sorteiam
+igual. Os itens no jogo são a parte 4 (abaixo).
+
+- **A moradia de cada ponto** (`PontoDeMovel.unidade`, `apartamento` e `sala`, postos pelo `MoveisDaObra.Distribuir`): a
+  `unidade` é 1 na casa, o andar mais 1 no apartamento de cima de uma loja, o apartamento mais 1 nos prédios e 0 fora de uma
+  moradia (a loja, a portaria, o corredor, o hospital, e os pontos que não saem dali, como os do bunker); a `sala` é um número
+  do cômodo (pelo andar e pelo canto dele).
+- **Os itens** (`ItensDoSaque.cs`, escrito; Zombie City Cleaner > Itens > Escrever os itens do saque, no
+  `MontagemDosLugaresDoSaque.EscreverItens`): o nome (o do enum `Item`; as roupas, `Roupa.<peça>`), o número, o tamanho como
+  fica no chão do jogo (as armas de fogo e as brancas deitadas de lado) e o lugar da roupa no corpo, das malhas de
+  `Art/Characters/Jogador/Malhas` e das roupas como itens (147). O assembly do mundo não vê o enum `Item`: o catálogo chama
+  os itens pelo nome. Um item novo no saque: escreva a tabela de novo e ponha ele no catálogo.
+- **O catálogo** (`CatalogoDoSaque`): as raridades (`Raridade`: as chances 40/30/15/10/5, desde 02/11/2026, a pedido; na decisão 1 eram 60/25/10/4/1; os nomes e as cores do F1), os itens
+  (`Lista` e as roupas por raridade: o nome, a raridade, a `EspecieDoSaque`, flags do que ele é para o saque, e a pilha
+  achada; o número e o tamanho vêm dos `ItensDoSaque`; `Faltando` diz os nomes que não estão lá), as regras dos móveis
+  (`Regra`: o que cada modelo aceita em cima, atrás das portas e das tampas e nas gavetas, e o peso dele; `Aceita`), o peso
+  dos cômodos (o quarto e a cozinha 3, o porão, o depósito e o banheiro 2, a sala 1), quantos por moradia (`Quantos`,
+  o triplo da decisão 3 desde 02/11/2026, a pedido: a térrea 3 a 9, o sobrado 6 a 12, o apartamento 3 a 6; com porão, mais
+  0 a 3 no porão, `TentativasNoPorao` vezes a chance de 50%) e o estado das armas
+  (o desgaste de 20 a 70%, as épicas e as lendárias de 0 a 30%; o pente até a metade; as brancas de 10 a 60%).
+- **O sorteio** (`SaqueDaObra.Sortear(pontos, semente, saída)`, os pontos e a semente da obra, como o `MobiliaDaConstrucao`):
+  para cada moradia, os lugares livres (as peças do conjunto de cada ponto pelo `MobiliaNova.Pecas`, os `LugaresDoSaque` de
+  cada uma e, de cada lugar, os itens de cada raridade que ele aceita e que cabem nele, deitados ou girados 90°, com 1 cm
+  de folga; a caixa de bolas e os tacos só no cômodo com a mesa de sinuca); a quantidade; e para cada item, a raridade,
+  depois o cômodo (pelo peso; no máximo 6 no mesmo, `PorComodo`, se houver outros), o lugar (pelo peso do móvel dividido pelos lugares
+  dele) entre os que aceitam um item dela (sem nenhum na moradia, a raridade de baixo) e o item. O `ItemDoSaque`: o número,
+  o nome, a raridade, o ponto, a peça e o lugar (a chave na rede vai sair deles), o apoio e o giro na obra, o tamanho, a
+  parte que abre, a pilha, o desgaste, o pente, o cômodo e a moradia. Escolher o lugar antes da raridade fazia quase tudo
+  descer (o épico em 1,5% e o lendário em 0,3%).
+- **No F1 do mundo** ("Mostrar o saque", embaixo de "Mostrar os pontos dos móveis"; `MobiliaDaConstrucao.MostrarOSaque`):
+  em cada construção carregada, o saque dela (`MobiliaDaConstrucao.Saque`, sorteado uma vez) vira uma malha de caixas do
+  tamanho de cada item com um palito de 60 cm para cima, com o material da mobília nova (a textura do plástico tingida pela
+  cor da raridade), só nesta máquina; o botão diz quantos de cada raridade estão à mostra e quantos já foram pegos na
+  partida (as caixas dos pegos continuam).
+- **Os testes** (`Tests/Editor/SaqueTestes`): `OCatalogoEstaCompleto` (nenhum nome faltando, as roupas no catálogo, itens em
+  todas as raridades, a regra e os lugares nos mesmos modelos) e `OSaqueDoMapaInteiro` (~55 s: cada casa, loja e andar de
+  prédio do Médio 7 montado como no jogo, o saque de cada moradia sorteado duas vezes: igual nas duas, nenhuma moradia
+  vazia nem acima do máximo, cada item no tamanho e no que o lugar aceita, e as raridades perto das chances; o log dá os
+  números por tipo de moradia, por raridade, por cômodo e os itens mais achados).
+- **Os números** (Médio 7, com o triplo, 02/11/2026): 9.792 moradias (8.086 apartamentos), 50.415 itens (5,15 por moradia:
+  a térrea 6,09, com porão 7,51; o sobrado 8,99, com porão 10,50; o apartamento 4,49; no máximo 15; só 4 moradias ficaram
+  abaixo do mínimo, sem lugar para todos); com as chances de antes, normal 59,9%, incomum 25,4%, raro 10,1%, épico 3,7%, lendário 0,9%; 561
+  pistolas, 176 submetralhadoras, 71 espingardas, 53 rifles e 44 snipers. Antes do triplo: 16.827 itens (1,7 por moradia). Com as chances novas (40/30/15/10/5): normal 40,0%, incomum 30,6%, raro 15,5%,
+  épico 9,4%, lendário 4,5% (2.274 lendários: 1.743 visões noturnas, 305 rifles e 226 snipers; a visão noturna cabe em quase
+  todo lugar e é o segundo item mais achado); 931 pistolas, 485 submetralhadoras e 138 espingardas.
+
+### O saque nos móveis (o `Plano_Saque.md`, a parte 4, 02/11/2026; esperando o teste do usuário com dois jogadores)
+
+- **Os itens entram com os móveis de perto** (`MobiliaNovaDoMundo.PorOSaque`, no `MobiliaNovaDoMundo.Saque.cs`, chamado pelo
+  `MobiliaDaConstrucao.PorPerto` para cada móvel, **antes** de as partes dele ficarem como estão na rede: os lugares são os
+  do móvel fechado). Cada item é um objeto com a malha e o material dele como no chão (`ItensNoMundo.MalhaDe` e
+  `MaterialDe`; as roupas com as cores do catálogo, `ItensDasRoupas.Pintar`), as armas deitadas de lado, o meio de baixo no
+  apoio e o giro do sorteio; o da gaveta, da prateleira da porta e da tampa (`naParte`) é filho dela e vai junto, o resto é
+  filho do móvel. Um gatilho do tamanho da malha (no mínimo 10 cm), na camada 2 (fora do NavMesh), e o `SaqueNaMira`. Saem com
+  os móveis de perto (`TirarPerto`). O sorteio de uma construção leva uns 0,45 ms, uma vez, quando alguém chega perto.
+- **A mira** (`SaqueNaMira`, um `Interagivel`): a dica é o "[E] Pegar ..." da mochila, com o nome na cor da raridade (o texto
+  rico; a sombra da dica vai sem a cor, `ArmaJogador.SemCor`), e o número de sempre (as balas do pente, a pilha); nada com a
+  parte fechada (a porta, a gaveta, a tampa ou o forno) ou com o item já pego. **A caixa de colisão do móvel** (na colisão da
+  obra) e o gatilho da parte aberta (maior que ela) ficariam na frente: o `Interagivel.GanhaDe` novo deixa a mira passar por
+  eles até um item mais adiante no mesmo raio (`ArmaJogador.DeDentro`): o ponto do acerto dentro da caixa do móvel (a da
+  malha do corpo dele, 6 cm maior) ou a parte ser do mesmo móvel. Para fechar a gaveta com itens, a mira vai na frente dela.
+- **Pegar** (`MobiliaNovaDoMundo.PedirPegar` → `PegarRpc`, no anfitrião): acha a construção pela chave da obra
+  (`MobiliaDaConstrucao.DaObra`, entre as carregadas: as em volta de todos os jogadores) e o item (`AcharNoSaque`), confere
+  se ainda não foi pego e a distância (4,5 m dos pés ao lugar do móvel fechado: a gaveta aberta sai uns 60 cm) e põe na
+  mochila: as armas de fogo com o pente (o do sorteio vezes a capacidade) e o desgaste, as brancas com o desgaste, a pilha
+  pelo `ReceberEmPilha` (o que não couber cai aos pés de quem pegou), o resto pelo `Receber`. Sem lugar, fica onde está (a
+  dica de hoje avisa). Não confere se a parte está aberta (o anfitrião pode não ter o móvel de perto).
+- **A lista dos pegos** (`_pegos`, uma `NetworkList<ulong>` do `MobiliaNovaDoMundo`, o anfitrião escreve):
+  `ChaveDoSaque(obra, ponto, peça, lugar)` é a `MobiliaNova.ChaveDaParte` com a parte 900 mais o lugar. Ao mudar, os itens
+  de perto pegos somem; quem chega depois não os cria. O que foi pego não volta (largado, vira um item do chão). Quando o
+  mundo for salvo, a lista vai junto.
+- **A raridade na tela** (a decisão 5; `CatalogoDoSaque.RaridadeDo(número)` e `CorEmHex`): na mochila, um filete em L da cor
+  dela no canto de baixo, à esquerda, de cada célula (`TelaDoInventario.DesenharItem`); nos detalhes, o nome na cor dela e
+  ela escrita à direita. Vale para todo item do catálogo do saque, venha de onde vier (a pistola do bunker é rara).
+- **As roupas desfiam** (a decisão 7): as 73 viram 2 panos, como a "roupa" (`Receitas.DesmontagemDe`).
+- **A rua do Dia 0 não tem saque** (`MobiliaDaConstrucao.Por(..., comSaque: false)`).
+- **Conferido no Play** (o Médio 7, hospedando local, com os zumbis parados): na casa da família, a gaze e a atadura atrás de
+  portas do banheiro e a barra de energia no forno; com o forno aberto, a mira passa pela caixa dele e dá "[E] Pegar a barra
+  de energia" (em verde), o E põe na mochila, o item some e a lista tem 1; de volta à casa, ela não volta. A faca na gaveta
+  do fogão de um sobrado vai com a gaveta, e a gaveta que ficou aberta na rede a mostra aberta quando a casa volta a ser
+  de perto; o moletom em cima da cama. As fotos em `Imgs/Renders/Saque_Jogo_*` da pasta de arte (o forno, a gaveta, a cama
+  e a mochila com os filetes).
+
+## As portas e as janelas das casas (o `Plano_Portas.md` da pasta de arte, 02/11/2026; as partes 2 a 5 feitas, esperando a aprovação)
+
+- **No kit** (`Scripts/Mundo/Construcoes`): com `Obra.portasVivas` (só nas casas do mundo: o `MalhasDasCasas.Montar` e os
+  testes do Editor que conferem o mapa: `MoveisTestes`, `PassagemTestes` e `SaqueTestes`), o `Obra.FolhaDePorta` das portas
+  que a `Casa` marca (`viva`: o `PortaDaObra.Tipo`, a da frente, as de fora, a do porão, a da garagem e as de dentro, com o
+  cômodo para onde abre) não desenha a folha: guarda o ponto (`Obra.portas`, `PortaDaObra`: a dobradiça no chão, a
+  direção da folha fechada, para onde ela abre, a largura, a altura, a cor, o giro do sorteio e o máximo,
+  `Obra.AberturaMaxima`, 95°) e põe no `ocupado` o quadrado do giro inteiro (os móveis deixam a folha abrir). O lado da
+  dobradiça das fechadas também desvia do pé da escada (como o das abertas). O Dia 0, as cenas de exemplo e as lojas, os
+  prédios e o bunker continuam com as folhas paradas. **As janelas:** com `portasVivas`, o `AbandonoDaObra.Janelas` deixa
+  as tapadas (`tabuas`), põe umas quebradas com o buraco (20% × k), deixa umas abertas (10%) e o resto vira um ponto
+  (`Obra.janelas`, `JanelaDaObra`: o meio do peitoril, ao longo da parede, para fora, o vão e a grossura da parede). Os
+  pontos vão para a `CasaPronta` (`Portas` e `Janelas`, espelhados com a casa).
+- **No mundo** (`World/PortasDoMundo`, um NetworkBehaviour no objeto "Mundo" da cena Mundo: Zombie City Cleaner > Mundo >
+  Pôr as portas na cena, que também põe a camada "Portas" nas camadas do projeto; a montagem da cena chama junto):
+  - **Cada casa de verdade** ganha um `PortasDaConstrucao` (o `TerrenoDoMundo.PorCasas`): os pontos, a semente e as chaves
+    (`ChaveDaPorta` e `ChaveDaJanela`: a da casa, `MobiliaNova.ChaveDaObra(lugar, -100)`, e o número). As folhas entram aos
+    poucos (`portasPorQuadro`, 12), filhas da casa (saem com ela).
+  - **A porta** (`PortaDaCasa`, um `Interagivel`): a folha na dobradiça, ao longo do +X local (o giro do começo pela
+    semente, `GiroDoComeco`: as de fora fechadas três em cada quatro, a da garagem uma em três, as de dentro uma em cinco),
+    a malha de cada tamanho e cor feita uma vez (a folha, as duas almofadas e a maçaneta; o material das casas), um
+    `BoxCollider` sólido na camada `PortasDoMundo.Camada` (12, "Portas": bate no jogador, no tiro e na visão dos zumbis,
+    `ZombieManager.MascaraDaVisao`; fica fora do NavMesh, que só junta as camadas 0 e 1) e, no anfitrião, um
+    `NavMeshObstacle` que corta o NavMesh com ela fechada (desligado ao abrir; volta quando ela termina de fechar). Abre a
+    90° (as do começo, no giro do sorteio) a 260°/s.
+  - **A janela** (`JanelaDaCasa`): no meio do peitoril, com o colisor que fecha o vão (sólido, desligado com ela aberta: o
+    `PuloDaJanela` só acha a abertura com ela aberta) e o gatilho da mira; as duas folhas (o caixilho, a travessa, o vidro
+    sujo e o puxador) presas nos batentes, abrindo para fora até 100°. Começa aberta uma em sete
+    (`JanelaAbertaNoComeco`); trancada metade das fechadas.
+  - **A rede:** uma lista (`_mudadas`: a chave e os bits aberta e destrancada), escrita pelo anfitrião; o resto vem da
+    semente. O E vai ao anfitrião (`UsarRpc` e `UsarJanelaRpc`, a 3,5 m): abre, fecha, destranca por dentro (as portas de
+    fora e as janelas: o lado de dentro é o contrário de onde a folha da janela abre e o mesmo da porta) ou, trancada, manda
+    todos verem a folha tremer e ouvirem o som (`TremerRpc`; quem ouviu fica sabendo que ela está trancada, `_sabidas`).
+  - **Trancada no começo** (`TrancadaNoComeco`, só as fechadas): a da frente 60%, as outras de fora 40%, a do porão e a da
+    garagem 30%, as de dentro do quarto e do banheiro 30%.
+  - **Arrombar** (`PortasDoMundo.Arrombar.cs`): com a porta ou a janela sabida trancada e a gazua ou o pé de cabra na
+    mochila, o `Interagivel.Segurar` novo devolve o tempo (a gazua 4 s, o pé de cabra 2 s; com as duas, a gazua), e o
+    `ArmaJogador` segura o E (`ApertouE`, a barra embaixo da mira com o texto de `Segurando`; soltar o E ou tirar a mira
+    cancela; `SegurandoAgora`); no fim, o `Segurado` pede ao anfitrião (`ArrombarRpc`), que confere a ferramenta, a
+    distância e a tranca, quebra a gazua uma em quatro vezes (`InventarioJogador.AvisarDono`, o aviso no HUD), destranca,
+    abre, toca o som do fim para todos (`ArrombouRpc`) e, no pé de cabra, chama os zumbis até 25 m
+    (`ZombieManager.Barulho` com o raio novo). Enquanto o jogador local segura, o som da ferramenta repete na porta.
+  - **Os sons** (`SomDasPortas`, gerados no jogo): abrir (o rangido), fechar (a batida e o trinco), a trancada (a maçaneta
+    e o trinco batendo três vezes), a gazua (os cliques dos pinos), o pé de cabra forçando e rachando.
+- **Os itens** (`Item.Gazua` = 109 e `Item.PeDeCabra` = 110, no saque: `Itens._loot`, o pé de cabra com 2 células): os
+  modelos, os ícones e as fotos do `Blender/loot.py` (`_gazua` e `_pe_de_cabra`; o ícone na proporção das células,
+  `CELULAS`), montados por Zombie City Cleaner > Itens > Montar só o saque; no catálogo do saque (`CatalogoDoSaque`: a gazua
+  na oficina, no escritório, na gaveta da cozinha e na cabeceira, de 1 a 3; o pé de cabra na oficina, os dois incomuns) e
+  na tabela dos tamanhos (`ItensDoSaque`, escrita de novo).
+- **Conferido no Play** (o Médio 7, hospedando local): veja o `Plano_Portas.md` da pasta de arte ("O estado"). O NavMesh:
+  com todas as portas de fora de uma casa fechadas, o caminho da rua para dentro sai `PathPartial`; com a da frente aberta,
+  `PathComplete`. Os testes do Editor dos móveis, da passagem dos zumbis e do saque passaram com as portas vivas.
 
 ## O carro (a pedido, 24/10/2026; branch `feature/carro`)
 
@@ -1643,8 +1835,13 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - **As casas** (`PorCasaNova`): a `Casa` nova, a mobília antiga e, com a `MobiliaNova` registrada, a nova (pela
     `MobiliaDaConstrucao`, com as portas e as gavetas); os pisos, a área de dentro e o eco.
   - **A nossa casa** (`ACasaDaFamilia`):
-    - os nascimentos na frente do sofá, olhando a TV (e o `OlhoNoSofa` e a `Tv`);
-    - os `LugaresDasCompras`, no chão da sala, da cozinha e do corredor, fora dos móveis;
+    - os nascimentos na frente do sofá, olhando a TV (e o `OlhoNoSofa` e a `Tv`): a fila vai ao longo do sofá e recua até
+      os dois do meio ficarem livres, e quem ainda cair num móvel do chão (com 0,35 m de folga) ou a menos de 0,8 m de
+      outro vai para o lugar livre mais perto, na sala. Antes (até 02/11/2026), a fila ficava de frente para a TV: na
+      nossa casa, a TV fica do lado do sofá, na mesma parede, a fila saía atravessada, e os jogadores nasciam dentro da
+      mesa de centro e colados no sofá. Agora ela fica logo depois da mesa (as fotos em `Imgs/Renders/DiaZero_Nascimento_*`
+      da pasta de arte);
+    - os `LugaresDasCompras`, no chão da sala, da cozinha e do corredor, fora dos móveis e a mais de 0,8 m dos nascimentos;
     - a `PortaDoAbrigo`, no fim do corredor, na parede de x0.
     `DentroDaCasa(ponto)` é a caixa da planta, com a garagem coberta.
   - **As lojas** (`PorLojaDoDia`):
@@ -1701,11 +1898,16 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - **Com o mundo pronto** (`FicouPronto`): cada um vai para o nascimento dele, que no mundo com o bunker é a sala de
     operações (o mundo só fica pronto com a casca e o B0 com a colisão). O anfitrião entrega as compras (`Entregar`):
     - **no bunker** (a pedido, 01/11/2026: "No bunker e os itens vão estar alocados nos depósitos do bunker";
-      `EntregarNoBunker`): em fileiras pelo chão dos vãos dos depósitos (`PlantaDeBunker.DepositosDasCompras`: dois no
-      B1, entre as estantes, e o do B3 de sobra), as do mesmo tipo juntas, cada uma deitada ao longo da fileira (o giro de
-      0 ou 90 que deixa ela mais curta para dentro, pela malha do `ItensNoMundo.MalhaDe`). O teste do Editor
-      `BunkerTestes.AsComprasDoDiaZeroFicamNoChaoLivreDosDepositos` confere que os vãos ficam fora das estantes e das
-      portas;
+      `EntregarNoBunker`): nas estantes dos depósitos (a pedido, no mesmo dia: "Sim, nas estantes";
+      `EstantesDoBunker.EstantesDosDepositos`: as do B1 e, de sobra, as do B3; `EstantesDoBunker.GuardarNasEstantes`,
+      só no anfitrião: completa as pilhas do item nelas e põe o resto no primeiro lugar livre, a tábua da altura do peito
+      antes), em grupos (`Grupo`: as armas e a munição, a comida e a bebida, os remédios e o resto), cada um começando na
+      estante depois da última do grupo de antes. O que não vai numa estante (as mochilas, que são equipamento, e o coldre, que saiu do jogo: `Itens.NoJogo`) ou
+      não cabe numa tábua (o pneu) fica em fileiras pelo chão dos vãos dos depósitos (`PlantaDeBunker.DepositosDasCompras`:
+      dois no B1, entre as estantes, e o do B3 de sobra), cada uma deitada ao longo da fileira (o giro de 0 ou 90 que
+      deixa ela mais curta para dentro, pela malha do `ItensNoMundo.MalhaDe`). Os testes do Editor
+      `BunkerTestes.OsDepositosTemEstantesParaAsCompras` (cada depósito tem as estantes dele) e
+      `AsComprasDoDiaZeroFicamNoChaoLivreDosDepositos` (os vãos ficam fora das estantes e das portas);
     - sem o bunker (um mapa sem ele): o lugar de cada uma, nas coordenadas da casa, pela `MatrizDaCasa` do lote da
       família, no `ItensNoMundo`.
 - **Os NPCs** (`NpcsDoDiaZero` e `NpcDoDiaZero`, só no Play):

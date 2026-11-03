@@ -50,6 +50,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var p in Prefabs(material, log)) log.AppendLine($"  {AssetDatabase.GetAssetPath(p)}");
             AssetDatabase.SaveAssets();
             log.AppendLine(EscreverMedidas());
+            // os lugares do saque, das malhas dos prefabs novos (o Plano_Saque.md, a parte 2)
+            log.AppendLine(MontagemDosLugaresDoSaque.Escrever());
             return log.ToString();
         }
 

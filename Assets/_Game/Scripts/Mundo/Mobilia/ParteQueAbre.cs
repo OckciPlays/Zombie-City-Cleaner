@@ -59,6 +59,13 @@ namespace ZombieCityCleaner.Mundo
             enabled = true;
         }
 
+        /// <summary>Aberta ou fechada na hora, também fora do Play (as fotos do Editor).</summary>
+        public void Pousar(bool aberta)
+        {
+            Definir(aberta, true);
+            Update();
+        }
+
         void Update()
         {
             _t = Mathf.MoveTowards(_t, _alvo, Time.deltaTime / Mathf.Max(0.01f, duracao));

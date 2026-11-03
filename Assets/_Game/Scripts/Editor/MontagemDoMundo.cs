@@ -220,6 +220,7 @@ namespace ZombieCityCleaner.EditorTools
             if (faltam > 0) Debug.LogWarning($"Faltam {faltam} modelos da mobília no {FbxDaMobilia}.");
             EditorUtility.SetDirty(mobilia);
             PorAMobiliaNova(mundo);
+            PorAsPortas(mundo);
             // o Dia 0 (01/11/2026): a rua normal antes do mundo, no jogo novo
             MontagemDoDiaZero.PorNoMundo(mundo);
             return mobilia;
@@ -241,6 +242,53 @@ namespace ZombieCityCleaner.EditorTools
             return nova;
         }
 
+        /// <summary>
+        /// As portas que abrem das casas (o Plano_Portas.md da pasta de arte): a <see cref="PortasDoMundo"/> no objeto "Mundo"
+        /// e a camada "Portas" (a 12) nas camadas do projeto.
+        /// </summary>
+        public static PortasDoMundo PorAsPortas(GameObject mundo)
+        {
+            CamadaDasPortas();
+            var p = mundo.GetComponent<PortasDoMundo>();
+            if (p == null) p = mundo.AddComponent<PortasDoMundo>();
+            EditorUtility.SetDirty(p);
+            return p;
+        }
+
+        /// <summary>A camada "Portas" (<see cref="PortasDoMundo.Camada"/>) nas camadas do projeto, se ainda não está lá.</summary>
+        public static void CamadaDasPortas()
+        {
+            var gerente = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            var camadas = gerente.FindProperty("layers");
+            var c = camadas.GetArrayElementAtIndex(PortasDoMundo.Camada);
+            if (c.stringValue == "Portas") return;
+            if (!string.IsNullOrEmpty(c.stringValue)) Debug.LogWarning($"A camada {PortasDoMundo.Camada} era \"{c.stringValue}\": virou \"Portas\".");
+            c.stringValue = "Portas";
+            gerente.ApplyModifiedProperties();
+        }
+
+        [MenuItem("Zombie City Cleaner/Mundo/Pôr as portas na cena")]
+        public static void PorAsPortasNaCena()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de mexer na cena do mundo.");
+                return;
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != Cena) cena = EditorSceneManager.OpenScene(Cena);
+            var mundo = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Mundo");
+            if (mundo == null)
+            {
+                Debug.LogWarning("A cena do mundo não tem o objeto \"Mundo\": monte a cena antes.");
+                return;
+            }
+            PorAsPortas(mundo);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log("Portas postas na cena (a PortasDoMundo no \"Mundo\" e a camada \"Portas\").");
+        }
+
         public const string MaterialDoBunker = "Assets/_Game/Art/Materials/Cidade.mat";
         public const string FbxDosMoveis = "Assets/_Game/Art/Cidade/Cidade_Moveis.fbx";
         public const string MaterialDosFundadores = "Assets/_Game/Art/Materials/Fundadores.mat";
@@ -249,8 +297,9 @@ namespace ZombieCityCleaner.EditorTools
         /// O bunker da família no objeto "Mundo" (o Plano_Bunker.md da pasta de arte, a parte 5): o <see cref="BunkerDoMundo"/>
         /// com o material (o Cidade.mat), o painel de armas, o interruptor e os fundadores, e a "Parede de armas" da cena (um
         /// NetworkObject, montado na origem; no jogo, o bunker leva ela para o arsenal). Os modelos do bunker são os prefabs
-        /// da mobília nova (a <see cref="MobiliaNovaDoMundo"/>). Serve para a montagem da cena e para o menu Zombie City
-        /// Cleaner > Mundo > Pôr o bunker na cena.
+        /// da mobília nova (a <see cref="MobiliaNovaDoMundo"/>). Junto, as estantes que guardam itens
+        /// (<see cref="EstantesDoBunker"/>) e as mesas de sinuca do mundo (<see cref="SinucaDoMundo"/>, as do bunker e as das
+        /// casas). Serve para a montagem da cena e para o menu Zombie City Cleaner > Mundo > Pôr o bunker na cena.
         /// </summary>
         public static BunkerDoMundo PorOBunker(GameObject mundo, UnityEngine.SceneManagement.Scene cena)
         {
@@ -269,6 +318,11 @@ namespace ZombieCityCleaner.EditorTools
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(provisorio, cena);
             MontagemDasArmas.MontarSuporte(cena);
             Object.DestroyImmediate(provisorio);
+            // as estantes que guardam itens (as do bunker) e as mesas de sinuca que se jogam (as do bunker e as das casas)
+            var estantes = mundo.GetComponent<EstantesDoBunker>();
+            if (estantes == null) estantes = mundo.AddComponent<EstantesDoBunker>();
+            EditorUtility.SetDirty(estantes);
+            MontagemDaSinuca.PorASinuca(mundo);
             return b;
         }
 
@@ -292,7 +346,7 @@ namespace ZombieCityCleaner.EditorTools
             PorOBunker(mundo, cena);
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
-            Debug.Log($"Bunker posto na cena: {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} prefabs da mobília nova e a parede de armas.");
+            Debug.Log($"Bunker posto na cena: {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} prefabs da mobília nova, a parede de armas, as estantes e a sinuca.");
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a mobília na cena")]

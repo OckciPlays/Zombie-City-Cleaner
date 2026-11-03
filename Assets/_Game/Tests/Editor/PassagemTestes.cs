@@ -70,7 +70,7 @@ namespace ZombieCityCleaner.Testes
 
         static void ConferirCasa(Planta p, string nome, Conta conta)
         {
-            var casa = new Casa(p, M);
+            var casa = new Casa(p, M) { portasVivas = true };
             casa.Montar();
             var alvos = p.comodos.Select(k => new Alvo
             {

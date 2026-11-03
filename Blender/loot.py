@@ -564,6 +564,63 @@ def _galao():
     return p
 
 
+# ------------------------------------------------------------------ arrombar (02/11/2026: o Plano_Portas.md da pasta de arte)
+
+def _gazua():
+    # o estojo de couro aberto, deitado, com as hastes de aço: o tensor em L, o gancho e a de ondas (os cabos pretos)
+    p = [
+        C("chocolate", (0.11, 0.06, 0.006), (0, 0, 0.003), chanfro=0.002),
+        C("madeira_escura", (0.11, 0.004, 0.009), (0, 0.028, 0.0045)),
+        C("madeira_escura", (0.11, 0.004, 0.009), (0, -0.028, 0.0045)),
+    ]
+    for k, y in enumerate((-0.016, 0.0, 0.016)):
+        p.append(C("preto", (0.034, 0.009, 0.005), (-0.034, y, 0.0085), chanfro=0.0015))
+        p.append(C("aco", (0.062, 0.0028, 0.0018), (0.014, y, 0.0075)))
+        # a ponta: o gancho, as ondas, a bola
+        if k == 0:
+            p.append(C("aco", (0.006, 0.0028, 0.0018), (0.046, y + 0.002, 0.0075), giro=(0, 0, 55)))
+        elif k == 1:
+            for j in range(3):
+                p.append(C("aco", (0.007, 0.0028, 0.0018), (0.034 + j * 0.006, y + (0.0018 if j % 2 else -0.0018), 0.0075), giro=(0, 0, 40 if j % 2 else -40)))
+        else:
+            p.append(Z("aco", 0.0025, 0.003, (0.046, y, 0.0075), 8))
+    # o tensor em L, solto em cima do estojo
+    p += [
+        C("aco_escuro", (0.07, 0.004, 0.0015), (0.005, 0.034, 0.0075), giro=(0, 0, -12)),
+        C("aco_escuro", (0.004, 0.016, 0.0015), (-0.029, 0.04, 0.0075), giro=(0, 0, -12)),
+    ]
+    return p
+
+
+def _pe_de_cabra():
+    # o pé de cabra deitado (o comprido em X): a barra vermelha com o gancho em J na ponta de trás (a unha de aço com o
+    # V) e a ponta chata de aço na da frente, um pouco dobrada
+    import math as _m
+    z = 0.009
+    p = [C("vermelho", (0.47, 0.018, 0.018), (0.0, 0, z), chanfro=0.004)]
+    # o gancho: um arco de raio 4,5 cm em volta de (-0.235, 0.045), de -90° a -270°, em 4 pedaços
+    cx, cy, r = -0.235, 0.045, 0.045
+    angs = [-90, -135, -180, -225, -270]
+    for a, b in zip(angs, angs[1:]):
+        pa = (cx + r * _m.cos(_m.radians(a)), cy + r * _m.sin(_m.radians(a)))
+        pb = (cx + r * _m.cos(_m.radians(b)), cy + r * _m.sin(_m.radians(b)))
+        mx, my = (pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2
+        comp = _m.hypot(pb[0] - pa[0], pb[1] - pa[1]) + 0.012
+        p.append(C("vermelho", (comp, 0.018, 0.018), (mx, my, z), giro=(0, 0, _m.degrees(_m.atan2(pb[1] - pa[1], pb[0] - pa[0]))), chanfro=0.004))
+    # a unha (aço), voltada para a frente, com o V do meio (duas pontas)
+    p += [
+        C("aco_escuro", (0.03, 0.02, 0.012), (cx + 0.012, cy + r, z), chanfro=0.002),
+        C("aco_escuro", (0.016, 0.007, 0.01), (cx + 0.034, cy + r + 0.0065, z)),
+        C("aco_escuro", (0.016, 0.007, 0.01), (cx + 0.034, cy + r - 0.0065, z)),
+    ]
+    # a ponta chata da frente, larga e fina, dobrada 12°
+    p += [
+        C("aco", (0.06, 0.024, 0.009), (0.262, 0.004, z), giro=(0, 0, 12), chanfro=0.002),
+        C("aco", (0.012, 0.02, 0.004), (0.293, 0.011, z), giro=(0, 0, 12)),
+    ]
+    return p
+
+
 # nome do modelo -> (as peças, as células do ícone, onde a câmera do ícone olha de, onde a da foto)
 MODELOS = {
     "Feijao": _feijao, "Carne": _carne, "Milho": _milho, "Sopa": _sopa, "Salgadinho": _salgadinho,
@@ -578,6 +635,7 @@ MODELOS = {
     "Fogueira": _kit_fogueira, "Cama": _kit_cama, "Barricada": _kit_barricada,
     "Lanterna": _lanterna, "Pilhas": _pilhas,
     "Galao": _galao,
+    "Gazua": _gazua, "PeDeCabra": _pe_de_cabra,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -586,7 +644,9 @@ MONTADAS = {
 }
 # os deitados (vistos mais de cima no ícone)
 DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "PecasDeMetal", "Fios", "Pregos", "VaraDePesca",
-            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas"}
+            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas", "Gazua", "PeDeCabra"}
+# os que ocupam mais de uma célula na mochila (o ícone na proporção delas, 128 px por célula; o Itens.Tamanho da Unity)
+CELULAS = {"PeDeCabra": (2, 1)}
 
 SAIDA = os.path.join(eq.UNITY, "Loot.fbx")
 
@@ -648,8 +708,10 @@ def imagens(so=None):
         deitado = nome in DEITADOS
         icone = (0.35, -0.7, 1.0) if deitado else (0.45, -1.0, 0.45)
         foto = (0.6, -0.9, 1.0) if deitado else (0.8, -1.0, 0.6)
-        r.resolution_x, r.resolution_y = 128, 128
-        eq._camera(cena, True, centro, icone, 3.0, tam * (1.45 if nome in ("Atadura", "Bandagem", "FitaAdesiva") else 1.3))
+        cx, cy = CELULAS.get(nome, (1, 1))
+        r.resolution_x, r.resolution_y = 128 * cx, 128 * cy
+        eq._camera(cena, True, centro, (0.0, -0.25, 1.0) if cx > cy else icone, 3.0,
+                   tam * (1.45 if nome in ("Atadura", "Bandagem", "FitaAdesiva") else 1.15 if cx > cy else 1.3))
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500

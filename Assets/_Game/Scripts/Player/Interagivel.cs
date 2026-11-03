@@ -22,5 +22,25 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>O jogador local clicou (botão esquerdo) olhando para isto (só se <see cref="UsaClique"/>).</summary>
         public virtual void Clicar(ArmaJogador quem) { }
+
+        /// <summary>
+        /// Isto está dentro do que a mira achou antes (no mesmo raio) e ganha dele: o saque de um móvel, atrás da caixa de
+        /// colisão dele ou dentro da gaveta aberta (o gatilho dela é maior que ela). 'ponto': onde o raio bateu no de antes;
+        /// 'antes': ele, se é uma coisa que se usa (null: um colisor sólido sem nada). Falso na maioria.
+        /// </summary>
+        public virtual bool GanhaDe(Vector3 ponto, Interagivel antes) => false;
+
+        /// <summary>
+        /// Segurar o E: quantos segundos (0: não se segura; o E aperta, <see cref="Usar"/>). Com mais que 0, o E começa a
+        /// segurar (uma barra embaixo da mira), e só depois do tempo, com o E ainda apertado e a mira nisto, vem o
+        /// <see cref="Segurado"/>: arrombar a porta trancada.
+        /// </summary>
+        public virtual float Segurar(ArmaJogador quem) => 0f;
+
+        /// <summary>O jogador local segurou o E pelo tempo de <see cref="Segurar"/> olhando para isto.</summary>
+        public virtual void Segurado(ArmaJogador quem) { }
+
+        /// <summary>O texto da barra de segurar ("Arrombando com a gazua").</summary>
+        public virtual string Segurando(ArmaJogador quem) => null;
     }
 }

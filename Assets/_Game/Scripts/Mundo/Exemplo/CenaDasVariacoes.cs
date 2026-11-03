@@ -23,13 +23,14 @@ namespace ZombieCityCleaner.Mundo
     /// <see cref="mobiliaNova"/> postos pelo <see cref="CatalogoDaMobilia"/>, um cômodo aberto na frente para cada grupo
     /// (a sala, o quarto...), com o piso, as paredes e a porta do tamanho das construções (×1,15). As portas e as gavetas
     /// abrem com o E (o ParteQueAbre), o C troca a cor do móvel na mira (o MovelDoMostruario) e o K troca a escala dos
-    /// móveis (1,00, 1,15 e 1,30; começa em 1,30, a escolhida para o jogo).
+    /// móveis (1,00, 1,15 e 1,30; começa em 1,30, a escolhida para o jogo). O L mostra os lugares do saque de cada móvel
+    /// (o Plano_Saque.md, a parte 2: <c>CenaDasVariacoes.Saque.cs</c>).
     /// Antes dele, a primeira parada: as mesas dos itens (o lote 6 das roupas, 31/10/2026), com as roupas como itens e os
     /// itens que já se pegam no jogo, para ver a quantidade de coisas (<see cref="MesasDosItens"/>).
     /// Montada por Editor/MontagemDoExemploDasCasas (menu Zombie City Cleaner > Exemplos > Variações das construções).
     /// </summary>
     [ExecuteAlways]
-    public class CenaDasVariacoes : CenaDeExemplo
+    public partial class CenaDasVariacoes : CenaDeExemplo
     {
         public TamanhoDoMundo tamanho = TamanhoDoMundo.Medio;
         [Tooltip("Os modelos do Cidade_Mobilia.fbx (os nomes de Mobilia.Feitos); sem eles, as construções ficam sem os móveis.")]
@@ -40,10 +41,25 @@ namespace ZombieCityCleaner.Mundo
         public GameObject[] roupas;
         [Tooltip("O lugar de cada roupa (o mesmo índice): a cabeça, os óculos, a máscara, o tronco...")]
         public string[] lugaresDasRoupas;
-        [Tooltip("As malhas dos itens que já se pegam no jogo (Art/Characters/Jogador/Malhas: as armas, a comida e a água, os equipamentos, a munição, as peças do carro e a sinuca).")]
-        public Mesh[] coletaveis;
-        [Tooltip("O material deles (o Pistola.mat, a paleta).")]
+        [Tooltip("Os itens que já se pegam no jogo (Art/Characters/Jogador/Malhas: as armas, as armas brancas, o saque, as mochilas, a munição, as peças do carro e a sinuca), em grupos, na ordem das mesas.")]
+        public Coletavel[] coletaveis;
+        [Tooltip("O material deles quando não têm um próprio (o Pistola.mat, a paleta).")]
         public Material materialDosColetaveis;
+
+        /// <summary>
+        /// Um item que já se pega no jogo, nas mesas: a malha, o nome do item no jogo (o da ficha), o material próprio (o
+        /// das armas de fogo; null: o <see cref="materialDosColetaveis"/>), o grupo (o nome da mesa; os do mesmo grupo vêm
+        /// juntos) e se vai deitado de lado, como no chão do jogo (as armas de fogo e as brancas).
+        /// </summary>
+        [System.Serializable]
+        public struct Coletavel
+        {
+            public Mesh malha;
+            public string nome;
+            public Material material;
+            public string grupo;
+            public bool deitado;
+        }
 
         /// <summary>O espaço entre um lote e o outro.</summary>
         const float Entre = 4f;
@@ -357,10 +373,11 @@ namespace ZombieCityCleaner.Mundo
         public override void Teclas(Keyboard k)
         {
             if (k.kKey.wasPressedThisFrame && _suportes.Count > 0) TrocarEscala();
+            if (k.lKey.wasPressedThisFrame && _caixasDoSaque.Count > 0) TrocarOSaque();
         }
 
         public override string AjudaDasTeclas => _suportes.Count > 0
-            ? $"K a escala dos móveis do mostruário (agora ×{Escalas[_escala]:0.00}) · C troca a cor do móvel na mira" : null;
+            ? $"K a escala dos móveis do mostruário (agora ×{Escalas[_escala]:0.00}) · C troca a cor do móvel na mira{AjudaDoSaque}" : null;
 
         /// <summary>A próxima escala dos móveis do mostruário (1,00, 1,15 e 1,30).</summary>
         public void TrocarEscala()
@@ -373,6 +390,7 @@ namespace ZombieCityCleaner.Mundo
         {
             foreach (var s in _suportes) s.localScale = Vector3.one * Escalas[_escala];
             foreach (var c in _comodos) c.parada.Ficha = FichaDoComodo(c);
+            AjustarOSaque();
         }
 
         // o tamanho do móvel (o corpo e as partes que abrem, fechadas, sem o de longe) e os triângulos, do prefab
@@ -419,6 +437,7 @@ namespace ZombieCityCleaner.Mundo
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.hideFlags = HideFlags.DontSave;
             go.transform.SetLocalPositionAndRotation(local, Quaternion.Euler(0f, giro, 0f));
             go.AddComponent<MovelDoMostruario>().Guardar(prefab.name);
+            PorOsLugares(go, prefab.name);
             return go;
         }
 
@@ -434,6 +453,7 @@ namespace ZombieCityCleaner.Mundo
         {
             _comodos.Clear();
             _suportes.Clear();
+            ComecarOSaque();
             var prefabs = (mobiliaNova ?? new GameObject[0]).Where(p => p != null).GroupBy(p => p.name).ToDictionary(g => g.Key, g => g.First());
             if (prefabs.Count == 0) return 0f;
             foreach (CatalogoDaMobilia.Grupo g in System.Enum.GetValues(typeof(CatalogoDaMobilia.Grupo)))
@@ -453,7 +473,7 @@ namespace ZombieCityCleaner.Mundo
             }
             Escalar();
             resumo.AppendLine($"O mostruário da mobília nova: {_comodos.Count} cômodos, {_comodos.Sum(c => c.expostos.Count)} móveis, " +
-                              $"de x = {inicio:0} a -14.");
+                              $"de x = {inicio:0} a -14; os lugares do saque: {_itensDoSaque.Count} com o item de teste, {_lugaresSemItem} sem nenhum que caiba.");
             return inicio;
         }
 
@@ -639,13 +659,6 @@ namespace ZombieCityCleaner.Mundo
             ("Cabeca", "os chapéus e os capacetes"), ("Oculos", "os óculos"), ("Mascara", "as máscaras"),
         };
 
-        /// <summary>Os grupos dos itens que já se pegam no jogo (o começo do nome da malha e o nome).</summary>
-        static readonly (string prefixo, string nome)[] GruposDosColetaveis =
-        {
-            ("Arma_", "as armas"), ("Item_", "a comida e a água"), ("Equip_", "as mochilas e o coldre"), ("Mun_", "a munição"),
-            ("Peca_", "as peças do carro"), ("Sinuca_", "a sinuca"),
-        };
-
         /// <summary>As mesas por fileira, o espaço entre as mesas e entre os itens, e a escala das mesas (a do jogo).</summary>
         const int MesasPorFileira = 5;
         const float EntreMesas = 1.3f, EntreItens = 0.07f, EscalaDasMesas = 1.3f;
@@ -655,6 +668,7 @@ namespace ZombieCityCleaner.Mundo
             public string nome, grupo;
             public GameObject prefab;       // a roupa
             public Mesh malha;              // o coletável
+            public Material material;       // o dele
             public Quaternion giro;
             public Bounds tamanho;          // depois do giro
         }
@@ -673,8 +687,8 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>
         /// As mesas dos itens (o lote 6 das roupas, 31/10/2026, a pedido: "tudo numa cena em cima de mesas, para ter uma
         /// visão da quantidade de coisas"): as roupas como itens (deitadas de frente, a gola para o fundo; o resto de
-        /// frente para a rua) e os itens que já se pegam no jogo (as armas deitadas de lado, como no chão do jogo), cada
-        /// grupo começando numa mesa (a de 6 lugares da mobília nova, na escala do jogo), vários itens por mesa, em
+        /// frente para a rua) e os itens que já se pegam no jogo (com o saque desde 01/11/2026; as armas de fogo e as
+        /// brancas deitadas de lado, como no chão do jogo), cada grupo começando numa mesa (a de 6 lugares da mobília nova, na escala do jogo), vários itens por mesa, em
         /// fileiras, as mesas em fileiras de 5 no lado norte, terminando em x = fim. É a primeira parada (o jogador começa
         /// nela). Devolve onde a área começa (em x), ou fim sem os itens.
         /// </summary>
@@ -698,19 +712,25 @@ namespace ZombieCityCleaner.Mundo
                     }
                     if (lista.Count > 0) grupos.Add((nome, lista));
                 }
-            if (coletaveis != null && materialDosColetaveis != null)
-                foreach (var (prefixo, nome) in GruposDosColetaveis)
+            if (coletaveis != null)
+            {
+                List<ItemNaMesa> lista = null;
+                foreach (var c in coletaveis)
                 {
-                    var lista = new List<ItemNaMesa>();
-                    foreach (var m in coletaveis.Where(m => m != null && m.name.StartsWith(prefixo)).OrderBy(m => m.name))
+                    var material = c.material != null ? c.material : materialDosColetaveis;
+                    if (c.malha == null || material == null) continue;
+                    if (lista == null || grupos[grupos.Count - 1].nome != c.grupo)
                     {
-                        // as armas deitadas de lado (como o ItensNoMundo as põe no chão), o resto como é (os tacos já deitados)
-                        var q = prefixo == "Arma_" ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
-                        lista.Add(new ItemNaMesa { nome = m.name.Substring(prefixo.Length), grupo = nome, malha = m, giro = q,
-                                                   tamanho = Girado(m.bounds, q) });
+                        lista = new List<ItemNaMesa>();
+                        grupos.Add((c.grupo, lista));
                     }
-                    if (lista.Count > 0) grupos.Add((nome, lista));
+                    // as deitadas de lado como o ItensNoMundo as põe no chão; o resto como é (os tacos já deitados)
+                    var q = c.deitado ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity;
+                    string nome = string.IsNullOrEmpty(c.nome) ? c.malha.name.Substring(c.malha.name.IndexOf('_') + 1) : c.nome;
+                    lista.Add(new ItemNaMesa { nome = nome, grupo = c.grupo, malha = c.malha,
+                                               material = material, giro = q, tamanho = Girado(c.malha.bounds, q) });
                 }
+            }
             if (grupos.Count == 0 || mesa == null) return fim;
 
             // o tampo da mesa (na escala do jogo): a largura, o fundo e a altura
@@ -791,7 +811,7 @@ namespace ZombieCityCleaner.Mundo
                     {
                         go = Novo(it.malha.name, raiz);
                         go.AddComponent<MeshFilter>().sharedMesh = it.malha;
-                        go.AddComponent<MeshRenderer>().sharedMaterial = materialDosColetaveis;
+                        go.AddComponent<MeshRenderer>().sharedMaterial = it.material;
                         nColetaveis++;
                     }
                     go.name = it.nome;
@@ -827,7 +847,7 @@ namespace ZombieCityCleaner.Mundo
                 var partes = e.partes.GroupBy(p => p).Select(g => $"{g.Count()} {g.Key}{(g.Count() > 1 ? "s" : "")}").ToList();
                 int n = e.tipo.variacoes?.Length ?? 1;
                 sb.AppendLine($"    {e.tipo.nome}: {t.x:0.00} × {t.z:0.00} × {t.y:0.00} m; {e.perto:N0} / {e.longe:N0}" +
-                              (partes.Count > 0 ? "; abre: " + string.Join(" e ", partes) : "") + (n > 1 ? $"; {n} cores" : ""));
+                              (partes.Count > 0 ? "; abre: " + string.Join(" e ", partes) : "") + (n > 1 ? $"; {n} cores" : "") + LugaresNaFicha(e.tipo.modelo));
             }
             return sb.ToString();
         }

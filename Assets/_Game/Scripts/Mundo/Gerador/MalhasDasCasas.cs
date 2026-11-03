@@ -52,6 +52,10 @@ namespace ZombieCityCleaner.Mundo
             /// <summary>Os de longe dos móveis novos (nas coordenadas da casa; do estoque, null sem eles) e a semente da obra.</summary>
             public MalhaDaMobilia MobiliaNova;
             public int Semente;
+            /// <summary>As portas que abrem (o Plano_Portas.md da pasta de arte; nas coordenadas da casa, já espelhadas).</summary>
+            public readonly List<PortaDaObra> Portas = new List<PortaDaObra>();
+            /// <summary>As janelas que abrem (nas coordenadas da casa, já espelhadas).</summary>
+            public readonly List<JanelaDaObra> Janelas = new List<JanelaDaObra>();
         }
 
         /// <summary>Um prédio (Parte M6, segunda fatia): a casca vai para o desenho do bloco; o resto, aqui.</summary>
@@ -339,7 +343,8 @@ namespace ZombieCityCleaner.Mundo
                                         MalhaDePichacao pichacoes = null, MalhaDeObra mobilia = null)
         {
             var p = l.Casa;
-            var casa = new Casa(p, M);
+            // as portas abrem no mundo (o Plano_Portas.md da pasta de arte): as folhas saem da malha e viram pontos
+            var casa = new Casa(p, M) { portasVivas = true };
             casa.Montar();
             var matriz = t.MatrizDaCasa(l);
             Abandonar(casa, l.Tipo == TipoDeLote.Familia ? AbandonoDaObra.NaFamilia : AbandonoDaObra.NoMundo, p.semente, 4f, matriz, p.espelhar, hera, pichacoes);
@@ -358,6 +363,8 @@ namespace ZombieCityCleaner.Mundo
             pronta.Triangulos = casa.vis.Triangulos;
             MalhaDeObra.Devolver(casa.vis);
             foreach (var pm in casa.moveis) pronta.Moveis.Add(p.espelhar ? pm.Espelhado() : pm);
+            foreach (var pd in casa.portas) pronta.Portas.Add(p.espelhar ? pd.Espelhada() : pd);
+            foreach (var jd in casa.janelas) pronta.Janelas.Add(p.espelhar ? jd.Espelhada() : jd);
             pronta.Semente = p.semente;
             pronta.MobiliaNova = MobiliaNovaDa(pronta.Moveis, p.semente, pronta.Colisao);
 

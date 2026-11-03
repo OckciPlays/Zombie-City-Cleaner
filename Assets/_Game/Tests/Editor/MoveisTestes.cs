@@ -43,7 +43,7 @@ namespace ZombieCityCleaner.Testes
                 {
                     if (l.Casa != null)
                     {
-                        var c = new Casa(l.Casa, M);
+                        var c = new Casa(l.Casa, M) { portasVivas = true };
                         c.Montar();
                         var r = Guardar(c, $"casa em {t.Cidade.Nome} ({l.Casa.molde})", c.moveis);
                         foreach (var k in l.Casa.comodos) r.comodos.Add((k, c.Base(k.andar), "casa"));
@@ -351,7 +351,7 @@ namespace ZombieCityCleaner.Testes
                         if (l.Casa.espelhar)
                         {
                             espelhadas++;
-                            var obra = new Casa(l.Casa, M);
+                            var obra = new Casa(l.Casa, M) { portasVivas = true };
                             obra.Montar();
                             Assert.AreEqual(obra.moveis.Count, c.Moveis.Count);
                             for (int i = 0; i < c.Moveis.Count; i++) Assert.AreEqual(-obra.moveis[i].centro.x, c.Moveis[i].centro.x, 1e-4f, "o espelho dos pontos");

@@ -57,8 +57,10 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   mesmo jeito.
 - **5 anos depois:** cada um aparece na sala de operações do bunker da família (perto da cidade da nossa casa), às 8h
   da manhã, e as compras estão guardadas nos depósitos do bunker (a pedido, no merge com o bunker novo: o do B1 e, se
-  faltar lugar, o do B3), em fileiras no chão, as do mesmo tipo juntas. Num mapa sem o bunker, elas ficam no chão da
-  casa, no mesmo lugar em que estavam no Dia 0.
+  faltar lugar, o do B3), nas estantes deles (a pedido: "Sim, nas estantes"), cada grupo na sua: as armas e a munição,
+  a comida e a bebida, os remédios e o resto. No chão dos depósitos, só o que não vai numa estante (as mochilas e o
+  coldre) ou não cabe numa tábua (o pneu). Num mapa sem o bunker, elas ficam no chão da casa, no mesmo lugar em que
+  estavam no Dia 0.
 
 ## Os NPCs
 

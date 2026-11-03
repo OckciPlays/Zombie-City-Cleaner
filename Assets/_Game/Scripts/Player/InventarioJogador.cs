@@ -745,6 +745,12 @@ namespace ZombieCityCleaner.Player
             AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada");
         }
 
+        /// <summary>Só no anfitrião: um aviso no HUD do dono desta mochila ("A gazua quebrou").</summary>
+        public void AvisarDono(string texto)
+        {
+            if (IsServer) AvisoRpc(texto);
+        }
+
         [Rpc(SendTo.Owner)]
         void AvisoRpc(string texto)
         {

@@ -277,6 +277,17 @@ namespace ZombieCityCleaner.Player
                 PesoDasAcoes(animador);
             }
             ProcurarAlvo(rede.Olho);
+            // segurando o E (arrombar): cancela se o E soltou ou a mira saiu; no tempo, faz
+            if (_segurando != null)
+            {
+                if (bot || !controla || _alvo != _segurando || !_interagir.IsPressed()) _segurando = null;
+                else if (Time.time - _segurarDesde >= _segurarTempo)
+                {
+                    var s = _segurando;
+                    _segurando = null;
+                    s.Segurado(this);
+                }
+            }
             // a tocha acesa na mão queima: o desgaste sobe com o tempo (100: ela se apaga e some)
             if (NaMao == Item.Tocha && !bot && Inventario != null)
                 Inventario.Desgastar(_id, Time.deltaTime / Itens.SegundosDaTochaPorDesgaste);
@@ -285,12 +296,12 @@ namespace ZombieCityCleaner.Player
             if (_alvo != null && !bot && _alvo.UsaClique(this))
             {
                 if (_atirar.WasPressedThisFrame()) _alvo.Clicar(this);
-                if (!Usando && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+                if (!Usando && _interagir.WasPressedThisFrame()) ApertouE();
                 return;
             }
             if (ocupadas)
             {
-                if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+                if (_alvo != null && !bot && _interagir.WasPressedThisFrame()) ApertouE();
                 return;
             }
 
@@ -346,7 +357,7 @@ namespace ZombieCityCleaner.Player
             // a arma branca golpeia (segurando o botão, um golpe atrás do outro)
             else if (Itens.EhBranca(NaMao) && !bot && Time.time >= _proximoTiro && _atirar.IsPressed())
                 StartCoroutine(GolpearComBranca());
-            if (_alvo != null && !bot && !Usando && _interagir.WasPressedThisFrame()) _alvo.Usar(this);
+            if (_alvo != null && !bot && !Usando && _interagir.WasPressedThisFrame()) ApertouE();
         }
 
         /// <summary>Toca uma ação (sacar, tiro, gatilho sem bala, recarga, comer ou beber) do começo, na camada "Ações".</summary>
@@ -785,7 +796,7 @@ namespace ZombieCityCleaner.Player
                 var alvo = hit.collider.GetComponent<Interagivel>();
                 if (alvo == null)
                 {
-                    if (hit.collider.isTrigger) continue;
+                    if (hit.collider.isTrigger || DeDentro(i, n, hit.point, null)) continue;
                     return;
                 }
                 string dica = alvo.Dica(this);
@@ -794,10 +805,42 @@ namespace ZombieCityCleaner.Player
                     if (hit.collider.isTrigger) continue;
                     return;
                 }
+                if (DeDentro(i, n, hit.point, alvo)) continue;
                 _alvo = alvo;
                 _dica = dica;
                 return;
             }
+        }
+
+        // o E na coisa da mira: aperta (Usar) ou começa a segurar (Segurar mais que 0: arrombar a porta trancada)
+        void ApertouE()
+        {
+            float t = _alvo.Segurar(this);
+            if (t <= 0f)
+            {
+                _alvo.Usar(this);
+                return;
+            }
+            _segurando = _alvo;
+            _segurarDesde = Time.time;
+            _segurarTempo = t;
+        }
+
+        Interagivel _segurando;
+        float _segurarDesde, _segurarTempo;
+
+        /// <summary>A coisa em que o jogador está segurando o E agora (null: nenhuma).</summary>
+        public Interagivel SegurandoAgora => _segurando;
+
+        // uma coisa mais adiante no raio que ganha da do acerto i (o saque dentro do móvel: veja Interagivel.GanhaDe)
+        bool DeDentro(int i, int n, Vector3 ponto, Interagivel antes)
+        {
+            for (int j = i + 1; j < n; j++)
+            {
+                var outra = _acertos[j].collider.GetComponent<Interagivel>();
+                if (outra != null && outra != antes && outra.GanhaDe(ponto, antes) && outra.Dica(this) != null) return true;
+            }
+            return false;
         }
 
         void OnGUI()
@@ -866,13 +909,50 @@ namespace ZombieCityCleaner.Player
             if (_dica != null)
             {
                 // com uma sombra embaixo, para ler na frente de coisa clara (a porta na luz da lanterna)
-                var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(17 * u), FontStyle.Normal, TextAnchor.UpperCenter);
+                // (a do saque tem o nome do item na cor da raridade: a sombra vai sem a cor)
+                var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(17 * u), FontStyle.Normal, TextAnchor.UpperCenter, true);
                 dica.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
                 float s = Mathf.Max(1f, Mathf.Round(1.5f * u));
-                GUI.Label(new Rect(cx - 300 * u + s, cy + 40 * u + s, 600 * u, 30 * u), _dica, dica);
+                GUI.Label(new Rect(cx - 300 * u + s, cy + 40 * u + s, 600 * u, 30 * u), SemCor(_dica), dica);
                 dica.normal.textColor = new Color(0.95f, 0.93f, 0.85f);
                 GUI.Label(new Rect(cx - 300 * u, cy + 40 * u, 600 * u, 30 * u), _dica, dica);
+                // segurando o E: a barra do tempo (e o que está fazendo)
+                if (_segurando != null && _segurarTempo > 0f)
+                {
+                    float k = Mathf.Clamp01((Time.time - _segurarDesde) / _segurarTempo), w = 220 * u, h = Mathf.Max(3f, Mathf.Round(6 * u));
+                    var barra = new Rect(cx - w / 2, cy + 74 * u, w, h);
+                    Retangulo(barra.x - 1, barra.y - 1, barra.width + 2, barra.height + 2, new Color(0f, 0f, 0f, 0.6f));
+                    Retangulo(barra.x, barra.y, barra.width * k, barra.height, new Color(0.95f, 0.85f, 0.45f, 0.95f));
+                    string texto = _segurando.Segurando(this);
+                    if (texto != null)
+                    {
+                        var pequeno = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Normal, TextAnchor.UpperCenter);
+                        pequeno.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
+                        GUI.Label(new Rect(cx - 300 * u, cy + 84 * u, 600 * u, 24 * u), texto, pequeno);
+                    }
+                }
             }
+        }
+
+        // o texto sem as marcas de cor do texto rico (<color=...> e </color>)
+        static string SemCor(string t)
+        {
+            if (t.IndexOf('<') < 0) return t;
+            var sb = new System.Text.StringBuilder(t.Length);
+            for (int i = 0; i < t.Length; i++)
+            {
+                if (t[i] == '<')
+                {
+                    int f = t.IndexOf('>', i);
+                    if (f > i && (string.CompareOrdinal(t, i, "<color", 0, 6) == 0 || string.CompareOrdinal(t, i, "</color", 0, 7) == 0))
+                    {
+                        i = f;
+                        continue;
+                    }
+                }
+                sb.Append(t[i]);
+            }
+            return sb.ToString();
         }
 
         // os textos do HUD da arma, refeitos só quando o que eles mostram muda (eram novos a cada quadro)

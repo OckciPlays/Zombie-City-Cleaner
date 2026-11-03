@@ -50,6 +50,27 @@ namespace ZombieCityCleaner.Testes
         }
 
         /// <summary>
+        /// As compras do Dia 0 vão para as estantes dos depósitos (o EstantesDoBunker do jogo: as do B1 e, de sobra, as do
+        /// B3): cada depósito tem as dele (as estantes de aço ou as prateleiras de madeira, com o ponto dentro do cômodo).
+        /// </summary>
+        [Test]
+        public void OsDepositosTemEstantesParaAsCompras()
+        {
+            foreach (int f in new[] { 1, 3 })
+            {
+                var an = DoAndar(f);
+                int n = 0;
+                foreach (var m in MoveisDoBunker.DoAndar(f))
+                {
+                    if (!m.modelo.StartsWith("EstanteAco") && !m.modelo.StartsWith("PrateleiraMadeira")) continue;
+                    var k = an.Em(m.lugar.x, m.lugar.z);
+                    if (k != null && k.tipo == "deposito") n++;
+                }
+                Assert.GreaterOrEqual(n, 3, $"{Codigos[f]}: o depósito tem só {n} estantes");
+            }
+        }
+
+        /// <summary>
         /// Os vãos onde as compras do Dia 0 ficam guardadas (<see cref="DepositosDasCompras"/>) estão dentro de um depósito,
         /// fora dos móveis do andar (o tamanho inteiro, sem o recuo da colisão) e a mais de 1,2 m das portas dele.
         /// </summary>

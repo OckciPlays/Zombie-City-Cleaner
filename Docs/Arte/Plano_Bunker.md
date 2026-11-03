@@ -366,3 +366,30 @@ Os andares se chamam B0 a B4; as partes do plano são numeradas, para não confu
      - **Ficou para depois:**
        - os quartos com o nome de cada jogador e a volta na cama dele quando cai (a decisão 7);
        - guardar no disco as portas e as luzes (o mundo salvo, a M10).
+
+## Os ajustes depois da parte 5 (01/11/2026, a pedido; feitos, esperando o teste do usuário)
+
+1. **A barreira verde no portão:** por dentro da garagem, a barra verde-escura com o friso (a de 1,2 m dos cômodos de serviço) atravessava o vão do portão. O kit desenhava a barra também no pedaço de parede de baixo do chão, no vão. Agora a barra só vai nos pedaços que sobem do chão (o `ParedeExterna` do `Bunker`); vale para o mundo e para a cena de teste. A foto: `Imgs/Renders/Bunker_Portao_Sem_Barra.png` (o portão aberto, de dentro e de fora).
+2. **A sinuca no bunker e no mapa:** as mesas de sinuca da mobília nova se jogam onde existirem: a da sala de jogos do B1 e as dos porões das casas (a receita do porão põe uma mesa em 25% deles). As regras são as da cena de teste: a caixa de bolas e o taco na mão.
+   - O jogo de cada mesa fica num lugar só da rede, o `SinucaDoMundo` do "Mundo", pela chave da mesa (a mesma em todas as máquinas). A mesa aparece e some com os móveis de perto, e o jogo continua onde estava.
+   - Conferido no Play: no B1, as bolas postas, a quebra (a bola 4 caiu) e o fim gravado pelo anfitrião; uma segunda mesa, posta como as das casas, ficou com o jogo dela (as bolas recolhidas de uma e postas na outra).
+   - A cena de teste (`Scenes/Exemplos/Sinuca.unity`) foi refeita no mesmo esquema.
+   - A foto: `Imgs/Renders/Bunker_Sinuca_Tela.png` (a vista de cima da mesa do B1, depois da quebra).
+3. **Os móveis vazios** (no bunker e nas casas; o `Mobilia_Nova.fbx` refeito):
+   - os guarda-roupas de 2, 3 e 4 portas: sem as roupas penduradas e dobradas; ficam o cabideiro, a prateleira de cima e três cabides vazios numa ponta;
+   - as estantes de aço (90 e 120) e as prateleiras de madeira (90 e 150): sem as latas, as caixas, os potes e os galões.
+   - As fotos: `Imgs/Renders/MobiliaNova_Vazios_GuardaRoupas.png` e `_Estantes.png`.
+4. **Guardar nas estantes do bunker:** E numa estante de aço ou prateleira de madeira do bunker abre a tela do inventário com ela na coluna da direita.
+   - **A grade:** uma faixa por tábua (de cima para baixo), cada uma com a linha de trás e a da frente e as colunas pela largura (uns 17 cm por célula, como a mochila). A estante de aço de 1,20 m tem 5 tábuas de 8 × 2; a de 0,90 m, 5 de 6 × 2; a prateleira de 1,50 m, 4 de 10 × 2; a de 0,90 m, 4 de 6 × 2. Um item fica numa tábua só (o rifle deitado cabe; a sniper só nas de 8 e 10 colunas).
+   - **Arrastar:** da mochila para a estante guarda; da estante para a mochila, pega; dentro da estante, move. R gira o que está seguro. O botão direito dá "Guardar na estante" (num item da mochila) e "Pegar (para a mochila)" (num da estante), no primeiro lugar livre.
+   - **O primeiro lugar livre** começa pela tábua da altura do peito e completa as pilhas do mesmo item que já estão nela.
+   - **Na estante:** cada item aparece na tábua dele, no lugar das células: a malha do chão, deitado (as armas) ou em pé, virado ao longo do lado mais comprido e, se for maior que o lugar, um pouco menor.
+   - **A rede:** o anfitrião guarda a lista (`EstantesDoBunker`, no "Mundo") e confere quem pede (perto da estante, até 3,5 m). A arma leva o pente, e as roupas, as cores.
+   - Conferido no Play: 12 itens guardados numa estante de aço do depósito do B1 (o rifle na tábua de baixo, o machado na do meio, as pilhas juntas), na tela e na estante; o rifle de volta para uma célula da mochila com o pente (30), o feijão para o primeiro lugar livre e a garrafa movida dentro da estante.
+   - As fotos: `Imgs/Renders/Bunker_Estante_Tela.png` e `Bunker_Estante_Itens.png`.
+   - **Ficou para depois:** guardar no disco (a M10); juntar duas pilhas arrastando uma em cima da outra na estante.
+5. **As compras do Dia 0 nas estantes** (a pedido: "Sim, nas estantes"): com o mundo pronto, o anfitrião guarda as compras nas estantes e prateleiras dos depósitos (as 9 do B1 e, de sobra, as 5 do B3), pelo primeiro lugar livre de cada uma, em grupos: as armas e a munição, a comida e a bebida, os remédios e o resto (as ferramentas, as peças, as lanternas). Cada grupo começa na estante depois da última do grupo de antes, então cada um fica na sua.
+   - O que não vai numa estante (as mochilas, que são equipamento, e o coldre, que saiu do jogo) ou não cabe numa tábua (o pneu) fica no chão dos depósitos, em fileiras, como antes.
+   - Conferido no Play (o mapa pequeno, a semente 12345, 99 compras nas cinco lojas, 58 lotes): 55 nas estantes (o rifle, a espingarda, a sniper, as armas brancas e a munição numa; a comida e a bebida na seguinte; os remédios na terceira; o resto na quarta) e 3 no chão (o pneu, o coldre e a mochila média).
+   - O teste do Editor `BunkerTestes.OsDepositosTemEstantesParaAsCompras` confere que cada depósito tem as estantes dele.
+   - A foto: `Imgs/Renders/Bunker_Compras_Estantes.png` (as três estantes de frente e cada uma de perto: as armas, a comida, os remédios e o resto).

@@ -613,9 +613,14 @@ namespace ZombieCityCleaner.DiaZero
         }
 
         /// <summary>
-        /// As compras guardadas nos depósitos do bunker (a pedido, 01/11/2026), em fileiras pelo chão dos vãos deles
-        /// (<see cref="PlantaDeBunker.DepositosDasCompras"/>), as do mesmo tipo juntas e cada uma deitada ao longo da
-        /// fileira. Cheios os vãos (umas 100 compras), as que sobram recomeçam do primeiro, por cima.
+        /// As compras guardadas nos depósitos do bunker (a pedido, 01/11/2026): nas estantes deles (a pedido, no mesmo dia:
+        /// "nas estantes"; <see cref="EstantesDoBunker.EstantesDosDepositos"/>: as do B1 e, de sobra, as do B3), em grupos
+        /// (as armas e a munição, a comida e a bebida, os remédios e o resto: <see cref="Grupo"/>), cada um começando na
+        /// estante depois da última do grupo de antes, as do mesmo item juntas, completando as pilhas, cada uma no primeiro
+        /// lugar livre (a tábua da altura do peito antes). O que não
+        /// vai numa estante (as mochilas) ou não coube fica em fileiras pelo chão dos vãos dos depósitos
+        /// (<see cref="PlantaDeBunker.DepositosDasCompras"/>), cada uma deitada ao longo da fileira; cheios os vãos (umas 100
+        /// compras), as que sobram recomeçam do primeiro, por cima.
         /// </summary>
         void EntregarNoBunker(DadosDoMundo d)
         {
@@ -626,8 +631,29 @@ namespace ZombieCityCleaner.DiaZero
                 return;
             }
             const float Folga = 0.08f, EntreFileiras = 0.12f;
-            var compras = new List<CompraDoDia>(_levar);
-            compras.Sort((a, b) => a.item != b.item ? a.item.CompareTo(b.item) : a.id.CompareTo(b.id));
+            var todas = new List<CompraDoDia>(_levar);
+            todas.Sort((a, b) => Grupo(a.item) != Grupo(b.item) ? Grupo(a.item).CompareTo(Grupo(b.item))
+                               : a.item != b.item ? a.item.CompareTo(b.item) : a.id.CompareTo(b.id));
+            // nas estantes dos depósitos, cada grupo começando na estante depois da última do grupo de antes (as armas
+            // numa, a comida noutra); o que não couber, no chão
+            var estantes = EstantesDoBunker.Instancia;
+            var nasEstantes = estantes != null && estantes.IsSpawned ? EstantesDoBunker.EstantesDosDepositos() : new List<int>();
+            var compras = new List<CompraDoDia>();
+            var daVez = new List<int>(nasEstantes);
+            int grupo = -1;
+            foreach (var c in todas)
+            {
+                if (nasEstantes.Count == 0) { compras.Add(c); continue; }
+                if (Grupo(c.item) != grupo)
+                {
+                    grupo = Grupo(c.item);
+                    int ultima = nasEstantes.FindLastIndex(e => estantes.Quantos(e) > 0);
+                    daVez.Clear();
+                    for (int k = 0; k < nasEstantes.Count; k++) daVez.Add(nasEstantes[(ultima + 1 + k) % nasEstantes.Count]);
+                }
+                if (!estantes.GuardarNasEstantes(daVez, c.item, c.qtd > 0 ? c.qtd : -1, c.desgaste, 0)) compras.Add(c);
+            }
+            int guardadas = todas.Count - compras.Count;
             var vaos = PlantaDeBunker.DepositosDasCompras;
             int v = 0;
             float x = vaos[0].area.xMin, z = vaos[0].area.yMin, fundo = 0f;
@@ -658,8 +684,17 @@ namespace ZombieCityCleaner.DiaZero
                 x += largura + Folga;
                 fundo = Mathf.Max(fundo, funda);
             }
-            Debug.Log($"[Dia 0] {compras.Count} compras guardadas nos depósitos do bunker ({compras.Count - noB3} no B1, {noB3} no B3).");
+            Debug.Log($"[Dia 0] {todas.Count} compras guardadas nos depósitos do bunker: {guardadas} nas estantes, {compras.Count} no chão ({compras.Count - noB3} no B1, {noB3} no B3).");
             _levar.Clear();
+        }
+
+        // os grupos das compras nas estantes: as armas e a munição, a comida e a bebida, os remédios e o resto
+        static int Grupo(Item item)
+        {
+            if (Itens.EhArma(item) || Itens.EhBranca(item) || Itens.EhMunicao(item)) return 0;
+            var tipo = Itens.Loot(item)?.tipo;
+            if (tipo == TipoDeLoot.Comida || tipo == TipoDeLoot.Bebida) return 1;
+            return tipo == TipoDeLoot.Remedio ? 2 : 3;
         }
 
         // o tamanho do item no chão (como o ItensNoMundo o deita: as armas de lado), ao longo da fileira e para dentro, no

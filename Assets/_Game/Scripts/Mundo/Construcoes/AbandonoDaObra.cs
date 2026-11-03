@@ -57,10 +57,34 @@ namespace ZombieCityCleaner.Mundo
                 {
                     if (ab.EhPorta || obra.Tapada(w, ab)) continue;
                     double r = rnd.NextDouble();
+                    if (obra.portasVivas)
+                    {
+                        // as janelas que abrem (o Plano_Portas.md da pasta de arte, a parte 5): as tapadas como antes, umas
+                        // quebradas com o buraco (20%, com k = 1) e umas abertas (10%); o resto, o vidro inteiro, abre
+                        if (r < tabuas) Tabuas(obra, w, ab, rnd, k, pichacoes);
+                        else if (r < tabuas + 0.2f * k) Vidro(obra, w, ab, rnd, true);
+                        else if (r >= tabuas + 0.2f * k + 0.1f) obra.janelas.Add(JanelaViva(obra, w, ab));
+                        continue;
+                    }
                     if (r < tabuas) Tabuas(obra, w, ab, rnd, k, pichacoes);
                     else if (r < tabuas + quebradas) Vidro(obra, w, ab, rnd, rnd.NextDouble() < 0.45 + 0.45 * k);
                 }
             }
+        }
+
+        // o ponto da janela que abre: o meio do peitoril (no meio da parede), ao longo dela e para fora
+        static JanelaDaObra JanelaViva(Obra obra, Parede w, Abertura ab)
+        {
+            Vector2 c = w.a + w.u * (ab.ini + ab.larg / 2);
+            return new JanelaDaObra
+            {
+                peitoril = new Vector3(c.x, w.baseY + ab.baixo, c.y),
+                u = w.u,
+                fora = w.n,
+                largura = ab.larg,
+                altura = ab.alto - ab.baixo,
+                parede = obra.m.esp,
+            };
         }
 
         static float Faixa(System.Random rnd, float a, float b) => a + (float)rnd.NextDouble() * (b - a);

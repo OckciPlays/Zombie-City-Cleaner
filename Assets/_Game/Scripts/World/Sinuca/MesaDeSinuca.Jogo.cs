@@ -71,8 +71,6 @@ namespace ZombieCityCleaner.World
         float _u = 1f, _uDosEstilos;
         GUIStyle _titulo, _texto, _centro;
 
-        void OnDisable() => SairJa();
-
         // chamado no Update da mesa
         void AtualizarJogo()
         {
@@ -80,7 +78,7 @@ namespace ZombieCityCleaner.World
             if (!_jogando && EuJogo && _armaQuePediu != null && Time.time - _pediuEm < 3f) Entrar(_armaQuePediu);
             if (!_jogando || _saindo) return;
             var inventario = _arma != null ? _arma.Inventario : null;
-            if (_rede == null || !_rede.IsSpawned || inventario == null || !Itens.EhTaco(inventario.NaMao) || !ComBolas.Value || !EuJogo
+            if (_rede == null || !_rede.IsSpawned || inventario == null || !Itens.EhTaco(inventario.NaMao) || !ComBolas || !EuJogo
                 || (_telaDoInventario != null && _telaDoInventario.Aberta))
             {
                 Sair();
@@ -133,7 +131,7 @@ namespace ZombieCityCleaner.World
             _saindo = true;
             _carregando = false;
             MostrarMira(false);
-            if (IsSpawned && EuJogo) SairRpc();
+            if (EuJogo) Rede?.Sair(this);
         }
 
         // a câmera voltou ao olho: tudo como antes
@@ -257,8 +255,8 @@ namespace ZombieCityCleaner.World
         void Bater(float forca)
         {
             var pos = new Vector2[FisicaDaSinuca.Bolas];
-            for (int i = 0; i < pos.Length; i++) pos[i] = i < _posicoes.Count ? _posicoes[i] : Vector2.zero;
-            _sim.Carregar(pos, _fora.Value);
+            Rede?.Posicoes(chave, pos);
+            _sim.Carregar(pos, Estado().fora);
             if (!_sim.Dentro(FisicaDaSinuca.Branca)) _sim.VoltarABranca();
             _foraAntes = _sim.Fora;
             _brancaNaTacada = _sim.Pos[FisicaDaSinuca.Branca];
@@ -302,7 +300,7 @@ namespace ZombieCityCleaner.World
             _somBola = _somTabela = 0f;
             _somCacapas = 0;
             _somTacada = false;
-            if (IsSpawned) QuadroRpc(q);
+            Rede?.MandarQuadro(this, q);
         }
 
         // as bolas pararam: o que caiu, a branca de volta, o jogo de novo (a preta, ou todas) e o fim para o anfitrião
@@ -331,7 +329,7 @@ namespace ZombieCityCleaner.World
             _foraDoAlvo = _sim.Fora;
             _esperandoAnfitriao = true;
             _esperarAte = Time.time + 2f;
-            if (IsSpawned) FimRpc(Quadro(), preta || todas);
+            Rede?.Fim(this, Quadro(), preta || todas);
         }
 
         // "a 3", "a 3 e a 11", "a 3, a 5 e a 11" (null, nenhuma)

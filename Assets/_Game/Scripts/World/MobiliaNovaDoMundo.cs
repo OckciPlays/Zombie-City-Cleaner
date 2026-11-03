@@ -17,10 +17,11 @@ namespace ZombieCityCleaner.World
     ///    está nelas (<see cref="raioDePerto"/>, no mesmo andar), poucos por quadro;
     ///  - as partes abertas são uma lista na rede (o anfitrião manda): o E de quem joga vai ao anfitrião
     ///    (<see cref="AlternarRpc"/>), que abre ou fecha, e cada máquina mostra igual. Fora de uma partida (sem a rede), abre
-    ///    e fecha direto.
+    ///    e fecha direto;
+    ///  - o saque nos móveis de perto e o que já foi pego (MobiliaNovaDoMundo.Saque.cs).
     /// As cores (as variações) são as dos de longe, pintadas uma vez por malha e variação.
     /// </summary>
-    public class MobiliaNovaDoMundo : NetworkBehaviour
+    public partial class MobiliaNovaDoMundo : NetworkBehaviour
     {
         [Tooltip("Os prefabs da mobília nova (Prefabs/MobiliaNova; o nome é o do modelo).")]
         public GameObject[] prefabs;
@@ -61,6 +62,7 @@ namespace ZombieCityCleaner.World
         void Awake()
         {
             _abertas = new NetworkList<ulong>();
+            _pegos = new NetworkList<ulong>();
             Instancia = this;
             _guardadas.Clear();
             _guardados = new GameObject("Moldes da mobília nova").transform;
@@ -110,15 +112,23 @@ namespace ZombieCityCleaner.World
 
         public override void OnNetworkSpawn()
         {
-            if (IsServer) _abertas.Clear();
+            if (IsServer)
+            {
+                _abertas.Clear();
+                _pegos.Clear();
+            }
             _abertas.OnListChanged += AoMudar;
+            _pegos.OnListChanged += AoPegar;
             Sincronizar();
+            SincronizarOSaque();
         }
 
         public override void OnNetworkDespawn()
         {
             _abertas.OnListChanged -= AoMudar;
+            _pegos.OnListChanged -= AoPegar;
             _aqui.Clear();
+            _pegosAqui.Clear();
             foreach (var p in _vivas.Values) if (p != null && p.parte != null) p.parte.Definir(false);
         }
 

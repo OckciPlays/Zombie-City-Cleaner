@@ -136,6 +136,16 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public bool nova;
 
+        /// <summary>
+        /// As portas que abrem (o mundo: o Plano_Portas.md da pasta de arte, a parte 2): as folhas que a subclasse marca como
+        /// vivas não vão para a malha nem para a colisão; a obra guarda o ponto de cada uma (<see cref="portas"/>), e o chão
+        /// do giro inteiro dela fica livre de móveis. Fora do mundo (o Dia 0, as cenas de exemplo), as folhas ficam paradas.
+        /// </summary>
+        public bool portasVivas;
+        public readonly List<PortaDaObra> portas = new List<PortaDaObra>();
+        /// <summary>As janelas que abrem (com <see cref="portasVivas"/>; as do vidro inteiro do abandono): o jogo põe as folhas.</summary>
+        public readonly List<JanelaDaObra> janelas = new List<JanelaDaObra>();
+
         /// <summary>A abertura ab da parede w já foi tapada pela obra.</summary>
         public bool Tapada(Parede w, Abertura ab)
         {
@@ -346,6 +356,9 @@ namespace ZombieCityCleaner.Mundo
             Caixa(new Vector3(c.x, w.baseY + (y0 + y1) / 2, c.y), new Vector3(s1 - s0, y1 - y0, esp), cor, w.yaw, RZ(giro), colide);
         }
 
+        /// <summary>Até onde as portas que abrem (<see cref="portasVivas"/>) abrem (graus).</summary>
+        public const float AberturaMaxima = 95f;
+
         /// <summary>As duas pontas (no chão) da folha de porta aberta: a da dobradiça e a de fora.</summary>
         public (Vector2 dobradica, Vector2 ponta) PontasDaFolha(Parede w, float ini, float larg, int dentro, float abertura, bool dobradicaNoInicio)
         {
@@ -358,12 +371,39 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>
         /// Folha de porta aberta para o lado 'dentro' (+1 = n, -1 = -n), com maçaneta, presa no fim da abertura (ou no
-        /// começo, com dobradicaNoInicio).
+        /// começo, com dobradicaNoInicio). Com <see cref="portasVivas"/> e 'viva', ela vira um ponto (<see cref="portas"/>):
+        /// a folha não é desenhada, e o chão do giro dela (de fechada até <see cref="AberturaMaxima"/>) fica livre de móveis.
         /// </summary>
         public void FolhaDePorta(Parede w, float ini, float larg, float alto, int dentro, string cor, float abertura = 95f, bool colide = true,
-                                 bool dobradicaNoInicio = false)
+                                 bool dobradicaNoInicio = false, PortaDaObra.Tipo? viva = null, string comodo = null)
         {
             float folha = larg - 0.06f, h = alto - 0.06f;
+            if (portasVivas && viva.HasValue)
+            {
+                var (d0, _) = PontasDaFolha(w, ini, larg, dentro, 0f, dobradicaNoInicio);
+                var porta = new PortaDaObra
+                {
+                    dobradica = new Vector3(d0.x, w.baseY + 0.01f, d0.y),
+                    fechada = dobradicaNoInicio ? w.u : -w.u,
+                    abre = w.n * dentro,
+                    largura = folha,
+                    altura = h,
+                    cor = cor,
+                    giro = Mathf.Clamp(abertura, 0f, AberturaMaxima),
+                    maximo = AberturaMaxima,
+                    tipo = viva.Value,
+                    comodo = comodo,
+                };
+                portas.Add(porta);
+                // o giro inteiro (o quadrado da dobradiça até a ponta aberta, para o lado em que ela abre) fica livre de móveis
+                Vector2 f = porta.fechada * folha, a = porta.abre * folha;
+                float xa = Mathf.Min(Mathf.Min(d0.x, d0.x + f.x), Mathf.Min(d0.x + a.x, d0.x + f.x + a.x));
+                float xb = Mathf.Max(Mathf.Max(d0.x, d0.x + f.x), Mathf.Max(d0.x + a.x, d0.x + f.x + a.x));
+                float za = Mathf.Min(Mathf.Min(d0.y, d0.y + f.y), Mathf.Min(d0.y + a.y, d0.y + f.y + a.y));
+                float zb = Mathf.Max(Mathf.Max(d0.y, d0.y + f.y), Mathf.Max(d0.y + a.y, d0.y + f.y + a.y));
+                ocupado.Add((Rect.MinMaxRect(xa - 0.08f, za - 0.08f, xb + 0.08f, zb + 0.08f), w.baseY));
+                return;
+            }
             var (dob, ponta) = PontasDaFolha(w, ini, larg, dentro, abertura, dobradicaNoInicio);
             var area = Rect.MinMaxRect(Mathf.Min(dob.x, ponta.x) - 0.08f, Mathf.Min(dob.y, ponta.y) - 0.08f, Mathf.Max(dob.x, ponta.x) + 0.08f, Mathf.Max(dob.y, ponta.y) + 0.08f);
             ocupado.Add((area, w.baseY));

@@ -107,8 +107,9 @@ namespace ZombieCityCleaner.Mundo
                 var c = emX ? new Vector3((a + b) / 2, (ya + yb) / 2, linha) : new Vector3(linha, (ya + yb) / 2, (a + b) / 2);
                 var tam = emX ? new Vector3(b - a, yb - ya, ParedeDeFora) : new Vector3(ParedeDeFora, yb - ya, b - a);
                 Caixa(c, tam, corDeParede, colide: true);
-                // a barra por dentro, nos pedaços que vão do chão do andar para cima
-                if (ya > Base(f) + 0.01f) return;
+                // a barra por dentro, nos pedaços que vão do chão do andar para cima (o de baixo do vão do portão fica
+                // embaixo do chão: com a barra nele, ela atravessava a entrada da garagem)
+                if (ya > Base(f) + 0.01f || yb < Base(f) + AlturaDaBarra) return;
                 Vector3 dentro = lado == 0 ? Vector3.forward : lado == 1 ? Vector3.left : lado == 2 ? Vector3.back : Vector3.right;
                 var pe = emX ? new Vector3((a + b) / 2, Base(f), linha) : new Vector3(linha, Base(f), (a + b) / 2);
                 Barra(pe + dentro * (ParedeDeFora / 2), emX ? Vector3.right : Vector3.forward, dentro, b - a);

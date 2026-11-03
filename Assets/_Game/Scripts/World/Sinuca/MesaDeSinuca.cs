@@ -29,20 +29,24 @@ namespace ZombieCityCleaner.World
     }
 
     /// <summary>
-    /// A mesa de sinuca que se joga (por enquanto só na cena de teste da sinuca; a pedido em 29/10/2026). A mesa é o
-    /// modelo da mobília nova (<c>MesaSinuca</c>, na escala dos móveis), e as 16 bolas são as filhas dele.
+    /// A mesa de sinuca que se joga (a pedido em 29/10/2026; no bunker e no mapa desde 01/11/2026). A mesa é o modelo da
+    /// mobília nova (<c>MesaSinuca</c>, na escala dos móveis), e as 16 bolas são as filhas dele. O jogo dela fica no
+    /// <see cref="SinucaDoMundo"/>, pela <see cref="chave"/> (a mesma em todas as máquinas): a mesa aparece e some com os
+    /// móveis de perto, e o jogo continua onde estava.
     /// - **As bolas** vêm numa caixa (o item <see cref="Item.CaixaDeBolas"/>): com ela na mochila, E na mesa põe as bolas
     ///   arrumadas no triângulo, e a caixa fica vazia na mochila; com a vazia, E recolhe as bolas (ninguém jogando).
     /// - **Jogar:** com um taco na mão (<see cref="Itens.EhTaco"/>), E na mesa entra no jogo: a câmera vai para cima da
     ///   mesa, o mouse mira a branca e o clique segurado dá a força (veja <c>MesaDeSinuca.Jogo.cs</c>). Um jogador por vez;
     ///   o corpo dele fica parado onde estava, e os outros só veem as bolas andando.
-    /// - **A rede:** o anfitrião guarda as posições (<see cref="_posicoes"/>, as que caíram e quem joga). Quem joga simula
-    ///   a tacada (<see cref="FisicaDaSinuca"/>) e manda um quadro a cada 0,05 s para os outros; quando as bolas param,
-    ///   manda o fim para o anfitrião, que grava. A preta na caçapa, ou todas as 15, recomeça o jogo (o triângulo de novo).
+    /// - **A rede:** o anfitrião guarda as posições, as que caíram e quem joga. Quem joga simula a tacada
+    ///   (<see cref="FisicaDaSinuca"/>) e manda um quadro a cada 0,05 s para os outros; quando as bolas param, manda o fim
+    ///   para o anfitrião, que grava. A preta na caçapa, ou todas as 15, recomeça o jogo (o triângulo de novo).
     /// </summary>
     [DefaultExecutionOrder(200)]   // a câmera de quem joga é posta depois de tudo o que mexe nela
-    public partial class MesaDeSinuca : NetworkBehaviour
+    public partial class MesaDeSinuca : MonoBehaviour
     {
+        [Tooltip("A chave da mesa no SinucaDoMundo (a da obra, do ponto e da parte da mesa; a mesma em todas as máquinas).")]
+        public ulong chave;
         [Tooltip("A mesa (o modelo da mobília nova, na escala dos móveis): o pano é o plano dela; as bolas são filhas dela.")]
         public Transform mesa;
         [Tooltip("As 16 bolas (MesaSinuca.Bola.0 a .15), filhas da mesa.")]
@@ -54,165 +58,90 @@ namespace ZombieCityCleaner.World
         public Material materialDaLinha;
         [Tooltip("A altura do pano, no tamanho real da mesa (sem a escala).")]
         public float alturaDoPano = 0.78f;
-        [Tooltip("Até onde o anfitrião aceita os pedidos (m, dos pés do jogador ao meio da mesa).")]
-        public float distanciaMaxima = 3.5f;
-
-        const ulong Ninguem = ulong.MaxValue;
-
-        public readonly NetworkVariable<bool> ComBolas = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        readonly NetworkVariable<ulong> _jogador = new(Ninguem, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        readonly NetworkVariable<ushort> _fora = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        // a cada jogo arrumado (as bolas postas, ou a preta na caçapa), a vista pula para o triângulo sem deslizar
-        readonly NetworkVariable<int> _rodada = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        NetworkList<Vector2> _posicoes;
 
         // a vista desta máquina: onde cada bola aparece, para onde ela vai e as que estão escondidas
         readonly Vector2[] _vista = new Vector2[FisicaDaSinuca.Bolas];
         readonly Vector2[] _alvo = new Vector2[FisicaDaSinuca.Bolas];
         ushort _foraDoAlvo;
         bool _pular = true;
+        int _rodadaVista = int.MinValue;
+        SinucaDoMundo _registrada;
         // o último quadro de quem joga (os outros mostram ele até o fim da tacada chegar no anfitrião)
         float _quadroAte;
 
+        /// <summary>O jogo das mesas (na rede), ou null fora de uma partida.</summary>
+        static SinucaDoMundo Rede => SinucaDoMundo.Instancia != null && SinucaDoMundo.Instancia.IsSpawned ? SinucaDoMundo.Instancia : null;
+
+        MesaNaRede Estado()
+        {
+            var r = Rede;
+            if (r != null && r.Estado(chave, out var m)) return m;
+            return new MesaNaRede { chave = chave, jogador = SinucaDoMundo.Ninguem };
+        }
+
+        /// <summary>As bolas estão na mesa.</summary>
+        public bool ComBolas => Estado().comBolas;
         /// <summary>Alguém está jogando (o anfitrião aceitou).</summary>
-        public bool Ocupada => _jogador.Value != Ninguem;
-        public bool EuJogo => IsSpawned && _jogador.Value == NetworkManager.LocalClientId;
+        public bool Ocupada => Estado().jogador != SinucaDoMundo.Ninguem;
+        public bool EuJogo => Rede != null && NetworkManager.Singleton != null && Estado().jogador == NetworkManager.Singleton.LocalClientId;
+        /// <summary>O meio da mesa (para a distância dos pedidos).</summary>
+        public Vector3 Centro => mesa != null ? mesa.position : transform.position;
 
-        void Awake() => _posicoes = new NetworkList<Vector2>();
-
-        public override void OnNetworkSpawn()
+        void OnEnable()
         {
-            if (IsServer)
-            {
-                _jogador.Value = Ninguem;
-                if (_posicoes.Count != FisicaDaSinuca.Bolas) Arrumar();
-            }
-            _posicoes.OnListChanged += AoMudarLista;
-            _fora.OnValueChanged += AoMudarFora;
-            _rodada.OnValueChanged += AoMudarRodada;
             _pular = true;
-            LerAlvo();
+            Registrar();
         }
 
-        public override void OnNetworkDespawn()
+        void OnDisable()
         {
-            _posicoes.OnListChanged -= AoMudarLista;
-            _fora.OnValueChanged -= AoMudarFora;
-            _rodada.OnValueChanged -= AoMudarRodada;
             SairJa();
+            if (_registrada != null) _registrada.Esquecer(this);
+            _registrada = null;
         }
 
-        void AoMudarLista(NetworkListEvent<Vector2> e) => Confirmado();
-        void AoMudarFora(ushort antes, ushort depois) => Confirmado();
-
-        void AoMudarRodada(int antes, int depois)
+        void Registrar()
         {
-            _pular = true;
+            var r = SinucaDoMundo.Instancia;
+            if (r == null || r == _registrada) return;
+            _registrada?.Esquecer(this);
+            _registrada = r;
+            r.Registrar(this);
             Confirmado();
         }
 
-        // o anfitrião gravou: a vista vai para o que está na rede
-        void Confirmado()
+        /// <summary>O anfitrião gravou (ou a mesa apareceu): a vista vai para o que está na rede.</summary>
+        internal void Confirmado()
         {
             _quadroAte = 0f;
             _esperandoAnfitriao = false;
+            int rodada = Estado().rodada;
+            if (rodada != _rodadaVista) _pular = true;
+            _rodadaVista = rodada;
             LerAlvo();
         }
 
+        readonly Vector2[] _lidas = new Vector2[FisicaDaSinuca.Bolas];
+
         void LerAlvo()
         {
-            for (int i = 0; i < FisicaDaSinuca.Bolas; i++) _alvo[i] = i < _posicoes.Count ? _posicoes[i] : Vector2.zero;
-            _foraDoAlvo = _fora.Value;
-        }
-
-        // ------------------------------------------------------------------ no anfitrião
-
-        // o jogo arrumado: o triângulo e a branca na marca, nenhuma caída
-        void Arrumar()
-        {
-            var pos = FisicaDaSinuca.Arrumadas(Random.Range(0, int.MaxValue));
-            if (_posicoes.Count != FisicaDaSinuca.Bolas)
-            {
-                _posicoes.Clear();
-                foreach (var p in pos) _posicoes.Add(p);
-            }
+            var r = Rede;
+            if (r != null) r.Posicoes(chave, _lidas);
             else
-                for (int i = 0; i < pos.Length; i++) _posicoes[i] = pos[i];
-            _fora.Value = 0;
-            _rodada.Value++;
-        }
-
-        // o jogador que mandou o pedido, se ele está perto da mesa (o inventário e a arma dele)
-        bool Quem(RpcParams parametros, out InventarioJogador inventario)
-        {
-            inventario = null;
-            if (!NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var cliente) || cliente.PlayerObject == null) return false;
-            var d = cliente.PlayerObject.transform.position - transform.position;
-            d.y = 0f;
-            if (d.magnitude > distanciaMaxima) return false;
-            inventario = cliente.PlayerObject.GetComponent<InventarioJogador>();
-            return inventario != null;
-        }
-
-        [Rpc(SendTo.Server)]
-        void PorBolasRpc(RpcParams parametros = default)
-        {
-            if (ComBolas.Value || !Quem(parametros, out var inventario)) return;
-            ushort caixa = inventario.Primeiro(Item.CaixaDeBolas);
-            if (caixa == 0 || !inventario.TrocarItem(caixa, Item.CaixaDeBolasVazia)) return;
-            Arrumar();
-            ComBolas.Value = true;
-        }
-
-        [Rpc(SendTo.Server)]
-        void RecolherBolasRpc(RpcParams parametros = default)
-        {
-            if (!ComBolas.Value || Ocupada || !Quem(parametros, out var inventario)) return;
-            ushort caixa = inventario.Primeiro(Item.CaixaDeBolasVazia);
-            if (caixa == 0 || !inventario.TrocarItem(caixa, Item.CaixaDeBolas)) return;
-            ComBolas.Value = false;
-        }
-
-        [Rpc(SendTo.Server)]
-        void JogarRpc(RpcParams parametros = default)
-        {
-            ulong quem = parametros.Receive.SenderClientId;
-            if (!ComBolas.Value || (Ocupada && _jogador.Value != quem) || !Quem(parametros, out var inventario)) return;
-            if (!Itens.EhTaco(inventario.NaMao)) return;
-            _jogador.Value = quem;
-        }
-
-        [Rpc(SendTo.Server)]
-        void SairRpc(RpcParams parametros = default)
-        {
-            if (_jogador.Value == parametros.Receive.SenderClientId) _jogador.Value = Ninguem;
-        }
-
-        /// <summary>O fim de uma tacada (as bolas pararam): o anfitrião grava, ou arruma o jogo de novo.</summary>
-        [Rpc(SendTo.Server)]
-        void FimRpc(QuadroDaSinuca final, bool recomecar, RpcParams parametros = default)
-        {
-            if (_jogador.Value != parametros.Receive.SenderClientId || final.pos == null || !ComBolas.Value) return;
-            if (recomecar)
             {
-                Arrumar();
-                return;
+                var arrumadas = FisicaDaSinuca.Arrumadas(1);
+                for (int i = 0; i < _lidas.Length; i++) _lidas[i] = arrumadas[i];
             }
-            if (_posicoes.Count != FisicaDaSinuca.Bolas) Arrumar();
-            for (int i = 0; i < FisicaDaSinuca.Bolas; i++)
-                if (_posicoes[i] != final.pos[i]) _posicoes[i] = final.pos[i];
-            _fora.Value = final.fora;
+            for (int i = 0; i < FisicaDaSinuca.Bolas; i++) _alvo[i] = _lidas[i];
+            _foraDoAlvo = Estado().fora;
         }
 
-        /// <summary>Quem joga manda um quadro da tacada para os outros.</summary>
-        [Rpc(SendTo.NotMe)]
-        void QuadroRpc(QuadroDaSinuca quadro, RpcParams parametros = default)
+        /// <summary>Um quadro de quem joga (de outra máquina): as bolas vão para lá, e os sons saem no meio da mesa.</summary>
+        internal void ReceberQuadro(QuadroDaSinuca quadro)
         {
-            if (quadro.pos == null || parametros.Receive.SenderClientId != _jogador.Value) return;
             for (int i = 0; i < FisicaDaSinuca.Bolas; i++) _alvo[i] = quadro.pos[i];
             _foraDoAlvo = quadro.fora;
             _quadroAte = Time.time + 1.5f;
-            // os sons, no meio da mesa
             var meio = mesa != null ? mesa.position + Vector3.up * alturaDoPano * mesa.lossyScale.y : transform.position;
             if (quadro.tacada != 0) Efeitos.Som(SomDaSinuca.Tacada, meio, 0.7f, true, 25f);
             if (quadro.bola > 4) Efeitos.Som(SomDaSinuca.Bolas, meio, quadro.bola / 255f, true, 25f);
@@ -222,14 +151,9 @@ namespace ZombieCityCleaner.World
 
         void Update()
         {
-            if (!IsSpawned) return;
-            // quem jogava saiu da partida: a mesa fica livre, e as bolas voltam para onde o anfitrião gravou (se ele saiu
-            // no meio de uma tacada, os outros viam as bolas andando)
-            if (IsServer && Ocupada && !NetworkManager.ConnectedClients.ContainsKey(_jogador.Value))
-            {
-                _jogador.Value = Ninguem;
-                _rodada.Value++;
-            }
+            // o jogo das mesas chegou depois da mesa (a partida começando), ou mudou (outra partida)
+            if (SinucaDoMundo.Instancia != _registrada) Registrar();
+            if (Rede == null) return;
             AtualizarJogo();
             AtualizarVista();
         }
@@ -257,7 +181,7 @@ namespace ZombieCityCleaner.World
 
         void Mostrar(bool direto, ushort fora)
         {
-            bool com = ComBolas.Value;
+            bool com = ComBolas;
             float k = 1f - Mathf.Exp(-22f * Time.deltaTime);
             float y = alturaDoPano + FisicaDaSinuca.Raio;
             for (int i = 0; i < FisicaDaSinuca.Bolas && i < bolas.Length; i++)
@@ -289,10 +213,10 @@ namespace ZombieCityCleaner.World
         public string Dica(ArmaJogador quem)
         {
             var inventario = quem != null ? quem.Inventario : null;
-            if (!IsSpawned || inventario == null || _jogando) return null;
-            if (Ocupada) return "Alguém está jogando sinuca";
+            if (Rede == null || inventario == null || _jogando) return null;
+            if (Ocupada && !EuJogo) return "Alguém está jogando sinuca";
             bool taco = Itens.EhTaco(inventario.NaMao);
-            if (!ComBolas.Value)
+            if (!ComBolas)
                 return inventario.Primeiro(Item.CaixaDeBolas) != 0 ? "[E] Pôr as bolas na mesa"
                     : inventario.Primeiro(Item.CaixaDeBolasVazia) != 0 ? "A sua caixa de bolas está vazia" : "Mesa sem as bolas: ache uma caixa de bolas";
             if (taco) return "[E] Jogar sinuca";
@@ -303,13 +227,14 @@ namespace ZombieCityCleaner.World
         /// <summary>O jogador local apertou E na mesa.</summary>
         public void Usar(ArmaJogador quem)
         {
+            var r = Rede;
             var inventario = quem != null ? quem.Inventario : null;
-            if (!IsSpawned || inventario == null || _jogando || Ocupada) return;
-            if (!ComBolas.Value)
+            if (r == null || inventario == null || _jogando || (Ocupada && !EuJogo)) return;
+            if (!ComBolas)
             {
                 if (inventario.Primeiro(Item.CaixaDeBolas) != 0)
                 {
-                    PorBolasRpc();
+                    r.PorBolas(this);
                     Efeitos.Som(SomDaSinuca.Cacapa, transform.position + Vector3.up, 0.5f, true, 20f);
                 }
                 return;
@@ -318,12 +243,12 @@ namespace ZombieCityCleaner.World
             {
                 _armaQuePediu = quem;
                 _pediuEm = Time.time;
-                JogarRpc();
+                r.Jogar(this);
                 return;
             }
             if (inventario.Primeiro(Item.CaixaDeBolasVazia) != 0)
             {
-                RecolherBolasRpc();
+                r.RecolherBolas(this);
                 Efeitos.Som(SomDaSinuca.Cacapa, transform.position + Vector3.up, 0.5f, true, 20f);
             }
         }

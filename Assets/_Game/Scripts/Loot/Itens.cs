@@ -24,6 +24,8 @@ namespace ZombieCityCleaner.Loot
         Remedio = 80, Comprimidos, KitMedico, Atadura, Gaze, Desinfetante, SprayAntisseptico, Antibiotico, Bandagem,
         // os materiais (a matéria-prima da fabricação)
         Madeira = 96, Toras, Pano, Corda, FitaAdesiva, Ferramenta, PecasDeMetal, Fios, Pregos, Isca, VaraDePesca, KitDeReparo, Roupa,
+        // arrombar as portas e as janelas trancadas (02/11/2026, o Plano_Portas.md da pasta de arte)
+        Gazua = 109, PeDeCabra,
         // o que se monta no mundo (os kits: na mochila, um item; montados, a construção)
         Fogueira = 112, Cama, Barricada,
         // a luz (01/11/2026, a pedido: a lanterna só funciona achada, e gasta as pilhas)
@@ -232,6 +234,9 @@ namespace ZombieCityCleaner.Loot
             Material(Item.Pilhas, "Pilhas", "par de pilhas", "o par de pilhas", "pares de pilhas", "Botão direito na lanterna: trocar as pilhas.", 6),
             // a gasolina (01/11/2026)
             Material(Item.Galao, "Galao", "galão de gasolina", "o galão de gasolina", "galões de gasolina", "10 litros. Na tampa do tanque do carro, E abastece.", 1),
+            // arrombar (02/11/2026, o Plano_Portas.md da pasta de arte)
+            Material(Item.Gazua, "Gazua", "gazua", "a gazua", "gazuas", "Na mochila: segure E numa porta trancada. Abre sem barulho, e às vezes quebra.", 5),
+            Material(Item.PeDeCabra, "PeDeCabra", "pé de cabra", "o pé de cabra", "pés de cabra", "Na mochila: segure E numa porta trancada. Arromba rápido, com barulho.", 1),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -517,6 +522,7 @@ namespace ZombieCityCleaner.Loot
             if (EhMunicao(i) || EhRoupa(i)) return new UnityEngine.Vector2Int(1, 1);
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
             if (i == Item.Galao) return new UnityEngine.Vector2Int(2, 2);   // o galão: maior que o resto do saque
+            if (i == Item.PeDeCabra) return new UnityEngine.Vector2Int(2, 1);   // o pé de cabra: comprido
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

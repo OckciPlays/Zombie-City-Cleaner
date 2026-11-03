@@ -196,7 +196,8 @@ namespace ZombieCityCleaner.DiaZero
                     Vector2 c = Mundo(pos);
                     Objeto("Carro da casa", raiz, carros[rnd.Next(carros.Length)], null, new Vector3(c.x, 0.05f, c.y), (lado > 0 ? 0f : 180f) + yaw);
                 }
-            if (nova != null) MobiliaDaConstrucao.Por(go, pontos, nova, p.semente, -100);
+            // (a rua do Dia 0 não tem saque: as compras do dia vão para o bunker)
+            if (nova != null) MobiliaDaConstrucao.Por(go, pontos, nova, p.semente, -100, comSaque: false);
             PisosEDentro(go, p, casa, M);
             MalhaDeObra.Devolver(casa.vis);
             MalhaDeObra.Devolver(casa.col);
@@ -264,35 +265,77 @@ namespace ZombieCityCleaner.DiaZero
             sofaLocal.y = piso;
             Tv = NaCasa(tvLocal.x, tvLocal.y, tvLocal.z);
             OlhoNoSofa = NaCasa(sofaLocal.x, piso + 1.1f, sofaLocal.z);
-            // os 4 em fila na frente do sofá, de frente para a TV
-            var paraTv = tvLocal - sofaLocal;
-            paraTv.y = 0f;
-            if (paraTv.sqrMagnitude < 0.01f) paraTv = Vector3.forward;
-            paraTv.Normalize();
-            var lado = Vector3.Cross(Vector3.up, paraTv);
-            float[] desvios = { -0.55f, 0.55f, -1.5f, 1.5f };
-            for (int i = 0; i < 4; i++)
-            {
-                var l = sofaLocal + lado * desvios[i] + paraTv * (i >= 2 ? -0.1f : 0.15f);
-                l.x = Mathf.Clamp(l.x, Mathf.Min(sx * sala.x0, sx * sala.x1) + 0.5f, Mathf.Max(sx * sala.x0, sx * sala.x1) - 0.5f);
-                l.z = Mathf.Clamp(l.z, sala.z0 + 0.5f, sala.z1 - 0.5f);
-                Nascimentos[i] = NaCasa(l.x, piso + 0.05f, l.z);
-                var olhar = go.transform.TransformDirection(tvLocal - l);
-                GirosDosNascimentos[i] = Mathf.Atan2(olhar.x, olhar.z) * Mathf.Rad2Deg;
-            }
 
-            // os lugares das compras: o chão da sala, depois o da cozinha e o do corredor, de 0,55 em 0,55 m, fora dos
-            // móveis (com 0,2 m de folga), da frente do sofá (os nascimentos) e longe das paredes
-            var ocupados = new List<Rect>();
+            // os móveis do chão do térreo (o retângulo de cada um): os nascimentos e as compras ficam fora deles
+            var moveis = new List<Rect>();
             foreach (var pm in pontos)
             {
                 if (!pm.OcupaOChao || pm.andar != 0) continue;
                 var giro = Quaternion.Euler(0f, pm.giro, 0f);
                 var ext = new Vector2(Mathf.Abs((giro * new Vector3(pm.tamanho.x, 0, pm.tamanho.z)).x), Mathf.Abs((giro * new Vector3(pm.tamanho.x, 0, pm.tamanho.z)).z));
                 var e2 = new Vector2(Mathf.Abs((giro * new Vector3(pm.tamanho.x, 0, -pm.tamanho.z)).x), Mathf.Abs((giro * new Vector3(pm.tamanho.x, 0, -pm.tamanho.z)).z));
-                ext = Vector2.Max(ext, e2) * 0.5f + Vector2.one * 0.2f;
-                ocupados.Add(Rect.MinMaxRect(pm.centro.x - ext.x, pm.centro.z - ext.y, pm.centro.x + ext.x, pm.centro.z + ext.y));
+                ext = Vector2.Max(ext, e2) * 0.5f;
+                moveis.Add(Rect.MinMaxRect(pm.centro.x - ext.x, pm.centro.z - ext.y, pm.centro.x + ext.x, pm.centro.z + ext.y));
             }
+            bool Ocupado(Vector2 c, float folga)
+            {
+                foreach (var o in moveis)
+                    if (c.x > o.xMin - folga && c.x < o.xMax + folga && c.y > o.yMin - folga && c.y < o.yMax + folga) return true;
+                return false;
+            }
+
+            // os 4 em fila na frente do sofá (ao longo dele), de frente para a TV. A fila recua até os dois do meio ficarem
+            // livres (02/11/2026: eles nasciam dentro da mesa de centro, e os de fora colados no sofá: na nossa casa, a TV
+            // fica do lado do sofá, na mesma parede, e a fila de frente para ela saía atravessada); quem ainda cair num
+            // móvel (o jogador tem 0,3 m de raio) ou perto de outro vai para o lugar livre mais perto, na sala
+            var paraTv = tvLocal - sofaLocal;
+            paraTv.y = 0f;
+            if (paraTv.sqrMagnitude < 0.01f) paraTv = Vector3.forward;
+            paraTv.Normalize();
+            var frenteDoSofa = sofa.HasValue ? Quaternion.Euler(0f, sofa.Value.giro, 0f) * Vector3.forward : paraTv;
+            var lado = Vector3.Cross(Vector3.up, frenteDoSofa);
+            float[] desvios = { -0.55f, 0.55f, -1.5f, 1.5f };
+            float salaX0 = Mathf.Min(sx * sala.x0, sx * sala.x1) + 0.5f, salaX1 = Mathf.Max(sx * sala.x0, sx * sala.x1) - 0.5f;
+            float salaZ0 = sala.z0 + 0.5f, salaZ1 = sala.z1 - 0.5f;
+            var locais = new Vector3[4];
+            bool Livre(Vector3 l, int antes)
+            {
+                if (l.x < salaX0 || l.x > salaX1 || l.z < salaZ0 || l.z > salaZ1) return false;
+                if (Ocupado(new Vector2(l.x, l.z), 0.35f)) return false;
+                for (int j = 0; j < antes; j++)
+                    if (new Vector2(l.x - locais[j].x, l.z - locais[j].z).sqrMagnitude < 0.8f * 0.8f) return false;
+                return true;
+            }
+            Vector3 NaFila(int i, float recuo) => sofaLocal + lado * desvios[i] + frenteDoSofa * ((i >= 2 ? -0.1f : 0.15f) + recuo);
+            float recuoDaFila = 0f;
+            for (float r = 0f; r <= 3f; r += 0.1f)
+                if (Livre(NaFila(0, r), 0) && Livre(NaFila(1, r), 0)) { recuoDaFila = r; break; }
+            for (int i = 0; i < 4; i++)
+            {
+                var l = NaFila(i, recuoDaFila);
+                if (!Livre(l, i))
+                {
+                    var melhor = l;
+                    float perto = float.MaxValue;
+                    for (float z = salaZ0; z <= salaZ1; z += 0.1f)
+                        for (float xx = salaX0; xx <= salaX1; xx += 0.1f)
+                        {
+                            var c = new Vector3(xx, piso, z);
+                            float d = (c - l).sqrMagnitude;
+                            if (d < perto && Livre(c, i)) { perto = d; melhor = c; }
+                        }
+                    l = melhor;
+                }
+                l.x = Mathf.Clamp(l.x, salaX0, salaX1);
+                l.z = Mathf.Clamp(l.z, salaZ0, salaZ1);
+                locais[i] = l;
+                Nascimentos[i] = NaCasa(l.x, piso + 0.05f, l.z);
+                var olhar = go.transform.TransformDirection(tvLocal - l);
+                GirosDosNascimentos[i] = Mathf.Atan2(olhar.x, olhar.z) * Mathf.Rad2Deg;
+            }
+
+            // os lugares das compras: o chão da sala, depois o da cozinha e o do corredor, de 0,55 em 0,55 m, fora dos
+            // móveis (com 0,2 m de folga), da frente do sofá e dos nascimentos e longe das paredes
             foreach (var tipo in new[] { "sala", "cozinha", "corredor" })
                 foreach (var k in p.comodos)
                 {
@@ -303,10 +346,11 @@ namespace ZombieCityCleaner.DiaZero
                         for (float cxx = a; cxx <= b; cxx += 0.55f)
                         {
                             var c = new Vector2(cxx, cz);
-                            bool livre = true;
-                            foreach (var o in ocupados) if (o.Contains(c)) { livre = false; break; }
-                            if (!livre) continue;
+                            if (Ocupado(c, 0.2f)) continue;
                             if (tipo == "sala" && Vector2.Distance(c, new Vector2(sofaLocal.x, sofaLocal.z)) < 2.0f) continue;
+                            bool noNascimento = false;
+                            foreach (var n in locais) if (Vector2.Distance(c, new Vector2(n.x, n.z)) < 0.8f) { noNascimento = true; break; }
+                            if (noNascimento) continue;
                             celulas.Add(new Vector3(c.x, piso, c.y));
                         }
                     // das paredes para o meio (as compras encostadas, como quem guardou)

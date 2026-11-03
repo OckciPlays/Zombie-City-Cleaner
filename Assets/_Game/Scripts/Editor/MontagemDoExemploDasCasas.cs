@@ -176,14 +176,66 @@ namespace ZombieCityCleaner.EditorTools
             c.mobiliaNova = MontagemDaMobiliaNova.Carregar();
             // as mesas dos itens: as roupas como itens (Roupas e NPCs > Montar) e os itens que já se pegam no jogo
             (c.roupas, c.lugaresDasRoupas) = MontagemDasRoupas.CarregarItens();
-            c.coletaveis = AssetDatabase.FindAssets("t:Mesh", new[] { "Assets/_Game/Art/Characters/Jogador/Malhas" })
-                .Select(g => AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(g))).Where(m => m != null)
-                .OrderBy(m => m.name).ToArray();
+            c.coletaveis = Coletaveis();
             c.materialDosColetaveis = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Characters/Jogador/Materials/Pistola.mat");
             go.SetActive(true);
             Jogador(c.Paradas.Count > 0 ? c.Paradas[0].Chegada : new Vector3(0f, 0.2f, -2.5f));
             EditorSceneManager.SaveScene(cena.Value, CenaVariacoes);
             Debug.Log($"Cena das variações montada: {CenaVariacoes}\n{c.Resumo}\n\n{string.Join("\n", c.Paradas.Select(p => p.Ficha))}");
+        }
+
+        /// <summary>Os grupos das mesas dos coletáveis, na ordem delas.</summary>
+        static readonly string[] GruposDosColetaveis =
+        {
+            "as armas", "as armas brancas", "a comida", "a bebida", "os remédios", "os materiais", "os kits de montar",
+            "a lanterna, as pilhas e o galão", "as mochilas", "a munição", "as peças do carro", "a sinuca",
+        };
+
+        /// <summary>
+        /// Os itens que já se pegam no jogo, para as mesas da cena das variações: as malhas de Art/Characters/Jogador/Malhas
+        /// (Arma_, Item_, Loot_, Equip_, Mun_, Peca_ e Sinuca_), cada uma com o item dela, nos grupos de
+        /// <see cref="GruposDosColetaveis"/> e na ordem do enum Item: as armas de fogo (com o material próprio de cada uma) e as
+        /// brancas, deitadas como no chão do jogo; o saque pela espécie (a lata e a garrafa de água com a comida e a
+        /// bebida; a lanterna, as pilhas e o galão à parte); as mochilas, a munição, as peças do carro e a sinuca. Ficam de
+        /// fora os braços e as armas de terceira pessoa (FP_ e TP_), as construções montadas e o coldre (saiu do jogo).
+        /// </summary>
+        static CenaDasVariacoes.Coletavel[] Coletaveis()
+        {
+            string[] prefixos = { "Arma", "Item", "Loot", "Equip", "Mun", "Peca", "Sinuca" };
+            var lista = new System.Collections.Generic.List<(int grupo, int ordem, CenaDasVariacoes.Coletavel c)>();
+            foreach (var g in AssetDatabase.FindAssets("t:Mesh", new[] { "Assets/_Game/Art/Characters/Jogador/Malhas" }))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(g));
+                int i = m != null ? m.name.IndexOf('_') : -1;
+                if (i < 0 || !prefixos.Contains(m.name.Substring(0, i))) continue;
+                // o item: o nome do modelo (a lata e a garrafa da mão são a comida e a água)
+                string modelo = m.name.Substring(i + 1);
+                Loot.Item item;
+                if (modelo == "Lata") item = Loot.Item.Comida;
+                else if (modelo == "Garrafa") item = Loot.Item.Agua;
+                else if (!System.Enum.TryParse(modelo, out item)) { Debug.LogWarning($"As mesas dos itens: {m.name} não é um item."); continue; }
+                if (item == Loot.Item.Coldre) continue;
+                var loot = Loot.Itens.Loot(item);
+                int grupo = Loot.Itens.EhArma(item) ? 0
+                    : Loot.Itens.EhBranca(item) ? 1
+                    : item == Loot.Item.Lanterna || item == Loot.Item.Pilhas || item == Loot.Item.Galao ? 7
+                    : loot != null ? loot.tipo switch
+                    {
+                        Loot.TipoDeLoot.Comida => 2, Loot.TipoDeLoot.Bebida => 3, Loot.TipoDeLoot.Remedio => 4,
+                        Loot.TipoDeLoot.Material => 5, _ => 6,
+                    }
+                    : Loot.Itens.Equipamento(item) >= 0 ? 8
+                    : Loot.Itens.IndiceDaMunicao(item) >= 0 ? 9
+                    : Loot.Itens.IndiceDaPeca(item) >= 0 ? 10
+                    : Loot.Itens.IndiceDaSinuca(item) >= 0 ? 11 : -1;
+                if (grupo < 0) { Debug.LogWarning($"As mesas dos itens: {m.name} não tem grupo."); continue; }
+                lista.Add((grupo, (int)item, new CenaDasVariacoes.Coletavel
+                {
+                    malha = m, nome = Loot.Itens.Nome(item), grupo = GruposDosColetaveis[grupo], deitado = grupo <= 1,
+                    material = grupo == 0 ? Loot.Itens.MaterialProprio(item) : null,
+                }));
+            }
+            return lista.OrderBy(x => x.grupo).ThenBy(x => x.ordem).Select(x => x.c).ToArray();
         }
 
         /// <summary>

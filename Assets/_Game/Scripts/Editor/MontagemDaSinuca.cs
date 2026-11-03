@@ -15,8 +15,9 @@ namespace ZombieCityCleaner.EditorTools
     /// `Scenes/Exemplos/Sinuca.unity`, menu Zombie City Cleaner > Exemplos > Sinuca (teste). Refaz a cena do zero:
     ///  - um porão de 12 × 10 m (o chão de cimento, as paredes, o teto a 4 m e as luzes amarelas em cima da mesa), com uns
     ///    móveis da mobília nova encostados (as estantes de aço, o freezer e o acampamento);
-    ///  - a mesa de sinuca no meio: o prefab da mobília nova (<c>MesaSinuca</c>, desempacotado, em ×1,30), com o
-    ///    <see cref="MesaDeSinuca"/> e o NetworkObject na raiz, as 16 bolas dele sem colisor e o gatilho da mira em volta;
+    ///  - a mesa de sinuca no meio: o prefab da mobília nova (<c>MesaSinuca</c>, desempacotado, em ×1,30), com a
+    ///    <see cref="MesaDeSinuca"/> (a chave 1) na raiz, as 16 bolas dele sem colisor e o gatilho da mira em volta, e o
+    ///    jogo das mesas na rede (<see cref="SinucaDoMundo"/>, no objeto "Sinuca", com o NetworkObject);
     ///  - a rede e o jogador de hoje (<see cref="MontagemDaRede.MontarCena"/>, os pontos de nascimento de frente para a
     ///    mesa) e os itens no chão (<see cref="MontagemDasArmas.MontarItensNoMundo"/>, sem itens no começo: o F1 cria a
     ///    caixa de bolas e os tacos).
@@ -156,8 +157,8 @@ namespace ZombieCityCleaner.EditorTools
             var prefab = Prefab("MesaSinuca");
             if (prefab == null) throw new System.Exception("Falta o prefab MesaSinuca: rode antes Zombie City Cleaner > Mobília nova > Montar.");
             var raiz = new GameObject("Mesa de sinuca");
-            raiz.AddComponent<NetworkObject>();
             var mesa = raiz.AddComponent<MesaDeSinuca>();
+            mesa.chave = 1;
             var modelo = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             PrefabUtility.UnpackPrefabInstance(modelo, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             modelo.name = "Mesa";
@@ -189,7 +190,28 @@ namespace ZombieCityCleaner.EditorTools
             if (mesa.tacos.Any(t => t == null)) Debug.LogWarning("Faltam as malhas dos tacos: rode a montagem das armas (Zombie City Cleaner > Montar armas).");
             mesa.materialDoTaco = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Characters/Jogador/Materials/Pistola.mat");
             mesa.materialDaLinha = MaterialDaLinha();
+            // o jogo das mesas na rede (o mesmo do mundo: a mesa daqui é a de chave 1)
+            var sinuca = new GameObject("Sinuca");
+            sinuca.AddComponent<NetworkObject>();
+            PorASinuca(sinuca);
             return raiz;
+        }
+
+        /// <summary>
+        /// O <see cref="SinucaDoMundo"/> no objeto de rede (o "Mundo" da cena do mundo, ou o "Sinuca" da cena de teste), com
+        /// as malhas dos tacos e os materiais do taco que mira e das linhas.
+        /// </summary>
+        public static SinucaDoMundo PorASinuca(GameObject objeto)
+        {
+            var s = objeto.GetComponent<SinucaDoMundo>();
+            if (s == null) s = objeto.AddComponent<SinucaDoMundo>();
+            s.tacos = Enumerable.Range(0, Itens.QuantosDaSinuca).Select(k => Itens.DaSinuca(k)).Where(Itens.EhTaco)
+                .Select(t => AssetDatabase.LoadAssetAtPath<Mesh>(MontagemDasArmas.MalhaDaSinuca(Itens.IndiceDaSinuca(t)))).ToArray();
+            if (s.tacos.Any(t => t == null)) Debug.LogWarning("Faltam as malhas dos tacos: rode a montagem das armas (Zombie City Cleaner > Montar armas).");
+            s.materialDoTaco = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Characters/Jogador/Materials/Pistola.mat");
+            s.materialDaLinha = MaterialDaLinha();
+            EditorUtility.SetDirty(s);
+            return s;
         }
 
         static Material MaterialDaLinha()

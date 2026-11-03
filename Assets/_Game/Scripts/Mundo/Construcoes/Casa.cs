@@ -623,17 +623,17 @@ namespace ZombieCityCleaner.Mundo
                 bool frente = pf.l != null && pf.l.lado == 0 && pf.l.a.andar == 0;
                 if (frente)
                 {
-                    Folha(pf, -1, p.corDaPorta, p.portaDaFrenteAberta ? 95f : 0f);
+                    Folha(pf, -1, p.corDaPorta, p.portaDaFrenteAberta ? 95f : 0f, PortaDaObra.Tipo.Frente);
                     // luminária ao lado da porta (apagada)
                     float sl = pf.ab.ini + pf.ab.larg + 0.35f;
                     Placa(pf.w, sl - 0.06f, sl + 0.06f, pf.ab.alto - 0.25f, pf.ab.alto - 0.03f, m.esp / 2 + 0.06f, 0.08f, "Metal");
                     Placa(pf.w, sl - 0.04f, sl + 0.04f, pf.ab.alto - 0.22f, pf.ab.alto - 0.08f, m.esp / 2 + 0.105f, 0.012f, "Farol");
                 }
                 // a do porão de fora, um pouco além do ângulo reto: a 85°, a ponta da folha entrava no vão
-                else if (pf.w.nome == "porao") Folha(pf, -1, "Madeira", 95f);
+                else if (pf.w.nome == "porao") Folha(pf, -1, "Madeira", 95f, PortaDaObra.Tipo.Porao);
                 // a da garagem fica aberta: é por ela que se chega no carro com o portão fechado
-                else if (pf.l != null && pf.l.paraGaragem) Folha(pf, -1, Um("Madeira", "Batente"), Faixa(80f, 95f));
-                else Folha(pf, -1, Um("Madeira", "Batente", p.corDaPorta), Chance(0.5f) ? 0f : Faixa(15f, 40f));
+                else if (pf.l != null && pf.l.paraGaragem) Folha(pf, -1, Um("Madeira", "Batente"), Faixa(80f, 95f), PortaDaObra.Tipo.Garagem);
+                else Folha(pf, -1, Um("Madeira", "Batente", p.corDaPorta), Chance(0.5f) ? 0f : Faixa(15f, 40f), PortaDaObra.Tipo.Fora);
             }
             foreach (var pf in _portasDeDentro)
             {
@@ -645,7 +645,7 @@ namespace ZombieCityCleaner.Mundo
                 Comodo alvo = Privado(b) ? b : Privado(a) ? a : b.tipo == "corredor" ? a : a.tipo == "corredor" ? b
                             : (a.x1 - a.x0) * (a.z1 - a.z0) >= (b.x1 - b.x0) * (b.z1 - b.z0) ? a : b;
                 // aberta quase em ângulo reto: com 60°, a folha ficava atravessada na frente da passagem
-                Folha(pf, alvo == pf.i.LadoN ? 1 : -1, Um("Batente", "Madeira", "Batente"), Faixa(85f, 100f));
+                Folha(pf, alvo == pf.i.LadoN ? 1 : -1, Um("Batente", "Madeira", "Batente"), Faixa(85f, 100f), PortaDaObra.Tipo.Dentro, alvo.tipo);
             }
         }
 
@@ -655,7 +655,7 @@ namespace ZombieCityCleaner.Mundo
         /// A folha da porta, presa do lado em que ela não fica na frente de uma escada: a da frente do sobrado, presa no
         /// fim da abertura, abria em cima do pé da escada e tapava a subida.
         /// </summary>
-        void Folha(PortaFeita pf, int dentro, string cor, float abertura)
+        void Folha(PortaFeita pf, int dentro, string cor, float abertura, PortaDaObra.Tipo tipo, string comodo = null)
         {
             bool noInicio = false;
             if (abertura > 1f)
@@ -667,7 +667,17 @@ namespace ZombieCityCleaner.Mundo
                     noInicio = !NaFrenteDaEscada(pf.andar, a2, b2);
                 }
             }
-            FolhaDePorta(pf.w, pf.ab.ini, pf.ab.larg, pf.ab.alto, dentro, cor, abertura, dobradicaNoInicio: noInicio);
+            // (a porta que abre: o lado da dobradiça é o da folha aberta do sorteio, a 95° ou mais)
+            if (portasVivas && abertura <= 1f)
+            {
+                var (a, b) = PontasDaFolha(pf.w, pf.ab.ini, pf.ab.larg, dentro, AberturaMaxima, false);
+                if (NaFrenteDaEscada(pf.andar, a, b))
+                {
+                    var (a2, b2) = PontasDaFolha(pf.w, pf.ab.ini, pf.ab.larg, dentro, AberturaMaxima, true);
+                    noInicio = !NaFrenteDaEscada(pf.andar, a2, b2);
+                }
+            }
+            FolhaDePorta(pf.w, pf.ab.ini, pf.ab.larg, pf.ab.alto, dentro, cor, abertura, dobradicaNoInicio: noInicio, viva: tipo, comodo: comodo);
         }
 
         /// <summary>Se a folha aberta (da dobradiça até a ponta) fica no pé de uma escada ou na chegada dela, naquele andar.</summary>
