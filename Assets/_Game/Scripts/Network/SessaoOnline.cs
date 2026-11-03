@@ -28,7 +28,10 @@ namespace ZombieCityCleaner.Network
         public string Codigo { get; private set; }
         public string Erro { get; private set; }
         public bool Local { get; private set; }
-        public int Jogadores => _sessao != null ? _sessao.PlayerCount : (_rede != null && _rede.IsServer ? _rede.ConnectedClientsIds.Count : 0);
+        // (no jogo local por IP, sem a sessão online, quem entrava via "0/4": a lista de conectados só existe no anfitrião;
+        // ali conta os jogadores que chegaram, 02/11/2026)
+        public int Jogadores => _sessao != null ? _sessao.PlayerCount
+            : _rede != null && _rede.IsServer ? _rede.ConnectedClientsIds.Count : Player.JogadorRede.Todos.Count;
 
         NetworkManager _rede;
         ISession _sessao;

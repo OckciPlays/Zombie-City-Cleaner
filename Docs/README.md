@@ -19,6 +19,8 @@ Esta pasta explica o que o jogo vai ser, o que já está pronto e como trabalhar
 | [10 – Os zumbis especiais](10-Zumbis-Especiais.md) | o Brutamonte, o Long e o Corredor (os números, as animações, como testar), a lanterna com pilhas e as luzes maiores da fogueira e da tocha |
 | [11 – O desgaste do carro e a gasolina](11-Desgaste-do-Carro.md) | os pneus que gastam e furam (um problema por vez), a vela, o radiador, as batidas, a gasolina e o galão; como testar pelo F1 |
 | [12 – O Dia 0](12-Dia-Zero.md) | o começo do jogo novo: a introdução na TV, a rua normal com os NPCs (os 5 doentes), as lojas e os 1.000 dólares, a porta do abrigo e os 5 anos depois; o F1 do Dia 0 |
+| [13 – Os sobreviventes e os acampamentos](13-Sobreviventes-e-Acampamentos.md) | os grupos de busca armados nas cidades (como aparecem, como lutam, o tiro na cabeça, a mochila de quem morre, a tela do saque) e os acampamentos (a casa fortificada, os guardas, a zona segura, os comerciantes, os preços, o estoque, a hostilidade) e o carro quebrado na estrada (os dois trocando o pneu, a desconfiança, a ajuda com os zumbis chegando, o pagamento); o F1 "Gente" |
+| [14 – O save](14-Save.md) | as três formas de salvar, o personagem de cada um (que vai para qualquer mundo), o mundo de quem hospeda, a lista do Continuar e o dinheiro do Dia 0 que agora fica |
 
 A referência técnica mais detalhada é o [`CLAUDE.md`](../CLAUDE.md) da raiz do repositório. Ele é escrito para o assistente de IA que trabalha no projeto, mas é um texto comum, em português, e descreve cada sistema em detalhe. Esta pasta é o resumo para gente.
 

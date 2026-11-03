@@ -76,6 +76,15 @@ namespace ZombieCityCleaner.Player
             if (!Aberta || nome.Length == 0) return;
             _escolha.nome = new Unity.Collections.FixedString32Bytes(nome);
             _rede.Criar(_escolha);
+            // o personagem escolhido no menu ganha o nome e a aparência e vai para o computador (02/11/2026, o save): na
+            // próxima partida, ele aparece na lista e entra direto
+            var p = Salvar.EscolhaDoPersonagem.Atual;
+            if (p != null && !MenuOnline.Bot)
+            {
+                p.Vestir(_escolha);
+                p.jogou = true;
+                p.Gravar();
+            }
             Fechar();
         }
 

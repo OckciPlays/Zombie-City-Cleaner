@@ -84,6 +84,7 @@ namespace ZombieCityCleaner.Vehicles
         // o sorteio do alarme, à parte do das peças (não muda o que sobrou nos outros carros)
         bool AlarmeDeFabrica(int carro)
         {
+            if (Quebrado(carro) != null) return false;   // o carro quebrado (os dois estão ali do lado) não tem alarme
             var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
             int semente = dados != null ? dados.Semente : 0;
             return new Sorteio(semente ^ 0x41A2, carro).Valor() < 1f / Mathf.Max(1, umAlarmeEmCada);
@@ -139,6 +140,18 @@ namespace ZombieCityCleaner.Vehicles
             int carro = CarroPerto(ponto, 25f, false);
             if (carro < 0) return false;
             Disparar(carro, "F1", true);
+            return true;
+        }
+
+        /// <summary>
+        /// No anfitrião: um raio caiu no ponto (o clima, 02/11/2026); o carro abandonado a até 5 m dispara o alarme, se tiver
+        /// alarme e bateria (como com um tiro).
+        /// </summary>
+        public bool RaioNoCarro(Vector3 ponto)
+        {
+            int carro = CarroPerto(ponto, 5f, false);
+            if (carro < 0) return false;
+            Disparar(carro, "raio");
             return true;
         }
 

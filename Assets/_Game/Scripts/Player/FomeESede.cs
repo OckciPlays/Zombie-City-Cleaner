@@ -52,6 +52,15 @@ namespace ZombieCityCleaner.Player
             Gravar();
         }
 
+        /// <summary>No anfitrião: a fome e a sede de um personagem salvo (02/11/2026, o save).</summary>
+        public void Definir(float fome, float sede)
+        {
+            if (!IsServer) return;
+            _fome = Mathf.Clamp(fome, 0f, 100f);
+            _sede = Mathf.Clamp(sede, 0f, 100f);
+            Gravar();
+        }
+
         void Update()
         {
             if (!IsSpawned || !IsServer) return;

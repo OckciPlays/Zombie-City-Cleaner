@@ -171,7 +171,10 @@ namespace ZombieCityCleaner.Music
             double agora = AudioSettings.dspTime;
             float dt = Mathf.Min(Time.unscaledDeltaTime, 0.1f);
             var eu = JogadorRede.Local;
-            bool emJogo = Ligada && _trilha != null && eu != null && eu.IsSpawned;
+            // no Dia 0 (o mundo normal, antes do apocalipse), a trilha do jogo não toca: a festa, o jornal na TV e a rua têm
+            // os sons deles; ela começa no mundo, depois da porta do abrigo (02/11/2026: tocava no começo do jornal)
+            var mundo = MundoDaPartida.Instancia;
+            bool emJogo = Ligada && _trilha != null && eu != null && eu.IsSpawned && !(mundo != null && mundo.NoDiaZero);
             if (!emJogo)
             {
                 if (_estado != Estado.Fora) Desligar(agora);
@@ -200,6 +203,7 @@ namespace ZombieCityCleaner.Music
             if (dia && !_eraDia) Amanhecer(agora);
             _eraDia = dia;
 
+            TempoNaMusica(agora, dia);   // o clima: o tornado avistado corta para a família dele (MaestroDaTrilha.Clima.cs)
             if (_estado == Estado.Silencio || _estado == Estado.Exploracao)
             {
                 if (_nivel >= 1 && agora >= _semPerigoAte)
@@ -280,9 +284,10 @@ namespace ZombieCityCleaner.Music
         // ------------------------------------------------------------------ a exploração
         void ComecarTrecho(double agora, bool dia)
         {
-            _familia = dia ? "neblina" : "noite";
-            var faixa = dia ? blocosNaNeblina : blocosNaNoite;
-            var seguinte = dia ? SeguinteNaNeblina : SeguinteNaNoite;
+            // a família: a de sempre (a neblina de dia, a noite à noite), ou a do clima (a tempestade, o tornado perto)
+            _familia = FamiliaDoTempo(dia);
+            var faixa = BlocosPeloNome(_familia);
+            var seguinte = SeguintePeloNome(_familia);
             int n = Random.Range(faixa.x, faixa.y + 1);
             var tipos = new List<string>();
             string ultimo = "entrada";
@@ -307,13 +312,13 @@ namespace ZombieCityCleaner.Music
             _blocoAtual = 0;
             _proximoBloco = agora + 0.15;
             _estado = Estado.Exploracao;
-            Anotar(agora, $"um trecho da {(dia ? "neblina" : "noite")} ({_blocosNoTrecho} blocos): {string.Join(" > ", _fila)}");
+            Anotar(agora, $"um trecho da {_familia} ({_blocosNoTrecho} blocos): {string.Join(" > ", _fila)}");
         }
 
         void SeguirTrecho(double agora)
         {
             if (agora < _proximoBloco - 0.4) return;
-            var familia = _familia == "neblina" ? _trilha.neblina : _trilha.noite;
+            var familia = FamiliaPeloNome(_familia);
             if (_fila.Count == 0)
             {
                 var faixa = SilencioCurto ? silencioCurto : silencioDepoisDoTrecho;
@@ -620,7 +625,7 @@ namespace ZombieCityCleaner.Music
             switch (_estado)
             {
                 case Estado.Exploracao:
-                    return $"{(_familia == "neblina" ? "Neblina" : "Noite")}: {_tipoAtual} ({_blocoAtual} de {_blocosNoTrecho})\n{perigo}";
+                    return $"{NomeDaFamilia(_familia)}: {_tipoAtual} ({_blocoAtual} de {_blocosNoTrecho})\n{perigo}";
                 case Estado.Perigo:
                     return $"PERIGO ({(_nivel >= 3 ? "a horda" : _nivel == 2 ? "a perseguição" : "a tensão")})\n{perigo}";
                 case Estado.Silencio:

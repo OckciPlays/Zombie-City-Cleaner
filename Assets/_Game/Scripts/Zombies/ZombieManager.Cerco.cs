@@ -18,14 +18,15 @@ namespace ZombieCityCleaner.Zombies
         readonly List<(Zumbi z, float rumo)> _noCerco = new List<(Zumbi, float)>();
         // a "assinatura" do grupo de cada jogador (quantos e quais): igual, os lugares ficam (senão o círculo girava a cada
         // 0,3 s, conforme eles andavam, e eles corriam atrás dos lugares)
-        readonly Dictionary<JogadorRede, long> _grupos = new Dictionary<JogadorRede, long>();
+        readonly Dictionary<IAlvoDeZumbi, long> _grupos = new Dictionary<IAlvoDeZumbi, long>();
 
         void OrganizarCerco()
         {
-            for (int k = 0; k < QuantosJogadores; k++)
+            // cada alvo (os jogadores e os sobreviventes: 02/11/2026) com o grupo dele
+            for (int k = 0; k < QuantosAlvos; k++)
             {
-                var jogador = Jogadores[k].jogador;
-                Vector3 c = Jogadores[k].pes;
+                var jogador = AlvoNo(k).quem;
+                Vector3 c = AlvoNo(k).pes;
                 _noCerco.Clear();
                 foreach (var z in _ativos)
                 {
@@ -78,10 +79,11 @@ namespace ZombieCityCleaner.Zombies
         }
 
         /// <summary>
-        /// Teste (F1): uma horda já vindo atrás do jogador, nascida junta num ponto (todos chegam pelo mesmo lado: o cerco
-        /// é que os espalha em volta). Eles foram "ameaçados": vêm mesmo de dia.
+        /// Uma horda já vindo atrás do alvo (o jogador, no teste do F1; o mecânico do carro quebrado, na troca do pneu),
+        /// nascida junta num ponto (todos chegam pelo mesmo lado: o cerco é que os espalha em volta). Eles foram
+        /// "ameaçados": vêm mesmo de dia.
         /// </summary>
-        public int CriarHordaPerseguindo(JogadorRede jogador, Vector3 centro, int quantidade)
+        public int CriarHordaPerseguindo(IAlvoDeZumbi jogador, Vector3 centro, int quantidade)
         {
             if (!IsServer || !IsSpawned || jogador == null) return 0;
             float agora = Time.time;

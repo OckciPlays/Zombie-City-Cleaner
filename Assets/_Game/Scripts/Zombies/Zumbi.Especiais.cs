@@ -141,6 +141,37 @@ namespace ZombieCityCleaner.Zombies
         float VelocidadeNoBote(float distancia, float normal) =>
             tipo == TipoDeZumbi.Corredor && distancia < A.corredor.distanciaDoBote ? A.corredor.velocidadeDoBote : normal;
 
+        /// <summary>
+        /// O ritmo de cada um (0,88 a 1,12 da velocidade). No bote do Corredor, nunca abaixo de 1: senão os mais lentos
+        /// davam o bote a ~4 m/s, abaixo do jogador correndo (4,2).
+        /// </summary>
+        float RitmoPara(float velocidade) =>
+            tipo == TipoDeZumbi.Corredor && A != null && velocidade >= A.corredor.velocidadeDoBote ? Mathf.Max(1f, _ritmo) : _ritmo;
+
+        /// <summary>
+        /// O Corredor persegue golpeando (02/11/2026, a pedido: "ele deveria correr e já vir bater na gente"). Antes ele ia
+        /// para o lugar dele no cerco (o anel de 1,8 m, fora do alcance), parava para bater e o dano saía 0,7 s depois: o
+        /// jogador já tinha saído do alcance. Agora, no bote, ele vai reto no alvo e, a 1,6 m, golpeia sem parar de correr;
+        /// o dano sai 0,2 s depois, se o alvo ainda estiver a até 2,1 m (em <see cref="Acertar"/>).
+        /// </summary>
+        void PerseguirGolpeando(float agora, Vector3 alvo, float distancia, float horizontal, float altura)
+        {
+            var c = A.corredor;
+            if (horizontal < c.alcanceDoGolpe && Mathf.Abs(altura) < 1.2f && agora >= _proximoGolpe && _pernas != 3)
+            {
+                _proximoGolpe = agora + c.intervaloDoGolpe;
+                _golpeEm = agora + c.atrasoDoDano;
+                Golpes++;
+                MostrarGolpe();
+            }
+            if (agora < _proximoCaminho) return;
+            bool noBote = distancia < c.distanciaDoBote;
+            // de longe, o cerco de sempre; no bote, reto no alvo (e chega mais perto antes de frear)
+            Ir(noBote ? alvo : DestinoNoCerco(alvo, distancia), VelocidadeNoBote(distancia, VelocidadeDePerseguir),
+                noBote ? 0.5f : _temCerco ? ParadaNoCerco : 0.9f);
+            _proximoCaminho = agora + (noBote ? 0.1f : 0.25f);
+        }
+
         /// <summary>O Corredor e o Brutamonte andam pelo "Andar dos especiais" ("Pernas" em 7): o do Oco, com a disparada a 3,8 m/s.</summary>
         bool CorreComoEspecial => tipo == TipoDeZumbi.Corredor || tipo == TipoDeZumbi.Brutamonte;
 

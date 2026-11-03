@@ -16,7 +16,7 @@ namespace ZombieCityCleaner.DiaZero
         /// <summary>As tosses: 0 a 2 de homem, 3 a 5 de mulher.</summary>
         public static AudioClip Tosse(bool mulher, int k)
         {
-            if (_tosses == null)
+            if (_tosses == null || _tosses[0] == null)
             {
                 _tosses = new AudioClip[6];
                 for (int i = 0; i < 6; i++) _tosses[i] = SomGerado.Clip($"Tosse {i}", GerarTosse(i >= 3, 1 + i % 3, 300 + i * 17));
@@ -24,73 +24,11 @@ namespace ZombieCityCleaner.DiaZero
             return _tosses[(mulher ? 3 : 0) + Mathf.Abs(k) % 3];
         }
 
-        public static AudioClip Cortador => _cortador ??= SomGerado.Clip("Cortador de grama", GerarMotor(31f, 2f, 0.55f, 77));
-        public static AudioClip MotorDoCarro => _motor ??= SomGerado.Clip("Carro passando", GerarMotor(24f, 2f, 0.35f, 91));
-        public static AudioClip Agua => _agua ??= SomGerado.Clip("Mangueira", GerarAgua(2f, 55));
-        static AudioClip _festa;
-        /// <summary>A festa na sala (a introdução): as vozes misturadas conversando e a música abafada (laço de 8 s).</summary>
-        public static AudioClip Festa => _festa ??= SomGerado.Clip("Festa", GerarFesta(8f, 31));
-
-        // a conversa de várias pessoas (cada voz, o pulso da garganta no tom dela passando por duas formantes que mudam a cada
-        // sílaba, com as pausas) e a música do som da sala, grave e abafada
-        static float[] GerarFesta(float segundos, int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(segundos * Taxa);
-            var s = new float[n];
-            float[,] vogais = { { 730, 1090 }, { 270, 2290 }, { 530, 1840 }, { 570, 840 }, { 300, 870 }, { 660, 1700 } };
-            for (int v = 0; v < 6; v++)
-            {
-                float f0 = v % 2 == 0 ? 105f + (float)r.NextDouble() * 40f : 185f + (float)r.NextDouble() * 50f;
-                float fase = 0f, vol = 0.5f + (float)r.NextDouble() * 0.5f;
-                int i = 0;
-                while (i < n)
-                {
-                    // uma frase: de 4 a 12 sílabas, e uma pausa
-                    int silabas = 4 + r.Next(9);
-                    for (int k = 0; k < silabas && i < n; k++)
-                    {
-                        int vo = r.Next(vogais.GetLength(0));
-                        var a = new Banda(vogais[vo, 0], 6f);
-                        var b = new Banda(vogais[vo, 1], 8f);
-                        int m = Mathf.RoundToInt((0.11f + (float)r.NextDouble() * 0.14f) * Taxa);
-                        float tom = f0 * (0.9f + (float)r.NextDouble() * 0.25f);
-                        for (int j = 0; j < m && i < n; j++, i++)
-                        {
-                            fase += tom / Taxa;
-                            float pulso = 2f * (fase - Mathf.Floor(fase)) - 1f;
-                            float env = Mathf.Sin(Mathf.PI * j / m);
-                            s[i] += (a.Passo(pulso) * 1.2f + b.Passo(pulso) * 0.7f) * env * vol * 0.5f;
-                        }
-                    }
-                    i += Mathf.RoundToInt((0.3f + (float)r.NextDouble() * 1.4f) * Taxa);
-                }
-            }
-            // a música: o grave e a batida (110 bpm), abafados pela parede
-            var grave = new Banda(90f, 1.2f);
-            float batida = 60f / 110f;
-            int[] notas = { 41, 41, 45, 38 };
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                int tempo = Mathf.FloorToInt(t / batida);
-                float dentro = t - tempo * batida;
-                float f = 440f * Mathf.Pow(2f, (notas[(tempo / 4) % notas.Length] - 69) / 12f);
-                float bumbo = Mathf.Sin(2f * Mathf.PI * (50f + 60f * Mathf.Exp(-dentro * 30f)) * dentro) * Mathf.Exp(-dentro * 9f);
-                float baixo = Mathf.Sin(2f * Mathf.PI * f * t) * (0.6f + 0.4f * Mathf.Exp(-dentro * 4f));
-                s[i] += grave.Passo(bumbo * 1.2f + baixo * 0.5f) * 0.9f;
-            }
-            int c = Taxa / 10;
-            for (int i = 0; i < c; i++)
-            {
-                float k = i / (float)c;
-                s[i] = s[i] * k + s[n - c + i] * (1f - k);
-            }
-            System.Array.Resize(ref s, n - c);
-            Normalizar(s, 0.5f);
-            return s;
-        }
-
+        // (o "!= null" da Unity, e não o "??=": no Editor, o clipe gerado no Play anterior volta destruído, e a mangueira dava
+        // erro no segundo Play)
+        public static AudioClip Cortador => _cortador != null ? _cortador : _cortador = SomGerado.Clip("Cortador de grama", GerarMotor(31f, 2f, 0.55f, 77));
+        public static AudioClip MotorDoCarro => _motor != null ? _motor : _motor = SomGerado.Clip("Carro passando", GerarMotor(24f, 2f, 0.35f, 91));
+        public static AudioClip Agua => _agua != null ? _agua : _agua = SomGerado.Clip("Mangueira", GerarAgua(2f, 55));
         // um filtro passa-banda (biquad, a forma do RBJ), estável para qualquer frequência abaixo da metade da taxa
         struct Banda
         {

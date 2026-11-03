@@ -761,6 +761,10 @@ MonoBehaviour:
       velocidadePerseguindo: 3.8
       velocidadeDoBote: 4.6
       distanciaDoBote: 4
+      alcanceDoGolpe: 1.6
+      atrasoDoDano: 0.2
+      alcanceDoDano: 2.1
+      intervaloDoGolpe: 1
       fatorAndando: 1.6
       tempoParaPetrificar: 5
       fracaoDeDia: 0.02
@@ -4974,6 +4978,27 @@ MonoBehaviour:
     intensidadeLuz: 1.35
     alturaLuz: 47
     neblinaDeAltura: 0.003
+  tempestadeDia:
+    neblina: {r: 0.4, g: 0.43, b: 0.45, a: 1}
+    ceu: {r: 0.3, g: 0.32, b: 0.35, a: 1}
+    horizonte: {r: 0.26, g: 0.28, b: 0.3, a: 1}
+    chao: {r: 0.17, g: 0.17, b: 0.17, a: 1}
+    luz: {r: 0.62, g: 0.66, b: 0.72, a: 1}
+    densidade: 0.05
+    intensidadeLuz: 0.25
+    alturaLuz: 55
+    neblinaDeAltura: 0.1
+  tempestadeNoite:
+    neblina: {r: 0.05, g: 0.06, b: 0.07, a: 1}
+    ceu: {r: 0.07, g: 0.085, b: 0.1, a: 1}
+    horizonte: {r: 0.05, g: 0.06, b: 0.07, a: 1}
+    chao: {r: 0.025, g: 0.028, b: 0.032, a: 1}
+    luz: {r: 0.4, g: 0.46, b: 0.56, a: 1}
+    densidade: 0.05
+    intensidadeLuz: 0.12
+    alturaLuz: 38
+    neblinaDeAltura: 0.07
+  corDoClarao: {r: 0.75, g: 0.8, b: 1, a: 1}
   alturaBase: 0.2
   queda: 0.32
   vento: {x: 0.6, y: 0.25}
@@ -4995,6 +5020,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.CicloDoDia
   ShowTopMostFoldoutHeaderGroup: 1
+  climaLigado: 1
+  ritmoDeTeste: 1
+  chanceDoTornado: 0.6
   horaInicial: 21
   minutosPorDia: 24
 --- !u!1 &2005601259
@@ -5022,6 +5050,11 @@ GameObject:
   - component: {fileID: 2005601276}
   - component: {fileID: 2005601275}
   - component: {fileID: 2005601277}
+  - component: {fileID: 2005601278}
+  - component: {fileID: 2005601279}
+  - component: {fileID: 2005601281}
+  - component: {fileID: 2005601280}
+  - component: {fileID: 2005601282}
   m_Layer: 0
   m_Name: Mundo
   m_TagString: Untagged
@@ -5586,7 +5619,7 @@ MonoBehaviour:
   raioDePerto: 8
   pecasPorQuadro: 12
   malhasPorQuadro: 2
---- !u!114 &2005601273
+--- !u!114 &2005601279
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5610,7 +5643,7 @@ MonoBehaviour:
   luzNaGaragem: 0.35
   luzEmbaixo: 0.08
   alcance: 5
---- !u!114 &2005601274
+--- !u!114 &2005601273
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5623,7 +5656,85 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.DiaZero.DiaZeroDaPartida
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &2005601274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d85c1f34d13a945408ca17dd7409d7cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Salvar.Salvamento
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &2005601275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12b272ada51dd4a4fbc30d1291998493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.MochilasNoChao
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &2005601276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a35a8bedfe3a1114e894f16bd674c0a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Sobreviventes.SobreviventesDoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  prefab: {fileID: 4018859423084373417, guid: 7e9e4e38100736e45b631915ead42d3b, type: 3}
+  ligado: 1
+  distanciaParaSair: 75
+  ouvidoDoTiro: 70
+--- !u!114 &2005601277
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 775b396e136c7c44ea035671f3b20fca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Sobreviventes.AcampamentosDoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  raioDaConstrucao: 230
+  chegarPerto: 35
+  sairLonge: 110
+--- !u!114 &2005601278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f21a4699a97c6b44ac54ee3d1720303, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Sobreviventes.CarrosQuebradosDoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  chegarPerto: 110
+  sairLonge: 170
+  duracaoDaTroca: 60
+  distanciaDoAviso: 25
+  pertoArmado: 6
+  raioDoVisual: 160
+--- !u!114 &2005601280
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5644,7 +5755,7 @@ MonoBehaviour:
   materialDoTaco: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
   materialDaLinha: {fileID: 2100000, guid: 9f31e4dfd4ce71a4ea275f4be8e1dd84, type: 2}
   distanciaMaxima: 3.5
---- !u!114 &2005601276
+--- !u!114 &2005601281
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5658,7 +5769,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.EstantesDoBunker
   ShowTopMostFoldoutHeaderGroup: 1
   distanciaMaxima: 3.5
---- !u!114 &2005601277
+--- !u!114 &2005601282
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

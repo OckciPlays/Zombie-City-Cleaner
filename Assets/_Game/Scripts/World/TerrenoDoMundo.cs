@@ -171,17 +171,25 @@ namespace ZombieCityCleaner.World
             _pedidos.Clear();
             if (_raiz != null)
             {
+                // (02/11/2026) os móveis das casas ficam de fora: a mobília cuida das malhas dela (MobiliaDaConstrucao). Os
+                // móveis de perto usam as malhas pintadas da MobiliaNovaDoMundo, guardadas para a próxima partida: apagadas
+                // aqui, quem saía da partida e começava outra no mesmo Play achava a casa sem móveis (e os modelos são
+                // assets: daí o "Destroying assets is not permitted" ao sair)
                 var malhas = new List<Mesh>();
                 foreach (var f in _raiz.GetComponentsInChildren<MeshFilter>(true))
                     // menos as dos móveis novos de perto (as do projeto e as pintadas que a MobiliaNovaDoMundo guarda para a
-                    // próxima partida: apagadas, na segunda partida os móveis de perto ficavam sem malha)
-                    if (f.sharedMesh != null && !MobiliaNovaDoMundo.Guarda(f.sharedMesh)) malhas.Add(f.sharedMesh);
+                    // próxima partida: apagadas, na segunda partida os móveis de perto ficavam sem malha) e as dos móveis
+                    // das construções (a MobiliaDaConstrucao apaga as dela)
+                    if (f.sharedMesh != null && !MobiliaNovaDoMundo.Guarda(f.sharedMesh) && !DaMobilia(f.transform)) malhas.Add(f.sharedMesh);
                 Destroy(_raiz.gameObject);
                 foreach (var m in malhas) Destroy(m);
             }
             _raiz = null;
             _dados = null;
         }
+
+        // dentro dos móveis de uma construção (um filho do objeto que tem a MobiliaDaConstrucao)
+        static bool DaMobilia(Transform t) => t.parent != null && t.parent.GetComponentInParent<MobiliaDaConstrucao>(true) != null;
 
         /// <summary>Pede blocos (e, se quiser, colisão) em volta de um ponto, até <see cref="Esquecer"/>.</summary>
         public void Pedir(object dono, Vector3 ponto, float raio, bool colisao)

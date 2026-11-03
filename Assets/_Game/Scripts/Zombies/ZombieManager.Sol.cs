@@ -30,8 +30,11 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         public bool Amanhecendo => !EDia && CicloDoDia.Hora >= 5f && CicloDoDia.Hora < 8f;
 
-        /// <summary>De dia ou amanhecendo: os zumbis só vagam e param onde o sol do dia não bate.</summary>
-        public bool ProtegerDoSol => EDia || Amanhecendo;
+        /// <summary>
+        /// De dia ou amanhecendo: os zumbis só vagam e param onde o sol do dia não bate. Com o céu fechado (a chuva e a
+        /// tempestade, World/CicloDoDia.Tempo.cs), o sol não petrifica e eles andam onde quiserem, como à noite: o dia perigoso.
+        /// </summary>
+        public bool ProtegerDoSol => (EDia || Amanhecendo) && Tempo.Sol > 0.05f;
 
         /// <summary>
         /// A direção do ponto para o sol do dia (a altura e o giro do sol de dia do AmbienteDoDia: o sol fica parado no céu
@@ -61,8 +64,8 @@ namespace ZombieCityCleaner.Zombies
             return floresta == null || !floresta.SobAsCopas(pes);
         }
 
-        /// <summary>De dia, este ponto (os pés) está no sol?</summary>
-        public bool NoSol(Vector3 pes) => EDia && Exposto(pes);
+        /// <summary>De dia, este ponto (os pés) está no sol? Com o céu fechado (a chuva), não há sol.</summary>
+        public bool NoSol(Vector3 pes) => EDia && Tempo.Sol > 0.02f && Exposto(pes);
 
         /// <summary>Tem teto em cima (até 30 m): dentro de uma casa, de um prédio, debaixo de um viaduto. O abrigo preferido.</summary>
         public bool Coberto(Vector3 pes) =>

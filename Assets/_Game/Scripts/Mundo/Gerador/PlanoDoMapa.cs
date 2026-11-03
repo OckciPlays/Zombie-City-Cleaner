@@ -8,7 +8,9 @@ namespace ZombieCityCleaner.Mundo
         CidadeGrande, CidadePequena, Vila, Fazenda, BaseMilitar, ComunidadeAliada, ComunidadeInimiga, Laboratorio, Cabana,
         Posto, Bunker, CasaDoLago, CasaDaFamilia, Barreira,
         /// <summary>O bunker da família (o Plano_Bunker.md da pasta de arte): o morro com o portão, fora da cidade dela.</summary>
-        BunkerDaFamilia
+        BunkerDaFamilia,
+        // os acampamentos dos sobreviventes (02/11/2026, a etapa 3: um por cidade grande e pequena, fora dela)
+        Acampamento,
     }
 
     public enum TipoDeBairro : byte { Centro, Comercio, Residencial }
@@ -119,6 +121,25 @@ namespace ZombieCityCleaner.Mundo
     }
 
     /// <summary>Uma linha do metrô: as estações em ordem, com o nome de cada uma (o bairro ou a cidade onde ela fica).</summary>
+    /// <summary>
+    /// Um acampamento de sobreviventes (02/11/2026, a pedido: "uma casa já existente com barricadas, fogueiras, guardas e
+    /// comerciantes"), na beira da primeira rodovia que sai de uma cidade grande ou pequena. O chão dele é aplainado na
+    /// <see cref="Altura"/>; a <see cref="Frente"/> olha para a rodovia (o portão). O resto (a casa, a cerca, as bancas e
+    /// as pessoas) sai da semente, em <c>Sobreviventes/PlantaDoAcampamento</c>.
+    /// </summary>
+    public sealed class Acampamento : Lugar
+    {
+        /// <summary>O índice dele em <see cref="PlanoDoMapa.Acampamentos"/>.</summary>
+        public int Indice;
+        /// <summary>A cidade dele (o índice em <see cref="PlanoDoMapa.Cidades"/>).</summary>
+        public int Cidade;
+        public bool Grande;
+        /// <summary>A altura do chão aplainado (m).</summary>
+        public float Altura;
+        /// <summary>Para onde o portão olha (a rodovia), no plano do mapa.</summary>
+        public Vector2 Frente;
+    }
+
     public sealed class LinhaDeMetro
     {
         public string Nome;
@@ -145,6 +166,8 @@ namespace ZombieCityCleaner.Mundo
         /// frente da planta, o portão, olha para a estrada de terra); null num mapa sem a cidade da família.
         /// </summary>
         public Lugar BunkerDaFamilia;
+        /// <summary>Os acampamentos dos sobreviventes (também em <see cref="Lugares"/>).</summary>
+        public readonly List<Acampamento> Acampamentos = new List<Acampamento>();
         public Lugar CasaDaFamilia, CasaDoLago, Laboratorio;
         /// <summary>O lote da casa da família (no traçado da cidade dela).</summary>
         public Lote LoteDaFamilia;

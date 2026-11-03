@@ -134,6 +134,22 @@ namespace ZombieCityCleaner.World
 
         void AoMudar(NetworkListEvent<ulong> e) => Sincronizar();
 
+        /// <summary>As portas e gavetas abertas (o save: Salvar/Salvamento).</summary>
+        public List<ulong> Copia()
+        {
+            var lista = new List<ulong>(_abertas.Count);
+            foreach (var k in _abertas) lista.Add(k);
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: as portas e gavetas abertas do mundo salvo.</summary>
+        public void Restaurar(List<ulong> abertas)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _abertas.Clear();
+            foreach (var k in abertas) _abertas.Add(k);
+        }
+
         // as partes de perto ficam como a lista da rede
         void Sincronizar()
         {
@@ -203,6 +219,10 @@ namespace ZombieCityCleaner.World
             if (!_moldes.TryGetValue(modelo, out var molde)) return null;
             var go = Instantiate(molde.objeto, pai, false);
             go.name = modelo;
+            // as camas: na casa da família, E dorme e salva (02/11/2026, o save)
+            if (modelo == "CamaCasal" || modelo == "CamaSolteiro" || modelo == "Beliche")
+                foreach (var c in go.GetComponentsInChildren<Collider>(true))
+                    if (c.GetComponent<Interagivel>() == null) c.gameObject.AddComponent<Salvar.CamaDeDormir>();
             var v = VariacaoDe(modelo, variacao);
             if (v == null) return go;
             var filtros = go.GetComponentsInChildren<MeshFilter>(true);
@@ -230,7 +250,8 @@ namespace ZombieCityCleaner.World
 
         Mesh Pintada(Mesh orig, int variacao, CatalogoDaMobilia.Variacao v)
         {
-            if (!_pintadas.TryGetValue((orig, variacao), out var pintada))
+            // (sem a malha guardada, ou apagada por alguém: pinta de novo)
+            if (!_pintadas.TryGetValue((orig, variacao), out var pintada) || pintada == null)
             {
                 pintada = CatalogoDaMobilia.Pintar(orig, v);
                 _pintadas[(orig, variacao)] = pintada;

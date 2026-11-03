@@ -199,7 +199,8 @@ namespace ZombieCityCleaner.Zombies
             }
             if (_noSol)
             {
-                MudarPedra(Pedra + dt / Mathf.Max(0.5f, TempoParaPetrificar));   // o Corredor, mais rápido
+                // o Corredor, mais rápido; no chuvisco (as nuvens tapando o sol), mais devagar
+                MudarPedra(Pedra + dt * World.Tempo.Sol / Mathf.Max(0.5f, TempoParaPetrificar));
                 if (Pedra >= 1f)
                 {
                     Petrificar();
@@ -216,7 +217,7 @@ namespace ZombieCityCleaner.Zombies
         {
             Pedra = Mathf.Clamp01(p);
             // a velocidade do agente acompanha a lentidão
-            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * _ritmo;
+            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * RitmoPara(_velocidadeBase);
         }
 
         void ComecarFuga(float agora)

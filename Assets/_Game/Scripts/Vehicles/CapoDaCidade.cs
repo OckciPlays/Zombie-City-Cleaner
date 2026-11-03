@@ -259,6 +259,8 @@ namespace ZombieCityCleaner.Vehicles
         public override string Dica(ArmaJogador quem)
         {
             if (!Aberto) return null;
+            string dono = pecas != null ? pecas.Ocupado(indice) : null;
+            if (dono != null) return dono;   // o carro quebrado com os donos ali
             var p = Pecas;
             bool vazio = true;
             for (int k = 0; k < PecasDoMotor.Quantas; k++) vazio &= !p.Tem(k);
@@ -267,6 +269,7 @@ namespace ZombieCityCleaner.Vehicles
 
         public override void Usar(ArmaJogador quem)
         {
+            if (pecas != null && pecas.Ocupado(indice) != null) return;
             var tela = quem.GetComponent<TelaDoCapo>();
             if (tela != null) tela.Abrir(this);
         }

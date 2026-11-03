@@ -29,7 +29,7 @@ namespace ZombieCityCleaner.Zombies
         bool _temCerco;
 
         /// <summary>Quem ele persegue (para o cerco).</summary>
-        internal JogadorRede Alvo => _alvo;
+        internal IAlvoDeZumbi Alvo => _alvo;
 
         /// <summary>Foi atacado (ou ouviu um tiro bem perto) há pouco: sai atrás do jogador mesmo no sol.</summary>
         internal bool Ameacado => Time.time < _ameacadoAte;

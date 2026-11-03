@@ -134,6 +134,7 @@ namespace ZombieCityCleaner.Mundo
 
             // 4. os postos, os lotes das cidades (fora das estradas e dos postos), a casa da família e os bunkers
             PorPostos(d, plano, nomes, s, q);
+            PorAcampamentos(d, plano);   // (02/11/2026: o sorteio é o deles, o resto do mapa não muda)
             foreach (var t in plano.Tracados) t.Lotear(plano);
             PorACasaDaFamilia(plano, s);
             PorOBunkerDaFamilia(d, plano);
@@ -594,6 +595,86 @@ namespace ZombieCityCleaner.Mundo
                 if (!Livre(e.Pontos[i]) || !Longe(e.Pontos[i], 650f)) continue;
                 Por(e, i);
             }
+        }
+
+        /// <summary>
+        /// Os acampamentos dos sobreviventes (02/11/2026, a etapa 3 do plano dos sobreviventes): um por cidade grande (45 m de
+        /// raio) e pequena (30 m), na beira da primeira rodovia que sai dela, mais longe que o posto (o ponto da rodovia em
+        /// q de 1,3 a 1,6), ao lado dela, no chão mais liso entre os lugares que cabem (fora das cidades, do lago, das
+        /// outras estradas e dos outros lugares). O portão olha para a rodovia. O chão fica plano na altura média dele
+        /// (<see cref="GeradorDoMundo.AlturaFinal"/>). O sorteio é o dele ("acampamentos").
+        /// </summary>
+        static void PorAcampamentos(DadosDoMundo d, PlanoDoMapa plano)
+        {
+            var s = Sorteio.Da(d.Semente, "acampamentos");
+            for (int ci = 0; ci < plano.Cidades.Count; ci++)
+            {
+                var c = plano.Cidades[ci];
+                if (c.Tipo == TipoDeLugar.Vila) continue;
+                bool grande = c.Tipo == TipoDeLugar.CidadeGrande;
+                float raio = grande ? 45f : 30f;
+                Vector2 melhor = default, frente = default;
+                float melhorNota = float.MaxValue;
+                foreach (var e in plano.Estradas)
+                {
+                    if (e.Tipo != TipoDeEstrada.Rodovia || e.Conector) continue;
+                    for (int i = 1; i + 1 < e.Pontos.Count; i++)
+                    {
+                        var p = e.Pontos[i];
+                        float q = c.Q(p.x, p.y);
+                        if (q < 1.3f || q > 1.6f) continue;
+                        var dir = (e.Pontos[i + 1] - e.Pontos[i - 1]).normalized;
+                        var normal = new Vector2(-dir.y, dir.x);
+                        foreach (float lado in new[] { 1f, -1f })
+                        {
+                            var centro = p + normal * (lado * (raio + 9f));
+                            if (!CabeOAcampamento(d, plano, centro, raio)) continue;
+                            float nota = Aspereza(d, centro, raio) + s.Entre(0f, 0.3f);
+                            if (nota >= melhorNota) continue;
+                            melhorNota = nota;
+                            melhor = centro;
+                            frente = -normal * lado;
+                        }
+                    }
+                }
+                if (melhorNota == float.MaxValue) continue;
+                // a altura do chão: a média do meio e de 8 pontos a 60% do raio (o que menos corta e aterra)
+                float soma = GeradorDoMundo.AlturaComLago(d, melhor.x, melhor.y);
+                for (int a = 0; a < 8; a++)
+                {
+                    var dir = Direcao(a * 45f);
+                    soma += GeradorDoMundo.AlturaComLago(d, melhor.x + dir.x * raio * 0.6f, melhor.y + dir.y * raio * 0.6f);
+                }
+                var acampamento = new Acampamento
+                {
+                    Tipo = TipoDeLugar.Acampamento, Nome = $"Acampamento de {c.Nome}", Centro = new Vector2(Mathf.Round(melhor.x), Mathf.Round(melhor.y)),
+                    Raio = raio, Giro = Mathf.Atan2(frente.y, frente.x) * Mathf.Rad2Deg, Indice = plano.Acampamentos.Count, Cidade = ci,
+                    Grande = grande, Altura = soma / 9f, Frente = frente,
+                };
+                plano.Lugares.Add(acampamento);
+                plano.Acampamentos.Add(acampamento);
+            }
+        }
+
+        // o acampamento cabe ali: dentro do mapa, fora do lago, longe das cidades (a beira delas), dos outros lugares e das
+        // estradas (a dele fica a raio + 9 m do meio)
+        static bool CabeOAcampamento(DadosDoMundo d, PlanoDoMapa plano, Vector2 c, float raio)
+        {
+            float limite = d.Metade - d.FaixaDaSerra * 0.9f - raio;
+            if (Mathf.Abs(c.x) > limite || Mathf.Abs(c.y) > limite) return false;
+            if (d.Lago != null && d.Lago.Q(c.x, c.y) < 1.3f + raio / d.Lago.Raio) return false;
+            foreach (var l in plano.Lugares)
+            {
+                float minimo = l is Cidade ? l.Raio * 1.3f + raio : l.Raio + raio + 15f;
+                if ((l.Centro - c).sqrMagnitude < minimo * minimo) return false;
+            }
+            foreach (var e in plano.Estradas)
+            {
+                if (e.Conector) continue;
+                for (int i = 0; i + 1 < e.Pontos.Count; i++)
+                    if (RedeDeEstradas.DistanciaAoSegmento(c, e.Pontos[i], e.Pontos[i + 1], out _) < raio + 5f) return false;
+            }
+            return true;
         }
 
         // num bairro de casas de uma cidade pequena (ou de uma vila, sem cidade pequena): dois lotes de casa vizinhos, numa

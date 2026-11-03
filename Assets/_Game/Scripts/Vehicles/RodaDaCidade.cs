@@ -22,6 +22,8 @@ namespace ZombieCityCleaner.Vehicles
 
         public override string Dica(ArmaJogador quem)
         {
+            string dono = capo != null && Pecas != null ? Pecas.Ocupado(capo.indice) : null;
+            if (dono != null) return dono;   // o carro quebrado com os donos ali
             if (!Pode(quem)) return null;
             var inv = quem.Inventario;
             var pneus = capo.Pneus;
@@ -71,6 +73,7 @@ namespace ZombieCityCleaner.Vehicles
         bool Pode(ArmaJogador quem)
         {
             if (capo == null || Pecas == null || !Pecas.IsSpawned || quem == null || quem.Inventario == null) return false;
+            if (Pecas.Ocupado(capo.indice) != null) return false;
             var p = quem.GetComponent<PassageiroDoCarro>();
             return p == null || !p.NoCarro;
         }

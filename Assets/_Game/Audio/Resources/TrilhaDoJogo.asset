@@ -154,6 +154,108 @@ MonoBehaviour:
       clipe: {fileID: 8300000, guid: ca46fe4c9a7d28d459952a01291b4069, type: 3}
     - tipo: vidro
       clipe: {fileID: 8300000, guid: 0c277f41eadbfc34d9bb3697e02fddcd, type: 3}
+  tempestade:
+    bpm: 52
+    comprimento: 18.461538
+    blocos:
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: 7978e78e4c556f246892d60582a8ac29, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: 61fe5ea02107b6c498af96c98b234b0e, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: f32d23fe72b87794cabb7da70bc8ab8d, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: dcd7816128ba3d94a8a2f788fc4a0e42, type: 3}
+    - tipo: cordas
+      clipe: {fileID: 8300000, guid: ffd1570cab5fcb94e9a97bdca60131ca, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: 99fcff57fe3d2b54aaf5ee3c9a3aa7ad, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: 498ff19a306c07b40abe8772d52a1fb4, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: 053c6eba8abdaf144b29dfe4218b0271, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: f07eb6c665d7a6f4ab0ef3716f91fb35, type: 3}
+    - tipo: coro
+      clipe: {fileID: 8300000, guid: f1decbd63755f72439f2ec31b32237dd, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: c753d9b69d78ace479185a42ecbca247, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 7a29ad4c06e27f340a6054e22e89c74b, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: d0430eef72c5d344d84b3bc3671692ef, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: df9bf06f14cda6e4ca329cc74fb6b781, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: 40fb12cdee67f1d459d88327058e399c, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: c6f5a86956c3e664a8d418ac4531c5f8, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: 69ac5647671cb834fb74c460b8b5473d, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: bfe5eb73e9fa60e47979181298863092, type: 3}
+    - tipo: ostinato
+      clipe: {fileID: 8300000, guid: 6f7f4120c7cacda40b1b607370c9d3ba, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: b68026085dee9f342a0925d5f77e97d6, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 0d11a855d2e73024da5ebb9a9b3218dd, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 968f459ddd8ed2d4c924b150ad1fecbe, type: 3}
+    - tipo: tambores
+      clipe: {fileID: 8300000, guid: 30372c6d0bbf4564c91a125a44a7b0f6, type: 3}
+    - tipo: tambores
+      clipe: {fileID: 8300000, guid: 2007f7ec3ef7ef241aeda7f90360d791, type: 3}
+    - tipo: tambores
+      clipe: {fileID: 8300000, guid: 1570ad5be5635dd409d7705668020da2, type: 3}
+    - tipo: tambores
+      clipe: {fileID: 8300000, guid: 838b5aedd3d815448a2bfb6b87ef4791, type: 3}
+    - tipo: tambores
+      clipe: {fileID: 8300000, guid: 47b0806ef835dd74b95d4921df9298f3, type: 3}
+  tornado:
+    bpm: 66
+    comprimento: 14.545455
+    blocos:
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 8611b9a699c609f47b664914927d42c6, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: a0287e58cbbe57f429fa4c81dbfafe3b, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: c181195d28f003d4ea551799f34cbaf8, type: 3}
+    - tipo: coracao
+      clipe: {fileID: 8300000, guid: 473e20b08e705d44fa7e891f9494feda, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: bf769173946c8d44d9da6a23cb8afef7, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 35f9f43226faa9d42ad17cd9d727e0b2, type: 3}
+    - tipo: entrada
+      clipe: {fileID: 8300000, guid: 6b36de5cfb27a2e4da4ea1fa2b881411, type: 3}
+    - tipo: espiral
+      clipe: {fileID: 8300000, guid: 723aa4be7a606a14e83d4bfe423a7e01, type: 3}
+    - tipo: espiral
+      clipe: {fileID: 8300000, guid: d7a49bbcb1b6de44dae5e986cf05b424, type: 3}
+    - tipo: espiral
+      clipe: {fileID: 8300000, guid: a79a5fdc0951392449030cc8c8f0bc5c, type: 3}
+    - tipo: espiral
+      clipe: {fileID: 8300000, guid: f61a109acbcb22b45b2d25f683af02d4, type: 3}
+    - tipo: lamento
+      clipe: {fileID: 8300000, guid: dea86e397e7d13845acf270c5acc9938, type: 3}
+    - tipo: lamento
+      clipe: {fileID: 8300000, guid: e0ab11e23c1adcc4faf6dd278b4128cf, type: 3}
+    - tipo: lamento
+      clipe: {fileID: 8300000, guid: 6b3f8143e5daa5e409d6061f00c56439, type: 3}
+    - tipo: lamento
+      clipe: {fileID: 8300000, guid: e0202fe90b9b93e44a131fcd20772c5a, type: 3}
+    - tipo: metal
+      clipe: {fileID: 8300000, guid: 10f7cc2945031b4469ae58ee7fc76cc1, type: 3}
+    - tipo: metal
+      clipe: {fileID: 8300000, guid: 687c3cfaaac56ca428202707a01d8ffa, type: 3}
+    - tipo: metal
+      clipe: {fileID: 8300000, guid: 1761bb9d6622244418e9d3e2b6df2536, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 6a7cfdb7815eb114c828135a4df9954f, type: 3}
+    - tipo: saida
+      clipe: {fileID: 8300000, guid: 5b0f343f67ed741428d075848b572300, type: 3}
   bpmDoPerigo: 88
   comprimentoDoPerigo: 10.909091
   perigo:

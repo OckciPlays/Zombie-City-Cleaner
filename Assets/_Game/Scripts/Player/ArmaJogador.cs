@@ -436,6 +436,20 @@ namespace ZombieCityCleaner.Player
                 // uma esfera que já começa encostada não tem ponto: o mais perto do olho, no colisor
                 Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(cam.position) : hit.point;
                 var hitbox = hit.collider.GetComponent<Hitbox>();
+                // um sobrevivente: o golpe na cabeça vale mais (sem matar na hora), nos membros vale metade
+                var parte = hitbox == null ? hit.collider.GetComponent<Sobreviventes.ParteDoSobrevivente>() : null;
+                if (hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada && (parte == null || parte.sobrevivente == null || parte.sobrevivente.Morto)) continue;   // os corpos no chão
+                if (parte != null && parte.sobrevivente != null)
+                {
+                    Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
+                    Sangue.Respingo(ponto, -cam.forward);
+                    _marcaAte = Time.time + 0.18f;
+                    _marcaNaCabeca = parte.regiao == Sobreviventes.RegiaoDoSobrevivente.Cabeca;
+                    rede.AcertarSobrevivente(parte.sobrevivente, parte.regiao, dano, ponto, false);
+                    rede.AnunciarPancada(ponto, true);
+                    if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
+                    return;
+                }
                 if (hitbox != null && hitbox.zumbi != null)
                 {
                     if (hitbox.zumbi.Morto) continue;
@@ -517,6 +531,7 @@ namespace ZombieCityCleaner.Player
             Physics.SyncTransforms();
             var impactos = new JogadorRede.Impacto[d.chumbos];
             _carne.Clear();
+            _gente.Clear();
             for (int k = 0; k < d.chumbos; k++)
             {
                 // na espingarda um chumbo sai bem no meio da mira: é a parte que ele pega que conta (veja MandarAcertos)
@@ -527,8 +542,47 @@ namespace ZombieCityCleaner.Player
             }
             _chumboDoCentro = false;
             MandarAcertos(d);
+            MandarAcertosNaGente(d);
             rede.AnunciarTiro(Atual, impactos);
         }
+
+        /// <summary>Uma parte de um sobrevivente que o tiro (ou um chumbo) pegou.</summary>
+        struct NaGente
+        {
+            public Sobreviventes.ParteDoSobrevivente parte;
+            public Vector3 ponto;
+            public float distancia;
+        }
+
+        readonly System.Collections.Generic.List<NaGente> _gente = new System.Collections.Generic.List<NaGente>();
+
+        /// <summary>
+        /// Os acertos nos sobreviventes: um por pessoa a cada disparo (na espingarda, os chumbos contam juntos), na melhor
+        /// parte que foi pega (a cabeça, depois o tronco, depois um membro), com o dano da distância mais perto.
+        /// </summary>
+        void MandarAcertosNaGente(DadosDaArma d)
+        {
+            for (int i = 0; i < _gente.Count; i++)
+            {
+                var s = _gente[i].parte.sobrevivente;
+                bool repetido = false;
+                for (int k = 0; k < i && !repetido; k++) repetido = _gente[k].parte.sobrevivente == s;
+                if (repetido) continue;
+                int melhor = i;
+                float perto = _gente[i].distancia;
+                for (int k = i; k < _gente.Count; k++)
+                {
+                    if (_gente[k].parte.sobrevivente != s) continue;
+                    perto = Mathf.Min(perto, _gente[k].distancia);
+                    if (Peso(_gente[k].parte.regiao) > Peso(_gente[melhor].parte.regiao)) melhor = k;
+                }
+                // o dano da distância (na espingarda, o do tiro inteiro, como nos zumbis)
+                rede.AcertarSobrevivente(s, _gente[melhor].parte.regiao, Armas.Dano(d, perto), _gente[melhor].ponto, true);
+            }
+        }
+
+        static int Peso(Sobreviventes.RegiaoDoSobrevivente r) =>
+            r == Sobreviventes.RegiaoDoSobrevivente.Cabeca ? 2 : r == Sobreviventes.RegiaoDoSobrevivente.Tronco ? 1 : 0;
 
         /// <summary>Um pedaço de zumbi que o tiro (ou um chumbo) pegou, e a que distância do olho.</summary>
         struct NaCarne
@@ -646,6 +700,19 @@ namespace ZombieCityCleaner.Player
                 if (hit.collider == _corpo) continue;
                 var hitbox = hit.collider.GetComponent<Hitbox>();
                 if (hitbox != null && hitbox == encostada) continue;
+                // um sobrevivente: o sangue aqui, a marca na mira, e o acerto vai ao anfitrião no fim do disparo
+                var parte = hitbox == null ? hit.collider.GetComponent<Sobreviventes.ParteDoSobrevivente>() : null;
+                if (hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada && (parte == null || parte.sobrevivente == null || parte.sobrevivente.Morto)) continue;   // os corpos no chão
+                if (parte != null && parte.sobrevivente != null)
+                {
+                    Sangue.Respingo(hit.point, hit.normal);
+                    _gente.Add(new NaGente { parte = parte, ponto = hit.point, distancia = hit.distance });
+                    _marcaAte = Time.time + 0.18f;
+                    _marcaNaCabeca |= parte.regiao == Sobreviventes.RegiaoDoSobrevivente.Cabeca;
+                    impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
+                    parou = true;
+                    break;
+                }
                 if (hitbox != null && hitbox.zumbi != null)
                 {
                     int membro = Membros.Limbo(hitbox.membro);
@@ -796,7 +863,9 @@ namespace ZombieCityCleaner.Player
                 var alvo = hit.collider.GetComponent<Interagivel>();
                 if (alvo == null)
                 {
-                    if (hit.collider.isTrigger || DeDentro(i, n, hit.point, null)) continue;
+                    // as partes dos sobreviventes (e os corpos no chão) não tapam a mochila do lado, nem o móvel o item
+                    // do saque dentro dele
+                    if (hit.collider.isTrigger || hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada || DeDentro(i, n, hit.point, null)) continue;
                     return;
                 }
                 string dica = alvo.Dica(this);

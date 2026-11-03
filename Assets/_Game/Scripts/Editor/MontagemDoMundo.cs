@@ -106,6 +106,9 @@ namespace ZombieCityCleaner.EditorTools
             }
             mundo.AddComponent<TelaDeCarregamento>();
             mundo.AddComponent<MapaDoMundo>();
+            mundo.AddComponent<Salvar.Salvamento>();   // o save (02/11/2026)
+            // os grupos de sobreviventes e as mochilas no chão (02/11/2026; o prefab sai do menu "Montar os sobreviventes")
+            MontagemDosSobreviventes.PorNoMundo(mundo, AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDosSobreviventes.Prefab));
 
             // a beira das estradas (M4): os modelos do Blender, a paleta e o material das letras das placas
             var objetos = mundo.AddComponent<ObjetosDoMundo>();
@@ -244,7 +247,7 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>
         /// As portas que abrem das casas (o Plano_Portas.md da pasta de arte): a <see cref="PortasDoMundo"/> no objeto "Mundo"
-        /// e a camada "Portas" (a 12) nas camadas do projeto.
+        /// e a camada "Portas" (a 13) nas camadas do projeto.
         /// </summary>
         public static PortasDoMundo PorAsPortas(GameObject mundo)
         {

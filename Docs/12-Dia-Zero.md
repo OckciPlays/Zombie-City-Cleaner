@@ -25,6 +25,12 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   mesmo tempo** (quem entrar no meio vê dali em diante). Não mostra os amigos (cada um tem o seu personagem). Tem a trilha
   estilo cinema (sem voz) e o texto contando a história nas faixas pretas. **Enter ou Espaço pula** (só para quem
   apertou).
+  - No hospital, os doentes ficam recostados nas camas. A cama de hospital dos móveis tem o encosto montado ao contrário
+    (por cima de quem deita); na introdução, ele é virado para o lado certo. Nas enfermarias do mundo, o modelo ainda
+    está com o defeito.
+  - No corredor do hospital, quem ataca o médico é **o Oco** (o zumbi do jogo, com as animações dele e sem a voz).
+- **A trilha do jogo não toca no Dia 0:** só a festa, os sons da rua e a trilha da introdução. Ela começa no mundo,
+  depois da porta (antes, ela entrava uns segundos depois de nascer, bem no começo do jornal).
 - **A rua é liberada** quando todos acabaram de ver (ou pularam) o jornal. Depois disso, E na TV mostra o jornal de novo,
   só para quem apertou. O F1 tem "Liberar a rua (sem a TV)".
 - **A rua:** 10 casas (a nossa é a segunda do lado norte), o mercado, a farmácia, a loja de armas, a de ferragens e

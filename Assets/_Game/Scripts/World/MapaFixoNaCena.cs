@@ -585,7 +585,7 @@ namespace ZombieCityCleaner.World
             float giro = Mathf.Sin(t * 0.031f) * 35f + Mathf.Sin(t * 0.087f + 1.3f) * 12f;
             var dir = (Vector2)(Quaternion.Euler(0f, 0f, giro) * new Vector2(0.92f, 0.38f).normalized);
             float rajada = Mathf.Clamp(Mathf.Sin(t * 0.37f) * 0.6f + Mathf.Sin(t * 0.83f + 1.1f) * 0.4f + Mathf.Sin(t * 2.3f) * 0.15f, -1f, 1f);
-            Shader.SetGlobalVector(VentoId, new Vector4(dir.x, dir.y, 0.22f * (1f + 0.35f * rajada), rajada));
+            Shader.SetGlobalVector(VentoId, new Vector4(dir.x, dir.y, 0.22f * (1f + 0.35f * rajada) * (1f + 2.2f * Tempo.Vento), rajada));
 
             // as listas são refeitas quando a câmera anda 6 m, a cada segundo ou quando chegam plantas novas
             if ((c - _ondeJuntou).sqrMagnitude > 36f || Time.time - _juntouEm > 1f)

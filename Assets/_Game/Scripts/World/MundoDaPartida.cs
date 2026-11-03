@@ -256,7 +256,8 @@ namespace ZombieCityCleaner.World
                 CriarJogador(NetworkManager.LocalClientId);
                 foreach (var (cliente, resumo) in _esperando) Aceitar(cliente, resumo);
                 _esperando.Clear();
-                CriarCarro();
+                // o mundo do save tem os carros dele (e a chave está onde ficou): o Salvamento põe (02/11/2026)
+                if (!Salvar.Salvamento.Carregando) CriarCarro();
             }
             else ProntoRpc(Dados.Resumo);
             FicouPronto?.Invoke(Dados);

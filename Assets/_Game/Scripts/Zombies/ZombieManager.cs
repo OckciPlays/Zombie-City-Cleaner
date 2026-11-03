@@ -40,7 +40,10 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         internal struct Alvo
         {
+            /// <summary>O jogador (null num sobrevivente).</summary>
             public JogadorRede jogador;
+            /// <summary>Quem é, para o zumbi perseguir e morder: o jogador ou o sobrevivente (02/11/2026).</summary>
+            public IAlvoDeZumbi quem;
             public Vector3 pes, peito, olho, olhar;
             public bool lanterna, correndo, iluminado;
             /// <summary>
@@ -229,7 +232,31 @@ namespace ZombieCityCleaner.Zombies
                 Jogadores[n++].exposto = ProtegerDoSol && Exposto(j.transform.position);
             }
             QuantosJogadores = n;
+            // os sobreviventes (02/11/2026): os zumbis os percebem, perseguem e mordem como aos jogadores
+            int k = 0;
+            foreach (var o in OutrosAlvos)
+            {
+                if (o == null || !o.AlvoValido || k == Npcs.Length) continue;
+                Vector3 pes = o.transform.position;
+                Npcs[k++] = new Alvo
+                {
+                    quem = o, pes = pes, peito = pes + Vector3.up * 1.3f, olho = pes + Vector3.up * 1.62f, olhar = o.transform.forward,
+                    lanterna = o.LuzLigada, correndo = o.VelocidadeNoChao > 3f, iluminado = noite && PosteDeLuz.Ilumina(pes),
+                    exposto = ProtegerDoSol && Exposto(pes), aumento = 1f,
+                };
+            }
+            QuantosNpcs = k;
         }
+
+        /// <summary>Os alvos que não são jogadores (os sobreviventes se põem aqui no anfitrião, e saem ao morrer ou sumir).</summary>
+        public static readonly List<IOutroAlvoDeZumbi> OutrosAlvos = new List<IOutroAlvoDeZumbi>();
+        /// <summary>Os sobreviventes deste quadro, como os jogadores (<see cref="Jogadores"/>).</summary>
+        internal readonly Alvo[] Npcs = new Alvo[32];
+        internal int QuantosNpcs;
+        /// <summary>Todos os alvos deste quadro: os jogadores e, depois, os sobreviventes.</summary>
+        internal int QuantosAlvos => QuantosJogadores + QuantosNpcs;
+        /// <summary>O alvo de número i (os jogadores primeiro, depois os sobreviventes).</summary>
+        internal ref Alvo AlvoNo(int i) => ref (i < QuantosJogadores ? ref Jogadores[i] : ref Npcs[i - QuantosJogadores]);
 
         static Alvo AlvoDe(JogadorRede j, bool noite, Vector3 olhar)
         {
@@ -237,6 +264,7 @@ namespace ZombieCityCleaner.Zombies
             var a = new Alvo
             {
                 jogador = j,
+                quem = j,
                 pes = pes,
                 peito = pes + Vector3.up * 1.3f,
                 olho = pes + Vector3.up * 1.62f,
@@ -321,7 +349,7 @@ namespace ZombieCityCleaner.Zombies
         /// atrasada, então a conferência é tolerante (é co-op): o zumbi tem que existir (mesmo Id e geração), estar
         /// vivo e perto do ponto do acerto.
         /// </summary>
-        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, JogadorRede autor, float corte = 1f)
+        public static void Acertar(int id, byte geracao, RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, bool arremesso, IAlvoDeZumbi autor, float corte = 1f)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
@@ -334,16 +362,17 @@ namespace ZombieCityCleaner.Zombies
             z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 1000f), ponto, direcao, arremesso, autor, Time.time, Mathf.Clamp(corte, 0f, 4f));
         }
 
-        internal void Golpear(JogadorRede alvo, float dano, Vector3 de)
+        internal void Golpear(IAlvoDeZumbi alvo, float dano, Vector3 de)
         {
-            if (!SemDano && alvo != null && alvo.Vida != null) alvo.Vida.Dano(dano, de);
+            if (!SemDano && alvo != null && alvo.AlvoValido) alvo.LevarGolpe(dano, de);
         }
 
         /// <summary>
-        /// Um tiro, no anfitrião: quem está perto vai atrás de quem atirou; quem está mais longe vai ver o que foi. 'raio': até
-        /// onde o barulho chega (m; o do tiro, sem ele; o pé de cabra arrombando uma porta, menos).
+        /// Um tiro, no anfitrião: quem está perto vai atrás de quem atirou (o jogador ou o sobrevivente); quem está mais longe
+        /// vai ver o que foi. 'raio': até onde o barulho chega (m; o do tiro, sem ele; o pé de cabra arrombando uma porta,
+        /// menos).
         /// </summary>
-        public static void Barulho(Vector3 ponto, JogadorRede autor, float raio = -1f)
+        public static void Barulho(Vector3 ponto, IAlvoDeZumbi autor, float raio = -1f)
         {
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer) return;
@@ -351,7 +380,10 @@ namespace ZombieCityCleaner.Zombies
             // de dia e ao amanhecer, o tiro só tira da sombra quem está bem perto (5 m; à noite, 12 m)
             float direto = m.ProtegerDoSol ? m.ajustes.tiroAmeacaDeDia : m.ajustes.tiroChamaDireto;
             if (raio < 0f) raio = m.ajustes.barulhoDoTiro;
-            float raio2 = raio * raio, direto2 = Mathf.Min(direto, raio) * Mathf.Min(direto, raio);
+            // a chuva abafa o barulho (World/CicloDoDia.Tempo.cs): na tempestade, ele chega a pouco mais da metade
+            float ouvido = Tempo.Ouvido, alcance = raio * ouvido;
+            direto = Mathf.Min(direto, raio) * ouvido;
+            float raio2 = alcance * alcance, direto2 = direto * direto;
             foreach (var z in m._ativos)
             {
                 if (z.NivelAtual == Zumbi.Nivel.Longe || z.Morto || z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) continue;
@@ -404,6 +436,8 @@ namespace ZombieCityCleaner.Zombies
                     float doVideo = olhoDoVideo.HasValue ? Vector3.Distance(olhoDoVideo.Value, p) / alcanceDoVideo : float.MaxValue;
                     float menor = doVideo;
                     for (int k = 0; k < QuantosJogadores; k++) menor = Mathf.Min(menor, Distancia(Jogadores[k], p));
+                    // os sobreviventes também contam: o zumbi perto de um deles pensa e percebe (02/11/2026)
+                    for (int k = 0; k < QuantosNpcs; k++) menor = Mathf.Min(menor, Vector3.Distance(Npcs[k].pes, p));
                     var nivel = menor < float.MaxValue ? NivelPara(menor, z.NivelAtual) : Zumbi.Nivel.Longe;
                     if (z.Engajado || z.SempreDePerto(menor)) nivel = Zumbi.Nivel.Perto;
                     z.MudarNivelNoServidor(nivel);
@@ -547,6 +581,35 @@ namespace ZombieCityCleaner.Zombies
             if (areasLivres != null)
                 foreach (var a in areasLivres)
                     if ((p - a.centro).sqrMagnitude < a.raio * a.raio) return true;
+            return NaZonaSegura(p);
+        }
+
+        /// <summary>
+        /// As zonas seguras dos acampamentos dos sobreviventes (02/11/2026, a pedido: "zona segura, zumbi não nasce lá
+        /// dentro"; postas pelo <c>AcampamentosDoMundo</c> no anfitrião): zumbi não nasce, não vaga e não persegue ninguém
+        /// lá dentro (desiste na beira, como no sol), e o barulho de dentro só o leva até a beira.
+        /// </summary>
+        public static readonly List<AreaLivre> ZonasSeguras = new List<AreaLivre>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ZerarAsZonas() => ZonasSeguras.Clear();
+
+        /// <summary>O ponto está numa zona segura (no plano: a altura não conta).</summary>
+        public static bool NaZonaSegura(Vector3 p) => ZonaSeguraEm(p, out _);
+
+        /// <summary>A zona segura que contém o ponto (no plano).</summary>
+        public static bool ZonaSeguraEm(Vector3 p, out AreaLivre zona)
+        {
+            foreach (var z in ZonasSeguras)
+            {
+                float dx = p.x - z.centro.x, dz = p.z - z.centro.z;
+                if (dx * dx + dz * dz < z.raio * z.raio)
+                {
+                    zona = z;
+                    return true;
+                }
+            }
+            zona = default;
             return false;
         }
 

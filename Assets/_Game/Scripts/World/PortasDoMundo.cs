@@ -23,8 +23,11 @@ namespace ZombieCityCleaner.World
     /// </summary>
     public partial class PortasDoMundo : NetworkBehaviour
     {
-        /// <summary>A camada das folhas: bate no jogador, no tiro e na visão dos zumbis, e fica fora do NavMesh (camadas 0 e 1).</summary>
-        public const int Camada = 12;
+        /// <summary>
+        /// A camada das folhas: bate no jogador, no tiro e na visão dos zumbis, e fica fora do NavMesh (camadas 0 e 1). A 13: a
+        /// 12 é a dos sobreviventes (<see cref="Sobreviventes.Sobrevivente.Camada"/>, que veio da develop junto).
+        /// </summary>
+        public const int Camada = 13;
 
         [Tooltip("Folhas postas por quadro (as de uma casa entram aos poucos).")]
         [Min(1)] public int portasPorQuadro = 12;

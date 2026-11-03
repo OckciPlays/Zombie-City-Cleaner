@@ -710,7 +710,8 @@ namespace ZombieCityCleaner.World
             float giro = Mathf.Sin(t * 0.031f) * 35f + Mathf.Sin(t * 0.087f + 1.3f) * 12f;
             var dir = (Vector2)(Quaternion.Euler(0f, 0f, giro) * direcaoDoVento.normalized);
             float rajada = Mathf.Clamp(Mathf.Sin(t * 0.37f) * 0.6f + Mathf.Sin(t * 0.83f + 1.1f) * 0.4f + Mathf.Sin(t * 2.3f) * 0.15f, -1f, 1f);
-            Shader.SetGlobalVector(VentoId, new Vector4(dir.x, dir.y, forcaDoVento * (1f + 0.35f * rajada), rajada));
+            // o vento do tempo (a tempestade, o tornado: World/CicloDoDia.Tempo.cs) balança bem mais
+            Shader.SetGlobalVector(VentoId, new Vector4(dir.x, dir.y, forcaDoVento * (1f + 0.35f * rajada) * (1f + 2.2f * Tempo.Vento), rajada));
         }
     }
 }

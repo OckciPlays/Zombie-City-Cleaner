@@ -77,8 +77,11 @@ Não mata: ajuda as hordas.
 ## 3. O Corredor
 
 - **Vida:** 60; cada braço e perna, 30. É frágil, com o mesmo desmembramento dos Ocos.
-- **Velocidade:** corre atrás a 3,8 m/s e dá o bote a 4,6 m/s nos últimos 4 m. É mais rápido que o jogador correndo. Vagando,
-  anda 1,6 vez mais rápido que um Oco.
+- **Velocidade:** corre atrás a 3,8 m/s e dá o bote a 4,6 m/s nos últimos 4 m. Só no bote ele é mais rápido que o jogador
+  correndo (4,2 m/s): quem foge em linha reta antes de ele chegar a 4 m escapa. Vagando, anda 1,6 vez mais rápido que um Oco.
+- **O golpe correndo** (02/11/2026): no bote ele vem reto e, a 1,6 m, golpeia sem parar de correr; o dano sai 0,2 s depois.
+  Antes, ele rodeava o jogador para cercar, parava para bater e o golpe saía tarde demais (dava para encostar nele
+  correndo sem levar golpe).
 - **O sol** o petrifica mais rápido (5 s). De dia, ele foge para as casas como os Ocos.
 - **Aparece** no lugar de um Oco: 2% de dia e 8% de noite (com as hordas).
 - **Os sentidos** são os do Oco: de noite e no escuro, ele só percebe de perto ou com a luz nele.

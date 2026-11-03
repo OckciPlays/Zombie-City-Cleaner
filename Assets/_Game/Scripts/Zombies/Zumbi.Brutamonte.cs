@@ -36,8 +36,8 @@ namespace ZombieCityCleaner.Zombies
         float _faseBrutoDesde, _olhoVendo, _proximaBracada, _percorrido, _parado, _proximoPassoDoBruto;
         Vector3 _pontoDoAvanco, _direcaoDoAvanco, _fimDoAvanco, _ultimoVistoPeloOlho;
         bool _bateuNaParede, _temUltimoVisto, _emergirVisto;
-        JogadorRede _travadoEm;
-        readonly System.Collections.Generic.List<JogadorRede> _atingidosNoAvanco = new System.Collections.Generic.List<JogadorRede>(4);
+        IAlvoDeZumbi _travadoEm;
+        readonly System.Collections.Generic.List<IAlvoDeZumbi> _atingidosNoAvanco = new System.Collections.Generic.List<IAlvoDeZumbi>(4);
         // o olho e as pálpebras (no espaço do pai, na pose de repouso)
         Quaternion _olhoRepouso, _supRepouso, _infRepouso;
         Vector3 _olhoLado, _olhoCima, _olhoFrente;
@@ -199,16 +199,16 @@ namespace ZombieCityCleaner.Zombies
         /// O jogador mais perto que o olho vê: até o alcance, com a linha livre do olho até o peito, e do lado das costas (o
         /// olho gira até ~110° de cada lado da nuca).
         /// </summary>
-        JogadorRede JogadorNoOlho(AjustesDoBrutamonte b)
+        IAlvoDeZumbi JogadorNoOlho(AjustesDoBrutamonte b)
         {
             if (!OlhoExposto) return null;
             Vector3 deOnde = olho != null ? olho.position : transform.position + Vector3.up * 1.6f - transform.forward * 0.3f;
             Vector3 costas = -transform.forward;
             float menor = b.alcanceDoOlho;
-            JogadorRede melhor = null;
-            for (int i = 0; i < _m.QuantosJogadores; i++)
+            IAlvoDeZumbi melhor = null;
+            for (int i = 0; i < _m.QuantosAlvos; i++)   // os jogadores e os sobreviventes (02/11/2026)
             {
-                ref readonly var p = ref _m.Jogadores[i];
+                ref readonly var p = ref _m.AlvoNo(i);
                 Vector3 para = p.peito - deOnde;
                 float d = para.magnitude;
                 if (d > menor) continue;
@@ -216,13 +216,13 @@ namespace ZombieCityCleaner.Zombies
                 if (plano.sqrMagnitude > 0.01f && Vector3.Angle(costas, plano) > 110f) continue;
                 if (!_m.Enxerga(deOnde, p.peito)) continue;
                 menor = d;
-                melhor = p.jogador;
+                melhor = p.quem;
             }
             return melhor;
         }
 
         /// <summary>Viu: o olho fecha, e ele se prepara para avançar no ponto onde o jogador estava.</summary>
-        void Travar(JogadorRede quem)
+        void Travar(IAlvoDeZumbi quem)
         {
             if (quem == null) return;
             _travadoEm = quem;
@@ -283,14 +283,14 @@ namespace ZombieCityCleaner.Zombies
             }
             Velocidade = b.velocidadeDoAvanco;
             // quem está no caminho
-            for (int i = 0; i < _m.QuantosJogadores; i++)
+            for (int i = 0; i < _m.QuantosAlvos; i++)
             {
-                ref readonly var p = ref _m.Jogadores[i];
-                if (p.jogador == null || _atingidosNoAvanco.Contains(p.jogador)) continue;
+                ref readonly var p = ref _m.AlvoNo(i);
+                if (p.quem == null || _atingidosNoAvanco.Contains(p.quem)) continue;
                 Vector3 d = p.pes - transform.position;
                 if (Mathf.Abs(d.y) > 1.6f || new Vector2(d.x, d.z).sqrMagnitude > 1.7f * 1.7f) continue;
-                _atingidosNoAvanco.Add(p.jogador);
-                _m.Golpear(p.jogador, b.danoDoAvanco, transform.position);
+                _atingidosNoAvanco.Add(p.quem);
+                _m.Golpear(p.quem, b.danoDoAvanco, transform.position);
                 _m.BaqueDoBrutamonte(this);
             }
             // as barricadas no caminho caem
@@ -314,19 +314,19 @@ namespace ZombieCityCleaner.Zombies
         {
             Golpes++;
             bool acertou = false;
-            for (int i = 0; i < _m.QuantosJogadores; i++)
+            for (int i = 0; i < _m.QuantosAlvos; i++)
             {
-                ref readonly var p = ref _m.Jogadores[i];
+                ref readonly var p = ref _m.AlvoNo(i);
                 Vector3 d = p.pes - transform.position;
                 if (Mathf.Abs(d.y) > 1.8f || new Vector2(d.x, d.z).sqrMagnitude > raio * raio) continue;
-                _m.Golpear(p.jogador, dano, transform.position);
+                _m.Golpear(p.quem, dano, transform.position);
                 acertou = true;
             }
             if (acertou) _m.BaqueDoBrutamonte(this);
         }
 
         /// <summary>Um acerto no Brutamonte: o casco tira quase tudo; o olho aberto leva o triplo e o faz travar em quem atirou.</summary>
-        void LevarTiroNoBrutamonte(RegiaoDoCorpo regiao, float dano, Vector3 ponto, Vector3 direcao, JogadorRede autor, float agora)
+        void LevarTiroNoBrutamonte(RegiaoDoCorpo regiao, float dano, Vector3 ponto, Vector3 direcao, IAlvoDeZumbi autor, float agora)
         {
             var b = A.brutamonte;
             bool noOlho = regiao == RegiaoDoCorpo.Olho && OlhoExposto;

@@ -109,5 +109,13 @@
     20.32
    ]
   }
- ]
+ ],
+ "tempestade": {
+  "bpm": 52,
+  "comprimento": 18.46153846153846
+ },
+ "tornado": {
+  "bpm": 66,
+  "comprimento": 14.545454545454545
+ }
 }

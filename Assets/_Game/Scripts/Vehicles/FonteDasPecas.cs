@@ -40,5 +40,11 @@ namespace ZombieCityCleaner.Vehicles
         public event System.Action Mudou;
         public virtual bool AvisaAsMudancas => false;
         protected void AvisarMudanca() => Mudou?.Invoke();
+
+        /// <summary>
+        /// Por que ninguém mexe neste carro agora (o carro quebrado com os donos ali: Sobreviventes/CarrosQuebradosDoMundo),
+        /// ou null. O capô, as rodas e o macaco mostram isto no lugar da dica.
+        /// </summary>
+        public virtual string Ocupado(int carro) => null;
     }
 }

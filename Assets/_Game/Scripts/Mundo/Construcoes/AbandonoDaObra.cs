@@ -87,6 +87,20 @@ namespace ZombieCityCleaner.Mundo
             };
         }
 
+        /// <summary>
+        /// Todas as janelas de fora tapadas com tábuas ou chapas (a casa fortificada de um acampamento de sobreviventes,
+        /// 02/11/2026). As portas ficam.
+        /// </summary>
+        public static void Fortificar(Obra obra, int semente)
+        {
+            var rnd = new System.Random(semente * 17 + 11);
+            _fora ??= new List<Parede>();
+            DeFora(obra, _fora);
+            foreach (var w in _fora)
+                foreach (var ab in w.aberturas)
+                    if (!ab.EhPorta && !obra.Tapada(w, ab)) Tabuas(obra, w, ab, rnd, 0.5f, null);
+        }
+
         static float Faixa(System.Random rnd, float a, float b) => a + (float)rnd.NextDouble() * (b - a);
 
         // as paredes de fora da obra acima do chão: as levantadas e as fachadas de prédio (as listas de rascunho são de

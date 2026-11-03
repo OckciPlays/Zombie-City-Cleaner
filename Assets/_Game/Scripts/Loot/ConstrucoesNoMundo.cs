@@ -87,6 +87,38 @@ namespace ZombieCityCleaner.Loot
 
         float Agora => NetworkManager != null ? NetworkManager.ServerTime.TimeAsFloat : Time.time;
 
+        /// <summary>
+        /// As construções agora (o save: Salvar/Salvamento). Na fogueira, o valor vira os segundos de fogo que faltam (ele é
+        /// o fim do fogo no relógio da partida, que recomeça em cada partida).
+        /// </summary>
+        public List<Construcao> Copia()
+        {
+            var lista = new List<Construcao>(_lista.Count);
+            foreach (var c in _lista)
+            {
+                var d = c;
+                if (d.tipo == Item.Fogueira) d.valor = Mathf.Max(0f, d.valor - Agora);
+                lista.Add(d);
+            }
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: as construções do mundo salvo (a fogueira, com os segundos que faltavam).</summary>
+        public void Restaurar(List<Construcao> lista)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _lista.Clear();
+            _proximoId = 1;
+            foreach (var c in lista)
+            {
+                if (!Itens.EhConstrucao(c.tipo)) continue;
+                var d = c;
+                d.id = _proximoId++;
+                if (d.tipo == Item.Fogueira) d.valor = d.valor > 0f ? Agora + d.valor : 0f;
+                _lista.Add(d);
+            }
+        }
+
         /// <summary>A malha montada do kit (null: não é um, ou ainda não foi montada).</summary>
         public Mesh MalhaDe(Item tipo)
         {
@@ -159,7 +191,10 @@ namespace ZombieCityCleaner.Loot
             if (!Cabe(kit.item, ponto, giro)) return;
             inventario.TirarUm(idDoKit);
             float valor = kit.item == Item.Barricada ? 100f : kit.item == Item.Fogueira ? Agora + MinutosPorLenha * 60f : 0f;
-            _lista.Add(new Construcao { id = _proximoId++, tipo = kit.item, pos = ponto, giro = giro, valor = valor, dono = quem });
+            // o dono é o personagem (a chave dele, que vale em qualquer partida: 02/11/2026, o save), não a conexão
+            var rede = inventario.GetComponent<JogadorRede>();
+            ulong dono = rede != null && rede.Chave.Value != 0 ? rede.Chave.Value : quem;
+            _lista.Add(new Construcao { id = _proximoId++, tipo = kit.item, pos = ponto, giro = giro, valor = valor, dono = dono });
         }
 
         [Rpc(SendTo.Server)]
@@ -437,14 +472,30 @@ namespace ZombieCityCleaner.Loot
                     if (madeira == 0) return acesa ? "Fogueira acesa (mais lenha: 1 madeira)" : "Fogueira apagada: precisa de 1 madeira";
                     return acesa ? $"[E] Pôr lenha (1 madeira: +{ConstrucoesNoMundo.MinutosPorLenha:0} min)" : "[E] Acender a fogueira (1 madeira)";
                 case Item.Cama:
-                    bool minha = mundo.NetworkManager != null && c.dono == mundo.NetworkManager.LocalClientId;
-                    return minha ? "Sua cama: você volta aqui quando cair   ·   [E] Recolher" : "[E] Recolher a cama";
+                    return Minha(c) ? "Sua cama: você volta aqui quando cair   ·   [E] Dormir e salvar   ·   [clique] Recolher" : "[E] Recolher a cama";
                 case Item.Barricada:
                     return $"Barricada ({Mathf.CeilToInt(c.valor)}%)   ·   [E] Desmontar";
             }
             return null;
         }
 
-        public override void Usar(ArmaJogador quem) => mundo.PedirUsar(id);
+        // a cama do personagem deste jogador (pela chave dele)
+        bool Minha(Construcao c) => c.tipo == Item.Cama && JogadorRede.Local != null && c.dono == JogadorRede.Local.Chave.Value;
+
+        public override void Usar(ArmaJogador quem)
+        {
+            var d = mundo.Dados(id);
+            // na própria cama, E dorme e salva (02/11/2026, o save); o clique recolhe
+            if (d != null && Minha(d.Value)) Salvar.Salvamento.PedirDormir();
+            else mundo.PedirUsar(id);
+        }
+
+        public override bool UsaClique(ArmaJogador quem)
+        {
+            var d = mundo.Dados(id);
+            return d != null && Minha(d.Value);
+        }
+
+        public override void Clicar(ArmaJogador quem) => mundo.PedirUsar(id);
     }
 }
