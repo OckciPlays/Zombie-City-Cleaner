@@ -26,6 +26,12 @@ namespace ZombieCityCleaner.World
         public static CicloDoDia Instancia { get; private set; }
         /// <summary>Hora atual, de 0 a 24.</summary>
         public static float Hora { get; private set; } = 21f;
+        /// <summary>
+        /// O dia do mundo (1 no começo; mais um a cada meia-noite), do anfitrião (02/11/2026, o save: a lista do Continuar, e
+        /// depois a reposição dos comerciantes).
+        /// </summary>
+        public static int Dia { get; private set; } = 1;
+        public readonly NetworkVariable<int> DiaRede = new(1);
         /// <summary>0 = dia claro (8h às 17h), 1 = noite fechada (20h às 5h); o resto é amanhecer e anoitecer.</summary>
         public static float Noite { get; private set; } = 1f;
         /// <summary>O relógio está parado (a hora não anda).</summary>
@@ -54,9 +60,26 @@ namespace ZombieCityCleaner.World
             {
                 HoraRede.Value = Hora;
                 ParadoRede.Value = false;   // sem a cena recarregar, cada partida começa com o relógio andando
+                Dia = 1;
+                DiaRede.Value = 1;
             }
-            else Hora = HoraRede.Value;
+            else
+            {
+                Hora = HoraRede.Value;
+                Dia = DiaRede.Value;
+            }
             HoraRede.OnValueChanged += AoReceber;
+        }
+
+        /// <summary>No anfitrião: a hora e o dia do mundo salvo.</summary>
+        public void Definir(float hora, int dia)
+        {
+            if (IsSpawned && !IsServer) return;
+            Hora = Mathf.Repeat(hora, 24f);
+            Dia = Mathf.Max(1, dia);
+            if (!IsSpawned) return;
+            HoraRede.Value = Hora;
+            DiaRede.Value = Dia;
         }
 
         public override void OnNetworkDespawn()
@@ -96,7 +119,14 @@ namespace ZombieCityCleaner.World
         void Update()
         {
             if (IsSpawned) Parado = ParadoRede.Value;
-            if (!Parado) Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Time.deltaTime, 24f);
+            if (!Parado)
+            {
+                float antes = Hora;
+                Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Time.deltaTime, 24f);
+                // passou da meia-noite: mais um dia (no anfitrião; os outros recebem)
+                if (Hora < antes && (!IsSpawned || IsServer)) Dia++;
+            }
+            if (IsSpawned && !IsServer) Dia = DiaRede.Value;
             bool mandaNaHora = !IsSpawned || IsServer;
             var teclado = Keyboard.current;
             if (mandaNaHora && teclado != null)
@@ -107,6 +137,7 @@ namespace ZombieCityCleaner.World
             if (IsSpawned && IsServer && Time.unscaledTime >= _proximoEnvio)
             {
                 HoraRede.Value = Hora;
+                if (DiaRede.Value != Dia) DiaRede.Value = Dia;
                 _proximoEnvio = Time.unscaledTime + 1f;
             }
             Noite = CalcularNoite(Hora);

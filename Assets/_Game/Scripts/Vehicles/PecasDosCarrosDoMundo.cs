@@ -125,8 +125,51 @@ namespace ZombieCityCleaner.Vehicles
             // o carro com alarme sempre tem bateria, com carga (é ela que faz o alarme tocar; quem tira, cala o alarme)
             byte bateria = e.pecas[PecasDoMotor.Bateria];
             if (AlarmeDeFabrica(carro) && (bateria == PecasDoMotor.Vazio || bateria < 30)) e.pecas[PecasDoMotor.Bateria] = (byte)s.Entre(35, 80);
+            // o carro quebrado (os sobreviventes, a etapa 4): eles vinham andando nele; o macaco erguido na roda do lado de
+            // fora, sem o pneu (o estepe deles furou também), e as outras três rodas boas
+            var quebrado = Quebrado(carro);
+            if (quebrado != null)
+            {
+                for (int k = 0; k < PneusDoCarro.Quantas; k++)
+                    e.pneus[k] = k == quebrado.Roda ? PneusDoCarro.Vazio : (byte)s.Entre(Mathf.Max(faixaDoPneu.x, 45), Mathf.Max(faixaDoPneu.y, 60));
+                e.macaco = (byte)(quebrado.Roda | Erguido);
+            }
             _padroes[carro] = e;
             return e;
+        }
+
+        /// <summary>Os carros do mundo em que alguém mexeu (o save: Salvar/Salvamento).</summary>
+        public List<CarroMexido> Copia()
+        {
+            var lista = new List<CarroMexido>(_mexidos.Count);
+            foreach (var e in _mexidos) lista.Add(e);
+            return lista;
+        }
+
+        /// <summary>
+        /// Só no anfitrião: os carros mexidos do mundo salvo (o macaco erguido volta para baixo; o do carro quebrado, com a
+        /// roda ainda sem pneu, fica erguido).
+        /// </summary>
+        public void Restaurar(List<CarroMexido> lista)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _mexidos.Clear();
+            foreach (var e in lista)
+            {
+                var d = e;
+                var quebrado = Quebrado(d.id);
+                bool naRodaVazia = quebrado != null && (d.macaco & 3) == quebrado.Roda && d.pneus[quebrado.Roda] == PneusDoCarro.Vazio;
+                if (d.macaco != SemMacaco && !naRodaVazia) d.macaco = (byte)(d.macaco & ~Erguido);
+                _mexidos.Add(d);
+            }
+            _lugarVelho = true;
+        }
+
+        /// <summary>O carro quebrado do acostamento com este número (os sobreviventes, a etapa 4), ou null.</summary>
+        public static ZombieCityCleaner.Mundo.CarroQuebrado Quebrado(int carro)
+        {
+            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            return dados?.Objetos?.QuebradoDe(carro);
         }
 
         // no anfitrião: grava o carro mexido na lista da rede
@@ -139,6 +182,30 @@ namespace ZombieCityCleaner.Vehicles
         }
 
         public override PneusDoCarro PneusDo(int carro) => Estado(carro).pneus;
+        public override string Ocupado(int carro) => Sobreviventes.CarrosQuebradosDoMundo.Instancia?.Ocupado(carro);
+
+        /// <summary>
+        /// No anfitrião: os dois do carro quebrado trocaram o pneu (Sobreviventes/CarrosQuebradosDoMundo): o pneu na roda e o
+        /// macaco guardado.
+        /// </summary>
+        public void TrocaDosSobreviventes(int carro, int roda, int pneu)
+        {
+            if (!IsServer || !IsSpawned || roda < 0 || roda >= PneusDoCarro.Quantas) return;
+            var e = Estado(carro);
+            e.pneus[roda] = (byte)Mathf.Clamp(pneu, 0, 100);
+            e.macaco = SemMacaco;
+            Gravar(e);
+            Som(2, carro, roda);
+        }
+
+        /// <summary>No anfitrião (o F1): o carro volta ao que a semente deu (sai da lista dos mexidos).</summary>
+        public void Esquecer(int carro)
+        {
+            if (!IsServer || !IsSpawned) return;
+            for (int i = _mexidos.Count - 1; i >= 0; i--)
+                if (_mexidos[i].id == carro) _mexidos.RemoveAt(i);
+            _lugarVelho = true;
+        }
         public override int MacacoDo(int carro)
         {
             byte m = Estado(carro).macaco;
@@ -179,6 +246,7 @@ namespace ZombieCityCleaner.Vehicles
         bool Perto(int carro, ulong cliente, out InventarioJogador inventario)
         {
             inventario = null;
+            if (Ocupado(carro) != null) return false;   // o carro quebrado com os donos ali
             if (!Ponto(carro, out var capo) || !Jogador(cliente, out var j)) return false;
             if ((j.transform.position - capo).sqrMagnitude > distanciaMaxima * distanciaMaxima) return false;
             inventario = j.GetComponent<InventarioJogador>();
@@ -188,6 +256,7 @@ namespace ZombieCityCleaner.Vehicles
         bool PertoDaRoda(int carro, int roda, ulong cliente, out InventarioJogador inventario)
         {
             inventario = null;
+            if (Ocupado(carro) != null) return false;
             if (roda < 0 || roda >= PneusDoCarro.Quantas || !Roda(carro, roda, out var ponto, out _) || !Jogador(cliente, out var j)) return false;
             var p = j.GetComponent<PassageiroDoCarro>();
             if (p != null && p.Sentado) return false;

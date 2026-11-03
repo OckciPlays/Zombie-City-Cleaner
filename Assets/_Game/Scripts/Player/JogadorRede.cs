@@ -17,8 +17,17 @@ namespace ZombieCityCleaner.Player
     /// próprio corpo só como sombra. Os outros veem o corpo animado, para onde ele olha, o que está na mão (do
     /// <see cref="InventarioJogador"/>), a lanterna e os tiros.
     /// </summary>
-    public class JogadorRede : NetworkBehaviour
+    public class JogadorRede : NetworkBehaviour, IAlvoDeZumbi
     {
+        /// <summary>Para os zumbis (02/11/2026: eles também perseguem os sobreviventes): o jogador na rede.</summary>
+        public bool AlvoValido => this != null && IsSpawned;
+
+        /// <summary>No anfitrião: a mordida de um zumbi.</summary>
+        public void LevarGolpe(float dano, Vector3 de)
+        {
+            if (Vida != null) Vida.Dano(dano, de);
+        }
+
         public const int CamadaBracos = 6;
         /// <summary>A raiz do jogador (o CharacterController): os pedaços dos zumbis não param em cima de ninguém.</summary>
         public const int CamadaJogador = 9;
@@ -103,12 +112,22 @@ namespace ZombieCityCleaner.Player
         /// <summary>O personagem foi criado (a aparência chegou): antes, ele não aparece para ninguém.</summary>
         public bool Criado => Aparencia.Value.definida != 0;
 
-        /// <summary>O dono cria o personagem (a tela de criar): a aparência vai pela rede.</summary>
+        /// <summary>
+        /// A chave do personagem salvo (02/11/2026, o save: <see cref="Salvar.PersonagemSalvo.Chave"/>), escrita pelo dono
+        /// quando nasce: o anfitrião guarda por ela onde cada um estava no mundo e de quem é cada cama.
+        /// </summary>
+        public readonly NetworkVariable<ulong> Chave = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        /// <summary>
+        /// O dono cria o personagem (a tela de criar, ou o personagem salvo): a aparência vai pela rede, e o que ele leva
+        /// (o salvo, ou o começo de um novo) vai para o anfitrião.
+        /// </summary>
         public void Criar(AparenciaDoJogador a)
         {
             if (!IsOwner) return;
             a.definida = 1;
             Aparencia.Value = a;
+            Inventario?.ComecarPersonagem();
         }
 
         /// <summary>As roupas do corpo (a aparência e, depois, as roupas achadas).</summary>
@@ -245,12 +264,16 @@ namespace ZombieCityCleaner.Player
             AplicarPersonagem(Personagem.Value);
             if (dono)
             {
-                // o personagem de cada partida: a tela de criar (o robô de teste sai sorteado)
+                // a chave do personagem escolhido no menu (sem um, a do jogador nesta partida)
+                var escolhido = Salvar.EscolhaDoPersonagem.Atual;
+                Chave.Value = escolhido != null ? escolhido.Chave : unchecked((OwnerClientId + 1) * 0x9E3779B97F4A7C15UL) | 1UL;
+                // o personagem: o salvo entra direto; um novo passa pela tela de criar (o robô de teste sai sorteado)
                 if (MenuOnline.Bot)
                 {
                     var semente = new System.Random(unchecked((int)OwnerClientId * 7919 + System.Environment.TickCount));
                     Criar(AparenciaDoJogador.Sortear(semente, $"Robô {OwnerClientId + 1}"));
                 }
+                else if (escolhido != null && !Salvar.EscolhaDoPersonagem.Novo) Criar(escolhido.Aparencia());
                 else if (!Criado && GetComponent<TelaDeCriarPersonagem>() != null) GetComponent<TelaDeCriarPersonagem>().Abrir();
                 Local = this;
                 CameraDoMenu.Ligar(false);
@@ -263,9 +286,8 @@ namespace ZombieCityCleaner.Player
         public override void OnNetworkDespawn()
         {
             Todos.Remove(this);
-            // quem sai da partida devolve as armas ao painel do bunker (a pistola, a uma vaga de pistola livre) e deixa a
-            // comida e a água no chão
-            if (IsServer && !NetworkManager.ShutdownInProgress) Inventario.Esvaziar();
+            // quem sai da partida leva as coisas (o personagem é dele: 02/11/2026, o save); o mundo lembra onde ele estava
+            if (IsServer) Salvar.Salvamento.LembrarPosicao(this);
             Personagem.OnValueChanged -= AoMudarPersonagem;
             Aparencia.OnValueChanged -= AoMudarAparencia;
             Inventario.Mudou -= AplicarNaMao;
@@ -498,8 +520,29 @@ namespace ZombieCityCleaner.Player
             {
                 ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);   // o tiro num carro com alarme dispara
+                Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);   // o grupo de sobreviventes perto ouve
             }
             TiroRpc((byte)arma, impactos);
+        }
+
+        /// <summary>
+        /// O dono acertou um sobrevivente (02/11/2026): o anfitrião confere (ele existe e está perto do ponto) e tira a vida
+        /// (a parte do corpo decide: o tiro na cabeça mata).
+        /// </summary>
+        public void AcertarSobrevivente(Sobreviventes.Sobrevivente s, Sobreviventes.RegiaoDoSobrevivente regiao, float dano, Vector3 ponto, bool tiro)
+        {
+            if (s == null) return;
+            if (IsServer) s.LevarTiro(regiao, dano, ponto, this, tiro);
+            else AcertoNoSobreviventeRpc(s.NetworkObject, (byte)regiao, dano, ponto, tiro);
+        }
+
+        [Rpc(SendTo.Server)]
+        void AcertoNoSobreviventeRpc(NetworkObjectReference quem, byte regiao, float dano, Vector3 ponto, bool tiro, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !quem.TryGet(out var no)) return;
+            var s = no.GetComponent<Sobreviventes.Sobrevivente>();
+            if (s == null || (s.transform.position + Vector3.up * 1f - ponto).sqrMagnitude > 2.5f * 2.5f) return;
+            s.LevarTiro((Sobreviventes.RegiaoDoSobrevivente)Mathf.Min(regiao, (byte)2), Mathf.Clamp(dano, 0f, 500f), ponto, this, tiro);
         }
 
         [Rpc(SendTo.NotMe)]
@@ -511,6 +554,7 @@ namespace ZombieCityCleaner.Player
             {
                 ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);
+                Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);
             }
             animadorCorpo.SetTrigger(FireId);
             var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);

@@ -7,6 +7,8 @@ namespace ZombieCityCleaner.Mundo
     {
         CidadeGrande, CidadePequena, Vila, Fazenda, BaseMilitar, ComunidadeAliada, ComunidadeInimiga, Laboratorio, Cabana,
         Posto, Bunker, CasaDoLago, CasaDaFamilia, Barreira,
+        // os acampamentos dos sobreviventes (02/11/2026, a etapa 3: um por cidade grande e pequena, fora dela)
+        Acampamento,
     }
 
     public enum TipoDeBairro : byte { Centro, Comercio, Residencial }
@@ -117,6 +119,25 @@ namespace ZombieCityCleaner.Mundo
     }
 
     /// <summary>Uma linha do metrô: as estações em ordem, com o nome de cada uma (o bairro ou a cidade onde ela fica).</summary>
+    /// <summary>
+    /// Um acampamento de sobreviventes (02/11/2026, a pedido: "uma casa já existente com barricadas, fogueiras, guardas e
+    /// comerciantes"), na beira da primeira rodovia que sai de uma cidade grande ou pequena. O chão dele é aplainado na
+    /// <see cref="Altura"/>; a <see cref="Frente"/> olha para a rodovia (o portão). O resto (a casa, a cerca, as bancas e
+    /// as pessoas) sai da semente, em <c>Sobreviventes/PlantaDoAcampamento</c>.
+    /// </summary>
+    public sealed class Acampamento : Lugar
+    {
+        /// <summary>O índice dele em <see cref="PlanoDoMapa.Acampamentos"/>.</summary>
+        public int Indice;
+        /// <summary>A cidade dele (o índice em <see cref="PlanoDoMapa.Cidades"/>).</summary>
+        public int Cidade;
+        public bool Grande;
+        /// <summary>A altura do chão aplainado (m).</summary>
+        public float Altura;
+        /// <summary>Para onde o portão olha (a rodovia), no plano do mapa.</summary>
+        public Vector2 Frente;
+    }
+
     public sealed class LinhaDeMetro
     {
         public string Nome;
@@ -138,6 +159,8 @@ namespace ZombieCityCleaner.Mundo
         public readonly List<LinhaDeMetro> Metro = new List<LinhaDeMetro>();
         /// <summary>O traçado de cada cidade e vila (Parte M5), na ordem de <see cref="Cidades"/>.</summary>
         public readonly List<TracadoDaCidade> Tracados = new List<TracadoDaCidade>();
+        /// <summary>Os acampamentos dos sobreviventes (também em <see cref="Lugares"/>).</summary>
+        public readonly List<Acampamento> Acampamentos = new List<Acampamento>();
         public Lugar CasaDaFamilia, CasaDoLago, Laboratorio;
         /// <summary>O lote da casa da família (no traçado da cidade dela).</summary>
         public Lote LoteDaFamilia;

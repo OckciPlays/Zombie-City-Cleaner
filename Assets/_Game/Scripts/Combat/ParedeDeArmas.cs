@@ -58,6 +58,21 @@ namespace ZombieCityCleaner.Combat
             Aplicar(_conteudo.Value);
         }
 
+        /// <summary>As armas e os pentes de cada vaga (o save: Salvar/Salvamento).</summary>
+        public void Copia(out long armas, out long pentes)
+        {
+            armas = _conteudo.Value;
+            pentes = _pentes.Value;
+        }
+
+        /// <summary>Só no anfitrião: as vagas do mundo salvo (senão, cada partida devolvia as 4 armas do começo).</summary>
+        public void Restaurar(long armas, long pentes)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _conteudo.Value = armas;
+            _pentes.Value = pentes;
+        }
+
         public override void OnNetworkDespawn()
         {
             _conteudo.OnValueChanged -= AoMudar;

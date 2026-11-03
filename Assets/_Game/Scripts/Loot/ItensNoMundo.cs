@@ -99,6 +99,29 @@ namespace ZombieCityCleaner.Loot
 
         void AoMudar(NetworkListEvent<ItemNoChao> e) => Atualizar();
 
+        /// <summary>O que está no chão agora (o save: Salvar/Salvamento).</summary>
+        public List<ItemNoChao> Copia()
+        {
+            var lista = new List<ItemNoChao>(_itens.Count);
+            foreach (var it in _itens) lista.Add(it);
+            return lista;
+        }
+
+        /// <summary>Só no anfitrião: o chão do mundo salvo no lugar do de agora (os Ids são dados de novo).</summary>
+        public void Restaurar(List<ItemNoChao> itens)
+        {
+            if (!IsServer || !IsSpawned) return;
+            _itens.Clear();
+            _proximoId = 1;
+            foreach (var it in itens)
+            {
+                if (it.item == Item.Nada || !Itens.NoJogo(it.item)) continue;
+                var novo = it;
+                novo.id = _proximoId++;
+                _itens.Add(novo);
+            }
+        }
+
         /// <summary>
         /// Só no anfitrião: um item novo no mundo, apoiado no ponto. <paramref name="qtd"/>: as balas (da caixa, ou do pente
         /// da arma); -1, cheio.

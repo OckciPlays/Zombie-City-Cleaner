@@ -905,9 +905,9 @@ namespace ZombieCityCleaner.Mundo
                     lista.Add((a, b, meia));
                 }
             }
-            // e os postos (o pátio deles)
+            // e os postos (o pátio deles) e os acampamentos (02/11/2026)
             foreach (var l in plano.Lugares)
-                if (l.Tipo == TipoDeLugar.Posto && Vector2.Distance(l.Centro, Centro) < alcance + 40f)
+                if ((l.Tipo == TipoDeLugar.Posto || l.Tipo == TipoDeLugar.Acampamento) && Vector2.Distance(l.Centro, Centro) < alcance + 40f + l.Raio)
                     lista.Add((l.Centro, l.Centro, l.Raio + 8f));
             return lista;
         }

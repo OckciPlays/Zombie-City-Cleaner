@@ -35,8 +35,12 @@ namespace ZombieCityCleaner.UI
             GUI.color = antes;
         }
 
-        // 0: os zumbis; 1: o clima
-        void MostrarAba(int qual) => _abaDoClima = qual == 1;
+        // 0: os zumbis; 1: o clima; 2: os sobreviventes (MenuDoDesenvolvedor.Sobreviventes.cs)
+        void MostrarAba(int qual)
+        {
+            _abaDoClima = qual == 1;
+            _abaDosSobreviventes = qual == 2;
+        }
 
         Rect PainelDoClima(float u, Rect aoLado)
         {

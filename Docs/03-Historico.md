@@ -427,6 +427,8 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
   - **o Brutamonte:** o avanço acabava na hora em "tonto", porque a linha reta saía de um ponto fora do NavMesh;
   - **o Long:** nascendo atrás de uma casa, ele nunca via ninguém. Agora vai na direção do jogador até ver.
 - **Os sons são provisórios** (sintetizados), para o Pedro trocar depois.
+- **O Corredor golpeia correndo (02/11/2026, a pedido):** ele rodeava o jogador para cercar, parava para bater e o golpe
+  saía tarde demais. Agora, no bote, vem reto e bate sem parar de correr.
 - O resumo está em [10 – Os zumbis especiais](10-Zumbis-Especiais.md).
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
@@ -493,6 +495,79 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
   o jogador jogado a 3,7 m de altura e a vida de 100 a 30 em 3 s; quem fica no miolo morre), o fim do tornado no lugar, e a
   música trocando para o tornado quando ele foi avistado. Falta: ouvir os sons no jogo, testar com dois jogadores e o
   painel do F1 na tela.
+
+## O save (02/11/2026, a pedido)
+
+- **O jogo salva.** As três formas, escolhidas ao criar o mundo: automático (a cada 5 minutos e ao sair), ao sair e só
+  dormindo (na cama montada ou numa cama da casa da família).
+- **Cada um leva o seu personagem:** a mochila, o dinheiro, a vida, a fome e a sede ficam no computador de cada jogador e
+  vão para qualquer mundo. O mundo (o chão, os carros, as construções, a hora, o clima, onde cada um estava) fica com quem
+  hospeda.
+- **O menu:** o painel do personagem (os salvos e o novo) e o Continuar com a lista dos mundos salvos. Um personagem que já
+  existe pula o Dia 0.
+- **O dinheiro do Dia 0 fica com o personagem** e aparece na tela da mochila. O dia do mundo passou a ser contado.
+- **Sair da partida não larga mais as coisas no chão**, e a cama montada é do personagem.
+- É a etapa 1 do plano dos sobreviventes e dos acampamentos. A etapa 0 foi o Corredor golpeando correndo.
+- O resumo está em [14 – O save](14-Save.md).
+
+## Os sobreviventes (02/11/2026, a pedido)
+
+- **Grupos de busca armados e hostis nas cidades:** de 6 a 8, um por cidade, sorteados pela semente. Aparecem fora da vista
+  quando alguém entra na cidade (mais cedo e mais vezes nas grandes) e vão embora quando todos se afastam.
+- **Lutam:** se protegem atrás do cenário, espiam e atiram em rajadas, recarregam com a munição da mochila e fogem sem
+  ela; o último que sobra foge. A mira depende da arma (a sniper acerta de longe) e piora de longe, no escuro e andando.
+  Ouvem os passos perto e os tiros até 70 m. O tiro deles no jogador vale 70% do da arma.
+- **À noite** saem de lanterna, apagam no tiroteio e acendem de novo com zumbi perto.
+- **Os zumbis vão atrás deles:** os tiros chamam os zumbis, e todos os tipos perseguem e mordem os sobreviventes como aos
+  jogadores. A lanterna deles afasta os zumbis.
+- **Vida 100; o tiro na cabeça mata com qualquer arma.** Os braços e as pernas levam metade.
+- **Quem morre desaba no chão** (uma queda com física: o corpo do jogador não tem animação de morte) e deixa a mochila. A
+  tela do saque mostra a mochila dele ao lado da nossa, com pegar tudo, o dinheiro e trocar de mochila. Os mortos continuam
+  mortos (fica no save).
+- **A nossa morte deixa a mochila no chão**, onde a gente caiu.
+- **As falas:** o texto em cima da cabeça, letra a letra, com um bipe por letra.
+- O F1 ganhou a aba "Gente". O resumo está em [13 – Os sobreviventes](13-Sobreviventes-e-Acampamentos.md).
+
+## Os acampamentos (02/11/2026, a pedido)
+
+- **Um acampamento por cidade grande e pequena**, ao lado da primeira rodovia que sai dela, no chão aplainado (o gerador
+  passou para a versão 11). Aparece no mapa.
+- **A construção:** a cerca de alambrado, sacos de areia e contêineres, o portão entre barreiras, a casa que já existia
+  com as janelas tapadas, as bancas com a lona e a placa, as fogueiras, as barracas e o chão de terra.
+- **As pessoas:** os guardas (no portão e nos cantos, de lanterna à noite, atirando nos zumbis que chegam), os
+  comerciantes (atrás das bancas) e os moradores (em volta das fogueiras). Quem mira neles ouve "Abaixa essa arma".
+- **A zona segura:** zumbi não nasce, não vaga e não persegue ninguém lá dentro.
+- **O comércio:** cada comerciante vende uma categoria, só com dinheiro; vender rende a metade; o estoque acaba e volta a
+  cada amanhecer. O pequeno tem 3 comerciantes; o grande, 7.
+- **Hostil para sempre:** ferir qualquer um deles vira o acampamento inteiro contra os jogadores; os comerciantes se
+  escondem na casa, e o comerciante morto deixa a metade do estoque.
+- **O save** guarda os hostis, os mortos e os estoques. O F1 ganhou "Ir ao portão", "Fazer hostil" e "Repor o estoque".
+- É a etapa 3. O resumo está em [13 – Os sobreviventes e os acampamentos](13-Sobreviventes-e-Acampamentos.md).
+
+## O carro quebrado (02/11/2026, a pedido)
+
+- **Na estrada:** um carro quebrado a cada 2 rodovias (pelo menos 1 no mundo), no acostamento, longe das cidades e dos
+  acampamentos. O macaco erguido numa roda sem pneu, e o pneu furado no chão, do lado.
+- **Os dois:** o mecânico agachado na roda, de pistola, e o vigia de pé, de rifle. Desconfiados: "Ei! Fica aí!" a 25 m; o
+  vigia aponta para quem chega armado; mirar neles por 2 s, ou chegar armado a menos de 6 m por 3 s, deixa os dois hostis.
+- **A ajuda:** "O estepe furou também. Tem um pneu aí?". Com um pneu de 30% ou mais, E dá o pneu. A troca leva 60 s: as
+  batidas chamam os zumbis, e duas ondas vêm atrás do mecânico (maiores à noite). O vigia atira; a gente protege.
+- **Depois:** a roda fica com o nosso pneu, e eles pagam quem ajudou ($ 60 a $ 140 e uma caixa de munição da arma dele) e
+  ficam ali, amigos. Mortos, deixam as duas mochilas, e o carro fica livre.
+- Enquanto um deles está vivo, ninguém mexe no carro deles. O save guarda o estado de cada um. O F1 ganhou "Ir ao carro",
+  "Recomeçar", "Pneu de 80%" e "Acabar a troca".
+- É a etapa 4, a última do plano. O resumo está em [13 – Os sobreviventes e os acampamentos](13-Sobreviventes-e-Acampamentos.md).
+
+## Mais grupos de busca, o som da casa e os móveis (02/11/2026, a pedido)
+
+- **Os grupos de busca** (os que atiram na gente): a cidade grande tem 6, cada um numa parte dela; a pequena e a vila, 1.
+  Até 2 no mundo de uma vez. Na cidade grande, o grupo de uma parte nova vem em 20 s a 1 min, e o que foi embora volta em
+  4 a 8 min (antes, era um grupo por cidade e um no mundo inteiro, de 6 a 12 min).
+- **O som da sala do Dia 0:** a "festa" gerada por código (vozes sintéticas em laço de 8 s), que tocava na tela do
+  personagem até a TV, saiu.
+- **Os móveis sumindo:** quem saía da partida pelo menu e começava outra no mesmo Play achava a casa sem móveis. A limpeza
+  do terreno apagava as malhas dos móveis, que a partida seguinte reaproveita; agora ela deixa os móveis de fora (e os
+  erros "Destroying assets" ao sair acabaram).
 
 ## Mudanças de rumo, em resumo
 

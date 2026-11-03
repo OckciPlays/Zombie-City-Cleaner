@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.Player
     /// A mochila é do anfitrião (pegar, largar, comer, mover e o painel de armas passam por ele); os atalhos e o lugar
     /// escolhido são do dono. A tela da mochila (TAB) é a <see cref="TelaDoInventario"/>; aqui fica a barra do HUD.
     /// </summary>
-    public class InventarioJogador : NetworkBehaviour
+    public partial class InventarioJogador : NetworkBehaviour
     {
         public const int Atalhos = 3;
 
@@ -151,13 +151,10 @@ namespace ZombieCityCleaner.Player
                 Mochila.Clear();
                 MochilaVestida.Value = Item.Nada;
                 PneuNasMaos.Value = SemPneu;
-                // na cena de vídeo, de mãos vazias; no Dia 0 também (a vida normal: o que tiver, foi comprado)
-                var mundo = World.MundoDaPartida.Instancia;
-                bool diaZero = mundo != null && mundo.NoDiaZero;
-                if (!ModoVideo.SemArma && !diaZero) Receber(Item.Pistola);
+                Dinheiro.Value = 0;
+                // o que ele leva chega quando o dono cria o personagem (InventarioJogador.Personagem.cs): as coisas do
+                // personagem salvo, ou o começo de um novo (a pistola e a lanterna)
             }
-            // a pistola do começo no primeiro atalho
-            if (IsOwner && _atalhos.Value == 0 && Mochila.Count > 0) _atalhos.Value = Mochila[0].id;
             Mudou?.Invoke();
         }
 
@@ -1259,12 +1256,8 @@ namespace ZombieCityCleaner.Player
             if (IsSpawned && IsServer)
             {
                 GastarPilhas(Time.deltaTime);
-                if (!_lanternaDoComeco && !ModoVideo.SemArma)
-                {
-                    _lanternaDoComeco = true;
-                    StartCoroutine(LanternaDoComeco());
-                }
             }
+            if (IsSpawned && IsOwner && _pedirComeco) EnviarPersonagem();   // o personagem (InventarioJogador.Personagem.cs)
             if (IsSpawned) PneuQueSeVe();
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
             if (_arma.Usando || _arma.Montando) return;   // comendo, bebendo ou montando: nem troca nem larga

@@ -74,9 +74,9 @@ namespace ZombieCityCleaner.Zombies
             Vector3 olhoDele = transform.position + Vector3.up * 2.1f;
             int quem = -1, perto = -1;
             float menor = c.distancia.y + 20f, menorDeTodos = menor;
-            for (int i = 0; i < _m.QuantosJogadores; i++)
+            for (int i = 0; i < _m.QuantosAlvos; i++)   // os jogadores e os sobreviventes (02/11/2026)
             {
-                ref readonly var p = ref _m.Jogadores[i];
+                ref readonly var p = ref _m.AlvoNo(i);
                 float d = Vector3.Distance(p.pes, transform.position);
                 if (d < menorDeTodos)
                 {
@@ -97,7 +97,7 @@ namespace ZombieCityCleaner.Zombies
                 if (agora >= _proximaBuscaDoLong && NoNavMesh)
                 {
                     _proximaBuscaDoLong = agora + 2f;
-                    Ir(_m.Jogadores[perto].pes, c.velocidade, 1f);
+                    Ir(_m.AlvoNo(perto).pes, c.velocidade, 1f);
                     Atual = Estado.Investigando;
                 }
                 return;
@@ -110,8 +110,8 @@ namespace ZombieCityCleaner.Zombies
                 else if (Atual == Estado.Vagando && Chegou()) Pausar(agora);
                 return;
             }
-            ref readonly var alvo = ref _m.Jogadores[quem];
-            _alvo = alvo.jogador;
+            ref readonly var alvo = ref _m.AlvoNo(quem);
+            _alvo = alvo.quem;
             Vector3 deMim = transform.position - alvo.pes;
             deMim.y = 0f;
             Vector3 fora = deMim.sqrMagnitude > 0.01f ? deMim.normalized : -transform.forward;
@@ -231,7 +231,7 @@ namespace ZombieCityCleaner.Zombies
         }
 
         /// <summary>Ferido (sem morrer): o grito (de tempos em tempos) e, no papo, a gosma estoura.</summary>
-        void LongFerido(RegiaoDoCorpo regiao, JogadorRede autor, float agora)
+        void LongFerido(RegiaoDoCorpo regiao, IAlvoDeZumbi autor, float agora)
         {
             if (regiao == RegiaoDoCorpo.Papo && !_semPapo)
             {

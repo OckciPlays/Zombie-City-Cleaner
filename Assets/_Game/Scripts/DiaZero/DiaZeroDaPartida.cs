@@ -521,6 +521,13 @@ namespace ZombieCityCleaner.DiaZero
                 }
             _levar.Clear();
             foreach (var compra in _compras) if (!deFora.Contains(compra.cliente)) _levar.Add(compra);
+            // o dinheiro que sobrou vai com cada um (02/11/2026, o save: antes ele se perdia aqui); ficar de fora só perde as
+            // compras
+            foreach (var kv in NetworkManager.ConnectedClients)
+            {
+                var inv = kv.Value.PlayerObject != null ? kv.Value.PlayerObject.GetComponent<InventarioJogador>() : null;
+                if (inv != null) inv.Pagar(Dinheiro(kv.Key));
+            }
             Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para a casa" +
                       (fora.Count > 0 ? $"; ficaram de fora: {string.Join(", ", fora)}." : "."));
             PortaFechouRpc(string.Join(", ", fora));

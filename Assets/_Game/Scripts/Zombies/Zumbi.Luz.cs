@@ -54,8 +54,10 @@ namespace ZombieCityCleaner.Zombies
             Vector3 para = transform.position - f.origem;
             para.y = 0f;
             float aoLongo = Vector3.Dot(para, frente), deLado = Vector3.Dot(para, lado);
-            // de perto, a luz não o afasta mais (já está em cima de quem segura a lanterna; o carro já vai bater)
-            if (aoLongo < (f.carro ? 3f : a.alcanceDoAtaque + 0.3f)) return false;
+            // de perto, a luz não o afasta mais (já está em cima de quem segura a lanterna; o carro já vai bater); o Corredor
+            // no bote (a menos de 4 m) também não desvia: ele vem bater (02/11/2026)
+            float naoDesvia = f.carro ? 3f : tipo == TipoDeZumbi.Corredor && _alvo != null ? a.corredor.distanciaDoBote : a.alcanceDoAtaque + 0.3f;
+            if (aoLongo < naoDesvia) return false;
             if (f.carro && Mathf.Abs(deLado) > CaminhoDoCarro) return false;   // fora do caminho do carro
 
             // quanto pular: até sair do facho (o da lanterna; o do carro, até sair do caminho), com uma folga
@@ -121,7 +123,7 @@ namespace ZombieCityCleaner.Zombies
         void FimDaEsquiva(float agora)
         {
             var antes = _antesDaEsquiva;
-            if ((antes == Estado.Perseguindo || antes == Estado.Atacando) && _alvo != null && _alvo.IsSpawned)
+            if ((antes == Estado.Perseguindo || antes == Estado.Atacando) && _alvo != null && _alvo.AlvoValido)
             {
                 Atual = Estado.Perseguindo;
                 _proximoCaminho = 0f;

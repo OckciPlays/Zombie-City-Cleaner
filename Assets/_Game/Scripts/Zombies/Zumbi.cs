@@ -349,7 +349,7 @@ namespace ZombieCityCleaner.Zombies
             capsula.height = altura;
             capsula.center = new Vector3(0f, altura / 2f, 0f);
             agente.height = p >= 3 ? 0.7f : _alturaDoAgente;
-            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * _ritmo;
+            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * RitmoPara(_velocidadeBase);
             AplicarPernasNoAnimador();
         }
 
@@ -458,7 +458,7 @@ namespace ZombieCityCleaner.Zombies
         // ------------------------------------------------------------------ anfitrião: a IA
 
         internal float proximaDecisao, ultimaDecisao;
-        JogadorRede _alvo;
+        IAlvoDeZumbi _alvo;   // o jogador ou o sobrevivente (02/11/2026)
         Vector3 _casa, _ultimaPosicao, _olharPara;
         float _fimDaPausa, _alerta, _ultimoVisto, _proximoGolpe, _proximoCaminho, _engajadoAte, _preguica, _giro, _golpeEm;
         float _danoNoCorpo;
@@ -604,10 +604,12 @@ namespace ZombieCityCleaner.Zombies
             Vector3 olho = transform.position + Vector3.up * AlturaDoOlho;
             float maior = 0f;
             int quem = -1;
-            for (int i = 0; i < _m.QuantosJogadores; i++)
+            // os jogadores e os sobreviventes (02/11/2026)
+            for (int i = 0; i < _m.QuantosAlvos; i++)
             {
-                ref readonly var p = ref _m.Jogadores[i];
+                ref readonly var p = ref _m.AlvoNo(i);
                 if (BunkerRede.Isolado(p.peito, olho)) continue;
+                if (ZombieManager.ZonasSeguras.Count > 0 && ZombieManager.NaZonaSegura(p.pes)) continue;   // no acampamento (02/11/2026)
                 Vector3 para = p.peito - olho;
                 float d = para.magnitude;
                 float forca;
@@ -631,14 +633,14 @@ namespace ZombieCityCleaner.Zombies
                 return;
             }
             _alerta += maior * dt;
-            ref readonly var visto = ref _m.Jogadores[quem];
+            ref readonly var visto = ref _m.AlvoNo(quem);
             // de dia e ao amanhecer, ele prioriza se esconder: quem está onde o sol bate (ou vai bater) só é observado,
             // mesmo encostando ou correndo perto; ele só sai atrás se foi atacado (tiro, soco) ou com um tiro bem perto
             // (Ameacado; a pedido em 28/10/2026: antes encostar e correr perto também o tiravam da sombra)
             if (visto.exposto && !Ameacado) _alerta = Mathf.Min(_alerta, 0.95f);
             if (_alerta >= 1f)
             {
-                ComecarPerseguicao(visto.jogador, agora);
+                ComecarPerseguicao(visto.quem, agora);
                 return;
             }
             // desconfiado: para e vira para o que viu
@@ -659,6 +661,7 @@ namespace ZombieCityCleaner.Zombies
                 Vector3 p = _casa + new Vector3(r.x, 0f, r.y);
                 if (NavMesh.SamplePosition(p, out var hit, 1.5f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - _casa.y) < 1.2f
                     && !(_m.ProtegerDoSol && _m.Exposto(hit.position))   // de dia e ao amanhecer, só vaga onde o sol não bate
+                    && !ZombieManager.NaZonaSegura(hit.position)   // nem para dentro de um acampamento (02/11/2026)
                     && !(_m.Fachos.Count > 0 && _m.NoFacho(hit.position + Vector3.up * 1.2f, out _)))   // nem para dentro da luz
                 {
                     Ir(hit.position, a.velocidadeVagando * FatorAndando, 0.4f);
@@ -672,7 +675,7 @@ namespace ZombieCityCleaner.Zombies
         void Ir(Vector3 destino, float velocidade, float parada)
         {
             _velocidadeBase = velocidade;
-            agente.speed = velocidade * FatorDasPernas * FatorDaPedra * _ritmo;   // mancando, rastejando ou virando pedra, mais devagar; cada um no seu ritmo
+            agente.speed = velocidade * FatorDasPernas * FatorDaPedra * RitmoPara(velocidade);   // mancando, rastejando ou virando pedra, mais devagar; cada um no seu ritmo
             agente.stoppingDistance = parada;
             agente.isStopped = false;
             agente.SetDestination(destino);
@@ -709,12 +712,20 @@ namespace ZombieCityCleaner.Zombies
         {
             if (!NoNavMesh || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte é surdo
             _alvo = null;
+            // o barulho de dentro de um acampamento: vai só até a beira dele (02/11/2026)
+            if (ZombieManager.ZonaSeguraEm(ponto, out var zona))
+            {
+                Vector3 fora = transform.position - zona.centro;
+                fora.y = 0f;
+                if (fora.sqrMagnitude < 0.01f) fora = Vector3.forward;
+                ponto = zona.centro + fora.normalized * (zona.raio + 2f);
+            }
             if (NavMesh.SamplePosition(ponto, out var hit, 3f, NavMesh.AllAreas)) ponto = hit.position;
             Ir(ponto, _m.ajustes.velocidadeInvestigando * FatorAndando, 1f);
             Atual = Estado.Investigando;
         }
 
-        internal void ComecarPerseguicao(JogadorRede jogador, float agora)
+        internal void ComecarPerseguicao(IAlvoDeZumbi jogador, float agora)
         {
             if (jogador == null || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte só vê pelo olho
             if (tipo == TipoDeZumbi.Long)
@@ -737,7 +748,7 @@ namespace ZombieCityCleaner.Zombies
 
         void Perseguir(float agora, AjustesDeZumbi a)
         {
-            if (_alvo == null || !_alvo.IsSpawned)
+            if (_alvo == null || !_alvo.AlvoValido)
             {
                 Desistir(agora);
                 return;
@@ -745,7 +756,7 @@ namespace ZombieCityCleaner.Zombies
             Vector3 pos = _alvo.transform.position;
             Vector3 delta = pos - transform.position;
             float d = delta.magnitude;
-            if (d > a.distanciaDeDesistir || DesisteDoSol(pos))
+            if (d > a.distanciaDeDesistir || DesisteDoSol(pos) || ZombieManager.NaZonaSegura(pos))
             {
                 Desistir(agora);
                 return;
@@ -762,6 +773,11 @@ namespace ZombieCityCleaner.Zombies
                 return;
             }
             float horizontal = new Vector2(delta.x, delta.z).magnitude;
+            if (tipo == TipoDeZumbi.Corredor)
+            {
+                PerseguirGolpeando(agora, pos, d, horizontal, delta.y);   // o Corredor não para para bater (Zumbi.Especiais.cs)
+                return;
+            }
             // no alcance do golpe: ataca quando chega ao lugar dele no cerco (senão os primeiros atacavam de onde
             // chegavam, todos do mesmo lado); colado no jogador (a menos de 1 m), bate na hora; no alcance, espera chegar ao
             // lugar no máximo 1,5 s (a pedido em 28/10/2026: chegando perto de um que estava dando a volta, ele não batia)
@@ -772,6 +788,7 @@ namespace ZombieCityCleaner.Zombies
             {
                 Atual = Estado.Atacando;
                 agente.ResetPath();
+                agente.velocity = Vector3.zero;   // para ali (antes ele escorregava, às vezes para depois do jogador)
                 _proximoGolpe = Mathf.Max(_proximoGolpe, agora + 0.25f);
                 return;
             }
@@ -785,13 +802,13 @@ namespace ZombieCityCleaner.Zombies
 
         void Atacar(float agora, AjustesDeZumbi a)
         {
-            if (_alvo == null || !_alvo.IsSpawned)
+            if (_alvo == null || !_alvo.AlvoValido)
             {
                 Desistir(agora);
                 return;
             }
             Vector3 pos = _alvo.transform.position;
-            if (DesisteDoSol(pos))
+            if (DesisteDoSol(pos) || ZombieManager.NaZonaSegura(pos))
             {
                 Desistir(agora);
                 return;
@@ -819,9 +836,10 @@ namespace ZombieCityCleaner.Zombies
         void Acertar(AjustesDeZumbi a)
         {
             _golpeEm = 0f;
-            if (_alvo == null || !_alvo.IsSpawned) return;
+            if (_alvo == null || !_alvo.AlvoValido) return;
             Vector3 delta = _alvo.transform.position - transform.position;
-            if (new Vector2(delta.x, delta.z).magnitude > a.alcanceDoAtaque + 0.5f || Mathf.Abs(delta.y) > 1.4f) return;
+            float alcance = tipo == TipoDeZumbi.Corredor ? a.corredor.alcanceDoDano : a.alcanceDoAtaque + 0.5f;
+            if (new Vector2(delta.x, delta.z).magnitude > alcance || Mathf.Abs(delta.y) > 1.4f) return;
             _m.Golpear(_alvo, a.danoDoGolpe, transform.position);
         }
 
@@ -840,7 +858,7 @@ namespace ZombieCityCleaner.Zombies
         /// machado corta em dobro, o que não tem fio, 0; acabou a vida dele, ele cai). A direção do acerto empurra o corpo que cai, e o arremesso (a espingarda de perto, o
         /// carro rápido) joga o corpo inteiro para trás.
         /// </summary>
-        internal void LevarTiro(RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, Vector3 direcao, bool arremesso, JogadorRede autor, float agora, float corte = 1f)
+        internal void LevarTiro(RegiaoDoCorpo regiao, Membro membro, float dano, Vector3 ponto, Vector3 direcao, bool arremesso, IAlvoDeZumbi autor, float agora, float corte = 1f)
         {
             if (Morto) return;
             if (tipo == TipoDeZumbi.Brutamonte)

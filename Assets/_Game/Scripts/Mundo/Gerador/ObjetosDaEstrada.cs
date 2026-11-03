@@ -31,7 +31,24 @@ namespace ZombieCityCleaner.Mundo
         public bool NaCalcada;
         /// <summary>O carro na garagem ou na vaga de uma casa (Parte M6): em cima do chão de concreto dela (5 cm acima do patamar).</summary>
         public bool NaGaragem;
+        /// <summary>O carro quebrado no acostamento, com os dois sobreviventes trocando o pneu (<see cref="CarroQuebrado"/>).</summary>
+        public bool Quebrado;
         public List<LinhaDePlaca> Linhas;
+    }
+
+    /// <summary>
+    /// Um carro quebrado no acostamento (02/11/2026, a pedido; a etapa 4 dos sobreviventes): o macaco erguido na roda do
+    /// lado de fora da pista e essa roda sem pneu (<c>Vehicles/PecasDosCarrosDoMundo.Padrao</c>). Os dois sobreviventes que
+    /// trocam o pneu são do <c>Sobreviventes/CarrosQuebradosDoMundo</c>.
+    /// </summary>
+    public sealed class CarroQuebrado
+    {
+        /// <summary>O índice dele em <see cref="ObjetosDaEstrada.Todos"/> (o número do carro do mundo).</summary>
+        public int Indice;
+        /// <summary>A roda sem pneu (1, a dianteira direita, ou 3, a traseira direita: do lado de fora da pista).</summary>
+        public int Roda;
+        /// <summary>O lugar do carro, a frente dele e o lado de fora da pista (a direita dele), no plano do mapa.</summary>
+        public Vector2 Posicao, Frente, Fora;
     }
 
     /// <summary>Uma saída numa placa de direção: o trecho da <see cref="RedeDeEstradas"/> e os lugares escritos para ela.</summary>
@@ -79,6 +96,15 @@ namespace ZombieCityCleaner.Mundo
         readonly Sorteio _s;
         // onde já tem algo grande (as blitz, os postos, os cruzamentos): os carros não caem em cima
         readonly List<(Vector2 p, float r)> _ocupado = new List<(Vector2, float)>();
+        // os carros encostados no acostamento (onde pode cair um quebrado): o índice, a estrada, o lugar e a frente
+        readonly List<(int indice, Estrada e, Vector2 c, Vector2 frente)> _noAcostamento = new List<(int, Estrada, Vector2, Vector2)>();
+        readonly Dictionary<int, CarroQuebrado> _quebradoDe = new Dictionary<int, CarroQuebrado>();
+
+        /// <summary>Os carros quebrados no acostamento (os sobreviventes, a etapa 4).</summary>
+        public readonly List<CarroQuebrado> Quebrados = new List<CarroQuebrado>();
+
+        /// <summary>O carro quebrado com este número, ou null.</summary>
+        public CarroQuebrado QuebradoDe(int indice) => _quebradoDe.TryGetValue(indice, out var q) ? q : null;
 
         ObjetosDaEstrada(DadosDoMundo d)
         {
@@ -100,6 +126,7 @@ namespace ZombieCityCleaner.Mundo
                 o.PorAsEntradas();
                 o.PorAsPlacasDeDirecao();
                 o.PorOsCarros();
+                o.PorOsQuebrados();
                 ObjetosDaCidade.Por(d, o.Todos);
             }
             o.Indexar();
@@ -209,6 +236,8 @@ namespace ZombieCityCleaner.Mundo
         {
             foreach (var l in _plano.Lugares)
             {
+                // os acampamentos (02/11/2026): nada da beira da estrada cai dentro deles (o acampamento monta o dele)
+                if (l.Tipo == TipoDeLugar.Acampamento) _ocupado.Add((l.Centro, l.Raio + 6f));
                 if (l.Tipo != TipoDeLugar.Posto) continue;
                 // o Giro do lugar é o ângulo do mapa (do leste para o norte) para onde a frente olha: a estrada
                 float g = l.Giro * Mathf.Deg2Rad;
@@ -684,7 +713,11 @@ namespace ZombieCityCleaner.Mundo
                 // encostado no acostamento
                 var c = p + direita * (meia + 1.4f + _s.Entre(-0.2f, 0.4f));
                 float giro = GiroDe(frente) + _s.Entre(-6f, 6f);
-                if (NaPropria(c, e)) Por(TipoDeObjeto.Carro, c, giro, modelo, true);
+                if (NaPropria(c, e))
+                {
+                    Por(TipoDeObjeto.Carro, c, giro, modelo, true);
+                    _noAcostamento.Add((Todos.Count - 1, e, c, frente));
+                }
             }
             else
             {
@@ -701,6 +734,59 @@ namespace ZombieCityCleaner.Mundo
                 }
             }
             _ocupado.Add((p, 8f));
+        }
+
+        // ------------------------------------------------------------------ os carros quebrados (os sobreviventes, a etapa 4)
+
+        // um carro do acostamento a cada 2 rodovias (pelo menos 1 no mundo; as rodovias primeiro), longe das cidades, dos
+        // acampamentos, dos postos e um do outro, com o chão do lado de fora livre (onde os dois ficam). A sequência de
+        // sorteio é só dela: o resto do mapa não muda
+        void PorOsQuebrados()
+        {
+            var s = Sorteio.Da(_d.Semente, "carros-quebrados");
+            int rodovias = 0;
+            foreach (var e in _plano.Estradas)
+                if (e.Tipo == TipoDeEstrada.Rodovia && !e.Conector) rodovias++;
+            int quantos = Mathf.Max(1, Mathf.RoundToInt(rodovias * 0.5f));
+            var lista = new List<(int indice, Estrada e, Vector2 c, Vector2 frente)>(_noAcostamento);
+            for (int i = lista.Count - 1; i > 0; i--)
+            {
+                int j = s.Entre(0, i + 1);
+                (lista[i], lista[j]) = (lista[j], lista[i]);
+            }
+            for (int volta = 0; volta < 2; volta++)
+                foreach (var c in lista)
+                {
+                    if (Quebrados.Count >= quantos) return;
+                    if ((c.e.Tipo == TipoDeEstrada.Rodovia) != (volta == 0) || _quebradoDe.ContainsKey(c.indice)) continue;
+                    var fora = Direita(c.frente);
+                    if (!LugarDoQuebrado(c.c, fora)) continue;
+                    bool longe = true;
+                    foreach (var q in Quebrados) longe &= (q.Posicao - c.c).sqrMagnitude >= 700f * 700f;
+                    if (!longe) continue;
+                    var novo = new CarroQuebrado { Indice = c.indice, Roda = s.Chance(0.5f) ? 1 : 3, Posicao = c.c, Frente = c.frente, Fora = fora };
+                    Todos[c.indice].Quebrado = true;
+                    Quebrados.Add(novo);
+                    _quebradoDe[c.indice] = novo;
+                }
+        }
+
+        bool LugarDoQuebrado(Vector2 c, Vector2 fora)
+        {
+            if (!_d.DentroDaCerca(c.x, c.y, 120f)) return false;
+            foreach (var cidade in _plano.Cidades)
+                if (cidade.Q(c.x, c.y) < 1.3f) return false;
+            foreach (var l in _plano.Lugares)
+            {
+                float longe = l.Tipo == TipoDeLugar.Acampamento ? l.Raio + 150f
+                            : l.Tipo == TipoDeLugar.Posto ? 70f
+                            : l.Tipo == TipoDeLugar.CasaDaFamilia ? 400f : -1f;
+                if (longe > 0f && (l.Centro - c).sqrMagnitude < longe * longe) return false;
+            }
+            // os dois ficam do lado de fora: ali não é outra estrada, e o chão não despenca
+            var lado = c + fora * 3.5f;
+            if (!ForaDasEstradas(lado, 0.5f) || !ForaDasEstradas(lado + fora * 3f, 0.5f)) return false;
+            return Mathf.Abs(_d.Altura(lado.x, lado.y) - _d.Altura(c.x, c.y)) < 1.2f;
         }
     }
 }

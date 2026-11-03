@@ -52,6 +52,7 @@ namespace ZombieCityCleaner.Mundo
                     case TipoDeLugar.CidadePequena: nivel = 1; break;
                     case TipoDeLugar.Vila: case TipoDeLugar.BaseMilitar: case TipoDeLugar.ComunidadeAliada: case TipoDeLugar.ComunidadeInimiga:
                     case TipoDeLugar.Laboratorio: case TipoDeLugar.Fazenda: case TipoDeLugar.CasaDoLago: case TipoDeLugar.CasaDaFamilia:
+                    case TipoDeLugar.Acampamento:
                         nivel = 2; break;
                     default: continue;
                 }
@@ -262,6 +263,11 @@ namespace ZombieCityCleaner.Mundo
                     break;
                 case TipoDeLugar.Barreira:
                     Xis(px, lado, d, mpp, p, 4.5f * e, new Color(0.8f, 0.1f, 0.1f));
+                    break;
+                case TipoDeLugar.Acampamento:
+                    // a barraca (02/11/2026): o triângulo verde-oliva, maior que o da cabana
+                    Triangulo(px, lado, d, mpp, p, 4.6f * e, Contorno);
+                    Triangulo(px, lado, d, mpp, p, 3.4f * e, new Color(0.42f, 0.5f, 0.24f));
                     break;
                 case TipoDeLugar.CasaDoLago:
                     Quadrado(px, lado, d, mpp, p, 3f * e, Contorno);

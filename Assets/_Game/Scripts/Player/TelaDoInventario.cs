@@ -628,6 +628,14 @@ namespace ZombieCityCleaner.Player
                 PorCor(_titulo, CorDoTexto);
             }
             Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), "DETALHES", _titulo);
+            // o dinheiro do personagem (02/11/2026: o que sobrou do Dia 0; os comerciantes vêm depois)
+            if (inventario != null && inventario.IsSpawned)
+            {
+                PorCor(_titulo, Destaque);
+                GUI.Label(Em(new Rect(AreaDoNome.x + 100, 18, 160, 28)), DiaZero.PrecosDoDiaZero.Dinheiro(inventario.Dinheiro.Value),
+                          new GUIStyle(_titulo) { alignment = TextAnchor.MiddleRight });
+                PorCor(_titulo, CorDoTexto);
+            }
             var x = Em(BotaoFechar);
             Ret(x, x.Contains(mouse) ? new Color(0.62f, 0.16f, 0.12f, 0.95f) : new Color(0f, 0f, 0f, 0.35f));
             Moldura(x, Mathf.Max(1f, Mathf.Round(u)), BordaClara);

@@ -31,5 +31,11 @@ namespace ZombieCityCleaner.Vehicles
         public abstract void PedirTirarRoda(int carro, int roda);
         /// <summary>Um pneu da mochila (pelo Id; 0, o das mãos) vai para a roda vazia do lado erguido.</summary>
         public abstract void PedirPorRoda(int carro, int roda, ushort idNaMochila);
+
+        /// <summary>
+        /// Por que ninguém mexe neste carro agora (o carro quebrado com os donos ali: Sobreviventes/CarrosQuebradosDoMundo),
+        /// ou null. O capô, as rodas e o macaco mostram isto no lugar da dica.
+        /// </summary>
+        public virtual string Ocupado(int carro) => null;
     }
 }

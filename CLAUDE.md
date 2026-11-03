@@ -17,6 +17,11 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 >
 > **O Dia 0 (01/11/2026):** o começo do jogo novo no mundo normal (a introdução na TV, a rua com os NPCs e as lojas, os
 > 1.000 dólares, a porta do abrigo e os 5 anos depois) está em [`Docs/12-Dia-Zero.md`](Docs/12-Dia-Zero.md) e na seção "O Dia 0".
+>
+> **O save (02/11/2026):** as três formas de salvar, o personagem de cada jogador (no computador dele, vai para qualquer
+> mundo), o mundo de quem hospeda e a lista do Continuar estão em [`Docs/14-Save.md`](Docs/14-Save.md) e na seção "O save".
+> É a etapa 1 do plano dos sobreviventes, dos acampamentos e do save (o plano fica com o Pedro; o resumo das decisões, na
+> seção "O save").
 
 ## Branches
 
@@ -831,13 +836,15 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - `MenuOnline.Controla` diz se o jogador local recebe comandos (o movimento, a arma, a lanterna e o E usam ele): na partida, com o menu fechado, o mouse preso e os botões já soltos depois de prendê-lo. Assim o clique que devolve o foco não atira nem mira.
     - Ele lê o estado do mouse na hora, para não depender da ordem dos scripts no quadro do clique. Antes, o `MovimentoPrimeiraPessoa` prendia o mouse no clique, e a arma atirava no mesmo quadro.
   - **As telas do jogo** (a do inventário e o menu do desenvolvedor): `MenuOnline.Tela(dona, aberta)` registra uma tela aberta por cima da partida (`ComTela`). Com uma aberta, o mouse fica solto e `Controla` é falso (o jogador fica parado, sem olhar nem atirar), mas o HUD continua. ESC fecha as telas (`FecharTelas`) em vez de abrir o menu; fechadas, o mouse volta a ficar preso sozinho, e o clique que fechou não atira.
-- **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot` e `-hora N`.
+- **Linha de comando, para testes:** `-entrar CÓDIGO`, `-hospedar-local`, `-entrar-local [ip]`, `-bot`, `-hora N` e
+  `-fotos PASTA` (02/11/2026: o robô fotografa a tela a cada relatório; precisa da build com janela, sem `-batchmode`).
   - Com `-bot`, o jogador local anda em círculo, atira a cada 1,5 s e troca a lanterna a cada 5 s.
     - Com um zumbi vivo a até 18 m, ele mira no peito desse zumbi e recua devagar (o acerto vai ao anfitrião como o de um jogador).
     - Com a sniper na mão, ele fica na luneta (testa o nível de detalhe pela luneta, na rede).
     - A cada 3 s, ele registra no log:
       - a hora, os zumbis que recebe e a vida (`[robô] hora HH:MM, zumbis N (perto P, médio M; caídos C, sem cabeça S), vida V`);
-      - o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`).
+      - o que vê dos outros (`[robô] jogador N: posição, olhar, tiros recebidos, lanterna`);
+      - o clima que recebe do anfitrião e o que mostra (`[robô] clima NÍVEL: nuvens, chuva, vento, poças, tornado · Aqui: ...`).
   - Matar a build sem fechar a conexão deixa o jogador dela na partida até o tempo limite do transporte.
 - **Como testar com dois jogadores:**
   1. gere a build em `Builds/Teste/` (Development, ignorada pelo git). A build deixa o `InputSystem_Actions` nos Preloaded Assets do Player Settings; tire de lá antes de commitar;
@@ -845,6 +852,13 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   3. rode a build sem janela, por exemplo `ZombieCityCleaner.exe -batchmode -nographics -entrar CÓDIGO -bot -logFile caminho.log` (ou `-entrar-local 127.0.0.1` no lugar de `-entrar CÓDIGO`);
   4. confira no Editor (`JogadorRede.Todos`, `TirosRecebidos`) e no log da build.
   - Ao terminar, desligue `MenuOnline.Bot` se ele foi ligado no Editor: sem Domain Reload, ele continuaria ligado no próximo Play.
+  - **Conferido (02/11/2026, a pedido: "antes ... o Oco não era visto por quem entrava no servidor"):** o Editor hospedando
+    local (semente 7, à noite) e a build com janela como robô (`-entrar-local 127.0.0.1 -bot -fotos`). O robô recebeu até
+    79 zumbis (8 perto: os 5 criados na frente dele e os do mundo), apanhou deles (a vida de 100 a 8), matou alguns (um sem
+    cabeça) e, nas fotos dele, aparecem o anfitrião, o Oco na porta e os de fora pela janela; o anfitrião recebeu os 46
+    tiros do robô e o viu. Sem erros nos dois lados. O contador do topo dizia "0/4 jogadores" em quem entra no jogo local
+    por IP (a lista de conectados só existe no anfitrião): agora conta os jogadores que chegaram (`SessaoOnline.Jogadores`).
+    A build levou 42 minutos (os shaders compilados do zero; o Lit do URP tem 2.688 variantes).
 - **O jogador (`Assets/_Game/Prefabs/Jogador.prefab`, montado por `Editor/MontagemDaRede`, menu Zombie City Cleaner > Montar jogador e rede):**
   - **Raiz:** CharacterController (1,8 m, raio 0,3), NetworkObject e NetworkTransform com autoridade do dono (posição e só o giro em Y).
     - `JogadorRede`: as câmeras, os corpos (`corpos`, um `CorpoDoPersonagem` por personagem), o personagem (`Personagem`, que o dono escreve quando nasce: ele liga o corpo dele, passa a usar o Animator, os ossos, o que está na mão e os controladores dele e pinta os braços de primeira pessoa com a pele dele; avisa `CorpoMudou`), o que está na mão (`NaMao`, do `InventarioJogador`) e o RPC do tiro. A cor da família saiu (dois jogadores podem ter o mesmo personagem).
@@ -1469,6 +1483,23 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
     `PapoDepoisDaAnimacao`. Ele não pula para fora do facho da lanterna a menos de 8 m.
   - **O Corredor:** é o Oco com outros números (`VidaDoCorpo`, `VidaDoMembro`, `VelocidadeDePerseguir`, `FatorAndando`,
     `TempoParaPetrificar`, `VelocidadeNoBote`). Ele nasce no lugar de um Oco (`ModeloParaNascer`).
+    - **Golpeia correndo** (02/11/2026, a pedido: ele chegava perto, rodeava e não batia; dava para encostar nele correndo
+      sem levar golpe). A causa: ele ia para o lugar dele no cerco (o anel de 1,8 m, fora do alcance de 1,3 m), parava para
+      bater escorregando a ~5 m/s, e o dano saía ~0,7 s depois, quando o jogador já tinha saído do alcance.
+    - Agora a perseguição dele é a `PerseguirGolpeando` (`Zumbi.Especiais.cs`): no bote (a menos de 4 m) ele vai reto no
+      alvo, sem o anel, e refaz o caminho a cada 0,1 s. A 1,6 m ele golpeia sem parar de correr, e o dano sai 0,2 s depois,
+      se o alvo estiver a até 2,1 m. Ele nunca entra no estado `Atacando`.
+    - Os números estão em `AjustesDeZumbi` > `corredor`: `alcanceDoGolpe`, `atrasoDoDano`, `alcanceDoDano` e
+      `intervaloDoGolpe` (1 s).
+    - No bote, o ritmo de cada um (`RitmoPara`) não fica abaixo de 1: os mais lentos davam o bote a ~4 m/s, abaixo do
+      jogador correndo.
+    - No bote, a lanterna não o desvia (`Zumbi.Luz`).
+    - Para todos os zumbis: ao entrar no golpe, a velocidade do agente zera (antes ele escorregava).
+    - **Conferido** (à noite, numa rodovia, um Corredor por vez, chamado por um barulho, em 8 s):
+      - parado: 6 acertos;
+      - correndo de encontro a ele: 7;
+      - andando de lado: 6;
+      - fugindo em linha reta a 4,2 m/s, saindo de 5 m: nenhum. Ele persegue a 3,8 m/s e só passa o jogador no bote.
 - **As animações:** `Blender/especiais_animacoes.py` faz `Correr`, `Emergir`, `Furia`, `Cuspir` e `Gritar`.
   - Usa o esqueleto, o IK, as curvas e o espelho do `equilibrio_oco.py`.
   - Os laços (`Laco`) dão a volta sem tranco.
@@ -1619,7 +1650,8 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - **os sons:** em `SonsDoDiaZero`, gerados por código.
 - **O lobby na casa** (`DiaZeroDaPartida.Lobby.cs`, a pedido: "isso funcionaria como um lobby pré-jogo"): a `FaseDoDia`
   (`_fase`, NetworkVariable do anfitrião): `Casa`, `Tv` e `Rua`.
-  - **Casa:** cada um nasce na sala e cria o personagem; a festa toca (`IntroDoDiaZero.Festa`); quem sai da caixa da
+  - **Casa:** cada um nasce na sala e cria o personagem (o som da festa, as vozes geradas, saiu em 02/11/2026, a pedido:
+    "um som muito estranho... em repetição"); quem sai da caixa da
     casa (`DentroDaCasa`) volta para o último ponto de dentro (`NoLobby`, com o aviso); a porta do abrigo não aparece;
     em cima da tela, quantos estão na casa (`DesenharOLobby`).
   - **Tv:** o E na TV da sala (`TelevisaoDoDiaZero`, a caixa na frente da tela, posta pela `IntroDoDiaZero.PrepararATv`
@@ -1640,7 +1672,7 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
     modelo). As enfermarias do mundo ainda usam o modelo com o defeito.
   - **A câmera:** a dela, com a profundidade 60 e sem as camadas 6 e 10.
   - **A trilha:** `Audio/DiaZero/IntroDoDiaZero.ogg`, do `Ferramentas/trilha/intro_dia0.py` (ré menor, o tema do jogo, os
-    "braams" e os tambores). Os tempos dela casam com as cenas. Junto, a festa (`SonsDoDiaZero.Festa`) e a TV ligando.
+    "braams" e os tambores). Os tempos dela casam com as cenas. Junto, a TV ligando (a festa saiu em 02/11/2026).
     A trilha do jogo (o `MaestroDaTrilha`) não toca no Dia 0 inteiro (`MundoDaPartida.NoDiaZero`): ela começava de 6 a 12 s
     depois de nascer e caía no começo do jornal (02/11/2026). Ela começa no mundo, depois da porta.
   - **As cenas:**
@@ -1667,6 +1699,417 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - sair da loja sem pagar;
   - a porta e os 5 anos depois: o mundo da semente 7 em ~4 s, o jogador na sala às 8h, as compras no chão da casa.
   Falta testar com dois jogadores.
+
+## O save (02/11/2026, a pedido; `Scripts/Salvar/`)
+
+O resumo para gente está em `Docs/14-Save.md`. É a etapa 1 do plano de 02/11/2026 (o Corredor, o save, os grupos de
+sobreviventes, os acampamentos com os comerciantes e o carro quebrado). As decisões do Pedro: as três formas de salvar,
+escolhidas ao criar o mundo; "cada um leva o seu personagem"; o Continuar com a lista dos mundos; um personagem que já existe
+pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na etapa 2 (a seção "Os sobreviventes").
+
+- **Os arquivos** (JSON pelo `JsonUtility`, gravados num `.tmp` ao lado e trocados: `Arquivos.Gravar`):
+  - **`PersonagemSalvo`** (`persistentDataPath/Personagens/<id>.json`, no computador de cada jogador):
+    - o id (um GUID); a `Chave` (um `ulong`, o FNV do id: `Sorteio.Fnv`);
+    - o nome e a aparência (`Aparencia()`, `Vestir(a)`);
+    - o dinheiro, a vida, a fome, a sede;
+    - a mochila vestida, os itens (`ItemSalvo`: item, x, y, girado, qtd, desgaste), os atalhos (os índices nos itens) e o da
+      mão, o pneu nas mãos;
+    - `jogou`: falso só antes da tela de criar;
+    - `Todos()` (os salvos por último primeiro), `Gravar()`, `Apagar(id)`.
+  - **`MundoSalvo`** (`persistentDataPath/Mundos/<id>.json`, no anfitrião):
+    - o pedido: a semente, o tamanho, o nome e a versão do gerador (`Pedido` volta sem o Dia 0);
+    - o modo (`ModoDeSalvar`: Automático, AoSair, Dormindo), as datas, o dia e a hora, o clima (`TempoSalvo`: o relógio do
+      clima e os eventos que vêm);
+    - os itens no chão, as construções (a fogueira com os segundos que faltam), a perua e o cupê (`CarroSalvo`), os carros do
+      mundo mexidos, a mobília aberta, os sustos, o painel de armas;
+    - as posições de cada personagem, pela chave;
+    - `temEstado`: só os já salvos entram na lista (`Todos()`, só o cabeçalho).
+  - **`EscolhaDoPersonagem`** (estático): o personagem que o menu escolheu (`Atual`, `Novo`). O menu põe um salvo ou um
+    novo (`NovoPersonagem()`); sem o menu (os testes, o robô), fica null, e nada é gravado.
+- **`Salvamento`** (NetworkBehaviour no objeto "Mundo", posto pela `MontagemDoMundo` e na cena):
+  - **`Atual`** (estático, no anfitrião) é o mundo salvo da partida, posto pelo menu antes de hospedar. Null: a partida não
+    salva (`_modo` = 255). `Carregando` (`temEstado`): o `MundoDaPartida` não cria a perua, o cupê e a chave.
+  - **`Salvar(motivo)`** (anfitrião; nunca no Dia 0 nem antes de o mundo ficar pronto): copia o estado de cada sistema e
+    grava o mundo. Depois, `SalvarPersonagensRpc` (para todos) faz cada máquina gravar o próprio personagem
+    (`SalvarOPersonagemDaqui` → `InventarioJogador.Encher`: a mochila da rede e o pente de cada arma pelo
+    `ArmaJogador.MunicaoDe`).
+  - **Os modos:** o automático salva a cada 5 min (`Update`). "Sair da partida" chama `AoSairDaPartida`, menos no "só
+    dormindo": o anfitrião salva e sai 0,6 s depois (para o pedido chegar aos outros); quem entrou grava o próprio
+    personagem. `OnApplicationQuit` faz o mesmo. Dormir (`PedirDormir` → `DormirRpc`) salva em qualquer modo.
+  - **Ao carregar** (no `FicouPronto`), `Restaurar` põe:
+    - a hora e o dia (`CicloDoDia.Definir`) e o clima (`RestaurarTempo`: o calendário salvo; o que vem depois é sorteado
+      pela semente e pelo relógio do clima);
+    - os itens (`ItensNoMundo.Restaurar`), as construções, os carros do mundo (o macaco erguido desce), a mobília, os sustos
+      e o painel;
+    - os dois carros (`CriarCarro`): nascem cinemáticos até o chão de lá ter colisão (`TerrenoDoMundo.Pedir`/`Pronto`), e
+      `Carro.Restaurar` põe o estado. O macaco apoiado volta ao porta-malas.
+  - **A posição:** quem entra com o personagem salvo vai para onde estava (`AoCarregarPersonagem` → `IrParaRpc` no dono,
+    que espera o chão de lá e teleporta). Quem sai fica lembrado (`LembrarPosicao`, no `JogadorRede.OnNetworkDespawn`).
+  - **O Dia 0:** o personagem salvo que entra no Dia 0 de outro espera a porta (`GuardarParaDepois`) e entra no
+    `FicouPronto` seguinte.
+  - **As variáveis estáticas** (`Atual`, `EscolhaDoPersonagem.Atual`) são zeradas no começo de cada Play
+    (`RuntimeInitializeOnLoadMethod(SubsystemRegistration)`): sem o Domain Reload, o mundo de um Play ia para o próximo.
+- **O personagem na rede** (`InventarioJogador.Personagem.cs`, `InventarioJogador` virou `partial`):
+  - `Dinheiro` (NetworkVariable do servidor; `Pagar(dólares)`, o F1 `PedirMaisDinheiro`). Na porta do Dia 0, o que sobrou
+    na carteira do dia vai para ele (`DiaZeroDaPartida.FecharAPortaRpc`).
+  - **O começo:** o `JogadorRede.Criar` chama `ComecarPersonagem`; no quadro seguinte (no `OnNetworkSpawn` o inventário
+    ainda limpa a mochila), o dono manda `CarregarRpc(PacoteDoPersonagem)` (o salvo) ou `NovoRpc` (a pistola e a lanterna
+    no chão; nada no Dia 0 e no vídeo). Antes, a pistola vinha no `OnNetworkSpawn` e a lanterna no `Update`.
+  - **`Aplicar` (anfitrião):** a mochila vestida; os itens no lugar deles (o que não couber vai para outro lugar ou para o
+    chão), com Ids novos; o pneu; o dinheiro (somado); a vida, a fome e a sede (`FomeESede.Definir`). Depois, `CarregadoRpc`
+    põe os atalhos no dono.
+  - **A chave do personagem** vai no `JogadorRede.Chave` (NetworkVariable do dono). Um personagem salvo entra sem a tela de
+    criar (`Criar(escolhido.Aparencia())`). A tela de criar grava o novo (`jogou`) ao confirmar.
+  - **Sair da partida não chama mais o `Esvaziar`** (que largava tudo no chão e devolvia as armas ao painel).
+- **A cama:**
+  - `Construcao.dono` é a chave do personagem (antes, o clientId). `CamaDe(chave)` está no `VidaJogador.CaiuRpc`.
+  - Na própria cama: E dorme e salva, o clique recolhe (`ConstrucaoNaMira.UsaClique`).
+  - As camas da mobília (CamaCasal, CamaSolteiro, Beliche) ganham a `CamaDeDormir` em cada colisor
+    (`MobiliaNovaDoMundo.Novo`). Na casa da família (a menos de 13 m do meio dela, `TracadoDaCidade.MatrizDaCasa`), E dorme e
+    salva.
+- **O dia do mundo:** `CicloDoDia.Dia` (mais um a cada meia-noite, no anfitrião; `DiaRede` para os outros) e
+  `CicloDoDia.Definir(hora, dia)`.
+- **O menu** (`UI/MenuOnline`):
+  - o painel do personagem (`PainelDoPersonagem`, à direita do "Novo mundo" e do Continuar): os salvos e o "Novo
+    personagem", com as setas e o apagar (dois cliques);
+  - o "Salvar o jogo" (os três modos) antes do "Criar o mundo". `PedirOMundo` põe o Dia 0 só para o personagem novo e cria
+    o `MundoSalvo`;
+  - o Continuar abre a lista (`TelaDoContinuar`): o Jogar e o Apagar de cada mundo, e o "Jogar local";
+  - entrar com o código usa o personagem escolhido, sem mundo salvo (`ParaEntrar`);
+  - o ESC da partida diz como o mundo salva e quando salvou;
+  - o `UltimoMundo` dos PlayerPrefs saiu (o `GravarOUltimoMundo` ficou para os testes).
+- **O F1:** o painel "SAVE" (`MenuDoDesenvolvedor.Save.cs`, embaixo do carro), com o modo, quando salvou, o dinheiro,
+  "Salvar agora" e "+ $ 1.000". A tela da mochila mostra o dinheiro ao lado de "DETALHES".
+- **Conferido** (02/11/2026, um jogador, no Editor; os arquivos de teste foram apagados no fim):
+  - **um mundo novo:** o personagem novo, $ 1.234, a mochila média com 4 itens, um machado no chão, o dia 3 às 15h30, a
+    perua com 1 L e o jogador 2 m ao lado do nascimento. Salvo, fora do Play e de volta pelo save, tudo igual: o chão (4
+    itens, uma chave só), a mochila, o dinheiro, o atalho, a posição (0,00 m), o dia e a hora, a gasolina e os dois carros;
+  - **o Dia 0** com um personagem novo: não salva no Dia 0; na porta, os $ 1.000 vão para o personagem; o mundo e o
+    personagem aparecem nas listas.
+  - Os erros "Destroying assets is not permitted" ao sair vinham do `TerrenoDoMundo.Parar`, que destruía as malhas de todos
+    os filhos, até as dos móveis das casas (as dos modelos são assets; as pintadas da `MobiliaNovaDoMundo` ficam guardadas
+    para a partida seguinte, que, no mesmo Play, achava a casa do Dia 0 sem móveis). Desde 02/11/2026 ele deixa de fora o
+    que está dentro de uma `MobiliaDaConstrucao` (`DaMobilia`), e a `MobiliaNovaDoMundo.Novo` pinta de novo uma malha apagada.
+  - **Falta testar com dois jogadores:** o amigo com o personagem dele, o anfitrião saindo com todos e um personagem salvo
+    no Dia 0 de outro.
+
+## Os sobreviventes (02/11/2026, a pedido; `Scripts/Sobreviventes/`, `Loot/MochilasNoChao.cs`, `Loot/TelaDoSaque.cs`)
+
+O resumo para gente está em `Docs/13-Sobreviventes-e-Acampamentos.md`. É a etapa 2 do plano de 02/11/2026: os grupos de
+busca armados e hostis nas cidades. As etapas 3 (os acampamentos e o comércio) e 4 (o carro quebrado) estão nas seções
+seguintes.
+
+- **Os zumbis atrás de outros alvos** (`Zombies/IAlvoDeZumbi.cs`):
+  - `IAlvoDeZumbi` (o `transform`, `AlvoValido`, `LevarGolpe(dano, de)`) e `IOutroAlvoDeZumbi` (mais `LuzLigada` e
+    `VelocidadeNoChao`). O `JogadorRede` e o `Sobrevivente` são alvos;
+  - o `ZombieManager` monta, a cada quadro, os `Jogadores` e os `Npcs` (de `OutrosAlvos`, que os sobreviventes enchem no
+    anfitrião). `QuantosAlvos` e `AlvoNo(i)` percorrem os dois, e o `Alvo.quem` é o alvo;
+  - o zumbi (`_alvo`, `Perceber`, `ComecarPerseguicao`, `LevarTiro(autor)`), o cerco, o Brutamonte, o Long (`GritoDoLong`),
+    o `Golpear` (chama `LevarGolpe`), o `Barulho` e o `Acertar` usam a interface. O `VarrerNiveis` conta os NPCs (o zumbi
+    perto de um NPC também pensa);
+  - `Facho.dono` é um `IAlvoDeZumbi`: a lanterna dos NPCs (no peito, para a frente) entra nos `Fachos` e afasta os Ocos.
+- **O corpo** (`Prefabs/Sobreviventes/Sobrevivente.prefab`, pelo menu "Zombie City Cleaner > Montar os sobreviventes",
+  `Editor/MontagemDosSobreviventes.cs`):
+  - **a raiz** (camada 2): NetworkObject, NetworkTransform do servidor (a posição e o giro em Y), NavMeshAgent (desligado
+    no prefab; o `OnNetworkSpawn` liga só no anfitrião), a cápsula e o `Sobrevivente`;
+  - **o "Corpo":** a cópia do `Corpo_PrincipalBloco` do `Jogador.prefab` (as roupas, as armas na mão, as bocas, o
+    controlador de cada arma);
+  - **as partes que levam tiro** (`ParteDoSobrevivente`, camada 12 "Sobrevivente"), presas aos ossos: a cabeça (esfera de
+    0,13 m), o tronco (duas cápsulas: `spine` e `chest`), o braço, o antebraço, a coxa e a canela de cada lado. A camada 12
+    não colide com 2, 6, 7, 8, 11 nem com ela mesma; o jogador (9) esbarra nela;
+  - **a lanterna** no peito (spot, sem sombra, desligada).
+  - A montagem põe o prefab na `DefaultNetworkPrefabs.asset` e o `SobreviventesDoMundo` (com o prefab) e as
+    `MochilasNoChao` no "Mundo" da `Mundo.unity` (e a `MontagemDoMundo` também).
+- **`Sobrevivente`** (em todas as máquinas):
+  - as NetworkVariables `Identidade` (a semente das roupas, a arma, o tipo de roupa, o grupo, o papel, o índice),
+    `_mirando`, `_luz`, `_empurrao` e `_morto`. `Vestir()` sorteia as roupas (`VestirSorteado` do tipo "Sobrevivente",
+    "Militar", "Policial" ou "Civil") e liga a arma da mão;
+  - a animação: `Speed` (a do agente no anfitrião; a medida pela posição nos outros) e `Aiming`; o `TiroRpc` (o clarão, o
+    som, os impactos e o `Fire`), o `FalaRpc` e o `SangueRpc` (quem atirou já viu o sangue dele e pula);
+  - `LevarTiro(regiao, dano, ponto, autor, tiro)`: a cabeça com tiro mata (10 vezes a vida); com golpe, 2,5 vezes; o
+    membro, metade.
+- **A cabeça** (`Sobrevivente.Cabeca.cs`, no anfitrião; `Pensar()` a cada quadro, com `Olhar` 3 a 4 vezes por segundo):
+  - **a visão:** 50 m de dia e 15 m à noite (35 m com a lanterna do jogador, 25 m embaixo de um poste); 75° para cada lado
+    (em combate, todos os lados); `Linecast` no cenário (camadas 0 e 11);
+  - **os passos:** 9 m andando e 20 m correndo, de qualquer lado e através das paredes (o `Ver` com 3 m de erro). O
+    `OuvirTiro` (o tiro de um jogador a até 70 m, pelo `JogadorRede.AnunciarTiro`/`TiroRpc`) avisa o grupo;
+  - **os zumbis:** o que vem atrás dele ou está a menos de 9 m (até 16 m) leva tiro primeiro (`LutarComZumbi`). A menos de
+    3 m ele recua; num tiroteio, de lado (não para cima do inimigo);
+  - **o combate** (`Combater`):
+    - `AcharProtecao`: 18 pontos a 2–14 m em que o cenário tapa a linha até o inimigo, e um lugar de espiar ao lado, com
+      a linha livre;
+    - as fases: indo (correndo), escondido (1–2,5 s), espiando e atirando (1,6–3,2 s);
+    - sem proteção, anda de lado e recua até 10 m;
+    - sem ver por 6 s, avança para onde o inimigo foi visto;
+  - **atirar** (`AtirarNo`, `Disparar`, `Raio`):
+    - só virado para o alvo (12°), meio segundo depois de começar a mirar;
+    - as automáticas em rajadas de 0,25–0,6 s; as outras com uma pausa de 1,8 a 3 vezes o intervalo;
+    - a dispersão (`Dispersao`): a da arma × 1,5, mais 1,5° (a sniper 0,35°), mais 0,035°/m (a sniper 0,004°/m); mais 2,5°
+      no escuro sem luz no alvo, 1,5° contra quem corre e 1,5° andando. Tudo isso vezes 2 logo que ele levanta a arma, e
+      assenta em 1,5 s;
+    - o raio pega o cenário, os zumbis, os jogadores, os carros e os colegas (o colega para a bala, sem dano; os corpos
+      no chão não);
+    - o dano é `Armas.Dano` uma vez por alvo (a espingarda, o maior dos chumbos). No jogador, vezes `DanoNoJogador`
+      (0,7); nos zumbis, `ZombieManager.Acertar(…, this)`;
+    - cada tiro faz `Barulho` (chama os zumbis para ele) e passa pelo `TiroNosCarros` (os alarmes);
+  - **a recarga:** com as caixas da mochila dele; sem munição, foge (`ComecarAFugir`);
+  - **a luz:** acesa à noite explorando; no tiroteio, só com um zumbi a menos de 10 m;
+  - **a morte:** `Ferir` → `Morrer(direção)`: o `_empurrao` (para longe de quem atirou ou golpeou), o agente desligado,
+    fora dos `OutrosAlvos`, o `grupo.Morreu` (a fala dos outros) e o `SobreviventesDoMundo.AoMorrer` (a máscara dos vivos
+    e a mochila no chão).
+- **A queda** (`Sobrevivente.Queda.cs`, em todas as máquinas): o FBX do personagem não tem animação de morte (o "Cair" é a
+  chegada do pulo). O Animator desliga, e os ossos grandes (o quadril, a coluna, o peito, a cabeça, o braço, o antebraço,
+  a coxa e a canela) ganham Rigidbody e `CharacterJoint`. As partes que levavam tiro são o corpo que bate no chão (e uma
+  esfera no quadril). O peito leva o `_empurrao` (35 para longe e 6 para cima), e em 8 s os corpos ficam kinematic. O tiro
+  e o golpe do jogador passam pelos corpos (a camada 12 de um morto é pulada), e a mira do E também (a mochila ao lado).
+- **`GrupoDeSobreviventes`** (no anfitrião):
+  - os membros (o líder é o primeiro vivo), o estado (Explorando ou Combate), o inimigo e onde e quando foi visto;
+  - `Pensar()` (5 vezes por segundo): sem ver o inimigo por 30 s, volta a explorar; o próximo destino a 20–40 m do líder,
+    no NavMesh, na cidade e a até 60 m de um jogador;
+  - `Fugindo`: sobrou um de um grupo de dois ou mais.
+- **`SobreviventesDoMundo`** (NetworkBehaviour no "Mundo", no anfitrião; até `gruposJuntos` (2) grupos no mundo de uma vez,
+  em `Ativos`):
+  - os grupos de cada cidade (02/11/2026, a pedido: "aumentar o spawn deles"): `GruposNaCidade` dá 6 na cidade grande
+    (`gruposNaCidadeGrande`, cada um numa parte: a fatia de 60° em volta do meio, `ParteDaCidade`) e 1 na pequena e na vila.
+    O estado de cada um fica pela `Chave(cidade, parte)` = cidade·8 + parte (também o `grupo` da identidade na rede);
+  - `EstadoDaCidade`: a geração, a máscara dos vivos, quantos eram, o dia em que todos morreram e quando o grupo pode vir;
+  - `TentarUmGrupo` (uma vez por segundo, se `ligado`, com menos de `gruposJuntos` no mundo e 15 s depois do último): um
+    jogador numa parte de uma cidade, sem o grupo dela no mundo; ele vem 20–60 s depois na cidade grande e 90–240 s na
+    pequena, e de novo 4–8 min (grande) ou 10–20 min (pequena) depois de sair. Todo morto, a próxima geração vem 2 dias
+    depois;
+  - `Nascer(cidade, parte, ...)`: a semente `Semente·7919 + cidade·104729 + geração·31337 + parte·7727 + 11` sorteia
+    quantos (6 a 8), as armas (`SortearArma`) e as roupas; quem morreu não nasce (a parte 0 sorteia como antes). `Encher` põe a munição (2 a 4 caixas, de um a dois pentes cada), a comida, a água, o
+    remédio, os materiais, as pilhas, a faca, a mochila e o dinheiro;
+  - `AcharLugar`: no NavMesh a 40–52 m e fora da vista de todos (o F1: 18–24 m, à vista se der);
+  - `ConferirOAtivo`: quem fugiu e está a mais de 45 m sai (vivo); longe de todos (75 m), o grupo sai (`Recolher`, os corpos
+    também; as mochilas ficam);
+  - `OuvirTiro`: em cada grupo no mundo, o primeiro a até 70 m avisa os outros;
+  - `PorUmGrupoPerto(j)` (o grupo da parte onde o jogador está; os outros saem) e `TirarTodos()` (o F1); `Copia()`/`Restaurar()`
+    (o save, com a parte: `GrupoSalvo.parte`, 0 nos saves antigos; só os grupos que mudaram).
+  - **Conferido** (02/11/2026, semente 7, média; São Bento, raio 738 m): em cada parte nova, o grupo dela apareceu em 34 a
+    55 s, a 44–46 m; o save guardou os três com a parte; 0 erros.
+- **As falas** (`FalasDosSobreviventes.cs`): `Frase` (Contato, Atirando, Recarregando, Zumbis, CaiuUm, Fugindo, Sumiu,
+  ParaAi), no máximo uma a cada 3 s por sobrevivente; o texto letra a letra em cima da cabeça (até 35 m), sem caixa, com
+  sombra, e um bipe gerado por letra no tom de cada um.
+- **As mochilas no chão** (`Loot/MochilasNoChao.cs`, NetworkBehaviour no "Mundo"):
+  - as NetworkLists `MochilaNoChao` (id, posição, giro, a mochila, o dinheiro, a grade, o nome em `FixedString32Bytes`,
+    cortado a 29 bytes) e `ItemNoRecipiente`;
+  - o desenho é a malha da mochila (`ItensNoMundo.MalhaDe`), com um trigger e o `Interagivel` (E abre a tela);
+  - `Criar(...)` (a do sobrevivente morto); `DaMorte(inventario)` (`VidaJogador.Perder` a zero, fora do Dia 0: a mochila
+    vestida, os itens e o pneu, "a mochila de X");
+  - os pedidos ao anfitrião (a 3,2 m): pegar, pegar tudo, o dinheiro, guardar e trocar de mochila (`TirarTudo` +
+    `VestirComItens`; o que não couber fica no chão). A vazia some;
+  - `Copia()`/`Restaurar()` (o save).
+- **A tela do saque** (`Loot/TelaDoSaque.cs`, IMGUI): as duas grades, os botões (pegar tudo, o dinheiro, trocar quando a
+  dela é maior, fechar); fecha com ESC, E, TAB ou de longe.
+- **O tiro do jogador neles** (`ArmaJogador`): no `Disparar`, a `ParteDoSobrevivente` vivo para a bala e vai para `_gente`;
+  `MandarAcertosNaGente` manda um acerto por pessoa (a melhor parte: a cabeça, o tronco, o membro) com o `Armas.Dano` da
+  menor distância. O `Golpear` manda com `tiro: false`. `JogadorRede.AcertarSobrevivente` → `AcertoNoSobreviventeRpc`
+  (confere o dono e a distância do ponto até o corpo, 2,5 m).
+- **O save:** `MundoSalvo.sobreviventes` (`GrupoSalvo`: cidade, geração, vivos, quantos, o dia da morte) e
+  `MundoSalvo.mochilas` (`MochilaSalva`, com os `ItemSalvo`), no `Salvamento.Salvar`/`Restaurar`.
+- **O F1:** a aba "Gente" (`MenuDoDesenvolvedor.Sobreviventes.cs`, a terceira no canto, ao lado de "Zumbis" e "Clima"):
+  quantos vivos e caídos, o estado do grupo, "Grupo perto", "Tirar todos" e os grupos sozinhos ligados ou não.
+- **Os acessos de teste** (no anfitrião): `Sobrevivente.Vida`, `Pente`, `ItensNaMochila`, `Grupo` e `Situacao` (o texto do
+  que ele está fazendo).
+- **Conferido** (02/11/2026, um jogador, no Editor, semente 7, média; o roteiro de teste no RunCommand):
+  - de dia: o grupo se protege, espia, atira em rajadas e recarrega; o último foge. O jogador parado na rua levou de 50 a
+    140 em 30 s;
+  - à noite, com 10 a 12 zumbis: as lanternas acendem nos zumbis e apagam no tiroteio, e os zumbis mordem e matam um deles;
+  - os danos: a cabeça mata; 100 − 30 (tronco) − 15 (perna) = 55; o golpe na cabeça × 2,5;
+  - a queda deita os corpos (a cabeça a 0,1 m do chão) e para;
+  - a troca de mochila, pegar tudo e a mochila da nossa morte;
+  - o save: as mochilas e o grupo (4 de 6) voltaram.
+  - **Falta:** dois jogadores, as falas no jogo e os grupos sozinhos numa partida normal.
+
+## Os acampamentos (02/11/2026, a pedido; a etapa 3; `Sobreviventes/AcampamentosDoMundo*.cs`, `PlantaDoAcampamento.cs`, `PrecosDosSobreviventes.cs`, `TelaDoComerciante.cs`)
+
+O resumo para gente está em `Docs/13-Sobreviventes-e-Acampamentos.md` ("Os acampamentos"). As decisões do Pedro: um por
+cidade, fora dela, numa casa com barricadas, fogueiras, guardas e comerciantes, maior na cidade grande; zona segura; atirar
+num deles deixa o acampamento hostil na hora; os comerciantes fixos, cada um vende uma coisa, só dinheiro, a venda sempre
+mais barata; o estoque acaba e repõe a cada dia; dá para roubar e matar.
+
+- **O gerador** (a **versão 11**):
+  - `TipoDeLugar.Acampamento` (no fim do enum) e a classe `Acampamento : Lugar` (Indice, Cidade, Grande, Altura, Frente),
+    em `PlanoDoMapa.Acampamentos` (e em `Lugares`);
+  - `PlanejadorDoMapa.PorAcampamentos` (depois do `PorPostos`, com o sorteio "acampamentos"): para cada cidade grande (raio
+    45) e pequena (30), os pontos das rodovias (não os conectores) com q de 1,3 a 1,6; de cada lado, o meio a raio + 9 m;
+    `CabeOAcampamento` (dentro do mapa, fora do lago, a 1,3 raio das cidades, longe dos lugares e a raio + 5 m das
+    estradas); fica o de menor `Aspereza`. A `Altura` é a média do relevo no meio e em 8 pontos a 60% do raio;
+  - `GeradorDoMundo.NoAcampamento` (no `AlturaFinal`, antes do `Acomodar` das estradas): o chão plano na altura dentro do
+    raio, voltando ao relevo em 15 m;
+  - os lotes das cidades evitam o acampamento como os postos (`TracadoDaCidade`, os corredores); a beira da estrada
+    (`ObjetosDaEstrada.PorOsPostos`) marca o lugar dele ocupado (raio + 6 m); a floresta já não planta nos lugares;
+  - o mapa: o rótulo (nível 2) e a barraca verde-oliva (`PintorDoMapa`).
+- **`PlantaDoAcampamento`** (em dados, igual em todas as máquinas; `Da(d, a)` guarda uma por semente e índice):
+  - as coordenadas: o meio no chão (`Altura`), +z para o portão (o giro sai da `Frente`); `Mundo`, `Local`, `GiroNoMundo`,
+    `Dentro`;
+  - `Meia` = 0,6 do raio (18 m no pequeno, 27 no grande; 0,8 deixava o grande vazio);
+  - a casa: a térrea (pequeno) ou o sobrado (grande), sem porão, girada 180° (a frente para o portão), com o fundo a 3 m da
+    cerca (pela `Casa.Profundidade`);
+  - a cerca (`Trecho`): pedaços de alambrado (giro com o arame farpado para fora), sacos e contêineres sorteados; a frente
+    em dois trechos até o vão de 7 m do portão, entre duas barreiras;
+  - as bancas: em duas filas viradas para o meio, a partir da frente da casa, de 5 em 5 m (o x passa da casa); as
+    categorias embaralhadas (o grande tem as 7; o pequeno, 3);
+  - as fogueiras (1 ou 2) na praça, as barracas nos cantos de trás, as coisas soltas (`Coisas`: os tocos em volta das
+    fogueiras, os barris e as caixas na cerca);
+  - as pessoas, na ordem dos índices: os guardas (`Guardas`, com a ronda), os comerciantes (um por banca) e os moradores (2
+    a 5, em volta das fogueiras); `PapelDe(i)`, `LugarDe(i)`; o `Esconderijo` (dentro da casa) e o `Portao` (fora).
+- **`AcampamentosDoMundo`** (NetworkBehaviour no "Mundo"; posto pela `MontagemDosSobreviventes.PorNoMundo`):
+  - na rede: `_hostis` (um bit por acampamento) e o estoque (`NetworkList<EstoqueDoComerciante>`: acampamento, banca,
+    produto, qtd);
+  - no anfitrião, por acampamento: os mortos (um bit por pessoa), o dia da reposição, o grupo, quem está mirando;
+  - `Comecar` (o mundo pronto): o estoque (se não veio do save) e as zonas seguras (`ZombieManager.ZonasSeguras`, o raio +
+    15 m);
+  - `TornarHostil(a, quem)` (o `Sobrevivente.Ferir` com um jogador de autor: o bit, o grupo vê quem atirou, "Traidor!");
+    `DefinirHostil` (o F1);
+  - `Copia()`/`Restaurar()` (o save: o índice, hostil, os mortos, o dia e o estoque num `int` por produto: banca << 16 |
+    produto << 8 | qtd). O `Restaurar` marca o estoque feito (o `Comecar` não refaz).
+- **A construção** (`AcampamentosDoMundo.Construcao.cs`, em cada máquina, a até `raioDaConstrucao` = 230 m do jogador
+  local, um por revisão; some a 290 m):
+  - a casa: o `Casa.Montar`, `AbandonoDaObra.Fortificar` (novo: tábuas em todas as janelas de fora), a mobília (como as
+    casas novas do Dia 0), o desenho com o `materialDasCasas` do terreno, a colisão em malha, os pisos, a caixa de dentro e
+    o eco;
+  - uma malha só para o chão de terra (uma caixa "Terra" de 2H + 1 m, 1,5 cm acima do chão), a cerca (os modelos da
+    `ModelosDaEstrada`, guardados), as bancas (o balcão, as caixas, os postes, a lona colorida, a placa), as barracas (a
+    lona em A) e as coisas soltas; as colisões em caixas (filhos "Caixa"). As barreiras do portão são o modelo do Blender
+    (`ObjetosDoMundo.barreira`);
+  - as placas das bancas: o `Letreiro` (a cor escura num material copiado do das placas; refeitas quando o atlas muda);
+  - as lâmpadas das bancas (pontuais, 9 m, sem sombra) e as fogueiras (a malha e o `ConstrucoesNoMundo.Fogo`, com a luz
+    tremulando) com o estalo (um ruído curto gerado, a até 20 m, pelo `Efeitos.Som`);
+  - pronta (e apagada), `NavMeshDoMundo.Mudou` refaz a área do NavMesh em volta.
+- **As pessoas** (`AcampamentosDoMundo.Pessoas.cs`, no anfitrião):
+  - com alguém a menos de raio + 35 m do meio, os vivos nascem nos lugares (o prefab dos sobreviventes; a semente
+    `Semente·5113 + a·70001 + 17` sorteia as armas e as roupas, igual a cada vez); com todos a mais de raio + 110 m, saem;
+  - os guardas: rifle (65%) ou espingarda, roupa militar ou policial; os comerciantes: pistola; os moradores: pistola ou
+    espingarda. A identidade: o grupo = `GrupoBase` (1000) + o índice do acampamento, o papel e o índice da pessoa;
+  - `AoMorrer`: o bit dos mortos e a mochila (`SobreviventesDoMundo.LargarAMochila`); a do comerciante leva a metade de
+    cada produto do estoque dele (`Mercadoria`), que sai do estoque;
+  - `VigiarAMira` (5 vezes por segundo, acampamento amigo): o jogador mirando (`Mirando`, `Pitch`) a menos de 0,75 m do
+    peito de uma pessoa, até 35 m, por 2 s: "Abaixa essa arma" (no máximo a cada 6 s); a menos de 4,5 m de um comerciante:
+    "Precisa de alguma coisa?" (a cada 40 s por comerciante).
+- **O `Sobrevivente` no acampamento** (`Sobrevivente.cs` e `Sobrevivente.Cabeca.cs`):
+  - os papéis novos `Guarda`, `Comerciante` e `Morador`; no anfitrião, `acampamento`, `posto`, `ronda`, `giroDoPosto`,
+    `esconderijo`;
+  - o agente liga só com NavMesh embaixo (`LigarOAgente`, de meio em meio segundo): o do acampamento pode nascer antes da
+    área ficar pronta;
+  - `FicarNoPosto`: o guarda alterna o posto e a ronda (8–16 s); o morador passeia perto da fogueira; o comerciante fica;
+    parado, gira para o lado do posto;
+  - `Esconder`: o comerciante com o acampamento hostil, e quem ficou sem munição, corre para dentro da casa e fica;
+  - o grupo do acampamento (`GrupoDeSobreviventes.acampamento`): `Hostil` (o grupo de busca sempre; o acampamento pelo
+    bit), não explora e não foge. O `Olhar` só procura jogadores com o grupo hostil. O guarda atira nos zumbis a até 30 m
+    (os outros, 16 m). A lanterna à noite só nos guardas (ou com um zumbi perto);
+  - `Comercio(out a, out banca, out categoria)` (em qualquer máquina, pela identidade) e o `ComercianteNaMira`
+    (Interagivel na raiz do comerciante: E abre a tela).
+- **A zona segura** (`ZombieManager.ZonasSeguras`, `NaZonaSegura`, `ZonaSeguraEm`): o `EmAreaLivre` (os nascimentos) olha
+  ela; o zumbi não percebe quem está dentro, não vaga para dentro, desiste da perseguição e do golpe quando o alvo entra
+  (como no sol), e o `Investigar` de um barulho de dentro vai até a beira.
+- **O comércio** (`AcampamentosDoMundo.Comercio.cs`, `PrecosDosSobreviventes.cs`, `TelaDoComerciante.cs`):
+  - `CategoriaDoComercio` (Alimentos, Armas, Municao, Sobrevivencia, PecasDeCarro, Materiais, Roupas) e os itens de cada
+    uma (`Itens(c)`, só os que estão no jogo; o índice é o do estoque);
+  - o preço de compra: o do Dia 0 (o menor; os que não tinham, uma tabela aqui) vezes o fator (munição e remédio 2,5;
+    comida e bebida 2; materiais 1,5; peças 1,3; armas 1,2); o máximo do estoque (armas 1 ou 2, mochilas 1, munição 5,
+    peças 2, remédios 3, o resto pelo preço);
+  - a venda: a metade do `Valor` (o preço vezes o estado: o desgaste, as balas, a carga, os litros);
+  - `EncherOEstoque` (a semente por acampamento e banca), `Repor` (no amanhecer, das 6 h em diante: 75% dos produtos
+    abaixo do máximo sobem a metade dele);
+  - `ComprarRpc`/`VenderRpc`: o anfitrião confere o comerciante vivo a até 4,5 m (`QuemNegocia`), o acampamento amigo, o
+    estoque, o dinheiro e o lugar (`InventarioJogador.Receber`), e avisa o dono;
+  - a tela (IMGUI): as duas listas com o ícone, o preço e o botão; fecha com ESC, E, TAB, de longe (5 m), com ele morto
+    ou o acampamento hostil.
+- **O save:** `MundoSalvo.acampamentos` (`AcampamentoSalvo`: indice, hostil, mortos, diaDaReposicao, estoque), no
+  `Salvamento.Salvar`/`Restaurar`.
+- **O F1** (a aba "Gente", embaixo de "ACAMPAMENTOS"): o mais perto (o nome, a distância, amigo ou hostil), "Ir ao
+  portão" (aqui mesmo: o movimento é do dono), "Fazer hostil/amigo" e "Repor o estoque agora"; "Tirar todos" tira também
+  as pessoas dos acampamentos.
+- **Conferido** (02/11/2026, um jogador, no Editor, semente 7, média):
+  - 6 acampamentos;
+  - montar leva 47 ms no grande e 17 ms no pequeno;
+  - as 14 e as 9 pessoas nos lugares;
+  - à noite, 25 zumbis a até 90 m e nenhum dentro da zona;
+  - comprar ($ 6) e vender ($ 3) a madeira, e a reposição no dia 2;
+  - o tiro num guarda deixa o acampamento hostil: os comerciantes se escondem, os outros lutam;
+  - o comerciante morto deixa a metade do estoque na mochila;
+  - o save: hostil, o morto continua morto (8 de 9) e o estoque igual.
+  - **Falta:** dois jogadores, a tela e as falas no jogo, o "Abaixa essa arma" com a mira de verdade.
+
+## O carro quebrado (02/11/2026, a pedido; a etapa 4; `Sobreviventes/CarrosQuebradosDoMundo.cs`, `Sobrevivente.Estrada.cs`)
+
+O resumo para gente está em `Docs/13-Sobreviventes-e-Acampamentos.md` ("O carro quebrado"). As decisões do Pedro: o
+carro quebrado na estrada com dois trocando o pneu; o estepe deles furou: a gente dá um pneu e protege dos zumbis enquanto
+trocam; depois pagam e ficam ali; ou a gente mata e saqueia.
+
+- **O gerador** (`Mundo/Gerador/ObjetosDaEstrada.cs`; continua na versão 11):
+  - `ObjetoDaEstrada.Quebrado` e a classe `CarroQuebrado` (`Indice` em `Todos`, `Roda` 1 ou 3, `Posicao`, `Frente`,
+    `Fora`), em `ObjetosDaEstrada.Quebrados`; `QuebradoDe(indice)`;
+  - o `Carro()` guarda os do acostamento (`_noAcostamento`); `PorOsQuebrados` (depois do `PorOsCarros`, com o sorteio
+    "carros-quebrados": não muda o resto do mapa) escolhe max(1, rodovias / 2), as rodovias primeiro, a 700 m um do
+    outro;
+  - `LugarDoQuebrado`: dentro da cerca (120 m), o Q das cidades ≥ 1,3, longe dos acampamentos (raio + 150 m), dos postos
+    (70 m) e da casa da família (400 m); o lado de fora sem outra estrada, e o chão a menos de 1,2 m do carro.
+- **O carro** (`Vehicles/PecasDosCarrosDoMundo.cs`):
+  - `Padrao`: no quebrado, as três rodas boas, a roda dele vazia e o macaco erguido nela; o `AlarmeDeFabrica` e o
+    `ZombieManager.TemRastejante` dão falso; `Quebrado(carro)` (estático);
+  - `Restaurar` deixa erguido o macaco do quebrado com a roda ainda vazia;
+  - `Ocupado(carro)` (o virtual novo da `FonteDasPecas`): com um dos dois vivo, "O carro é deles". O `Perto` e o
+    `PertoDaRoda` recusam; o `CapoDaCidade`, a `RodaDaCidade` e o `MacacoDaCidade` mostram o texto no lugar da dica;
+  - `TrocaDosSobreviventes(carro, roda, pneu)` e `Esquecer(carro)` (o F1).
+- **`CarrosQuebradosDoMundo`** (NetworkBehaviour no "Mundo", posto pela `MontagemDosSobreviventes.PorNoMundo`):
+  - na rede: `NetworkList<CenaDoCarroQuebrado>` (estado, mortos, pneu, falta), uma por carro, na ordem do gerador.
+    `Estado(q)`, `Falta`, `Trocando`, `Hostil`, `Vivos`, `Ocupado`, `Pose`, `MaisPerto`, `LugarParaChegar`;
+  - no anfitrião (`Dupla`): o grupo, o mecânico e o vigia, o lugar do trabalho, o barulho, as ondas, quem ajudou e as
+    contas da mira e da arma;
+  - `ConferirAsPessoas` (a cada 1 s): nascem com alguém a menos de 110 m e saem com todos a mais de 170 m. Quem fugiu sem
+    munição e sumiu conta como morto (sem mochila);
+  - `Povoar`:
+    - o mecânico (pistola) a 0,75 m da roda, virado para ela, já agachado (`NascerAjoelhado`, antes do Spawn);
+    - o vigia (rifle, 70%; senão espingarda) do lado de fora, na outra metade do carro;
+    - ajudados: o mecânico de pé, do lado do carro;
+    - na troca, o pneu volta para a mochila de quem troca;
+    - a semente `Semente·7919 + q·104729 + 23`; o grupo na rede = `GrupoBase` (2000) + q;
+  - `Vigiar` (5 vezes por segundo):
+    - o aviso a 25 m (uma vez, até ele passar de 40 m);
+    - a mira (`Mirado`, como no acampamento): esperando, a fala aos 0,4 s e hostis aos 2 s; na troca e depois, só a fala;
+    - a arma na mão (`Armado`: as de fogo e as brancas, menos a tocha) a menos de 6 m: a fala e, aos 3 s, hostis;
+  - `TornarHostil`; `AoMorrer` (o bit; quem trocava levou o pneu e a troca volta a esperar; os dois: Mortos; a mochila
+    pelo `SobreviventesDoMundo.LargarAMochila`);
+  - `DarPneuRpc`: o anfitrião confere a cena esperando, o jogador a até 5 m de um dos dois e sem arma na mão, e o pneu de
+    30% ou mais (na mochila ou nas mãos). `ConversaRpc`: as falas Estepe, PneuRuim e Obrigado;
+  - `Trocar` (a cada 1 s): só conta com quem troca agachado. O `ZombieManager.Barulho` a cada 6–10 s; as ondas aos 12 e
+    aos 38 s (`Onda`, pelo `ZombieManager.CriarHordaPerseguindo`, que agora aceita qualquer `IAlvoDeZumbi`). No fim,
+    `Terminar` e `Pagar` ($ 60–140 pela semente e uma caixa de dois pentes da arma de quem ajudou);
+  - o F1: `Recomecar`, `AcabarATroca`, `TirarAsPessoas`. O save: `Copia` e `Restaurar` (aplicado no `Comecar`);
+  - o visual, em cada máquina: o pneu furado deitado (a malha do `ItensNoMundo`, com o eixo para cima, a até 160 m) e as
+    batidas de ferro geradas (3 variações), a até 45 m.
+- **O `Sobrevivente` na estrada** (`Sobrevivente.Estrada.cs`):
+  - os papéis `Mecanico` e `Vigia` (no fim do enum); `cena` (no anfitrião) e `CenaNaRede`/`DaEstrada` (pela identidade);
+  - agachado (`_ajoelhado` na rede): o controlador da arma com o "Sentado_Motorista" trocado pelo clipe "Agachado" (um
+    `AnimatorOverrideController` por arma; o clipe é o campo `agachado` do prefab, posto pela montagem). O "Lugar" = 1 leva
+    até ele; a camada dos braços vai a 0; a arma some da mão; e os braços vão para a roda no `LateUpdate`
+    (`NpcDoDiaZero.Apontar`; batendo, na troca);
+  - `FicarNaEstrada` (no `Pensar`, antes do acampamento): quem trabalha (`Trabalhador`: esperando, o mecânico; na troca,
+    ele ou o vigia) agacha no lugar. O outro fica no posto, vira para o jogador mais perto (até 30 m) e aponta, sem atirar,
+    para quem chega armado;
+  - `AlcanceDosZumbis`: o vigia, 30 m; o mecânico agachado, 6 m;
+  - o `Ferir` com um jogador de autor → `TornarHostil`; o `Morrer` → `AoMorrer`;
+  - `CarroQuebradoNaMira` (Interagivel na raiz dos dois): as dicas e o E;
+  - o grupo (`GrupoDeSobreviventes.cena`): `Hostil` pela cena; não explora e não foge. O `Morreu` só diz que foge quem
+    foge (vale também para o acampamento).
+- **As falas novas:** FicaAi, GuardaArma, Estepe, PneuRuim, Valeu, Pronto, Obrigado, EuAvisei. O `Falar(frase, sempre)`
+  passa por cima dos 3 s nos avisos antes do tiro e nas respostas. `FalasDosSobreviventes.Ultima`: a última fala mostrada
+  (para os testes).
+- **O save:** `MundoSalvo.carrosQuebrados` (`CarroQuebradoSalvo`: estado, mortos, pneu, falta), no `Salvamento.Salvar` e
+  no `Restaurar`.
+- **O F1** (a aba "Gente", embaixo dos acampamentos): "CARRO QUEBRADO" (o mais perto), "Ir ao carro", "Recomeçar", "Pneu
+  de 80%" e "Acabar a troca". O "Tirar todos" tira também os dois.
+- **Conferido** (02/11/2026, um jogador, no Editor, semente 7, média):
+  - 5 carros quebrados para 10 rodovias;
+  - os dois a 32 m, o mecânico agachado ("Sentado_Motorista" com o clipe Agachado, o quadril a 0,63 m), o vigia de guarda;
+  - o aviso, o vigia apontando para quem vem armado, a conversa e o pneu dado;
+  - a troca à noite (60 s, ondas de 4 e de 5 zumbis, o vigia atirando), a roda com 80%, o macaco fora, $ 120 e 24 balas;
+  - hostis pela mira (2 s) e pela pistola a 3 m (3 s); os dois mortos: 2 mochilas e o carro livre;
+  - a cópia do save; o JSON ida e volta; 0 erros.
+  - **Falta:** dois jogadores, a troca de dia, ouvir as batidas no jogo.
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 

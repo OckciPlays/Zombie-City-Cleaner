@@ -155,7 +155,7 @@ namespace ZombieCityCleaner.Zombies
         /// O grito (no anfitrião): os zumbis até o raio vêm (os de perto atrás de quem o feriu; os outros vão ver), e chegam
         /// outros, de fora da vista, já atrás de quem o feriu.
         /// </summary>
-        internal void GritoDoLong(Zumbi longo, JogadorRede autor)
+        internal void GritoDoLong(Zumbi longo, IAlvoDeZumbi autor)
         {
             var c = ajustes.cuspidor;
             float agora = Time.time;

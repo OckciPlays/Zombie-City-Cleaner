@@ -42,7 +42,7 @@ namespace ZombieCityCleaner.DiaZero
         Transform _cenarios;
         Camera _cam, _estudio;
         RenderTexture _rt;
-        AudioSource _musica, _festa, _tv;
+        AudioSource _musica, _tv;
         float _desde;
         bool _saindo;
         float _saindoDesde;
@@ -104,7 +104,6 @@ namespace ZombieCityCleaner.DiaZero
             if (!Tocando)
             {
                 PrepararATv();
-                Festa();
                 // a TV foi ligada (o jornal para todos, no tempo do anfitrião): quem chega no meio vê dali em diante
                 var j = JogadorRede.Local;
                 var dia = DiaZeroDaPartida.Instancia;
@@ -149,17 +148,8 @@ namespace ZombieCityCleaner.DiaZero
             if (!Tocando && _tvPronta) Comecar(0f, false);
         }
 
-        // a festa na sala enquanto todos chegam (o lobby); depois da TV, ela fica só na introdução
-        void Festa()
-        {
-            var dia = DiaZeroDaPartida.Instancia;
-            bool naCasa = DiaZeroDaPartida.NoDia && dia != null && dia.Fase == FaseDoDia.Casa && JogadorRede.Local != null;
-            if (naCasa && _festa == null) _festa = Fonte("Festa", SonsDoDiaZero.Festa, 0.3f, true);
-            if (_festa == null) return;
-            if (naCasa && !_festa.isPlaying) _festa.Play();
-            if (!naCasa && !Tocando && _festa.isPlaying) _festa.Stop();
-            if (naCasa) _festa.volume = 0.3f;
-        }
+        // (o som da festa na sala, as vozes geradas em laço de 8 s, saiu em 02/11/2026, a pedido: "um som muito estranho...
+        // parece que é um som em repetição". A casa fica só com os sons da rua até entrar um som de verdade)
 
         void Comecar(float jaFoi, bool compartilhada)
         {
@@ -184,14 +174,12 @@ namespace ZombieCityCleaner.DiaZero
             _cam.cullingMask = ~((1 << 6) | (1 << 10));
             go.AddComponent<UniversalAdditionalCameraData>().renderPostProcessing = true;
             _musica = Fonte("Trilha", trilha, 1f, false);
-            if (_festa == null) _festa = Fonte("Festa", SonsDoDiaZero.Festa, 0.5f, true);
             _tv = Fonte("TV ligando", Resources.Load<AudioClip>("TV_Ligando"), 0.6f, false);
             if (_musica != null && _musica.clip != null)
             {
                 _musica.Play();
                 if (jaFoi > 0.05f) _musica.time = Mathf.Min(jaFoi, _musica.clip.length - 0.1f);
             }
-            if (_festa != null && !_festa.isPlaying) _festa.Play();
             if (_tv != null && _tv.clip != null && jaFoi < 1f) _tv.PlayDelayed(1.2f - jaFoi);
             Debug.Log($"[Dia 0] A introdução começou{(jaFoi > 0.5f ? $" (a {jaFoi:0} s)" : "")}{(compartilhada ? "" : " (de novo, só aqui)")}.");
         }
@@ -219,7 +207,6 @@ namespace ZombieCityCleaner.DiaZero
             if (_estudio != null) Destroy(_estudio.gameObject);
             if (_rt != null) { _rt.Release(); Destroy(_rt); }
             foreach (var a in new[] { _musica, _tv }) if (a != null) Destroy(a.gameObject);
-            if (_festa != null) _festa.Stop();
             if (_cenarios != null) Destroy(_cenarios.gameObject);
             if (_telaQuad != null) Destroy(_telaQuad.gameObject);
             _telaQuad = null;
@@ -234,8 +221,6 @@ namespace ZombieCityCleaner.DiaZero
 
         void Filmar(float t)
         {
-            // a festa abafa quando o jornal começa (alguém pediu silêncio) e some nas imagens
-            if (_festa != null) _festa.volume = t < 8f ? 0.5f : t > 72f && t < 84f ? 0.12f : 0.05f;
             AmbienteDoDia.Escurecer = t >= 56f && t < 72f ? 1f : 0f;
             bool naTv = t < 10f || (t >= 72f && t < 84f);
             if (_estudio != null) _estudio.enabled = naTv;

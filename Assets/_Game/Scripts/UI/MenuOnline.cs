@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Network;
+using ZombieCityCleaner.Salvar;
 using ZombieCityCleaner.Video;
 using ZombieCityCleaner.World;
 
@@ -82,6 +83,16 @@ namespace ZombieCityCleaner.UI
         string _nomeDoMundo = "Mundo novo", _semente = "";
         TamanhoDoMundo _tamanho = TamanhoDoMundo.Grande;
         static readonly string[] NomesDosTamanhos = { "Pequeno (3 km)", "Médio (5 km)", "Grande (8 km)" };
+        // o save (02/11/2026): o personagem escolhido aqui, o modo de salvar do mundo novo e a tela do Continuar (a lista
+        // dos mundos salvos)
+        bool _continuar, _continuarLocal;
+        System.Collections.Generic.List<PersonagemSalvo> _personagens;
+        System.Collections.Generic.List<MundoSalvo> _mundos;
+        int _indiceDoPersonagem;
+        string _apagarPersonagem, _apagarMundo;
+        ModoDeSalvar _modoNovo = ModoDeSalvar.Automatico;
+        Vector2 _rolagemDosMundos;
+        static readonly string[] NomesDosModos = { "Automático (5 min)", "Ao sair", "Só dormindo" };
 
         void OnEnable() => _esperarSoltar = true;
 
@@ -100,6 +111,8 @@ namespace ZombieCityCleaner.UI
                 else if (args[i] == "-tamanho" && Tamanhos.Ler(args[i + 1], out var tamanho)) MundoDaPartida.Pedido.tamanho = tamanho;
                 else if (args[i] == "-nome") MundoDaPartida.Pedido.nome = args[i + 1];
                 else if (args[i] == "-personagem" && int.TryParse(args[i + 1], out int personagem)) Player.Personagens.Escolhido = personagem - 1;
+                // o robô de teste fotografa a tela dele a cada relatório (o que quem entra enxerga: os zumbis, a chuva)
+                else if (args[i] == "-fotos") _pastaDasFotos = args[i + 1];
             }
             // (o pedido fica de um Play para o outro no Editor; sem o nome, o campo de texto quebrava o menu)
             _nomeDoMundo = string.IsNullOrEmpty(MundoDaPartida.Pedido.nome) ? PedidoDoMundo.Padrao.nome : MundoDaPartida.Pedido.nome;
@@ -131,7 +144,13 @@ namespace ZombieCityCleaner.UI
             Aberto = !naPartida || _pausa || _obrigatorias.Count > 0;
             // fora da partida, o menu do começo (com o fundo, que fica também enquanto conecta); ao sair de uma, volta ao
             // menu principal
-            if (_estavaNaPartida && !naPartida) _principal = MundoDaPartida.Instancia != null;
+            if (_estavaNaPartida && !naPartida)
+            {
+                _principal = MundoDaPartida.Instancia != null;
+                _continuar = false;
+                _personagens = null;   // a lista do save muda depois de uma partida: lê de novo
+                _mundos = null;
+            }
             _estavaNaPartida = naPartida;
             FundoDoMenu.Pedido = !naPartida && MundoDaPartida.Instancia != null && !ModoVideo.Ligado;
             if (!naPartida) _ultimoGravado = false;
@@ -166,11 +185,24 @@ namespace ZombieCityCleaner.UI
             else if (mouse == null || (!mouse.leftButton.isPressed && !mouse.rightButton.isPressed)) _esperarSoltar = false;
         }
 
-        // No modo robô, registra no log o que esta cópia enxerga dos outros jogadores (para testes sem tela).
+        // No modo robô, registra no log o que esta cópia enxerga dos outros jogadores (para testes sem tela). Com -fotos
+        // PASTA (e a build com janela), também fotografa a tela a cada relatório.
         float _proximoRelatorio;
+        static string _pastaDasFotos;
+        int _fotos;
         void Relatorio()
         {
             _proximoRelatorio = Time.time + 3f;
+            // o clima que chega do anfitrião (World/CicloDoDia.Tempo.cs) e o que esta máquina mostra (World/ClimaNaTela)
+            var clima = World.ClimaNaTela.Instancia;
+            Debug.Log($"[robô] clima {World.Tempo.NomeDo(World.Tempo.Nivel)}: nuvens {World.Tempo.Nuvens:F2}, chuva {World.Tempo.Chuva:F2}, vento {World.Tempo.Vento:F2}, " +
+                      $"poças {World.Tempo.Pocas:F2}, tornado {(World.Tempo.Tornado ? $"a {Vector3.Distance(World.Tempo.PosicaoDoTornado, Player.JogadorRede.Local != null ? Player.JogadorRede.Local.transform.position : Vector3.zero):F0} m, força {World.Tempo.ForcaDoTornado:F2}" : "não")}" +
+                      $"{(clima != null ? " · " + clima.Resumo().Replace("\n", " · ") : "")}");
+            if (!string.IsNullOrEmpty(_pastaDasFotos))
+            {
+                System.IO.Directory.CreateDirectory(_pastaDasFotos);
+                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(_pastaDasFotos, $"robo_{++_fotos:000}.png"));
+            }
             var zumbis = Zombies.ZombieManager.Instancia;
             int perto = 0, medio = 0;
             if (zumbis != null && zumbis.IsSpawned) zumbis.ContarNiveis(out perto, out medio, out _);
@@ -241,6 +273,11 @@ namespace ZombieCityCleaner.UI
                 MenuPrincipal(u);
                 return;
             }
+            if (doJogo && _continuar && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
+            {
+                TelaDoContinuar(u);
+                return;
+            }
             GUI.color = new Color(0, 0, 0, doJogo ? 0.55f : 0.6f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
@@ -260,7 +297,11 @@ namespace ZombieCityCleaner.UI
                 GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
                 return;
             }
-            if (doMundo) y = NovoMundo(u, x, y, w);
+            if (doMundo)
+            {
+                PainelDoPersonagem(u, x + w + 36 * u, Screen.height * 0.07f + 84 * u, 300 * u);
+                y = NovoMundo(u, x, y, w);
+            }
             else
             {
                 if (GUI.Button(new Rect(x, y, w, 46 * u), "Hospedar partida", _botao)) _sessao.Hospedar();
@@ -269,7 +310,11 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(x, y, w, 24 * u), "ou entre com o código de um amigo:", _texto);
             y += 28 * u;
             _codigo = GUI.TextField(new Rect(x, y, w * 0.62f, 40 * u), _codigo, 12, _campo);
-            if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 40 * u), "Entrar", _botao)) _sessao.Entrar(_codigo);
+            if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 40 * u), "Entrar", _botao))
+            {
+                ParaEntrar(doMundo);
+                _sessao.Entrar(_codigo);
+            }
             y += 64 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "Teste sem internet (mesma rede):", _texto);
             y += 26 * u;
@@ -279,7 +324,11 @@ namespace ZombieCityCleaner.UI
                 _sessao.HospedarLocal();
             }
             _ip = GUI.TextField(new Rect(x + w * 0.52f, y, w * 0.26f, 32 * u), _ip, 40, _campo);
-            if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao)) _sessao.EntrarLocal(_ip);
+            if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao))
+            {
+                ParaEntrar(doMundo);
+                _sessao.EntrarLocal(_ip);
+            }
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Configurações", _botao)) _opcoes = true;
@@ -313,20 +362,23 @@ namespace ZombieCityCleaner.UI
             GUI.DrawTexture(new Rect(x + 2 * u, y + 72 * u, 300 * u, 2 * u), Texture2D.whiteTexture);
             GUI.color = new Color(1f, 1f, 1f, _alfa);
             y += 150 * u;
-            if (Opcao(new Rect(x, y, w, 46 * u), "Iniciar novo jogo", true, u)) _principal = false;
-            y += 56 * u;
-            var ultimo = UltimoMundo();
-            if (Opcao(new Rect(x, y, w, 46 * u), "Continuar", ultimo.HasValue, u) && ultimo.HasValue)
+            if (Opcao(new Rect(x, y, w, 46 * u), "Iniciar novo jogo", true, u))
             {
-                MundoDaPartida.Pedido = ultimo.Value;
-                _nomeDoMundo = ultimo.Value.nome;
-                _tamanho = ultimo.Value.tamanho;
-                _semente = ultimo.Value.semente.ToString();
-                _sessao.Hospedar();
+                _principal = false;
+                _personagens = null;
             }
-            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), ultimo.HasValue
-                ? $"{ultimo.Value.nome} · {NomesDosTamanhos[(int)ultimo.Value.tamanho]} · semente {ultimo.Value.semente}"
-                : "nenhum mundo criado ainda", _detalhe);
+            y += 56 * u;
+            // o Continuar abre a lista dos mundos salvos (02/11/2026, o save)
+            var mundos = Mundos();
+            if (Opcao(new Rect(x, y, w, 46 * u), "Continuar", mundos.Count > 0, u) && mundos.Count > 0)
+            {
+                _principal = false;
+                _continuar = true;
+                _personagens = null;
+            }
+            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0
+                ? $"{mundos[0].nome} · {mundos[0].Resumo()}"
+                : "nenhum mundo salvo ainda", _detalhe);
             y += 76 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Configurações", true, u)) _opcoes = true;
             y += 56 * u;
@@ -372,20 +424,8 @@ namespace ZombieCityCleaner.UI
 #endif
         }
 
-        // o último mundo criado aqui (o Continuar): o nome, o tamanho e a semente, gravados no computador quando a partida
-        // começa como anfitrião. Não há jogo salvo: o Continuar reabre o mesmo mapa
-        static PedidoDoMundo? UltimoMundo()
-        {
-            int semente = PlayerPrefs.GetInt("mundo.ultimo.semente", 0);
-            if (semente <= 0) return null;
-            return new PedidoDoMundo
-            {
-                semente = semente,
-                tamanho = (TamanhoDoMundo)Mathf.Clamp(PlayerPrefs.GetInt("mundo.ultimo.tamanho", (int)TamanhoDoMundo.Grande), 0, NomesDosTamanhos.Length - 1),
-                nome = PlayerPrefs.GetString("mundo.ultimo.nome", PedidoDoMundo.Padrao.nome),
-            };
-        }
-
+        // o último mundo criado aqui: o nome, o tamanho e a semente, gravados no computador quando a partida começa como
+        // anfitrião (o Continuar agora é o dos mundos salvos: Salvar/MundoSalvo; isto ficou para os testes e o -semente)
         void GravarOUltimoMundo()
         {
             var m = MundoDaPartida.Instancia;
@@ -414,7 +454,12 @@ namespace ZombieCityCleaner.UI
             y += 24 * u;
             _semente = GUI.TextField(new Rect(x, y, w * 0.62f, 34 * u), _semente, 20, _campo);
             if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 34 * u), "Sortear", _botao)) _semente = GeradorDoMundo.NovaSemente().ToString();
-            y += 46 * u;
+            y += 44 * u;
+            // quando o mundo salva (02/11/2026, a pedido: as três formas)
+            GUI.Label(new Rect(x, y, w, 22 * u), "Salvar o jogo:", _texto);
+            y += 24 * u;
+            _modoNovo = (ModoDeSalvar)GUI.SelectionGrid(new Rect(x, y, w, 32 * u), (int)_modoNovo, NomesDosModos, 3, _botao);
+            y += 42 * u;
             if (GUI.Button(new Rect(x, y, w, 46 * u), "Criar o mundo", _botao))
             {
                 PedirOMundo();
@@ -430,8 +475,148 @@ namespace ZombieCityCleaner.UI
             int semente = 0;
             if (texto.Length > 0 && (!int.TryParse(texto, out semente) || semente <= 0))
                 semente = (int)(Sorteio.Fnv(texto.ToLowerInvariant()) % 999999UL) + 1;
-            // o jogo novo começa pelo Dia 0 (01/11/2026); o Continuar vai direto para o mundo
-            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = true };
+            // o jogo novo começa pelo Dia 0 (01/11/2026), menos para um personagem que já existe (02/11/2026, a pedido: ele
+            // pula o Dia 0); o Continuar vai direto para o mundo
+            AplicarAEscolha();
+            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = EscolhaDoPersonagem.Novo };
+            Salvamento.Atual = MundoSalvo.Novo(MundoDaPartida.Pedido, _modoNovo);
+        }
+
+        // ------------------------------------------------------------------ o save (02/11/2026)
+
+        System.Collections.Generic.List<PersonagemSalvo> Personagens() => _personagens ??= PersonagemSalvo.Todos();
+        System.Collections.Generic.List<MundoSalvo> Mundos() => _mundos ??= MundoSalvo.Todos();
+
+        // o personagem escolhido no painel vira o da partida (um novo, se for o "Novo personagem")
+        void AplicarAEscolha()
+        {
+            var lista = Personagens();
+            if (_indiceDoPersonagem >= 0 && _indiceDoPersonagem < lista.Count) EscolhaDoPersonagem.Escolher(lista[_indiceDoPersonagem]);
+            else EscolhaDoPersonagem.NovoPersonagem();
+        }
+
+        // entrando no mundo de um amigo: o personagem escolhido, e nada de mundo salvo nesta máquina (o mundo é dele)
+        void ParaEntrar(bool doMundo)
+        {
+            if (doMundo) AplicarAEscolha();
+            Salvamento.Atual = null;
+        }
+
+        /// <summary>
+        /// O painel do personagem (na tela do mundo novo e na do Continuar): os salvos neste computador e o "Novo personagem",
+        /// com as setas; o salvo mostra o dinheiro e o que leva, e pode ser apagado (com um segundo clique).
+        /// </summary>
+        void PainelDoPersonagem(float u, float x, float y, float w)
+        {
+            var lista = Personagens();
+            _indiceDoPersonagem = Mathf.Clamp(_indiceDoPersonagem, 0, lista.Count);
+            GUI.color = new Color(0f, 0f, 0f, 0.45f);
+            GUI.DrawTexture(new Rect(x - 12 * u, y - 10 * u, w + 24 * u, 214 * u), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(x, y, w, 24 * u), "Personagem:", _texto);
+            y += 30 * u;
+            bool novo = _indiceDoPersonagem >= lista.Count;
+            var p = novo ? null : lista[_indiceDoPersonagem];
+            var nome = new GUIStyle(_texto) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold };
+            if (GUI.Button(new Rect(x, y, 34 * u, 38 * u), "<", _botao)) { _indiceDoPersonagem = (_indiceDoPersonagem + lista.Count) % (lista.Count + 1); _apagarPersonagem = null; }
+            GUI.Label(new Rect(x + 38 * u, y, w - 76 * u, 38 * u), novo ? "Novo personagem" : p.nome, nome);
+            if (GUI.Button(new Rect(x + w - 34 * u, y, 34 * u, 38 * u), ">", _botao)) { _indiceDoPersonagem = (_indiceDoPersonagem + 1) % (lista.Count + 1); _apagarPersonagem = null; }
+            y += 46 * u;
+            var detalhe = new GUIStyle(_texto) { fontSize = Mathf.RoundToInt(14 * u) };
+            GUI.Label(new Rect(x, y, w, 60 * u), novo
+                ? "Você cria a aparência ao entrar. Num mundo novo, começa pelo Dia 0."
+                : $"{p.Resumo()}\n{(string.IsNullOrEmpty(p.ultimoMundo) ? "" : "Último mundo: " + p.ultimoMundo)}", detalhe);
+            y += 66 * u;
+            if (!novo)
+            {
+                bool confirmar = _apagarPersonagem == p.id;
+                if (GUI.Button(new Rect(x + w * 0.25f, y, w * 0.5f, 28 * u), confirmar ? "Clique de novo para apagar" : "Apagar personagem", _botao))
+                {
+                    if (!confirmar) _apagarPersonagem = p.id;
+                    else
+                    {
+                        PersonagemSalvo.Apagar(p.id);
+                        _personagens = null;
+                        _apagarPersonagem = null;
+                    }
+                }
+            }
+        }
+
+        // a tela do Continuar: os mundos salvos, cada um com o jogar e o apagar, e o personagem que vai entrar
+        void TelaDoContinuar(float u)
+        {
+            GUI.color = new Color(0, 0, 0, 0.55f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            float w = 560 * u, x = Screen.width * 0.5f - w * 0.5f - 170 * u, y = Screen.height * 0.07f;
+            GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
+            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Continuar", _texto);
+            y += 84 * u;
+            if (_sessao.Atual == SessaoOnline.Estado.Conectando)
+            {
+                GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
+                return;
+            }
+            PainelDoPersonagem(u, x + w + 36 * u, y, 300 * u);
+            var marca = new GUIStyle(GUI.skin.toggle) { fontSize = Mathf.RoundToInt(15 * u) };
+            Opcoes.Cor(marca, new Color(0.8f, 0.8f, 0.78f));
+            _continuarLocal = GUI.Toggle(new Rect(x, y, w, 26 * u), _continuarLocal, "  Jogar local (mesma rede, sem o código para os amigos)", marca);
+            y += 34 * u;
+            var mundos = Mundos();
+            var nome = new GUIStyle(_texto) { alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold, fontSize = Mathf.RoundToInt(18 * u) };
+            var detalhe = new GUIStyle(_texto) { alignment = TextAnchor.MiddleLeft, fontSize = Mathf.RoundToInt(13 * u) };
+            float linha = 62 * u, altura = Mathf.Min(mundos.Count * linha, Screen.height - y - 130 * u);
+            _rolagemDosMundos = GUI.BeginScrollView(new Rect(x, y, w + 18 * u, altura), _rolagemDosMundos, new Rect(0, 0, w, mundos.Count * linha));
+            for (int i = 0; i < mundos.Count; i++)
+            {
+                var m = mundos[i];
+                float ly = i * linha;
+                GUI.color = new Color(1f, 1f, 1f, i % 2 == 0 ? 0.06f : 0.03f);
+                GUI.DrawTexture(new Rect(0, ly, w, linha - 6 * u), Texture2D.whiteTexture);
+                GUI.color = Color.white;
+                GUI.Label(new Rect(10 * u, ly + 4 * u, w - 220 * u, 26 * u), m.nome, nome);
+                string antigo = m.versaoDoGerador != 0 && m.versaoDoGerador != GeradorDoMundo.Versao ? " · gerador antigo: o mapa pode ter mudado" : "";
+                GUI.Label(new Rect(10 * u, ly + 30 * u, w - 220 * u, 22 * u), $"{NomesDosTamanhos[Mathf.Clamp(m.tamanho, 0, 2)]} · {m.Resumo()}{antigo}", detalhe);
+                if (GUI.Button(new Rect(w - 204 * u, ly + 12 * u, 100 * u, 32 * u), "Jogar", _botao)) Jogar(m.id);
+                bool confirmar = _apagarMundo == m.id;
+                if (GUI.Button(new Rect(w - 98 * u, ly + 12 * u, 92 * u, 32 * u), confirmar ? "Confirmar" : "Apagar", _botao))
+                {
+                    if (!confirmar) _apagarMundo = m.id;
+                    else
+                    {
+                        MundoSalvo.Apagar(m.id);
+                        _mundos = null;
+                        _apagarMundo = null;
+                    }
+                }
+            }
+            GUI.EndScrollView();
+            if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x, Screen.height - 120 * u, w, 40 * u), _sessao.Erro, _erro);
+            if (GUI.Button(new Rect(24 * u, Screen.height - 70 * u, 150 * u, 34 * u), "< Voltar", _botao))
+            {
+                _continuar = false;
+                _principal = true;
+            }
+        }
+
+        // abre o mundo salvo: o pedido vem do arquivo (a semente, o tamanho e o nome; sem o Dia 0) e o Salvamento põe o resto
+        void Jogar(string id)
+        {
+            var m = MundoSalvo.Ler(id);
+            if (m == null)
+            {
+                _mundos = null;
+                return;
+            }
+            AplicarAEscolha();
+            Salvamento.Atual = m;
+            MundoDaPartida.Pedido = m.Pedido;
+            _nomeDoMundo = m.nome;
+            _tamanho = (TamanhoDoMundo)Mathf.Clamp(m.tamanho, 0, 2);
+            _semente = m.semente.ToString();
+            if (_continuarLocal) _sessao.HospedarLocal();
+            else _sessao.Hospedar();
         }
 
         void Pausa(float u)
@@ -453,7 +638,20 @@ namespace ZombieCityCleaner.UI
             }
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
             if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Configurações", _botao)) _opcoes = true;
-            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), "Sair da partida", _botao)) { _pausa = false; _sessao.Sair(); }
+            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), "Sair da partida", _botao))
+            {
+                _pausa = false;
+                // nos modos automático e ao sair, salva antes (o anfitrião sai um instante depois, para todos gravarem)
+                if (!Salvamento.AoSairDaPartida(() => _sessao.Sair())) _sessao.Sair();
+            }
+            // como este mundo salva, e quando salvou
+            var s = Salvamento.Instancia;
+            string texto = s == null || !s.Salva ? "Esta partida não salva."
+                : s.Modo == ModoDeSalvar.Dormindo ? "Este mundo salva só dormindo (E na sua cama, ou numa cama da casa da família)."
+                : s.Modo == ModoDeSalvar.AoSair ? "Este mundo salva ao sair da partida (e dormindo)."
+                : "Este mundo salva sozinho a cada 5 minutos e ao sair.";
+            if (s != null && s.Salva && s.SalvouEm >= 0f) texto += $"\nSalvo há {Mathf.FloorToInt((Time.unscaledTime - s.SalvouEm) / 60f)} min.";
+            GUI.Label(new Rect(0, y + 196 * u, Screen.width, 44 * u), texto, _texto);
         }
     }
 }

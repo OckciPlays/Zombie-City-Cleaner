@@ -16,7 +16,7 @@ namespace ZombieCityCleaner.Zombies
             public Vector3 origem, direcao;
             public float alcance, cosMeio, tanMeio;
             public bool carro;
-            public JogadorRede dono;   // quem segura a lanterna (no farol, ninguém)
+            public IAlvoDeZumbi dono;   // quem segura a lanterna: o jogador ou o sobrevivente (no farol, ninguém)
         }
 
         internal readonly List<Facho> Fachos = new List<Facho>(8);
@@ -34,6 +34,17 @@ namespace ZombieCityCleaner.Zombies
                 {
                     origem = p.olho, direcao = p.olhar.normalized, alcance = a.alcanceDaLanterna,
                     cosMeio = Mathf.Cos(meioL), tanMeio = Mathf.Tan(meioL), dono = p.jogador,
+                });
+            }
+            // a lanterna dos sobreviventes (no peito, para a frente) afasta os zumbis como a do jogador (02/11/2026)
+            for (int k = 0; k < QuantosNpcs; k++)
+            {
+                ref readonly var p = ref Npcs[k];
+                if (!p.lanterna || p.olhar.sqrMagnitude < 0.01f) continue;
+                Fachos.Add(new Facho
+                {
+                    origem = p.peito, direcao = p.olhar.normalized, alcance = a.alcanceDaLanterna,
+                    cosMeio = Mathf.Cos(meioL), tanMeio = Mathf.Tan(meioL), dono = p.quem,
                 });
             }
             foreach (var c in Carro.Todos)

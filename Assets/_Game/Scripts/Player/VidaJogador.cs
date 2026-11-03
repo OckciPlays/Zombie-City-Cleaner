@@ -63,6 +63,9 @@ namespace ZombieCityCleaner.Player
                 Vida.Value = vidaMaxima;
                 if (_fomeESede != null) _fomeESede.AoCair();
                 Vehicles.Carro.TirarDeTodos(OwnerClientId);   // caiu dentro de um carro: o lugar fica vazio
+                // a mochila, com tudo dentro, fica onde ele caiu (02/11/2026, a pedido); no Dia 0 não se perde nada
+                var mundo = World.MundoDaPartida.Instancia;
+                if (!(mundo != null && mundo.NoDiaZero)) Loot.MochilasNoChao.Instancia?.DaMorte(GetComponent<InventarioJogador>());
                 CaiuRpc();
             }
             else Vida.Value = nova;
@@ -80,7 +83,9 @@ namespace ZombieCityCleaner.Player
         void CaiuRpc()
         {
             // a cama dele (a última que montou), ou o ponto de nascimento
-            var ponto = Loot.ConstrucoesNoMundo.CamaDe(OwnerClientId, out var cama) ? cama : PontosDeNascimento.Ponto(OwnerClientId);
+            var rede = GetComponent<JogadorRede>();
+            ulong dono = rede != null && rede.Chave.Value != 0 ? rede.Chave.Value : OwnerClientId;
+            var ponto = Loot.ConstrucoesNoMundo.CamaDe(dono, out var cama) ? cama : PontosDeNascimento.Ponto(OwnerClientId);
             GetComponent<PassageiroDoCarro>().Soltar();
             GetComponent<MovimentoPrimeiraPessoa>().Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
             _caiuAte = Time.time + 3f;

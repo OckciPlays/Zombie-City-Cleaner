@@ -211,7 +211,7 @@ namespace ZombieCityCleaner.Zombies
         {
             Pedra = Mathf.Clamp01(p);
             // a velocidade do agente acompanha a lentidão
-            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * _ritmo;
+            if (_velocidadeBase >= 0f && agente.enabled && agente.isOnNavMesh) agente.speed = _velocidadeBase * FatorDasPernas * FatorDaPedra * RitmoPara(_velocidadeBase);
         }
 
         void ComecarFuga(float agora)

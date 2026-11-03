@@ -161,6 +161,32 @@ namespace ZombieCityCleaner.World
 
         void TempoAoAcabar() => Tempo.Zerar();
 
+        /// <summary>O relógio do clima e o que ainda vem no calendário (o save: Salvar/Salvamento).</summary>
+        public Salvar.TempoSalvo CopiaDoTempo()
+        {
+            var t = new Salvar.TempoSalvo { horas = _horas };
+            foreach (var e in _calendario)
+                t.eventos.Add(new Salvar.EventoSalvo { inicio = e.inicio, fim = e.fim, nivel = (int)e.nivel, tornado = e.tornado });
+            return t;
+        }
+
+        /// <summary>
+        /// No anfitrião: o clima do mundo salvo (a chuva que estava vindo continua). O que vem depois é sorteado de novo, pela
+        /// semente e pelo relógio do clima.
+        /// </summary>
+        public void RestaurarTempo(Salvar.TempoSalvo t)
+        {
+            if (!IsServer || t == null) return;
+            _horas = t.horas;
+            _calendario.Clear();
+            foreach (var e in t.eventos)
+                _calendario.Add(new Evento { inicio = e.inicio, fim = e.fim, nivel = (NivelDoTempo)e.nivel, tornado = e.tornado });
+            var mundo = MundoDaPartida.Instancia;
+            int semente = mundo != null && mundo.Semente != 0 ? mundo.Semente : 1;
+            _sorteio = new System.Random(unchecked(semente * 7919 + 17 + (int)_horas));
+            _tornadoDoEventoFeito = false;
+        }
+
         // ------------------------------------------------------------------------------------------ o calendário
 
         double Sortear(double de, double ate) => de + (ate - de) * _sorteio.NextDouble();

@@ -22,6 +22,15 @@ namespace ZombieCityCleaner.Zombies
         public float velocidadeDoBote = 4.6f;
         [Tooltip("A partir de quantos metros do alvo ele dá o bote.")]
         public float distanciaDoBote = 4f;
+        [Header("O golpe correndo (02/11/2026, a pedido: ele rodeava e não batia)")]
+        [Tooltip("Ele golpeia sem parar de correr, a esta distância do alvo (m; o Oco para e golpeia a 1,3).")]
+        public float alcanceDoGolpe = 1.6f;
+        [Tooltip("O dano sai este tempo depois do golpe (s; o do Oco é 0,45).")]
+        public float atrasoDoDano = 0.2f;
+        [Tooltip("Quando o dano sai, o golpe ainda pega até esta distância (m).")]
+        public float alcanceDoDano = 2.1f;
+        [Tooltip("O intervalo entre os golpes (s; o do Oco é 1,4).")]
+        public float intervaloDoGolpe = 1f;
         [Tooltip("Vagando e investigando, mais rápido que o Oco (vezes).")]
         public float fatorAndando = 1.6f;
         [Tooltip("No sol, a pedra sobe neste tempo (s): o corpo dele é mais frágil que o do Oco.")]

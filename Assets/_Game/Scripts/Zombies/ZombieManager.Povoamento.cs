@@ -80,6 +80,16 @@ namespace ZombieCityCleaner.Zombies
         readonly HashSet<int> _sustos = new HashSet<int>();
         float _proximoPovoamento, _proximoRecolher;
 
+        /// <summary>Os carros em que o rastejante já assustou (o save: Salvar/Salvamento).</summary>
+        public List<int> Sustos() => new List<int>(_sustos);
+
+        /// <summary>Só no anfitrião: os sustos já dados no mundo salvo (o rastejante não volta embaixo do mesmo carro).</summary>
+        public void RestaurarSustos(List<int> sustos)
+        {
+            _sustos.Clear();
+            if (sustos != null) foreach (int s in sustos) _sustos.Add(s);
+        }
+
         /// <summary>Para conferir (o teste): quantos o povoamento quis pôr e quantos achou lugar.</summary>
         public int PovoamentoQuis { get; private set; }
         public int PovoamentoPos { get; private set; }
@@ -310,6 +320,7 @@ namespace ZombieCityCleaner.Zombies
         public bool TemRastejante(int carro)
         {
             if (carro < 0 || _sustos.Contains(carro)) return false;
+            if (Dados?.Objetos?.QuebradoDe(carro) != null) return false;   // o carro quebrado: os dois estão ali do lado
             if (RastejanteEmTodos.Value) return true;
             var dados = Dados;
             int semente = dados != null ? dados.Semente : 0;

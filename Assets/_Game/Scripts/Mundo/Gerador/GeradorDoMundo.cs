@@ -33,9 +33,9 @@ namespace ZombieCityCleaner.Mundo
         /// tamanho do lote, e o chão dele (Parte M6, segunda fatia, 26/10/2026). 8 = as lojas de verdade (o tipo e a planta
         /// de cada uma) e o hospital (Parte M6, terceira fatia, 27/10/2026). 9 = a floresta: as manchas, os plantios e as
         /// plantas de cada bloco, e as folhas no chão embaixo dela (Parte M9a, 27/10/2026). 10 = a casa da família sempre a
-        /// mesma (a do Dia 0, 01/11/2026).
+        /// mesma (a do Dia 0, 01/11/2026). 11 = os acampamentos dos sobreviventes, com o chão aplainado (02/11/2026).
         /// </summary>
-        public const int Versao = 10;
+        public const int Versao = 11;
 
         /// <summary>As etapas para a tela de carregamento (de 0 a 1, e o texto). Pode ser chamado de outras threads.</summary>
         public delegate void Progresso(float fracao, string etapa);
@@ -168,6 +168,7 @@ namespace ZombieCityCleaner.Mundo
         public static float AlturaFinal(DadosDoMundo d, float x, float z)
         {
             float h = AlturaDoChao(d, x, z);
+            h = NoAcampamento(d, x, z, h);
             if (d.Rede != null) h = d.Rede.Acomodar(x, z, h);
             var cidade = d.CidadeNoChao(x, z, out _);
             if (cidade != null) h = cidade.NoPatamar(new Vector2(x, z), h);
@@ -176,6 +177,24 @@ namespace ZombieCityCleaner.Mundo
                 float px = x - d.Partida.x, pz = z - d.Partida.z;
                 float dp = Mathf.Sqrt(px * px + pz * pz);
                 if (dp < DadosDoMundo.FimDoPlato) h = Mathf.Lerp(d.Partida.y, h, Geo.Suave(DadosDoMundo.RaioDoPlato, DadosDoMundo.FimDoPlato, dp));
+            }
+            return h;
+        }
+
+        /// <summary>
+        /// O chão dos acampamentos dos sobreviventes (02/11/2026): plano na altura de cada um dentro do raio, voltando ao
+        /// relevo em 15 m (antes das estradas se acomodarem: a rodovia do lado continua no lugar dela).
+        /// </summary>
+        static float NoAcampamento(DadosDoMundo d, float x, float z, float h)
+        {
+            var lista = d.Plano?.Acampamentos;
+            if (lista == null) return h;
+            foreach (var a in lista)
+            {
+                float dx = x - a.Centro.x, dz = z - a.Centro.y, lim = a.Raio + 15f;
+                float d2 = dx * dx + dz * dz;
+                if (d2 > lim * lim) continue;
+                h = Mathf.Lerp(a.Altura, h, Geo.Suave(a.Raio, lim, Mathf.Sqrt(d2)));
             }
             return h;
         }
