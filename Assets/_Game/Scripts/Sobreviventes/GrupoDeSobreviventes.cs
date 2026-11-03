@@ -23,6 +23,8 @@ namespace ZombieCityCleaner.Sobreviventes
         public int acampamento = -1;
         /// <summary>Os dois do carro quebrado (o índice dele em <c>Objetos.Quebrados</c>; -1: não é da estrada).</summary>
         public int cena = -1;
+        /// <summary>Os militares de uma base (03/11/2026: o índice dela em <see cref="BasesMilitaresDoMundo"/>; -1: não é).</summary>
+        public int baseMilitar = -1;
         /// <summary>Os membros no começo (o que o save guarda: quem morreu sai da máscara).</summary>
         public int quantos;
         public readonly List<Sobrevivente> membros = new List<Sobrevivente>();
@@ -33,15 +35,15 @@ namespace ZombieCityCleaner.Sobreviventes
         public Vector3 destino;
         public bool temDestino;
         float _proximoDestino;
-        // (as pessoas do acampamento não fogem: estão em casa; os do carro quebrado não largam o carro)
-        public bool Fugindo => acampamento < 0 && cena < 0 && quantos >= 2 && Vivos == 1;
+        // (as pessoas do acampamento não fogem: estão em casa; os do carro quebrado não largam o carro; os militares, a base)
+        public bool Fugindo => acampamento < 0 && cena < 0 && baseMilitar < 0 && quantos >= 2 && Vivos == 1;
 
         /// <summary>
-        /// Contra os jogadores: o grupo de busca, sempre; o acampamento, depois que alguém feriu um deles; os do carro
-        /// quebrado, depois de alguém mirar neles, chegar armado ou ferir um deles.
+        /// Contra os jogadores: o grupo de busca e os militares, sempre; o acampamento, depois que alguém feriu um deles; os
+        /// do carro quebrado, depois de alguém mirar neles, chegar armado ou ferir um deles.
         /// </summary>
-        public bool Hostil => cena >= 0 ? CarrosQuebradosDoMundo.Instancia != null && CarrosQuebradosDoMundo.Instancia.Hostil(cena)
-            : acampamento < 0 || (AcampamentosDoMundo.Instancia != null && AcampamentosDoMundo.Instancia.Hostil(acampamento));
+        public bool Hostil => baseMilitar >= 0 || (cena >= 0 ? CarrosQuebradosDoMundo.Instancia != null && CarrosQuebradosDoMundo.Instancia.Hostil(cena)
+            : acampamento < 0 || (AcampamentosDoMundo.Instancia != null && AcampamentosDoMundo.Instancia.Hostil(acampamento)));
 
         public Sobrevivente Lider
         {
@@ -96,7 +98,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 inimigo = null;
                 temDestino = false;
             }
-            if (acampamento >= 0 || cena >= 0) return;   // o acampamento e o carro quebrado não exploram: cada um no seu posto
+            if (acampamento >= 0 || cena >= 0 || baseMilitar >= 0) return;   // o acampamento, o carro quebrado e a base não exploram: cada um no seu posto
             var lider = Lider;
             if (estado != EstadoDoGrupo.Explorando || lider == null) return;
             bool chegou = temDestino && Vector3.Distance(lider.transform.position, destino) < 2.5f;

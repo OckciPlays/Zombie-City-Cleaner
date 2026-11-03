@@ -109,6 +109,8 @@ namespace ZombieCityCleaner.Player
             if (!_cache.TryGetValue(c, out var chao))
             {
                 chao = (c.name == "Chão" ? Superficie.Grama : Superficie.Concreto, c.name == "Chão" ? null : c.GetComponentInParent<PisoPorZona>());
+                // os colisores dos blocos do terreno são novos a cada vez: sem o teto, os que já sumiram ficavam aqui
+                if (_cache.Count >= 4096) _cache.Clear();
                 _cache[c] = chao;
             }
             if (chao.zonas != null) return chao.zonas.Em(ponto);

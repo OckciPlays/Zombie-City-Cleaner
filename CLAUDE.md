@@ -2436,6 +2436,154 @@ trocam; depois pagam e ficam ali; ou a gente mata e saqueia.
   - a cópia do save; o JSON ida e volta; 0 erros.
   - **Falta:** dois jogadores, a troca de dia, ouvir as batidas no jogo.
 
+## Os ajustes da primeira partida (03/11/2026, a pedido; `Docs/15-Ajustes-da-Primeira-Partida.md`)
+
+O Pedro jogou com os amigos e pediu cinco etapas, feitas de uma vez para ele avaliar depois. O resumo para gente está no
+`Docs/15`. `MundoDaPartida`, `JogadorRede` e `MapaDoMundo` viraram `partial` (os arquivos novos ao lado). Nada mudou nas
+cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo.Awake` põe o `BasesMilitaresDoMundo`;
+`MapaDoMundo.OnEnable`, o `MinimapaDoMundo`).
+
+- **Os bugs:**
+  - `MochilasNoChao.Criar`: o item sem tamanho (as mochilas, `Itens.Tamanho` 0×0) vai para o chão ao lado
+    (`NoChaoDoLado`), e a arrumação na grade para em 80 linhas (com um aviso `[Mochilas]`). Antes, o `while` não acabava e o
+    jogo travava ao matar o comerciante de roupas;
+  - `PlantaDoAcampamento.Esconderijos` (o meio de cada cômodo do térreo); `AcampamentosDoMundo.Pessoas`: cada um no seu, e
+    `NoChao` (o NavMesh na altura do chão, não no tampo do balcão); `Sobrevivente.LigarOAgente` prefere o chão a 0,6 m; o
+    `Esconder` atira em quem entra perto (10 m, à vista);
+  - `ParedeDeArmas.Update`: as `vagas` escondidas com o mundo não pronto ou no Dia 0;
+  - `DiaZeroDaPartida.PuloBloqueado(de, para)` (no Dia, antes da Rua, de dentro para fora): o `PuloDaJanela.Tentar` avisa
+    e não pula; o `NoLobby` não puxa ninguém no meio de um pulo.
+- **Os civis** (`Sobreviventes/Sobrevivente.Branca.cs`):
+  - `IdentidadeDoSobrevivente.branca` (o `Item` da arma branca; `Nada`: a de fogo); `ComBranca`, `ItemDaArma`; o
+    `Vestir` usa `ControladorDoItem` (o `corpo.controladoresDosItens[Itens.MaoDe(item) - Armas.Quantas]`);
+  - no combate e contra os zumbis: `BrigarDePerto` (de longe pelo lado, golpe a menos de `alcance + 0,35`),
+    `BrigarComZumbi`, `GolpeRpc` (o "Fire" e o vento) e `ImpactoDoGolpe` no impacto da animação (`d.dano × DanoNoJogador`
+    no jogador; `× 1,5` no zumbi, com o corte); o intervalo `intervalo × 1,6 + 0,2–0,6 s`;
+  - `SobreviventesDoMundo.SortearArma`: o líder pistola (25% submetralhadora); os outros: 10% submetralhadora (uma por
+    grupo), 40% pistola, 50% branca (faca 30, bastão 30, machado 25, lança 15);
+  - `Encher(sob, arma, militar, branca)`: o perfil civil (o pente 40–100%, 45% uma caixa de 3–12 balas; 1–3 comidas, 1–2
+    bebidas...) e o militar (o pente cheio, 2–3 caixas de `min(MaxPorCaixa, capacidade × 2)`, a ração, o remédio, às vezes
+    o `Colete_Tatico` e o `Capacete_Militar` como itens). O acampamento e o carro quebrado usam o civil.
+- **A base militar** (`Sobreviventes/PlantaDaBase.cs`, `BasesMilitaresDoMundo.cs`, `BasesMilitaresDoMundo.Construcao.cs`):
+  - `PlantaDaBase.Bases(d)` (os `TipoDeLugar.BaseMilitar` do plano), `Da(d, lugar, indice)`: a meia largura 20 m, o giro
+    pela estrada que sai do meio (`Estrada.De`), as `Pecas` (a cerca em trechos, as barreiras, a cancela, a guarita, o
+    caminhão, o blindado, as barracas, os ninhos, as caixas, o mastro, os postes) e os 8 `Postos` (`Militares`: 6 a 8);
+    `Mundo(local)` põe o ponto no relevo (`d.Altura`); `Chao(local, giro, comprimento)`, a altura mais baixa do meio e das
+    pontas, menos 5 cm;
+  - `BasesMilitaresDoMundo` (um `MonoBehaviour`, sem rede: a construção sai da planta em cada máquina; os militares são
+    `NetworkObject`s do anfitrião): `Garantir` refaz tudo quando os `Dados` mudam; a construção até `raioDaConstrucao` (320
+    m), uma por vez; a cada 1 s (`ConferirOsMilitares`): o reforço (dias depois da última morte, com ninguém perto:
+    `mortos = 0`, `geracao++`), aparecem a menos de `chegarPerto` (170 m), saem a mais de `sairLonge` (260 m); `GrupoBase`
+    3000; `AoMorrer` (a máscara, `diaDoReforco = Dia + 3`, a mochila); `Copia`/`Restaurar`; `Recomecar` e `TirarAsPessoas`
+    (o F1);
+  - no `Sobrevivente`: `PapelDoSobrevivente.Militar`, `baseMilitar`/`DaBase`, `DeGuarda` (o guarda e o militar: a ronda, os
+    30 m dos zumbis, a lanterna), `AlcanceDaVista` (90; o militar 110, o de sniper 160), o `Olhar` (o militar vê a 90 m de
+    dia, o de sniper a 150), `VidaDoMilitar` 150, `VestirABlindagem` (o colete e o capacete por cima do sorteio "Militar"),
+    o `LevarTiro` (militar: a cabeça × 2,5 sem matar de uma vez, o tronco × 0,5) e o `PensarParado` (sem o agente, longe do
+    NavMesh: olha, vira para o posto, atira e recarrega); `GrupoDeSobreviventes.baseMilitar` (sempre hostil, não foge, não
+    explora).
+- **A morte** (`Player/VidaJogador.cs`, `Player/TelaDeMorte.cs`):
+  - `VidaJogador.Caido` (rede): a vida a 0; `Dano(valor, de, causa)` e `Perder(valor, causa)` ignoram quem está caído; a
+    causa vem de cada fonte ("Mordido pelos zumbis.", "Baleado por um militar.", "De fome.", "Atingido por um raio."...);
+    `MorreuRpc(causa, diaZero)` no dono; `PedirRenascer` → `RenascerRpc` (o anfitrião confere os 5 s) → `VoltarRpc` (a cama
+    ou o ponto de nascimento); `RenascerAgora` para os testes;
+  - `Deitar`: o corpo (`animadorCorpo.transform`) gira −90° em x e o animador para; no dono, a câmera dos braços apaga;
+  - `JogadorRede.AlvoValido` é falso com ele caído (os zumbis e os sobreviventes largam);
+  - `TelaDeMorte` (no dono, posta pela `VidaJogador`): uma tela obrigatória (`MenuOnline.Tela(this, true, true)`),
+    `GUI.depth` −40, "VOCÊ MORREU", a causa, a contagem e o botão (ou Enter); com o ESC aberto, só o menu;
+  - `MochilasNoChao.DaMorte` põe as roupas vestidas (com as cores) na mochila e zera o `InventarioJogador.Roupas`; o save
+    do personagem caído guarda a vida cheia.
+- **O fogo amigo:** `PedidoDoMundo.fogoAmigo` → `MundoDaPartida._fogoAmigo` (`FogoAmigo`; `DefinirFogoAmigo` no F1, que
+  muda o `Salvamento.Atual` junto) e `MundoSalvo.fogoAmigo`; o `MenuOnline` (o "Fogo amigo" no Novo mundo e a linha no
+  ESC). No `ArmaJogador`, `OutroJogador(collider)` (o `CharacterController` de outro jogador, com o fogo amigo ligado) no
+  `Disparar` (vai para `_jogadores` e `MandarAcertosNosJogadores`: um acerto por jogador, a distância mais perto) e no
+  `Golpear`; `JogadorRede.AcertarJogador` → `AcertoNoJogadorRpc` → `FerirJogador` (o fogo amigo ligado, os dois vivos, o
+  ponto a 2,5 m do outro, o dano até 200, a causa "Morto por Fulano.").
+- **O minimapa e as marcas:**
+  - `UI/MarcasDoMapa.cs`: `TipoDeMarca` (Ping, Marca, Anotacao), `MarcaNoMapa` (memcpy: id, tipo, cor, dono, pos, `ate`
+    no tempo do anfitrião, autor e texto em `FixedString`), os números (20 s, 3 pings por jogador, 40 letras, 200 marcas,
+    300 m), as 5 cores, o losango, o alfinete e o bipe gerados;
+  - `World/MundoDaPartida.Marcas.cs`: a `NetworkList` (criada no `Awake`, limpa no spawn do anfitrião), `PorMarca`,
+    `ApagarMarca`, `EditarMarca` (sem texto vira marca, com texto anotação), `LimparOsPings` (1 s), `Agora`
+    (`ServerTime`), o evento `MarcaNova` (o bipe), `CopiaDasMarcas`/`RestaurarMarcas` (o save, sem os pings);
+  - `Player/JogadorRede.Marcas.cs`: `NomeNoMapa`, `PedirPing`, `PedirMarca`, `PedirApagarMarca`, `PedirEditarMarca` (os
+    RPCs conferem o dono e o ponto dentro do mapa);
+  - `UI/MinimapaDoMundo.cs`: no canto de cima à direita (30 u do alto), 170 ou 270 u, 250 ou 400 m
+    (`GUI.DrawTextureWithTexCoords` com a imagem do `MapaDoMundo`), N muda (`minimapa.tamanho` nos PlayerPrefs); o botão do
+    meio do mouse (o raio, ou o relevo andando pelo raio); os losangos dos pings por cima de tudo; some com
+    `MenuOnline.Aberto`/`ComTela`/`Cinema`, o mapa aberto e a tela de morte;
+  - `UI/MapaDoMundo.Marcas.cs`: o clique direito (o menu: ping, a anotação e as 5 cores), o clique sem arrastar num
+    alfinete (editar ou apagar), o texto da anotação ao passar o mouse; com o menu aberto, o mapa não mexe e o M não fecha.
+    O `MapaDoMundo` ganhou `Instancia`, `Textura`, `Dados` e `SetaDosJogadores`, e o nome do jogador ao lado da seta.
+- **O save:** `MundoSalvo.basesMilitares` (`BaseMilitarSalva`), `marcas` (`MarcaSalva`) e `fogoAmigo`, no `Salvamento`.
+- **O F1** (a aba "Gente"): "BASE MILITAR" ("Ir à base", "Recomeçar a base") e "A MORTE" ("Morrer agora", "Fogo amigo").
+- **Conferido** (03/11/2026, um jogador, no Editor, semente 7, média; 0 erros em todos): os 7 comerciantes mortos sem
+  travar; os esconderijos; o Dia 0 sem as armas e com o pulo bloqueado; os 6 grupos (as armas e o saque); a luta de perto
+  (fotos); as 2 bases (fotos de dia e de noite), o dano do colete e do capacete, o saque, o save e o reforço; a tela de
+  morte (capturas), a mochila com as roupas, o renascer; o minimapa, os pings, as marcas, o mapa com o nome (capturas); a
+  regressão do Dia 0 e do save antigo.
+  - **Falta:** dois jogadores (o fogo amigo de uma máquina na outra, os pings e as marcas chegando, o corpo deitado visto
+    pelo outro).
+
+### Depois do primeiro teste do Pedro (03/11/2026, à noite)
+
+- **O "dentro da casa" do Dia 0** (`RuaDoDiaZero.DentroDaCasa`): os cômodos da planta (`Planta.comodos`, no x da planta: a
+  casa espelhada troca o sinal), com `FolgaDoComodo` 0,2 m, mais a garagem coberta entre o `z0` e o `z1` dela; do chão
+  (−1 m) a 6 m. Antes, a caixa X0..X1 × Z0..Z1 inteira, esticada pela largura da garagem em todo o lado: com a garagem
+  mais curta que a casa (a semente 156653), a faixa ao lado dela contava como dentro; o pulo da janela do quarto passava, e
+  o `NoLobby` não puxava de volta. Conferido: as 28 janelas de fora bloqueadas (antes, 24).
+- **O nome no mapa grande** (`MapaDoMundo.OnGUI`): `_nomesDosJogadores` (as caixas, antes dos nomes dos lugares, que entram
+  no `_ocupados` e desviam delas), o estilo `_nomeDoJogador` (à esquerda, sem margem), a etiqueta escura e a cor do jogador.
+- **O começo no bunker** (o Profiler, `UnityEditorInternal.ProfilerDriver` e `HierarchyFrameDataView` no RunCommand):
+  - `ZombieManager.Pedacos.cs`: `CortesProntos`, `ProgressoDosCortes`, `PodeAquecer` (o carregamento do mundo, uma tela
+    cheia ou o cinema; no Dia 0, na rua, espera) e `EsperarOProximoQuadro` (120 ms por quadro no carregamento, 25 nas
+    telas, um passo jogando); o `PreaquecerOPool` usa o mesmo orçamento. O `MundoDaPartida.Update` segura o `FicarPronto`
+    até `CortesProntos` (no máximo 90 s, `_esperandoOsZumbisDesde`), com a etapa "Preparando os zumbis (N%)";
+  - `ObjetosDoMundo.Revisar` e `FlorestaDoMundo.Revisar`: sem o jogador local, o centro é `_dados.Partida` (antes, a câmera
+    do menu, na origem);
+  - `TelaDeCarregamento`: `FolgaDepoisDeNascer` 0,8 s e `QuadrosDepoisDeNascer` 12 por cima, depois de o jogador nascer
+    ("Entrando…");
+  - `MapaDoMundo.ComMipmaps`: os níveis (a média de 2 × 2) na `Task` da pintura; no quadro, `SetPixelData` por nível e
+    `Apply(false, true)`;
+  - `ZombieManager.PararOAquecimento`: uma corrotina de cada por partida (a da partida anterior seguia rodando junto);
+  - **medido depois:** os cortes acabam durante a geração (504 passos em 11 s, o carregamento igual, 12,3 s); do fim da tela
+    em diante, 45 s com 1 quadro acima de 50 ms (antes, 627, 226, 97 ms...).
+
+### O crash do Editor e o saque dos militares (03/11/2026, à noite, a pedido)
+
+- **O crash:** falta de memória (o `Logs/Editor.log` com "Crash!!!": `MimallocPrimErrorHandler` / `mi_os_prim_alloc_aligned`
+  dentro de `TerrenoDoMundo.PorCasas` → `MalhaDeObra.ParaMesh`), num mundo grande depois de horas de Editor. Medido: 3
+  partidas seguidas no mesmo Play não crescem (a Unity volta a ~1,9 GB depois de cada `Sair`; ~14 mil GameObjects e ~440 MB
+  de malhas ficam nos pools para a partida seguinte); o processo do Editor fica em ~10 GB e o Windows chegou a 0,7 GB livres.
+  O heap do Mono nunca encolhe (um pico de lixo deixa o processo maior para sempre); os dois `AssetImportWorkerHW` de reserva
+  seguram 1,8 GB cada.
+- **`PlantaDaBase`:** o cache é só do mundo de agora (`_doCache`; `Esquecer()` no `SubsystemRegistration` e no
+  `BasesMilitaresDoMundo.Garantir`). Antes, a chave (semente, índice) guardava a planta, e a planta guarda o `DadosDoMundo`:
+  cada mundo novo da sessão ficava preso inteiro.
+- **Os vazamentos achados numa revisão (um workflow só de leitura, cada achado conferido por outro agente):**
+  - `Vestimenta.Guardadas` (o maior): as malhas sem as faces cobertas (`SemAsFaces`, um `Instantiate` do corpo e das peças
+    por combinação) ficavam para sempre, e a combinação muda a cada NPC sorteado novo (~2 MB cada). Agora `Guardada { malha,
+    usos }` + `ChaveDa` (malha → chave): `SemAsFaces` conta um uso, `Soltar` tira um (no `Vestir`, depois de pegar a nova; a
+    peça desligada volta à malha inteira; no `OnDestroy`); sem uso, a chave vai para `Soltas` (no máximo 24, `MaxSoltas`; a
+    mais velha é destruída). A cópia de um corpo vestido (o retrato, o estúdio, o boneco do F1) chega com as malhas da outra:
+    o `Achar` reconhece pela `ChaveDa`, guarda a inteira em `_originais` e conta o uso até se vestir. `MalhasGuardadas` para
+    os testes. Conferido: 40 NPCs diferentes por rodada, 3 rodadas, ~95 malhas e de volta a 26; nenhum renderer sem malha.
+  - `NavMeshDoMundo.Tirar`: o `NavMeshData` é destruído (no meio de uma montagem, no `completed` dela). Antes ficava um por
+    jogador por partida e um a cada jogador que saía. Conferido: 0 `NavMeshData` vivos depois do `Sair`.
+  - `ZombieManager._grupos` (o cerco): sai quem não está mais entre os alvos (`_semAlvo`) e tudo no `OnNetworkDespawn`.
+  - `PassosJogador._cache` (o chão por colisor): esvazia com 4096 (os colisores dos blocos são novos a cada vez).
+  - `PlantaDoAcampamento._cache`: a chave leva o tamanho do mundo (antes, a mesma semente em outro tamanho devolvia a
+    planta errada); esvazia com 64.
+  - Conferidos e deixados: `MalhaDeObra.Estoques` e `MalhaDaMobilia._estoque` têm teto e a partida seguinte reaproveita
+    (não crescem por partida); `IconesDasRoupas` não vaza (as cores das roupas não são sorteadas).
+- **O F3 (Itens):** o clique em "Roupas" valia só no quadro seguinte, e a lista de antes lia `ItensDoMenu[_especie]` fora
+  do tamanho (o `IndexOutOfRangeException` no log do Pedro); `roupas` é refeito logo depois do `SelectionGrid`.
+- **O saque dos militares** (`SobreviventesDoMundo.Encher`, `militar`): o pente de 50% a 100%, `Sobrevivente.reserva` = 2
+  pentes (a recarga usa as caixas da mochila primeiro, depois a reserva; ela não vai para a mochila no chão), 40% uma caixa
+  de 30% a 60% de um pente; a barra, o feijão 30%, a água 60%, o remédio 30%, o colete 8%, o capacete 6%, as pilhas 15%. No
+  `LargarAMochila`, a arma do militar cai com o desgaste de 50 a 85 (a partir de `Itens.DesgasteQueEmperra`, 70, engasga).
+  Conferido: 6 mortos, 6 armas (5 que engasgam), 119 balas nos pentes e 55 em caixas.
+
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 
 O resumo para gente (os números, como testar) está em `Docs/11-Desgaste-do-Carro.md`. O pedido: os pneus furando na estrada

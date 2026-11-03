@@ -87,6 +87,11 @@ namespace ZombieCityCleaner.Player
             if (!IsSpawned || !IsOwner || _pulando) return false;
             if (_rede.Passageiro != null && _rede.Passageiro.NoCarro) return false;
             if (!AcharJanela(out var j)) return false;
+            if (DiaZero.DiaZeroDaPartida.PuloBloqueado(transform.position, transform.position + j.dir * (j.distancia + j.parede + Depois)))
+            {
+                InventarioJogador.AvisoLocal("Ainda não: esperem todos chegarem e liguem a TV da sala (E).");
+                return false;
+            }
             Comecar(j);
             JanelaRpc();
             return true;

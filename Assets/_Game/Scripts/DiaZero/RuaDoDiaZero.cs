@@ -372,20 +372,30 @@ namespace ZombieCityCleaner.DiaZero
             }
         }
 
-        /// <summary>O ponto (mundo) está dentro da nossa casa (a caixa da planta, do chão ao telhado).</summary>
+        /// <summary>A folga em volta de cada cômodo (m): cobre a parede entre dois cômodos (a porta), sem chegar em quem está
+        /// encostado do lado de fora.</summary>
+        const float FolgaDoComodo = 0.2f;
+
+        /// <summary>
+        /// O ponto (mundo) está dentro da nossa casa: num dos cômodos da planta (com uma folga pequena), do chão ao telhado, ou
+        /// na garagem coberta. 03/11/2026: antes era a caixa da planta inteira, e numa casa em L o canto de fora (entre as
+        /// duas alas) contava como dentro: dava para pular a janela do quarto para lá, e o lobby não puxava de volta.
+        /// </summary>
         public bool DentroDaCasa(Vector3 mundo)
         {
             if (NossaCasa == null || PlantaDaCasa == null) return false;
             var l = NossaCasa.InverseTransformPoint(mundo);
+            if (l.y <= -1f || l.y >= 6f) return false;
             var p = PlantaDaCasa;
-            // a garagem coberta conta como dentro (do lado dela; a planta é simétrica em x, o espelho só troca o lado)
-            float x0 = p.X0, x1 = p.X1;
-            if (p.garagem != null && p.garagem.coberta)
-            {
-                int g = p.espelhar ? -p.garagem.lado : p.garagem.lado;
-                if (g > 0) x1 += p.garagem.largura; else x0 -= p.garagem.largura;
-            }
-            return l.x >= x0 - 0.1f && l.x <= x1 + 0.1f && l.z >= p.Z0 - 0.1f && l.z <= p.Z1 + 0.1f && l.y > -1f && l.y < 6f;
+            // nas coordenadas da planta (a casa espelhada troca o x)
+            float x = p.espelhar ? -l.x : l.x, z = l.z, f = FolgaDoComodo;
+            foreach (var k in p.comodos)
+                if (x >= k.x0 - f && x <= k.x1 + f && z >= k.z0 - f && z <= k.z1 + f) return true;
+            // a garagem coberta (do lado dela, entre o z0 e o z1 dela)
+            var g = p.garagem;
+            if (g != null && g.coberta && z >= g.z0 - f && z <= g.z1 + f)
+                return g.lado > 0 ? x >= p.X1 - f && x <= p.X1 + g.largura + f : x <= p.X0 + f && x >= p.X0 - g.largura - f;
+            return false;
         }
 
         // ------------------------------------------------------------------ as lojas

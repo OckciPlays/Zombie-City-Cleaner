@@ -56,6 +56,11 @@ namespace ZombieCityCleaner.Sobreviventes
         public readonly List<(Vector3 pos, float giro)> Barracas = new List<(Vector3, float)>();
         /// <summary>Onde os comerciantes se escondem quando o acampamento fica hostil (dentro da casa).</summary>
         public readonly Vector3 Esconderijo;
+        /// <summary>
+        /// Os esconderijos dentro da casa: o meio de cada cômodo do térreo (03/11/2026: antes, todos iam para o mesmo ponto,
+        /// o <see cref="Esconderijo"/>, e se amontoavam).
+        /// </summary>
+        public readonly List<Vector3> Esconderijos = new List<Vector3>();
         /// <summary>Fora do portão, na frente dele (para o F1 levar o jogador).</summary>
         public readonly Vector3 Portao;
 
@@ -66,7 +71,8 @@ namespace ZombieCityCleaner.Sobreviventes
         readonly Matrix4x4 _paraOMundo;
         readonly float _giro;
 
-        static readonly Dictionary<(int, int), PlantaDoAcampamento> _cache = new Dictionary<(int, int), PlantaDoAcampamento>();
+        // (o tamanho na chave: a mesma semente em outro tamanho é outro mundo)
+        static readonly Dictionary<(int, TamanhoDoMundo, int), PlantaDoAcampamento> _cache = new Dictionary<(int, TamanhoDoMundo, int), PlantaDoAcampamento>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Zerar() => _cache.Clear();
@@ -74,9 +80,10 @@ namespace ZombieCityCleaner.Sobreviventes
         /// <summary>O desenho do acampamento (feito uma vez por mundo).</summary>
         public static PlantaDoAcampamento Da(DadosDoMundo d, Acampamento a)
         {
-            var chave = (d.Semente, a.Indice);
+            var chave = (d.Semente, d.Tamanho, a.Indice);
             if (!_cache.TryGetValue(chave, out var p))
             {
+                if (_cache.Count >= 64) _cache.Clear();   // os mundos de antes, numa sessão longa
                 p = new PlantaDoAcampamento(d, a);
                 _cache[chave] = p;
             }
@@ -106,6 +113,15 @@ namespace ZombieCityCleaner.Sobreviventes
             float frenteDaCasa = zCasa - prof.x;   // o z (no acampamento) dos degraus da frente
             float meiaCasa = Mathf.Max(Mathf.Abs(lim.x), Mathf.Abs(lim.y));
             Esconderijo = new Vector3(0f, global::ZombieCityCleaner.Mundo.Casa.PisoDe(Casa), zCasa);
+            foreach (var k in Casa.comodos)
+            {
+                if (k.andar != 0 || (k.x1 - k.x0) * (k.z1 - k.z0) < 4f) continue;
+                float cx = (k.x0 + k.x1) / 2f, cz = (k.z0 + k.z1) / 2f;
+                if (Casa.espelhar) cx = -cx;
+                // a casa girada 180°: o (x, z) da planta vira (-x, -z)
+                Esconderijos.Add(new Vector3(-cx, Esconderijo.y, zCasa - cz));
+            }
+            if (Esconderijos.Count == 0) Esconderijos.Add(Esconderijo);
             Portao = new Vector3(0f, 0f, H + 5f);
 
             // a cerca: os quatro lados (o -z das peças, o lado do arame farpado, para fora), com o portão (7 m) no meio da

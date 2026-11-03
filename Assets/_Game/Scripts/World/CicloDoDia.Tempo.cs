@@ -511,7 +511,7 @@ namespace ZombieCityCleaner.World
             {
                 if (j == null || j.Vida == null) continue;
                 float d = Vector3.Distance(j.transform.position, ponto);
-                if (tipo == 2 && d < 2f) j.Vida.Dano(1000f, ponto);   // o raio direto: mata
+                if (tipo == 2 && d < 2f) j.Vida.Dano(1000f, ponto, "Atingido por um raio.");   // o raio direto: mata
             }
             Vehicles.PecasDosCarrosDoMundo.Instancia?.RaioNoCarro(ponto);
             RaioRpc(ponto, tipo);
@@ -614,7 +614,7 @@ namespace ZombieCityCleaner.World
                 if (protecao >= 1f || d.magnitude > Mathf.Lerp(13f, 6f, protecao)) continue;
                 if (_danoDoTornado.TryGetValue(j, out float ate) && Time.time < ate) continue;
                 _danoDoTornado[j] = Time.time + 2.5f;
-                j.Vida.Dano(Mathf.Lerp(35f, 15f, protecao), p);
+                j.Vida.Dano(Mathf.Lerp(35f, 15f, protecao), p, "Arrastado pelo tornado.");
             }
         }
 

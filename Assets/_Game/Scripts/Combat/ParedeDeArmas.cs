@@ -35,6 +35,21 @@ namespace ZombieCityCleaner.Combat
 
         void OnEnable() => Instancia = this;
 
+        // (03/11/2026) a parede só vai para o arsenal do bunker quando o mundo fica pronto (World/BunkerDoMundo); no Dia 0
+        // ela ficava no lugar da cena, flutuando no fim da rua, e dava para pegar as armas. Escondida até lá (sem o mundo
+        // da partida, como nas cenas de exemplo, ela aparece sempre)
+        bool _escondida;
+
+        void Update()
+        {
+            var m = World.MundoDaPartida.Instancia;
+            bool esconder = m != null && (!m.Pronto || m.NoDiaZero);
+            if (esconder == _escondida || vagas == null) return;
+            _escondida = esconder;
+            foreach (var v in vagas)
+                if (v != null && v.gameObject != gameObject) v.gameObject.SetActive(!esconder);
+        }
+
         void OnDisable()
         {
             if (Instancia == this) Instancia = null;

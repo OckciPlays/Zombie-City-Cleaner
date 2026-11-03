@@ -18,6 +18,12 @@ namespace ZombieCityCleaner.UI
         float _uDosEstilos;
         float _avisoAte;
         string _avisoMostrado;
+        // o jogador local nasceu: a tela fica mais um pouco por cima (o primeiro desenho do bunker, com a sombra de tudo em
+        // volta, levava ~110 ms, e o que começa a montar em volta dele também; 03/11/2026)
+        const float FolgaDepoisDeNascer = 0.8f;
+        const int QuadrosDepoisDeNascer = 12;
+        float _nasceuEm = -1f;
+        int _quadroDoNascimento;
 
         void Estilos(float u)
         {
@@ -44,7 +50,14 @@ namespace ZombieCityCleaner.UI
             GUI.depth = -20;   // por cima do menu e do HUD
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
-            if (JogadorRede.Local != null)
+            if (JogadorRede.Local == null) _nasceuEm = -1f;
+            else if (_nasceuEm < 0f)
+            {
+                _nasceuEm = Time.unscaledTime;
+                _quadroDoNascimento = Time.frameCount;
+            }
+            bool cobrindo = JogadorRede.Local != null && (Time.unscaledTime - _nasceuEm < FolgaDepoisDeNascer || Time.frameCount - _quadroDoNascimento < QuadrosDepoisDeNascer);
+            if (JogadorRede.Local != null && !cobrindo)
             {
                 Aviso(mundo, u);
                 return;
@@ -67,7 +80,7 @@ namespace ZombieCityCleaner.UI
                 if (GUI.Button(new Rect(x + w * 0.25f, y + 64 * u, w * 0.5f, 40 * u), "Voltar ao menu", _botao)) sessao.Sair();
                 return;
             }
-            GUI.Label(new Rect(0, y, Screen.width, 28 * u), mundo.Etapa + "…", _etapa);
+            GUI.Label(new Rect(0, y, Screen.width, 28 * u), (cobrindo ? "Entrando" : mundo.Etapa) + "…", _etapa);
             y += 38 * u;
             // a barra
             GUI.color = new Color(0.2f, 0.2f, 0.19f);

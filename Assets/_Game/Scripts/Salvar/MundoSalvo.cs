@@ -26,6 +26,8 @@ namespace ZombieCityCleaner.Salvar
         public string id, nome;
         public int semente, tamanho, versaoDoGerador;
         public int modo;
+        /// <summary>O fogo amigo, escolhido ao criar o mundo (03/11/2026).</summary>
+        public bool fogoAmigo;
         public string criadoEm, salvoEm;
         public int dia = 1;
         public float hora = 8f;
@@ -48,6 +50,10 @@ namespace ZombieCityCleaner.Salvar
         public List<AcampamentoSalvo> acampamentos = new List<AcampamentoSalvo>();
         /// <summary>Os carros quebrados, na ordem do gerador: o estado de cada cena, quem morreu, o pneu dado e o que falta da troca.</summary>
         public List<CarroQuebradoSalvo> carrosQuebrados = new List<CarroQuebradoSalvo>();
+        /// <summary>As bases militares (03/11/2026): quem morreu, a geração dos militares e o dia do reforço.</summary>
+        public List<BaseMilitarSalva> basesMilitares = new List<BaseMilitarSalva>();
+        /// <summary>As marcas e as anotações do mapa (03/11/2026; os pings não ficam).</summary>
+        public List<MarcaSalva> marcas = new List<MarcaSalva>();
         /// <summary>O saque dos móveis já pego (as chaves: o que foi pego não volta; o Plano_Saque.md da pasta de arte).</summary>
         public List<long> saquePego = new List<long>();
         /// <summary>As portas e as janelas das casas mexidas (abertas, fechadas, destrancadas ou arrombadas; o Plano_Portas.md).</summary>
@@ -58,7 +64,7 @@ namespace ZombieCityCleaner.Salvar
         public ModoDeSalvar Modo => (ModoDeSalvar)Mathf.Clamp(modo, 0, 2);
         public PedidoDoMundo Pedido => new PedidoDoMundo
         {
-            semente = semente, tamanho = (TamanhoDoMundo)Mathf.Clamp(tamanho, 0, 2), nome = nome, diaZero = false,
+            semente = semente, tamanho = (TamanhoDoMundo)Mathf.Clamp(tamanho, 0, 2), nome = nome, diaZero = false, fogoAmigo = fogoAmigo,
         };
 
         public static MundoSalvo Novo(PedidoDoMundo pedido, ModoDeSalvar modo) => new MundoSalvo
@@ -68,6 +74,7 @@ namespace ZombieCityCleaner.Salvar
             semente = pedido.semente,
             tamanho = (int)pedido.tamanho,
             modo = (int)modo,
+            fogoAmigo = pedido.fogoAmigo,
             criadoEm = DateTime.Now.ToString("s"),
         };
 
@@ -143,7 +150,7 @@ namespace ZombieCityCleaner.Salvar
                     lista.Add(new MundoSalvo
                     {
                         id = m.id, nome = m.nome, semente = m.semente, tamanho = m.tamanho, versaoDoGerador = m.versaoDoGerador,
-                        modo = m.modo, criadoEm = m.criadoEm, salvoEm = m.salvoEm, dia = m.dia, hora = m.hora, temEstado = true,
+                        modo = m.modo, fogoAmigo = m.fogoAmigo, criadoEm = m.criadoEm, salvoEm = m.salvoEm, dia = m.dia, hora = m.hora, temEstado = true,
                     });
                 }
                 catch (Exception e)
@@ -251,6 +258,23 @@ namespace ZombieCityCleaner.Salvar
     public class CarroQuebradoSalvo
     {
         public int estado, mortos, pneu, falta;
+    }
+
+    /// <summary>Uma marca do mapa: o tipo (1 marca, 2 anotação), o ponto no mundo, a cor, o texto e quem marcou.</summary>
+    [Serializable]
+    public class MarcaSalva
+    {
+        public int tipo, cor;
+        public Vector3 pos;
+        public string texto, autor;
+    }
+
+    /// <summary>Uma base militar: o índice dela, um bit por militar morto (na ordem dos postos), a geração e o dia do reforço.</summary>
+    [Serializable]
+    public class BaseMilitarSalva
+    {
+        public int indice, mortos, geracao;
+        public int diaDoReforco = -1;
     }
 
     [Serializable]

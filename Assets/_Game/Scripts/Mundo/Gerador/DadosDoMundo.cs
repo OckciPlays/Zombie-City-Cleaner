@@ -51,6 +51,8 @@ namespace ZombieCityCleaner.Mundo
         /// só é gerado depois. O Continuar (o mesmo mundo de novo) vai direto para o mundo.
         /// </summary>
         public bool diaZero;
+        /// <summary>O fogo amigo (03/11/2026, a pedido: escolhido ao criar o mundo): o tiro e o golpe de um jogador ferem os outros.</summary>
+        public bool fogoAmigo;
 
         public static PedidoDoMundo Padrao => new PedidoDoMundo { tamanho = TamanhoDoMundo.Grande, nome = "Mundo novo" };
     }

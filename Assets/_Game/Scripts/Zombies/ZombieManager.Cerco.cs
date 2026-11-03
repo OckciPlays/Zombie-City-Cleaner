@@ -19,9 +19,19 @@ namespace ZombieCityCleaner.Zombies
         // a "assinatura" do grupo de cada jogador (quantos e quais): igual, os lugares ficam (senão o círculo girava a cada
         // 0,3 s, conforme eles andavam, e eles corriam atrás dos lugares)
         readonly Dictionary<IAlvoDeZumbi, long> _grupos = new Dictionary<IAlvoDeZumbi, long>();
+        readonly List<IAlvoDeZumbi> _semAlvo = new List<IAlvoDeZumbi>();
 
         void OrganizarCerco()
         {
+            // quem saiu da lista dos alvos (o sobrevivente que morreu cercado, o jogador que saiu) não fica preso aqui
+            if (_grupos.Count > QuantosAlvos)
+            {
+                _semAlvo.Clear();
+                _semAlvo.AddRange(_grupos.Keys);
+                for (int k = 0; k < QuantosAlvos; k++) _semAlvo.Remove(AlvoNo(k).quem);
+                foreach (var quem in _semAlvo) _grupos.Remove(quem);
+                _semAlvo.Clear();
+            }
             // cada alvo (os jogadores e os sobreviventes: 02/11/2026) com o grupo dele
             for (int k = 0; k < QuantosAlvos; k++)
             {

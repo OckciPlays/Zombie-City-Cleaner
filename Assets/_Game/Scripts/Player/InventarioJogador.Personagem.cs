@@ -327,7 +327,7 @@ namespace ZombieCityCleaner.Player
             }
             if (_rede != null)
             {
-                if (_rede.Vida != null) p.vida = _rede.Vida.Vida.Value;
+                if (_rede.Vida != null) p.vida = _rede.Vida.Caido.Value ? _rede.Vida.vidaMaxima : _rede.Vida.Vida.Value;   // (caído: renasce inteiro)
                 if (_rede.Criado) p.Vestir(_rede.Aparencia.Value);
             }
             var fs = GetComponent<FomeESede>();

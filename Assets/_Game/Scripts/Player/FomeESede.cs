@@ -76,7 +76,7 @@ namespace ZombieCityCleaner.Player
             {
                 float d = Mathf.Floor(_dano);
                 _dano -= d;
-                _vida.Perder(d);
+                _vida.Perder(d, _fome <= 0f ? "De fome." : "De sede.");
             }
             if (Time.time >= _proximaGravacao) Gravar();
         }

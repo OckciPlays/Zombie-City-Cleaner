@@ -91,6 +91,9 @@ namespace ZombieCityCleaner.UI
         int _indiceDoPersonagem;
         string _apagarPersonagem, _apagarMundo;
         ModoDeSalvar _modoNovo = ModoDeSalvar.Automatico;
+        // o fogo amigo do mundo novo (03/11/2026): desligado de começo
+        bool _fogoAmigoNovo;
+        static readonly string[] NomesDoFogoAmigo = { "Desligado", "Ligado" };
         Vector2 _rolagemDosMundos;
         static readonly string[] NomesDosModos = { "Automático (5 min)", "Ao sair", "Só dormindo" };
 
@@ -475,6 +478,11 @@ namespace ZombieCityCleaner.UI
             y += 24 * u;
             _modoNovo = (ModoDeSalvar)GUI.SelectionGrid(new Rect(x, y, w, 32 * u), (int)_modoNovo, NomesDosModos, 3, _botao);
             y += 42 * u;
+            // o fogo amigo (03/11/2026, a pedido: "uma opção na tela de começo")
+            GUI.Label(new Rect(x, y, w, 22 * u), "Fogo amigo (o tiro e o golpe ferem os outros jogadores):", _texto);
+            y += 24 * u;
+            _fogoAmigoNovo = GUI.SelectionGrid(new Rect(x, y, w, 32 * u), _fogoAmigoNovo ? 1 : 0, NomesDoFogoAmigo, 2, _botao) == 1;
+            y += 42 * u;
             if (GUI.Button(new Rect(x, y, w, 46 * u), "Criar o mundo", _botao))
             {
                 PedirOMundo();
@@ -493,7 +501,7 @@ namespace ZombieCityCleaner.UI
             // o jogo novo começa pelo Dia 0 (01/11/2026), menos para um personagem que já existe (02/11/2026, a pedido: ele
             // pula o Dia 0); o Continuar vai direto para o mundo
             AplicarAEscolha();
-            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = EscolhaDoPersonagem.Novo };
+            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = EscolhaDoPersonagem.Novo, fogoAmigo = _fogoAmigoNovo };
             Salvamento.Atual = MundoSalvo.Novo(MundoDaPartida.Pedido, _modoNovo);
         }
 
@@ -666,7 +674,10 @@ namespace ZombieCityCleaner.UI
                 : s.Modo == ModoDeSalvar.AoSair ? "Este mundo salva ao sair da partida (e dormindo)."
                 : "Este mundo salva sozinho a cada 5 minutos e ao sair.";
             if (s != null && s.Salva && s.SalvouEm >= 0f) texto += $"\nSalvo há {Mathf.FloorToInt((Time.unscaledTime - s.SalvouEm) / 60f)} min.";
-            GUI.Label(new Rect(0, y + 196 * u, Screen.width, 44 * u), texto, _texto);
+            // o fogo amigo do mundo (03/11/2026)
+            var mundo = MundoDaPartida.Instancia;
+            if (mundo != null && mundo.IsSpawned) texto += mundo.FogoAmigo ? "\nFogo amigo: ligado." : "\nFogo amigo: desligado.";
+            GUI.Label(new Rect(0, y + 196 * u, Screen.width, 66 * u), texto, _texto);
         }
     }
 }

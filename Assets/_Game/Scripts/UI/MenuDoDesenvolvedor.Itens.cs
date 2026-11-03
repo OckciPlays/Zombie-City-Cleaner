@@ -50,7 +50,7 @@ namespace ZombieCityCleaner.UI
         void PainelDosItens(float u)
         {
             var inventario = GetComponent<InventarioJogador>();
-            bool roupas = _especie == ItensDoMenu.Length;
+            bool roupas = _especie >= ItensDoMenu.Length;
             int maior = 0;
             foreach (var e in ItensDoMenu) maior = Mathf.Max(maior, e.itens.Length);
             // a altura da maior lista (a janela não pula ao trocar): a dos óculos (12, com os lugares e as cores em cima) ou
@@ -71,6 +71,8 @@ namespace ZombieCityCleaner.UI
             _destino = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _destino, Destinos, 2, _botao);
             y += 34 * u;
             _especie = GUI.SelectionGrid(new Rect(x, y, w, 58 * u), _especie, EspeciesDoF3, 3, _botao);
+            // o clique em "Roupas" vale já neste quadro (antes a lista de antes lia fora do ItensDoMenu)
+            roupas = _especie >= ItensDoMenu.Length;
             y += 64 * u;
             float bw = (w - 8 * u) / 2f;
             if (roupas)

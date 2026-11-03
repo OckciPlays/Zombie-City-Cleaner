@@ -16,31 +16,50 @@ namespace ZombieCityCleaner.UI
     /// encostaria num nome já escrito fica de fora. Os jogadores são setas para onde olham (você em ciano). A roda do
     /// mouse aproxima no ponto do mouse, arrastar move, Espaço volta para você. Por enquanto mostra o mapa inteiro: a
     /// descoberta (só onde o grupo passou, e os mapas de papel) vem depois.
+    /// O nome de cada jogador vai ao lado da seta dele (03/11/2026, a pedido: "o nome dos jogadores no mapa"), com as marcas,
+    /// as anotações e os pings (MapaDoMundo.Marcas.cs); o minimapa (<see cref="MinimapaDoMundo"/>) usa a mesma imagem.
     /// Fica no objeto "Mundo" da cena Mundo.
     /// </summary>
-    public class MapaDoMundo : MonoBehaviour
+    public partial class MapaDoMundo : MonoBehaviour
     {
         [Tooltip("O lado da imagem do mapa, em pixels (2048: uns 2,5 m por pixel no médio).")]
         public int resolucao = 2048;
 
         public bool Aberto { get; private set; }
 
+        /// <summary>O mapa da cena (o minimapa lê a imagem dele).</summary>
+        public static MapaDoMundo Instancia { get; private set; }
+        /// <summary>A imagem do mapa inteiro (null enquanto pinta).</summary>
+        public Texture2D Textura => _textura;
+        public DadosDoMundo Dados => _dados;
+
+        static Texture2D _setaCompartilhada;
+        /// <summary>A seta dos jogadores (a mesma do mapa grande, para o minimapa).</summary>
+        public static Texture2D SetaDosJogadores => _setaCompartilhada != null ? _setaCompartilhada : _setaCompartilhada = Seta();
+
         DadosDoMundo _dados;
         Texture2D _textura;
-        Task<Color32[]> _pintando;
+        Task<Color32[][]> _pintando;
         List<PintorDoMapa.Rotulo> _rotulos;
         float _zoom = 1f;
         Vector2 _centro;
         readonly List<Rect> _ocupados = new List<Rect>();
         GUIStyle[] _nomes;
-        GUIStyle _titulo, _texto;
+        GUIStyle _titulo, _texto, _nomeDoJogador;
+        readonly List<(Rect caixa, string nome, bool voce)> _nomesDosJogadores = new List<(Rect, string, bool)>();
         float _uDosEstilos;
         Texture2D _seta;
 
         // a cor de você no mapa: o ciano não aparece em nada do desenho (o amarelo é o da casa da família)
         static readonly Color CorDeVoce = new Color(0.25f, 0.9f, 1f);
 
-        void OnEnable() => MenuOnline.FecharTelas += Fechar;
+        void OnEnable()
+        {
+            Instancia = this;
+            MenuOnline.FecharTelas += Fechar;
+            // o minimapa (03/11/2026): no mesmo objeto, posto aqui (sem mexer na cena do Mundo)
+            if (GetComponent<MinimapaDoMundo>() == null) gameObject.AddComponent<MinimapaDoMundo>();
+        }
 
         void OnDisable()
         {
@@ -51,7 +70,7 @@ namespace ZombieCityCleaner.UI
         void OnDestroy()
         {
             if (_textura != null) Destroy(_textura);
-            if (_seta != null) Destroy(_seta);
+            if (Instancia == this) Instancia = null;
         }
 
         void Fechar() => Abrir(false);
@@ -82,7 +101,7 @@ namespace ZombieCityCleaner.UI
                 if (dados != null)
                 {
                     int lado = resolucao;
-                    _pintando = Task.Run(() => PintorDoMapa.Pintar(dados, lado));
+                    _pintando = Task.Run(() => ComMipmaps(PintorDoMapa.Pintar(dados, lado), lado));
                     _rotulos = PintorDoMapa.Rotulos(dados);
                     // os maiores primeiro: na hora de escrever, o que encostaria num já escrito fica de fora
                     _rotulos.Sort((a, b) => a.Nivel.CompareTo(b.Nivel));
@@ -93,11 +112,13 @@ namespace ZombieCityCleaner.UI
                 if (_pintando.IsFaulted) Debug.LogException(_pintando.Exception);
                 else
                 {
-                    // com mipmaps: no mapa inteiro a imagem fica 2 a 3 vezes menor na tela, e as linhas finas tremeriam
-                    _textura = new Texture2D(resolucao, resolucao, TextureFormat.RGBA32, true)
+                    // com mipmaps: no mapa inteiro a imagem fica 2 a 3 vezes menor na tela, e as linhas finas tremeriam. Eles
+                    // vêm prontos da outra thread (ComMipmaps): aqui, só a cópia e a subida
+                    var mips = _pintando.Result;
+                    _textura = new Texture2D(resolucao, resolucao, TextureFormat.RGBA32, mips.Length, false)
                         { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 1, name = "Mapa do mundo" };
-                    _textura.SetPixels32(_pintando.Result);
-                    _textura.Apply(true, true);
+                    for (int k = 0; k < mips.Length; k++) _textura.SetPixelData(mips[k], k);
+                    _textura.Apply(false, true);
                 }
                 _pintando = null;
             }
@@ -108,11 +129,16 @@ namespace ZombieCityCleaner.UI
                 if (Aberto) Abrir(false);
                 return;
             }
-            if (teclado != null && teclado.mKey.wasPressedThisFrame && !MenuOnline.Aberto && _textura != null) Abrir(!Aberto);
-            if (!Aberto) return;
+            if (teclado != null && teclado.mKey.wasPressedThisFrame && !MenuOnline.Aberto && _textura != null && !EscrevendoNasMarcas) Abrir(!Aberto);
+            if (!Aberto)
+            {
+                _menu = MenuDasMarcas.Nenhum;
+                return;
+            }
 
             var mouse = Mouse.current;
             float escala = Escala();
+            if (AtualizarAsMarcas(mouse, escala)) return;   // o menu das marcas aberto: o mapa fica parado
             if (mouse != null)
             {
                 float rolagem = mouse.scroll.ReadValue().y;
@@ -138,6 +164,37 @@ namespace ZombieCityCleaner.UI
             }
             float limite = _dados.Metade;
             _centro = new Vector2(Mathf.Clamp(_centro.x, -limite, limite), Mathf.Clamp(_centro.y, -limite, limite));
+        }
+
+        // a imagem e os mipmaps dela (a média de 2 × 2 de um nível para o próximo), na outra thread (03/11/2026: o
+        // SetPixels32 com o Apply que gerava os mipmaps levava ~30 ms num quadro só, já com o jogo na tela)
+        static Color32[][] ComMipmaps(Color32[] base0, int lado)
+        {
+            int niveis = 1;
+            for (int n = lado; n > 1; n >>= 1) niveis++;
+            var mips = new Color32[niveis][];
+            mips[0] = base0;
+            int antes = lado;
+            for (int k = 1; k < niveis; k++)
+            {
+                int n = Mathf.Max(1, antes >> 1);
+                var a = mips[k - 1];
+                var m = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                {
+                    int y0 = Mathf.Min(2 * y, antes - 1) * antes, y1 = Mathf.Min(2 * y + 1, antes - 1) * antes;
+                    for (int x = 0; x < n; x++)
+                    {
+                        int x0 = Mathf.Min(2 * x, antes - 1), x1 = Mathf.Min(2 * x + 1, antes - 1);
+                        Color32 p = a[y0 + x0], q = a[y0 + x1], r = a[y1 + x0], s = a[y1 + x1];
+                        m[y * n + x] = new Color32((byte)((p.r + q.r + r.r + s.r + 2) >> 2), (byte)((p.g + q.g + r.g + s.g + 2) >> 2),
+                                                   (byte)((p.b + q.b + r.b + s.b + 2) >> 2), (byte)((p.a + q.a + r.a + s.a + 2) >> 2));
+                    }
+                }
+                mips[k] = m;
+                antes = n;
+            }
+            return mips;
         }
 
         // pixels por metro: o mapa inteiro cabe na altura da tela com zoom 1
@@ -181,6 +238,12 @@ namespace ZombieCityCleaner.UI
             _titulo.normal.textColor = new Color(0.9f, 0.88f, 0.82f);
             _texto = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13 * u), alignment = TextAnchor.MiddleCenter };
             _texto.normal.textColor = new Color(0.75f, 0.74f, 0.7f);
+            // o nome do jogador: à esquerda (começa colado na seta), sem margem (a etiqueta é desenhada em volta)
+            _nomeDoJogador = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Overflow, wordWrap = false, padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0),
+            };
         }
 
         void OnGUI()
@@ -203,8 +266,26 @@ namespace ZombieCityCleaner.UI
             var cantoB = NaJanela(new Vector2(_dados.Metade, -_dados.Metade));
             GUI.DrawTexture(Rect.MinMaxRect(cantoA.x, cantoA.y, cantoB.x, cantoB.y), _textura);
 
-            // os nomes: os lugares a partir de ~1,1 px por 10 m, os bairros a partir de ~3 px por 10 m
+            // os nomes dos jogadores primeiro (03/11/2026): colados na seta, e os nomes dos lugares desviam deles (antes, o nome
+            // ficava centrado numa caixa à direita, longe da seta, e os lugares que aparecem com o zoom passavam por cima)
             _ocupados.Clear();
+            _nomesDosJogadores.Clear();
+            foreach (var j in JogadorRede.Todos)
+            {
+                if (j == null) continue;
+                bool voce = j == JogadorRede.Local;
+                var pos = j.transform.position;
+                var p = NaJanela(new Vector2(pos.x, pos.z));
+                string nome = j.NomeNoMapa;
+                var t = _nomeDoJogador.CalcSize(new GUIContent(nome));
+                float ladoDaSeta = (voce ? 28f : 22f) * u;
+                var caixa = new Rect(p.x + ladoDaSeta * 0.5f + 6 * u, p.y - t.y / 2f, t.x, t.y);
+                _nomesDosJogadores.Add((caixa, nome, voce));
+                _ocupados.Add(new Rect(caixa.x - 5 * u, caixa.y - 2 * u, caixa.width + 10 * u, caixa.height + 4 * u));
+                _ocupados.Add(new Rect(p.x - ladoDaSeta / 2f, p.y - ladoDaSeta / 2f, ladoDaSeta, ladoDaSeta));
+            }
+
+            // os nomes: os lugares a partir de ~1,1 px por 10 m, os bairros a partir de ~3 px por 10 m
             if (_rotulos != null)
                 foreach (var r in _rotulos)
                 {
@@ -223,23 +304,34 @@ namespace ZombieCityCleaner.UI
                 }
 
             // os jogadores: uma seta para onde cada um olha (você em ciano, por cima dos outros)
-            if (_seta == null) _seta = Seta();
+            // as marcas, as anotações e os pings (embaixo das setas)
+            DesenharAsMarcas(NaJanela, u, janela);
+            if (_seta == null) _seta = SetaDosJogadores;
             JogadorRede local = null;
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null) continue;
                 if (j == JogadorRede.Local) { local = j; continue; }
-                var p = Jogador(j, NaJanela, 22f * u, new Color(0.95f, 0.95f, 0.95f));
-                Contornado(new Rect(p.x + 12 * u, p.y - 9 * u, 140 * u, 18 * u), $"jogador {j.OwnerClientId + 1}", _nomes[2], new Color(1f, 0.98f, 0.92f, 0.8f));
+                Jogador(j, NaJanela, 22f * u, new Color(0.95f, 0.95f, 0.95f));
             }
             if (local != null) Jogador(local, NaJanela, 28f * u, CorDeVoce);
+            // o nome de cada um numa etiqueta escura ao lado da seta, na cor dele (você em ciano), por cima de tudo
+            foreach (var (caixa, nome, voce) in _nomesDosJogadores)
+            {
+                GUI.color = new Color(0.04f, 0.04f, 0.035f, 0.75f);
+                GUI.DrawTexture(new Rect(caixa.x - 4 * u, caixa.y - 1 * u, caixa.width + 8 * u, caixa.height + 2 * u), Texture2D.whiteTexture);
+                GUI.color = antes;
+                _nomeDoJogador.normal.textColor = voce ? CorDeVoce : new Color(0.97f, 0.97f, 0.95f);
+                GUI.Label(caixa, nome, _nomeDoJogador);
+            }
             GUI.EndGroup();
+            MenuDasMarcasNaTela(u);
 
             var mundo = MundoDaPartida.Instancia;
             string titulo = $"{mundo?.Nome}  ·  {Tamanhos.NomeComLado(_dados.Tamanho)}  ·  semente {_dados.Semente}";
             GUI.Label(new Rect(0, 8 * u, Screen.width, 26 * u), titulo, _titulo);
             GUI.Label(new Rect(0, Screen.height - 30 * u, Screen.width, 22 * u),
-                "M ou ESC fecha  ·  roda do mouse aproxima  ·  arraste para mover  ·  Espaço: você", _texto);
+                "M ou ESC fecha  ·  roda do mouse aproxima  ·  arraste para mover  ·  Espaço: você  ·  clique direito: ping, marca ou anotação", _texto);
         }
 
         void Contornado(Rect caixa, string texto, GUIStyle estilo, Color contorno)

@@ -12,9 +12,10 @@ namespace ZombieCityCleaner.Sobreviventes
 {
     /// <summary>
     /// O papel de um sobrevivente: os dos grupos de busca, os do acampamento (02/11/2026, a etapa 3) e os dois do carro
-    /// quebrado na estrada (a etapa 4: o mecânico, ajoelhado na roda, e o vigia, de rifle).
+    /// quebrado na estrada (a etapa 4: o mecânico, ajoelhado na roda, e o vigia, de rifle) e o militar da base
+    /// (03/11/2026, <see cref="BasesMilitaresDoMundo"/>).
     /// </summary>
-    public enum PapelDoSobrevivente : byte { Lider, Busca, Guarda, Comerciante, Morador, Mecanico, Vigia }
+    public enum PapelDoSobrevivente : byte { Lider, Busca, Guarda, Comerciante, Morador, Mecanico, Vigia, Militar }
 
     /// <summary>O que vai pela rede de cada sobrevivente: a semente (as roupas), a arma, o tipo de roupa, o grupo e o papel.</summary>
     public struct IdentidadeDoSobrevivente : INetworkSerializeByMemcpy, IEquatable<IdentidadeDoSobrevivente>
@@ -26,8 +27,10 @@ namespace ZombieCityCleaner.Sobreviventes
         public ushort grupo;
         public PapelDoSobrevivente papel;
         public byte indice;
+        /// <summary>A arma branca na mão (a faca, o machado, o bastão, a lança; Nada: a arma de fogo). 03/11/2026, os civis.</summary>
+        public Item branca;
 
-        public bool Equals(IdentidadeDoSobrevivente o) => semente == o.semente && arma == o.arma && roupa == o.roupa && grupo == o.grupo && papel == o.papel && indice == o.indice;
+        public bool Equals(IdentidadeDoSobrevivente o) => semente == o.semente && arma == o.arma && roupa == o.roupa && grupo == o.grupo && papel == o.papel && indice == o.indice && branca == o.branca;
         public static readonly string[] Roupas = { "Sobrevivente", "Militar", "Policial", "Civil" };
     }
 
@@ -69,7 +72,8 @@ namespace ZombieCityCleaner.Sobreviventes
         public bool Morto => IsSpawned && _morto.Value;
         public bool Mirando => IsSpawned && _mirando.Value;
         public TipoDeArma Arma => Identidade.Value.arma;
-        public Item ItemDaArma => Itens.DaArma(Arma);
+        /// <summary>O que ele tem na mão: a arma branca, ou a de fogo.</summary>
+        public Item ItemDaArma => ComBranca ? Identidade.Value.branca : Itens.DaArma(Arma);
         public DadosDaArma DadosDaArma => Armas.Dados(Arma);
         /// <summary>De onde ele olha (a cabeça, 1,6 m).</summary>
         public Vector3 Olho => transform.position + Vector3.up * 1.6f;
@@ -155,20 +159,41 @@ namespace ZombieCityCleaner.Sobreviventes
                 var roupas = v.transform.Find("Roupas");
                 if (roupas != null) roupas.gameObject.SetActive(true);
                 v.VestirSorteado(IdentidadeDoSobrevivente.Roupas[Mathf.Min(id.roupa, (byte)3)], id.semente);
+                if (id.papel == PapelDoSobrevivente.Militar) VestirABlindagem(v);
             }
             MostrarArma();
             if (corpo.controladores != null && (int)id.arma < corpo.controladores.Length && corpo.animador != null && !_caido)
             {
-                var daArma = corpo.controladores[(int)id.arma];
+                var daArma = Itens.EhBranca(id.branca) ? ControladorDoItem(id.branca) : corpo.controladores[(int)id.arma];
                 corpo.animador.runtimeAnimatorController = DaEstrada ? ControladorAjoelhado(daArma) : daArma;
             }
+        }
+
+        /// <summary>O que o militar veste por cima do sorteio (03/11/2026): o colete tático e o capacete (é o que segura o tiro).</summary>
+        static readonly string[] Blindagem = { "Colete_Tatico", "Capacete_Militar" };
+
+        // o colete e o capacete no lugar das peças do mesmo lugar do corpo (o colete, a cabeça), com as cores do catálogo
+        static void VestirABlindagem(Roupas.Vestimenta v)
+        {
+            var catalogo = v.Catalogo;
+            if (catalogo == null) return;
+            var lista = new List<Roupas.CatalogoDasRoupas.PecaVestida>(v.Vestidas);
+            foreach (var nome in Blindagem)
+            {
+                var dados = catalogo.DaPeca(nome);
+                if (dados == null) continue;
+                lista.RemoveAll(p => catalogo.DaPeca(p.nome)?.lugar == dados.lugar);
+                var cores = dados.cores != null && dados.cores.Length > 0 ? (string[])dados.cores.Clone() : new[] { "#4B5320", "#3A3F1F", "#2B2B2B" };
+                lista.Add(new Roupas.CatalogoDasRoupas.PecaVestida { nome = nome, cores = cores });
+            }
+            v.Vestir(lista);
         }
 
         // a arma na mão (a da identidade): some com ele morto ou ajoelhado
         void MostrarArma()
         {
             if (corpo == null || corpo.naMao == null) return;
-            int m = Itens.MaoDe(Itens.DaArma(Identidade.Value.arma));
+            int m = Itens.MaoDe(ItemDaArma);
             for (int i = 0; i < corpo.naMao.Length; i++)
                 if (corpo.naMao[i] != null) corpo.naMao[i].SetActive(i == m && !_morto.Value && !_ajoelhado.Value);
         }
@@ -218,7 +243,10 @@ namespace ZombieCityCleaner.Sobreviventes
         void LigarOAgente()
         {
             if (agente == null || agente.enabled || _morto.Value) return;
-            if (!NavMesh.SamplePosition(transform.position, out var hit, 2f, NavMesh.AllAreas)) return;
+            // (o chão primeiro: perto, na altura dos pés; senão, o mais perto, sem subir mais de meio metro, como no tampo
+            // de um balcão)
+            if (!NavMesh.SamplePosition(transform.position, out var hit, 0.6f, NavMesh.AllAreas)
+                && (!NavMesh.SamplePosition(transform.position, out hit, 2f, NavMesh.AllAreas) || hit.position.y > transform.position.y + 0.5f)) return;
             agente.enabled = true;
             agente.Warp(hit.position);
         }
@@ -291,15 +319,18 @@ namespace ZombieCityCleaner.Sobreviventes
 
         /// <summary>
         /// No anfitrião: um tiro (ou um golpe) de um jogador numa parte do corpo. O tiro na cabeça mata na hora (a pedido:
-        /// com qualquer arma); o golpe na cabeça vale 2,5 vezes; nos braços e nas pernas, metade do dano.
+        /// com qualquer arma); o golpe na cabeça vale 2,5 vezes; nos braços e nas pernas, metade do dano. O militar
+        /// (03/11/2026) tem o capacete, e o tiro na cabeça vale 2,5 vezes, sem matar de uma vez; e o colete, que corta pela
+        /// metade o dano no tronco.
         /// </summary>
         public void LevarTiro(RegiaoDoSobrevivente regiao, float dano, Vector3 ponto, JogadorRede autor, bool tiro = true)
         {
             if (!IsServer || _morto.Value) return;
             SangueRpc(ponto, autor != null ? (autor.transform.position + Vector3.up * 1.5f - ponto).normalized : Vector3.up,
                       autor != null ? autor.OwnerClientId : ulong.MaxValue);
-            float valor = regiao == RegiaoDoSobrevivente.Cabeca ? (tiro ? VidaMaxima * 10f : dano * 2.5f)
-                        : regiao == RegiaoDoSobrevivente.Membro ? dano * 0.5f : dano;
+            bool blindado = Identidade.Value.papel == PapelDoSobrevivente.Militar;
+            float valor = regiao == RegiaoDoSobrevivente.Cabeca ? (tiro && !blindado ? VidaMaxima * 10f : dano * 2.5f)
+                        : regiao == RegiaoDoSobrevivente.Membro ? dano * 0.5f : blindado ? dano * 0.5f : dano;
             Ferir(valor, ponto, autor, regiao == RegiaoDoSobrevivente.Cabeca);
         }
     }

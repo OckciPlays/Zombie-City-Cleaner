@@ -191,6 +191,16 @@ namespace ZombieCityCleaner.Salvar
                 foreach (var c in Sobreviventes.CarrosQuebradosDoMundo.Instancia.Copia())
                     m.carrosQuebrados.Add(new CarroQuebradoSalvo { estado = (int)c.estado, mortos = c.mortos, pneu = c.pneu, falta = c.falta });
 
+            m.basesMilitares.Clear();
+            if (Sobreviventes.BasesMilitaresDoMundo.Instancia != null)
+                foreach (var (indice, mortos, geracao, dia) in Sobreviventes.BasesMilitaresDoMundo.Instancia.Copia())
+                    m.basesMilitares.Add(new BaseMilitarSalva { indice = indice, mortos = mortos, geracao = geracao, diaDoReforco = dia });
+
+            m.marcas.Clear();
+            if (MundoDaPartida.Instancia != null)
+                foreach (var (tipo, pos, cor, texto, autor) in MundoDaPartida.Instancia.CopiaDasMarcas())
+                    m.marcas.Add(new MarcaSalva { tipo = (int)tipo, pos = pos, cor = cor, texto = texto, autor = autor });
+
             m.mochilas.Clear();
             if (MochilasNoChao.Instancia != null)
                 foreach (var (mc, itensDela) in MochilasNoChao.Instancia.Copia())
@@ -421,6 +431,20 @@ namespace ZombieCityCleaner.Salvar
                         pneu = (byte)Mathf.Clamp(c.pneu, 0, 100), falta = (byte)Mathf.Clamp(c.falta, 0, 250),
                     });
                 Sobreviventes.CarrosQuebradosDoMundo.Instancia?.Restaurar(quebrados);
+            }
+
+            if (m.marcas != null && m.marcas.Count > 0 && MundoDaPartida.Instancia != null)
+            {
+                var marcas = new List<(UI.TipoDeMarca, Vector3, byte, string, string)>(m.marcas.Count);
+                foreach (var x in m.marcas) marcas.Add(((UI.TipoDeMarca)Mathf.Clamp(x.tipo, 1, 2), x.pos, (byte)Mathf.Clamp(x.cor, 0, 4), x.texto, x.autor));
+                MundoDaPartida.Instancia.RestaurarMarcas(marcas);
+            }
+
+            if (m.basesMilitares != null && m.basesMilitares.Count > 0)
+            {
+                var bases = new List<(int, int, int, int)>(m.basesMilitares.Count);
+                foreach (var b in m.basesMilitares) bases.Add((b.indice, b.mortos, b.geracao, b.diaDoReforco));
+                Sobreviventes.BasesMilitaresDoMundo.Instancia?.Restaurar(bases);
             }
 
             var mochilas = new List<(MochilaNoChao, List<ItemNaMochila>)>(m.mochilas.Count);

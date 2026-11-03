@@ -25,7 +25,7 @@ namespace ZombieCityCleaner.World
     ///    superfície assim que a colisão dali ficar pronta.
     /// A tela de carregamento (<see cref="UI.TelaDeCarregamento"/>) mostra as etapas.
     /// </summary>
-    public class MundoDaPartida : NetworkBehaviour
+    public partial class MundoDaPartida : NetworkBehaviour
     {
         /// <summary>O pedido do menu (só o anfitrião usa): o tamanho, a semente (0 = sortear) e o nome.</summary>
         public static PedidoDoMundo Pedido = PedidoDoMundo.Padrao;
@@ -45,6 +45,11 @@ namespace ZombieCityCleaner.World
         readonly NetworkVariable<FixedString64Bytes> _nome = new NetworkVariable<FixedString64Bytes>();
         // o Dia 0 (01/11/2026): enquanto ele dura, o mundo espera (a geração começa quando a porta da casa fecha)
         readonly NetworkVariable<bool> _diaZero = new NetworkVariable<bool>();
+        // o fogo amigo (03/11/2026): escolhido ao criar o mundo, igual para todos
+        readonly NetworkVariable<bool> _fogoAmigo = new NetworkVariable<bool>();
+
+        /// <summary>O fogo amigo está ligado neste mundo: o tiro e o golpe de um jogador ferem os outros (Player/ArmaJogador).</summary>
+        public bool FogoAmigo => IsSpawned && _fogoAmigo.Value;
 
         /// <summary>A partida está no Dia 0 (a rua normal, antes do apocalipse): o mundo ainda não foi gerado.</summary>
         public bool NoDiaZero => IsSpawned && _diaZero.Value;
@@ -78,12 +83,14 @@ namespace ZombieCityCleaner.World
         volatile string _etapaDaThread = "Preparando";
         float _comecou;
         bool _esperandoOChao;
+        float _esperandoOsZumbisDesde = -1f;
         readonly List<(ulong cliente, ulong resumo)> _esperando = new List<(ulong, ulong)>();
         NetworkManager _rede;
 
         void Awake()
         {
             Instancia = this;
+            IniciarAsMarcas();   // (a lista da rede antes do spawn: MundoDaPartida.Marcas.cs)
             // sem o personagem na conexão: ele nasce quando o mundo estiver pronto na máquina do jogador
             _rede = FindAnyObjectByType<NetworkManager>();
             if (_rede != null) _rede.ConnectionApprovalCallback = Aprovar;
@@ -107,6 +114,7 @@ namespace ZombieCityCleaner.World
             Reiniciar();
             if (IsServer)
             {
+                _marcas.Clear();   // as marcas do mapa da partida anterior (as do save voltam no Salvamento)
                 var p = Pedido;
                 _semente.Value = p.semente > 0 ? p.semente : GeradorDoMundo.NovaSemente();
                 _tamanho.Value = (byte)p.tamanho;
@@ -114,6 +122,7 @@ namespace ZombieCityCleaner.World
                 string nome = string.IsNullOrWhiteSpace(p.nome) ? "Mundo novo" : p.nome.Trim();
                 _nome.Value = new FixedString64Bytes(nome.Length > 30 ? nome.Substring(0, 30) : nome);
                 _diaZero.Value = p.diaZero;
+                _fogoAmigo.Value = p.fogoAmigo;
                 NetworkManager.OnClientDisconnectCallback += AoSair;
             }
             VeioDoDiaZero = _diaZero.Value;
@@ -156,6 +165,7 @@ namespace ZombieCityCleaner.World
             Dados = null;
             Pronto = false;
             _esperandoOChao = false;
+            _esperandoOsZumbisDesde = -1f;
             Progresso = 0f;
             Etapa = "Recebendo o mundo do anfitrião";
             Erro = Aviso = null;
@@ -213,6 +223,20 @@ namespace ZombieCityCleaner.World
                 if (!terreno.Pronto(Dados.Partida, raioPronto)) return;
                 // a partida no bunker da família (o Plano_Bunker.md, a parte 5): a casca, o morro e a garagem com a colisão
                 if (Dados.TemBunker && (BunkerDoMundo.Instancia == null || !BunkerDoMundo.Instancia.Pronto)) return;
+                // os cortes dos zumbis (03/11/2026): eles levavam segundos e caíam no começo do jogo, com engasgos de até
+                // 600 ms; a tela de carregamento espera (até 90 s, por segurança)
+                var zumbis = Zombies.ZombieManager.Instancia;
+                if (zumbis != null && zumbis.IsSpawned && !zumbis.CortesProntos)
+                {
+                    if (_esperandoOsZumbisDesde < 0f) _esperandoOsZumbisDesde = Time.realtimeSinceStartup;
+                    if (Time.realtimeSinceStartup - _esperandoOsZumbisDesde < 90f)
+                    {
+                        Etapa = $"Preparando os zumbis ({zumbis.ProgressoDosCortes * 100f:0}%)";
+                        return;
+                    }
+                    Debug.LogWarning("[Mundo] Os cortes dos zumbis passaram de 90 s: o jogo começa sem esperar o resto.");
+                }
+                _esperandoOsZumbisDesde = -1f;
                 _esperandoOChao = false;
                 FicarPronto();
             }

@@ -187,8 +187,23 @@ namespace ZombieCityCleaner.Loot
                 foreach (var it in itens)
                 {
                     if (!Loot.Itens.NoJogo(it.item)) continue;
+                    // (03/11/2026) o que não vai na grade (as mochilas: sem tamanho nela) fica no chão, do lado. Antes a grade
+                    // crescia sem fim tentando encaixar a mochila da banca do comerciante de roupas morto, e o jogo travava
+                    var tamanho = Loot.Itens.Tamanho(it.item);
+                    if (tamanho.x <= 0 || tamanho.y <= 0)
+                    {
+                        NoChaoDoLado(it, pos, giro);
+                        continue;
+                    }
                     var novo = it;
-                    while (!Posicionar(postos, ref novo, colunas, linhas)) linhas++;
+                    bool coube = false;
+                    for (int tentativa = 0; tentativa < 80 && !(coube = Posicionar(postos, ref novo, colunas, linhas)); tentativa++) linhas++;
+                    if (!coube)
+                    {
+                        Debug.LogWarning($"[Mochilas] {it.item} não coube na mochila de \"{nome}\": fica no chão.");
+                        NoChaoDoLado(it, pos, giro);
+                        continue;
+                    }
                     novo.id = _proximoItem++;
                     postos.Add(novo);
                     _itens.Add(new ItemNoRecipiente { recipiente = id, item = novo });
@@ -199,6 +214,15 @@ namespace ZombieCityCleaner.Loot
                 nome = new FixedString32Bytes(Cortar(nome)),
             });
             return id;
+        }
+
+        // um item no chão, ao lado da mochila (o que não vai na grade)
+        static void NoChaoDoLado(ItemNaMochila it, Vector3 pos, float giro)
+        {
+            var mundo = ItensNoMundo.Instancia;
+            if (mundo == null) return;
+            var lado = Quaternion.Euler(0f, giro + UnityEngine.Random.Range(60f, 120f), 0f) * Vector3.forward * UnityEngine.Random.Range(0.5f, 0.9f);
+            mundo.Criar(it.item, pos + lado, giro + UnityEngine.Random.Range(0f, 360f), it.qtd, it.desgaste, it.cores);
         }
 
         internal static string Curto(string s) => Cortar(s);
@@ -221,14 +245,22 @@ namespace ZombieCityCleaner.Loot
         }
 
         /// <summary>
-        /// No anfitrião: o jogador caiu (a vida acabou). A mochila vestida, com tudo, e o pneu das mãos ficam no chão, onde
-        /// ele estava (a pedido); ele volta na cama sem nada, com a roupa e o dinheiro.
+        /// No anfitrião: o jogador caiu (a vida acabou). A mochila vestida, com tudo, o pneu das mãos e as roupas vestidas
+        /// (03/11/2026, a pedido: "perder também as roupas") ficam no chão, onde ele estava; ele volta na cama sem nada, só
+        /// com o corpo da criação e o dinheiro.
         /// </summary>
         public void DaMorte(InventarioJogador inventario)
         {
             if (!IsServer || inventario == null) return;
             var itens = inventario.TirarTudo(out var mochila, out int pneu);
             if (pneu != InventarioJogador.SemPneu) itens.Add(new ItemNaMochila { item = Item.Pneu, qtd = (ushort)pneu });
+            var roupas = inventario.Roupas.Value;
+            for (int k = 0; k < global::ZombieCityCleaner.Loot.Itens.QuantosLugaresDeRoupa; k++)
+            {
+                var l = (LugarDaRoupa)k;
+                if (roupas.Peca(l) != Item.Nada) itens.Add(new ItemNaMochila { item = roupas.Peca(l), qtd = 1, cores = roupas.Cores(l) });
+            }
+            inventario.Roupas.Value = default;
             var rede = inventario.GetComponent<JogadorRede>();
             string nome = rede != null && rede.Criado ? $"a mochila de {rede.Aparencia.Value.nome}" : "a sua mochila";
             Criar(inventario.transform.position, inventario.transform.eulerAngles.y, nome, mochila, itens, 0);

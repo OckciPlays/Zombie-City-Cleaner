@@ -127,13 +127,78 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
+        // ------------------------------------------------------------------ o aquecimento do começo (03/11/2026)
+        //
+        // O Profiler mostrou o começo no bunker com engasgos de 25 a 600 ms (um corte de um especial, de 24 mil vértices,
+        // levou 342 ms mais 245 de coleta do lixo) por 1 a 3 s: os cortes dos 21 modelos (504 passos, ~10 s de trabalho) não
+        // acabavam no carregamento e caíam no jogo. Agora:
+        //  - os cortes só andam com a tela coberta: o carregamento do mundo (vários passos por quadro, até ~120 ms), uma tela
+        //    cheia do menu ou o cinema (até ~25 ms, para a tela responder). No Dia 0, na rua, eles esperam;
+        //  - o MundoDaPartida segura a tela de carregamento até eles ficarem prontos (CortesProntos);
+        //  - se o mundo ficar pronto antes (um cliente, um tempo esgotado), um passo por quadro, como era.
+
+        const float OrcamentoNoCarregamentoMs = 120f, OrcamentoNasTelasMs = 25f;
+        readonly System.Diagnostics.Stopwatch _relogioDoAquecimento = new System.Diagnostics.Stopwatch();
+        int _quadroDoAquecimento = -1, _passosDosCortes, _passosFeitos;
+
+        /// <summary>Os cortes do começo estão prontos (o MundoDaPartida espera por eles para soltar a tela de carregamento).</summary>
+        public bool CortesProntos { get; private set; }
+
+        /// <summary>Quanto dos cortes do começo já foi feito (0 a 1, para a tela de carregamento).</summary>
+        public float ProgressoDosCortes => _passosDosCortes > 0 ? Mathf.Clamp01(_passosFeitos / (float)_passosDosCortes) : 1f;
+
+        /// <summary>O mundo está sendo carregado agora (fora do Dia 0): a tela de carregamento está na frente.</summary>
+        static bool CarregandoOMundo
+        {
+            get
+            {
+                var m = World.MundoDaPartida.Instancia;
+                return m != null && m.IsSpawned && !m.Pronto && !m.NoDiaZero;
+            }
+        }
+
+        static bool NumaTelaCheia => UI.MenuOnline.Aberto || UI.MenuOnline.Cinema;
+
         /// <summary>
-        /// As malhas cortadas mais comuns e os pedaços delas, uma por quadro, no começo da partida: cortar uma malha leva de
-        /// 3 a 15 ms e o pedaço de 6 a 20 ms, e na hora do tiro isso virava um tranco. Ficam prontos os cortes de um membro
-        /// só (nos dois pontos), as duas pernas juntas e os pedaços de cada corte. As malhas ficam guardadas (são estáticas).
+        /// O aquecimento pode trabalhar agora: com a tela coberta, ou com o mundo já pronto (o resto, um passo por quadro).
+        /// Jogando no Dia 0 (a rua, a casa), não: espera a tela de carregamento do mundo.
+        /// </summary>
+        static bool PodeAquecer
+        {
+            get
+            {
+                if (CarregandoOMundo || NumaTelaCheia) return true;
+                var m = World.MundoDaPartida.Instancia;
+                return m == null || !m.IsSpawned || m.Pronto;
+            }
+        }
+
+        /// <summary>Depois de cada passo do aquecimento: espera o próximo quadro (jogando, sempre; coberta, só depois do orçamento).</summary>
+        bool EsperarOProximoQuadro()
+        {
+            if (Time.frameCount != _quadroDoAquecimento)
+            {
+                _quadroDoAquecimento = Time.frameCount;
+                _relogioDoAquecimento.Restart();
+            }
+            float orcamento = CarregandoOMundo ? OrcamentoNoCarregamentoMs : NumaTelaCheia ? OrcamentoNasTelasMs : 0f;
+            return _relogioDoAquecimento.Elapsed.TotalMilliseconds >= orcamento;
+        }
+
+        /// <summary>
+        /// As malhas cortadas mais comuns e os pedaços delas, no começo da partida: cortar uma malha leva de 3 a 15 ms (nos
+        /// especiais, até ~340) e o pedaço de 6 a 20 ms, e na hora do tiro isso virava um tranco. Ficam prontos os cortes de
+        /// um membro só (nos dois pontos), as duas pernas juntas e os pedaços de cada corte. As malhas ficam guardadas (são
+        /// estáticas). Só com a tela coberta (veja acima).
         /// </summary>
         System.Collections.IEnumerator PreaquecerCortes()
         {
+            CortesProntos = false;
+            _passosFeitos = 0;
+            _passosDosCortes = 0;
+            foreach (var modelo in modelos)
+                if (modelo != null && modelo.malhaInteira != null) _passosDosCortes += Membros.Quantos * 5 + 4;
+            float noRelogio = Time.realtimeSinceStartup;
             foreach (var modelo in modelos)
             {
                 if (modelo == null || modelo.malhaInteira == null) continue;
@@ -143,23 +208,33 @@ namespace ZombieCityCleaner.Zombies
                     {
                         byte cortes = Membros.ComEstado(0, l, e);
                         int osso = Membros.IndiceDoOsso(ossos, Membros.OssoDoCorte(l, e));
+                        while (!PodeAquecer) yield return null;
                         Membros.Variante(modelo.malhaInteira, ossos, cortes);
-                        yield return null;
+                        _passosFeitos++;
+                        if (EsperarOProximoQuadro()) yield return null;
+                        while (!PodeAquecer) yield return null;
                         Membros.Pedaco(modelo.malhaInteira, ossos, 0, cortes, osso);
-                        yield return null;
+                        _passosFeitos++;
+                        if (EsperarOProximoQuadro()) yield return null;
                         if (e == 2)
                         {
+                            while (!PodeAquecer) yield return null;
                             Membros.Pedaco(modelo.malhaInteira, ossos, Membros.ComEstado(0, l, 1), cortes, osso);
-                            yield return null;
+                            _passosFeitos++;
+                            if (EsperarOProximoQuadro()) yield return null;
                         }
                     }
                 for (int a = 1; a <= 2; a++)
                     for (int b = 1; b <= 2; b++)
                     {
+                        while (!PodeAquecer) yield return null;
                         Membros.Variante(modelo.malhaInteira, ossos, Membros.ComEstado(Membros.ComEstado(0, Membros.PernaE, a), Membros.PernaD, b));
-                        yield return null;
+                        _passosFeitos++;
+                        if (EsperarOProximoQuadro()) yield return null;
                     }
             }
+            CortesProntos = true;
+            Debug.Log($"[Zumbis] Os cortes do começo ficaram prontos: {_passosFeitos} passos em {(Time.realtimeSinceStartup - noRelogio):0.0} s.");
         }
 
         void GuardarPedacos()

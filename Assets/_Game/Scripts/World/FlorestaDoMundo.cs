@@ -328,6 +328,9 @@ namespace ZombieCityCleaner.World
             Vector3 centro;
             var local = JogadorRede.Local;
             if (local != null) centro = local.transform.position;
+            // na tela de carregamento, em volta de onde o jogador vai nascer (03/11/2026: antes era a câmera do menu, na
+            // origem do mapa, e tudo em volta do bunker começava de uma vez quando ele nascia, com o jogo já na tela)
+            else if (_dados != null) centro = _dados.Partida;
             else if (Camera.main != null) centro = Camera.main.transform.position;
             else return;
             float agora = Time.unscaledTime;

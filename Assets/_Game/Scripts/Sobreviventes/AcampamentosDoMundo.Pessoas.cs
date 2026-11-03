@@ -48,8 +48,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 int sementeDaRoupa = s.Next();
                 if ((e.mortos & (1 << i)) != 0) continue;   // este morreu
                 var (local, giro) = p.LugarDe(i);
-                var pos = p.Mundo(local);
-                if (NavMesh.SamplePosition(pos, out var hit, 2f, NavMesh.AllAreas)) pos = hit.position;
+                var pos = NoChao(p.Mundo(local));
                 var go = Instantiate(prefab, pos, Quaternion.Euler(0f, p.GiroNoMundo(giro), 0f));
                 var sob = go.GetComponent<Sobrevivente>();
                 sob.Identidade.Value = new IdentidadeDoSobrevivente
@@ -61,13 +60,29 @@ namespace ZombieCityCleaner.Sobreviventes
                 sob.posto = pos;
                 sob.ronda = papel == PapelDoSobrevivente.Guarda ? p.Mundo(p.Guardas[i].ronda) : pos;
                 sob.giroDoPosto = p.GiroNoMundo(giro);
-                sob.esconderijo = p.Mundo(p.Esconderijo);
+                // cada um num cômodo (e, no mesmo cômodo, um pouco para o lado)
+                int n = p.Esconderijos.Count, volta = i / n;
+                var lado = new Vector3((volta % 3 - 1) * 0.8f, 0f, (volta / 3 % 3 - 1) * 0.8f);
+                sob.esconderijo = p.Mundo(p.Esconderijos[i % n] + lado);
                 SobreviventesDoMundo.Encher(sob, arma);
                 go.GetComponent<NetworkObject>().Spawn(true);
                 g.membros.Add(sob);
             }
             e.grupo = g;
             Debug.Log($"[Acampamentos] As pessoas do {p.Lugar.Nome} apareceram: {g.membros.Count} de {p.Pessoas}{(Hostil(a) ? " (hostil)" : "")}.");
+        }
+
+        // o ponto do NavMesh no chão perto do lugar (03/11/2026: o NavMesh mais perto podia ser o tampo do balcão da banca, e o
+        // comerciante nascia lá em cima, ilhado): primeiro no próprio lugar, depois em volta, sempre na altura do chão
+        static Vector3 NoChao(Vector3 pos)
+        {
+            for (int volta = 0; volta < 3; volta++)
+                for (int k = 0; k < (volta == 0 ? 1 : 8); k++)
+                {
+                    var q = pos + Quaternion.Euler(0f, k * 45f, 0f) * Vector3.forward * (volta * 0.6f);
+                    if (NavMesh.SamplePosition(q, out var hit, 0.6f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - pos.y) < 0.4f) return hit.position;
+                }
+            return NavMesh.SamplePosition(pos, out var perto, 2f, NavMesh.AllAreas) && perto.position.y < pos.y + 0.4f ? perto.position : pos;
         }
 
         void Recolher(int a, Estado e)

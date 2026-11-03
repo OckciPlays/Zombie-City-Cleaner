@@ -106,6 +106,18 @@ namespace ZombieCityCleaner.DiaZero
             LiberarARua();
         }
 
+        /// <summary>
+        /// Em cada máquina: no Dia 0, antes da rua liberada, ninguém pula uma janela da casa para fora (03/11/2026: no meio do
+        /// pulo, o lobby puxava o jogador de volta para o peitoril, e ele ficava travado na janela).
+        /// </summary>
+        public static bool PuloBloqueado(Vector3 de, Vector3 para)
+        {
+            var dia = Instancia;
+            var rua = RuaDoDiaZero.Instancia;
+            if (!NoDia || dia == null || rua == null || dia.Fase == FaseDoDia.Rua) return false;
+            return rua.DentroDaCasa(de) && !rua.DentroDaCasa(para);
+        }
+
         // em cada máquina, no Dia 0: antes da rua liberada, quem sai da casa volta para dentro
         void NoLobby(JogadorRede j)
         {
@@ -113,6 +125,8 @@ namespace ZombieCityCleaner.DiaZero
             if (rua == null || Fase == FaseDoDia.Rua) return;
             var mov = j.GetComponent<MovimentoPrimeiraPessoa>();
             if (mov == null || mov.Voando) return;
+            var pulo = j.GetComponent<PuloDaJanela>();
+            if (pulo != null && pulo.Pulando) return;   // (nem puxa no meio do pulo, nem guarda o peitoril como o último ponto)
             var p = j.transform.position;
             if (rua.DentroDaCasa(p))
             {

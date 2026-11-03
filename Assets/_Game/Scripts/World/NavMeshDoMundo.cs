@@ -81,8 +81,16 @@ namespace ZombieCityCleaner.World
 
         static void Tirar(Area a)
         {
-            if (a.Dados != null && a.Montando != null && !a.Montando.isDone) NavMeshBuilder.Cancel(a.Dados);
+            var dados = a.Dados;
+            bool montando = dados != null && a.Montando != null && !a.Montando.isDone;
+            if (montando) NavMeshBuilder.Cancel(dados);
             a.Instancia.Remove();
+            a.Dados = null;
+            if (dados == null) return;
+            // os dados também saem (antes ficavam na memória: um a cada partida e a cada jogador que saía); no meio de uma
+            // montagem, quando ela parar
+            if (montando) a.Montando.completed += _ => { if (dados != null) Destroy(dados); };
+            else Destroy(dados);
         }
 
         /// <summary>Já tem NavMesh perto do ponto (até 2 m).</summary>

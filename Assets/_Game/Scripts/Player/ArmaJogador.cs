@@ -478,6 +478,19 @@ namespace ZombieCityCleaner.Player
                     if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));   // a arma branca gasta a cada golpe que pega
                     return;
                 }
+                // outro jogador, com o fogo amigo ligado (03/11/2026): o dano da arma, sem a cabeça
+                var outro = OutroJogador(hit.collider);
+                if (outro != null)
+                {
+                    Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
+                    Sangue.Respingo(ponto, -cam.forward);
+                    _marcaAte = Time.time + 0.18f;
+                    _marcaNaCabeca = false;
+                    rede.AcertarJogador(outro, dano, ponto);
+                    rede.AnunciarPancada(ponto, true);
+                    if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
+                    return;
+                }
                 Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
                 if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
                 rede.AnunciarPancada(ponto, false);
@@ -532,6 +545,7 @@ namespace ZombieCityCleaner.Player
             var impactos = new JogadorRede.Impacto[d.chumbos];
             _carne.Clear();
             _gente.Clear();
+            _jogadores.Clear();
             for (int k = 0; k < d.chumbos; k++)
             {
                 // na espingarda um chumbo sai bem no meio da mira: é a parte que ele pega que conta (veja MandarAcertos)
@@ -543,7 +557,43 @@ namespace ZombieCityCleaner.Player
             _chumboDoCentro = false;
             MandarAcertos(d);
             MandarAcertosNaGente(d);
+            MandarAcertosNosJogadores(d);
             rede.AnunciarTiro(Atual, impactos);
+        }
+
+        // ------------------------------------------------------------------ o fogo amigo (03/11/2026)
+
+        /// <summary>O fogo amigo está ligado neste mundo (escolhido ao criar: World/MundoDaPartida.FogoAmigo).</summary>
+        static bool FogoAmigo => World.MundoDaPartida.Instancia != null && World.MundoDaPartida.Instancia.FogoAmigo;
+
+        /// <summary>Outro jogador que o tiro (ou um chumbo) pegou, com o fogo amigo ligado.</summary>
+        readonly System.Collections.Generic.List<(JogadorRede alvo, Vector3 ponto, float distancia)> _jogadores =
+            new System.Collections.Generic.List<(JogadorRede, Vector3, float)>();
+
+        // o jogador que o raio pegou (o colisor dele, o CharacterController da raiz), se o fogo amigo estiver ligado
+        JogadorRede OutroJogador(Collider c)
+        {
+            if (!FogoAmigo || c == null || c == _corpo) return null;
+            var j = c.GetComponent<JogadorRede>();
+            return j != null && j != rede && j.AlvoValido ? j : null;
+        }
+
+        /// <summary>
+        /// Os acertos nos outros jogadores (o fogo amigo): um por jogador a cada disparo (na espingarda, os chumbos contam
+        /// juntos), com o dano da arma na distância mais perto. Sem tiro na cabeça entre jogadores (a pedido do plano).
+        /// </summary>
+        void MandarAcertosNosJogadores(DadosDaArma d)
+        {
+            for (int i = 0; i < _jogadores.Count; i++)
+            {
+                var alvo = _jogadores[i].alvo;
+                bool repetido = false;
+                for (int k = 0; k < i && !repetido; k++) repetido = _jogadores[k].alvo == alvo;
+                if (repetido) continue;
+                float perto = _jogadores[i].distancia;
+                for (int k = i; k < _jogadores.Count; k++) if (_jogadores[k].alvo == alvo) perto = Mathf.Min(perto, _jogadores[k].distancia);
+                rede.AcertarJogador(alvo, Armas.Dano(d, perto), _jogadores[i].ponto);
+            }
         }
 
         /// <summary>Uma parte de um sobrevivente que o tiro (ou um chumbo) pegou.</summary>
@@ -722,6 +772,17 @@ namespace ZombieCityCleaner.Player
                     Carne(hitbox, hit.point, hit.normal, hit.distance);
                     impacto = new JogadorRede.Impacto { tipo = TipoNoZumbi(hitbox), ponto = hit.point, normal = hit.normal };
                     if (EhBraco(hitbox.regiao) && ++bracos <= 2) continue;
+                    parou = true;
+                    break;
+                }
+                // outro jogador, com o fogo amigo ligado: o sangue aqui; o acerto vai ao anfitrião no fim do disparo
+                var outro = OutroJogador(hit.collider);
+                if (outro != null)
+                {
+                    Sangue.Respingo(hit.point, hit.normal);
+                    _jogadores.Add((outro, hit.point, hit.distance));
+                    _marcaAte = Time.time + 0.18f;
+                    impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
                     parou = true;
                     break;
                 }

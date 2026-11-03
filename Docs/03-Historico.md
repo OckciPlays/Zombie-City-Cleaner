@@ -569,6 +569,44 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
   do terreno apagava as malhas dos móveis, que a partida seguinte reaproveita; agora ela deixa os móveis de fora (e os
   erros "Destroying assets" ao sair acabaram).
 
+## Os ajustes da primeira partida com os amigos (03/11/2026, a pedido)
+
+O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, para ele avaliar depois. O resumo está no
+[15](15-Ajustes-da-Primeira-Partida.md).
+
+- **Os bugs:** o jogo fechava ao matar as pessoas do acampamento (a mochila de quem morre ficava presa arrumando um item sem
+  tamanho); os escondidos se amontoavam num ponto da casa; a parede de armas do bunker aparecia no fim da rua do Dia 0; o
+  pulo da janela antes da TV travava o jogador.
+- **Os civis:** armas brancas (a faca, o bastão, o machado, a lança), pistolas e, raramente, uma submetralhadora; o golpe de
+  perto; muito menos munição no saque e mais comida.
+- **Os militares e a base provisória:** um quadrado de 40 m em cada base militar do mapa, com contêineres, barracas, o
+  caminhão e o blindado; de 6 a 8 militares de colete e capacete (vida 150), com rifle, espingarda, sniper ou
+  submetralhadora; o reforço 3 dias depois.
+- **A morte:** a tela "VOCÊ MORREU" com a causa e o botão de renascer em 5 s; as roupas vão para a mochila no chão.
+- **O fogo amigo:** a opção na tela de criar o mundo (desligado de começo), no save e no ESC.
+- **O minimapa** (a tecla N), **o nome dos jogadores no mapa**, **os pings** (o botão do meio do mouse e o clique direito no
+  mapa) e **as marcas e as anotações** (no save).
+- **Para a próxima fase:** a emboscada nos prédios, os NPCs dirigindo carros, os acampamentos e as bases rivais "de verdade"
+  e a base militar de verdade.
+
+## A janela, o nome no mapa e o começo no bunker (03/11/2026, à noite, a pedido)
+
+- **A janela do quarto (Dia 0):** o "dentro da casa" passou a ser os cômodos, e não a caixa da planta (a garagem coberta
+  esticava a caixa por todo o lado da casa, e a faixa de fora da janela do quarto contava como dentro).
+- **O nome no mapa:** colado na seta, numa etiqueta, e os nomes dos lugares desviam dele.
+- **O começo no bunker,** medido no Profiler: os cortes dos zumbis caíam no jogo (até 627 ms num quadro); agora a tela de
+  carregamento espera por eles. As árvores e os objetos da estrada passaram a montar em volta do bunker durante o
+  carregamento; a tela fica 0,8 s depois de nascer (o primeiro desenho); os mipmaps do mapa saíram do quadro. Depois: 1
+  quadro acima de 50 ms em 45 s de jogo, e o carregamento do mesmo tamanho.
+
+## O crash do Editor e o saque dos militares (03/11/2026, à noite, a pedido)
+
+- **O crash:** falta de memória no Editor (o mundo grande, depois de horas aberto); o computador fica no limite. Corrigidos os
+  vazamentos que uma revisão do código achou: as roupas dos NPCs (cada NPC novo deixava ~2 MB presos para sempre), o NavMesh
+  de cada partida, o cache da base militar (guardava os mundos antigos) e alguns pequenos.
+- **Os militares:** lutam com uma reserva de 2 pentes que não fica no saque; no corpo, o pente e às vezes uma caixa pequena;
+  a arma cai gasta (engasga); o colete e o capacete como itens ficaram raros. De ~98 para ~29 balas por militar.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

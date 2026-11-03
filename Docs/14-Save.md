@@ -56,7 +56,11 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
     o que faltava da troca (a etapa 4);
   - desde o merge com o saque e as portas (02/11/2026): o saque dos móveis já pego (não volta), as portas e as janelas das
     casas abertas, fechadas, destrancadas ou arrombadas, os itens guardados nas estantes do bunker e as cores das roupas no
-    chão e nas mochilas caídas.
+    chão e nas mochilas caídas;
+  - desde os ajustes da primeira partida (03/11/2026, [15](15-Ajustes-da-Primeira-Partida.md)): o fogo amigo (ligado ou
+    desligado, escolhido ao criar o mundo), as bases militares (quem morreu, a geração dos militares e o dia do reforço) e
+    as marcas e as anotações do mapa (os pings não ficam). Um save de antes abre com tudo isso vazio (e o fogo amigo
+    desligado).
 
 ## O dinheiro
 

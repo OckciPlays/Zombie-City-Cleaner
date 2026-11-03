@@ -5,6 +5,9 @@ O mundo agora tem outros vivos:
 - a etapa 3: os acampamentos com os comerciantes ([mais abaixo](#os-acampamentos-a-etapa-3));
 - a etapa 4: o carro quebrado na estrada, com dois sobreviventes trocando o pneu ([mais abaixo](#o-carro-quebrado-a-etapa-4)).
 
+Depois da primeira partida com os amigos (03/11/2026), os civis passaram a usar armas brancas e a levar menos munição, e
+chegaram os militares, nas bases militares do mapa: veja o [15 – Os ajustes da primeira partida](15-Ajustes-da-Primeira-Partida.md).
+
 O que o Pedro pediu, em resumo:
 
 - todo armado que a gente encontra na cidade é hostil;
@@ -31,10 +34,13 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   - longe de todos os jogadores (75 m), o grupo vai embora e volta mais tarde, com quem estava vivo (de 4 a 8 min na
     cidade grande; de 10 a 20 min na pequena);
   - um grupo inteiro morto é trocado por outro 2 dias de jogo depois.
-- **As armas:** o líder com o rifle; os outros com a pistola, a espingarda, a submetralhadora ou o rifle; no máximo uma
-  sniper por grupo.
-- **A mochila de cada um:** de 2 a 4 caixas de munição da arma dele, comida, água, às vezes remédio, materiais, pilhas e uma
-  faca; quase sempre uma mochila (pequena, média ou grande) e algum dinheiro.
+- **As armas** (03/11/2026, a pedido: os civis "com armas brancas, tacos, facas, pistolas, raramente uma submetralhadora"):
+  o líder com a pistola (às vezes a submetralhadora); os outros, metade de arma branca (a faca, o bastão com pregos, o
+  machado ou a lança), 40% a pistola e 10% a submetralhadora (no máximo uma por grupo). Antes, rifles, a espingarda e até a
+  sniper.
+- **A mochila de cada um** (03/11/2026, a pedido: "o loot dos NPC está muito alto"): o pente de 40% a 100% e, em menos da
+  metade deles, uma caixa com 3 a 12 balas; de 1 a 3 comidas e de 1 a 2 bebidas, às vezes remédio, materiais, pilhas e uma
+  faca; quase sempre uma mochila (pequena, média ou grande) e algum dinheiro. Antes, de 2 a 4 caixas cheias.
 
 ## Como eles se comportam
 
@@ -388,4 +394,8 @@ O que o Pedro pediu:
 
 - **As roupas de vestir** no comerciante de roupas (hoje ele vende as mochilas e a roupa velha; trocar a roupa do corpo é a
   loja do Dia 0).
-- **Depois:** os NPCs dirigindo carros, e os acampamentos e as bases rivais "de verdade" (do Gustavo).
+- **Fica para a próxima fase** (o cronograma de 03/11/2026, a pedido):
+  - **a emboscada:** os civis escondidos nos prédios das cidades, um em cada andar, atirando de cima;
+  - **os NPCs dirigindo carros**, junto com ela;
+  - os acampamentos e as bases rivais "de verdade" (do Gustavo);
+  - a base militar de verdade, no lugar da provisória ([15](15-Ajustes-da-Primeira-Partida.md)).

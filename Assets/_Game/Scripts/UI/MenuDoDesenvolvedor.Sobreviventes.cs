@@ -10,7 +10,9 @@ namespace ZombieCityCleaner.UI
     /// "Clima"): quantos estão no mundo, pôr o grupo da cidade (ou um de teste) a uns 20 m, tirar todos, e ligar ou
     /// desligar os grupos que aparecem sozinhos. Os acampamentos (a etapa 3): ir ao portão do mais perto, deixá-lo amigo ou
     /// hostil e repor o estoque agora. O carro quebrado (a etapa 4): ir até ele, recomeçar a cena, um pneu de 80% na mochila
-    /// e acabar a troca agora. Os pedidos vão para o anfitrião; o ir ao portão e ao carro é aqui (o movimento é do dono).
+    /// e acabar a troca agora. A base militar (03/11/2026): ir até a estrada na frente do portão e recomeçar (todos
+    /// vivos). A morte (a etapa 4): morrer agora (a tela de morte) e ligar ou desligar o fogo amigo do mundo. Os pedidos
+    /// vão para o anfitrião; o ir ao portão, ao carro e à base é aqui (o movimento é do dono).
     /// </summary>
     public partial class MenuDoDesenvolvedor
     {
@@ -32,7 +34,8 @@ namespace ZombieCityCleaner.UI
             float x = x0 + 12 * u, w = largura - 24 * u;
             float meio = (w - 6 * u) / 2f, x2 = x + meio + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, 8 * u + 28 * u + 58 * u + 30 * u * 2 + 10 * u + 22 * u + 40 * u + 30 * u * 2
-                                                     + 10 * u + 22 * u + 40 * u + 30 * u * 2 + 6 * u);
+                                                     + 10 * u + 22 * u + 40 * u + 30 * u * 2 + 10 * u + 22 * u + 40 * u + 30 * u
+                                                     + 10 * u + 22 * u + 30 * u + 6 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -100,6 +103,40 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Pneu de 80%", _botao)) TesteDosSobreviventesRpc(8);
             if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Acabar a troca", _botao)) TesteDosSobreviventesRpc(9);
             GUI.enabled = true;
+            y += 40 * u;
+
+            // a base militar (03/11/2026)
+            GUI.Label(new Rect(x, y, w, 22 * u), "BASE MILITAR", _titulo);
+            y += 22 * u;
+            var bases = BasesMilitaresDoMundo.Instancia;
+            int bm = -1;
+            float db = 0f;
+            if (bases != null) bm = bases.MaisPerto(transform.position, out db);
+            var plantaDaBase = bm >= 0 ? bases.Planta(bm) : null;
+            string sobreABase = "";
+            if (plantaDaBase != null && bases.Grupo(bm) != null) sobreABase = $" {bases.Grupo(bm).Vivos} militares lá.";
+            if (plantaDaBase != null && bases.DiaDoReforco(bm) >= 0) sobreABase += $" {bases.Mortos(bm)} mortos; o reforço no dia {bases.DiaDoReforco(bm)}.";
+            GUI.Label(new Rect(x, y, w, 36 * u), plantaDaBase == null ? "Nenhuma base neste mundo." :
+                      $"{plantaDaBase.Lugar.Nome}: {db:0} m.{sobreABase}", _texto);
+            y += 40 * u;
+            GUI.enabled = plantaDaBase != null;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Ir à base", _botao) && plantaDaBase != null)
+            {
+                var fora = plantaDaBase.Mundo(plantaDaBase.Portao);
+                GetComponent<MovimentoPrimeiraPessoa>().Teleportar(fora + Vector3.up * 0.3f, plantaDaBase.GiroNoMundo(180f));
+                Avisar($"Na estrada, a 45 m do meio da {plantaDaBase.Lugar.Nome}.");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Recomeçar a base", _botao)) TesteDosSobreviventesRpc(10);
+            GUI.enabled = true;
+            y += 40 * u;
+
+            // a morte e o fogo amigo (03/11/2026, a etapa 4)
+            GUI.Label(new Rect(x, y, w, 22 * u), "A MORTE", _titulo);
+            y += 22 * u;
+            var mundoDaPartida = World.MundoDaPartida.Instancia;
+            bool fogo = mundoDaPartida != null && mundoDaPartida.FogoAmigo;
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Morrer agora", _botao)) TesteDosSobreviventesRpc(11);
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), fogo ? "Fogo amigo: ligado" : "Fogo amigo: desligado", _botao)) TesteDosSobreviventesRpc((byte)(fogo ? 12 : 13));
             return area;
         }
 
@@ -145,7 +182,24 @@ namespace ZombieCityCleaner.UI
                     m?.TirarTodos();
                     acampamentos?.TirarAsPessoas();
                     CarrosQuebradosDoMundo.Instancia?.TirarAsPessoas();
-                    aviso = "Os sobreviventes saíram (os dos acampamentos voltam quando você chegar perto).";
+                    BasesMilitaresDoMundo.Instancia?.TirarAsPessoas();
+                    aviso = "Os sobreviventes saíram (os dos acampamentos e das bases voltam quando você chegar perto).";
+                    break;
+                case 10:
+                    var bases = BasesMilitaresDoMundo.Instancia;
+                    if (bases == null) break;
+                    int b = bases.MaisPerto(transform.position, out _);
+                    bases.Recomecar(b);
+                    aviso = b >= 0 ? "A base voltou ao começo: os militares todos vivos (aparecem a 170 m)." : "Nenhuma base neste mundo.";
+                    break;
+                case 11:
+                    var vida = GetComponent<VidaJogador>();
+                    if (vida != null) vida.Dano(1000f, transform.position, "O menu do desenvolvedor (F1).");
+                    break;
+                case 12:
+                case 13:
+                    World.MundoDaPartida.Instancia?.DefinirFogoAmigo(acao == 13);
+                    aviso = acao == 13 ? "Fogo amigo ligado: o tiro e o golpe ferem os outros jogadores." : "Fogo amigo desligado.";
                     break;
                 case 2: if (m != null) m.ligado = false; aviso = "Os grupos não aparecem mais sozinhos."; break;
                 case 3: if (m != null) m.ligado = true; aviso = "Os grupos voltam a aparecer sozinhos."; break;

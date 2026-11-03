@@ -143,8 +143,10 @@ namespace ZombieCityCleaner.Zombies
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
             PrepararCorpos();
             if (GetComponent<UI.BarraDoChefe>() == null) gameObject.AddComponent<UI.BarraDoChefe>();   // a barra do Brutamonte
-            StartCoroutine(PreaquecerCortes());
-            StartCoroutine(PreaquecerOPool());
+            // (03/11/2026: a corrotina da partida anterior seguia rodando junto com a nova; agora só uma de cada)
+            PararOAquecimento();
+            _aquecendoCortes = StartCoroutine(PreaquecerCortes());
+            _aquecendoPool = StartCoroutine(PreaquecerOPool());
             if (IsServer)
             {
                 NetworkManager.OnClientDisconnectCallback += AoSairCliente;
@@ -153,8 +155,18 @@ namespace ZombieCityCleaner.Zombies
             else NetworkManager.CustomMessagingManager.RegisterNamedMessageHandler(NomeDaMensagem, AoReceber);
         }
 
+        Coroutine _aquecendoCortes, _aquecendoPool;
+
+        void PararOAquecimento()
+        {
+            if (_aquecendoCortes != null) StopCoroutine(_aquecendoCortes);
+            if (_aquecendoPool != null) StopCoroutine(_aquecendoPool);
+            _aquecendoCortes = _aquecendoPool = null;
+        }
+
         public override void OnNetworkDespawn()
         {
+            PararOAquecimento();
             if (_povoando != null)
             {
                 StopCoroutine(_povoando);
@@ -170,6 +182,7 @@ namespace ZombieCityCleaner.Zombies
             GuardarCorpos();
             GuardarPedacos();
             _niveisPorCliente.Clear();
+            _grupos.Clear();
         }
 
         void Update()
@@ -700,8 +713,8 @@ namespace ZombieCityCleaner.Zombies
             _pools[z.modelo].Push(z);
         }
 
-        // os primeiros do pool (aquecerPorModelo), um por quadro, enquanto o mundo é gerado; os que já estão no pool (de uma
-        // partida anterior) contam
+        // os primeiros do pool (aquecerPorModelo), um por quadro, enquanto o mundo é gerado (com a tela coberta, vários por
+        // quadro: ZombieManager.Pedacos.cs, EsperarOProximoQuadro); os que já estão no pool (de uma partida anterior) contam
         IEnumerator PreaquecerOPool()
         {
             for (int m = 0; m < modelos.Length; m++)
@@ -710,7 +723,7 @@ namespace ZombieCityCleaner.Zombies
                 for (int k = Pool(m).Count; k < aquecerPorModelo; k++)
                 {
                     GuardarNoPool(Instantiate(modelos[m], _vivos));
-                    yield return null;
+                    if (EsperarOProximoQuadro()) yield return null;
                 }
             }
         }

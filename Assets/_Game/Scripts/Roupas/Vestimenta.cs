@@ -49,7 +49,38 @@ namespace ZombieCityCleaner.Roupas
         readonly Dictionary<SkinnedMeshRenderer, Mesh> _originais = new Dictionary<SkinnedMeshRenderer, Mesh>();
         MaterialPropertyBlock _bloco;
         bool _vestiu;
-        static readonly Dictionary<(Mesh, string), Mesh> Guardadas = new Dictionary<(Mesh, string), Mesh>();
+        // as malhas sem as faces cobertas, por (malha inteira, faces), contadas por quem as usa; a que fica sem ninguém
+        // espera na fila das soltas (o NPC que some e volta acha a dele pronta) e, com a fila cheia, é destruída. Antes
+        // ficavam todas para sempre: cada NPC sorteado novo deixava ~2 MB presos (03/11/2026, o Editor caiu sem memória)
+        sealed class Guardada
+        {
+            public Mesh malha;
+            public int usos;
+        }
+        const int MaxSoltas = 24;
+        static readonly Dictionary<(Mesh, string), Guardada> Guardadas = new Dictionary<(Mesh, string), Guardada>();
+        static readonly Dictionary<Mesh, (Mesh, string)> ChaveDa = new Dictionary<Mesh, (Mesh, string)>();
+        static readonly List<(Mesh, string)> Soltas = new List<(Mesh, string)>();
+        // as malhas sem as faces que este usa agora (soltas ao trocar de roupa e ao sumir)
+        readonly Dictionary<SkinnedMeshRenderer, Mesh> _emUso = new Dictionary<SkinnedMeshRenderer, Mesh>();
+
+        /// <summary>As malhas sem as faces guardadas agora (as em uso e as soltas na fila).</summary>
+        public static int MalhasGuardadas => Guardadas.Count;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void Zerar()
+        {
+            // as do Play anterior morreram com ele (o Editor não recarrega o domínio)
+            Guardadas.Clear();
+            ChaveDa.Clear();
+            Soltas.Clear();
+        }
+
+        void OnDestroy()
+        {
+            foreach (var m in _emUso.Values) Soltar(m);
+            _emUso.Clear();
+        }
 
         public CatalogoDasRoupas Catalogo => _catalogo ??= CatalogoDasRoupas.Ler(catalogo);
 
@@ -76,7 +107,17 @@ namespace ZombieCityCleaner.Roupas
             {
                 if (r.name != Corpo && !r.name.StartsWith(PrefixoDasPecas)) continue;
                 _renderers[r.name] = r;
-                _originais[r] = r.sharedMesh;
+                // a cópia de um corpo já vestido (o retrato, o estúdio) chega com as malhas sem as faces: a inteira é a de
+                // origem delas, e esta passa a usar a que chegou até se vestir (sem isso, a de lá sumia com o dono)
+                var chegou = r.sharedMesh;
+                if (chegou != null && ChaveDa.TryGetValue(chegou, out var chave) && Guardadas.TryGetValue(chave, out var g)
+                    && ReferenceEquals(g.malha, chegou))
+                {
+                    _originais[r] = chave.Item1;
+                    Usar(chave, g);
+                    _emUso[r] = chegou;
+                }
+                else _originais[r] = chegou;
             }
         }
 
@@ -157,10 +198,25 @@ namespace ZombieCityCleaner.Roupas
             {
                 bool liga = par.Key == Corpo || vestidas.Contains(par.Key);
                 par.Value.gameObject.SetActive(liga);
-                if (!liga) continue;
+                _emUso.TryGetValue(par.Value, out var antiga);
+                if (!liga)
+                {
+                    // desligada: volta à inteira e solta a sem as faces
+                    if (!ReferenceEquals(antiga, null))
+                    {
+                        par.Value.sharedMesh = _originais[par.Value];
+                        _emUso.Remove(par.Value);
+                        Soltar(antiga);
+                    }
+                    continue;
+                }
                 escondidas.TryGetValue(par.Key, out var faces);
                 var malha = SemAsFaces(_originais[par.Value], faces);
+                if (ReferenceEquals(malha, _originais[par.Value])) _emUso.Remove(par.Value);
+                else _emUso[par.Value] = malha;
                 par.Value.sharedMesh = malha;
+                // depois de pegar a nova (a mesma combinação só troca a conta)
+                if (!ReferenceEquals(antiga, null)) Soltar(antiga);
                 for (int s = 0; s < malha.subMeshCount; s++) Triangulos += (int)malha.GetIndexCount(s) / 3;
             }
             Formas();
@@ -273,15 +329,29 @@ namespace ZombieCityCleaner.Roupas
             Versao++;
         }
 
-        /// <summary>A malha sem as faces pedidas (o UV1.x de cada vértice é o número da face), guardada por combinação.</summary>
+        /// <summary>
+        /// A malha sem as faces pedidas (o UV1.x de cada vértice é o número da face), guardada por combinação; quem pede passa
+        /// a usá-la (e solta com <see cref="Soltar"/>).
+        /// </summary>
         static Mesh SemAsFaces(Mesh original, HashSet<int> faces)
         {
             if (faces == null || faces.Count == 0) return original;
-            string chave = string.Join(",", faces.OrderBy(f => f));
-            if (Guardadas.TryGetValue((original, chave), out var m) && m != null) return m;
+            var chave = (original, string.Join(",", faces.OrderBy(f => f)));
+            if (Guardadas.TryGetValue(chave, out var g))
+            {
+                if (g.malha != null)
+                {
+                    Usar(chave, g);
+                    return g.malha;
+                }
+                // destruída por fora (o fim do Play): sai, e é feita de novo
+                ChaveDa.Remove(g.malha);
+                Soltas.Remove(chave);
+                Guardadas.Remove(chave);
+            }
             var uv = new List<Vector2>();
             original.GetUVs(1, uv);
-            m = Instantiate(original);
+            var m = Instantiate(original);
             m.name = original.name + " (vestido)";
             var lista = new List<int>();
             for (int s = 0; s < original.subMeshCount; s++)
@@ -297,8 +367,34 @@ namespace ZombieCityCleaner.Roupas
                 }
                 m.SetTriangles(lista, s);
             }
-            Guardadas[(original, chave)] = m;
+            Guardadas[chave] = new Guardada { malha = m, usos = 1 };
+            ChaveDa[m] = chave;
             return m;
+        }
+
+        static void Usar((Mesh, string) chave, Guardada g)
+        {
+            if (g.usos++ == 0) Soltas.Remove(chave);
+        }
+
+        /// <summary>Um a menos usando a malha; sem ninguém, ela vai para a fila das soltas (a mais velha da fila cheia sai).</summary>
+        static void Soltar(Mesh m)
+        {
+            if (ReferenceEquals(m, null) || !ChaveDa.TryGetValue(m, out var chave)) return;
+            if (!Guardadas.TryGetValue(chave, out var g) || !ReferenceEquals(g.malha, m) || g.usos <= 0) return;
+            if (--g.usos > 0) return;
+            Soltas.Add(chave);
+            while (Soltas.Count > MaxSoltas)
+            {
+                var velha = Soltas[0];
+                Soltas.RemoveAt(0);
+                if (!Guardadas.TryGetValue(velha, out var gv)) continue;
+                Guardadas.Remove(velha);
+                ChaveDa.Remove(gv.malha);
+                if (gv.malha == null) continue;
+                if (Application.isPlaying) Destroy(gv.malha);
+                else DestroyImmediate(gv.malha);
+            }
         }
     }
 }

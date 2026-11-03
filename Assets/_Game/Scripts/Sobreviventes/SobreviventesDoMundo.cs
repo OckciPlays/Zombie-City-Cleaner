@@ -71,7 +71,12 @@ namespace ZombieCityCleaner.Sobreviventes
         /// <summary>A chave do grupo de uma parte da cidade (até 8 partes).</summary>
         public static int Chave(int cidade, int parte) => cidade * 8 + parte;
 
-        void Awake() => Instancia = this;
+        void Awake()
+        {
+            Instancia = this;
+            // as bases militares (03/11/2026): no mesmo objeto, posto aqui (sem mexer na cena do Mundo, que é dos dois)
+            if (GetComponent<BasesMilitaresDoMundo>() == null) gameObject.AddComponent<BasesMilitaresDoMundo>();
+        }
 
         public override void OnDestroy()
         {
@@ -230,10 +235,10 @@ namespace ZombieCityCleaner.Sobreviventes
             if (e.quantos == 0) e.quantos = quantos;
             quantos = e.quantos;
             var g = new GrupoDeSobreviventes { cidade = cidade, setor = parte, geracao = e.geracao, quantos = quantos };
-            bool temSniper = false;
+            bool temSub = false;
             for (int i = 0; i < quantos; i++)
             {
-                var arma = SortearArma(s, i, ref temSniper);
+                var (arma, branca) = SortearArma(s, i, ref temSub);
                 byte roupa = (byte)(s.Next(100) < 70 ? 0 : s.Next(100) < 50 ? 1 : 3);
                 int sementeDaRoupa = s.Next();
                 if ((e.vivos & (1 << i)) == 0) continue;   // este morreu
@@ -245,10 +250,10 @@ namespace ZombieCityCleaner.Sobreviventes
                 sob.Identidade.Value = new IdentidadeDoSobrevivente
                 {
                     semente = sementeDaRoupa, arma = arma, roupa = roupa, grupo = (ushort)Mathf.Max(0, Chave(cidade, parte)),
-                    papel = i == 0 ? PapelDoSobrevivente.Lider : PapelDoSobrevivente.Busca, indice = (byte)i,
+                    papel = i == 0 ? PapelDoSobrevivente.Lider : PapelDoSobrevivente.Busca, indice = (byte)i, branca = branca,
                 };
                 sob.grupo = g;
-                Encher(sob, arma);
+                Encher(sob, arma, false, branca);
                 go.GetComponent<NetworkObject>().Spawn(true);
                 if (sob.agente != null && sob.agente.isOnNavMesh) sob.agente.Warp(p);
                 g.membros.Add(sob);
@@ -259,42 +264,98 @@ namespace ZombieCityCleaner.Sobreviventes
             return true;
         }
 
-        // as armas: o líder com o rifle; os outros, a pistola, a espingarda, a submetralhadora ou o rifle; no máximo uma sniper
-        static TipoDeArma SortearArma(System.Random s, int i, ref bool temSniper)
+        // as armas dos civis (03/11/2026, a pedido: "armas brancas, tacos, facas, pistolas, raramente uma submetralhadora";
+        // antes, rifles, a espingarda e até a sniper): o líder com a pistola (às vezes a submetralhadora); os outros, ~45%
+        // uma branca (a faca, o bastão com pregos, o machado ou a lança), ~45% a pistola e ~10% a submetralhadora, no
+        // máximo uma por grupo (os outros: 50% branca, 40% pistola e 10% a submetralhadora; com o líder, ~45% de brancas)
+        static (TipoDeArma arma, Item branca) SortearArma(System.Random s, int i, ref bool temSub)
         {
-            if (i == 0) return TipoDeArma.Rifle;
             int r = s.Next(100);
-            if (r < 5 && !temSniper)
+            if (i == 0)
             {
-                temSniper = true;
-                return TipoDeArma.Sniper;
+                if (r < 25 && !temSub)
+                {
+                    temSub = true;
+                    return (TipoDeArma.Submetralhadora, Item.Nada);
+                }
+                return (TipoDeArma.Pistola, Item.Nada);
             }
-            return r < 40 ? TipoDeArma.Pistola : r < 60 ? TipoDeArma.Espingarda : r < 80 ? TipoDeArma.Submetralhadora : TipoDeArma.Rifle;
+            if (r < 10 && !temSub)
+            {
+                temSub = true;
+                return (TipoDeArma.Submetralhadora, Item.Nada);
+            }
+            if (r < 50) return (TipoDeArma.Pistola, Item.Nada);
+            int b = s.Next(100);
+            var branca = b < 30 ? Item.Faca : b < 60 ? Item.Bastao : b < 85 ? Item.Machado : Item.Lanca;
+            return (TipoDeArma.Pistola, Itens.NoJogo(branca) ? branca : Item.Faca);
         }
 
         // o que ele leva: o pente cheio, de 2 a 4 caixas de munição da arma dele (de um a dois pentes cada), comida, água, às vezes remédio e materiais,
         // uma mochila (quase sempre) e algum dinheiro
-        internal static void Encher(Sobrevivente sob, TipoDeArma arma)
+        /// <summary>
+        /// O que ele leva (03/11/2026, a pedido: "o loot dos NPC está muito alto"). Os civis (os grupos, o acampamento, o
+        /// carro quebrado): o pente de 40% a 100% e, em 45% deles, uma caixa com 3 a 12 balas; de arma branca, nenhuma; mais
+        /// comida e bebida (de 1 a 3 e de 1 a 2). Os militares (<paramref name="militar"/>; 03/11/2026, à noite, a pedido: "o
+        /// loot dos NPC militares também está alto", 8 mortos deixavam 634 balas): o pente de 50% a 100% e, em 40% deles, uma
+        /// caixa com 30% a 60% de um pente; para lutar, uma reserva de 2 pentes que não fica no saque
+        /// (<see cref="Sobrevivente.reserva"/>); a barra, às vezes o feijão, a água e o remédio, e raramente o colete tático ou o
+        /// capacete militar como item.
+        /// </summary>
+        internal static void Encher(Sobrevivente sob, TipoDeArma arma, bool militar = false, Item branca = Item.Nada)
         {
             var d = Armas.Dados(arma);
-            sob.pente = d.capacidade;
             sob.mochila.Clear();
-            int caixas = Random.Range(2, 5);
-            for (int i = 0; i < caixas; i++) Por(sob, Itens.CaixaDe(d.calibre), Random.Range(d.capacidade, d.capacidade * 2 + 1));
+            sob.reserva = 0;
+            bool deBranca = Itens.EhBranca(branca);
+            if (deBranca) sob.pente = 0;
+            else if (militar)
+            {
+                sob.pente = Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.5f, 1f)));
+                sob.reserva = d.capacidade * 2;
+                if (Random.value < 0.4f) Por(sob, Itens.CaixaDe(d.calibre), Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.3f, 0.6f))));
+            }
+            else
+            {
+                sob.pente = Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.4f, 1f)));
+                if (Random.value < 0.45f) Por(sob, Itens.CaixaDe(d.calibre), Random.Range(3, 13));
+            }
             Item[] comidas = { Item.Comida, Item.Feijao, Item.Carne, Item.Milho, Item.Sopa, Item.Salgadinho, Item.BarraDeEnergia };
             Item[] bebidas = { Item.Agua, Item.RefrigeranteLata, Item.Energetico, Item.Suco };
             Item[] remedios = { Item.Atadura, Item.Comprimidos, Item.Gaze, Item.Bandagem, Item.KitMedico };
             Item[] materiais = { Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Pregos, Item.Fios, Item.PecasDeMetal };
-            Por(sob, comidas[Random.Range(0, comidas.Length)], 1);
-            if (Random.value < 0.6f) Por(sob, comidas[Random.Range(0, comidas.Length)], 1);
-            Por(sob, bebidas[Random.Range(0, bebidas.Length)], 1);
-            if (Random.value < 0.45f) Por(sob, remedios[Random.Range(0, remedios.Length)], 1);
-            if (Random.value < 0.4f) Por(sob, materiais[Random.Range(0, materiais.Length)], Random.Range(1, 3));
-            if (Random.value < 0.25f) Por(sob, Item.Pilhas, 2);
-            if (Random.value < 0.15f) Por(sob, Item.Faca, 1);
+            if (militar)
+            {
+                // a ração: a barra; às vezes o feijão, a água e o remédio; raramente o colete ou o capacete (o que ele veste
+                // fica com o corpo)
+                Por(sob, Item.BarraDeEnergia, 1);
+                if (Random.value < 0.3f) Por(sob, Item.Feijao, 1);
+                if (Random.value < 0.6f) Por(sob, Item.Agua, 1);
+                if (Random.value < 0.3f) Por(sob, Random.value < 0.25f ? Item.KitMedico : Item.Bandagem, 1);
+                if (Random.value < 0.08f) PorRoupa(sob, "Colete_Tatico");
+                if (Random.value < 0.06f) PorRoupa(sob, "Capacete_Militar");
+                if (Random.value < 0.15f) Por(sob, Item.Pilhas, 2);
+            }
+            else
+            {
+                int nComidas = Random.Range(1, 4), nBebidas = Random.Range(1, 3);
+                for (int i = 0; i < nComidas; i++) Por(sob, comidas[Random.Range(0, comidas.Length)], 1);
+                for (int i = 0; i < nBebidas; i++) Por(sob, bebidas[Random.Range(0, bebidas.Length)], 1);
+                if (Random.value < 0.35f) Por(sob, remedios[Random.Range(0, remedios.Length)], 1);
+                if (Random.value < 0.4f) Por(sob, materiais[Random.Range(0, materiais.Length)], Random.Range(1, 3));
+                if (Random.value < 0.2f) Por(sob, Item.Pilhas, 2);
+                if (!deBranca && Random.value < 0.1f) Por(sob, Item.Faca, 1);
+            }
             float r = Random.value;
             sob.mochilaVestida = r < 0.45f ? Item.MochilaPequena : r < 0.75f ? Item.MochilaMedia : r < 0.85f ? Item.MochilaGrande : Item.Nada;
             sob.dinheiro = Random.value < 0.6f ? Random.Range(5, 80) : 0;
+        }
+
+        // uma roupa do catálogo (pelo nome da peça), com as cores dele
+        static void PorRoupa(Sobrevivente sob, string peca)
+        {
+            var item = Itens.RoupaDaPeca(peca);
+            if (item != Item.Nada && Itens.NoJogo(item)) sob.mochila.Add(new ItemNaMochila { item = item, qtd = 1 });
         }
 
         static void Por(Sobrevivente sob, Item item, int qtd)
@@ -385,7 +446,10 @@ namespace ZombieCityCleaner.Sobreviventes
         internal static void LargarAMochila(Sobrevivente s, List<ItemNaMochila> extras)
         {
             var itens = new List<ItemNaMochila>(s.mochila);
-            itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)Mathf.Max(0, s.pente), desgaste = (byte)Random.Range(15, 60) });
+            // (a arma do militar cai gasta, de 50% a 85%: passando de 70%, ela engasga às vezes; 03/11/2026)
+            bool militar = s.Identidade.Value.papel == PapelDoSobrevivente.Militar;
+            itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)(s.ComBranca ? 1 : Mathf.Max(0, s.pente)),
+                                                desgaste = (byte)(militar ? Random.Range(50, 86) : Random.Range(15, 60)) });
             if (extras != null) itens.AddRange(extras);
             var lugar = s.transform.position + s.transform.right * 0.6f;
             MochilasNoChao.Instancia?.Criar(lugar, s.transform.eulerAngles.y, s.nome, s.mochilaVestida, itens, s.dinheiro);

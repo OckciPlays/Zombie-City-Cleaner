@@ -28,6 +28,11 @@ namespace ZombieCityCleaner.Sobreviventes
         internal GrupoDeSobreviventes grupo;
         internal float vida = VidaMaxima;
         internal int pente;
+        /// <summary>
+        /// As balas que ele usa para recarregar e que não ficam no saque (03/11/2026, os militares: lutam com bastante munição,
+        /// mas o que sobra no corpo é pouco). A recarga usa as caixas da mochila primeiro.
+        /// </summary>
+        internal int reserva;
         /// <summary>O que ele leva (vira a mochila no chão quando ele morre).</summary>
         internal readonly List<ItemNaMochila> mochila = new List<ItemNaMochila>();
         internal Item mochilaVestida;
@@ -38,6 +43,8 @@ namespace ZombieCityCleaner.Sobreviventes
         internal int acampamento = -1;
         /// <summary>O carro quebrado dele (o índice em <c>Objetos.Quebrados</c>; -1: não é da estrada). A etapa 4.</summary>
         internal int cena = -1;
+        /// <summary>A base militar dele (03/11/2026, <see cref="BasesMilitaresDoMundo"/>; -1: não é militar).</summary>
+        internal int baseMilitar = -1;
         internal Vector3 posto, ronda, esconderijo;
         internal float giroDoPosto, proximaSaudacao;
         bool _semMunicao, _naRonda;
@@ -47,23 +54,32 @@ namespace ZombieCityCleaner.Sobreviventes
         PapelDoSobrevivente Papel => Identidade.Value.papel;
         bool DoAcampamento => acampamento >= 0;
         bool NaEstrada => cena >= 0;
+        bool DaBase => baseMilitar >= 0;
+        /// <summary>Fica de guarda num posto, com a ronda: o guarda do acampamento e o militar da base.</summary>
+        bool DeGuarda => Papel == PapelDoSobrevivente.Guarda || Papel == PapelDoSobrevivente.Militar;
+        /// <summary>
+        /// Até onde ele vê o inimigo para atirar: 90 m; o militar, 110 m, e o de sniper, 160 m (a base atira de longe).
+        /// </summary>
+        float AlcanceDaVista => DaBase ? (Arma == TipoDeArma.Sniper ? 160f : 110f) : 90f;
         /// <summary>
         /// Até onde ele atira nos zumbis: o guarda e o vigia, 30 m (os que chegam na cerca, os que vêm na troca do pneu); o
         /// mecânico ajoelhado, 6 m (ele continua o trabalho: quem protege é o vigia e o jogador); os outros, 16 m.
         /// </summary>
-        float AlcanceDosZumbis => Papel == PapelDoSobrevivente.Guarda || Papel == PapelDoSobrevivente.Vigia ? 30f
-            : Papel == PapelDoSobrevivente.Mecanico && _ajoelhado.Value ? 6f : 16f;
+        float AlcanceDosZumbis => DeGuarda || Papel == PapelDoSobrevivente.Vigia ? 30f
+            : Papel == PapelDoSobrevivente.Mecanico && _ajoelhado.Value ? 6f : ComBranca ? 9f : 16f;
 
         // para o F1 e os testes (no anfitrião)
         public float Vida => vida;
         public int Pente => pente;
         public int ItensNaMochila => mochila.Count;
+        public IReadOnlyList<ItemNaMochila> Mochila => mochila;
         public GrupoDeSobreviventes Grupo => grupo;
         public string Situacao => _morto.Value ? "morto" : _fugindo ? "fugindo" : Escondido ? "escondido" : _recarregando ? "recarregando"
             : _zumbi != null && ZumbiAmeaca(_zumbi) ? "zumbi" : grupo != null && grupo.estado == EstadoDoGrupo.Combate
-            ? (_temProtecao ? $"combate (fase {_fase})" : "combate (sem proteção)") : DoAcampamento ? (_naRonda ? "ronda" : "no posto")
+            ? (_temProtecao ? $"combate (fase {_fase})" : "combate (sem proteção)") : DoAcampamento || DaBase ? (_naRonda ? "ronda" : "no posto")
             : NaEstrada ? (_ajoelhado.Value ? "ajoelhado na roda" : "de guarda") : "explorando";
         public int Acampamento => acampamento;
+        public int BaseMilitar => baseMilitar;
 
         // o comerciante com o acampamento hostil, e quem do acampamento ficou sem munição: dentro da casa
         bool Escondido => DoAcampamento && (_semMunicao || (Papel == PapelDoSobrevivente.Comerciante && grupo != null && grupo.Hostil));
@@ -87,10 +103,14 @@ namespace ZombieCityCleaner.Sobreviventes
         static readonly RaycastHit[] _acertos = new RaycastHit[24];
         static readonly IComparer<RaycastHit> PorDistancia = Comparer<RaycastHit>.Create((a, b) => a.distance.CompareTo(b.distance));
 
+        /// <summary>A vida do militar (03/11/2026, a pedido: "mais resistentes").</summary>
+        public const float VidaDoMilitar = 150f;
+
         void AoNascerNoServidor()
         {
-            vida = VidaMaxima;
-            pente = DadosDaArma.capacidade;
+            vida = Papel == PapelDoSobrevivente.Militar ? VidaDoMilitar : VidaMaxima;
+            // (o Encher já pôs o pente: os civis com 40% a 100%)
+            if (pente <= 0 && !ComBranca) pente = DadosDaArma.capacidade;
             if (!ZombieManager.OutrosAlvos.Contains(this)) ZombieManager.OutrosAlvos.Add(this);
             if (agente != null)
             {
@@ -119,7 +139,13 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void Pensar()
         {
-            if (_morto.Value || agente == null || !agente.enabled) return;
+            if (_morto.Value || agente == null) return;
+            if (!agente.enabled)
+            {
+                // o militar longe do NavMesh dos jogadores (aparece a 170 m): parado no posto, vê e atira de longe
+                if (DaBase) PensarParado();
+                return;
+            }
             float agora = Time.time;
             if (!agente.isOnNavMesh)
             {
@@ -130,6 +156,7 @@ namespace ZombieCityCleaner.Sobreviventes
             }
             _naoAchouChaoDesde = -1f;
             if (_recarregando && agora >= _recarregaAte) TerminarRecarga();
+            if (ComBranca) ImpactoDoGolpe(agora);
             if (agora >= _proximaOlhada)
             {
                 _proximaOlhada = agora + Random.Range(0.22f, 0.32f);
@@ -140,7 +167,7 @@ namespace ZombieCityCleaner.Sobreviventes
             bool combate = grupo != null && grupo.estado == EstadoDoGrupo.Combate && grupo.inimigo != null;
             // a lanterna: explorando à noite; no tiroteio, só com um zumbi perto (para afastá-lo). No acampamento, só os
             // guardas (o resto fica na luz das fogueiras e das bancas)
-            bool luz = noite && (!combate || zumbiPerto) && !_fugindo && (!DoAcampamento || Papel == PapelDoSobrevivente.Guarda || zumbiPerto);
+            bool luz = noite && (!combate || zumbiPerto) && !_fugindo && (!DoAcampamento || DeGuarda || zumbiPerto);
             if (_luz.Value != luz) _luz.Value = luz;
 
             _mirandoEm = null;
@@ -150,10 +177,47 @@ namespace ZombieCityCleaner.Sobreviventes
             else if (_zumbi != null && ZumbiAmeaca(_zumbi)) LutarComZumbi(agora);
             else if (combate) Combater(agora);
             else if (NaEstrada) FicarNaEstrada(agora);
-            else if (DoAcampamento) FicarNoPosto(agora);
+            else if (DoAcampamento || DaBase) FicarNoPosto(agora);
             else Explorar(agora);
             Mirar();
             if (_ajoelhado.Value != _querAjoelhar) _ajoelhado.Value = _querAjoelhar;
+        }
+
+        // o militar sem o NavMesh embaixo (longe dos jogadores): não anda, mas olha, vira, atira e recarrega
+        void PensarParado()
+        {
+            float agora = Time.time;
+            if (_recarregando && agora >= _recarregaAte) TerminarRecarga();
+            if (agora >= _proximaOlhada)
+            {
+                _proximaOlhada = agora + Random.Range(0.22f, 0.32f);
+                Olhar(agora);
+            }
+            bool combate = grupo != null && grupo.estado == EstadoDoGrupo.Combate && grupo.inimigo != null && grupo.inimigo.AlvoValido;
+            bool luz = CicloDoDia.Noite > 0.5f && !combate;
+            if (_luz.Value != luz) _luz.Value = luz;
+            _mirandoEm = null;
+            if (combate)
+            {
+                var inimigo = grupo.inimigo;
+                Vector3 peito = inimigo.transform.position + Vector3.up * 1.3f;
+                if ((peito - Olho).sqrMagnitude < AlcanceDaVista * AlcanceDaVista && !Physics.Linecast(Olho, peito, MascaraDoCenario, QueryTriggerInteraction.Ignore))
+                {
+                    grupo.Ver(inimigo, inimigo.transform.position, null);
+                    AtirarNo(inimigo, peito, agora);
+                }
+            }
+            else if (_zumbi != null && ZumbiAmeaca(_zumbi))
+            {
+                Vector3 alvo = _zumbi.transform.position + Vector3.up * 1.35f;
+                if (!Physics.Linecast(Olho, alvo, MascaraDoCenario, QueryTriggerInteraction.Ignore)) AtirarNo(null, alvo, agora);
+            }
+            else
+            {
+                var giro = Quaternion.Euler(0f, giroDoPosto, 0f);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, giro, 120f * Time.deltaTime);
+            }
+            Mirar();
         }
 
         // ------------------------------------------------------------------ perceber
@@ -172,7 +236,8 @@ namespace ZombieCityCleaner.Sobreviventes
                 Vector3 peito = j.transform.position + Vector3.up * 1.3f;
                 Vector3 para = peito - Olho;
                 float d = para.magnitude;
-                float alcance = Mathf.Lerp(50f, 15f, noite);
+                // (o militar vê mais longe: 90 m de dia, e o de sniper 150; à noite, 20)
+                float alcance = DaBase ? Mathf.Lerp(Arma == TipoDeArma.Sniper ? 150f : 90f, 20f, noite) : Mathf.Lerp(50f, 15f, noite);
                 if (j.Lanterna != null && j.Lanterna.Ligada.Value) alcance = Mathf.Max(alcance, 35f);
                 if (noite > 0.5f && PosteDeLuz.Ilumina(j.transform.position)) alcance = Mathf.Max(alcance, 25f);
                 if (d < 3f) alcance = 99f;   // encostado
@@ -196,7 +261,7 @@ namespace ZombieCityCleaner.Sobreviventes
             if (zm == null) return;
             float alcanceZ = AlcanceDosZumbis, menor = alcanceZ * alcanceZ;
             // (o guarda atira em qualquer um no alcance; os outros, no que vem atrás dele ou está a menos de 9 m)
-            float semAlvo = Papel == PapelDoSobrevivente.Guarda ? alcanceZ : 9f;
+            float semAlvo = DeGuarda ? alcanceZ : 9f;
             foreach (var z in zm.Ativos)
             {
                 if (z == null || z.Morto || z.Petrificado || z.NivelAtual == Zumbi.Nivel.Longe) continue;
@@ -221,7 +286,7 @@ namespace ZombieCityCleaner.Sobreviventes
             if (_mirando.Value) _mirando.Value = false;
             if (agora >= _proximaRonda)
             {
-                if (Papel == PapelDoSobrevivente.Guarda)
+                if (DeGuarda)
                 {
                     _naRonda = !_naRonda;
                     _proximaRonda = agora + Random.Range(8f, 16f);
@@ -235,13 +300,13 @@ namespace ZombieCityCleaner.Sobreviventes
                 }
                 else _proximaRonda = agora + 30f;
             }
-            Vector3 alvo = !_naRonda ? posto : Papel == PapelDoSobrevivente.Guarda ? ronda : _passeio;
+            Vector3 alvo = !_naRonda ? posto : DeGuarda ? ronda : _passeio;
             if ((transform.position - alvo).sqrMagnitude > 0.7f * 0.7f)
             {
                 if (agora >= _proximoCaminho)
                 {
                     _proximoCaminho = agora + 0.6f;
-                    Ir(alvo, Papel == PapelDoSobrevivente.Guarda ? 1.3f : 1.1f, 0.3f);
+                    Ir(alvo, DeGuarda ? 1.3f : 1.1f, 0.3f);
                 }
                 return;
             }
@@ -250,11 +315,21 @@ namespace ZombieCityCleaner.Sobreviventes
             transform.rotation = Quaternion.RotateTowards(transform.rotation, giro, 120f * Time.deltaTime);
         }
 
-        // dentro da casa: corre para o esconderijo e fica
+        // dentro da casa: corre para o esconderijo (o dele, num cômodo) e fica. Quem entra perto (10 m, à vista) leva tiro
         void Esconder(float agora)
         {
             _temProtecao = false;
-            if (_mirando.Value) _mirando.Value = false;
+            var inimigo = grupo != null && grupo.estado == EstadoDoGrupo.Combate ? grupo.inimigo : null;
+            if (inimigo != null && inimigo.AlvoValido && !_semMunicao)
+            {
+                Vector3 peito = inimigo.transform.position + Vector3.up * 1.3f;
+                if ((peito - Olho).sqrMagnitude < 10f * 10f && !Physics.Linecast(Olho, peito, MascaraDoCenario, QueryTriggerInteraction.Ignore))
+                {
+                    Parar();
+                    AtirarNo(inimigo, peito, agora);
+                    return;
+                }
+            }
             if (agora < _proximoCaminho || (transform.position - esconderijo).sqrMagnitude < 1.5f * 1.5f) return;
             _proximoCaminho = agora + 0.8f;
             Ir(esconderijo, 3.8f, 0.8f);
@@ -305,9 +380,15 @@ namespace ZombieCityCleaner.Sobreviventes
             var inimigo = grupo.inimigo;
             Vector3 alvo = inimigo.transform.position;
             Vector3 peito = alvo + Vector3.up * 1.3f;
-            bool vejo = (peito - Olho).sqrMagnitude < 90f * 90f && !Physics.Linecast(Olho, peito, MascaraDoCenario, QueryTriggerInteraction.Ignore);
+            bool vejo = (peito - Olho).sqrMagnitude < AlcanceDaVista * AlcanceDaVista && !Physics.Linecast(Olho, peito, MascaraDoCenario, QueryTriggerInteraction.Ignore);
             if (vejo) grupo.Ver(inimigo, alvo, null);
             Vector3 onde = vejo ? alvo : grupo.ondeViu;
+            if (ComBranca)
+            {
+                _temProtecao = false;
+                BrigarDePerto(inimigo, onde, vejo, agora);
+                return;
+            }
 
             // sem uma proteção (ou ela ficou ruim): procura outra; sem nenhuma, fica e atira de onde está
             if (!_temProtecao && agora >= _proximaProtecao)
@@ -426,6 +507,11 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void LutarComZumbi(float agora)
         {
+            if (ComBranca)
+            {
+                BrigarComZumbi(agora);
+                return;
+            }
             Vector3 alvo = _zumbi.transform.position + Vector3.up * 1.35f;
             float d = Vector3.Distance(transform.position, _zumbi.transform.position);
             // muito perto: recua um pouco enquanto atira
@@ -553,7 +639,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 Vector3 dir = Quaternion.LookRotation(direcao) * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
                 impactos[k] = Raio(origem, dir, d, danoNoJogador, noZumbi);
             }
-            foreach (var (j, dano) in danoNoJogador) j.Vida?.Dano(dano * DanoNoJogador, origem);
+            foreach (var (j, dano) in danoNoJogador) j.Vida?.Dano(dano * DanoNoJogador, origem, DaBase ? "Baleado por um militar." : "Baleado por um sobrevivente.");
             foreach (var (z, a) in noZumbi) ZombieManager.Acertar(z.Id, z.Geracao, a.h.regiao, a.h.membro, a.dano, a.p, false, this);
             TiroRpc((byte)Arma, impactos);
             ZombieManager.Barulho(origem, this);
@@ -628,7 +714,7 @@ namespace ZombieCityCleaner.Sobreviventes
             var caixa = Itens.CaixaDe(d.calibre);
             int tem = 0;
             foreach (var it in mochila) if (it.item == caixa) tem += it.qtd;
-            if (tem <= 0) return false;
+            if (tem <= 0 && reserva <= 0) return false;
             _recarregando = true;
             _recarregaAte = Time.time + Random.Range(1.8f, 2.6f);
             Falar(Frase.Recarregando);
@@ -652,6 +738,10 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (it.qtd == 0) mochila.RemoveAt(i);
                 else mochila[i] = it;
             }
+            // o resto, da reserva (os militares)
+            int daReserva = Mathf.Min(falta, reserva);
+            reserva -= daReserva;
+            pente += daReserva;
         }
 
         // ------------------------------------------------------------------ o dano e a morte
@@ -688,6 +778,7 @@ namespace ZombieCityCleaner.Sobreviventes
             grupo?.Morreu(this);
             if (DoAcampamento) AcampamentosDoMundo.Instancia?.AoMorrer(this);
             else if (NaEstrada) CarrosQuebradosDoMundo.Instancia?.AoMorrer(this);
+            else if (DaBase) BasesMilitaresDoMundo.Instancia?.AoMorrer(this);
             else SobreviventesDoMundo.Instancia?.AoMorrer(this);
         }
     }
