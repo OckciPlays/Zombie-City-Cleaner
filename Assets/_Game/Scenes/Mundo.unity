@@ -401,6 +401,7 @@ MonoBehaviour:
   - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
   - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
   - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
+  - {fileID: 4300000, guid: 1355c114c98e11d46b2583eebb080cd8, type: 2}
   malhasDaSinuca:
   - {fileID: 4300000, guid: 293272ab3de3e1e4eacc87570df5f724, type: 2}
   - {fileID: 4300000, guid: 98f8d89c81403e1439120223a137c74b, type: 2}
@@ -5619,30 +5620,6 @@ MonoBehaviour:
   raioDePerto: 8
   pecasPorQuadro: 12
   malhasPorQuadro: 2
---- !u!114 &2005601279
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2005601259}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 13577c4d2209442488b98862325bfa2e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.BunkerDoMundo
-  ShowTopMostFoldoutHeaderGroup: 1
-  material: {fileID: 2100000, guid: f974b0e92469f354ea110e2f089cac7e, type: 2}
-  painelDeArmas: {fileID: 3531473502758183091, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
-  fundadores: {fileID: 2100000, guid: 30d242a5ca7d57646bc2beb5715d1ce7, type: 2}
-  interruptor: {fileID: 6953860808112928011, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
-  alavanca: {fileID: -6448210279606459890, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
-  raio: 300
-  pertoDeFora: 45
-  barulhoDoPortao: 40
-  luzNaGaragem: 0.35
-  luzEmbaixo: 0.08
-  alcance: 5
 --- !u!114 &2005601273
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5699,6 +5676,8 @@ MonoBehaviour:
   ligado: 1
   distanciaParaSair: 75
   ouvidoDoTiro: 70
+  gruposNaCidadeGrande: 6
+  gruposJuntos: 2
 --- !u!114 &2005601277
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5734,6 +5713,30 @@ MonoBehaviour:
   distanciaDoAviso: 25
   pertoArmado: 6
   raioDoVisual: 160
+--- !u!114 &2005601279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005601259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13577c4d2209442488b98862325bfa2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.BunkerDoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  material: {fileID: 2100000, guid: f974b0e92469f354ea110e2f089cac7e, type: 2}
+  painelDeArmas: {fileID: 3531473502758183091, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
+  fundadores: {fileID: 2100000, guid: 30d242a5ca7d57646bc2beb5715d1ce7, type: 2}
+  interruptor: {fileID: 6953860808112928011, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
+  alavanca: {fileID: -6448210279606459890, guid: 8ffb424e45f27d943ad59e334603a0cb, type: 3}
+  raio: 300
+  pertoDeFora: 45
+  barulhoDoPortao: 40
+  luzNaGaragem: 0.35
+  luzEmbaixo: 0.08
+  alcance: 5
 --- !u!114 &2005601280
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -170,7 +170,10 @@ namespace ZombieCityCleaner.EditorTools
             r.chaveMetal = Lit("ChaveMetal", new Color(0.78f, 0.76f, 0.70f), 0.7f, null);
             r.chaveMetal.SetFloat("_Metallic", 0.85f);
             r.chavePlastico = Lit("ChavePlastico", new Color(0.07f, 0.07f, 0.075f), 0.35f, null);
-            r.chaveiro = Lit("Chaveiro", new Color(0.62f, 0.10f, 0.07f), 0.45f, null);
+            // o chaveiro da chave na ignição: o amarelo da chave da perua (o item, Blender/pecas.py); o vermelho ("Chaveiro")
+            // é o da chave do cupê, que a MontagemDoCupe põe no dele (04/11/2026)
+            r.chaveiro = Lit("ChaveiroDaPerua", new Color(0.78f, 0.62f, 0.16f), 0.45f, null);
+            Lit("Chaveiro", new Color(0.62f, 0.10f, 0.07f), 0.45f, null);
             r.miolo = Lit("IgnicaoMiolo", new Color(0.55f, 0.55f, 0.53f), 0.6f, null);
             r.miolo.SetFloat("_Metallic", 0.8f);
             r.anelApagado = Lit("IgnicaoAnel", new Color(0.12f, 0.12f, 0.12f), 0.4f, null);

@@ -110,6 +110,13 @@ gasolina caindo do galão. Para mudar, veja o `SomDoCarro.cs`.
 Todos ficam em **`AjustesDoDesgaste`**, no componente `Carro` de cada prefab (`Prefabs/Veiculos/Carro` e `Cupe`), no grupo
 "O desgaste e a gasolina". Dá para ajustar no Inspector, sem mexer no código.
 
+## O carro parado longe de todos (04/11/2026)
+
+O carro vazio, sem ninguém a 60 m, fica parado (sem a física) até alguém chegar a 50 m e o chão dele ter colisão de novo.
+Antes, o deixado no bunker caía pelo mundo quando todos saíam (o piso da garagem só existe com alguém a menos de 300 m). O
+carro que já tinha caído, inclusive nos saves antigos, volta sozinho para a vaga dele no bunker. A distância fica no
+componente `Carro` de cada prefab ("Parado longe de todos"); o código, em `Vehicles/Carro.Parado.cs`.
+
 ## O que ficou para depois
 
 - **O posto de gasolina:** encher o galão e o carro.

@@ -599,6 +599,18 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
   carregamento; a tela fica 0,8 s depois de nascer (o primeiro desenho); os mipmaps do mapa saíram do quadro. Depois: 1
   quadro acima de 50 ms em 45 s de jogo, e o carregamento do mesmo tamanho.
 
+## A chave do cupê (04/11/2026, a pedido)
+
+- O cupê ganhou a chave dele (a mesma da perua, com o chaveiro vermelho): fica no chão da sala do bunker, ao lado da da
+  perua, e aparece uma vez nos mundos salvos antes dela. Sem a chave, continua a ligação direta.
+
+## O carro que sumia do bunker (04/11/2026, a pedido)
+
+- **O bug:** o carro deixado no bunker caía pelo mundo quando todos se afastavam (o piso da garagem só existe com alguém a
+  menos de 300 m, e embaixo do bunker não há terreno). Os saves gravavam os carros caídos.
+- **O conserto:** o carro vazio longe de todos fica parado, sem a física, e volta a andar com alguém perto e o chão de
+  volta; o que já tinha caído (até nos saves antigos) volta para a vaga dele no bunker.
+
 ## O crash do Editor e o saque dos militares (03/11/2026, à noite, a pedido)
 
 - **O crash:** falta de memória no Editor (o mundo grande, depois de horas aberto); o computador fica no limite. Corrigidos os

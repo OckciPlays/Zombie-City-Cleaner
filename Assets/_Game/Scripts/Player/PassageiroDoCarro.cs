@@ -490,6 +490,9 @@ namespace ZombieCityCleaner.Player
             _mostradorSujo = true;
         }
 
+        /// <summary>"sem a chave do cupê" (o nome da chave deste veículo), para as dicas da ignição.</summary>
+        string SemAChave => Carro != null && Carro.chaveDoVeiculo != Loot.Item.Nada ? "sem " + Loot.Itens.NomeComArtigo(Carro.chaveDoVeiculo) : "sem a chave";
+
         /// <summary>O motorista (esta máquina) tem a chave deste veículo na mochila.</summary>
         bool TemAChave => Carro != null && _rede != null && _rede.Inventario != null
                           && PortaMalasDoCarro.Achar(_rede.Inventario, Carro.chaveDoVeiculo, out _);
@@ -844,14 +847,14 @@ namespace ZombieCityCleaner.Player
             if (mira)
             {
                 string texto = Carro.LigacaoDireta ? (ligado ? "[Clique] Separar os fios (desligar)" : TemAChave ? "[Clique] Pôr a chave" : "[Clique] Tentar a ligação direta de novo")
-                    : e == Carro.EstadoDoMotor.SemChave ? (TemAChave ? "[Clique] Pôr a chave" : "[Clique] Ligação direta (sem a chave)") : "[Clique] Pegar a chave";
+                    : e == Carro.EstadoDoMotor.SemChave ? (TemAChave ? "[Clique] Pôr a chave" : $"[Clique] Ligação direta ({SemAChave})") : "[Clique] Pegar a chave";
                 Sombra(new Rect(cx - 320 * u, cy + 14 * u, 640 * u, 26 * u), texto, meio, new Color(0.97f, 0.95f, 0.88f));
             }
             else if (!ligado)
             {
                 string texto = e == Carro.EstadoDoMotor.SemChave
                     ? (TemAChave ? "Olhe para a ignição, à direita do volante, e clique para pôr a chave"
-                                 : "Sem a chave: olhe para a ignição, à direita do volante, e clique para fazer a ligação direta")
+                                 : $"S{SemAChave.Substring(1)}: olhe para a ignição, à direita do volante, e clique para fazer a ligação direta")
                     : Carro.LigacaoDireta ? "Olhe para a ignição e clique para tentar a ligação direta de novo"
                     : "Olhe para a chave e clique nela para dar a partida";
                 Sombra(new Rect(cx - 360 * u, Screen.height - 62 * u, 720 * u, 24 * u), texto, dica, new Color(0.95f, 0.85f, 0.55f));

@@ -203,15 +203,20 @@ namespace ZombieCityCleaner.EditorTools
                 carro.torque = Torque;
                 carro.fimDasMarchas = FimDasMarchas;
                 carro.lugaresUsados = 2;
-                // o cupê não tem chave (só a ligação direta): a chave da perua não serve nele. (Pela propriedade
-                // serializada: o campo é novo no Carro e pode não existir numa versão sem a chave.)
+                // o cupê pega com a chave dele (04/11/2026, a pedido; antes, só a ligação direta): a chave da perua não serve
+                // nele. (Pela propriedade serializada: o campo é novo no Carro e pode não existir numa versão sem a chave.)
                 var so = new SerializedObject(carro);
                 var chave = so.FindProperty("chaveDoVeiculo");
                 if (chave != null)
                 {
-                    chave.intValue = 0;   // Item.Nada
+                    chave.intValue = (int)Loot.Item.ChaveDoCupe;
                     so.ApplyModifiedPropertiesWithoutUndo();
                 }
+                // o chaveiro da chave na ignição: o vermelho da chave do cupê (a cópia da perua vem com o amarelo da dela)
+                var vermelho = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Art/Veiculos/Materials/Chaveiro.mat");
+                if (carro.chave != null && vermelho != null)
+                    foreach (var r in carro.chave.GetComponentsInChildren<MeshRenderer>(true))
+                        if (r.name == "Chaveiro") r.sharedMaterial = vermelho;
                 T("Estepe").localPosition = new Vector3(0f, PisoDasMalas, -1.78f);
                 T("Macaco").localPosition = new Vector3(0f, PisoDasMalas, -2.15f);
 

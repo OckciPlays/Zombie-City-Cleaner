@@ -52,7 +52,9 @@ roda, pinos do capô, placa) estão na textura, projetados do modelo alto.
   atrito segura antes. Medido numa pista reta (pneus e vela bons): **113,6 km/h** no máximo, 100 km/h em 12 s, 110 em
   ~20 s (com 33 e 950 ficava em 93 km/h). Com o pneu furado do começo da partida ele puxa para um lado e não passa de
   uns 50 km/h. O som das marchas imaginárias vai até o `fimDasMarchas`.
-- **A chave:** o cupê não tem chave (`chaveDoVeiculo` = Nada) e só liga com a ligação direta, "roubando o carro". A chave
+- **A chave** (04/11/2026, a pedido): o cupê tem a chave dele, a "chave do cupê" (o item 70: a mesma chave da perua, com o
+  chaveiro vermelho e um emblema prateado). Ela fica no chão da sala do bunker, ao lado da chave da perua; nos mundos
+  salvos antes dela, aparece lá uma vez ao carregar. Sem ela, o cupê liga na ligação direta, "roubando o carro". A chave
   da perua não serve nele.
 - **Estado inicial:** igual ao da perua (vela queimada, bateria a 30%, radiador a 25%, um pneu furado, estepe e macaco no
   porta-malas). Dá para ajustar no Inspector do prefab.
@@ -121,6 +123,4 @@ roda, pinos do capô, placa) estão na textura, projetados do modelo alto.
 
 - A massa e o chassi são os da perua; o motor é mais forte e a máxima, maior (veja acima). Para mexer, mude as
   constantes da `MontagemDoCupe` e rode a montagem de novo (o Inspector do prefab é refeito por ela).
-- O cupê não tem uma chave própria. Uma "chave do cupê" seria um item novo em `Loot/Itens.cs`, arquivo que está sendo
-  mexido por outra sessão agora.
 - De muito perto, as bordas finas projetadas (as faixas cinza, os frisos) mostram os pixels, como na perua v2.

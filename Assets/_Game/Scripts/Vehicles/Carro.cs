@@ -406,6 +406,7 @@ namespace ZombieCityCleaner.Vehicles
                 _erguido.Value = false;
                 _ergueu = 0f;
                 DesgasteAoNascer();
+                PararAoNascer();   // (Carro.Parado.cs) até alguém chegar e o chão de lá ter colisão
             }
             _erguidoVisto = _erguido.Value;
             _erguidoMudouEm = -99f;
@@ -421,6 +422,7 @@ namespace ZombieCityCleaner.Vehicles
         // o novo dono (o motorista que sentou, ou o anfitrião quando ele sai) parte do que a rede tem
         public override void OnGainedOwnership()
         {
+            _temApoio = false;   // (Carro.Parado.cs) o apoio de antes de outro dirigir não vale
             _estadoLocal = (EstadoDoMotor)_motorRede.Value;
             _anguloDaChave = AnguloDe(_estadoLocal);
             _presaNaPartida = false;
@@ -815,6 +817,8 @@ namespace ZombieCityCleaner.Vehicles
 
         void FixedUpdate()
         {
+            // vazio e longe de todos, ou sem chão embaixo: parado, sem a física (Carro.Parado.cs)
+            if (CuidarDoParado()) return;
             if (IsSpawned && IsServer && IsOwner && MacacoNaRoda >= 0 && rodas != null && rodas.Length >= 4)
             {
                 NoMacaco(Time.fixedDeltaTime);
@@ -1040,8 +1044,11 @@ namespace ZombieCityCleaner.Vehicles
             if (!PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
             if (!PortaMalasDoCarro.Achar(inventario, Loot.Item.Macaco, out var macaco)) return;
             inventario.Tirar(macaco.id);
-            _corpo.linearVelocity = Vector3.zero;
-            _corpo.angularVelocity = Vector3.zero;
+            if (!_corpo.isKinematic)   // o carro parado (Carro.Parado.cs) já está sem a física
+            {
+                _corpo.linearVelocity = Vector3.zero;
+                _corpo.angularVelocity = Vector3.zero;
+            }
             _poseBase = _corpo.position;
             _giroBase = _corpo.rotation;
             _ergueu = 0f;

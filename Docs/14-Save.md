@@ -61,6 +61,8 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
     desligado, escolhido ao criar o mundo), as bases militares (quem morreu, a geração dos militares e o dia do reforço) e
     as marcas e as anotações do mapa (os pings não ficam). Um save de antes abre com tudo isso vazio (e o fogo amigo
     desligado).
+  - desde a chave do cupê (04/11/2026): se ela já foi posta no mundo. Num save de antes dela, a chave aparece uma vez no
+    chão da sala do bunker, ao carregar.
 
 ## O dinheiro
 
@@ -99,7 +101,7 @@ save anterior.
 No Editor, com um jogador, sem erros:
 - **Um mundo novo:** um personagem novo, dinheiro, uma mochila média com 4 itens, um machado no chão, o dia 3 às 15h30, a
   perua com 1 L e o jogador 2 m ao lado do nascimento. Ao salvar, sair e entrar pelo save, tudo voltou igual: a posição
-  exata, uma chave da perua só e nenhuma lanterna nova no chão.
+  exata, uma chave da perua só e nenhuma lanterna nova no chão. (Desde 04/11/2026, uma de cada: a da perua e a do cupê.)
 - **O Dia 0:** com um personagem novo, o jogo não salva no Dia 0. Na porta, os $ 1.000 vão para o personagem, e o mundo e o
   personagem aparecem nas listas.
 

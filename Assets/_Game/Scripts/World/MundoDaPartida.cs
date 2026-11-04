@@ -309,6 +309,48 @@ namespace ZombieCityCleaner.World
             var chave = Vector3.Lerp(Dados.Nascimentos[0], Dados.Nascimentos[1], 0.5f) + Vector3.down * 0.05f;
             Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.ChaveDaPerua, chave, Dados.GiroDaPartida + 35f);
             CriarSegundoCarro(novo);
+            if (PorAChaveDoCupe() && Salvar.Salvamento.Atual != null) Salvar.Salvamento.Atual.chaveDoCupe = true;
+        }
+
+        /// <summary>
+        /// No anfitrião: a chave do cupê (04/11/2026, a pedido) no chão da sala, ao lado da da perua (30 cm para o lado do
+        /// segundo nascimento). No mundo novo, junto com os carros; num save de antes dela, uma vez ao carregar
+        /// (<see cref="Salvar.MundoSalvo.chaveDoCupe"/>). Sem o cupê, nada. Devolve se ela foi posta (a marca no save só
+        /// com ela no chão: se algo falhar, o próximo carregamento tenta de novo).
+        /// </summary>
+        public bool PorAChaveDoCupe()
+        {
+            var itens = Loot.ItensNoMundo.Instancia;
+            if (segundoCarro == null || Dados == null || itens == null || Dados.Nascimentos.Length < 2) return false;
+            var meio = Vector3.Lerp(Dados.Nascimentos[0], Dados.Nascimentos[1], 0.5f);
+            var lado = Dados.Nascimentos[1] - Dados.Nascimentos[0];
+            lado.y = 0f;
+            var ponto = meio + (lado.sqrMagnitude > 0.01f ? lado.normalized * 0.3f : Vector3.zero) + Vector3.down * 0.05f;
+            itens.Criar(Loot.Item.ChaveDoCupe, ponto, Dados.GiroDaPartida + 10f);
+            return true;
+        }
+
+        /// <summary>
+        /// No anfitrião: a vaga de um carro (a dele no bunker da família; sem o bunker, ao lado da laje da partida), para onde
+        /// volta o carro que caiu do mundo (Carro.Parado.cs).
+        /// </summary>
+        public bool VagaDoCarro(Vehicles.Carro c, out Vector3 ponto, out Quaternion giro)
+        {
+            ponto = Vector3.zero;
+            giro = Quaternion.identity;
+            if (Dados == null || c == null) return false;
+            bool segundo = segundoCarro != null && c.name.StartsWith(segundoCarro.name);
+            var vaga = segundo ? Dados.LugarDoSegundoCarro : Dados.LugarDoCarro;
+            if (vaga.HasValue)
+            {
+                ponto = vaga.Value + Vector3.up * 0.45f;
+                giro = Quaternion.Euler(0f, Dados.GiroDoCarro, 0f);
+                return true;
+            }
+            giro = Quaternion.Euler(0f, Dados.GiroDaPartida, 0f);
+            ponto = Dados.Partida + giro * new Vector3((DadosDoMundo.LadoDaPartida * 0.5f + 3.2f) * (segundo ? -1f : 1f), 0f, 0f);
+            ponto.y = Dados.Altura(ponto.x, ponto.z) + 0.4f;
+            return true;
         }
 
         // o segundo carro (o cupê) ao lado da laje da partida, virado para o mesmo lado dela: o primeiro lugar (dos dois

@@ -28,6 +28,11 @@ namespace ZombieCityCleaner.Salvar
         public int modo;
         /// <summary>O fogo amigo, escolhido ao criar o mundo (03/11/2026).</summary>
         public bool fogoAmigo;
+        /// <summary>
+        /// A chave do cupê já foi posta no mundo (04/11/2026; marcada quando ela aparece: no mundo novo, com os carros, ou ao
+        /// carregar). Falso num save de antes dela: ao carregar, ela aparece uma vez no chão da sala do bunker.
+        /// </summary>
+        public bool chaveDoCupe;
         public string criadoEm, salvoEm;
         public int dia = 1;
         public float hora = 8f;

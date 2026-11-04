@@ -150,6 +150,22 @@ namespace ZombieCityCleaner.World
         public bool Aberta(int porta) => (Portas & (1 << porta)) != 0;
         public bool Acesa(int andar) => (Luzes & (1 << andar)) != 0;
 
+        /// <summary>A casca (as lajes com a da garagem, o morro, o pátio e a cerca) está montada, com a colisão.</summary>
+        public bool CascaPronta => _casca != null && _cascaPronta;
+
+        /// <summary>
+        /// O ponto (mundo) fica na área do bunker (a menos de <see cref="PlanejadorDoMapa.RaioDoBunker"/> + 5 m do meio da caixa,
+        /// no plano): o chão de lá é da casca (o carro parado só solta com ela pronta: Carro.Parado.cs).
+        /// </summary>
+        public static bool NaArea(Vector3 p)
+        {
+            var b = Instancia;
+            if (b == null || b._raiz == null) return false;
+            var c = b._raiz.position;
+            float dx = p.x - c.x, dz = p.z - c.z, r = PlanejadorDoMapa.RaioDoBunker + 5f;
+            return dx * dx + dz * dz < r * r;
+        }
+
         /// <summary>
         /// O ponto (mundo) fica na caixa do bunker, na casinha ou embaixo do morro: o chão do terreno passa por cima dele, e
         /// quem está ali não volta para a superfície (<see cref="MundoDaPartida"/>).

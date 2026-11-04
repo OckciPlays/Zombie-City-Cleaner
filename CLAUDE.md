@@ -1502,7 +1502,7 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   - O capô é uma peça à parte (`Carro_Capo`, a origem na dobradiça, atrás, perto do para-brisa; abre girando em X). Entre os para-lamas, a carroceria tem o cofre do motor aberto por cima (só o fundo e a parede de trás). O que fica dentro é o `Cofre.fbx` (`Blender/cofre.py`), o mesmo em todos os carros: `Cofre_Motor` (a origem no meio do fundo: o bloco, o cabeçote, a tampa de válvulas com os 4 poços das velas, o 2º aberto para a vela que se troca e os outros com o cachimbo e o cabo, o distribuidor, o filtro de ar, o escape, a bandeja da bateria com os cabos e o reservatório) e `Cofre_Frente` (a origem na parede da frente: o suporte do radiador e as mangueiras). As peças que se trocam são as malhas do `pecas.py`, postas pela montagem nos lugares do `LUGARES` do cofre.py (a vela no poço, a bateria na bandeja, o radiador de pé). O cofre.py espelha o X (a importação da Unity espelha de volta), como o carro.py.
 - **O visual novo (a pedido, 28/10/2026; relatório em `Docs/PeruaNova/README.md`):** a mesma perua, com mais detalhe e materiais PBR (mostarda desbotado, painéis de madeira com moldura bege, cromados, 4 faróis quadrados com refletor atrás da lente, interior de vinil azul-turquesa), feita pelo `Blender/PeruaNova/perua_nova.py` (lê as medidas do `carro.py`, que não mudou; o editável é o `PeruaNova.blend`) em `Art/Veiculos/PeruaNova/` (o FBX, 2 atlas de 2048 assados e 5 materiais URP Lit). O `Editor/PeruaNova/VisualDaPerua` (menu Zombie City Cleaner > Veículos > Aplicar o visual novo da perua / Voltar ao visual antigo da perua) troca só a malha e os materiais das 12 peças visuais do prefab e os índices das lentes (`submeshFarol` 3, `submeshLanterna` 4), e não salva se qualquer outro campo do prefab mudar. **A "Montar veículos" volta o prefab ao `Carro.fbx` antigo: depois dela, rode "Aplicar o visual novo da perua".** O backup de antes fica em `Backups/Perua_antes_do_visual_novo_2026-10-28/`.
   - **A versão 2, leve (29/10/2026; é a que está no prefab):** ~9.700 triângulos em vez de ~31.700 (os detalhes miúdos da v1 foram projetados nas texturas: a v1 é o modelo "alto" do bake), pneu de 18 lados chapado como o antigo, e polimentos (o veio da madeira da tampa, o forro). `Blender/PeruaNova2/` (`perua_nova2.py` e `rodar.py`, que rodam num Blender em segundo plano; bake na CPU) → `Art/Veiculos/PeruaNova2/`; menu Zombie City Cleaner > Veículos > Aplicar o visual novo da perua (v2, leve) / Voltar para a v1 da perua (`Editor/PeruaNova/VisualDaPerua2`). Backup do prefab com a v1 em `Backups/Perua_v1_antes_da_v2_2026-10-29/`. Detalhes no fim de `Docs/PeruaNova/README.md`.
-- **O cupê, o segundo carro que se dirige (a pedido, 29/10/2026; relatório em `Docs/Cupe/README.md`):** um cupê fastback dos anos 70, preto com as faixas cinza, 2 portas, ~8.200 triângulos (o mesmo caminho da perua v2: `Blender/Cupe/cupe.py` e `rodar.py` → `Art/Veiculos/Cupe/`). O `Prefabs/Veiculos/Cupe.prefab` é uma cópia do da perua feita pela `Editor/Cupe/MontagemDoCupe` (menu Zombie City Cleaner > Veículos > Montar o cupê; rode de novo depois de um "Montar veículos"): a mesma mecânica, o mesmo chassi (as rodas e os WheelColliders), o lugar do motorista 8 cm mais baixo, a colisão, os gatilhos, os lugares, o cofre e o porta-malas do cupê. **É o carro rápido** (a pedido em 29/10/2026: "precisa chegar a 110 km"): `MontagemDoCupe.VelocidadeMaxima` 42 m/s, `Torque` 1.000 N·m e `FimDasMarchas` 32 (a perua: 22, 700 e 23). A força cai a zero na `velocidadeMaxima` e o atrito segura antes: medido numa pista reta com os pneus bons, 113,6 km/h, 100 km/h em 12 s (com 33 e 950 ficava em 93). **Só 2 lugares, os da frente** (a pedido em 29/10/2026: "esse carro preto só vai ter apenas dois lugares", depois de a mira na porta comprida ir ora para o volante, ora para o banco de trás): `Carro.lugaresUsados` = 2 (o anfitrião recusa os outros); a mira na porta é um gatilho só, de ponta a ponta, que leva ao banco da frente; os gatilhos dos bancos de trás ficam desligados e os bancos, só desenhados. **As janelas de lado inclinam para dentro** (`TOMBO`, 8 cm por metro acima da cintura, no `cupe.py`; a janela da porta sobe até `Y_TOPO_JANELA`): em pé, o friso da porta ficava 5 cm para fora da beirada do teto e parecia a porta entreaberta. Sem chave (`chaveDoVeiculo` = Nada): só a ligação direta. No mundo, o `MundoDaPartida.segundoCarro` (opcional): o anfitrião o cria ao lado da laje da partida, longe da perua e sem nada no caminho; na Demo_Cidade, atrás da perua.
+- **O cupê, o segundo carro que se dirige (a pedido, 29/10/2026; relatório em `Docs/Cupe/README.md`):** um cupê fastback dos anos 70, preto com as faixas cinza, 2 portas, ~8.200 triângulos (o mesmo caminho da perua v2: `Blender/Cupe/cupe.py` e `rodar.py` → `Art/Veiculos/Cupe/`). O `Prefabs/Veiculos/Cupe.prefab` é uma cópia do da perua feita pela `Editor/Cupe/MontagemDoCupe` (menu Zombie City Cleaner > Veículos > Montar o cupê; rode de novo depois de um "Montar veículos"): a mesma mecânica, o mesmo chassi (as rodas e os WheelColliders), o lugar do motorista 8 cm mais baixo, a colisão, os gatilhos, os lugares, o cofre e o porta-malas do cupê. **É o carro rápido** (a pedido em 29/10/2026: "precisa chegar a 110 km"): `MontagemDoCupe.VelocidadeMaxima` 42 m/s, `Torque` 1.000 N·m e `FimDasMarchas` 32 (a perua: 22, 700 e 23). A força cai a zero na `velocidadeMaxima` e o atrito segura antes: medido numa pista reta com os pneus bons, 113,6 km/h, 100 km/h em 12 s (com 33 e 950 ficava em 93). **Só 2 lugares, os da frente** (a pedido em 29/10/2026: "esse carro preto só vai ter apenas dois lugares", depois de a mira na porta comprida ir ora para o volante, ora para o banco de trás): `Carro.lugaresUsados` = 2 (o anfitrião recusa os outros); a mira na porta é um gatilho só, de ponta a ponta, que leva ao banco da frente; os gatilhos dos bancos de trás ficam desligados e os bancos, só desenhados. **As janelas de lado inclinam para dentro** (`TOMBO`, 8 cm por metro acima da cintura, no `cupe.py`; a janela da porta sobe até `Y_TOPO_JANELA`): em pé, o friso da porta ficava 5 cm para fora da beirada do teto e parecia a porta entreaberta. Pega com a chave dele (`chaveDoVeiculo` = `Item.ChaveDoCupe`, 70, desde 04/11/2026; veja "A chave do cupê"); sem ela, a ligação direta. No mundo, o `MundoDaPartida.segundoCarro` (opcional): o anfitrião o cria ao lado da laje da partida, longe da perua e sem nada no caminho; na Demo_Cidade, atrás da perua.
 - **O prefab** (`Editor/MontagemDosVeiculos`, menu Montar veículos; as medidas lá têm de bater com o `carro.py`): Rigidbody de 1.150 kg (centro de massa baixo), `NetworkObject` (`DontDestroyWithOwner`), `NetworkTransform` (autoridade do dono, quatérnio), `NetworkRigidbody`, `Vehicles/Carro`, um `NavMeshObstacle` (corta o NavMesh parado) e um `NavMeshModifier` (fora do NavMesh assado).
   - 4 `WheelCollider` (suspensão de 18 cm) e os modelos das rodas, que seguem as rodas da física no dono (e um raio até o chão nos outros).
   - A colisão são 3 caixas: a parte de baixo, a cabine e o para-brisa inclinado (não uma caixa do tamanho do carro todo).
@@ -1519,7 +1519,7 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   - **A chave e o motor** (`EstadoDoMotor`: sem a chave, desligado, ignição, arranque e ligado; `_motorRede`, um byte escrito pelo dono; no dono, `_estadoLocal` e o ângulo da chave): as posições são 0 (desligada), `ChaveLiga` 60° (a ignição: o painel acende) e `ChavePartida` 92° (a partida). Abaixo de `ChaveDesliga` (30°), o motor desliga; com ele ligado, a chave não passa da ignição.
     - Da ignição para a partida a chave pesa (`pesoDaPartida`, 0,3 do giro do mouse) e a mola a puxa de volta (`molaDaPartida`, 25°/s). Chegando na partida, ela fica presa (`_presaNaPartida`): o estado é "arranque" (o motor de arranque gira) até o mini-game do motorista dar certo (`PegarAgora`: liga, e a chave volta para a ignição) ou ele desistir (puxar 10° para a esquerda, ou `SoltarChave`). `Tossir` toca o motor quase pegando (só nesta máquina). Solta, a chave cai na posição mais perto (desligada ou a ignição).
     - **A ligação direta** (a pedido em 29/10/2026: sem a chave, "esse mini-game como se fosse um ligar direto, pra roubar o carro"; `_direta`, um bool escrito pelo dono; `LigacaoDireta`): `FazerLigacaoDireta` (de "sem a chave", ou de novo com os fios juntos) põe o ângulo na partida, presa, e o estado em arranque: é o mini-game que decide. `DesfazerLigacaoDireta` separa os fios (sem a chave, o motor apaga). Na direta não existe "desligado com a chave": puxada até abaixo de `ChaveDesliga`, ou sem motorista, os fios se soltam. A chave na ignição não aparece e o `ChaveEntra` não toca.
-    - **A chave do veículo** (`chaveDoVeiculo`, um `Loot.Item`; a perua usa `Item.ChaveDaPerua`): cada veículo novo aponta a sua. Com ela na mochila do motorista, o clique põe a chave; sem ela, faz a ligação direta.
+    - **A chave do veículo** (`chaveDoVeiculo`, um `Loot.Item`; a perua usa `Item.ChaveDaPerua`, o cupê `Item.ChaveDoCupe`): cada veículo novo aponta a sua. Com ela na mochila do motorista, o clique põe a chave; sem ela, faz a ligação direta.
     - Sem motorista, o dono (o anfitrião, de volta) tira a chave e o motor desliga (`Ignicao`). Quem chega na partida com o motor ligado não ouve a partida.
     - Os sons vêm das mudanças de estado, em cada máquina (`Chave`): a chave entrando e estalando de uma posição para outra (até 6 m), o solenoide, o arranque em laço (o AudioSource "Arranque"), o pinhão soltando e o motor pegando (`SomDoCarro.Pegar`; o laço entra `LacoEntra` = 0,69 s depois). Desligado, o laço do motor morre (o tom cai e some).
   - **Dirigir** (só no dono, em `FixedUpdate`): tração na frente (700 N·m por roda, caindo até a velocidade máxima de 22 m/s, ~80 km/h), ré até 7 m/s, freio 2.400, freio de mão 4.500 nas de trás (com o carro andando, a traseira escorrega), as rodas virando 32° parado e 12° na máxima, a barra estabilizadora e um pouco de pressão para baixo. Sem motorista, fica freado. Os números ficam no Inspector do carro.
@@ -2515,7 +2515,8 @@ cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo
   - `UI/MapaDoMundo.Marcas.cs`: o clique direito (o menu: ping, a anotação e as 5 cores), o clique sem arrastar num
     alfinete (editar ou apagar), o texto da anotação ao passar o mouse; com o menu aberto, o mapa não mexe e o M não fecha.
     O `MapaDoMundo` ganhou `Instancia`, `Textura`, `Dados` e `SetaDosJogadores`, e o nome do jogador ao lado da seta.
-- **O save:** `MundoSalvo.basesMilitares` (`BaseMilitarSalva`), `marcas` (`MarcaSalva`) e `fogoAmigo`, no `Salvamento`.
+- **O save:** `MundoSalvo.basesMilitares` (`BaseMilitarSalva`), `marcas` (`MarcaSalva`) e `fogoAmigo`, no `Salvamento`
+  (e, desde 04/11/2026, `chaveDoCupe`: veja "A chave do cupê").
 - **O F1** (a aba "Gente"): "BASE MILITAR" ("Ir à base", "Recomeçar a base") e "A MORTE" ("Morrer agora", "Fogo amigo").
 - **Conferido** (03/11/2026, um jogador, no Editor, semente 7, média; 0 erros em todos): os 7 comerciantes mortos sem
   travar; os esconderijos; o Dia 0 sem as armas e com o pulo bloqueado; os 6 grupos (as armas e o saque); a luta de perto
@@ -2583,6 +2584,68 @@ cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo
   de 30% a 60% de um pente; a barra, o feijão 30%, a água 60%, o remédio 30%, o colete 8%, o capacete 6%, as pilhas 15%. No
   `LargarAMochila`, a arma do militar cai com o desgaste de 50 a 85 (a partir de `Itens.DesgasteQueEmperra`, 70, engasga).
   Conferido: 6 mortos, 6 armas (5 que engasgam), 119 balas nos pentes e 55 em caixas.
+
+## O carro que sumia do bunker (04/11/2026, a pedido)
+
+O Pedro: saindo com um carro e deixando o outro no bunker, ao voltar o que ficou tinha "sumido". Não era despawn:
+- **A causa:** o chão das vagas é a laje do B0 da **casca** do bunker (`Bunker.cs`, `colide: true`; o piso dos cômodos do
+  andar não tem colisão). O `BunkerDoMundo` monta a casca só com algum jogador a menos de `raio` = 300 m e a destrói uns 3 s
+  depois de todos saírem. Embaixo da caixa o terreno é um buraco (`GeradorDoMundo.AbrirOBunker`). O carro vazio é do
+  anfitrião, com a física, e caía para sempre (no teste, 330 m em 12 s; nos saves do Pedro, os dois carros a −77 km e a
+  −210 km, a 3,8 m um do outro). O terreno guarda o chão em volta dos carros (`raioDosCarros`), mas o bunker não; o save
+  gravava a posição caída. O "nasce parado" do `Salvamento.CriarCarro` não segurava nada: o `NetworkRigidbody`
+  (`AutoUpdateKinematicState`) solta o corpo no `Spawn`.
+- **O conserto, `Vehicles/Carro.Parado.cs`** (no anfitrião dono, no começo do `FixedUpdate`, `CuidarDoParado`):
+  - vazio e sem jogador a `distanciaParaParar` = 60 m: **parado** (cinemático, a física pula); solta com alguém a 50 m e o
+    chão embaixo (`TemChaoEmbaixo`: as rodas no chão ou raios das rodas e do meio para baixo, só a camada 0, sem o próprio
+    carro) e, na área do bunker (`BunkerDoMundo.NaArea`, `RaioDoBunker` + 5 m), com a casca pronta (`CascaPronta`: no
+    morro, o raio podia achar o terreno embaixo dele antes da casca);
+  - nasce parado (`PararAoNascer` no `OnNetworkSpawn`), o do mundo novo e o do save;
+  - solto e quieto (`_temApoio`), se o chão some embaixo dele: volta ao último apoio e fica parado até o chão voltar (o
+    apoio zera com alguém sentado e no `OnGainedOwnership`: senão, o carro sem chão logo depois de o motorista sair voltava
+    para onde estava parado antes);
+  - mais de `FundoDoMundo` = 60 m abaixo do terreno: volta à vaga (`MundoDaPartida.VagaDoCarro`, a dele no bunker; ao lado,
+    se a vaga estiver ocupada) pelo `NetworkTransform.Teleport` (os clientes não o veem atravessar quilômetros). Assim os
+    saves que já têm os carros caídos se consertam ao carregar;
+  - o macaco manda no corpo (o parado não vale com `MacacoNaRoda >= 0`); quem senta solta; com o motorista num cliente (o
+    anfitrião sem a posse) o parado se desfaz, para o carro não frear de uma vez quando ele sai andando; a posse voltando ao
+    anfitrião com o carro parado (o `NetworkRigidbody` solta o corpo) é presa de novo.
+- **Junto:** o `TerrenoDoMundo` não pede mais o chão em volta do carro parado; o `Salvamento.CriarCarro` só cria (o carro
+  cuida do resto); o "Trazer o carro" do F1 e o `ApoiarMacacoRpc` não mexem na velocidade de um corpo cinemático.
+- **Como foi achado:** um workflow só de leitura (3 ângulos e um cético para cada) confirmou a causa e conferiu que nada
+  faz despawn de carro; os saves do Pedro tinham os dois carros caídos (o mais antigo, 165 m abaixo logo depois de carregar,
+  sem o chão montado: o segundo caminho, coberto pelo `PararAoNascer`).
+- **Conferido no Play** (semente 7, médio): a 150 m e a 400 m os dois ficam parados no lugar (a casca já desmontada); o cupê
+  jogado 1400 m para baixo volta à vaga; de volta, os dois soltos e apoiados; a casca desligada com o jogador a 35 m, os dois
+  param e voltam com ela; a perua dirige (10 m em 2,5 s); um save com os carros a −210 km volta com eles nas vagas. 0 erros.
+
+### A chave do cupê (04/11/2026, a pedido)
+
+Antes, o cupê só ligava na ligação direta (`chaveDoVeiculo` = `Nada`). Agora tem a chave dele, como a perua:
+- **O item:** `Item.ChaveDoCupe` = 70, logo depois da `ChaveDaPerua` (69): a faixa das peças continua seguida (`EhPeca`,
+  `Vela..ChaveDoCupe`; o índice 6 do `_pecas`) e nenhum número de save muda. `EhChave` vale para as duas; `ComEstado`, para
+  nenhuma. O texto do inventário diz "dar a partida no cupê".
+- **O modelo:** `Blender/pecas.py` (`ChaveDoCupe`: a mesma chave, `_chave("polo_mais", True)`, o chaveiro vermelho e um
+  emblema prateado na cabeça), rodado sem janela (o `pecas._cena` trocado pela cena do contexto: em `--background` não há
+  `bpy.context.window`): o `Pecas.fbx`, o `Icone_`/`Foto_ChaveDoCupe.png`. Depois, na Unity, "Veículos > Montar as peças
+  do carro (e a chave)" com o Mundo aberto (a `Peca_ChaveDoCupe`, os ícones no `Jogador.prefab`, a malha no Mundo).
+- **O cupê:** `chaveDoVeiculo` 70 no `Cupe.prefab` e na `MontagemDoCupe` (refazer o cupê não tira a chave). A chave da
+  perua não serve nele, nem a dele na perua (`PassageiroDoCarro.TemAChave` olha o `Carro.chaveDoVeiculo`).
+- **Onde ela aparece:** `MundoDaPartida.PorAChaveDoCupe` (devolve se pôs), no chão da sala do bunker, 30 cm da da perua
+  (para o lado do segundo nascimento), no `CriarCarro` (mundo novo). Num save de antes dela (`MundoSalvo.chaveDoCupe`
+  falso), aparece uma vez ao carregar. A marca vai para o `Salvamento.Atual` só quando a chave foi posta de fato (se algo
+  falhar, o próximo carregamento tenta de novo); o `Salvar` grava o que estiver lá.
+- **A chave na ignição:** o chaveiro amarelo na perua (`Materials/ChaveiroDaPerua.mat`, da `MontagemDosVeiculos`) e o
+  vermelho no cupê (`Chaveiro.mat`, que a `MontagemDoCupe` põe no dele), como os itens.
+- **A dica do volante** diz qual chave falta (`PassageiroDoCarro.SemAChave`: "Ligação direta (sem a chave do cupê)").
+- **Refazer a chave:** `pecas.sem_janela("ChaveDoCupe")` num `blender --background --factory-startup` (o comando está no
+  cabeçalho do `pecas.py`; sem janela, o `_cena` usa a cena do contexto).
+- **As outras cenas** (Demo_Cidade, Sinuca, MapaFixo, Video; fora do build) não receberam a malha nova no "Itens no
+  mundo": a chave do cupê largada lá fica invisível. Para usar uma delas, abra e rode "Montar as peças do carro (e a
+  chave)". A tabela `ItensDoSaque` (gerada) também não tem a linha da chave (o saque não tem chaves).
+- **Conferido no Play:** cada carro com a sua chave; as duas no chão a 30 cm; o ícone, a foto e a malha; a da perua não
+  liga o cupê; com a dele, a chave entra, gira até a partida e o motor pega sem a ligação direta; um save antigo recebe a
+  chave uma vez e, salvo, passa a marcar `chaveDoCupe`. 0 erros.
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 

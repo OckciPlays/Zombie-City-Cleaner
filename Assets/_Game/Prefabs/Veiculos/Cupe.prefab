@@ -5316,7 +5316,7 @@ MonoBehaviour:
   antiCapotar: 7000
   relacaoDoVolante: 7
   giroMaximoDoVolanteVisto: 320
-  chaveDoVeiculo: 0
+  chaveDoVeiculo: 70
 --- !u!208 &8563254024263152018
 NavMeshObstacle:
   m_ObjectHideFlags: 0

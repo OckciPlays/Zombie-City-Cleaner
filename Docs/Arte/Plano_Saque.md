@@ -68,7 +68,7 @@ Os lugares são desenhados no Blender, junto do móvel (como as portas e as gave
 | **A sinuca** | o porão com a mesa: a caixa de bolas e os tacos em cima dela ou numa estante (sem a caixa, as mesas do mapa não se jogam) |
 | **O acampamento** | o saque de quem se escondeu ali: a comida, a bebida, os remédios, a faca, a lanterna, as pilhas, as caixas de munição e a mochila pequena |
 
-**Não aparecem nas casas:** os kits de montar (a fogueira, a cama e a barricada), o bastão, a lança e a tocha (da fabricação), a "roupa" de desfiar (as 73 de verdade estão no lugar dela; veja a decisão 7), o copo de água (vem da água da chuva, depois), a caixa de bolas vazia, o coldre (saiu do jogo), as peças do carro (vêm dos capôs) e a chave da perua (do Dia 0).
+**Não aparecem nas casas:** os kits de montar (a fogueira, a cama e a barricada), o bastão, a lança e a tocha (da fabricação), a "roupa" de desfiar (as 73 de verdade estão no lugar dela; veja a decisão 7), o copo de água (vem da água da chuva, depois), a caixa de bolas vazia, o coldre (saiu do jogo), as peças do carro (vêm dos capôs) e as chaves da perua e do cupê (ficam no bunker).
 
 ### 3. As raridades
 

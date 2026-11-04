@@ -316,10 +316,11 @@ namespace ZombieCityCleaner.World
                 // no anfitrião, o chão com colisão em volta de todos os jogadores e dos carros (a física dos parados roda aqui)
                 foreach (var j in JogadorRede.Todos)
                     if (j != null && j != local) Querer(j.transform.position, raioDeColisao, true, agora);
-                // o carro andando pede o chão de 1,5 s à frente (a 160 km/h, uns 70 m)
+                // o carro andando pede o chão de 1,5 s à frente (a 160 km/h, uns 70 m); o parado (vazio e longe de todos:
+                // Carro.Parado.cs) não precisa do chão
                 foreach (var c in Carro.Todos)
                 {
-                    if (c == null) continue;
+                    if (c == null || c.Parado) continue;
                     var corpo = c.GetComponent<Rigidbody>();
                     var v = corpo != null && !corpo.isKinematic ? corpo.linearVelocity : Vector3.zero;
                     Querer(c.transform.position + v * 0.75f, raioDosCarros + v.magnitude * 0.75f, true, agora);

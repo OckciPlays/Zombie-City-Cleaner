@@ -213,8 +213,11 @@ namespace ZombieCityCleaner.UI
             var ponto = transform.position + frente.normalized * 4.5f;
             ponto.y = Mapa.Altura(ponto.x, ponto.z) + 0.5f;
             var corpo = escolhido.GetComponent<Rigidbody>();
-            corpo.linearVelocity = Vector3.zero;
-            corpo.angularVelocity = Vector3.zero;
+            if (!corpo.isKinematic)   // o carro parado longe de todos (Carro.Parado.cs) fica sem a física
+            {
+                corpo.linearVelocity = Vector3.zero;
+                corpo.angularVelocity = Vector3.zero;
+            }
             corpo.position = ponto;
             corpo.rotation = Quaternion.LookRotation(Vector3.Cross(frente, Vector3.up));
             escolhido.transform.SetPositionAndRotation(ponto, corpo.rotation);

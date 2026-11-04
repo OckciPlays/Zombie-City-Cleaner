@@ -468,36 +468,31 @@ namespace ZombieCityCleaner.Salvar
             }
             MochilasNoChao.Instancia?.Restaurar(mochilas);
 
-            foreach (var c in m.carros) StartCoroutine(CriarCarro(c));
+            foreach (var c in m.carros) CriarCarro(c);
+            // um save de antes da chave do cupê: ela aparece uma vez no chão da sala do bunker (a marca vai no próximo salvar)
+            if (!m.chaveDoCupe && _mundo.PorAChaveDoCupe())
+            {
+                m.chaveDoCupe = true;
+                Debug.Log("[Save] Um save de antes da chave do cupê: a chave apareceu no chão da sala do bunker.");
+            }
             Debug.Log($"[Save] O mundo \"{m.nome}\" voltou: dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
                       $"{m.carros.Count} carros, {mexidos.Count} carros do mundo mexidos, {pegos.Count} itens do saque pegos, {portas.Count} portas e janelas mexidas, " +
                       $"{estantes.Count} itens nas estantes.");
         }
 
-        // um carro do save: nasce parado (sem a física) até o chão de lá ter colisão, para não cair por ele
-        IEnumerator CriarCarro(CarroSalvo c)
+        // um carro do save: nasce parado (sem a física) e fica assim até alguém chegar perto e o chão de lá ter colisão
+        // (Carro.Parado.cs; antes, o NetworkRigidbody soltava o corpo ao nascer, e o terreno pronto não queria dizer o piso
+        // do bunker pronto). O que caiu do mundo num save de antes volta para a vaga dele.
+        void CriarCarro(CarroSalvo c)
         {
             var prefab = c.qual == 1 ? _mundo.segundoCarro : _mundo.carro;
-            if (prefab == null) yield break;
+            if (prefab == null) return;
             var novo = Instantiate(prefab, c.pos + Vector3.up * 0.15f, c.giro);
             novo.name = c.qual == 1 ? prefab.name : "Carro";
             var corpo = novo.GetComponent<Rigidbody>();
             if (corpo != null) corpo.isKinematic = true;
             novo.GetComponent<NetworkObject>().Spawn(true);
             novo.GetComponent<Carro>()?.Restaurar(c);
-            var terreno = _mundo.terreno;
-            float ate = Time.unscaledTime + 30f;
-            if (terreno != null)
-            {
-                terreno.Pedir(novo, c.pos, 20f, true);
-                while (!terreno.Pronto(c.pos, 6f) && Time.unscaledTime < ate) yield return null;
-                terreno.Esquecer(novo);
-            }
-            if (corpo != null && novo != null)
-            {
-                corpo.isKinematic = false;
-                corpo.WakeUp();
-            }
         }
     }
 }
