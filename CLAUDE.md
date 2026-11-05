@@ -749,6 +749,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **Depois do pulo:** quem perseguia avança 0,6 m no pulo e volta a perseguir **pelo escuro, pelo lado**: o lugar dele no cerco gira 25° além do ponto do pulo, para longe do facho (só se a luz é de quem ele persegue); e continua no grupo do cerco enquanto pula (os lugares dos outros não mudam). Quem não perseguia recua 1 m e fica parado olhando para a luz (de 1,5 a 3 s); quem ia para o abrigo, vai de novo. Vagando, ninguém escolhe um ponto dentro de um facho.
   - **O farol:** só tira do caminho do carro: quem está a menos de 2,5 m do meio da frente, a mais de 3 m do carro, pula até 3,3 m para o lado (o carro em cima dele, a menos de 3 m, bate). Quem já está fora do caminho fica.
   - Os números ficam em `AjustesDeZumbi`, na seção "A luz".
+  - **O fogo** (a tocha e a fogueira, 05/11/2026): eles ficam longe e rodeiam a beira; veja "O carro ligado, o fogo e a chuva".
   - **Conferido (28/10/2026, Mundo, semente 7, de noite, na rua):** um zumbi vindo a 12 m de frente para a lanterna pulou para fora do facho (de 12° para 22° do meio dele) e veio pelo lado, fora da luz, atacando de lado (45°). A horda de 8 com o jogador parado mirando a lanterna num zumbi diferente a cada 1,5 s: 41 esquivas em 30 s; os da frente ficaram longe, os outros deram a volta e atacaram pelos lados e por trás (89°, 151°, 168°, 162°); dois chegaram pela frente quando estavam a menos de 1,6 m (de perto a luz não salva), e o jogador não saiu do lugar. O farol aceso de um carro parado com 4 zumbis na frente: os 3 no caminho pularam para o lado (até 3,2-3,7 m do meio), o que estava a 4 m ficou; um que voltou a vagar para dentro do caminho pulou de novo (depois disso o vagar passou a evitar os fachos).
 - **O povoamento do mundo gerado (a etapa 5, a pedido em 28/10/2026: "pode liberar todos os zumbis por hora", e "alguns spawnados já petrificados, para aumentar a imersão"; `Zombies/ZombieManager.Povoamento.cs`):** só no anfitrião e só com o mundo gerado (na Demo_Cidade valem as hordas da cena).
   - **As células:** o mapa é cortado em células de 40 m (`celulaDoPovoamento`). Quando o meio de uma chega a 52 m de um jogador (`alcanceDoPovoamento`; o NavMesh do mundo vai a 60 m) e o NavMesh já chegou ali, ela se povoa uma vez, até 2 células por segundo, as mais perto primeiro: na cidade (`CidadeEm`), de 1 a 4 zumbis acordados e, de dia, de 0 a 2 estátuas; fora da cidade, 15% de chance de um acordado e 6% de uma estátua; e, com 4 árvores vivas ou mais na célula (a mata, as praças: `FlorestaDoMundo.ArvoreEm`), de 1 a 3 debaixo das copas (`PovoarAMata`: do lado de uma árvore sorteada, a até 3/4 do raio da copa; de dia, só onde o sol não bate). **Ao mudar um desses números no código, reabra a cena Mundo antes de testar** (a cena aberta guarda os valores que tinha, e o teste usa esses; e não a salve com eles: a cena no git não guarda esses números, então vale o do código). As quantidades saem da semente do mundo e da célula, vezes a densidade: **×2 de dia e ×3 à noite** (o padrão, a pedido em 28/10/2026, depois de testar no F1; `DensidadeDeDia` e `DensidadeDeNoite`, `NetworkVariable`s; ao amanhecer vale a da noite). Ao escurecer, as células povoadas de dia (guardadas com a densidade com que foram povoadas) ganham a diferença, em outros lugares (outra sorte), como se mais zumbis saíssem à noite; ao clarear ninguém some: os que sobram se escondem ou viram pedra. Ninguém nasce a menos de 22 m de um jogador (`longeDoJogador`); cada um tem até 28 tentativas de lugar (eram 14, e muitos ficavam sem lugar). **Desde 29/10/2026, pela distância de visão de cada jogador** (`JogadorRede.Visao`, que o dono escreve; `Graficos.NascerAPartirDe`): a 22, 32, 42 ou 46 m dele (Curta a Máxima; mais longe, o NavMesh de ~60 m quase não dá lugar), o alcance da célula cresce junto (até 14 m além disso) e a célula quase toda dentro dessa distância (o meio a menos dela − 12 m) espera ele se afastar (povoada na hora, ficaria com poucos para sempre) (`PertoDemaisParaNascer`).
@@ -768,7 +769,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **Quem toca o quê** (`Zombies/Zumbi.Voz.cs`, em todas as máquinas): uma fala por vez na fonte "voz" do zumbi, e a mais forte corta a mais fraca (a agonia, a dor, o golpe, o chamado, a resposta, o gemido). O gemido à toa (`GemidosAoAcaso`) virou a voz do Oco, e em 22% das vezes um chamado; quem começa a perseguir chama (no lugar do gemido de antes); até 2 dos de perto (16 m) respondem de 0,6 a 1,5 s depois, e no anfitrião quem está parado vira para quem chamou (`OuvirChamado`; só som e olhar: ninguém sai atrás por isso). O golpe rosna (`MostrarGolpe`); a reação ao tiro dói (`MostrarReacao` → `SomDaReacao`; pulando da luz, um susto mais agudo); morrendo, o último grito sai solto no lugar. Na sombra que vira pedra (a pedra subindo), a agonia grita de tempos em tempos e a crosta estala numa segunda fonte (em laço, só a até 18 m de quem escuta, prioridade baixa); virando estátua, a pedra fecha (`Oco_Petrificou`); à noite, ao se soltar, a casca quebra (`Oco_Soltando`) e ele ruge. O gemido, o chamado e a agonia respeitam o limite de vozes novas por segundo (`PodeGemer`); o golpe e a dor, só a distância (`PodeOuvir`, 30 m).
   - **A agonia** (`Editor/MontagemDosZumbis.Agonia.cs`): três animações feitas por código nos músculos do esqueleto Humanoid (`AgoniaRosto`, 2,4 s: curvado, as mãos cobrindo o rosto, a cabeça balançando; `AgoniaPele`, 3 s: os braços cruzados, uma mão esfregando o outro braço, depois troca de lado, olhando para ele; `AgoniaEncolher`, 2 s: bem curvado, os ombros encolhidos, os braços apertados no peito, tremendo e se balançando), partindo da pose parada (o Idle no quadro 0), salvas em `Oco/Agonia/` e gravadas em cada Oco pela mesma montagem (`GravarClipes`). As poses foram achadas olhando fotos do Oco posado (os sinais dos músculos estão no comentário do arquivo). No Animator, o inteiro `Agonia` (1, 2, 3; 0 nenhuma) leva do vazio da camada "Ações" (só o tronco: as pernas continuam fugindo) a cada uma, e de volta. Cada zumbi tem a sua (`TipoDeAgonia`, pelo Id e a geração: um em cada quatro fica "como está hoje", só se debatendo com a reação ao tiro). Ela aparece enquanto a pedra sobe (`Agonizar`: no anfitrião e nas cópias, pela pedra que chega); virando estátua, o Animator para e a pose fica (a estátua guarda a agonia, como os moldes de Pompeia); a estátua que já nasce de pedra também ganha uma pose da agonia (`PosarAAgonia`).
   - **Conferido (28/10/2026, Mundo, semente 7):** 6 Ocos no sol na rua (os 4 tipos de agonia): cada um entrou na sua agonia fugindo, gritaram em turnos (os 4 gritos), a crosta estalou em todos, e em 10 s viraram estátuas com as mãos na cabeça, os braços cruzados ou encolhidos (fotos), caladas. À noite, sem a lanterna, uma horda de 4: 4 chamados e 2 respostas, 10 golpes rosnados, a dor no ferido. Antes, com a lanterna, os que pularam da luz deram o susto. Nenhum erro no Console. Os sons foram feitos sem ouvir (pelos números e pelos espectrogramas): o ouvido do Pedro decide o que ajustar no gerador.
-  - **Para depois (pedido, ainda não feito):** os túneis (o Gustavo está fazendo) como abrigo; a tocha (afastaria como a lanterna); a animação de soltar da pedra (hoje ele se debate com a reação ao tiro) e a de agarrar do rastejante; a esquiva também contra os tiros; à noite, mais dificuldade.
+  - **Para depois (pedido, ainda não feito):** os túneis (o Gustavo está fazendo) como abrigo; a tocha (feita em 05/11/2026: "O carro ligado, o fogo e a chuva"); a animação de soltar da pedra (hoje ele se debate com a reação ao tiro) e a de agarrar do rastejante; a esquiva também contra os tiros; à noite, mais dificuldade.
 - **Os zumbis leves (24/10/2026, a pedido: os modelos de ~3.100 vértices eram pesados para hordas grandes):** hoje a lista da montagem (`MontagemDosZumbis.Modelos`) tem só o `ZombieGaroto` (1,75 m, 2.195 triângulos, do Tripo, sem rosto, sangue nem sujeira). Ele voltou em 25/10/2026, depois dos em blocos (abaixo). Os 4 modelos de baixo e os em blocos continuam na pasta e voltam se entrarem na lista.
   - Vem de `Modelo 3D/Zumbis/` na pasta de arte (`zumbis_leves.py`, `texturas_leves.py` e `rostos_leves.py`). Ao atualizar, copie o `<modelo>.fbx`, `Texturas/<modelo>_Base.png`, `_Mascaras.png`, `_Sujeiras.png` e `Texturas/Rosto.png` para cá, refaça o `<modelo>_Extra.fbx` (`Blender/zumbi_extras.py`) e rode a montagem dos zumbis.
   - **A aparência varia por zumbi**, no shader `Shaders/Zumbi.shader` (`ZombieCityCleaner/Zumbi`, PBR da URP como o Lit, com SRP Batcher). As camadas, todas no material `Materials/<modelo>.mat`:
@@ -1273,7 +1274,8 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   `Player/MontadorDeConstrucao`): a sombra verde (cabe) ou vermelha segue a mira no chão em que ele pisa, até 5 m; R ou a
   roda giram, o clique monta, o botão direito desiste; a arma não atira enquanto isso (`ArmaJogador.Montando`).
   - **A fogueira:** a luz que tremula, as chamas (o material do clarão dos tiros) e +1 de vida por segundo até 3 m; a lenha
-    dura 4 minutos, e E põe mais (1 madeira). Apagada, E acende.
+    dura 4 minutos, e E põe mais (1 madeira). Apagada, E acende. Desde 05/11/2026, os zumbis ficam a 8 m dela e a chuva a
+    apaga fora de um teto ("O carro ligado, o fogo e a chuva").
   - **A cama:** quem montou volta nela quando cai (`ConstrucoesNoMundo.CamaDe`, no `VidaJogador.CaiuRpc`). E recolhe (o kit volta).
   - **A barricada** (1,6 × 1,5 m): segura o jogador e abre um buraco no NavMesh (`NavMeshObstacle` com carving); os zumbis
     perseguindo alguém e encostados nela tiram 2,5 de vida por segundo, cada um (de 100); acabou, ela cai e sobram 2 madeiras.
@@ -1286,7 +1288,8 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   alcance, 20 de dano, na parte onde pega) e a tocha (na mão direita, o soco direito, 8 de dano; a chama e a luz na ponta: nos braços,
   um ponto novo achado pela cor queimada da ponta, `MontagemDoItemNaMao.BocaNaPonta`, porque os clipes animam a boca do FBX;
   no corpo, na ponta da malha; o dono vê a luz dos braços, os outros a do corpo). A tocha queima: 1 de desgaste a cada 6 s na
-  mão (uns 10 minutos), e some no fim ("A tocha se apagou").
+  mão (uns 10 minutos), e some no fim ("A tocha se apagou"). Desde 05/11/2026, os zumbis ficam a 4 m dela, e a chuva a
+  apaga: fica na mão, apagada, e reacende numa fogueira acesa ("O carro ligado, o fogo e a chuva").
 - **O dano das armas brancas** (31/10/2026, a pedido: na escala de 100, na faixa das armas de fogo, "não quero que ultrapasse
   muito o dano de armas de fogo"; `Itens._brancas` e `ArmaJogador.danoDoSoco`). A cabeça vale 3 vezes em todas (no
   `Golpear`, a hitbox da cabeça vai como cabeça; o resto vai como o tronco, menos no machado e na lança, que levam o braço
@@ -1520,7 +1523,7 @@ igual. Os itens no jogo são a parte 4 (abaixo).
     - Da ignição para a partida a chave pesa (`pesoDaPartida`, 0,3 do giro do mouse) e a mola a puxa de volta (`molaDaPartida`, 25°/s). Chegando na partida, ela fica presa (`_presaNaPartida`): o estado é "arranque" (o motor de arranque gira) até o mini-game do motorista dar certo (`PegarAgora`: liga, e a chave volta para a ignição) ou ele desistir (puxar 10° para a esquerda, ou `SoltarChave`). `Tossir` toca o motor quase pegando (só nesta máquina). Solta, a chave cai na posição mais perto (desligada ou a ignição).
     - **A ligação direta** (a pedido em 29/10/2026: sem a chave, "esse mini-game como se fosse um ligar direto, pra roubar o carro"; `_direta`, um bool escrito pelo dono; `LigacaoDireta`): `FazerLigacaoDireta` (de "sem a chave", ou de novo com os fios juntos) põe o ângulo na partida, presa, e o estado em arranque: é o mini-game que decide. `DesfazerLigacaoDireta` separa os fios (sem a chave, o motor apaga). Na direta não existe "desligado com a chave": puxada até abaixo de `ChaveDesliga`, ou sem motorista, os fios se soltam. A chave na ignição não aparece e o `ChaveEntra` não toca.
     - **A chave do veículo** (`chaveDoVeiculo`, um `Loot.Item`; a perua usa `Item.ChaveDaPerua`, o cupê `Item.ChaveDoCupe`): cada veículo novo aponta a sua. Com ela na mochila do motorista, o clique põe a chave; sem ela, faz a ligação direta.
-    - Sem motorista, o dono (o anfitrião, de volta) tira a chave e o motor desliga (`Ignicao`). Quem chega na partida com o motor ligado não ouve a partida.
+    - Sem motorista, o dono (o anfitrião, de volta) tira a chave e o motor desliga (`Ignicao`), a não ser com o motor ligado, que fica ligado (05/11/2026: "O carro ligado, o fogo e a chuva"). Quem chega na partida com o motor ligado não ouve a partida.
     - Os sons vêm das mudanças de estado, em cada máquina (`Chave`): a chave entrando e estalando de uma posição para outra (até 6 m), o solenoide, o arranque em laço (o AudioSource "Arranque"), o pinhão soltando e o motor pegando (`SomDoCarro.Pegar`; o laço entra `LacoEntra` = 0,69 s depois). Desligado, o laço do motor morre (o tom cai e some).
   - **Dirigir** (só no dono, em `FixedUpdate`): tração na frente (700 N·m por roda, caindo até a velocidade máxima de 22 m/s, ~80 km/h), ré até 7 m/s, freio 2.400, freio de mão 4.500 nas de trás (com o carro andando, a traseira escorrega), as rodas virando 32° parado e 12° na máxima, a barra estabilizadora e um pouco de pressão para baixo. Sem motorista, fica freado. Os números ficam no Inspector do carro.
   - **Os lugares usados** (`lugaresUsados`, de 1 a 4; a perua usa os 4, o cupê só os 2 da frente): o `EntrarRpc` recusa os outros e a porta deles não mostra a dica. Os vetores (`portas`, `assentos`, `saidas`) continuam com 4.
@@ -2646,6 +2649,121 @@ Antes, o cupê só ligava na ligação direta (`chaveDoVeiculo` = `Nada`). Agora
 - **Conferido no Play:** cada carro com a sua chave; as duas no chão a 30 cm; o ícone, a foto e a malha; a da perua não
   liga o cupê; com a dele, a chave entra, gira até a partida e o motor pega sem a ligação direta; um save antigo recebe a
   chave uma vez e, salvo, passa a marcar `chaveDoCupe`. 0 erros.
+
+## O carro ligado, o fogo e a chuva (05/11/2026, a pedido)
+
+O Pedro: "deixar o carro ligado se não desligar se sair do carro, fazer os zumbis ficarem longe da luz da tocha e da
+fogueira, e apagar durante a chuva". As escolhas dele, perguntadas antes: na beira do fogo eles rodeiam e a horda cria
+coragem; a tocha 4 m e a fogueira 8 m; a tocha apagada fica e reacende no fogo; qualquer chuva apaga, até o chuvisco.
+
+- **O carro ligado** (`Carro.Ignicao`, `FicaLigadoSemMotorista`): sem motorista, o motor LIGADO continua ligado (a chave na
+  ignição, ou os fios juntos na ligação direta) enquanto puder (sem ferver, com a vela boa e gasolina). O resto (a ignição
+  acesa, a partida, o mini-game) perde a chave ao sair, como antes; o motor que morre sozinho sem ninguém também. Quem senta
+  depois herda o estado (`OnGainedOwnership`) e dirige direto: com a chave na ignição, liga e desliga mesmo sem a chave na
+  mochila. Sem ninguém, gasta na marcha lenta (`MarchaLenta` 0,12, ~0,12 L/min; o giro de quem saiu não conta, nem com o
+  carro parado longe de todos). Entrando ou saindo, o carro não obedece ao teclado (o freio de mão: o ligado arrancava com a
+  porta aberta). O macaco não apoia com o motor ligado ("Desligue o motor para apoiar o macaco"). A linha de comandos diz
+  "E: sair (fica ligado)". O save não guarda o motor (como o radiador vazando e o furo lento): carregado, volta sem a chave.
+  Junto: o `FaroisLigados` exige a bateria (o farol apagado na tela continuava afastando os zumbis e chamando a gosma).
+- **O fogo afasta** (`Zombies/Zumbi.Luz.cs` `Fogo`, `ZombieManager.Luz.cs` `Fogos`; os números em `AjustesDeZumbi`, "O
+  fogo"): a tocha acesa na mão (`JogadorRede.TochaAcesa`; no carro, não) e a fogueira acesa são fogos redondos de
+  `raioDaTocha` 4 m e `raioDaFogueira` 8 m (a luz que se vê vai a 14 e 16 m), à vista (sem parede no meio) e no plano (até
+  3 m de altura):
+  - dentro: recua até a beira (o pulo da esquiva das lanternas, para fora; o susto só na primeira vez);
+  - quem caça alguém que está no fogo **rodeia a beira** (0,5 m fora dela, no lugar do cerco, de 45° em 45°; atrás da
+    tocha, na velocidade de caça), olhando, sem atacar. Ele vê quem está no fogo: ao apagar, ataca na hora. Na beira,
+    ainda bate em quem está ao alcance do golpe;
+  - **a coragem** (`EsperarNoFogo`): com `hordaQueEntraNoFogo` 5 ou mais rodeando o mesmo fogo (os que se tocam contam como
+    um só: `ChaveDoGrupo`) por `esperaAteACoragem` 30 s, todos entram, por `tempoDeCoragem` 45 s;
+  - o ferido (tiro, golpe: `Ferido`, 20 s) entra mesmo assim, como no sol; o Brutamonte não liga para luz nenhuma; o Long
+    não liga para o fogo (cospe nele e o apaga);
+  - quem caça alguém fora do fogo dá a volta pela beira; quem vaga, se abriga do sol ou vai ver um barulho não escolhe ponto
+    no fogo (o `NoFacho` com os fogos) e para na beira;
+  - sem ponto na beira por causa de parede (um corredor), age como sempre (encurralado, ataca); por causa do sol do dia,
+    fica parado olhando o fogo. De onde o fogo não se vê (atrás da parede da casa com a fogueira dentro), não vai: espera no
+    vão da porta. As desistências do Perseguir (o alvo no sol, no acampamento) valem antes do fogo.
+  - Pela rede, nada novo: os estados de sempre (Perseguindo, Esquivando, Atacando).
+- **A chuva apaga** (`Loot/ConstrucoesNoMundo.Chuva.cs`, no anfitrião, a cada 0,5 s): fora de um teto (`World.Tempo.SobTeto`:
+  um colisor até 30 m acima, como a casa, o prédio, a laje, o viaduto e o carro; a `AreaInterna`; o bunker embaixo do morro,
+  `BunkerDoMundo.Abrigado`, porque o alto do morro é céu aberto; a copa, o toldo e a marquise não seguram), a molhadura sobe
+  com a `Tempo.Chuva` (a partir de 0,05: o chuvisco também):
+  - a fogueira apaga em 11,2 s divididos pela chuva (o chuvisco ~40 s, a chuva ~18 s, a tempestade ~12 s), perde a lenha que
+    sobrava, e quem está a 25 m lê "A chuva apagou a fogueira". Na chuva, fora do teto, E não acende nem põe lenha (a
+    madeira não se perde), e o kit montado ali fica apagado e devolve 1 madeira;
+  - a tocha acesa na mão apaga na metade do tempo e fica na mão, **apagada** (`Itens.TochaApagada`: o qtd 1000 da tocha,
+    que vai pela rede, para o chão e para o save; não é o 1, que os "pelo menos 1" dão): sem chama, sem luz, sem desgaste,
+    sem afastar ninguém e sem atrair o cuspe do Long. Com ela na mão, E numa fogueira acesa a reacende ("[E] Reacender a
+    tocha no fogo"); a tela do inventário diz "Fogo: apagada pela chuva";
+  - debaixo do teto, ou sem chuva, a molhadura seca em 20 s; trocar de tocha começa seco;
+  - longe de todos, a fogueira guarda o último teto conferido (sem nenhum, não molha até alguém chegar perto: o
+    `TerrenoDoMundo` só monta a colisão perto dos jogadores). O posto e as casas dos acampamentos só existem perto do jogador
+    de cada máquina: o dono diz se está debaixo de um teto (`JogadorRede.DebaixoDeTeto`), o cliente conta as fogueiras com
+    teto perto dele (`TetoDaFogueiraRpc`) e o `MontarRpc` leva o teto de quem monta;
+  - as fogueiras dos acampamentos (só visuais, em cada máquina) apagam como as dos jogadores, e os moradores acendem de novo
+    60 s depois da chuva.
+- **O F1:** no CARRO (TESTE), "Ligar o motor (vazio)" e a linha "motor:"; no CLIMA, "Fogueira aqui", "Tocha acesa na mão"
+  e "Horda de 6 caçando", e no texto os fogos, quem rodeia cada um (e quanto falta para a coragem), a fogueira mais perto
+  (coberta ou no aberto, o quanto molhou) e a tocha molhando.
+- **Conferido no Play** (anfitrião sozinho, semente 7, médio, de noite): o carro deixado ligado (na ligação direta) ficou
+  ligado, gastou 20 mL em 10 s, entrar segurando W não o mexeu e, sentado, andou 9 m; a fogueira numa esquina com 6
+  caçando: todos a 8 a 9 m, 0 de dano, e a coragem aos ~30 s (todos entraram e atacaram); a tocha com 4: a 4,5 m por 27 s,
+  0 de dano, e o ferido entrou; no chuvisco, a tocha apagou em ~26 s e a fogueira no aberto em ~47 s; na chuva, a tocha em
+  15 s, a fogueira dentro de uma casa ficou acesa (molhou 0%) e reacendeu a tocha; acender e montar na chuva, recusados sem
+  perder madeira; o alto do morro não é teto. 0 erros. Uma revisão (3 revisores e 3 céticos) achou 17 defeitos, todos
+  consertados (os principais: o carro arrancando na entrada, o amanhecer com a beira no sol, as desistências do Perseguir,
+  o alto do morro, o teto do posto visto por um cliente, o kit montado na chuva); uma conferência dos consertos (2 céticos)
+  achou mais 10 detalhes, também consertados (o zumbi que travava dando a volta atrás de uma parede, o alcance do golpe na
+  beira igual ao do Atacar, o Corredor na beira entre um golpe e outro, a espera que muda de chave quando a tocha encosta
+  na fogueira, a tocha que secava ao trocar de item, a gosma na tocha já apagada). Depois deles, de novo no Play: os 6 na
+  beira até a coragem (~37 s), os 4 da tocha a 4,5 m (com um Corredor), a tocha apagando em 26 s no chuvisco; 0 erros.
+- **Não conferido:** dois jogadores (o cliente que sai do carro ligado, a tocha dele, o teto visto por ele) e o amanhecer
+  com o fogo.
+
+### O Long da fogueira e o Brutamonte enterrado (05/11/2026, a pedido)
+
+O Pedro: "à noite ... se >5 zumbis em volta da fogueira, e jogador parado por >1 minuto, um Long spawna obrigatoriamente,
+assim apagando a fogueira" e "o spawn normal do Brutamonte está muito longe ... ele deveria spawnar mais próximo da gente,
+dando uma sensação de que ele estava debaixo da terra, e quando chegamos perto ele spawnou". As escolhas dele: na fogueira,
+à noite, o Long vem primeiro e a coragem passa para 90 s; o Brutamonte fica enterrado no caminho.
+
+- **O Long da fogueira** (`Zombies/ZombieManager.LongNaFogueira.cs`, no anfitrião, a cada segundo; os números em
+  `AjustesDeZumbi`, "O Long da fogueira"): à noite, numa fogueira acesa com `zumbisParaOLong` 6 ou mais zumbis caçando em
+  volta (Ocos e Corredores engajados, até 3 m além da beira) e um jogador parado dentro dela (sem sair de um círculo de 3 m,
+  fora do carro) há `paradoParaOLong` 60 s, um Long nasce a 17–24 m dela (dentro do alcance do cuspe), a mais de 15 m de
+  todos os jogadores, de preferência de onde ele vê o fogo, virado para ele. Dali ele faz o de sempre (vê quem está ali e
+  cospe na luz mais perto, a fogueira) e a gosma a apaga. Uma vez por fogueira a cada `recargaDoLongDaFogueira` 180 s, e não
+  com outro Long já perto. O nascido assim não conta no máximo de 2 Longs do sorteio.
+- **A coragem à noite na fogueira** (`ZombieManager.EsperaDaCoragem`): o grupo que tem uma fogueira espera
+  `esperaAteACoragemDeNoiteNaFogueira` 90 s (de dia e na tocha, os 30 s de antes). O Long vem antes; a coragem é o plano B.
+- **O Brutamonte enterrado** (`Zombies/ZombieManager.Enterrado.cs` e `Zumbi.Enterrado.cs`; os números no `ZombieManager`,
+  "O Brutamonte enterrado"): o sorteio de sempre (um por mundo; 30% de noite e 5% de dia, a cada 3 min) não o faz nascer
+  mais a 30–45 m fora da vista: ele fica enterrado `distanciaDoEnterrado` 25–40 m à frente de onde um jogador olha, num
+  ponto ao ar livre, no chão do mundo (não numa laje, ponte, telhado ou no bunker), fora do fogo e das zonas seguras. Quem
+  chega a `raioDoDespertar` 10 m ouve o chão roncar e vê a terra soltar poeira por `avisoDoDespertar` 1,2 s
+  (`TerraRoncandoRpc`, em cada máquina), a `distanciaDaSaida` 5,5 m dele, e o Brutamonte sai da terra ali (o Emergir de
+  sempre), a pelo menos `longeAoSair` 4,5 m e de costas para quem chegou. Ao terminar de sair, se o olho (nas costas) vê
+  alguém, ele trava na hora (`TravarSeOlhoVe`): de perto, andando até o ponto visto, ele virava a frente e o olho perdia o
+  jogador, e ficava parado ao lado dele. Se ninguém passar em `tempoEnterrado` 120 s, ele se enterra de novo à frente de
+  alguém. O ponto não vai para o save (como o Brutamonte).
+- **Sem o tremor da câmera:** o `MovimentoPrimeiraPessoa.Tremer` é da sessão do golpe no chão (sem commit em 05/11/2026);
+  quando ele entrar, o aviso pode tremer a tela de quem está perto.
+- **O F1** (a aba Clima, com os testes do fogo): "Long da fogueira já" (para a fogueira acesa mais perto, sem esperar a
+  regra) e "Brutamonte enterrado" (a 15–18 m à frente; chegue a 10 m dele); no texto, a regra do Long em cada fogueira
+  (quantos em volta, há quanto tempo alguém está parado, a recarga) e a distância do enterrado.
+- **Conferido no Play** (anfitrião sozinho, semente 7, médio, de noite, numa esquina): com 8 zumbis em volta e o jogador
+  parado, o Long nasceu ao completar 1 minuto, a 17,5 m da fogueira, e a apagou 4 s depois; o Brutamonte do sorteio foi
+  enterrado a 25 m à frente, acordou com o jogador a 10 m, saiu da terra a 5,5 m, de costas, travou ao terminar de sair e
+  avançou. 0 erros. Uma revisão (2 revisores e 2 céticos) achou 15 defeitos, consertados: o minuto parado passou a contar
+  só dentro de uma fogueira acesa, de noite (antes, quem atirava parado e acendia o fogo chamava o Long na hora); o Long
+  cospe primeiro na fogueira (antes, na luz mais perto: a tocha de quem estava nela); o Long sem papo não segura outro
+  (`Zumbi.LongQueCospe`); o Long só nasce de onde vê o fogo (e, se der, quem está nele: a fogueira dentro de uma casa não
+  chama Long, fica com a coragem); o enterrado não passa de uma partida para outra (`EsquecerOEnterrado` e
+  `EsquecerOLongDaFogueira` no `OnNetworkDespawn`); o lugar de sair passa pelas regras do plantio (`LugarDeSair`); quem
+  passa de carro não o acorda; ninguém fica em cima dele ao sair; o sorteio tenta todos os jogadores e conta os 3 min da
+  saída; o ronco vale até 45 m; com um Brutamonte já de pé (o do F1), o enterrado não sai; e a vida guardada de quem voltou
+  para a terra vale uma vez só (antes, todo Brutamonte seguinte nascia ferido). De novo no Play depois deles: o Long aos 60 s
+  (fogo apagado 5 s depois) e o Brutamonte saindo a 5,5 m, de costas, e avançando; 0 erros. Não conferido: dois jogadores,
+  o aviso visto por um cliente.
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 

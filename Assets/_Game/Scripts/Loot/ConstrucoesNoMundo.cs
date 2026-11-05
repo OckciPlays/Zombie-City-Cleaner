@@ -31,14 +31,16 @@ namespace ZombieCityCleaner.Loot
     /// "fogueira, cama e barricada são montadas no mundo e funcionam"). Uma lista só na rede (o anfitrião manda) e cada
     /// cópia monta os objetos dela, como os itens no chão (<see cref="ItensNoMundo"/>):
     /// - a fogueira: acesa, a luz que tremula, o fogo e a vida que volta (1 por segundo, até 3 m); a lenha dura
-    ///   <see cref="MinutosPorLenha"/> minutos e E põe mais (1 madeira). Apagada, E acende com 1 madeira;
+    ///   <see cref="MinutosPorLenha"/> minutos e E põe mais (1 madeira). Apagada, E acende com 1 madeira. A chuva a apaga
+    ///   fora de um teto, e com a tocha apagada na mão, E reacende a tocha nela (05/11/2026, ConstrucoesNoMundo.Chuva.cs);
+    ///   os zumbis ficam longe dela (ZombieManager.Luz.cs);
     /// - a cama: quem montou volta nela quando cai (no lugar do ponto de nascimento); E recolhe (volta o kit);
     /// - a barricada: o colisor e o buraco no NavMesh (os zumbis não passam: dão a volta ou param nela) e a vida, que os
     ///   zumbis perto, perseguindo alguém, tiram (<see cref="DanoPorZumbi"/> por segundo, cada um); acabou, ela cai e
     ///   sobram umas tábuas. E desmonta (volta o kit, se estiver inteira; senão, a madeira).
     /// O jogador monta pelo menu do botão direito do kit, na tela do inventário (<see cref="MontadorDeConstrucao"/>).
     /// </summary>
-    public class ConstrucoesNoMundo : NetworkBehaviour
+    public partial class ConstrucoesNoMundo : NetworkBehaviour
     {
         [Tooltip("As malhas montadas, na ordem do enum (de Fogueira em diante): Construcao_FogueiraMontada, _CamaMontada e _BarricadaMontada.")]
         public Mesh[] malhas;
@@ -81,6 +83,7 @@ namespace ZombieCityCleaner.Loot
             _lista.OnListChanged -= AoMudar;
             foreach (var o in _objetos.Values) if (o != null) Destroy(o);
             _objetos.Clear();
+            EsquecerAChuva();
         }
 
         void AoMudar(NetworkListEvent<Construcao> e) => Atualizar();
@@ -109,6 +112,7 @@ namespace ZombieCityCleaner.Loot
             if (!IsServer || !IsSpawned) return;
             _lista.Clear();
             _proximoId = 1;
+            EsquecerAChuva();
             foreach (var c in lista)
             {
                 if (!Itens.EhConstrucao(c.tipo)) continue;
@@ -171,7 +175,7 @@ namespace ZombieCityCleaner.Loot
         // ------------------------------------------------------------------ no dono
 
         /// <summary>O jogador local monta o kit da mochila (o Id dele) no ponto, virado (o anfitrião confere).</summary>
-        public void PedirMontar(ushort idDoKit, Vector3 ponto, float giro) => MontarRpc(idDoKit, ponto, giro);
+        public void PedirMontar(ushort idDoKit, Vector3 ponto, float giro) => MontarRpc(idDoKit, ponto, giro, World.Tempo.SobTeto(ponto));
 
         public void PedirUsar(ushort id) => UsarRpc(id);
 
@@ -181,7 +185,7 @@ namespace ZombieCityCleaner.Loot
             rede.ConnectedClients.TryGetValue(cliente, out var c) && c.PlayerObject != null ? c.PlayerObject.GetComponent<InventarioJogador>() : null;
 
         [Rpc(SendTo.Server)]
-        void MontarRpc(ushort idDoKit, Vector3 ponto, float giro, RpcParams parametros = default)
+        void MontarRpc(ushort idDoKit, Vector3 ponto, float giro, bool cobertoParaQuemMonta, RpcParams parametros = default)
         {
             ulong quem = parametros.Receive.SenderClientId;
             var inventario = InventarioDe(NetworkManager, quem);
@@ -191,10 +195,21 @@ namespace ZombieCityCleaner.Loot
             if (!Cabe(kit.item, ponto, giro)) return;
             inventario.TirarUm(idDoKit);
             float valor = kit.item == Item.Barricada ? 100f : kit.item == Item.Fogueira ? Agora + MinutosPorLenha * 60f : 0f;
+            // na chuva, fora de um teto (o de quem monta ou o do anfitrião), a fogueira fica montada, apagada, e a lenha do kit
+            // volta como 1 madeira (a que acende depois, debaixo de um teto ou sem chuva; 05/11/2026)
+            bool apagadaNaChuva = kit.item == Item.Fogueira && ChoveNoFogo && !cobertoParaQuemMonta && !World.Tempo.SobTeto(ponto);
+            if (apagadaNaChuva) valor = 0f;
             // o dono é o personagem (a chave dele, que vale em qualquer partida: 02/11/2026, o save), não a conexão
             var rede = inventario.GetComponent<JogadorRede>();
             ulong dono = rede != null && rede.Chave.Value != 0 ? rede.Chave.Value : quem;
-            _lista.Add(new Construcao { id = _proximoId++, tipo = kit.item, pos = ponto, giro = giro, valor = valor, dono = dono });
+            ushort id = _proximoId++;
+            _lista.Add(new Construcao { id = id, tipo = kit.item, pos = ponto, giro = giro, valor = valor, dono = dono });
+            if (kit.item == Item.Fogueira && cobertoParaQuemMonta) _tetosVistos.Add(id);
+            if (apagadaNaChuva)
+            {
+                inventario.EntregarItem(Item.Madeira, 1);
+                inventario.AvisarDono("A chuva não deixa o fogo pegar: a fogueira ficou apagada (1 madeira de volta)");
+            }
         }
 
         [Rpc(SendTo.Server)]
@@ -209,6 +224,18 @@ namespace ZombieCityCleaner.Loot
             switch (c.tipo)
             {
                 case Item.Fogueira:
+                    // a tocha apagada pela chuva reacende no fogo (05/11/2026): E na fogueira acesa, com ela na mão
+                    if (Acesa(c) && inventario.TochaDaMaoApagada)
+                    {
+                        inventario.AcenderTochaNaMao();
+                        return;
+                    }
+                    // na chuva, fora de um teto, o fogo não pega (nem a lenha nova): a madeira não se perde
+                    if (ChoveNoFogo && Coberta(c) != true)
+                    {
+                        inventario.AvisarDono("A chuva não deixa o fogo pegar: só debaixo de um teto");
+                        return;
+                    }
                     // mais lenha (ou acender): 1 madeira, mais uns minutos de fogo
                     if (!inventario.GastarItem(Item.Madeira, 1)) return;
                     c.valor = Mathf.Max(c.valor, Agora) + MinutosPorLenha * 60f;
@@ -295,10 +322,12 @@ namespace ZombieCityCleaner.Loot
                     if (acesa && fogo != null && fogo.TryGetComponent<Light>(out var luz))
                         luz.intensity = 3.6f + 0.9f * Mathf.PerlinNoise(Time.time * 3.1f, c.id) + 0.4f * Mathf.Sin(Time.time * 17f + c.id);
                 }
+            InformarTetos();
             if (!IsServer || !IsSpawned || Time.time < _proximoTique) return;
-            // o anfitrião, a cada meio segundo: o calor das fogueiras e os zumbis nas barricadas
+            // o anfitrião, a cada meio segundo: a chuva no fogo, o calor das fogueiras e os zumbis nas barricadas
             const float passo = 0.5f;
             _proximoTique = Time.time + passo;
+            MolharNaChuva(passo);
             for (int k = _lista.Count - 1; k >= 0; k--)
             {
                 var c = _lista[k];
@@ -469,6 +498,9 @@ namespace ZombieCityCleaner.Loot
             {
                 case Item.Fogueira:
                     bool acesa = mundo.Acesa(c);
+                    if (acesa && quem.Inventario.TochaDaMaoApagada) return "[E] Reacender a tocha no fogo";
+                    if (ConstrucoesNoMundo.ChuvaEm(c.pos))
+                        return acesa ? "Fogueira acesa: a chuva está apagando (debaixo de um teto ela fica)" : "Fogueira apagada: na chuva o fogo não pega (só debaixo de um teto)";
                     if (madeira == 0) return acesa ? "Fogueira acesa (mais lenha: 1 madeira)" : "Fogueira apagada: precisa de 1 madeira";
                     return acesa ? $"[E] Pôr lenha (1 madeira: +{ConstrucoesNoMundo.MinutosPorLenha:0} min)" : "[E] Acender a fogueira (1 madeira)";
                 case Item.Cama:

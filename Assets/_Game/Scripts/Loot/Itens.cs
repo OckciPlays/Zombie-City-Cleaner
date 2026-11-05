@@ -442,6 +442,13 @@ namespace ZombieCityCleaner.Loot
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;
         /// <summary>A tocha acesa na mão queima: o desgaste sobe 1 a cada tantos segundos (100: ela se apaga e some).</summary>
         public const float SegundosDaTochaPorDesgaste = 6f;
+        /// <summary>
+        /// A tocha que a chuva apagou (05/11/2026, a pedido): o qtd dela (a acesa tem 0, o que a tocha não usava). Vai junto
+        /// pela rede, para o chão e para o save. Apagada, ela não queima, não ilumina e não afasta os zumbis; reacende numa
+        /// fogueira acesa (Loot/ConstrucoesNoMundo.cs). Não é o 1: quem cria um item com "pelo menos 1" no qtd (a mercadoria
+        /// do comerciante morto, a mochila do sobrevivente) daria uma tocha apagada.
+        /// </summary>
+        public const ushort TochaApagada = 1000;
         /// <summary>Daqui para cima, a arma de fogo emperra às vezes (até 30% dos tiros, quase quebrada).</summary>
         public const int DesgasteQueEmperra = 70;
         /// <summary>Uma arma branca (a faca e o machado): vai na mão, o clique golpeia de perto, sem munição.</summary>

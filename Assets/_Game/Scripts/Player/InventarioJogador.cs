@@ -1052,6 +1052,14 @@ namespace ZombieCityCleaner.Player
                         escolher = lugar;
                     }
                 }
+                // o item que o F1 pôs na mão e que chegou depois do pedido (PorNaMao)
+                if (e.Type == NetworkListEvent<ItemNaMochila>.EventType.Add && _naMaoQuandoChegar != 0 && e.Value.id == _naMaoQuandoChegar)
+                {
+                    _naMaoQuandoChegar = 0;
+                    for (int i = 0; i < Atalhos; i++)
+                        if (Ler(a, i) == e.Value.id) a = Gravar(a, i, 0);
+                    a = Gravar(a, Escolhido.Value, e.Value.id);
+                }
                 if (a != _atalhos.Value) _atalhos.Value = a;
                 if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
             }
@@ -1114,10 +1122,60 @@ namespace ZombieCityCleaner.Player
             if (havia) AvisoRpc("A gosma apagou a sua lanterna: troque as pilhas");
         }
 
+        /// <summary>A tocha da mão foi apagada pela chuva (<see cref="Itens.TochaApagada"/>): fica na mão, sem fogo.</summary>
+        public bool TochaDaMaoApagada => NaMao == Item.Tocha && Achar(IdNaMao, out var it) && it.qtd == Itens.TochaApagada;
+
+        /// <summary>A tocha acesa na mão (não a apagada pela chuva).</summary>
+        public bool TochaAcesaNaMao => NaMao == Item.Tocha && !TochaDaMaoApagada;
+
+        /// <summary>
+        /// Só no anfitrião: a chuva apagou a tocha da mão (05/11/2026, a pedido). Ela fica, apagada (o desgaste que faltava
+        /// fica guardado), e reacende numa fogueira acesa (<see cref="AcenderTochaNaMao"/>).
+        /// </summary>
+        public void MolharTochaNaMao()
+        {
+            if (!IsServer || NaMao != Item.Tocha) return;
+            int k = Indice(IdNaMao);
+            if (k < 0 || Mochila[k].qtd == Itens.TochaApagada) return;
+            var it = Mochila[k];
+            it.qtd = Itens.TochaApagada;
+            Mochila[k] = it;
+            AvisoRpc("A chuva apagou a tocha: reacenda numa fogueira acesa");
+        }
+
+        /// <summary>Só no anfitrião: a tocha apagada da mão reacende (no fogo de uma fogueira acesa).</summary>
+        public bool AcenderTochaNaMao()
+        {
+            if (!IsServer || NaMao != Item.Tocha) return false;
+            int k = Indice(IdNaMao);
+            if (k < 0 || Mochila[k].qtd != Itens.TochaApagada) return false;
+            var it = Mochila[k];
+            it.qtd = 0;
+            Mochila[k] = it;
+            AvisoRpc("A tocha acendeu");
+            return true;
+        }
+
+        /// <summary>Só no anfitrião (o F1): o item vai para o atalho escolhido de quem joga, e para a mão.</summary>
+        public void PorNaMao(ushort id)
+        {
+            if (IsServer) PorNaMaoRpc(id);
+        }
+
+        // no cliente, o pedido chega antes do item (a mochila vai no tique de rede): ele vai para a mão quando chegar
+        [Rpc(SendTo.Owner)]
+        void PorNaMaoRpc(ushort id)
+        {
+            if (Do(id) == Item.Nada) _naMaoQuandoChegar = id;
+            else PorNoAtalho(Escolhido.Value, id);
+        }
+
+        ushort _naMaoQuandoChegar;
+
         /// <summary>Só no anfitrião: a gosma apagou a tocha da mão (ela se perde).</summary>
         public void ApagarTochaNaMao()
         {
-            if (!IsServer || NaMao != Item.Tocha) return;
+            if (!IsServer || NaMao != Item.Tocha || TochaDaMaoApagada) return;   // a apagada pela chuva já não tem fogo
             int k = Indice(IdNaMao);
             if (k < 0) return;
             Mochila.RemoveAt(k);

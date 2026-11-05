@@ -67,6 +67,19 @@ namespace ZombieCityCleaner.Player
         public TipoDeArma Atual { get; private set; }
         public DadosDaArma Dados => Armas.Dados(Atual);
         public Item NaMao { get; private set; }
+
+        /// <summary>
+        /// A chama da tocha nos braços: some com a tocha apagada pela chuva (05/11/2026) e volta quando ela reacende.
+        /// </summary>
+        void FogoDaTocha()
+        {
+            if (NaMao != Item.Tocha || bocas == null) return;
+            int m = Itens.ModeloNaMao(Item.Tocha);
+            if (m < 0 || m >= bocas.Length || bocas[m] == null) return;
+            var fogo = bocas[m].Find("Fogo");
+            bool acesa = Inventario == null || !Inventario.TochaDaMaoApagada;
+            if (fogo != null && fogo.gameObject.activeSelf != acesa) fogo.gameObject.SetActive(acesa);
+        }
         public bool ComArma => Itens.EhArma(NaMao);
         /// <summary>Comendo ou bebendo (o clipe Usar).</summary>
         public bool Usando { get; private set; }
@@ -189,6 +202,7 @@ namespace ZombieCityCleaner.Player
                 var fogo = Loot.ConstrucoesNoMundo.Fogo(bocas[m], Vector3.zero, Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.28f, 14f, false, JogadorRede.CamadaBracos);   // a luz maior (01/11/2026: era 8 m)
                 fogo.GetComponent<Light>().intensity = 2.1f;
             }
+            FogoDaTocha();
             if (ComArma)
             {
                 Atual = Itens.Arma(novo);
@@ -288,8 +302,9 @@ namespace ZombieCityCleaner.Player
                     s.Segurado(this);
                 }
             }
-            // a tocha acesa na mão queima: o desgaste sobe com o tempo (100: ela se apaga e some)
-            if (NaMao == Item.Tocha && !bot && Inventario != null)
+            // a tocha acesa na mão queima: o desgaste sobe com o tempo (100: ela se apaga e some); a apagada pela chuva, não
+            FogoDaTocha();
+            if (NaMao == Item.Tocha && !bot && Inventario != null && !Inventario.TochaDaMaoApagada)
                 Inventario.Desgastar(_id, Time.deltaTime / Itens.SegundosDaTochaPorDesgaste);
             if (!controla || Montando) return;
             // mirando no que usa o clique (o macaco apoiado), o botão esquerdo é dele: não atira nem soca

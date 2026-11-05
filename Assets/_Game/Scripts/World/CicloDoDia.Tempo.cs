@@ -48,6 +48,20 @@ namespace ZombieCityCleaner.World
         /// <summary>O clarão dos raios agora (o ClimaNaTela põe; o AmbienteDoDia acende o céu e a luz).</summary>
         public static float Clarao { get; set; }
 
+        // o que segura a chuva: o mesmo do tornado (a casa, o prédio, a laje, o viaduto) e o carro
+        const int MascaraDoTeto = (1 << 0) | (1 << 1) | (1 << Vehicles.Carro.CamadaVeiculo);
+
+        /// <summary>
+        /// O ponto (os pés) está debaixo de um teto (05/11/2026, o fogo na chuva): um colisor até 30 m acima (a casa, o
+        /// prédio, a laje, o viaduto, o carro), dentro de uma casa (<see cref="AreaInterna"/>) ou no bunker (embaixo do morro e
+        /// na casinha; o alto do morro, não). A copa da
+        /// árvore, o toldo e a marquise não têm colisão: a chuva passa (como a que se vê). Só vale onde a colisão está
+        /// montada (perto de algum jogador).
+        /// </summary>
+        public static bool SobTeto(Vector3 pes) =>
+            Physics.Raycast(pes + Vector3.up * 1.2f, Vector3.up, 30f, MascaraDoTeto, QueryTriggerInteraction.Ignore)
+            || AreaInterna.Contem(pes) || BunkerDoMundo.Abrigado(pes);
+
         /// <summary>Um raio caiu (em cada máquina, pela rede).</summary>
         public static event System.Action<Raio> AoCairUmRaio;
 

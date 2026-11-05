@@ -27,7 +27,9 @@ Um tanque cego e surdo, que não liga para a luz nem para o sol.
 - **Aparece:**
   - só um por mundo, brotando da terra (a terra se abre, ele sai e ruge);
   - a cada 3 minutos há uma chance: 30% de noite, 5% de dia;
-  - nasce a 30–45 m de um jogador, fora da vista.
+  - fica enterrado no caminho de um jogador, a 25–40 m à frente; quem chega a 10 m ouve o chão roncar e vê a poeira, e ele
+    sai da terra a uns 5 m, de costas (o olho já vê quem chegou) e avança (desde 05/11/2026; antes, nascia a 30–45 m, fora
+    da vista, e era difícil de achar).
 - **Volta para a terra:** sem ninguém a menos de 120 m por 1 minuto, ele afunda e guarda a vida que perdeu.
 - **A barra de vida** ("O BRUTAMONTE") aparece no alto da tela de quem está a menos de 60 m.
 - **O ciclo do olho:**
@@ -52,6 +54,9 @@ Não mata: ajuda as hordas.
 - **Vida:** 150; cada braço e perna, 60.
 - **Aparece:** só de noite e raro. A cada 2 minutos há 35% de chance, a 35–50 m de um jogador e fora da vista. No máximo 2 ao
   mesmo tempo.
+- **O Long da fogueira** (05/11/2026): à noite, com 6 ou mais zumbis caçando em volta de uma fogueira acesa e um jogador
+  parado nela há 1 minuto, um Long nasce a uns 20 m e vem cuspir nela (e a apaga). Nessa hora a coragem da horda na
+  fogueira espera 90 s.
 - **A distância:**
   - fica de 14 a 30 m de quem vê;
   - mais perto, ele se afasta;
@@ -129,6 +134,8 @@ em `Art/Characters/Oco/Oco_AnimacoesEspeciais.fbx` (Humanoid) e são gravadas em
 
 - **A fogueira** ilumina até 16 m (era 7), com a luz tremendo.
 - **A tocha** ilumina até 14 m (era 8).
+- **Desde 05/11/2026,** os zumbis ficam longe delas (a tocha 4 m, a fogueira 8 m) e a chuva as apaga: veja o CLAUDE.md, "O
+  carro ligado, o fogo e a chuva". O Long continua cuspindo no fogo (e o apaga); o Brutamonte não liga.
 
 ## 7. Montar as construções (já existia)
 

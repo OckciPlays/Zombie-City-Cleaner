@@ -140,6 +140,13 @@ namespace ZombieCityCleaner.Player
         /// Máxima), escrita pelo dono: o anfitrião manda os zumbis até ela e faz os novos nascerem mais longe dele.
         /// </summary>
         public readonly NetworkVariable<byte> Visao = new(2, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>
+        /// Na chuva, o dono está debaixo de um teto (05/11/2026, o fogo na chuva; o dono confere a cada meio segundo): o
+        /// anfitrião não monta o posto e as casas dos acampamentos longe do jogador dele, e a tocha de quem está lá dentro
+        /// apagaria (Loot/ConstrucoesNoMundo.Chuva.cs).
+        /// </summary>
+        public readonly NetworkVariable<bool> DebaixoDeTeto = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        float _proximoTeto;
 
         /// <summary>O corpo mudou (o personagem chegou pela rede): quem guarda os ossos dele lê de novo.</summary>
         public event System.Action CorpoMudou;
@@ -169,6 +176,11 @@ namespace ZombieCityCleaner.Player
         public PassageiroDoCarro Passageiro { get; private set; }
         /// <summary>O que está na mão (o item do atalho escolhido do inventário).</summary>
         public Item NaMao => Inventario != null ? Inventario.NaMao : Item.Nada;
+        /// <summary>
+        /// A tocha acesa na mão, à vista (não a apagada pela chuva; no carro ela fica escondida): os zumbis ficam longe dela
+        /// (ZombieManager.Luz.cs) e o Long cospe nela.
+        /// </summary>
+        public bool TochaAcesa => Inventario != null && Inventario.TochaAcesaNaMao && !_naMaoEscondida && (Passageiro == null || !Passageiro.NoCarro);
         /// <summary>A arma da mão; sem arma, a pistola (para quem pergunta pela luneta, por exemplo).</summary>
         public TipoDeArma ArmaNaMao => Itens.EhArma(NaMao) ? Itens.Arma(NaMao) : TipoDeArma.Pistola;
 
@@ -431,10 +443,24 @@ namespace ZombieCityCleaner.Player
         /// dos punhos) e, no dono, o de primeira pessoa (que também muda quando a mão passa para outra arma do mesmo
         /// tipo: cada arma da mochila tem o seu pente).
         /// </summary>
+        /// <summary>A chama e a luz da tocha no corpo: somem com a tocha apagada pela chuva (05/11/2026).</summary>
+        void FogoDaTochaNoCorpo()
+        {
+            if (Inventario == null || naMaoCorpo == null) return;
+            int m = Itens.MaoDe(Item.Tocha);
+            if (m < 0 || m >= naMaoCorpo.Length || naMaoCorpo[m] == null) return;
+            var peca = naMaoCorpo[m].GetComponentInChildren<MeshFilter>(true);
+            var fogo = peca != null ? peca.transform.Find("Fogo") : null;
+            if (fogo == null) return;
+            bool acesa = !Inventario.TochaDaMaoApagada;
+            if (fogo.gameObject.activeSelf != acesa) fogo.gameObject.SetActive(acesa);
+        }
+
         void AplicarNaMao()
         {
             var item = Inventario.NaMao;
             ushort id = Inventario.IdNaMao;
+            FogoDaTochaNoCorpo();   // a tocha apagada pela chuva (ou reacesa) muda o item sem mudar o que está na mão
             if (item == _naMaoAplicado && (id == _idAplicado || !IsOwner)) return;
             _naMaoAplicado = item;
             _idAplicado = id;
@@ -454,6 +480,7 @@ namespace ZombieCityCleaner.Player
                         Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, IsOwner ? 0f : 14f, true, naMaoCorpo[m].layer);   // a luz maior (01/11/2026: era 8 m)
                     if (fogo.TryGetComponent<Light>(out var luz)) luz.intensity = 2.4f;
                 }
+                FogoDaTochaNoCorpo();
             }
             int k = m - Armas.Quantas;
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)]
@@ -476,6 +503,12 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsSpawned) return;
             if (IsOwner && Visao.Value != Graficos.Visao) Visao.Value = (byte)Graficos.Visao;   // a escolha dos Gráficos, para o anfitrião
+            if (IsOwner && Time.time >= _proximoTeto)
+            {
+                _proximoTeto = Time.time + 0.5f;
+                bool teto = ZombieCityCleaner.World.Tempo.Chuva > 0.01f && ZombieCityCleaner.World.Tempo.SobTeto(transform.position);
+                if (DebaixoDeTeto.Value != teto) DebaixoDeTeto.Value = teto;
+            }
             // Velocidade no chão: o dono usa a do próprio controle; os outros medem a posição recebida a cada 0,1 s
             // (quadro a quadro a medida oscila, porque a posição chega em degraus).
             float medida;

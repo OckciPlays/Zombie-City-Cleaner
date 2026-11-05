@@ -57,4 +57,4 @@ garrafa térmica, kit de reparo, kits de montar e armas (viram peças de metal; 
 ## As armas gastam
 
 As de fogo gastam a cada tiro e, muito gastas, emperram; quebradas, não atiram. As brancas gastam a cada golpe e
-quebram. O kit de reparo (botão direito → Reparar) deixa a arma nova. A tocha queima uns 10 minutos na mão.
+quebram. O kit de reparo (botão direito → Reparar) deixa a arma nova. A tocha queima uns 10 minutos na mão; os zumbis ficam a 4 m dela, e a chuva a apaga (reacende numa fogueira acesa).

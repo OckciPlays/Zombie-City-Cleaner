@@ -1224,6 +1224,7 @@ namespace ZombieCityCleaner.Player
             if (Itens.ComDesgaste(item))
                 Linha("Estado", $"{100 - it.desgaste}%" + (it.desgaste >= 100 ? " (quebrada)" : it.desgaste >= Itens.DesgasteQueEmperra && Itens.EhArma(item) ? " (emperra)" : ""));
             if (Itens.EhLanterna(item)) Linha("Pilhas", it.desgaste >= 100 ? "acabaram (troque)" : $"{100 - it.desgaste}%");
+            if (item == Item.Tocha) Linha("Fogo", it.qtd == Itens.TochaApagada ? "apagada pela chuva (reacenda numa fogueira acesa)" : "acesa (só queima na mão)");
             if (Itens.EhGalao(item)) Linha("Gasolina", it.desgaste >= 100 ? "vazio" : $"{InventarioJogador.LitrosDe(it):0.#} de {Itens.LitrosDoGalao:0} L");
             var desmonta = Receitas.DesmontagemDe(item);
             if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(desmonta.vira));

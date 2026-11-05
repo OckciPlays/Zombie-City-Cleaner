@@ -501,10 +501,11 @@ namespace ZombieCityCleaner.Vehicles
             if (mudou) _pneus.Value = p;
 
             bool ligado = Estado == EstadoDoMotor.Ligado;
-            // a gasolina: pelo giro do motor (o do dono, que vai pela rede)
+            // a gasolina: pelo giro do motor (o do dono, que vai pela rede); sem motorista, a marcha lenta (o carro deixado
+            // ligado e parado longe de todos guardava o giro de quem dirigia: Carro.Parado.cs não roda a física)
             if (ligado && _litros > 0f)
             {
-                float giro = _rotacao.Value / 255f;
+                float giro = _ocupantes.Value[0] == 0 ? MarchaLenta : _rotacao.Value / 255f;
                 _litros = Mathf.Max(0f, _litros - Mathf.Lerp(a.gastoParado, a.gastoNoMaximo, Mathf.Pow(giro, 1.5f)) * dt / 60f);
             }
             if (Mathf.Abs(_litros - _gasolina.Value) >= 0.02f || (_litros <= 0f && _gasolina.Value > 0f)) _gasolina.Value = _litros;
@@ -602,7 +603,28 @@ namespace ZombieCityCleaner.Vehicles
 
         /// <summary>No anfitrião, pelo menu do desenvolvedor: 0 um furo lento, 1 um estouro, 2 os pneus a 30%, 3 o radiador
         /// vazando, 4 a gasolina quase no fim (1 L), 5 o tanque cheio, 6 a vela a 25%, 7 sem carência, 8 o motor novo (a vela,
-        /// a bateria e o radiador a 100%, sem vazamento), 9 os pneus novos (os 4 a 100%, sem murchar).</summary>
+        /// a bateria e o radiador a 100%, sem vazamento), 9 os pneus novos (os 4 a 100%, sem murchar), 10 o motor ligado no carro
+        /// vazio (como se o motorista tivesse saído sem desligar).</summary>
+        /// <summary>O giro do motor ligado sem ninguém acelerando (0 a 1; o <see cref="Rotacao"/> parado).</summary>
+        const float MarchaLenta = 0.12f;
+
+        /// <summary>O F1 (no anfitrião): liga o motor do carro vazio, como se o motorista tivesse saído sem desligar.</summary>
+        string LigarVazio()
+        {
+            if (!Vazio) return "Tem gente no carro: saia para testar";
+            if (!IsOwner) return "O carro ainda não voltou para o anfitrião";
+            if (MacacoNaRoda >= 0) return "Tire o macaco primeiro";
+            if (MotorLigado) return "O motor já está ligado";
+            if (SemGasolina) return "Sem gasolina";
+            if (!Pecas.VelaBoa) return "A vela não deixa pegar";
+            if (Fervendo) return "O motor está fervendo";
+            if (_direta.Value) _direta.Value = false;
+            _anguloDaChave = ChaveLiga;
+            _presaNaPartida = false;
+            MudarEstado(EstadoDoMotor.Ligado);
+            return "O motor ficou ligado, sem ninguém (a chave na ignição)";
+        }
+
         public string Teste(int acao)
         {
             if (!IsServer) return null;
@@ -658,6 +680,8 @@ namespace ZombieCityCleaner.Vehicles
                     _pneus.Value = PneusDoCarro.Com(new[] { 100, 100, 100, 100 });
                     for (int i = 0; i < PneusDoCarro.Quantas; i++) NovoPneu(i);
                     return "Pneus novos: os 4 a 100%";
+                case 10:
+                    return LigarVazio();
             }
             return null;
         }

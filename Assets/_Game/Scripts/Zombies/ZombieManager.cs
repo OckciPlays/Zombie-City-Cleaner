@@ -183,6 +183,8 @@ namespace ZombieCityCleaner.Zombies
             GuardarPedacos();
             _niveisPorCliente.Clear();
             _grupos.Clear();
+            EsquecerOLongDaFogueira();   // ZombieManager.LongNaFogueira.cs
+            EsquecerOEnterrado();   // ZombieManager.Enterrado.cs
         }
 
         void Update()
@@ -208,6 +210,8 @@ namespace ZombieCityCleaner.Zombies
                 }
                 PovoarEmVolta(agora);   // o mundo gerado (ZombieManager.Povoamento.cs)
                 EspeciaisNoServidor(agora);   // o Long e o Brutamonte aparecem (ZombieManager.Especiais.cs)
+                BrutamonteEnterradoNoServidor(agora);   // o Brutamonte sai da terra perto de quem passa (ZombieManager.Enterrado.cs)
+                LongNaFogueira(agora);   // o Long que vem apagar a fogueira (ZombieManager.LongNaFogueira.cs)
                 GosmaNoServidor(agora);   // a gosma do Long (ZombieManager.Gosma.cs)
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)

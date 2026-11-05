@@ -42,7 +42,8 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 - **No mundo** (o computador de quem hospeda):
   - o dia e a hora, e o clima;
   - os itens no chão;
-  - a perua e o cupê (onde estão, as peças, os pneus, a gasolina e o desgaste);
+  - a perua e o cupê (onde estão, as peças, os pneus, a gasolina e o desgaste; o motor ligado, não: o carro volta sem a
+    chave);
   - os carros do mundo em que alguém mexeu (as peças e os pneus tirados);
   - as construções (a fogueira continua com o fogo que tinha);
   - as portas e gavetas abertas;

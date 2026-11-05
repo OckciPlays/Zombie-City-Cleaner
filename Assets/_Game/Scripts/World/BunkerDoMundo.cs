@@ -179,6 +179,22 @@ namespace ZombieCityCleaner.World
         }
 
         /// <summary>
+        /// O ponto (mundo) está debaixo do teto do bunker (05/11/2026, o fogo na chuva): na caixa (a garagem e os andares) ou
+        /// na casinha da escada. O alto do morro, a céu aberto, não (o <see cref="Dentro"/> o conta). Só a geometria: vale com
+        /// a casca desmontada.
+        /// </summary>
+        public static bool Abrigado(Vector3 p)
+        {
+            var b = Instancia;
+            if (b == null || b._raiz == null) return false;
+            var q = b._raiz.InverseTransformPoint(p);
+            bool naCaixa = Mathf.Abs(q.x) < X1 && Mathf.Abs(q.z) < Z1 && q.y > Base(Andares - 1) - 1f && q.y < TopoDaCaixa;
+            bool naCasinha = q.x > Escada.xMin && q.x < Escada.xMax && q.z > Escada.yMin && q.z < Escada.yMax
+                             && q.y >= TopoDaCaixa && q.y < Morro + AlturaDaCasinha;
+            return naCaixa || naCasinha;
+        }
+
+        /// <summary>
         /// Onde fica, no mundo, o móvel <paramref name="ponto"/> do bunker (o índice em <see cref="MoveisDoBunker.Todos"/>):
         /// o ponto de apoio dele, no chão do andar (as estantes, para a distância de quem guarda).
         /// </summary>

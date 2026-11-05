@@ -289,7 +289,8 @@ namespace ZombieCityCleaner.Vehicles
         public bool Virado => transform.up.y < 0.35f;
         /// <summary>Virado há mais de 1,5 s e quase parado: o motorista pode desvirar.</summary>
         public bool PodeDesvirar => Virado && _viradoDesde >= 0f && Time.time - _viradoDesde > 1.5f && Velocidade < 2f;
-        public bool FaroisLigados => IsSpawned && _farois.Value && !FaroisSujos;
+        /// <summary>Os faróis acesos de verdade (ligados, com a bateria e sem a gosma): os que afastam os zumbis.</summary>
+        public bool FaroisLigados => IsSpawned && _farois.Value && Pecas.BateriaAcende && !FaroisSujos;
         /// <summary>A gosma do Long cobriu os faróis (eles não acendem até ela escorrer).</summary>
         public bool FaroisSujos => IsSpawned && NetworkManager.ServerTime.TimeAsFloat < _faroisSujosAte.Value;
 
@@ -689,6 +690,12 @@ namespace ZombieCityCleaner.Vehicles
             MudarEstado(EstadoDoMotor.SemChave);
         }
 
+        /// <summary>
+        /// No dono, sem motorista: o motor ligado continua ligado enquanto puder (sem ferver, com a vela boa e gasolina).
+        /// O resto (a ignição acesa, a partida, o mini-game da direta) perde a chave ao sair, como antes.
+        /// </summary>
+        bool FicaLigadoSemMotorista => _estadoLocal == EstadoDoMotor.Ligado && !Fervendo && Pecas.VelaBoa && !SemGasolina;
+
         void MudarEstado(EstadoDoMotor e)
         {
             _estadoLocal = e;
@@ -698,7 +705,8 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>
         /// No dono: o estado vem da chave. Presa na partida, o motor de arranque gira (até o mini-game do motorista dar
         /// certo, <see cref="PegarAgora"/>); entre a ignição e a partida, a mola puxa a chave de volta. Abaixo de
-        /// <see cref="ChaveDesliga"/>, o motor desliga. Sem motorista, a chave sai.
+        /// <see cref="ChaveDesliga"/>, o motor desliga. Sem motorista, a chave sai, a não ser com o motor ligado
+        /// (<see cref="FicaLigadoSemMotorista"/>).
         /// </summary>
         void Ignicao(float dt)
         {
@@ -706,8 +714,16 @@ namespace ZombieCityCleaner.Vehicles
             var e = _estadoLocal;
             if (_ocupantes.Value[0] == 0)
             {
-                _anguloDaChave = 0f;
                 _presaNaPartida = false;
+                // quem sai sem desligar deixa o carro ligado (05/11/2026, a pedido): a chave fica na ignição (ou os fios,
+                // juntos) e quem senta depois dirige direto. Gasta a gasolina parado; se o motor morrer sozinho (ferveu,
+                // a vela, a gasolina), a chave sai, como no carro desligado.
+                if (FicaLigadoSemMotorista)
+                {
+                    _anguloDaChave = ChaveLiga;
+                    return;
+                }
+                _anguloDaChave = 0f;
                 if (_direta.Value) _direta.Value = false;
                 if (e != EstadoDoMotor.SemChave) MudarEstado(EstadoDoMotor.SemChave);
                 return;
@@ -1040,7 +1056,7 @@ namespace ZombieCityCleaner.Vehicles
         [Rpc(SendTo.Server)]
         void ApoiarMacacoRpc(byte roda, RpcParams parametros = default)
         {
-            if (!IsOwner || MacacoNaRoda >= 0 || !Vazio || Virado || Velocidade > VelocidadeParaOMacaco) return;
+            if (!IsOwner || MacacoNaRoda >= 0 || !Vazio || Virado || MotorLigado || Velocidade > VelocidadeParaOMacaco) return;
             if (!PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
             if (!PortaMalasDoCarro.Achar(inventario, Loot.Item.Macaco, out var macaco)) return;
             inventario.Tirar(macaco.id);

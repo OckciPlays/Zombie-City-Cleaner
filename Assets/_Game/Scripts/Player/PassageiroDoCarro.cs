@@ -330,8 +330,11 @@ namespace ZombieCityCleaner.Player
             var teclado = Keyboard.current;
             if (Lugar == 0 && Carro.IsOwner)
             {
-                Vector2 m = DirecaoDeTeste ?? (controla ? _mover.ReadValue<Vector2>() : Vector2.zero);
-                Carro.Comandar(m.y, m.x, controla && _pular.IsPressed());
+                // entrando (ou saindo), o motorista ainda não dirige: o carro deixado ligado (05/11/2026) não arranca com a
+                // porta aberta; fica no freio de mão até ele sentar
+                bool sentado = _fase == Fase.Dentro;
+                Vector2 m = !sentado ? Vector2.zero : DirecaoDeTeste ?? (controla ? _mover.ReadValue<Vector2>() : Vector2.zero);
+                Carro.Comandar(m.y, m.x, !sentado || (controla && _pular.IsPressed()));
                 Chave(controla);
                 if (Carro.Fervendo && !_fervendoAntes) Avisar("O motor ferveu e apagou: espere esfriar e troque o radiador (capô)", 4f);
                 _fervendoAntes = Carro.Fervendo;
@@ -803,7 +806,8 @@ namespace ZombieCityCleaner.Player
                 }
             }
             var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Normal, TextAnchor.LowerCenter);
-            string linha = Lugar == 0 ? "WASD: dirigir   ·   Espaço: freio de mão   ·   L: faróis   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   E: sair"
+            string linha = Lugar == 0 ? "WASD: dirigir   ·   Espaço: freio de mão   ·   L: faróis   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   "
+                    + (Carro.MotorLigado ? "E: sair (fica ligado)" : "E: sair")
                 : "F: lanterna   ·   V: câmera   ·   E: sair";
             Sombra(new Rect(Screen.width / 2f - 400 * u, Screen.height - 34 * u, 800 * u, 24 * u), linha, dica, new Color(0.8f, 0.78f, 0.72f));
             if (Lugar == 0) TelaDaChave(u, dica);

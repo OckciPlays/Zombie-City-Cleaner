@@ -16,11 +16,12 @@ namespace ZombieCityCleaner.UI
         {
             ("Furo lento", 0), ("Estourar um pneu", 1), ("Pneus a 30%", 2), ("Pneus novos", 9), ("Vazar o radiador", 3),
             ("Vela a 25%", 6), ("Motor novo", 8), ("Gasolina: 1 L", 4), ("Tanque cheio", 5), ("Sem carência", 7),
+            ("Ligar o motor (vazio)", 10),
         };
 
         Rect PainelDoCarro(float u, Rect emCima)
         {
-            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 268 * u);
+            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 286 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -46,12 +47,13 @@ namespace ZombieCityCleaner.UI
                 pneus += (i == 0 ? "" : i == 2 ? " · tr " : " ") + e;
             }
             var pc = c.Pecas;
-            GUI.Label(new Rect(x, y, w, 54 * u),
+            GUI.Label(new Rect(x, y, w, 72 * u),
                 $"pneus: fr {pneus}\n" +
                 $"gasolina: {c.Gasolina:0.0} de {c.Tanque:0} L\n" +
+                $"motor: {(c.MotorLigado ? (c.Vazio ? "ligado, sem ninguém" : "ligado") : c.Estado == Carro.EstadoDoMotor.SemChave ? "sem a chave" : "desligado")}\n" +
                 $"vela {pc.Estado(PecasDoMotor.Vela)}% · radiador {pc.Estado(PecasDoMotor.Radiador)}%{(c.RadiadorVazando ? " (vaza)" : "")}" +
                 (IsServer ? $" · carência {Mathf.Max(0f, c.Carencia):0} s" : ""), _texto);
-            y += 58 * u;
+            y += 76 * u;
             for (int k = 0; k < TestesDoCarro.Length; k++)
             {
                 var r = new Rect(k % 2 == 0 ? x : x2, y + (k / 2) * 30 * u, meio, 26 * u);

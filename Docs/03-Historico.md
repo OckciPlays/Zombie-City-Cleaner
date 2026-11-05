@@ -619,6 +619,24 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
 - **Os militares:** lutam com uma reserva de 2 pentes que não fica no saque; no corpo, o pente e às vezes uma caixa pequena;
   a arma cai gasta (engasga); o colete e o capacete como itens ficaram raros. De ~98 para ~29 balas por militar.
 
+## O carro ligado, o fogo e a chuva (05/11/2026, a pedido)
+
+- **O carro:** quem sai com o motor ligado deixa o carro ligado (a chave na ignição, ou os fios juntos), e quem senta depois
+  dirige direto. Parado, ele gasta a gasolina na marcha lenta.
+- **O fogo:** os zumbis não chegam a 4 m da tocha acesa nem a 8 m da fogueira acesa. Quem caça alguém dentro rodeia a beira,
+  esperando; com 5 ou mais esperando por 30 s, a horda cria coragem e entra. O ferido entra, o Brutamonte ignora e o Long
+  cospe no fogo.
+- **A chuva:** qualquer chuva, até o chuvisco, apaga a tocha e a fogueira fora de um teto. A tocha fica apagada na mão e
+  reacende numa fogueira acesa; a fogueira perde a lenha e não acende na chuva. As fogueiras dos acampamentos também apagam.
+- Botões de teste no F1 (o carro, o clima) e detalhes no CLAUDE.md, "O carro ligado, o fogo e a chuva".
+
+## O Long da fogueira e o Brutamonte enterrado (05/11/2026, a pedido)
+
+- **O Long:** à noite, quem fica parado 1 minuto numa fogueira com 6 ou mais zumbis em volta atrai um Long, que nasce perto
+  e cospe nela até apagar. A coragem da horda na fogueira, à noite, passou para 90 s.
+- **O Brutamonte:** fica enterrado no caminho; quem chega a 10 m sente o aviso (o ronco e a poeira) e ele sai da terra a uns
+  5 m, de costas, e avança. Antes nascia a 30–45 m, fora da vista, e quase não era achado.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
