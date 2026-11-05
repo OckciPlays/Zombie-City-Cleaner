@@ -90,7 +90,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis (e, p
   - `MenuDoDesenvolvedor` (F1, só no Editor e nas builds de desenvolvimento): criar itens, contar, criar e matar zumbis, pelo anfitrião.
   - `ArmaJogador`: o que está na mão: com arma, o tiro, a recarga e a mira (e a luneta da sniper), com o pente guardado por lugar; com comida ou água, comer ou beber no clique; com a mão vazia, o soco (uma esfera curta da câmera; no zumbi, pouco dano e o recuo). E o E: mirando de perto uma coisa que se usa (`Interagivel`: um item no chão, uma arma do painel, a porta do bunker, um interruptor), mostra a dica e usa.
   - `LanternaJogador`: a luz no peito; o facho converge no ponto da mira (um raio sai do olho).
-  - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador volta ao bunker. Ela volta sozinha só sem fome e sem sede.
+  - `VidaJogador`: a vida (100), que só o anfitrião muda. Sem vida, o jogador cai e renasce na cama. Desde 05/11/2026 ela não volta sozinha: o golpe pega numa das 6 partes do corpo, e só o tratamento cura (o [16](16-Corpo-e-Ferimentos.md)).
   - `FomeESede`: duas barras (0 a 100) do anfitrião, que esvaziam com o tempo (25 min a sede, 40 a fome; mais rápido correndo) e tiram vida quando vazias.
   - `PassosJogador`: os passos, em todas as cópias, pela distância andada e pelo chão embaixo do pé (concreto, madeira, carpete, grama). Dentro das casas e do bunker, o `World/PisoPorZona` (posto pela montagem da cidade) diz o piso de cada cômodo.
 - **"Corpo":** o modelo que os outros veem. Para o próprio jogador, ele só faz sombra.

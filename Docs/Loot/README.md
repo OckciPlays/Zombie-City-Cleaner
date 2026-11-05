@@ -18,7 +18,7 @@ código ficam no `CLAUDE.md` ("O saque, a fabricação e as construções").
 |---|---|
 | Comida | lata de comida, feijão, carne, milho, sopa, salgadinho (dá sede), chocolate, barra de energia |
 | Bebida | garrafa de água, copo de água, refrigerante (garrafa e lata), energético, leite, suco, garrafa térmica |
-| Remédios | remédio, comprimidos, kit médico, atadura, gaze, desinfetante, spray antisséptico, antibiótico, bandagem |
+| Remédios | remédio, comprimidos, kit médico, atadura, gaze, desinfetante, spray antisséptico, antibiótico, bandagem, tala (o que cada um trata está no [16](../16-Corpo-e-Ferimentos.md)) |
 | Materiais | madeira, toras, pano, corda, fita adesiva, ferramenta, peças de metal, fios, pregos, isca, vara de pesca, kit de reparo, roupa |
 | Kits de montar | fogueira, cama improvisada, barricada |
 
@@ -29,7 +29,8 @@ A pesca ainda não existe.
 
 | Receita | Gasta | Onde |
 |---|---|---|
-| Bandagem ×2 | 2 panos | qualquer lugar |
+| Bandagem | 2 panos (desde 05/11/2026; antes dava 2) | qualquer lugar |
+| Tala | 2 madeiras, 1 pano | qualquer lugar |
 | Kit médico | 1 atadura, 2 gazes, 1 desinfetante, 1 cartela de comprimidos | qualquer lugar |
 | Corda | 3 panos | qualquer lugar |
 | Fogueira | 4 madeiras, 1 pano | qualquer lugar |
@@ -50,7 +51,7 @@ garrafa térmica, kit de reparo, kits de montar e armas (viram peças de metal; 
 
 ## Montar no mundo
 
-- **Fogueira:** luz e calor (a vida volta mais rápido perto). A lenha dura 4 minutos; E põe mais (1 madeira).
+- **Fogueira:** luz e calor (desde 05/11/2026 ela não cura). A lenha dura 4 minutos; E põe mais (1 madeira).
 - **Cama:** você volta nela quando cair. E recolhe.
 - **Barricada:** os zumbis não passam; os que encostam nela vão quebrando. E desmonta.
 

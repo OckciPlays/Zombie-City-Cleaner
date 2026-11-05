@@ -334,6 +334,9 @@ namespace ZombieCityCleaner.Player
                 // porta aberta; fica no freio de mão até ele sentar
                 bool sentado = _fase == Fase.Dentro;
                 Vector2 m = !sentado ? Vector2.zero : DirecaoDeTeste ?? (controla ? _mover.ReadValue<Vector2>() : Vector2.zero);
+                // o corpo ruim no volante e no pedal (05/11/2026: com a tala, dirige "porém com dificuldades"): o braço
+                // quebrado vira menos e o carro puxa devagar para um lado; a perna direita ruim acelera menos
+                if (sentado && (controla || DirecaoDeTeste.HasValue) && _rede.Vida != null) m = PartesDoCorpo.NoVolante(_rede.Vida.Corpo.Value, m, Time.time);
                 Carro.Comandar(m.y, m.x, !sentado || (controla && _pular.IsPressed()));
                 Chave(controla);
                 if (Carro.Fervendo && !_fervendoAntes) Avisar("O motor ferveu e apagou: espere esfriar e troque o radiador (capô)", 4f);

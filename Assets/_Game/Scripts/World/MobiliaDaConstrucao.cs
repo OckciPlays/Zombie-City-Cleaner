@@ -45,13 +45,14 @@ namespace ZombieCityCleaner.World
 
         /// <summary>
         /// Põe os móveis novos no objeto da construção ('andar': o do prédio, ou -100 numa casa ou loja). Fica com os de
-        /// longe (devolvidos ao estoque quando viram Mesh ou quando a construção sai). Nada, sem móvel novo. Sem
+        /// longe (devolvidos ao estoque quando viram Mesh ou quando a construção sai). Nada, sem móvel novo (nem móvel antigo
+        /// com saque da farmácia ou do hospital: o saque dele entra de perto, sem o móvel, 05/11/2026). Sem
         /// 'comSaque', os móveis ficam vazios (as casas da rua do Dia 0).
         /// </summary>
         public static void Por(GameObject go, List<PontoDeMovel> pontos, MalhaDaMobilia dados, int semente, int andar, bool comSaque = true)
         {
             bool tem = false;
-            if (pontos != null) foreach (var p in pontos) tem |= MobiliaNova.EhNovo(p.tipo);
+            if (pontos != null) foreach (var p in pontos) tem |= MobiliaNova.EhNovo(p.tipo) || (comSaque && AntigoComSaque(p));
             if (!tem || MobiliaNovaDoMundo.Instancia == null)
             {
                 MalhaDaMobilia.Devolver(dados);
@@ -66,7 +67,9 @@ namespace ZombieCityCleaner.World
             bool primeiro = true;
             foreach (var p in m._pontos)
             {
-                if (!MobiliaNova.EhNovo(p.tipo)) continue;
+                // (os antigos com saque da farmácia e do hospital também: sem eles, numa farmácia com apartamento em cima, o
+                // "perto" só ligaria nos andares de cima)
+                if (!MobiliaNova.EhNovo(p.tipo) && !(comSaque && AntigoComSaque(p))) continue;
                 var pe = p.Pe;
                 var b = new Bounds(new Vector3(pe.center.x, p.centro.y + p.altura + p.tamanho.y / 2, pe.center.y), new Vector3(pe.width, p.tamanho.y, pe.height));
                 if (primeiro) m._caixa = b;
@@ -74,6 +77,12 @@ namespace ZombieCityCleaner.World
                 primeiro = false;
             }
         }
+
+        /// <summary>
+        /// O móvel antigo com saque de uma unidade de loja (a farmácia, o hospital; 05/11/2026): desenhado na malha da obra,
+        /// sem prefab; de perto, só o saque em cima dele (<see cref="PorOSaqueDoAntigo"/>).
+        /// </summary>
+        static bool AntigoComSaque(PontoDeMovel p) => p.saque && p.DeLoja && !MobiliaNova.EhNovo(p.tipo);
 
         void OnEnable()
         {
@@ -330,7 +339,11 @@ namespace ZombieCityCleaner.World
             {
                 int i = _proximo++;
                 var p = _pontos[i];
-                if (!MobiliaNova.EhNovo(p.tipo)) continue;
+                if (!MobiliaNova.EhNovo(p.tipo))
+                {
+                    if (_comSaque && AntigoComSaque(p) && PorOSaqueDoAntigo(mundo, p, i, obra)) pecas--;
+                    continue;
+                }
                 _pecas.Clear();
                 MobiliaNova.Pecas(p, MobiliaNova.Sorte(p, _semente, i), _pecas);
                 foreach (var peca in _pecas)
@@ -357,6 +370,24 @@ namespace ZombieCityCleaner.World
                     if (peca.modelo == "MesaSinuca") SinucaDoMundo.Ligar(go, MobiliaNova.ChaveDaParte(obra, i, peca.indice, SinucaDoMundo.ParteDaMesa));
                 }
             }
+        }
+
+        /// <summary>
+        /// O saque em cima de um móvel antigo da farmácia ou do hospital (05/11/2026): o móvel já está na malha da obra, então
+        /// só um objeto vazio no ponto (com o giro dele), e os itens nele, com a caixa do ponto (sem ela, a colisão do móvel
+        /// na obra tapava o item na mira). False se o ponto não tem nenhum item (nada é posto).
+        /// </summary>
+        bool PorOSaqueDoAntigo(MobiliaNovaDoMundo mundo, PontoDeMovel p, int i, ulong obra)
+        {
+            bool tem = false;
+            foreach (var it in Saque) tem |= it.ponto == i;
+            if (!tem) return false;
+            var go = new GameObject($"Antigo: {p.tipo}");
+            go.transform.SetParent(_perto.transform, false);
+            go.transform.SetLocalPositionAndRotation(p.centro + Vector3.up * p.altura, Quaternion.Euler(0f, p.giro, 0f));
+            var caixa = new Bounds(Vector3.up * (p.tamanho.y / 2f), p.tamanho);
+            mundo.PorOSaque(this, go, null, obra, i, 0, _saqueDePerto, caixa);
+            return true;
         }
 
         void TirarPerto()

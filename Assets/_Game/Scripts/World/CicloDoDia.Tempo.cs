@@ -628,7 +628,7 @@ namespace ZombieCityCleaner.World
                 if (protecao >= 1f || d.magnitude > Mathf.Lerp(13f, 6f, protecao)) continue;
                 if (_danoDoTornado.TryGetValue(j, out float ate) && Time.time < ate) continue;
                 _danoDoTornado[j] = Time.time + 2.5f;
-                j.Vida.Dano(Mathf.Lerp(35f, 15f, protecao), p, "Arrastado pelo tornado.");
+                j.Vida.Dano(Mathf.Lerp(35f, 15f, protecao), p, "Arrastado pelo tornado.", TipoDeGolpe.Tornado);   // os destroços: às vezes abrem ferida
             }
         }
 

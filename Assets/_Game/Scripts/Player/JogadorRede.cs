@@ -28,7 +28,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>No anfitrião: a mordida de um zumbi.</summary>
         public void LevarGolpe(float dano, Vector3 de)
         {
-            if (Vida != null) Vida.Dano(dano, de, "Mordido pelos zumbis.");
+            // (o golpe dos zumbis passa pelo ZombieManager.Ferimentos, que escolhe a parte; este é o de reserva)
+            if (Vida != null) Vida.Dano(dano, de, "Mordido pelos zumbis.", TipoDeGolpe.Mordida);
         }
 
         public const int CamadaBracos = 6;
@@ -600,28 +601,30 @@ namespace ZombieCityCleaner.Player
         /// O dono acertou outro jogador (03/11/2026, o fogo amigo, escolhido ao criar o mundo): o anfitrião confere (o fogo
         /// amigo ligado, o outro vivo e perto do ponto) e tira a vida, com o nome de quem atirou na tela de morte.
         /// </summary>
-        public void AcertarJogador(JogadorRede alvo, float dano, Vector3 ponto)
+        public void AcertarJogador(JogadorRede alvo, float dano, Vector3 ponto, TipoDeGolpe tipo = TipoDeGolpe.Tiro, ParteDoCorpo parte = PartesDoCorpo.Sortear)
         {
             if (alvo == null) return;
-            if (IsServer) FerirJogador(alvo, dano, ponto);
-            else AcertoNoJogadorRpc(alvo.NetworkObject, dano, ponto);
+            if (IsServer) FerirJogador(alvo, dano, ponto, tipo, parte);
+            else AcertoNoJogadorRpc(alvo.NetworkObject, dano, ponto, (byte)tipo, (byte)parte);
         }
 
         [Rpc(SendTo.Server)]
-        void AcertoNoJogadorRpc(NetworkObjectReference quem, float dano, Vector3 ponto, RpcParams parametros = default)
+        void AcertoNoJogadorRpc(NetworkObjectReference quem, float dano, Vector3 ponto, byte tipo, byte parte, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId || !quem.TryGet(out var no)) return;
-            FerirJogador(no.GetComponent<JogadorRede>(), dano, ponto);
+            FerirJogador(no.GetComponent<JogadorRede>(), dano, ponto, (TipoDeGolpe)tipo, (ParteDoCorpo)parte);
         }
 
-        // no anfitrião: o fogo amigo
-        void FerirJogador(JogadorRede alvo, float dano, Vector3 ponto)
+        // no anfitrião: o fogo amigo (05/11/2026: o tiro, o corte e a pancada abrem feridas também entre jogadores)
+        void FerirJogador(JogadorRede alvo, float dano, Vector3 ponto, TipoDeGolpe tipo, ParteDoCorpo parte)
         {
+            if (tipo != TipoDeGolpe.Tiro && tipo != TipoDeGolpe.Corte && tipo != TipoDeGolpe.Pancada) tipo = TipoDeGolpe.Pancada;
+            if (!PartesDoCorpo.Valida(parte) && alvo != null) parte = PartesDoCorpo.PeloPonto(alvo.transform, ponto);
             var m = World.MundoDaPartida.Instancia;
             if (alvo == null || alvo == this || !alvo.AlvoValido || alvo.Vida == null || m == null || !m.FogoAmigo || !AlvoValido) return;
             if ((alvo.transform.position + Vector3.up * 1f - ponto).sqrMagnitude > 2.5f * 2.5f) return;
             string nome = Aparencia.Value.nome.ToString();
-            alvo.Vida.Dano(Mathf.Clamp(dano, 0f, 200f), transform.position + Vector3.up * 1.5f, $"Morto por {(string.IsNullOrEmpty(nome) ? "outro jogador" : nome)}.");
+            alvo.Vida.Dano(Mathf.Clamp(dano, 0f, 200f), transform.position + Vector3.up * 1.5f, $"Morto por {(string.IsNullOrEmpty(nome) ? "outro jogador" : nome)}.", tipo, parte);
         }
 
         [Rpc(SendTo.NotMe)]

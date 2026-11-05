@@ -51,6 +51,7 @@ namespace ZombieCityCleaner.UI
             ("Remédios", new[]
             {
                 Item.Remedio, Item.Comprimidos, Item.KitMedico, Item.Atadura, Item.Gaze, Item.Desinfetante, Item.SprayAntisseptico, Item.Antibiotico, Item.Bandagem,
+                Item.BandagemAntisseptica, Item.Tala,
             }),
             ("Materiais", new[]
             {
@@ -272,11 +273,12 @@ namespace ZombieCityCleaner.UI
             if (save.width > 0f) Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Area.xMax, Mathf.Max(Area.yMax, save.yMax));
             // os zumbis (teste: criar um na frente, a pedra do sol) ou o clima (02/11/2026: a chuva, os raios e o tornado),
             // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
-            // (e os sobreviventes, 02/11/2026, na terceira aba)
-            var zumbis = _abaDosSobreviventes ? PainelDosSobreviventes(u, oco) : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
-            AbasDosZumbisEDoClima(u, zumbis);
-            AbaDosSobreviventes(u, zumbis);
-            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
+            // (e os sobreviventes, 02/11/2026, na terceira aba; o corpo, 05/11/2026, na quarta: as quatro numa faixa logo
+            // acima do painel, que a Area também cobre)
+            var zumbis = _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
+                       : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
+            AbasDoCanto(u, zumbis);
+            Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
             // a trilha sonora (teste), embaixo dos zumbis
             var trilha = PainelDaTrilha(u, zumbis);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Mathf.Max(Area.xMax, trilha.xMax), Mathf.Max(Area.yMax, trilha.yMax));

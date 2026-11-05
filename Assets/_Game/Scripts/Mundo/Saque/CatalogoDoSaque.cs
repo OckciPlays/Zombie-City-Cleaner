@@ -40,6 +40,13 @@ namespace ZombieCityCleaner.Mundo
         Sinuca = 1 << 20,
         /// <summary>O que vai nas gavetas da cozinha: a faca, a fita adesiva, a lanterna, as pilhas, a atadura e os comprimidos.</summary>
         GavetaDaCozinha = 1 << 21,
+        /// <summary>
+        /// O que aparece nos móveis da farmácia e do hospital (05/11/2026, a etapa 2 do sistema de vida): os remédios, os
+        /// curativos e o kit; o antibiótico incomum só tem esta (nas casas, ele continua raro). As casas não aceitam esta.
+        /// </summary>
+        Farmacia = 1 << 22,
+        /// <summary>O que fica atrás das portas da cozinha, com os produtos de limpeza: o álcool (o Desinfetante).</summary>
+        Limpeza = 1 << 23,
     }
 
     /// <summary>
@@ -100,11 +107,27 @@ namespace ZombieCityCleaner.Mundo
             C("Agua", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche), C("RefrigeranteGarrafa", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche),
             C("RefrigeranteLata", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche), C("Suco", N, EspecieDoSaque.Bebida),
             C("Leite", I, EspecieDoSaque.Bebida), C("Energetico", I, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche), C("GarrafaTermica", I, EspecieDoSaque.Bebida),
-            // os remédios
-            C("Comprimidos", N, EspecieDoSaque.Remedio | EspecieDoSaque.Cabeceira | EspecieDoSaque.GavetaDaCozinha), C("Atadura", N, EspecieDoSaque.Remedio | EspecieDoSaque.GavetaDaCozinha),
-            C("Gaze", N, EspecieDoSaque.Remedio), C("Remedio", I, EspecieDoSaque.Remedio | EspecieDoSaque.Cabeceira), C("Desinfetante", I, EspecieDoSaque.Remedio),
-            C("SprayAntisseptico", I, EspecieDoSaque.Remedio), C("Bandagem", I, EspecieDoSaque.Remedio), C("KitMedico", R, EspecieDoSaque.Remedio),
+            // os remédios (05/11/2026, sem a vida voltando sozinha: a atadura, a bandagem e a gaze vêm de 1 a 2, os
+            // comprimidos de 1 a 3; a pilha achada não muda o lugar de nada no mundo salvo)
+            // (05/11/2026, a etapa 2: todos com a espécie Farmacia, a da farmácia e do hospital, e o Desinfetante, o "álcool",
+            // normal, e não mais incomum, também atrás das portas da cozinha, com a limpeza)
+            C("Comprimidos", N, EspecieDoSaque.Remedio | EspecieDoSaque.Cabeceira | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Farmacia, 1, 3),
+            C("Atadura", N, EspecieDoSaque.Remedio | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Farmacia, 1, 2),
+            C("Gaze", N, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia, 1, 2), C("Remedio", I, EspecieDoSaque.Remedio | EspecieDoSaque.Cabeceira | EspecieDoSaque.Farmacia),
+            C("Desinfetante", N, EspecieDoSaque.Remedio | EspecieDoSaque.Limpeza | EspecieDoSaque.Farmacia),
+            C("SprayAntisseptico", I, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia), C("Bandagem", I, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia, 1, 2),
+            C("KitMedico", R, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia),
+            // o antibiótico: raro nas casas (só a espécie Remedio: a farmácia e o hospital não aceitam esta entrada) e
+            // incomum na farmácia e no hospital (a segunda entrada, só Farmacia). A raridade da mochila é a da primeira
+            // (RaridadeDo): a rara
             C("Antibiotico", R, EspecieDoSaque.Remedio),
+            C("Antibiotico", I, EspecieDoSaque.Farmacia),
+            // a tala (05/11/2026): no banheiro e no acampamento. Só entra no saque depois do modelo no Loot.fbx e do "Itens >
+            // Escrever os itens do saque" (antes disso, fica no Faltando)
+            C("Tala", I, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia),
+            // a bandagem antisséptica (05/11/2026, a etapa 2): no banheiro, no acampamento, na farmácia e no hospital. Como a
+            // tala, só entra no saque depois do modelo no Loot.fbx e do "Itens > Escrever os itens do saque"
+            C("BandagemAntisseptica", I, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia, 1, 2),
             // os materiais
             C("Pano", N, EspecieDoSaque.Pano, 1, 3), C("Madeira", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Lenha, 1, 3), C("Pregos", N, EspecieDoSaque.Ferramenta, 3, 12),
             C("FitaAdesiva", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio | EspecieDoSaque.GavetaDaCozinha), C("Fios", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio),
@@ -174,7 +197,8 @@ namespace ZombieCityCleaner.Mundo
             if (_raridadePorNumero == null)
             {
                 var d = new Dictionary<int, Raridade>();
-                foreach (var it in _itens) d[it.numero] = it.raridade;
+                // (com duas entradas, vale a primeira: o antibiótico fica raro na mochila, mesmo o achado na farmácia)
+                foreach (var it in _itens) if (!d.ContainsKey(it.numero)) d[it.numero] = it.raridade;
                 _raridadePorNumero = d;
             }
             return _raridadePorNumero.TryGetValue(numero, out r);
@@ -252,8 +276,9 @@ namespace ZombieCityCleaner.Mundo
             (G(EspecieDoSaque.Lanche, 0, 0, 1f), new[] { "MesaDeCentro" }),
             (G(EspecieDoSaque.Lanche | EspecieDoSaque.Luz, 0, EspecieDoSaque.Luz | EspecieDoSaque.Cabeceira | EspecieDoSaque.ArmaCurta | EspecieDoSaque.Municao, 1f), new[] { "MesaDeCanto" }),
             (G(EspecieDoSaque.Lenha | EspecieDoSaque.Machado, 0, 0, 1f), new[] { "Lareira" }),
-            // a cozinha: a comida e a bebida; nas gavetas, o que fica numa gaveta da cozinha
-            (G(EspecieDoSaque.Comida | EspecieDoSaque.Bebida, EspecieDoSaque.Comida | EspecieDoSaque.Bebida, EspecieDoSaque.GavetaDaCozinha, 1f),
+            // a cozinha: a comida e a bebida; atrás das portas, também o álcool (a limpeza: o frasco tem 17 cm, e atrás das
+            // portas há de 27 a 32; nas gavetas, de 14, ele não cabe); nas gavetas, o que fica numa gaveta da cozinha
+            (G(EspecieDoSaque.Comida | EspecieDoSaque.Bebida, EspecieDoSaque.Comida | EspecieDoSaque.Bebida | EspecieDoSaque.Limpeza, EspecieDoSaque.GavetaDaCozinha, 1f),
              new[] { "ArmarioChao40", "ArmarioChao60", "ArmarioChao80", "Gaveteiro40", "ArmarioCanto", "Ilha", "Pia",
                      "ArmarioParede40", "ArmarioParede60", "ArmarioParede80", "ArmarioParedeAberto60", "ArmarioParedeAberto80" }),
             (G(0, EspecieDoSaque.Bebida, 0, 2f), new[] { "Geladeira", "GeladeiraGrande" }),
@@ -284,6 +309,20 @@ namespace ZombieCityCleaner.Mundo
 
         public static IEnumerable<string> ModelosComRegra => Regras.Keys;
 
+        // a farmácia e o hospital (05/11/2026): os remédios, os curativos e o kit em cima dos móveis antigos; na rouparia,
+        // também o pano
+        static readonly Regra RegraDaFarmacia = G(EspecieDoSaque.Farmacia, EspecieDoSaque.Farmacia, EspecieDoSaque.Farmacia, 1f);
+        static readonly Regra RegraDaRouparia = G(EspecieDoSaque.Farmacia | EspecieDoSaque.Pano, EspecieDoSaque.Farmacia | EspecieDoSaque.Pano, EspecieDoSaque.Farmacia | EspecieDoSaque.Pano, 1f);
+
+        /// <summary>
+        /// A regra dos móveis antigos de uma unidade de loja (<see cref="PontoDeMovel.Farmacia"/>, <see cref="PontoDeMovel.Hospital"/>;
+        /// 05/11/2026): pela unidade e pelo cômodo, não pelo modelo (o ModelosComRegra fica só com os da mobília nova). Aceita
+        /// só a espécie Farmacia (o antibiótico raro das casas fica de fora: aqui ele é incomum), e o pano na rouparia. Null
+        /// fora de uma unidade de loja.
+        /// </summary>
+        public static Regra RegraDaLoja(int unidade, string comodo) =>
+            unidade < PontoDeMovel.Farmacia ? null : comodo == "rouparia" ? RegraDaRouparia : RegraDaFarmacia;
+
         /// <summary>O que o lugar do móvel aceita: em cima, atrás de uma porta ou tampa, ou numa gaveta.</summary>
         public static EspecieDoSaque Aceita(Regra r, LugarDoSaque l) =>
             l.parte == null ? r.cima : l.parte.StartsWith("Gaveta") ? (r.gavetas != 0 ? r.gavetas : r.dentro) : r.dentro;
@@ -293,8 +332,18 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>O peso de cada cômodo no sorteio (o quarto e a cozinha mais; a sala menos).</summary>
         public static float PesoDoComodo(string comodo) => comodo switch
         {
-            "quarto" => 3f, "cozinha" => 3f, "porao" => 2f, "deposito" => 2f, "banheiro" => 2f, "sala" => 1f, _ => 1f,
+            "quarto" => 3f, "cozinha" => 3f, "porao" => 2f, "deposito" => 2f, "banheiro" => 2f, "sala" => 1f,
+            // a farmácia (o salão e o estoque) e o hospital (05/11/2026)
+            "salao" => 3f, "estoque" => 2f, "posto" => 3f, "emergencia" => 3f, "enfermaria" => 2f,
+            _ => 1f,
         };
+
+        /// <summary>
+        /// O peso do cômodo na unidade: na farmácia e no hospital, o banheiro vale 1 (o remédio fica no salão, no estoque e
+        /// nos armários, não na pia); nas moradias, o de <see cref="PesoDoComodo(string)"/>.
+        /// </summary>
+        public static float PesoDoComodo(string comodo, int unidade) =>
+            unidade >= PontoDeMovel.Farmacia && comodo == "banheiro" ? 1f : PesoDoComodo(comodo);
 
         /// <summary>Num cômodo, no máximo tantos itens (se a moradia tiver outros cômodos com lugar).</summary>
         public const int PorComodo = 6;
@@ -308,6 +357,25 @@ namespace ZombieCityCleaner.Mundo
 
         public const float ChanceDoPorao = 0.5f;
         public const int TentativasNoPorao = 3;
+
+        // ------------------------------------------------------------------ a farmácia e o hospital (05/11/2026)
+
+        /// <summary>
+        /// Quantos itens uma unidade de loja tem: a farmácia de 8 a 14 (mais ou menos o dobro de uma casa), cada andar do
+        /// hospital de 5 a 10 (cada andar é uma obra, com o seu sorteio). Sem porão.
+        /// </summary>
+        public static (int min, int max) QuantosNaLoja(int unidade) => unidade == PontoDeMovel.Hospital ? (5, 10) : (8, 14);
+
+        /// <summary>
+        /// As raridades na farmácia (normal 50, incomum 38, raro 12) e no hospital (45, 40 e 15). Sem épico nem lendário:
+        /// com as chances das casas, eles desceriam para o raro, e uns 30% dos itens seriam kits médicos.
+        /// </summary>
+        public static readonly float[] ChancesDaFarmacia = { 0.50f, 0.38f, 0.12f, 0f, 0f };
+        public static readonly float[] ChancesDoHospital = { 0.45f, 0.40f, 0.15f, 0f, 0f };
+
+        /// <summary>As chances da unidade: as da farmácia, as do hospital, ou as de todo o mapa (<see cref="Chances"/>).</summary>
+        public static float[] ChancesDa(int unidade) =>
+            unidade == PontoDeMovel.Farmacia ? ChancesDaFarmacia : unidade == PontoDeMovel.Hospital ? ChancesDoHospital : Chances;
 
         // ------------------------------------------------------------------ o estado do que se acha (a decisão 6)
 

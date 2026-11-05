@@ -116,7 +116,9 @@ namespace ZombieCityCleaner.Testes
             if (_deNovo.Count != _itens.Count || _itens.Where((x, i) => x.nome != _deNovo[i].nome || x.apoio != _deNovo[i].apoio).Any())
                 conta.falhas.Add($"{nome}: o mesmo sorteio deu outro saque");
 
-            foreach (int u in pontos.Where(p => p.unidade > 0).Select(p => p.unidade).Distinct())
+            // (05/11/2026) a farmácia e o hospital (as unidades de loja, nos móveis antigos) têm as regras deles e não entram nas
+            // contas das moradias
+            foreach (int u in pontos.Where(p => p.unidade > 0 && p.unidade < PontoDeMovel.Farmacia).Select(p => p.unidade).Distinct())
             {
                 conta.moradias++;
                 bool apto = pontos.Any(p => p.unidade == u && p.apartamento);
@@ -138,6 +140,7 @@ namespace ZombieCityCleaner.Testes
 
             foreach (var it in _itens)
             {
+                if (it.unidade >= PontoDeMovel.Farmacia) continue;   // o saque das lojas (veja acima)
                 conta.itens++;
                 conta.porRaridade[(int)it.raridade]++;
                 conta.porComodo[it.comodo] = conta.porComodo.TryGetValue(it.comodo, out int c) ? c + 1 : 1;

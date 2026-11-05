@@ -74,6 +74,10 @@ namespace ZombieCityCleaner.DiaZero
                 new Produto(Item.KitMedico, 45), new Produto(Item.Atadura, 5), new Produto(Item.Bandagem, 5), new Produto(Item.Gaze, 4),
                 new Produto(Item.Desinfetante, 6), new Produto(Item.SprayAntisseptico, 8), new Produto(Item.Agua, 2),
                 new Produto(Item.BarraDeEnergia, 2),
+                // a tala (05/11/2026): no fim, porque o pedido manda o índice do produto
+                new Produto(Item.Tala, 10),
+                // a bandagem antisséptica (05/11/2026, a etapa 2): também no fim
+                new Produto(Item.BandagemAntisseptica, 7),
             },
             [LojaDoDia.Armas] = new[]
             {
@@ -101,6 +105,29 @@ namespace ZombieCityCleaner.DiaZero
                 new Produto(Item.Agua, 2), new Produto(Item.RefrigeranteLata, 1), new Produto(Item.Energetico, 3), new Produto(Item.Salgadinho, 3),
                 new Produto(Item.Chocolate, 2), new Produto(Item.BarraDeEnergia, 2), new Produto(Item.Pilhas, 8), new Produto(Item.Lanterna, 25),
             },
+        };
+
+        /// <summary>
+        /// Quantos do item cada jogador pode levar no Dia 0, somando todas as compras (05/11/2026, sem a vida voltando
+        /// sozinha: com os $1000, dava para levar 22 kits); 0: sem limite. O anfitrião confere no pagamento.
+        /// </summary>
+        public static int Limite(Item item) => item switch
+        {
+            Item.KitMedico => 2,
+            Item.Tala => 2,
+            Item.Atadura => 6,
+            Item.Bandagem => 6,
+            Item.BandagemAntisseptica => 6,
+            // o spray: cada um tem 5 usos (a etapa 2)
+            Item.SprayAntisseptico => 2,
+            Item.Comprimidos => 6,
+            Item.Remedio => 4,
+            // os ingredientes do kit (senão se monta o kit que a farmácia não vende): no máximo 2 kits a mais (cada álcool
+            // também dá 3 bandagens antissépticas)
+            Item.Gaze => 4,
+            Item.Desinfetante => 2,
+            Item.Antibiotico => 2,
+            _ => 0,
         };
 
         public static Produto[] Produtos(LojaDoDia l) => _produtos.TryGetValue(l, out var p) ? p : new Produto[0];

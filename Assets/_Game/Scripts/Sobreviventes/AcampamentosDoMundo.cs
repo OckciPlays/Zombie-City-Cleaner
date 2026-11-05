@@ -269,6 +269,7 @@ namespace ZombieCityCleaner.Sobreviventes
                     novo.Add(new EstoqueDoComerciante { acampamento = (byte)a, banca = (byte)((v >> 16) & 0xFF), produto = (byte)((v >> 8) & 0xFF), qtd = (byte)(v & 0xFF) });
             }
             if (!algum) return;
+            CompletarOEstoque(novo);
             _hostis.Value = hostis;
             _estoque.Clear();
             foreach (var x in novo) _estoque.Add(x);

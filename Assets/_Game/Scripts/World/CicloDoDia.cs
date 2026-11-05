@@ -36,6 +36,12 @@ namespace ZombieCityCleaner.World
         public static float Noite { get; private set; } = 1f;
         /// <summary>O relógio está parado (a hora não anda).</summary>
         public static bool Parado { get; private set; }
+        /// <summary>
+        /// Quantas horas do jogo passam por segundo real (05/11/2026, o corpo do jogador: as feridas e as lesões contam em
+        /// horas vividas, não pelo relógio do mundo, que o Page Up e o Sempre de dia pulam). Com 24 minutos por dia, 1 h do
+        /// jogo = 60 s reais.
+        /// </summary>
+        public static float HorasPorSegundo => 24f / ((Instancia != null ? Instancia.minutosPorDia : 24f) * 60f);
 
         float _proximoEnvio;
 
@@ -116,8 +122,15 @@ namespace ZombieCityCleaner.World
             if (IsSpawned) HoraRede.Value = Hora;
         }
 
+        /// <summary>
+        /// Quantos amanheceres (as 6 h) passaram nesta partida, no anfitrião (05/11/2026, a infecção do corpo: o sorteio é ao
+        /// amanhecer). Conta o relógio andando e o Page Up; não conta o Page Down, o save nem a saída do Dia 0.
+        /// </summary>
+        public static int Amanheceres { get; private set; }
+
         void Update()
         {
+            float h0 = Hora;
             if (IsSpawned) Parado = ParadoRede.Value;
             if (!Parado)
             {
@@ -133,6 +146,12 @@ namespace ZombieCityCleaner.World
             {
                 if (teclado.pageUpKey.wasPressedThisFrame) Hora = Mathf.Repeat(Hora + 1f, 24f);
                 if (teclado.pageDownKey.wasPressedThisFrame) Hora = Mathf.Repeat(Hora - 1f, 24f);
+            }
+            if (mandaNaHora)
+            {
+                // as 6 h ficaram entre a hora de antes e a de agora, andando para a frente (menos de 12 h de pulo)
+                float d = Mathf.Repeat(Hora - h0, 24f), a = Mathf.Repeat(6f - h0, 24f);
+                if (d > 0f && d < 12f && a > 0f && a <= d) Amanheceres++;
             }
             if (IsSpawned && IsServer && Time.unscaledTime >= _proximoEnvio)
             {

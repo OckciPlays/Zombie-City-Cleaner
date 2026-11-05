@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using ZombieCityCleaner.DiaZero;
@@ -49,9 +50,42 @@ namespace ZombieCityCleaner.Sobreviventes
                     var itens = PrecosDosSobreviventes.Itens(p.Bancas[b].categoria);
                     for (int i = 0; i < itens.Length; i++)
                     {
-                        int max = PrecosDosSobreviventes.Maximo(itens[i]);
-                        int qtd = Itens.EhArma(itens[i]) ? (r.NextDouble() < (itens[i] == Item.Sniper ? 0.3 : 0.6) ? 1 : 0) : 1 + r.Next(max);
+                        int qtd = QtdInicial(itens[i], r);
                         _estoque.Add(new EstoqueDoComerciante { acampamento = (byte)a, banca = (byte)b, produto = (byte)i, qtd = (byte)qtd });
+                    }
+                }
+            }
+        }
+
+        // quanto o comerciante tem do produto no começo (a semente: as armas, uma ou nenhuma; o resto, de 1 ao máximo)
+        static int QtdInicial(Item item, System.Random r)
+        {
+            int max = PrecosDosSobreviventes.Maximo(item);
+            return Itens.EhArma(item) ? (r.NextDouble() < (item == Item.Sniper ? 0.3 : 0.6) ? 1 : 0) : 1 + r.Next(max);
+        }
+
+        /// <summary>
+        /// Completa o estoque que veio do save (05/11/2026, a tala nova na banca dos remédios): o produto que entrou no fim
+        /// da lista de uma categoria depois do save não tinha linha, e ficava "Acabou" para sempre. Ganha a quantidade que a
+        /// semente daria a ele num mundo novo; as linhas que já existem não mudam.
+        /// </summary>
+        void CompletarOEstoque(List<EstoqueDoComerciante> lista)
+        {
+            var tem = new HashSet<int>();
+            foreach (var x in lista) tem.Add((x.acampamento << 16) | (x.banca << 8) | x.produto);
+            for (int a = 0; a < Quantos; a++)
+            {
+                var p = Planta(a);
+                if (p == null) continue;
+                for (int b = 0; b < p.Bancas.Count; b++)
+                {
+                    var r = new System.Random(unchecked(Dados.Semente * 3571 + a * 911 + b * 37 + 5));
+                    var itens = PrecosDosSobreviventes.Itens(p.Bancas[b].categoria);
+                    for (int i = 0; i < itens.Length; i++)
+                    {
+                        int qtd = QtdInicial(itens[i], r);
+                        if (!tem.Contains((a << 16) | (b << 8) | i))
+                            lista.Add(new EstoqueDoComerciante { acampamento = (byte)a, banca = (byte)b, produto = (byte)i, qtd = (byte)qtd });
                     }
                 }
             }

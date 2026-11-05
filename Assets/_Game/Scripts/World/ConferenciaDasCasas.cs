@@ -458,7 +458,11 @@ namespace ZombieCityCleaner.World
         static void ManterVivo(MovimentoPrimeiraPessoa movimento)
         {
             var vida = movimento.GetComponent<VidaJogador>();
-            if (vida != null && vida.IsServer && vida.IsSpawned) vida.Vida.Value = vida.vidaMaxima;
+            if (vida != null && vida.IsServer && vida.IsSpawned)
+            {
+                vida.Vida.Value = vida.vidaMaxima;
+                vida.SararTudo();   // (05/11/2026) uma queda ou um sangramento não atrapalham a conferência
+            }
             var fomeESede = movimento.GetComponent<FomeESede>();
             if (fomeESede != null && fomeESede.IsServer && fomeESede.IsSpawned)
             {

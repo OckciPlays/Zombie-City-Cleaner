@@ -215,7 +215,12 @@ namespace ZombieCityCleaner.Zombies
                 GosmaNoServidor(agora);   // a gosma do Long (ZombieManager.Gosma.cs)
                 PensarEmFatias(agora);
                 for (int i = 0; i < _ativos.Count; i++)
-                    if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe) _ativos[i].QuadroNoServidor(dt);
+                    if (_ativos[i].NivelAtual != Zumbi.Nivel.Longe)
+                    {
+                        _quemAge = _ativos[i];   // quem golpeia, se golpear (ZombieManager.Ferimentos.cs)
+                        _ativos[i].QuadroNoServidor(dt);
+                    }
+                _quemAge = null;
                 DevolverMortos(agora);
                 EnviarParaClientes();
             }
@@ -381,7 +386,10 @@ namespace ZombieCityCleaner.Zombies
 
         internal void Golpear(IAlvoDeZumbi alvo, float dano, Vector3 de)
         {
-            if (!SemDano && alvo != null && alvo.AlvoValido) alvo.LevarGolpe(dano, de);
+            if (SemDano || alvo == null || !alvo.AlvoValido) return;
+            // o jogador: o golpe pega numa parte do corpo, pelo jeito do zumbi que bateu (ZombieManager.Ferimentos.cs)
+            if (alvo is Player.JogadorRede j && j.Vida != null) GolpearJogador(j, dano, de);
+            else alvo.LevarGolpe(dano, de);
         }
 
         /// <summary>
@@ -478,7 +486,9 @@ namespace ZombieCityCleaner.Zombies
                     float dt = Mathf.Min(agora - z.ultimaDecisao, 0.6f);
                     z.ultimaDecisao = agora;
                     z.proximaDecisao = agora + (z.NivelAtual == Zumbi.Nivel.Perto ? intervaloPerto : intervaloMedio) * Random.Range(0.85f, 1.15f);
+                    _quemAge = z;
                     z.Pensar(agora, dt);
+                    _quemAge = null;
                     feitos++;
                 }
             }

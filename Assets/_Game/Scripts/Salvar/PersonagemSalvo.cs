@@ -36,6 +36,11 @@ namespace ZombieCityCleaner.Salvar
         public int cabeca, oculos, mascara, tronco, porCima, colete, cintura, pernas, pes, maos;
         public int dinheiro;
         public float vida = 100f, fome = 100f, sede = 100f;
+        /// <summary>
+        /// O corpo (05/11/2026, a vida por membro): o dano de cada parte, as feridas, as lesões, as talas e os tempos que
+        /// faltam. Guarda o dano (não a vida): num save de antes dele, o campo vem zerado = o corpo sadio.
+        /// </summary>
+        public EstadoDoCorpo corpo;
         public int mochila;
         public int pneu = InventarioJogador.SemPneu;
         public List<ItemSalvo> itens = new List<ItemSalvo>();

@@ -987,7 +987,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - `LanternaJogador`: luz no peito cujo facho converge no ponto da mira; F liga e desliga. Ela fica desligada só enquanto a câmera dos braços desenha (os braços não recebem a luz dela).
   - **O que está na mão do corpo do dono fica desligado** (o renderer, nem sombra): a ponta do rifle e da espingarda passa dos 60 cm em que a sombra da lanterna começa, e a sombra do cano aparecia no facho. O corpo continua só como sombra.
   - **Na terceira pessoa, a arma da mão do dono fica na camada do dono** (`JogadorRede.CorpoDoDono`; corrigido em 31/10/2026, a pedido: o bug voltava na terceira pessoa com a sniper, o rifle e a espingarda): a lanterna, no peito, fica colada na coronha das armas longas, estourava a arma de branco na mão e o cano fazia sombra no facho. Nessa camada a lanterna do dono nem ilumina a arma nem faz a sombra dela (o sol e a lua continuam; as luzes comuns, como os postes, também não a iluminam, só no dono). A pistola e a SMG não chegavam aos 60 cm. Conferido no bunker, olhando o chão, com as três longas; sobra um brilho leve nas mãos (a pele, colada na luz). **Os outros jogadores** (31/10/2026, a pedido): em cada máquina, a arma (ou o item) na mão dos outros fica na camada de render 2 (`JogadorRede.CamadaDaArmaDosOutros`, "Light Layer 2"; no `AplicarPersonagem`), e a lanterna deles faz sombra de todas as camadas menos essa (`LanternaJogador.OnNetworkSpawn`); a luz delas, como a dos postes, é só da camada 0, então também não ilumina essa arma. A sombra do corpo do dono na lanterna dos outros continua. Sem uma build nova, foi conferido no editor com o próprio jogador na configuração dos outros (a mesma luz e a mesma camada): sem a sombra e sem o clarão.
-    - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Depois de 8 s sem apanhar, recupera 2 por segundo, se não estiver com fome nem com sede (`FomeESede.Bem`). `Perder(valor)` tira vida sem o golpe (a fome e a sede).
+    - `VidaJogador`: `Vida` (100, só o anfitrião escreve). O dono vê a barra, o clarão vermelho e o tranco do golpe. Se a vida acaba, ele volta ao ponto de nascimento com a vida cheia ("VOCÊ CAIU"). Desde 05/11/2026 a vida não volta sozinha: só o tratamento cura, e o golpe pega numa das 6 partes do corpo ("O corpo e os ferimentos", mais abaixo). `Perder(valor)` tira vida sem o golpe (a fome, a sede e o sangramento).
   - **"Corpo_<modelo>"** (um por personagem, só o escolhido ligado; no prefab, o primeiro): o `Personagem_<modelo>.fbx` com o override da pistola dele e o `CorpoDoPersonagem` (o Animator, os renderers, o peito e a cabeça, as armas e os itens do FBX, `Arma_<modelo>` no `weapon.R`, as bocas, os controladores, o das armas, o dos punhos e os dos itens, e as medidas do corpo para o equipamento, as da `MontagemDaRede.MedidasDosCorpos`). Para o dono, os renderers viram só sombra. O peito e a cabeça giram por cima da animação para acompanhar o olhar (`Pitch`).
     - **A tela de criar o personagem** (`Player/TelaDeCriarPersonagem`, a parte 2 do `Plano_Personagem.md`, 31/10/2026; só no dono): abre quando ele nasce (`JogadorRede.OnNetworkSpawn`; o robô de teste, `-bot`, sai sorteado), como tela obrigatória (veja o `MenuOnline`). OnGUI, no estilo da imagem do usuário (`Imgs/Personagem_Criacao_Referencia.webp` da pasta de arte): os painéis escuros, o destaque vermelho e a Bahnschrift (`Font.CreateDynamicFontFromOSFont`, só o nome da família: com "Bahnschrift SemiBold Condensed", que não existe, a fonte ficava presa num tamanho, desenhada no canto de cada caixa; sem ela, a Arial), `GUI.depth` -15. À esquerda, o nome (até 16 letras), o sexo, a pele, o cabelo (um carrossel de 4 em 4), a cor dos pelos e a barba (só no homem); à direita, a camiseta e a calça (grades de 4); no meio, o personagem, que gira arrastando; R (ou o botão) sorteia, e "Confirmar" (com o nome) chama `JogadorRede.Criar(aparência)` e fecha. `Escolher(nome, aparência)` e `Confirmar()` servem aos testes.
       - **O estúdio** (`Player/EstudioDoPersonagem`): uma cópia do corpo do prefab, 600 m embaixo do mundo, na camada do retrato, sem nada na mão, com o controlador do mostruário das roupas (o parado; `controladorDoEstudio`, posto pela montagem) e as roupas na luz fixa do retrato (`_Retrato`); a câmera desenha numa RenderTexture de fundo transparente (o dobro da área). As miniaturas são fotos de outra câmera (128 px, de 256 reduzidas): o cabelo e a barba na cabeça, com a pele e a cor dos pelos escolhidas (refeitas quando elas ou o sexo mudam, no `Update`, 4 por quadro), a camiseta e a calça sem o corpo.
@@ -1172,7 +1172,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **O boneco equipado (F1 > "Boneco equipado (teste)"; `Player/EquipamentoNoCorpo`):** uma cópia do "Corpo" do prefab, só nesta máquina, 2 m à frente e de costas, com 5 combinações (Pôr, Próximo, Tirar). As peças ficam presas ao peito e ao quadril, com as posições medidas no corpo em repouso. Sem mochila, a arma da alça na diagonal das costas (a pistola no cós, atrás); com mochila, as armas presas nas laterais dela (a da alça à direita, a das costas à esquerda); a curta no coldre do quadril direito. É a prévia da fatia 2 (o equipamento no corpo de todos). O retrato do TAB usa o mesmo script.
 - **Fome e sede (`Player/FomeESede`):** duas barras de 0 a 100 (cheia = satisfeito), do anfitrião (`Fome`, `Sede`, gravadas na rede uma vez por segundo).
   - Esvaziam de cheia a vazia em 40 min (a fome) e 25 min (a sede) de jogo, parado ou andando (um dia do jogo dura 24 min); correndo (mais de 3 m/s), 1,6 vez mais rápido. A partida começa com a fome em 80 e a sede em 70.
-  - Abaixo de 25, a barra fica vermelha com o aviso ("com fome", "com sede") e a vida para de voltar sozinha. Vazia, o fundo dela pisca e ela tira vida (0,25 por segundo a fome, 0,4 a sede, por `VidaJogador.Perder`). Se a vida acaba, o jogador cai e volta para casa com as duas pelo menos em 50.
+  - Abaixo de 25, a barra fica vermelha com o aviso ("com fome", "com sede") (desde 05/11/2026 a vida não volta sozinha de jeito nenhum). Vazia, o fundo dela pisca e ela tira vida (0,25 por segundo a fome, 0,4 a sede, por `VidaJogador.Perder`). Se a vida acaba, o jogador cai e volta para casa com as duas pelo menos em 50.
   - Na tela: FOME (âmbar) e SEDE (azul) em cima da barra da vida, no canto de baixo, à esquerda.
 - **Passos (`Player/PassosJogador`, em todas as cópias, sem nada na rede):** um passo a cada 0,6 m mirando (devagar), 0,75 m andando e 1,15 m correndo, contado pela distância andada e pela velocidade (a do dono, ou a medida dos outros). Parado, o próximo passo sai na metade. No ar, nada (o dono pelo `isGrounded`; os outros, por um raio de 30 cm para baixo); ao cair de um pulo de mais de 0,3 s, os dois pés.
   - **O chão** (`SomDePasso.Superficie`: concreto, madeira, grama ou carpete), pelo colisor embaixo do pé (guardado por colisor) e pelo ponto do pé: grama no gramado (o colisor "Chão"); onde houver um `World/PisoPorZona` no pai do colisor, a superfície da zona em que o pé está (`Em(ponto)`); concreto no resto (ruas, calçadas e o prédio).
@@ -1247,7 +1247,10 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   corda, fita adesiva, ferramenta, peças de metal, fios, pregos, isca, vara de pesca, kit de reparo e roupa) e os kits de
   montar (112 a 114: fogueira, cama improvisada e barricada). Cada um: o nome, o plural, o resumo, a espécie (o fundo na
   mochila), quantos por célula e, nos que se consomem, o verbo, a fome, a sede, a vida e o modelo de mão (a lata ou a
-  garrafa). Os números ficam na tabela do `Itens.cs`; a vida volta com `VidaJogador.Curar`.
+  garrafa). Os números ficam na tabela do `Itens.cs`. Desde 05/11/2026 a comida não dá vida, e os tratamentos (a atadura,
+  a bandagem, o kit, a tala 89 e os analgésicos) vão pelo corpo (`VidaJogador.Tratar`; "O corpo e os ferimentos"); a gaze e
+  o álcool (o antigo desinfetante) viraram só material do kit e da bandagem antisséptica; o spray e o antibiótico também
+  vão pelo corpo (a etapa 2).
   - **Os modelos** (`Blender/loot.py`, em segundo plano): `Loot.fbx` (as peças `<modelo>_corpo`; a montagem junta em
     `Malhas/Loot_<modelo>.asset`, `MontagemDasArmas.JuntarLoot`), os ícones (128 × 128) e as fotos (600 × 500), e as
     construções montadas (`FogueiraMontada`, `CamaMontada`, `BarricadaMontada`) e a bancada (`Construcao_<nome>.asset`,
@@ -1273,7 +1276,7 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   lista na rede (o tipo, onde, o giro, quem montou e o valor). O jogador monta pelo menu do kit ("Montar no chão",
   `Player/MontadorDeConstrucao`): a sombra verde (cabe) ou vermelha segue a mira no chão em que ele pisa, até 5 m; R ou a
   roda giram, o clique monta, o botão direito desiste; a arma não atira enquanto isso (`ArmaJogador.Montando`).
-  - **A fogueira:** a luz que tremula, as chamas (o material do clarão dos tiros) e +1 de vida por segundo até 3 m; a lenha
+  - **A fogueira:** a luz que tremula e as chamas (o material do clarão dos tiros; desde 05/11/2026 ela não cura); a lenha
     dura 4 minutos, e E põe mais (1 madeira). Apagada, E acende. Desde 05/11/2026, os zumbis ficam a 8 m dela e a chuva a
     apaga fora de um teto ("O carro ligado, o fogo e a chuva").
   - **A cama:** quem montou volta nela quando cai (`ConstrucoesNoMundo.CamaDe`, no `VidaJogador.CaiuRpc`). E recolhe (o kit volta).
@@ -2764,6 +2767,106 @@ dando uma sensação de que ele estava debaixo da terra, e quando chegamos perto
   para a terra vale uma vez só (antes, todo Brutamonte seguinte nascia ferido). De novo no Play depois deles: o Long aos 60 s
   (fogo apagado 5 s depois) e o Brutamonte saindo a 5,5 m, de costas, e avançando; 0 erros. Não conferido: dois jogadores,
   o aviso visto por um cliente.
+
+## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
+
+O pedido: "a vida não se regenera mais sozinha ... cada membro do jogador terá uma vida", com o sangramento, as bandagens,
+a queda (a entorse, a fratura e a fratura exposta), a tala e o kit que trata o corpo todo. A morte não muda (renasce com
+tudo inteiro). A etapa 2 (a limpeza, a infecção, os antibióticos, a farmácia e o hospital) e a 3 (o amigo tratando, a pose
+de cada curativo, a bandagem e a tala modeladas) estão no fim desta seção.
+
+- **O estado** (`Player/CorpoDoJogador.cs`): `ParteDoCorpo` (6), `TipoDeGolpe`, `Lesao` e o `EstadoDoCorpo` (o DANO de cada
+  parte, para o vazio ser o corpo sadio; os bits de sangra, faixa e talas; as lesões dos 4 membros; os minutos do jogo que
+  faltam para a ferida fechar e para a lesão sarar; o analgésico). O `PartesDoCorpo` tem as contas que o dono e o anfitrião
+  fazem iguais: a parte pelo ponto (`PeloPonto`), o sorteio pelos pesos de cada jeito de golpe (`SortearParte`), o que cada
+  item trata (`PodeTratar`, `TempoDe`) e os efeitos (`FatorDeAndar`, `SemCorrer`, `PuloQueSobra`, `TremorDaMira`,
+  `DispersaoExtra`, `DuasMaos`).
+- **O anfitrião** (`Player/VidaJogador.Corpo.cs`, partial do `VidaJogador`; a `NetworkVariable<EstadoDoCorpo> Corpo`, gravada
+  uma vez por segundo e na hora de cada golpe e tratamento): `Dano(valor, de, causa, tipo, parte, lesao)` (os três últimos
+  opcionais; sem o tipo, só a vida geral, como o raio); a chance de abrir ferida pelo jeito (mordida 20%, corte 70%, pancada
+  35%, tiro sempre, tornado 30%, esmagamento nunca) e o sangue por segundo (0,10 a 0,30, a exposta); o sangramento sai pela
+  `Perder` ("Sangrou até morrer."); o tempo do corpo anda em horas vividas (`CicloDoDia.HorasPorSegundo`), só com o mundo
+  pronto e fora do Dia 0 (`CorpoAnda`); a ferida enfaixada fecha em 3 dias do jogo; a lesão com tala sara em 6 h (entorse),
+  18 h (fratura) e 36 h (exposta) com o analgésico agindo, o dobro sem ele; `Cair(h)` (as faixas: abaixo de 3 m nada; 3-4,5
+  entorse às vezes; 4,5-7 fratura ou entorse; 7-11 exposta ou fratura; 11-16 a exposta e mais uma; 16 ou mais, a morte);
+  `Tratar(item, parte)` (a atadura 30% no membro, +8 e 1,5/s por 5 s; a bandagem 20%, +3 e 1/s por 5 s; o kit estanca tudo,
+  50% em cada membro, +40 e 2/s por 10 s; a tala; os comprimidos 6 h e o xarope 4 h de analgésico); `SararTudo` (nascer,
+  renascer, os 5 anos do Dia 0, a ConferenciaDasCasas) e `DefinirCorpo` (o save). Os testes: `AbrirFeridaDeTeste`,
+  `LesaoDeTeste`, `InutilizarDeTeste`, `PassarHorasNoCorpo`, `ResumoDoCorpo`.
+- **Quem bate:** os zumbis pelo `ZombieManager.Ferimentos.cs` (o zumbi que age, `_quemAge`, posto em volta do `Pensar` e do
+  `QuadroNoServidor`, sem mexer no Zumbi.cs: o Oco e o Corredor mordem; o rastejante pega as pernas; o Brutamonte esmaga,
+  nunca faz sangrar, e quebra: o avanço 35% no membro, o golpe no chão pela força que chegou); o tiro e a arma branca dos
+  sobreviventes (`Sobrevivente.Cabeca`, a parte pelo ponto do chumbo maior; `Sobrevivente.Branca`); o fogo amigo
+  (`JogadorRede.AcertarJogador` com o jeito e a parte); o tornado.
+- **O dono:** `QuedaDoJogador` (mede a queda no LateUpdate, desarma com o teleporte, o voo, a janela, o carro e o Dia 0, a água
+  amortece; `ArmarJa` para o F1), `EfeitosDoCorpo` (escreve os campos públicos de velocidade e pulo do
+  MovimentoPrimeiraPessoa a cada quadro, sem editar o arquivo; o mancar e a mira tremendo na câmera, só na primeira pessoa),
+  `Tratamento` (a barra de tempo do curativo, os sons do `Combat/SomDosCurativos`, cancela com o golpe, correr, o carro e a
+  troca de item; no fim, o `InventarioJogador.TratarRpc`, que confere de novo e só então gasta), `CorpoNoHud` (a silhueta
+  embaixo à esquerda, só com algo errado) e a aba **CORPO** da mochila (`TelaDoInventario.Corpo.cs`, a tecla H). O
+  `ArmaJogador` não deixa mirar nem atirar com arma de duas mãos com um braço quebrado ou inutilizado. Em todas as máquinas,
+  `CurativosNoCorpo` (a faixa e a tala nos ossos, as gotas de sangue de quem sangra; também no retrato da mochila).
+- **O saque:** a bandagem de pano rende 1 (eram 2); a tala (2 madeiras e 1 pano; incomum no banheiro; nos mortos e nos
+  comerciantes); as pilhas achadas da atadura, da bandagem, da gaze e dos comprimidos maiores; o limite por jogador na
+  farmácia do Dia 0.
+- **O save e a rede:** `PersonagemSalvo.corpo` e `PacoteDoPersonagem.corpo` (o save antigo entra sadio); o caído grava o corpo
+  inteiro. `SessaoOnline.VersaoDaRede = 1` (o `NetworkConfig.ProtocolVersion`): suba a cada mudança no que vai pela rede.
+- **O F1:** a aba "Corpo" (`UI/MenuDoDesenvolvedor.Corpo.cs`): abrir ferida, as lesões, inutilizar, sarar, +6 h, os
+  curativos, as quedas simuladas e as de verdade, o golpe no chão; na etapa 2, "Amanhecer agora", a infecção (ferida,
+  febre, sepse, curar) e o "Spray com 1 uso".
+- **Os ajustes (05/11/2026, à noite, a pedido):** com a tala, o braço e a perna funcionam "porém com dificuldades"
+  (`BracoImpede`/`PernaImpede` só sem a tala: atira, golpeia, dirige com o `PartesDoCorpo.NoVolante`, corre e pula a
+  janela; o coice 1,35, o golpe 1,35 mais lento, a dispersão a mais). O analgésico corta o tremor pela metade, e o HUD diz o
+  porquê ("MIRA TREMENDO: …" pelo `PorQueTreme`, "MANCANDO: …" pelo `PorQueManca`). O xarope tira a febre; os comprimidos, a
+  dor. O "Desinfetante" aparece como "álcool" (o enum e o modelo ficam).
+- **A etapa 2, a limpeza e a infecção** (`Player/VidaJogador.Infeccao.cs`; os campos novos no `EstadoDoCorpo`): o sorteio é
+  ao amanhecer (`CicloDoDia.Amanheceres`, as 6 h, o Page Up conta; com o relógio parado, a cada 26 h vividas), para toda
+  ferida aberta com 12 h ou mais, nos 3 primeiros dias, com a semente do personagem (`Sorteio.Hash`: sair e voltar não muda);
+  o risco pelas horas suja (`RiscoDeInfeccao`: dia 1 de 3% a 80%, dia 2 de 2% a 40%, dia 3 de 0 a 15%; a exposta bem mais);
+  a proteção (a bandagem antisséptica 90, o spray de 5 usos no desgaste mais a bandagem comum, o kit) vale até o amanhecer;
+  a infecção é uma só (a ferida 24 min reais, a febre 12, a sepse 12, que mata: "Morreu de infecção."); o antibiótico (uma
+  dose a cada 6 h do jogo) cura com 90/70/40% e cobre as feridas abertas; o xarope tira os sintomas por 4 h. A febre na tela
+  (`EfeitosDoCorpo`: um Volume "Febre" criado em código, a vinheta, a visão turva no DepthOfField Gaussian, os calafrios em
+  ondas, os sons do `Combat/SomDoCorpo`) e a opção "Menos balanço da câmera" (`Opcoes.CameraCalma`). A farmácia e o hospital
+  têm saque (as unidades de loja `PontoDeMovel.Farmacia/Hospital` no `MoveisDaObra`, sem mudar a geração; os lugares dos
+  móveis antigos no `LugaresDoSaque.Antigos.cs`, gerado pelo menu "Mobília nova > Escrever os lugares dos móveis antigos";
+  a `RegraDaLoja`); o álcool é normal e aparece na cozinha; o antibiótico é incomum na farmácia, raro nas casas, $100 no
+  comerciante (no máximo 2) e 10% nos militares mortos. `SessaoOnline.VersaoDaRede = 2`.
+- **A etapa 3, o amigo, a pose e os curativos modelados** (a pedido: as animações por código, "Mirar e segurar E", os
+  modelos no Blender):
+  - **O amigo:** `Player/TratarOAmigo` (no dono, posto pelo `VidaJogador.OnNetworkSpawn`): o raio do `JogadorRede.Olho` até
+    `Tratamento.AlcanceDoAmigo` + 0,4 (2,8 m; as paredes tapam); as opções saem da primeira pilha de cada curativo da
+    mochila, pelo `PartesDoCorpo.PodeTratar` com o corpo do amigo que vem pela rede, na ordem de `Prioridade` (a sepse com o
+    antibiótico, o sangue, a tala, o antibiótico, o xarope com febre, o kit, o resto), refeitas a cada 0,25 s; o toque no
+    `Player/Interact` (o E ou o botão do controle; menos de 0,35 s) troca, segurar começa (`Tratamento.ComecarNoAmigo`); com
+    outro alvo do E na mira (`ArmaJogador.TemAlvoDoE`: a janela, o item no chão), o amigo cede a vez. O `Tratamento` tem o
+    `Alvo` e o `_noAmigo` (o amigo que sai do jogo vira null: o curativo para, não cai no próprio corpo), cancela se o amigo
+    some, cai, entra no carro ou passa de 2,8 m, avisa o amigo no começo (`InventarioJogador.AvisarQueTrata`) e, no fim,
+    manda o `TratarOutroRpc` (o anfitrião confere quem mandou, quem trata de pé e fora do carro, o item, a distância de
+    3,6 m, o amigo fora do carro e o `PodeTratar` dele; gasta de quem trata, trata o amigo e avisa os dois). A câmera olha
+    para a parte sem passar de 82° (`EfeitosDoCorpo`, pela soma com o `Pitch`); a mão de primeira pessoa volta na hora em
+    que o curativo acaba ou para.
+  - **A pose** (`Player/PoseDoCurativo`, em todas as máquinas, `[DefaultExecutionOrder(105)]`): lê o
+    `VidaJogador.Tratando` (`NetworkVariable<byte>` do dono: 0 nada, a parte + 1, 7 o amigo, 8 pela boca) e, depois da
+    animação, inclina o `spine`, o `chest` e o `head` e leva as mãos por um IK de dois ossos (`DoisOssos`, público:
+    a lei dos cossenos no cotovelo, a cadeia apontada para o alvo e o cotovelo girado para a dica), com as voltas da faixa.
+    A perna agacha (`Agachar`: o `hips` desce 38 cm e as pernas dobram pelo mesmo IK com os pés no lugar; a posição do
+    quadril volta no quadro seguinte se a animação não a reescreve). A peça da mão do corpo (`naMaoCorpo`) some durante o
+    curativo e volta no fim pela regra do `AplicarNaMao`. No dono, os braços de primeira pessoa mostram o curativo
+    (`ItemNaMaoProprio.Aplicar` no modelo de `Itens.ModeloNaMao`) e, no fim, `ArmaJogador.Trocar` devolve a mão; a câmera
+    olha para a parte pelo `EfeitosDoCorpo` (`_olhar`).
+  - **Os modelos** (`Blender/curativos.py` → `Art/Characters/Jogador/Resources/Curativos.fbx`, legível, sem animação):
+    `Faixa_Membro`, `Faixa_Cabeca`, `Faixa_Tronco` e `Tala` (raio de dentro 5 cm, o +Y no eixo do osso, o meio do U da tala
+    em +Z), no material dos itens (a `Paleta.png`). O `CurativosNoCorpo.PorModelo` escala cada um para a medida da seção do
+    membro (frente e lado), grava a malha no espaço do osso e cai no tubo e nas ripas de antes sem o FBX.
+  - `SessaoOnline.VersaoDaRede = 3`. Ficou: o armário de remédios antigo do hospital sem lugar de saque; o freio com a
+    perna ruim (o `Comandar` do carro recebe o freio como `bool`).
+- **Conferido no Play (05/11/2026):** 0 erros; a mordida sangrou 1 em 10 s; a atadura estancou; a perna quebrada andou a 36%
+  (54% com a tala); a fratura com a tala e o analgésico sarou; o kit estancou as duas feridas; o save guardou e leu o corpo; a
+  queda de verdade de 10 m deu a fratura exposta; a horda de 4 Ocos mordeu 8 vezes pelo corpo (uma abriu ferida). Revisado
+  por 5 ângulos (19 defeitos corrigidos: os 5 anos do Dia 0 saram também o personagem salvo e devolvem a vida; o arremesso do
+  tornado fica na faixa da entorse; o curativo para na recarga e no pulo da janela; o limite da farmácia do Dia 0 inclui a
+  bandagem, os analgésicos e os ingredientes do kit). Ficou: a mira não treme na terceira pessoa (só a dispersão maior).
 
 ## O desgaste do carro e a gasolina (01/11/2026, a pedido)
 

@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.Loot
     /// As construções montadas pelos jogadores (31/10/2026, a pedido: a fogueira, a cama e a barricada da fabricação;
     /// "fogueira, cama e barricada são montadas no mundo e funcionam"). Uma lista só na rede (o anfitrião manda) e cada
     /// cópia monta os objetos dela, como os itens no chão (<see cref="ItensNoMundo"/>):
-    /// - a fogueira: acesa, a luz que tremula, o fogo e a vida que volta (1 por segundo, até 3 m); a lenha dura
+    /// - a fogueira: acesa, a luz que tremula e o fogo (não cura desde 05/11/2026: só o tratamento cura); a lenha dura
     ///   <see cref="MinutosPorLenha"/> minutos e E põe mais (1 madeira). Apagada, E acende com 1 madeira. A chuva a apaga
     ///   fora de um teto, e com a tocha apagada na mão, E reacende a tocha nela (05/11/2026, ConstrucoesNoMundo.Chuva.cs);
     ///   os zumbis ficam longe dela (ZombieManager.Luz.cs);
@@ -50,7 +50,6 @@ namespace ZombieCityCleaner.Loot
 
         public const float MinutosPorLenha = 4f;
         public const float DanoPorZumbi = 2.5f;
-        public const float AlcanceDoCalor = 3f;
         /// <summary>Até onde o jogador monta (m, dos pés ao ponto).</summary>
         public const float AlcanceDeMontar = 5f;
 
@@ -324,23 +323,16 @@ namespace ZombieCityCleaner.Loot
                 }
             InformarTetos();
             if (!IsServer || !IsSpawned || Time.time < _proximoTique) return;
-            // o anfitrião, a cada meio segundo: a chuva no fogo, o calor das fogueiras e os zumbis nas barricadas
+            // o anfitrião, a cada meio segundo: a chuva no fogo e os zumbis nas barricadas
             const float passo = 0.5f;
             _proximoTique = Time.time + passo;
             MolharNaChuva(passo);
             for (int k = _lista.Count - 1; k >= 0; k--)
             {
                 var c = _lista[k];
-                if (c.tipo == Item.Fogueira && Acesa(c))
-                {
-                    foreach (var cliente in NetworkManager.ConnectedClientsList)
-                    {
-                        var jogador = cliente.PlayerObject;
-                        if (jogador == null || (jogador.transform.position - c.pos).sqrMagnitude > AlcanceDoCalor * AlcanceDoCalor) continue;
-                        jogador.GetComponent<VidaJogador>()?.Curar(1f * passo);
-                    }
-                }
-                else if (c.tipo == Item.Barricada)
+                // (a fogueira não cura mais desde 05/11/2026, a pedido: "a vida não se regenera mais sozinha"; só o
+                // tratamento cura. O fogo continua com a luz, os zumbis na beira e a chuva)
+                if (c.tipo == Item.Barricada)
                 {
                     int zumbis = ZumbisNa(c);
                     if (zumbis == 0) continue;

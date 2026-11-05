@@ -6,9 +6,9 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// O painel de teste do clima (02/11/2026, World/CicloDoDia.Tempo.cs e World/ClimaNaTela.cs), no lugar do painel dos
-    /// zumbis, ao lado do Oco (as abas "Zumbis" e "Clima" no canto de cima). Embaixo do Oco ou do carro ele passava da
-    /// altura da tela e os botões não apareciam. Mostra o tempo agora e o próximo evento do calendário e onde quem joga
-    /// está (fora, dentro, no carro, debaixo da terra). Os botões forçam cada nível, chamam o tornado, derrubam um raio
+    /// zumbis, ao lado do Oco (as abas "Zumbis", "Clima", "Gente" e "Corpo" na faixa logo acima). Embaixo do Oco ou do
+    /// carro ele passava da altura da tela e os botões não apareciam. Mostra o tempo agora e o próximo evento do
+    /// calendário e onde quem joga está (fora, dentro, no carro, debaixo da terra). Os botões forçam cada nível, chamam o tornado, derrubam um raio
     /// perto ou longe e enchem as poças; os pedidos vão para o anfitrião (quem manda no tempo).
     /// O fogo (05/11/2026: a chuva apaga a tocha e a fogueira, e os zumbis ficam longe delas): uma fogueira acesa na
     /// frente, a tocha acesa na mão e uma horda de 6 caçando quem pediu; no texto, os fogos, quem rodeia cada um (e quanto
@@ -27,23 +27,34 @@ namespace ZombieCityCleaner.UI
         bool _abaDoClima;
         static readonly GUIContent _conteudoDoClima = new GUIContent();
 
-        // as abas no canto de cima do painel (o dos zumbis ou o do clima)
-        void AbasDosZumbisEDoClima(float u, Rect painel)
+        static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo" };
+
+        /// <summary>A faixa das abas acima do painel do canto (o <see cref="AbasDoCanto"/>), para a Area pegar os cliques nela.</summary>
+        static float AlturaDasAbas(float u) => 24 * u;
+
+        // as abas numa faixa logo acima do painel do canto (05/11/2026: com a quarta, "Corpo", a linha dentro do painel
+        // cobria os títulos "ZUMBIS (TESTE)" e "SOBREVIVENTES"); a aba ativa em branco, as outras a 55%
+        void AbasDoCanto(float u, Rect painel)
         {
-            float w = 50 * u, h = 20 * u, y = painel.y + 6 * u;
+            float vao = 4 * u, h = 20 * u, y = painel.y - AlturaDasAbas(u);
+            float w = (painel.width - vao * (NomesDasAbas.Length - 1)) / NomesDasAbas.Length;
+            int ativa = _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
             var antes = GUI.color;
-            GUI.color = _abaDoClima ? new Color(1f, 1f, 1f, 0.55f) : Color.white;
-            if (GUI.Button(new Rect(painel.xMax - 2 * w - 14 * u, y, w, h), "Zumbis", _botao)) MostrarAba(0);
-            GUI.color = _abaDoClima ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-            if (GUI.Button(new Rect(painel.xMax - w - 10 * u, y, w, h), "Clima", _botao)) MostrarAba(1);
+            for (int i = 0; i < NomesDasAbas.Length; i++)
+            {
+                GUI.color = i == ativa ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                if (GUI.Button(new Rect(painel.x + i * (w + vao), y, w, h), NomesDasAbas[i], _botao)) MostrarAba(i);
+            }
             GUI.color = antes;
         }
 
-        // 0: os zumbis; 1: o clima; 2: os sobreviventes (MenuDoDesenvolvedor.Sobreviventes.cs)
+        // 0: os zumbis; 1: o clima; 2: os sobreviventes (MenuDoDesenvolvedor.Sobreviventes.cs); 3: o corpo
+        // (MenuDoDesenvolvedor.Corpo.cs)
         void MostrarAba(int qual)
         {
             _abaDoClima = qual == 1;
             _abaDosSobreviventes = qual == 2;
+            _abaDoCorpo = qual == 3;
         }
 
         Rect PainelDoClima(float u, Rect aoLado)

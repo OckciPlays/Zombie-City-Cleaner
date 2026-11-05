@@ -36,20 +36,48 @@ namespace ZombieCityCleaner.Network
         NetworkManager _rede;
         ISession _sessao;
 
+        /// <summary>
+        /// A versão da rede (05/11/2026, o corpo do jogador: o estado e os RPCs do jogador mudaram). Duas cópias do jogo com
+        /// versões diferentes não se conectam (o NGO recusa). Suba a cada mudança no que vai pela rede.
+        /// </summary>
+        public const ushort VersaoDaRede = 3;   // (2: a infecção; 3: o curativo no amigo e a pose, 05/11/2026)
+
         void Awake()
         {
             Instancia = this;
             _rede = GetComponent<NetworkManager>();
+            if (_rede != null && _rede.NetworkConfig != null) _rede.NetworkConfig.ProtocolVersion = VersaoDaRede;
         }
 
-        void OnEnable() => _rede.OnClientStopped += AoParar;
-        void OnDisable() => _rede.OnClientStopped -= AoParar;
+        // chegou a entrar na partida (a conexão foi aceita): sem isso, a queda é a recusa da versão
+        bool _entrou;
+
+        void OnEnable()
+        {
+            _rede.OnClientStopped += AoParar;
+            _rede.OnClientConnectedCallback += AoConectar;
+        }
+
+        void OnDisable()
+        {
+            _rede.OnClientStopped -= AoParar;
+            _rede.OnClientConnectedCallback -= AoConectar;
+        }
+
+        void AoConectar(ulong id)
+        {
+            if (id == _rede.LocalClientId) _entrou = true;
+        }
 
         void AoParar(bool eraHost)
         {
             // O anfitrião saiu ou a conexão caiu: volta para o menu.
             if (Atual == Estado.Desconectado) return;
-            if (!eraHost) Erro = "A partida acabou (o anfitrião saiu ou a conexão caiu).";
+            if (!eraHost)
+                Erro = !_entrou
+                    ? "Não deu para entrar na partida (o anfitrião não respondeu, ou os dois jogos estão em versões diferentes)."
+                    : "A partida acabou (o anfitrião saiu ou a conexão caiu).";
+            _entrou = false;
             _sessao = null;
             Atual = Estado.Desconectado;
             Codigo = null;

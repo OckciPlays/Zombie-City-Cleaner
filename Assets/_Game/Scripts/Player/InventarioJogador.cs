@@ -491,6 +491,32 @@ namespace ZombieCityCleaner.Player
             return it.item;
         }
 
+        /// <summary>
+        /// Só no anfitrião: gasta um uso do item com usos (05/11/2026, a etapa 2: o spray antisséptico, <see cref="Itens.ComUsos"/>).
+        /// Os usos vão no desgaste (cada uso soma <see cref="Itens.DesgastePorUsoDoSpray"/>); no último, o item acaba. O que
+        /// não tem usos sai como no <see cref="TirarUm"/>. Devolve o que ele era (Nada, se não estava). <paramref name="avisar"/>:
+        /// o aviso "O spray antisséptico acabou" no dono (o TratarRpc junta ele ao aviso do tratamento).
+        /// </summary>
+        public Item GastarUso(ushort id, bool avisar = true)
+        {
+            int k = IsServer ? Indice(id) : -1;
+            if (k < 0) return Item.Nada;
+            var it = Mochila[k];
+            if (!Itens.ComUsos(it.item)) return TirarUm(id);
+            int novo = it.desgaste + Itens.DesgastePorUsoDoSpray;
+            if (novo >= 100 || Itens.UsosQueSobram(novo) <= 0)
+            {
+                Mochila.RemoveAt(k);
+                if (avisar) AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} acabou");
+            }
+            else
+            {
+                it.desgaste = (byte)novo;
+                Mochila[k] = it;
+            }
+            return it.item;
+        }
+
         /// <summary>Só no anfitrião: gasta n do item (das pilhas), se ele tiver; devolve se gastou.</summary>
         public bool GastarItem(Item item, int n)
         {
@@ -703,6 +729,9 @@ namespace ZombieCityCleaner.Player
         void ConsumirRpc(ushort id, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId || !Itens.EhConsumivel(Do(id))) return;
+            // os tratamentos do corpo (a atadura, a tala, o kit, os analgésicos, o xarope e, na etapa 2, a bandagem
+            // antisséptica, o spray e o antibiótico) só vão pelo TratarRpc, que confere antes de gastar
+            if (PartesDoCorpo.EhTratamento(Do(id))) return;
             var item = TirarUm(id);
             var d = Itens.Consumivel(item);
             GetComponent<FomeESede>().Consumir(d);
@@ -973,12 +1002,18 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// Come, bebe ou usa um da pilha direto da mochila (o menu do botão direito da tela): na hora, com o som de abrir e
-        /// de uma mordida ou de um gole (pela mão, o clique faz o clipe inteiro).
+        /// de uma mordida ou de um gole (pela mão, o clique faz o clipe inteiro). Os tratamentos do corpo (05/11/2026) não
+        /// são na hora: começam a barra do <see cref="Tratamento"/>, na parte escolhida sozinha.
         /// </summary>
         public void UsarDaMochila(ushort id)
         {
             var item = Do(id);
-            if (!Itens.EhConsumivel(item) || _arma.Usando) return;
+            if (PartesDoCorpo.EhTratamento(item))
+            {
+                if (!_arma.Usando && Tratamento.Local != null) Tratamento.Local.Comecar(id, PartesDoCorpo.Sortear);
+                return;
+            }
+            if (!Itens.EhConsumivel(item) || _arma.Usando || Tratando) return;
             bool bebe = Itens.Consumivel(item).tipo == TipoDeLoot.Bebida;
             var ouvido = _rede.cameraMundo != null ? _rede.cameraMundo.transform.position : transform.position + Vector3.up * 1.6f;
             Efeitos.Som(bebe || Itens.EhRemedio(item) ? Efeitos.AbrirTampa : Efeitos.AbrirLata, ouvido, 0.45f, false);
@@ -1327,7 +1362,7 @@ namespace ZombieCityCleaner.Player
             if (IsSpawned && IsOwner && _pedirComeco) EnviarPersonagem();   // o personagem (InventarioJogador.Personagem.cs)
             if (IsSpawned) PneuQueSeVe();
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
-            if (_arma.Usando || _arma.Montando) return;   // comendo, bebendo ou montando: nem troca nem larga
+            if (_arma.Usando || _arma.Montando || Tratando) return;   // comendo, bebendo, montando ou tratando: nem troca nem larga
             var teclado = Keyboard.current;
             var mouse = Mouse.current;
             int escolher = -1;
@@ -1525,7 +1560,12 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhConsumivel(naMao))
             {
                 int n = Achar(IdNaMao, out var pilha) ? Itens.Quantos(naMao, pilha.qtd) : 1;
-                linha = $"{Itens.Nome(naMao)}{(n > 1 ? $" ({n})" : "")}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
+                // os tratamentos do corpo (05/11/2026): o que o clique faz com cada um
+                string verbo = PartesDoCorpo.EhTratamento(naMao) ? VerboDoTratamento(naMao) : Itens.Consumivel(naMao).verbo;
+                // o spray (a etapa 2): os usos que sobram no lugar do número da pilha ("spray antisséptico (3 usos)")
+                string quantos = Itens.ComUsos(naMao) && Achar(IdNaMao, out var comUsos) ? UsosEmTexto(comUsos.desgaste)
+                               : n > 1 ? $" ({n})" : "";
+                linha = $"{Itens.Nome(naMao)}{quantos}   ·   clique: {verbo}   ·   G: largar";
             }
             else if (Itens.EhTaco(naMao)) linha = $"{Itens.Nome(naMao)}   ·   E na mesa de sinuca: jogar   ·   G: largar";
             else if (Time.time < _nomeAte)
