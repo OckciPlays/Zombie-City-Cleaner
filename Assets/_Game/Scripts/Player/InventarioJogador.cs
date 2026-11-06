@@ -968,9 +968,10 @@ namespace ZombieCityCleaner.Player
             if (id == 0 || quanto <= 0f || !Itens.ComDesgaste(Do(id))) return;
             _desgastePendente.TryGetValue(id, out float p);
             p += quanto;
-            if (p >= 1f)
+            // (a folga: 1/30 somado 30 vezes dá 0,99999, e o 1% sairia um tiro depois)
+            if (p >= 1f - 1e-4f)
             {
-                int n = Mathf.Min(255, (int)p);
+                int n = Mathf.Min(255, (int)(p + 1e-4f));
                 p -= n;
                 DesgastarRpc(id, (byte)n);
             }

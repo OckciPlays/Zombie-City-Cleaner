@@ -488,9 +488,19 @@ namespace ZombieCityCleaner.Loot
         /// <summary>Quantos usos sobram com este desgaste (0 → 5, 40 → 3, 80 → 1, 100 → 0).</summary>
         public static int UsosQueSobram(int desgaste) =>
             UnityEngine.Mathf.Clamp((100 - desgaste + DesgastePorUsoDoSpray - 1) / DesgastePorUsoDoSpray, 0, UsosDoSpray);
-        /// <summary>Quanto um uso gasta: um tiro (as de fogo: 400 tiros) ou um golpe que pega (as brancas).</summary>
-        public static float DesgastePorUso(Item i) => EhArma(i) ? 0.25f : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
+        /// <summary>Quanto um uso gasta: um tiro (as de fogo: 1% a cada <see cref="TirosPorPorcento"/>) ou um golpe que pega (as brancas).</summary>
+        public static float DesgastePorUso(Item i) => EhArma(i) ? 1f / TirosPorPorcento(i) : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;
+        /// <summary>
+        /// Quantos tiros gastam 1% da arma de fogo (05/11/2026, a pedido: "precisamos aumentar, principalmente das armas
+        /// automáticas"; era 1% a cada 4 tiros em todas, 400 até quebrar). Nas de pente, um pente cheio gasta 1%: a pistola
+        /// 12 (1.200 tiros até quebrar), a submetralhadora 25 (2.500) e o rifle 30 (3.000). A espingarda (8, 800 tiros) e a
+        /// sniper (10, 1.000) atiram pouco e forçam mais a arma a cada tiro.
+        /// </summary>
+        public static int TirosPorPorcento(Item i) => i switch
+        {
+            Item.Pistola => 12, Item.Submetralhadora => 25, Item.Rifle => 30, Item.Espingarda => 8, Item.Sniper => 10, _ => 4,
+        };
         /// <summary>A tocha acesa na mão queima: o desgaste sobe 1 a cada tantos segundos (100: ela se apaga e some).</summary>
         public const float SegundosDaTochaPorDesgaste = 6f;
         /// <summary>

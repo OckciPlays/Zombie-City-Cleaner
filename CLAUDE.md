@@ -1582,7 +1582,9 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   **A cabeça só explode com tiros e cortes** (a pedido: "só tiros e cortes"): o que não tem fio (`corte` 0: o soco, o bastão e
   a tocha) mata pela cabeça com ela no lugar; a faca, o machado e a lança (e os tiros) a explodem no golpe que mata.
 - **O desgaste e o kit de reparo:** `ItemNaMochila.desgaste` e `ItemNoChao.desgaste` (0, nova; 100, quebrada; vão juntos
-  para o chão e de volta). As armas de fogo gastam 0,25 por tiro e, de 70 para cima, emperram às vezes (até 30% dos
+  para o chão e de volta). As armas de fogo gastam 1% a cada tantos tiros (`Itens.TirosPorPorcento`, 05/11/2026, a
+  pedido: mais duráveis, principalmente as automáticas; era 0,25 por tiro em todas): um pente cheio por 1% (a pistola 12, a
+  submetralhadora 25, o rifle 30), a espingarda 8 e a sniper 10. De 70 para cima, emperram às vezes (até 30% dos
   tiros: o clique sem tiro, "EMPERROU"); quebradas, não atiram. As brancas gastam a cada golpe que pega (a faca 0,8, o
   machado 0,6, o bastão 1,5, a lança 1,2) e quebram (somem). O dono soma e manda de 1 em 1 (`Desgastar`); o anfitrião grava.
   Na mochila, a barra fina em cima do item e o "Estado" nos detalhes; no HUD, a porcentagem ao lado do nome da arma. O kit

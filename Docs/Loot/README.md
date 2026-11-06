@@ -57,5 +57,6 @@ garrafa térmica, kit de reparo, kits de montar e armas (viram peças de metal; 
 
 ## As armas gastam
 
-As de fogo gastam a cada tiro e, muito gastas, emperram; quebradas, não atiram. As brancas gastam a cada golpe e
+As de fogo gastam a cada tiro e, muito gastas, emperram; quebradas, não atiram. Um pente cheio gasta 1% da pistola (12
+tiros), da submetralhadora (25) e do rifle (30); a espingarda gasta 1% a cada 8 tiros e a sniper a cada 10. As brancas gastam a cada golpe e
 quebram. O kit de reparo (botão direito → Reparar) deixa a arma nova. A tocha queima uns 10 minutos na mão; os zumbis ficam a 4 m dela, e a chuva a apaga (reacende numa fogueira acesa).
