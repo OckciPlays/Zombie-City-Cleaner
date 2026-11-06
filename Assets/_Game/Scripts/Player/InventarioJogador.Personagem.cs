@@ -22,6 +22,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>As roupas vestidas (só com <see cref="comRoupas"/>: um save de antes delas entra com as do começo).</summary>
         public RoupasVestidas roupas;
         public bool comRoupas;
+        /// <summary>O corpo (05/11/2026; vazio = sadio, como num save de antes dele).</summary>
+        public EstadoDoCorpo corpo;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
@@ -41,11 +43,13 @@ namespace ZombieCityCleaner.Player
             s.SerializeValue(ref escolhido);
             s.SerializeValue(ref roupas);
             s.SerializeValue(ref comRoupas);
+            s.SerializeValue(ref corpo);
         }
 
         public static PacoteDoPersonagem De(PersonagemSalvo p)
         {
             var itens = new ItemNaMochila[p.itens.Count];
+            var aMais = new System.Collections.Generic.List<ItemNaMochila>();
             for (int i = 0; i < itens.Length; i++)
             {
                 var it = p.itens[i];
@@ -55,6 +59,26 @@ namespace ZombieCityCleaner.Player
                     qtd = (ushort)Mathf.Clamp(it.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100),
                     cores = unchecked((ulong)it.cores),
                 };
+                // (05/11/2026) o spray empilhava até 3 e agora é um por célula, com os usos: a pilha antiga vira sprays
+                // separados (o Aplicar acha lugar para eles, ou larga no chão)
+                if (Itens.ComUsos(itens[i].item) && itens[i].qtd > 1)
+                {
+                    for (int k = 1; k < itens[i].qtd && k < 10; k++)
+                    {
+                        var outro = itens[i];
+                        outro.qtd = 1;
+                        aMais.Add(outro);
+                    }
+                    itens[i].qtd = 1;
+                }
+            }
+            if (aMais.Count > 0)
+            {
+                // os novos vão no fim (os atalhos apontam pelo índice: não mudam)
+                var todos = new ItemNaMochila[itens.Length + aMais.Count];
+                itens.CopyTo(todos, 0);
+                aMais.CopyTo(todos, itens.Length);
+                itens = todos;
             }
             var roupas = new RoupasVestidas();
             bool comRoupas = p.roupas != null && p.roupas.Length == Itens.QuantosLugaresDeRoupa;
@@ -69,7 +93,7 @@ namespace ZombieCityCleaner.Player
             {
                 itens = itens, mochila = (Item)p.mochila, pneu = (byte)Mathf.Clamp(p.pneu, 0, 255), dinheiro = p.dinheiro,
                 vida = p.vida, fome = p.fome, sede = p.sede, a0 = A(0), a1 = A(1), a2 = A(2), escolhido = (byte)Mathf.Clamp(p.escolhido, 0, 2),
-                roupas = roupas, comRoupas = comRoupas,
+                roupas = roupas, comRoupas = comRoupas, corpo = p.corpo.Conferido(),
             };
         }
     }
@@ -268,10 +292,15 @@ namespace ZombieCityCleaner.Player
             if (p.pneu != SemPneu) PneuNasMaos.Value = (byte)Mathf.Clamp(p.pneu, 0, 100);
             Dinheiro.Value = Mathf.Max(0, Dinheiro.Value + p.dinheiro);
             var vida = GetComponent<VidaJogador>();
-            if (vida != null) vida.Vida.Value = Mathf.Clamp(p.vida, 10f, vida.vidaMaxima);
+            if (vida != null)
+            {
+                vida.Vida.Value = Mathf.Clamp(p.vida, 10f, vida.vidaMaxima);
+                vida.DefinirCorpo(p.corpo);   // as feridas, as lesões e as talas de quando ele saiu (05/11/2026)
+            }
             GetComponent<FomeESede>()?.Definir(p.fome, p.sede);
             if (p.comRoupas) VestirAsSalvas(p.roupas);
-            ushort A(int k) => k >= 0 && k < n ? ids[k] : (ushort)0;
+            // (um save antigo pode ter no atalho um item que não vai mais na mão: a gaze e o desinfetante, 05/11/2026)
+            ushort A(int k) => k >= 0 && k < n && Itens.VaiNaMao(p.itens[k].item) ? ids[k] : (ushort)0;
             CarregadoRpc(A(p.a0), A(p.a1), A(p.a2), p.escolhido);
             Debug.Log($"[Save] O personagem de {_rede?.Aparencia.Value.nome} entrou: {Mochila.Count} itens, {Itens.Nome(MochilaVestida.Value)}, " +
                       $"{DiaZero.PrecosDoDiaZero.Dinheiro(Dinheiro.Value)}.");
@@ -327,7 +356,11 @@ namespace ZombieCityCleaner.Player
             }
             if (_rede != null)
             {
-                if (_rede.Vida != null) p.vida = _rede.Vida.Caido.Value ? _rede.Vida.vidaMaxima : _rede.Vida.Vida.Value;   // (caído: renasce inteiro)
+                if (_rede.Vida != null)
+                {
+                    p.vida = _rede.Vida.Caido.Value ? _rede.Vida.vidaMaxima : _rede.Vida.Vida.Value;   // (caído: renasce inteiro)
+                    p.corpo = _rede.Vida.Caido.Value ? default : _rede.Vida.Corpo.Value;
+                }
                 if (_rede.Criado) p.Vestir(_rede.Aparencia.Value);
             }
             var fs = GetComponent<FomeESede>();

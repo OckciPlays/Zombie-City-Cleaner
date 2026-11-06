@@ -70,8 +70,10 @@ namespace ZombieCityCleaner.World
         /// <summary>
         /// Os itens do saque da construção que vão neste móvel de perto (o ponto e a peça dele), em 'saida'. Com as partes
         /// ainda fechadas (antes de elas ficarem como estão na rede): o lugar de cada item é o do móvel fechado.
+        /// 'caixaDoPonto': a caixa do móvel nas coordenadas dele (o móvel antigo da farmácia e do hospital, 05/11/2026, que não tem malha: o
+        /// objeto vazio no ponto, com a caixa do ponto); sem ela, a da malha do móvel.
         /// </summary>
-        internal void PorOSaque(MobiliaDaConstrucao m, GameObject movel, string modelo, ulong obra, int ponto, int peca, List<SaqueNaMira> saida)
+        internal void PorOSaque(MobiliaDaConstrucao m, GameObject movel, string modelo, ulong obra, int ponto, int peca, List<SaqueNaMira> saida, Bounds? caixaDoPonto = null)
         {
             var itens = ItensNoMundo.Instancia;
             if (itens == null) return;
@@ -81,7 +83,7 @@ namespace ZombieCityCleaner.World
             if (_doMovel.Count == 0) return;
             var raiz = movel.transform;
             var corpo = movel.GetComponent<MeshFilter>();
-            var caixa = corpo != null && corpo.sharedMesh != null ? corpo.sharedMesh.bounds : new Bounds(Vector3.zero, Vector3.zero);
+            var caixa = caixaDoPonto ?? (corpo != null && corpo.sharedMesh != null ? corpo.sharedMesh.bounds : new Bounds(Vector3.zero, Vector3.zero));
             var obraT = m.transform;
             foreach (var it in _doMovel)
             {

@@ -92,7 +92,14 @@ namespace ZombieCityCleaner.Salvar
             if (!IsServer) return;
             _proximo = Time.unscaledTime + MinutosEntreSalvamentos * 60f;
             if (Carregando && !_restaurado) Restaurar();
-            foreach (var (cliente, p) in _depois) InventarioDe(cliente)?.Aplicar(p);
+            // quem esperou o Dia 0 passou os 5 anos no abrigo: o corpo sara e a vida volta cheia (05/11/2026)
+            foreach (var (cliente, p) in _depois)
+            {
+                var q = p;
+                q.corpo = default;
+                q.vida = 1000f;   // (o Aplicar limita à máxima)
+                InventarioDe(cliente)?.Aplicar(q);
+            }
             _depois.Clear();
         }
 

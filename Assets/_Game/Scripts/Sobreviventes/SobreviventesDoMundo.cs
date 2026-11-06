@@ -299,8 +299,8 @@ namespace ZombieCityCleaner.Sobreviventes
         /// comida e bebida (de 1 a 3 e de 1 a 2). Os militares (<paramref name="militar"/>; 03/11/2026, à noite, a pedido: "o
         /// loot dos NPC militares também está alto", 8 mortos deixavam 634 balas): o pente de 50% a 100% e, em 40% deles, uma
         /// caixa com 30% a 60% de um pente; para lutar, uma reserva de 2 pentes que não fica no saque
-        /// (<see cref="Sobrevivente.reserva"/>); a barra, às vezes o feijão, a água e o remédio, e raramente o colete tático ou o
-        /// capacete militar como item.
+        /// (<see cref="Sobrevivente.reserva"/>); a barra, às vezes o feijão, a água e o remédio, em 10% o antibiótico, e
+        /// raramente o colete tático ou o capacete militar como item.
         /// </summary>
         internal static void Encher(Sobrevivente sob, TipoDeArma arma, bool militar = false, Item branca = Item.Nada)
         {
@@ -322,16 +322,17 @@ namespace ZombieCityCleaner.Sobreviventes
             }
             Item[] comidas = { Item.Comida, Item.Feijao, Item.Carne, Item.Milho, Item.Sopa, Item.Salgadinho, Item.BarraDeEnergia };
             Item[] bebidas = { Item.Agua, Item.RefrigeranteLata, Item.Energetico, Item.Suco };
-            Item[] remedios = { Item.Atadura, Item.Comprimidos, Item.Gaze, Item.Bandagem, Item.KitMedico };
             Item[] materiais = { Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Pregos, Item.Fios, Item.PecasDeMetal };
             if (militar)
             {
-                // a ração: a barra; às vezes o feijão, a água e o remédio; raramente o colete ou o capacete (o que ele veste
-                // fica com o corpo)
+                // a ração: a barra; às vezes o feijão, a água e o remédio (05/11/2026, sem a vida voltando sozinha: em 45%
+                // deles, pelos pesos dos militares, com o kit e a tala); em 10%, à parte, o antibiótico (a etapa 2: o
+                // militar é quem ainda tem); raramente o colete ou o capacete (o que ele veste fica com o corpo)
                 Por(sob, Item.BarraDeEnergia, 1);
                 if (Random.value < 0.3f) Por(sob, Item.Feijao, 1);
                 if (Random.value < 0.6f) Por(sob, Item.Agua, 1);
-                if (Random.value < 0.3f) Por(sob, Random.value < 0.25f ? Item.KitMedico : Item.Bandagem, 1);
+                if (Random.value < 0.45f) Por(sob, Sortear(RemediosDosMilitares), 1);
+                if (Random.value < 0.1f) Por(sob, Item.Antibiotico, 1);
                 if (Random.value < 0.08f) PorRoupa(sob, "Colete_Tatico");
                 if (Random.value < 0.06f) PorRoupa(sob, "Capacete_Militar");
                 if (Random.value < 0.15f) Por(sob, Item.Pilhas, 2);
@@ -341,7 +342,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 int nComidas = Random.Range(1, 4), nBebidas = Random.Range(1, 3);
                 for (int i = 0; i < nComidas; i++) Por(sob, comidas[Random.Range(0, comidas.Length)], 1);
                 for (int i = 0; i < nBebidas; i++) Por(sob, bebidas[Random.Range(0, bebidas.Length)], 1);
-                if (Random.value < 0.35f) Por(sob, remedios[Random.Range(0, remedios.Length)], 1);
+                if (Random.value < 0.35f) Por(sob, Sortear(RemediosDosCivis), 1);
                 if (Random.value < 0.4f) Por(sob, materiais[Random.Range(0, materiais.Length)], Random.Range(1, 3));
                 if (Random.value < 0.2f) Por(sob, Item.Pilhas, 2);
                 if (!deBranca && Random.value < 0.1f) Por(sob, Item.Faca, 1);
@@ -349,6 +350,30 @@ namespace ZombieCityCleaner.Sobreviventes
             float r = Random.value;
             sob.mochilaVestida = r < 0.45f ? Item.MochilaPequena : r < 0.75f ? Item.MochilaMedia : r < 0.85f ? Item.MochilaGrande : Item.Nada;
             sob.dinheiro = Random.value < 0.6f ? Random.Range(5, 80) : 0;
+        }
+
+        // o remédio que o morto deixa, por peso (05/11/2026, o sistema de vida por membro): o civil, mais a atadura e os
+        // comprimidos (o kit em 7 de cada 100 remédios); o militar, o kit de campanha e a tala
+        static readonly (Item item, int peso)[] RemediosDosCivis =
+        {
+            (Item.Atadura, 30), (Item.Comprimidos, 25), (Item.Bandagem, 20), (Item.Gaze, 10), (Item.Tala, 8), (Item.KitMedico, 7),
+        };
+        static readonly (Item item, int peso)[] RemediosDosMilitares =
+        {
+            (Item.Atadura, 35), (Item.Bandagem, 25), (Item.KitMedico, 20), (Item.Tala, 20),
+        };
+
+        static Item Sortear((Item item, int peso)[] lista)
+        {
+            int soma = 0;
+            foreach (var (_, peso) in lista) soma += peso;
+            int r = Random.Range(0, soma);
+            foreach (var (item, peso) in lista)
+            {
+                if (r < peso) return item;
+                r -= peso;
+            }
+            return lista[lista.Length - 1].item;
         }
 
         // uma roupa do catálogo (pelo nome da peça), com as cores dele

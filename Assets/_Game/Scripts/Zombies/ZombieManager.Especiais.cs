@@ -14,8 +14,9 @@ namespace ZombieCityCleaner.Zombies
     /// (<see cref="AjustesDoCorredor.fracaoDeDia"/>, <see cref="AjustesDoCorredor.fracaoDeNoite"/>);</item>
     /// <item>o Long, só de noite e raro: a cada <c>intervaloDoNascimento</c>, uma chance de aparecer a 35-50 m de um
     /// jogador, fora da vista (no máximo <c>maximo</c> ao mesmo tempo);</item>
-    /// <item>o Brutamonte, um por mundo: a cada <c>intervaloDoNascimento</c>, a chance (maior de noite) de brotar da terra
-    /// a 30-45 m de um jogador. Sem ninguém por perto um tempo, ele volta para a terra e guarda a vida que perdeu.</item>
+    /// <item>o Brutamonte, um por mundo: a cada <c>intervaloDoNascimento</c>, a chance (maior de noite) de se enterrar no
+    /// caminho de um jogador e brotar da terra quando alguém chega perto (05/11/2026: ZombieManager.Enterrado.cs; antes,
+    /// a 30-45 m, fora da vista). Sem ninguém por perto um tempo, ele volta para a terra e guarda a vida que perdeu.</item>
     /// </list>
     /// Também o grito do Long (a horda vem), os sons e os efeitos (a terra abrindo, o rugido, os baques). Os sons provisórios
     /// ficam em Resources/Especiais (feitos por Ferramentas/especiais_sons.py; o Pedro troca depois).
@@ -65,7 +66,11 @@ namespace ZombieCityCleaner.Zombies
             var z = Nascer(posicao, lista[Random.Range(0, lista.Length)]);
             if (z == null) return null;
             z.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            if (tipo == TipoDeZumbi.Brutamonte && _vidaGuardadaDoBruto > 0f) z.GuardarDano(_vidaGuardadaDoBruto);
+            if (tipo == TipoDeZumbi.Brutamonte && _vidaGuardadaDoBruto > 0f)
+            {
+                z.GuardarDano(_vidaGuardadaDoBruto);
+                _vidaGuardadaDoBruto = -1f;   // vale uma vez: é o mesmo que voltou da terra (05/11/2026)
+            }
             return z;
         }
 
@@ -113,11 +118,11 @@ namespace ZombieCityCleaner.Zombies
                 }
                 else bruto.semNinguemDesde = -1f;
             }
-            else if (agora >= _proximoBrutamonte)
+            else if (!TemBrutamonteEnterrado && agora >= _proximoBrutamonte)
             {
                 _proximoBrutamonte = agora + b.intervaloDoNascimento;
-                if (Random.value < (EDia ? b.chanceDeDia : b.chanceDeNoite) && LugarForaDaVista(30f, 45f, out var p))
-                    NascerEspecial(TipoDeZumbi.Brutamonte, p, Random.Range(0f, 360f));
+                // ele se enterra no caminho de alguém e sai da terra quando chegam perto (ZombieManager.Enterrado.cs)
+                if (Random.value < (EDia ? b.chanceDeDia : b.chanceDeNoite)) PlantarBrutamonte(agora);
             }
             // o Long: só de noite
             var c = ajustes.cuspidor;

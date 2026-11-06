@@ -15,15 +15,13 @@ namespace ZombieCityCleaner.Player
     /// <see cref="TelaDeMorte"/> (do que morreu e a contagem). A mochila e as roupas vestidas ficam no chão onde ele caiu
     /// (no Dia 0, nada se perde). O botão pede ao anfitrião, que leva o jogador à cama dele (ou ao ponto de nascimento) com a
     /// vida cheia.
-    /// Depois de um tempo sem apanhar a vida volta devagar, se o jogador não estiver com fome nem com sede
-    /// (<see cref="FomeESede"/>).
+    /// Desde 05/11/2026 (a pedido: "a vida não se regenera mais sozinha"), só o tratamento cura: a bandagem, o kit médico
+    /// e a tala tratam o corpo por partes (<see cref="Corpo"/>, no VidaJogador.Corpo.cs: as feridas que sangram, as
+    /// fraturas, a queda). A fogueira e as comidas não dão mais vida.
     /// </summary>
-    public class VidaJogador : NetworkBehaviour
+    public partial class VidaJogador : NetworkBehaviour
     {
         public float vidaMaxima = 100f;
-        [Tooltip("Vida recuperada por segundo, depois de um tempo sem apanhar.")]
-        public float recuperacao = 2f;
-        public float esperaParaRecuperar = 8f;
         [Tooltip("Caído, quanto tempo até o botão de renascer acender (s).")]
         public float esperaParaRenascer = 5f;
 
@@ -40,7 +38,7 @@ namespace ZombieCityCleaner.Player
         public float PodeRenascerEm { get; private set; }
 
         static AudioClip _somDoGolpe;
-        float _ultimoGolpe, _proximaRecuperacao, _clarao, _caiuNoServidor;
+        float _ultimoGolpe, _clarao, _caiuNoServidor;
         string _ultimaCausa;
         FomeESede _fomeESede;
         JogadorRede _rede;
@@ -57,24 +55,48 @@ namespace ZombieCityCleaner.Player
                 Vida.Value = vidaMaxima;
                 Caido.Value = false;
             }
+            NascerCorpo();
             if (_somDoGolpe == null) _somDoGolpe = GerarSom();
             if (IsOwner && GetComponent<TelaDeMorte>() == null) gameObject.AddComponent<TelaDeMorte>();
+            // o corpo (05/11/2026): no dono, a queda, os efeitos das lesões, o curativo com a barra e a silhueta no HUD; em
+            // todas as máquinas, a faixa e a tala no corpo
+            if (IsOwner)
+            {
+                if (GetComponent<QuedaDoJogador>() == null) gameObject.AddComponent<QuedaDoJogador>();
+                if (GetComponent<EfeitosDoCorpo>() == null) gameObject.AddComponent<EfeitosDoCorpo>();
+                if (GetComponent<Tratamento>() == null) gameObject.AddComponent<Tratamento>();
+                if (GetComponent<CorpoNoHud>() == null) gameObject.AddComponent<CorpoNoHud>();
+                if (GetComponent<TratarOAmigo>() == null) gameObject.AddComponent<TratarOAmigo>();   // a fase 3: mirar no amigo e segurar E
+            }
+            if (GetComponent<CurativosNoCorpo>() == null) gameObject.AddComponent<CurativosNoCorpo>();
+            if (GetComponent<PoseDoCurativo>() == null) gameObject.AddComponent<PoseDoCurativo>();   // a fase 3: o corpo enfaixando a parte
         }
+
+        public override void OnNetworkDespawn() => SumirCorpo();
 
         /// <summary>
         /// Só no anfitrião: um golpe (ou um tiro) tira vida. Se acabar, o jogador cai. A causa vai para a tela de morte
-        /// ("Mordido pelos zumbis", "Morto por Fulano"...).
+        /// ("Mordido pelos zumbis", "Morto por Fulano"...). Com o jeito do golpe (05/11/2026), ele também pega numa parte do
+        /// corpo (a <paramref name="parte"/>, ou sorteada pelo jeito e pelo lado de quem bate), que perde vida, e pode abrir
+        /// uma ferida que sangra e quebrar ou torcer o membro (<paramref name="lesao"/>: a queda e o Brutamonte). Sem o
+        /// jeito (Nenhum), só a vida geral, como antes (o raio, o F1).
         /// </summary>
-        public void Dano(float valor, Vector3 de, string causa = null)
+        public void Dano(float valor, Vector3 de, string causa = null, TipoDeGolpe tipo = TipoDeGolpe.Nenhum,
+                         ParteDoCorpo parte = PartesDoCorpo.Sortear, Lesao lesao = Lesao.Nenhuma)
         {
             if (!IsServer || !IsSpawned || Caido.Value) return;
             _ultimoGolpe = Time.time;
             _ultimaCausa = causa;
+            bool abriu = false;
+            var nova = Lesao.Nenhuma;
+            // no Dia 0 (e nos 5 anos depois), o corpo não guarda nada: só a vida geral
+            if (tipo != TipoDeGolpe.Nenhum && CorpoAnda) Ferir(valor, de, tipo, ref parte, lesao, out abriu, out nova);
+            else parte = PartesDoCorpo.Sortear;
             Perder(valor, causa);
-            GolpeRpc(de);
+            GolpeRpc(de, (byte)parte, (byte)tipo, (byte)nova, abriu);
         }
 
-        /// <summary>Só no anfitrião: um remédio (ou a comida que cura) devolve vida, até a máxima.</summary>
+        /// <summary>Só no anfitrião: um tratamento devolve vida geral, até a máxima.</summary>
         public void Curar(float valor)
         {
             if (!IsServer || !IsSpawned || valor <= 0f || Caido.Value) return;
@@ -105,11 +127,20 @@ namespace ZombieCityCleaner.Player
         }
 
         [Rpc(SendTo.Owner)]
-        void GolpeRpc(Vector3 de)
+        void GolpeRpc(Vector3 de, byte parte, byte tipo, byte lesao, bool abriu)
         {
             _clarao = 1f;
-            Efeitos.Som(_somDoGolpe, transform.position + Vector3.up * 1.5f, 0.9f, false);
-            GetComponent<MovimentoPrimeiraPessoa>().Coice(-2.5f);   // o golpe sacode a cabeça para baixo
+            // a queda já teve o tranco e o baque no dono (QuedaDoJogador): aqui, só o osso
+            if ((TipoDeGolpe)tipo == TipoDeGolpe.Queda)
+            {
+                if (lesao >= (byte)Lesao.Fratura) GetComponent<MovimentoPrimeiraPessoa>().Coice(-3f);
+            }
+            else
+            {
+                Efeitos.Som(_somDoGolpe, transform.position + Vector3.up * 1.5f, 0.9f, false);
+                GetComponent<MovimentoPrimeiraPessoa>().Coice(lesao >= (byte)Lesao.Fratura ? -6f : -2.5f);   // o golpe sacode a cabeça para baixo
+            }
+            AvisarDoGolpe((ParteDoCorpo)parte, (TipoDeGolpe)tipo, (Lesao)lesao, abriu);
         }
 
         // anfitrião → dono: a tela de morte (a causa, e se perdeu as coisas)
@@ -139,6 +170,7 @@ namespace ZombieCityCleaner.Player
             if (parametros.Receive.SenderClientId != OwnerClientId || !Caido.Value) return;
             if (Time.time - _caiuNoServidor < esperaParaRenascer - 0.5f) return;
             Vida.Value = vidaMaxima;
+            SararTudo();   // a morte não muda (05/11/2026): renasce com tudo inteiro
             Caido.Value = false;
             _ultimaCausa = null;
             VoltarRpc();
@@ -149,6 +181,7 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsServer || !Caido.Value) return;
             Vida.Value = vidaMaxima;
+            SararTudo();
             Caido.Value = false;
             _ultimaCausa = null;
             VoltarRpc();
@@ -172,12 +205,8 @@ namespace ZombieCityCleaner.Player
             Deitar(Caido.Value);
             // (a luneta, saindo dela, liga os braços de novo: caído, continuam apagados)
             if (Caido.Value && IsOwner && _rede != null && _rede.cameraBracos != null && _rede.cameraBracos.enabled) _rede.cameraBracos.enabled = false;
-            if (IsServer && !Caido.Value && Vida.Value < vidaMaxima && Time.time - _ultimoGolpe > esperaParaRecuperar && Time.time >= _proximaRecuperacao
-                && (_fomeESede == null || _fomeESede.Bem))
-            {
-                _proximaRecuperacao = Time.time + 1f;
-                Vida.Value = Mathf.Min(vidaMaxima, Vida.Value + recuperacao);
-            }
+            // a vida não volta mais sozinha (05/11/2026): o corpo anda (o sangramento, os curativos, as lesões sarando)
+            if (IsServer) AtualizarCorpo(Time.deltaTime);
         }
 
         // o corpo (o que os outros veem, e a sombra do dono) deita de costas no chão enquanto ele está caído

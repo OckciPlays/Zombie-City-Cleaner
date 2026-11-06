@@ -13,7 +13,9 @@ namespace ZombieCityCleaner.UI
     ///   VSync desliga (senão o limite não vale);
     /// - mostrar o FPS no canto de cima, à direita (a média de meio segundo);
     /// - o menu do desenvolvedor (F1) também no jogo compilado (no Editor e nas builds de desenvolvimento ele sempre está;
-    ///   numa partida, vale a opção do anfitrião, que é quem faz os pedidos do F1).
+    ///   numa partida, vale a opção do anfitrião, que é quem faz os pedidos do F1);
+    /// - menos balanço da câmera (05/11/2026, para quem enjoa): o mancar, o tremor da mira e o calafrio da febre a 35%,
+    ///   e a febre sem a visão turva (o Player/EfeitosDoCorpo lê).
     /// O <see cref="MenuOnline"/> carrega, mede os quadros, desenha o painel e o contador.
     /// </summary>
     public static class Opcoes
@@ -28,6 +30,8 @@ namespace ZombieCityCleaner.UI
         public static bool MostrarFps { get; private set; }
         /// <summary>O menu do desenvolvedor (F1) ligado no jogo compilado.</summary>
         public static bool LiberarF1 { get; private set; }
+        /// <summary>Menos balanço da câmera: o mancar, o tremor da mira e o calafrio a 35%, sem a visão turva da febre.</summary>
+        public static bool CameraCalma { get; private set; }
 
         static int _quadros;
         static float _tempo, _fps, _gravarEm = -1f;
@@ -38,6 +42,7 @@ namespace ZombieCityCleaner.UI
             Limite = Mathf.Clamp(PlayerPrefs.GetInt("opcoes.limite", ComVSync), 0, Limites.Length - 1);
             MostrarFps = PlayerPrefs.GetInt("opcoes.fps", 0) == 1;
             LiberarF1 = PlayerPrefs.GetInt("opcoes.f1", 0) == 1;
+            CameraCalma = PlayerPrefs.GetInt("opcoes.calma", 0) == 1;
             AudioListener.volume = Volume;
             AplicarLimite();
             Graficos.Carregar();   // a escala de renderização e a qualidade (a resolução, a Unity guarda sozinha)
@@ -55,6 +60,7 @@ namespace ZombieCityCleaner.UI
             PlayerPrefs.SetInt("opcoes.limite", Limite);
             PlayerPrefs.SetInt("opcoes.fps", MostrarFps ? 1 : 0);
             PlayerPrefs.SetInt("opcoes.f1", LiberarF1 ? 1 : 0);
+            PlayerPrefs.SetInt("opcoes.calma", CameraCalma ? 1 : 0);
             PlayerPrefs.Save();
             _gravarEm = -1f;
         }
@@ -191,7 +197,7 @@ namespace ZombieCityCleaner.UI
                 MostrarFps = fps == 1;
                 Gravar();
             }
-            y += 58 * u;
+            y += 50 * u;
 
             GUI.Label(new Rect(x, y + 6 * u, w, 26 * u), "Menu do desenvolvedor (F1)", texto);
             int f1 = GUI.SelectionGrid(new Rect(x + w - 200 * u, y, 200 * u, 36 * u), LiberarF1 ? 1 : 0, NaoSim, 2, opcao);
@@ -200,7 +206,17 @@ namespace ZombieCityCleaner.UI
                 LiberarF1 = f1 == 1;
                 Gravar();
             }
-            y += 58 * u;
+            y += 50 * u;
+
+            // para quem enjoa (05/11/2026): o mancar, o tremor da mira e o calafrio da febre bem menores, sem a visão turva
+            GUI.Label(new Rect(x, y + 6 * u, w, 26 * u), "Menos balanço da câmera", texto);
+            int calma = GUI.SelectionGrid(new Rect(x + w - 200 * u, y, 200 * u, 36 * u), CameraCalma ? 1 : 0, NaoSim, 2, opcao);
+            if ((calma == 1) != CameraCalma)
+            {
+                CameraCalma = calma == 1;
+                Gravar();
+            }
+            y += 50 * u;
             return Voltar(u, x, w, y, botao);
         }
 

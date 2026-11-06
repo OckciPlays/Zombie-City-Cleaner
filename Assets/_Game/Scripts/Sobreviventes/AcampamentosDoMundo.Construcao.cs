@@ -57,6 +57,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 _proximaRevisao = Time.unscaledTime + 0.5f;
                 Revisar();
             }
+            ChuvaNasFogueiras();   // a conta da chuva anda sempre (longe do acampamento também)
             if (_construidos.Count == 0) return;
             if (_versaoDasLetras != Letreiro.Versao) RefazerAsLetras();
             Fogueiras();
@@ -388,6 +389,30 @@ namespace ZombieCityCleaner.Sobreviventes
             MaterialDasLetras();
         }
 
+        // a chuva apaga as fogueiras dos acampamentos também (05/11/2026; só o que se vê, em cada máquina: os zumbis não
+        // entram no acampamento de todo jeito): elas molham como as dos jogadores e os moradores acendem de novo um minuto
+        // depois de a chuva passar
+        float _molhadaDosAcampamentos, _semChuvaDesde = -1f;
+        bool _fogueirasApagadas;
+        const float ReacenderDepoisDaChuva = 60f;
+
+        void ChuvaNasFogueiras()
+        {
+            float agora = Time.time, chuva = Tempo.Chuva;
+            if (chuva > ConstrucoesNoMundo.ChuvaQueMolha)
+            {
+                _semChuvaDesde = -1f;
+                _molhadaDosAcampamentos = Mathf.Min(1f, _molhadaDosAcampamentos + Time.deltaTime * chuva / ConstrucoesNoMundo.SegundosParaApagarAFogueira);
+                if (_molhadaDosAcampamentos >= 1f) _fogueirasApagadas = true;
+            }
+            else
+            {
+                if (_semChuvaDesde < 0f) _semChuvaDesde = agora;
+                _molhadaDosAcampamentos = Mathf.Max(0f, _molhadaDosAcampamentos - Time.deltaTime / ConstrucoesNoMundo.SegundosParaSecar);
+                if (_fogueirasApagadas && agora - _semChuvaDesde > ReacenderDepoisDaChuva) _fogueirasApagadas = false;
+            }
+        }
+
         // o fogo tremula, e a mais perto estala de vez em quando (até 20 m de quem ouve)
         void Fogueiras()
         {
@@ -398,6 +423,8 @@ namespace ZombieCityCleaner.Sobreviventes
             foreach (var c in _construidos.Values)
                 foreach (var (pos, luz) in c.Fogueiras)
                 {
+                    if (luz != null && luz.gameObject.activeSelf == _fogueirasApagadas) luz.gameObject.SetActive(!_fogueirasApagadas);
+                    if (_fogueirasApagadas) continue;
                     if (luz != null) luz.intensity = 2.6f + 0.9f * Mathf.PerlinNoise(agora * 3.1f, pos.x) + 0.4f * Mathf.Sin(agora * 17f + pos.z);
                     float d = (pos - ouvido).sqrMagnitude;
                     if (d < menor)

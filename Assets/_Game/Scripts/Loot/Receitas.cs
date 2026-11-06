@@ -57,8 +57,15 @@ namespace ZombieCityCleaner.Loot
         public static readonly Receita[] Todas =
         {
             // em qualquer lugar
-            R(Item.Bandagem, 2, false, Item.Nada, P(Item.Pano, 2)),
+            // a bandagem de pano: 2 panos dão 1 (05/11/2026, sem a vida voltando sozinha: eram 2, e as roupas viravam cura sem fim)
+            R(Item.Bandagem, 1, false, Item.Nada, P(Item.Pano, 2)),
             R(Item.KitMedico, 1, false, Item.Nada, P(Item.Atadura), P(Item.Gaze, 2), P(Item.Desinfetante), P(Item.Comprimidos)),
+            // a bandagem antisséptica (05/11/2026, a etapa 2): 1 álcool (o Desinfetante) e 3 bandagens de pano, ou 3
+            // ataduras, dão 3 (o índice da receita vai pela rede: a VersaoDaRede 2 já cobre esta mudança)
+            R(Item.BandagemAntisseptica, 3, false, Item.Nada, P(Item.Desinfetante), P(Item.Bandagem, 3)),
+            R(Item.BandagemAntisseptica, 3, false, Item.Nada, P(Item.Desinfetante), P(Item.Atadura, 3)),
+            // a tala improvisada (05/11/2026): duas ripas amarradas com o pano
+            R(Item.Tala, 1, false, Item.Nada, P(Item.Madeira, 2), P(Item.Pano)),
             R(Item.Corda, 1, false, Item.Nada, P(Item.Pano, 3)),
             R(Item.Fogueira, 1, false, Item.Nada, P(Item.Madeira, 4), P(Item.Pano)),
             R(Item.Cama, 1, false, Item.Nada, P(Item.Pano, 4), P(Item.Madeira, 3), P(Item.Corda)),
@@ -83,6 +90,7 @@ namespace ZombieCityCleaner.Loot
             D(Item.Toras, "rachar", Item.Machado, P(Item.Madeira, 3)),
             D(Item.KitMedico, "desmontar", Item.Nada, P(Item.Atadura), P(Item.Gaze, 2), P(Item.Desinfetante)),
             D(Item.Bandagem, "desfazer", Item.Nada, P(Item.Pano)),
+            D(Item.Tala, "desfazer", Item.Nada, P(Item.Madeira)),
             D(Item.Corda, "desfazer", Item.Nada, P(Item.Pano, 2)),
             D(Item.VaraDePesca, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Fios, 2)),
             D(Item.GarrafaTermica, "desmontar", Item.Nada, P(Item.PecasDeMetal)),

@@ -53,7 +53,10 @@ namespace ZombieCityCleaner.Sobreviventes
             new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca },
             new[] { Item.Municao9mm, Item.Municao12, Item.Municao556, Item.Municao762 },
             new[] { Item.Remedio, Item.Comprimidos, Item.Antibiotico, Item.KitMedico, Item.Atadura, Item.Bandagem, Item.Gaze, Item.Desinfetante,
-                    Item.SprayAntisseptico, Item.Lanterna, Item.Pilhas, Item.Tocha, Item.Fogueira, Item.Cama, Item.Barricada },
+                    Item.SprayAntisseptico, Item.Lanterna, Item.Pilhas, Item.Tocha, Item.Fogueira, Item.Cama, Item.Barricada,
+                    // (05/11/2026) no fim: o save guarda o estoque pelo índice do produto (a tala; a bandagem antisséptica,
+                    // da etapa 2)
+                    Item.Tala, Item.BandagemAntisseptica },
             new[] { Item.Pneu, Item.Bateria, Item.Vela, Item.Radiador, Item.Macaco, Item.Galao, Item.KitDeReparo, Item.Ferramenta },
             new[] { Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos, Item.Isca, Item.VaraDePesca },
             new[] { Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande, Item.Coldre, Item.Roupa, Item.Pano },
@@ -114,8 +117,15 @@ namespace ZombieCityCleaner.Sobreviventes
             return 1.2f;
         }
 
-        /// <summary>O preço de compra de um (a caixa de munição cheia, a peça nova, o galão cheio, a arma com o pente cheio).</summary>
-        public static int PrecoDeCompra(Item item) => Mathf.Max(1, Mathf.RoundToInt(Base(item) * Fator(item)));
+        /// <summary>O antibiótico no acampamento (05/11/2026, a etapa 2): $100 fixo, o remédio mais caro (cura a infecção).</summary>
+        public const int PrecoDoAntibiotico = 100;
+
+        /// <summary>
+        /// O preço de compra de um (a caixa de munição cheia, a peça nova, o galão cheio, a arma com o pente cheio, o spray
+        /// com os 5 usos). O antibiótico é fixo (<see cref="PrecoDoAntibiotico"/>).
+        /// </summary>
+        public static int PrecoDeCompra(Item item) => item == Item.Antibiotico ? PrecoDoAntibiotico
+            : Mathf.Max(1, Mathf.RoundToInt(Base(item) * Fator(item)));
 
         /// <summary>Quanto o comerciante guarda de cada item (o máximo do estoque).</summary>
         public static int Maximo(Item item)
@@ -124,6 +134,10 @@ namespace ZombieCityCleaner.Sobreviventes
             if (Loot.Itens.EhMochila(item)) return 1;
             if (Loot.Itens.EhMunicao(item)) return 5;
             if (Loot.Itens.EhPeca(item)) return 2;
+            // os remédios (05/11/2026, sem a vida voltando sozinha): mais do que estanca e do analgésico, menos do kit, da tala
+            // e do antibiótico (a etapa 2: no máximo 2)
+            if (item == Item.Atadura || item == Item.Bandagem || item == Item.BandagemAntisseptica || item == Item.Comprimidos) return 6;
+            if (item == Item.KitMedico || item == Item.Tala || item == Item.Antibiotico) return 2;
             if (Loot.Itens.EhRemedio(item)) return 3;
             int p = PrecoDeCompra(item);
             return p >= 60 ? 2 : p >= 20 ? 3 : 6;
@@ -131,11 +145,13 @@ namespace ZombieCityCleaner.Sobreviventes
 
         /// <summary>
         /// O quanto vale este item (o preço de compra vezes o estado dele): a arma e a lanterna pelo desgaste; a caixa de
-        /// munição pelas balas; as pilhas do saque pela quantidade; a peça pela carga; o galão pelos litros.
+        /// munição pelas balas; as pilhas do saque pela quantidade; a peça pela carga; o galão pelos litros; o spray pelos
+        /// usos que sobram.
         /// </summary>
         public static float Valor(ItemNaMochila it)
         {
             float preco = PrecoDeCompra(it.item);
+            if (Loot.Itens.ComUsos(it.item)) return preco * Loot.Itens.UsosQueSobram(it.desgaste) / (float)Loot.Itens.UsosDoSpray;
             if (Loot.Itens.EhMunicao(it.item)) return preco * Loot.Itens.Quantos(it.item, it.qtd) / (float)Loot.Itens.MaxPorCaixa;
             if (Loot.Itens.EmPilha(it.item)) return preco * Loot.Itens.Quantos(it.item, it.qtd);
             if (it.item == Item.Galao) return preco * Mathf.Lerp(0.45f, 1f, InventarioJogador.LitrosDe(it) / 10f);

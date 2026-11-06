@@ -631,7 +631,7 @@ namespace ZombieCityCleaner.Sobreviventes
             float abertura = Dispersao(d, distancia, quem);
             var impactos = new JogadorRede.Impacto[d.chumbos];
             // o dano de cada alvo, uma vez só (a espingarda: o maior dos chumbos)
-            var danoNoJogador = new Dictionary<JogadorRede, float>();
+            var danoNoJogador = new Dictionary<JogadorRede, (float dano, Vector3 ponto)>();
             var noZumbi = new Dictionary<Zumbi, (Hitbox h, Vector3 p, float dano)>();
             for (int k = 0; k < d.chumbos; k++)
             {
@@ -639,7 +639,10 @@ namespace ZombieCityCleaner.Sobreviventes
                 Vector3 dir = Quaternion.LookRotation(direcao) * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
                 impactos[k] = Raio(origem, dir, d, danoNoJogador, noZumbi);
             }
-            foreach (var (j, dano) in danoNoJogador) j.Vida?.Dano(dano * DanoNoJogador, origem, DaBase ? "Baleado por um militar." : "Baleado por um sobrevivente.");
+            // o tiro sempre abre uma ferida, na parte onde o chumbo maior pegou (05/11/2026, o corpo do jogador)
+            foreach (var (j, a) in danoNoJogador)
+                j.Vida?.Dano(a.dano * DanoNoJogador, origem, DaBase ? "Baleado por um militar." : "Baleado por um sobrevivente.",
+                             TipoDeGolpe.Tiro, PartesDoCorpo.PeloPonto(j.transform, a.ponto));
             foreach (var (z, a) in noZumbi) ZombieManager.Acertar(z.Id, z.Geracao, a.h.regiao, a.h.membro, a.dano, a.p, false, this);
             TiroRpc((byte)Arma, impactos);
             ZombieManager.Barulho(origem, this);
@@ -647,7 +650,7 @@ namespace ZombieCityCleaner.Sobreviventes
             if (Random.value < 0.04f) Falar(Frase.Atirando);
         }
 
-        JogadorRede.Impacto Raio(Vector3 origem, Vector3 dir, DadosDaArma d, Dictionary<JogadorRede, float> danoNoJogador,
+        JogadorRede.Impacto Raio(Vector3 origem, Vector3 dir, DadosDaArma d, Dictionary<JogadorRede, (float dano, Vector3 ponto)> danoNoJogador,
                                  Dictionary<Zumbi, (Hitbox, Vector3, float)> noZumbi)
         {
             var impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Nada, normal = Vector3.up };
@@ -668,7 +671,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (jogador != null && jogador.AlvoValido)
                 {
                     float dano = Armas.Dano(d, hit.distance);
-                    if (!danoNoJogador.TryGetValue(jogador, out float antes) || dano > antes) danoNoJogador[jogador] = dano;
+                    if (!danoNoJogador.TryGetValue(jogador, out var antes) || dano > antes.dano) danoNoJogador[jogador] = (dano, hit.point);
                     return new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
                 }
                 var hitbox = hit.collider.GetComponent<Hitbox>();

@@ -22,6 +22,10 @@ namespace ZombieCityCleaner.Loot
         Vela = 64, Bateria, Radiador, Pneu, Macaco, ChaveDaPerua, ChaveDoCupe,
         // os remédios
         Remedio = 80, Comprimidos, KitMedico, Atadura, Gaze, Desinfetante, SprayAntisseptico, Antibiotico, Bandagem,
+        // a tala (05/11/2026, o sistema de vida por membro: imobiliza o braço ou a perna quebrados)
+        Tala = 89,
+        // a bandagem antisséptica (05/11/2026, a etapa 2: 1 álcool + 3 bandagens = 3; protege a ferida da infecção)
+        BandagemAntisseptica = 90,
         // os materiais (a matéria-prima da fabricação)
         Madeira = 96, Toras, Pano, Corda, FitaAdesiva, Ferramenta, PecasDeMetal, Fios, Pregos, Isca, VaraDePesca, KitDeReparo, Roupa,
         // arrombar as portas e as janelas trancadas (02/11/2026, o Plano_Portas.md da pasta de arte)
@@ -194,8 +198,11 @@ namespace ZombieCityCleaner.Loot
 
         /// <summary>
         /// O saque (31/10/2026, a pedido: "precisamos criar alguns loots ... mais variações de latas de comida e de água,
-        /// refrigerantes e algumas matérias-primas para craft"; cada um numa célula, por enquanto). A fome, a sede e a vida
-        /// vão de 0 a 100 (a vida volta sozinha devagar, de barriga cheia; o remédio é a pressa).
+        /// refrigerantes e algumas matérias-primas para craft"; cada um numa célula, por enquanto). A fome e a sede vão de 0
+        /// a 100. Desde 05/11/2026 (a pedido: "a vida não se regenera mais sozinha"), a comida não dá vida, e só o tratamento
+        /// cura: a atadura, a bandagem de pano, o kit médico, a tala e os analgésicos vão pelo corpo (os números estão no
+        /// Player/VidaJogador.Corpo.cs, não no <c>vida</c> daqui). A gaze e o álcool (o Desinfetante) viraram material das
+        /// receitas. Na etapa 2, a bandagem antisséptica, o spray, o antibiótico e o xarope também vão pelo corpo.
         /// </summary>
         static readonly DadosDoLoot[] _loot =
         {
@@ -206,27 +213,33 @@ namespace ZombieCityCleaner.Loot
             Comer(Item.Milho, "Milho", "lata de milho", "a lata de milho", "latas de milho", "Milho verde. Serve de isca também.", 3, 30f, 8f),
             Comer(Item.Sopa, "Sopa", "sopa enlatada", "a sopa enlatada", "latas de sopa", "Sopa pronta. Mata a fome e um pouco da sede.", 3, 30f, 15f),
             Comer(Item.Salgadinho, "Salgadinho", "salgadinho", "o salgadinho", "salgadinhos", "Um pacote. Salgado: dá sede.", 5, 15f, -5f),
-            Comer(Item.Chocolate, "Chocolate", "chocolate", "o chocolate", "chocolates", "Uma barra. Um pouco de ânimo.", 5, 12f, 0f, 3f),
-            Comer(Item.BarraDeEnergia, "BarraDeEnergia", "barra de energia", "a barra de energia", "barras de energia", "Cereal e mel. Leve e sustenta.", 5, 22f, 0f, 2f),
+            Comer(Item.Chocolate, "Chocolate", "chocolate", "o chocolate", "chocolates", "Uma barra. Um pouco de ânimo.", 5, 12f, 0f),
+            Comer(Item.BarraDeEnergia, "BarraDeEnergia", "barra de energia", "a barra de energia", "barras de energia", "Cereal e mel. Leve e sustenta.", 5, 22f, 0f),
             // o que se bebe (o clipe da garrafa)
             Beber(Item.Agua, null, "garrafa de água", "a garrafa de água", "garrafas de água", "Água. Mata a sede.", 2, 0f, 45f),
             Beber(Item.CopoDeAgua, "CopoDeAgua", "copo de água", "o copo de água", "copos de água", "Copinho lacrado. Um gole só.", 5, 0f, 15f),
             Beber(Item.RefrigeranteGarrafa, "RefrigeranteGarrafa", "garrafa de refrigerante", "a garrafa de refrigerante", "garrafas de refrigerante", "Dois litros, quente e sem gás.", 2, 5f, 35f),
             Beber(Item.RefrigeranteLata, "RefrigeranteLata", "lata de refrigerante", "a lata de refrigerante", "latas de refrigerante", "Gelada um dia. Mata a sede.", 3, 3f, 25f),
-            Beber(Item.Energetico, "Energetico", "energético", "o energético", "energéticos", "Lata de energético. Acorda.", 3, 2f, 20f, 3f),
+            Beber(Item.Energetico, "Energetico", "energético", "o energético", "energéticos", "Lata de energético. Acorda.", 3, 2f, 20f),
             Beber(Item.Leite, "Leite", "caixa de leite", "a caixa de leite", "caixas de leite", "Longa vida. Mata a fome e a sede.", 2, 10f, 25f),
             Beber(Item.Suco, "Suco", "caixinha de suco", "a caixinha de suco", "caixinhas de suco", "Suco de caixinha, com canudo.", 3, 5f, 22f),
-            Beber(Item.GarrafaTermica, "GarrafaTermica", "garrafa térmica", "a garrafa térmica", "garrafas térmicas", "Café, ainda morno. Esvaziada, vira sucata.", 1, 5f, 30f, 2f),
-            // os remédios (o clipe da lata)
-            Remedio(Item.Remedio, "Remedio", "remédio", "o remédio", "remédios", "Um vidro de xarope. Alivia a dor.", 5, 15f),
-            Remedio(Item.Comprimidos, "Comprimidos", "cartela de comprimidos", "a cartela de comprimidos", "cartelas de comprimidos", "Analgésico. Um pouco de alívio.", 10, 8f),
-            Remedio(Item.KitMedico, "KitMedico", "kit médico", "o kit médico", "kits médicos", "Primeiros socorros completos. Cura muito.", 1, 60f),
-            Remedio(Item.Atadura, "Atadura", "atadura", "a atadura", "ataduras", "Rolo de atadura. Fecha o corte.", 5, 15f),
-            Remedio(Item.Gaze, "Gaze", "gaze", "a gaze", "gazes", "Pacote de gaze. Pouco, mas ajuda.", 10, 8f),
-            Remedio(Item.Desinfetante, "Desinfetante", "desinfetante", "o desinfetante", "desinfetantes", "Álcool. Limpa a ferida.", 3, 10f),
-            Remedio(Item.SprayAntisseptico, "SprayAntisseptico", "spray antisséptico", "o spray antisséptico", "sprays antissépticos", "Arde, mas limpa.", 3, 12f),
-            Remedio(Item.Antibiotico, "Antibiotico", "antibiótico", "o antibiótico", "antibióticos", "Caixa de antibiótico. Cura bem.", 5, 25f),
-            Remedio(Item.Bandagem, "Bandagem", "bandagem", "a bandagem", "bandagens", "Pano limpo em tiras. Feita à mão.", 5, 20f),
+            Beber(Item.GarrafaTermica, "GarrafaTermica", "garrafa térmica", "a garrafa térmica", "garrafas térmicas", "Café, ainda morno. Esvaziada, vira sucata.", 1, 5f, 30f),
+            // os remédios (o clipe da lata). Os tratamentos (05/11/2026) não usam o vida daqui: o que cada um faz no corpo
+            // está no VidaJogador.Tratar (e o tempo, no PartesDoCorpo.TempoDe)
+            Remedio(Item.Remedio, "Remedio", "xarope", "o xarope", "xaropes", "Tira a febre por umas 4 h. Não cura: só o antibiótico cura a infecção.", 5, 0f),
+            Remedio(Item.Comprimidos, "Comprimidos", "cartela de comprimidos", "a cartela de comprimidos", "cartelas de comprimidos", "Analgésico: tira a dor por 6 h.", 10, 0f),
+            Remedio(Item.KitMedico, "KitMedico", "kit médico", "o kit médico", "kits médicos", "Trata o corpo todo: estanca e cura muito.", 1, 0f),
+            Remedio(Item.Atadura, "Atadura", "atadura", "a atadura", "ataduras", "Estanca uma ferida e cura um pouco.", 5, 0f),
+            // a gaze e o álcool (05/11/2026): só material das receitas (não se usam sozinhos, nem vão na mão). O enum e o
+            // modelo do álcool continuam "Desinfetante" (os saves e o loot.py); na tela, ele é o álcool (a pedido: "nomear
+            // dessa maneira intuitiva")
+            Material(Item.Gaze, "Gaze", "gaze", "a gaze", "gazes", "Para montar o kit médico.", 10, TipoDeLoot.Remedio),
+            Material(Item.Desinfetante, "Desinfetante", "álcool", "o álcool", "frascos de álcool", "Álcool 70%. Para receitas: o kit médico e a bandagem antisséptica.", 3, TipoDeLoot.Remedio),
+            // o spray e o antibiótico (a etapa 2): vão pelo corpo, como os outros tratamentos. O spray não empilha: cada
+            // frasco guarda os seus usos no desgaste (Itens.ComUsos)
+            Remedio(Item.SprayAntisseptico, "SprayAntisseptico", "spray antisséptico", "o spray antisséptico", "sprays antissépticos", "5 usos. Borrife na ferida antes da bandagem comum: ela fica protegida até o amanhecer.", 1, 0f),
+            Remedio(Item.Antibiotico, "Antibiotico", "antibiótico", "o antibiótico", "antibióticos", "Uma dose a cada 6 h. Cura a infecção (nem sempre).", 5, 0f),
+            Remedio(Item.Bandagem, "Bandagem", "bandagem", "a bandagem", "bandagens", "Pano em tiras: estanca uma ferida.", 5, 0f),
             // os materiais
             Material(Item.Madeira, "Madeira", "madeira", "a madeira", "madeiras", "Tábuas e ripas. Para quase tudo.", 10),
             Material(Item.Toras, "Toras", "tora", "a tora", "toras", "Lenha grossa. Rachada, vira madeira.", 4),
@@ -242,7 +255,7 @@ namespace ZombieCityCleaner.Loot
             Material(Item.KitDeReparo, "KitDeReparo", "kit de reparo", "o kit de reparo", "kits de reparo", "Conserta uma arma ou remenda um pneu furado.", 3),
             Material(Item.Roupa, "Roupa", "roupa", "a roupa", "roupas", "Roupa velha. Desmontada, vira pano.", 5),
             // os kits de montar (a fogueira, a cama e a barricada)
-            Material(Item.Fogueira, "Fogueira", "fogueira", "a fogueira", "fogueiras", "Lenha arrumada. Monte no chão: luz e calor.", 1, TipoDeLoot.Construcao),
+            Material(Item.Fogueira, "Fogueira", "fogueira", "a fogueira", "fogueiras", "Lenha arrumada. Monte no chão: luz, e os zumbis ficam longe.", 1, TipoDeLoot.Construcao),
             Material(Item.Cama, "Cama", "cama improvisada", "a cama improvisada", "camas improvisadas", "Monte no chão: você volta nela quando cair.", 1, TipoDeLoot.Construcao),
             Material(Item.Barricada, "Barricada", "barricada", "a barricada", "barricadas", "Tábuas pregadas. Monte numa porta: segura os zumbis.", 1, TipoDeLoot.Construcao),
             // a luz (01/11/2026): no fim da lista, para os índices dos outros modelos não mudarem
@@ -253,6 +266,12 @@ namespace ZombieCityCleaner.Loot
             // arrombar (02/11/2026, o Plano_Portas.md da pasta de arte)
             Material(Item.Gazua, "Gazua", "gazua", "a gazua", "gazuas", "Na mochila: segure E numa porta trancada. Abre sem barulho, e às vezes quebra.", 5),
             Material(Item.PeDeCabra, "PeDeCabra", "pé de cabra", "o pé de cabra", "pés de cabra", "Na mochila: segure E numa porta trancada. Arromba rápido, com barulho.", 1),
+            // a tala (05/11/2026, o sistema de vida por membro): no fim da lista, para os índices dos outros modelos não
+            // mudarem (o modelo "Tala" sai do Blender/loot.py)
+            Remedio(Item.Tala, "Tala", "tala", "a tala", "talas", "Imobiliza um braço ou uma perna quebrados, ou o tornozelo torcido. Com analgésico, sara mais rápido.", 3, 0f),
+            // a bandagem antisséptica (05/11/2026, a etapa 2): no fim da lista, para os índices dos outros modelos não
+            // mudarem (o modelo "BandagemAntisseptica" sai do Blender/loot.py)
+            Remedio(Item.BandagemAntisseptica, "BandagemAntisseptica", "bandagem antisséptica", "a bandagem antisséptica", "bandagens antissépticas", "Com álcool: estanca e protege a ferida da infecção até o próximo amanhecer.", 5, 0f),
             // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o número da pilha é quantos cigarros sobram (até 20)
             Material(Item.MacoDeCigarros, "MacoDeCigarros", "maço de cigarros", "o maço de cigarros", "maços de cigarros",
                      "Blackwater. Na mão, clique: acende um. De noite, a brasa chama os zumbis de mais longe.", 20),
@@ -307,7 +326,7 @@ namespace ZombieCityCleaner.Loot
         }
         /// <summary>Um kit de montar no mundo (a fogueira, a cama, a barricada).</summary>
         public static bool EhConstrucao(Item i) => i >= Item.Fogueira && i <= Item.Barricada;
-        /// <summary>Um remédio (cura a vida).</summary>
+        /// <summary>Um remédio (da espécie: o fundo na mochila e o preço; a gaze e o álcool também, mesmo sem uso sozinhos).</summary>
         public static bool EhRemedio(Item i) => Loot(i)?.tipo == TipoDeLoot.Remedio;
 
         /// <summary>Quantos cabem numa célula (a pilha): as balas numa caixa de munição, os do saque; o resto, 1.</summary>
@@ -456,11 +475,31 @@ namespace ZombieCityCleaner.Loot
         public static bool EhGalao(Item i) => i == Item.Galao;
         /// <summary>Quantos litros cabem no galão.</summary>
         public const float LitrosDoGalao = 10f;
+        /// <summary>Quantos usos tem um spray antisséptico cheio.</summary>
+        public const int UsosDoSpray = 5;
+        /// <summary>
+        /// O que tem usos (05/11/2026, a etapa 2: o spray antisséptico, 5 usos): os usos vão no desgaste, como a carga da
+        /// lanterna e a gasolina do galão (0, cheio; cada uso soma <see cref="DesgastePorUsoDoSpray"/>; 100, acabou). O
+        /// desgaste já vai pela rede, para o chão, para as estantes e para o save; o item novo sai cheio de todo lugar.
+        /// </summary>
+        public static bool ComUsos(Item i) => i == Item.SprayAntisseptico;
+        /// <summary>Quanto desgaste cada uso do spray soma (20: 5 usos).</summary>
+        public static int DesgastePorUsoDoSpray => 100 / UsosDoSpray;
+        /// <summary>Quantos usos sobram com este desgaste (0 → 5, 40 → 3, 80 → 1, 100 → 0).</summary>
+        public static int UsosQueSobram(int desgaste) =>
+            UnityEngine.Mathf.Clamp((100 - desgaste + DesgastePorUsoDoSpray - 1) / DesgastePorUsoDoSpray, 0, UsosDoSpray);
         /// <summary>Quanto um uso gasta: um tiro (as de fogo: 400 tiros) ou um golpe que pega (as brancas).</summary>
         public static float DesgastePorUso(Item i) => EhArma(i) ? 0.25f : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;
         /// <summary>A tocha acesa na mão queima: o desgaste sobe 1 a cada tantos segundos (100: ela se apaga e some).</summary>
         public const float SegundosDaTochaPorDesgaste = 6f;
+        /// <summary>
+        /// A tocha que a chuva apagou (05/11/2026, a pedido): o qtd dela (a acesa tem 0, o que a tocha não usava). Vai junto
+        /// pela rede, para o chão e para o save. Apagada, ela não queima, não ilumina e não afasta os zumbis; reacende numa
+        /// fogueira acesa (Loot/ConstrucoesNoMundo.cs). Não é o 1: quem cria um item com "pelo menos 1" no qtd (a mercadoria
+        /// do comerciante morto, a mochila do sobrevivente) daria uma tocha apagada.
+        /// </summary>
+        public const ushort TochaApagada = 1000;
         /// <summary>Daqui para cima, a arma de fogo emperra às vezes (até 30% dos tiros, quase quebrada).</summary>
         public const int DesgasteQueEmperra = 70;
         /// <summary>Uma arma branca (a faca e o machado): vai na mão, o clique golpeia de perto, sem munição.</summary>

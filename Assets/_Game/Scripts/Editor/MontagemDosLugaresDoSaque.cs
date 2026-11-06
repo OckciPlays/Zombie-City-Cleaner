@@ -28,7 +28,9 @@ namespace ZombieCityCleaner.EditorTools
     /// Os móveis e o que vale em cada um (em cima, dentro ou no chão) estão em <see cref="Moveis"/>. Menu Zombie City
     /// Cleaner > Mobília nova > Escrever os lugares do saque (a montagem da mobília nova também chama, no fim).
     /// Escreve também a tabela dos itens que podem ser achados, com o tamanho de cada um (<see cref="EscreverItens"/>, a
-    /// parte 3: Zombie City Cleaner > Itens > Escrever os itens do saque), que o catálogo do saque usa.
+    /// parte 3: Zombie City Cleaner > Itens > Escrever os itens do saque), que o catálogo do saque usa, e a dos lugares dos
+    /// móveis antigos da farmácia e do hospital (<see cref="EscreverAntigos"/>, 05/11/2026: Zombie City Cleaner > Mobília
+    /// nova > Escrever os lugares dos móveis antigos).
     /// </summary>
     public static class MontagemDosLugaresDoSaque
     {
@@ -112,6 +114,128 @@ namespace ZombieCityCleaner.EditorTools
                 }
             string arquivo = EscreverTabela(tabela);
             return $"[Lugares do saque] {total} lugares em {tabela.Count} móveis; {arquivo}\n{log}";
+        }
+
+        // ------------------------------------------------------------------ os móveis antigos (a farmácia e o hospital)
+
+        const string ArquivoDosAntigos = "Assets/_Game/Scripts/Mundo/Mobilia/LugaresDoSaque.Antigos.cs";
+
+        /// <summary>
+        /// Os móveis antigos (os do Cidade_Mobilia.fbx, desenhados na malha da obra) com saque na farmácia e no hospital
+        /// (05/11/2026, a etapa 2 do sistema de vida): o salão e o estoque da farmácia, as salas, a rouparia e o depósito do
+        /// hospital, e o banheiro dos dois. Só em cima, à vista: eles não abrem.
+        /// </summary>
+        static readonly string[] Antigos =
+        {
+            "Prateleira_Farmacia", "Gondola", "EstanteDeAco", "Caixas_A", "Caixas_B", "PiaDeBanheiro",
+            "ArmarioDeRemedios", "CriadoMudo", "MesaDeEscritorio", "Balcao", "Prateleira_Rouparia", "Prateleira",
+        };
+
+        const int MaximoNosAntigos = 8;
+
+        [MenuItem("Zombie City Cleaner/Mobília nova/Escrever os lugares dos móveis antigos")]
+        public static void MenuDosAntigos() => Debug.Log(EscreverAntigos());
+
+        /// <summary>
+        /// Mede os lugares dos móveis antigos com saque (<see cref="Antigos"/>) nas malhas do Cidade_Mobilia.fbx, no tamanho
+        /// em que cada um foi feito (a escala 1: o jogo escala cada um pelo ponto, Mobilia.Feitos), e escreve a tabela
+        /// <c>Mundo/Mobilia/LugaresDoSaque.Antigos.cs</c> (<see cref="LugaresDoSaque.DoAntigo"/>), separada da dos prefabs
+        /// (o LugaresDoSaqueTestes confere cada nome dela contra um prefab). Cada malha é medida num objeto temporário
+        /// "Antigo.&lt;nome&gt;": com o prefixo, o catálogo da mobília nova não o confunde com o modelo novo do mesmo nome (o
+        /// CriadoMudo novo levaria o abajur em cima). Devolve o relatório.
+        /// </summary>
+        public static string EscreverAntigos()
+        {
+            var malhas = new Dictionary<string, Mesh>();
+            foreach (var m in AssetDatabase.LoadAllAssetsAtPath(MontagemDoMundo.FbxDaMobilia).OfType<Mesh>())
+                if (!malhas.ContainsKey(m.name)) malhas[m.name] = m;
+            var log = new StringBuilder();
+            var tabela = new SortedDictionary<string, List<LugarDoSaque>>(System.StringComparer.Ordinal);
+            var semConjunto = new Dictionary<string, GameObject>();
+            int total = 0;
+            foreach (var nome in Antigos)
+            {
+                if (!malhas.TryGetValue(nome, out var malha)) { log.AppendLine($"  ATENÇÃO: {nome} não está no {MontagemDoMundo.FbxDaMobilia}"); continue; }
+                var go = new GameObject("Antigo." + nome) { hideFlags = HideFlags.HideAndDontSave };
+                try
+                {
+                    go.AddComponent<MeshFilter>().sharedMesh = malha;
+                    var lugares = Medir(go, Onde.Cima, MaximoNosAntigos, semConjunto, 1f);
+                    // a malha antiga é uma só: o topo do abajur do criado-mudo vira "superfície". Fora o que passa da altura
+                    // em que o móvel foi feito, e o lugar que fica em cima de outro maior (a 3 cm de altura dele)
+                    if (Mobilia.Feitos.TryGetValue(nome, out var alto)) lugares.RemoveAll(l => l.meio.y > alto.y + 0.02f);
+                    lugares.Sort((a, b) => (b.tamanho.x * b.tamanho.z).CompareTo(a.tamanho.x * a.tamanho.z));
+                    for (int i = lugares.Count - 1; i > 0; i--)
+                        for (int j = 0; j < i; j++)
+                        {
+                            var a = lugares[j];
+                            var b = lugares[i];
+                            if (Mathf.Abs(a.meio.y - b.meio.y) > 0.03f) continue;
+                            if (Mathf.Abs(a.meio.x - b.meio.x) * 2f < a.tamanho.x + b.tamanho.x && Mathf.Abs(a.meio.z - b.meio.z) * 2f < a.tamanho.z + b.tamanho.z)
+                            {
+                                lugares.RemoveAt(i);
+                                break;
+                            }
+                        }
+                    tabela[nome] = lugares;
+                    total += lugares.Count;
+                    string feito = Mobilia.Feitos.TryGetValue(nome, out var f) ? $" (feito em {f.x:0.##} × {f.y:0.##} × {f.z:0.##} m)" : "  ATENÇÃO: fora do Mobilia.Feitos";
+                    log.AppendLine($"  {nome}{feito}: {lugares.Count}" +
+                                   (lugares.Count == 0 ? "  ATENÇÃO: nenhum" : ": " + string.Join(", ", lugares.Select(Resumo))));
+                }
+                finally
+                {
+                    Object.DestroyImmediate(go);
+                }
+            }
+            string arquivo = EscreverTabelaDosAntigos(tabela);
+            return $"[Lugares do saque, os móveis antigos] {total} lugares em {tabela.Count} móveis; {arquivo}\n{log}";
+        }
+
+        static string EscreverTabelaDosAntigos(SortedDictionary<string, List<LugarDoSaque>> tabela)
+        {
+            var ci = CultureInfo.InvariantCulture;
+            string F(float v) => v.ToString("0.###", ci) + "f";
+            var s = new StringBuilder();
+            s.AppendLine("// Escrito pela Zombie City Cleaner > Mobília nova > Escrever os lugares dos móveis antigos (MontagemDosLugaresDoSaque): não mude à mão.");
+            s.AppendLine("using System.Collections.Generic;");
+            s.AppendLine();
+            s.AppendLine("namespace ZombieCityCleaner.Mundo");
+            s.AppendLine("{");
+            s.AppendLine("    public static partial class LugaresDoSaque");
+            s.AppendLine("    {");
+            s.AppendLine("        /// <summary>");
+            s.AppendLine("        /// Os lugares de um móvel antigo (o do Cidade_Mobilia.fbx, no tamanho em que ele foi feito: Mobilia.Feitos), só à");
+            s.AppendLine("        /// vista (os antigos não abrem); nenhum, se ele não está na tabela. Só a farmácia e o hospital usam (SaqueDaObra).");
+            s.AppendLine("        /// </summary>");
+            s.AppendLine("        public static LugarDoSaque[] DoAntigo(string modelo) => modelo != null && _antigos.TryGetValue(modelo, out var l) ? l : Nenhum;");
+            s.AppendLine();
+            s.AppendLine("        public static IEnumerable<string> NomesDosAntigos => _antigos.Keys;");
+            s.AppendLine();
+            s.AppendLine("        // o modelo antigo: os lugares (o meio, a largura, a altura livre e o fundo), no tamanho em que ele foi feito");
+            s.AppendLine("        static readonly Dictionary<string, LugarDoSaque[]> _antigos = new Dictionary<string, LugarDoSaque[]>");
+            s.AppendLine("        {");
+            foreach (var kv in tabela)
+            {
+                if (kv.Value.Count == 0) continue;
+                s.AppendLine($"            [\"{kv.Key}\"] = new[]");
+                s.AppendLine("            {");
+                foreach (var l in kv.Value)
+                {
+                    string parte = l.parte == null ? "" : $", \"{l.parte}\"{(l.naParte ? ", true" : "")}";
+                    s.AppendLine($"                L({F(l.meio.x)}, {F(l.meio.y)}, {F(l.meio.z)}, {F(l.tamanho.x)}, {F(l.tamanho.y)}, {F(l.tamanho.z)}{parte}),");
+                }
+                s.AppendLine("            },");
+            }
+            s.AppendLine("        };");
+            s.AppendLine("    }");
+            s.AppendLine("}");
+            string texto = s.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
+            string velho = File.Exists(ArquivoDosAntigos) ? File.ReadAllText(ArquivoDosAntigos) : null;
+            if (velho == texto) return "a tabela não mudou";
+            File.WriteAllText(ArquivoDosAntigos, texto, new UTF8Encoding(true));
+            AssetDatabase.ImportAsset(ArquivoDosAntigos);
+            return $"escritos em {ArquivoDosAntigos}";
         }
 
         // ------------------------------------------------------------------ os itens do saque (a parte 3)
@@ -423,7 +547,8 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ as superfícies e os lugares
 
-        static List<LugarDoSaque> Medir(GameObject prefab, Onde onde, int maximo, Dictionary<string, GameObject> prefabs)
+        // 'escala': a do jogo (a mobília nova, ×1,30; os móveis antigos, 1: o jogo os escala pelo ponto)
+        static List<LugarDoSaque> Medir(GameObject prefab, Onde onde, int maximo, Dictionary<string, GameObject> prefabs, float escala = MedidasDaMobilia.Escala)
         {
             var g = Juntar(prefab, prefabs);
             // as superfícies: as faces para cima do corpo, das gavetas e das portas, pela altura (a tampa e o forno não:
@@ -449,14 +574,14 @@ namespace ZombieCityCleaner.EditorTools
                 var tris = kv.Value;
                 float y = tris.Max(t => Mathf.Max(g.a[t].y, Mathf.Max(g.b[t].y, g.c[t].y)));
                 // (rente ao chão, só o que caiu do móvel: os livros na frente da estante)
-                if ((pendurado + y) * MedidasDaMobilia.Escala > AteAMao || pendurado + y < RenteAoChao) continue;
+                if ((pendurado + y) * escala > AteAMao || pendurado + y < RenteAoChao) continue;
                 float x0 = tris.Min(t => Mathf.Min(g.a[t].x, Mathf.Min(g.b[t].x, g.c[t].x))), x1 = tris.Max(t => Mathf.Max(g.a[t].x, Mathf.Max(g.b[t].x, g.c[t].x)));
                 float z0 = tris.Min(t => Mathf.Min(g.a[t].z, Mathf.Min(g.b[t].z, g.c[t].z))), z1 = tris.Max(t => Mathf.Max(g.a[t].z, Mathf.Max(g.b[t].z, g.c[t].z)));
-                Superficie(g, kv.Key.dono, y, x0, x1, z0, z1, (x, z) => g.Apoia(tris, x, z), onde, pendurado, achados);
+                Superficie(g, kv.Key.dono, y, x0, x1, z0, z1, (x, z) => g.Apoia(tris, x, z), onde, pendurado, escala, achados);
             }
             // o chão em volta das latas, do fogareiro e das garrafas, dentro da caixa do modelo
             if ((onde & Onde.Chao) != 0)
-                Superficie(g, Corpo, 0f, g.caixa.min.x + 0.01f, g.caixa.max.x - 0.01f, g.caixa.min.z + 0.01f, g.caixa.max.z - 0.01f, (x, z) => true, onde, 0f, achados);
+                Superficie(g, Corpo, 0f, g.caixa.min.x + 0.01f, g.caixa.max.x - 0.01f, g.caixa.min.z + 0.01f, g.caixa.max.z - 0.01f, (x, z) => true, onde, 0f, escala, achados);
             return achados.OrderByDescending(x => x.area).Take(maximo).Select(x => x.lugar)
                 .OrderBy(l => l.parte ?? "").ThenBy(l => l.meio.y).ThenBy(l => l.meio.x).ToList();
         }
@@ -464,7 +589,7 @@ namespace ZombieCityCleaner.EditorTools
         // a grade de uma superfície (do dono, na altura y, dentro de x0..x1 e z0..z1), a classe de cada célula e os
         // maiores retângulos de cada classe
         static void Superficie(Geometria g, int dono, float y, float x0, float x1, float z0, float z1, System.Func<float, float, bool> apoia,
-                               Onde onde, float pendurado, List<(float area, LugarDoSaque lugar)> achados)
+                               Onde onde, float pendurado, float escala, List<(float area, LugarDoSaque lugar)> achados)
         {
             int nx = Mathf.FloorToInt((x1 - x0) / Celula), nz = Mathf.FloorToInt((z1 - z0) / Celula);
             int menor = Mathf.CeilToInt(LadoMenor / Celula - 0.01f), maior = Mathf.CeilToInt(LadoMaior / Celula - 0.01f);
@@ -532,7 +657,7 @@ namespace ZombieCityCleaner.EditorTools
                 // as células do lugar e uma em volta saem (um lugar não encosta no outro)
                 for (int i = Mathf.Max(0, ri - 1); i < Mathf.Min(nx, ri + rw + 1); i++)
                     for (int j = Mathf.Max(0, rj - 1); j < Mathf.Min(nz, rj + rd + 1); j++) classe[i, j] = Nada;
-                if ((pendurado + y) * MedidasDaMobilia.Escala > (aberto ? AteOOlho : AteAMao)) continue;
+                if ((pendurado + y) * escala > (aberto ? AteOOlho : AteAMao)) continue;
                 var lugar = new LugarDoSaque
                 {
                     meio = new Vector3(x0 + (ri + rw / 2f) * Celula, y, z0 + (rj + rd / 2f) * Celula),

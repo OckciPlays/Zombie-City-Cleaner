@@ -18,7 +18,8 @@ namespace ZombieCityCleaner.Player
     /// para a frente). As armas de coronha (o rifle, a submetralhadora, a espingarda e a sniper) usam o parado delas, com
     /// as duas mãos e a arma baixa na frente do corpo: numa mão só, a coronha entrava no corpo.
     /// O resto do que ele leva fica no corpo (<see cref="EquipamentoNoCorpo"/>): a mochila, o coldre e as outras armas,
-    /// refeitos quando o inventário muda.
+    /// refeitos quando o inventário muda. A faixa e a tala também (<see cref="CurativosNoCorpo"/>, 05/11/2026), pelo corpo
+    /// do jogador.
     /// A cópia é feita a cada vez que a tela abre (pega a cor naquela hora) e some quando ela fecha.
     /// </summary>
     public class RetratoDoJogador
@@ -75,6 +76,9 @@ namespace ZombieCityCleaner.Player
             // o equipamento do corpo do jogador (o EquipamentoDoJogador) vem junto na cópia: sai, e o retrato põe o dele
             EquipamentoNoCorpo.TirarCopiadas(copia.transform);
             foreach (var e in copia.GetComponents<EquipamentoNoCorpo>()) Object.Destroy(e);
+            // a faixa e a tala do corpo (o CurativosNoCorpo, 05/11/2026) também: o retrato põe as dele, abaixo
+            CurativosNoCorpo.TirarCopiadas(copia.transform);
+            foreach (var cur in copia.GetComponents<CurativosNoCorpo>()) Object.Destroy(cur);
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
             // as roupas: as mesmas peças e cores do jogador (a cópia não leva as cores, que ficam fora do material)
@@ -160,6 +164,18 @@ namespace ZombieCityCleaner.Player
                 if (!_copiasDosProprios.TryGetValue(proprio, out var c)) _copiasDosProprios[proprio] = c = Copia(material, proprio);
                 return c;
             };
+
+            // os curativos no corpo (05/11/2026): a faixa e a tala do jogador local, refeitas quando mudam, no material do
+            // retrato com as cores delas
+            var vida = rede.GetComponent<VidaJogador>();
+            if (vida != null)
+            {
+                var dosCurativos = Copia(material, null);
+                dosCurativos.mainTexture = CurativosNoCorpo.Cores;
+                dosCurativos.mainTextureOffset = Vector2.zero;
+                dosCurativos.mainTextureScale = Vector2.one;
+                copia.AddComponent<CurativosNoCorpo>().NoRetrato(vida, _referencia, dosCurativos);
+            }
 
             var camGo = new GameObject("Câmera do retrato");
             camGo.transform.SetParent(_raiz.transform, false);

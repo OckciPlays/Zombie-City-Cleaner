@@ -353,6 +353,21 @@ namespace ZombieCityCleaner.DiaZero
             int total = 0;
             foreach (byte i in pedido.produtos) total += PrecosDoDiaZero.DaLoja(loja, i)?.preco ?? 0;
             for (int i = 0; i + 1 < pedido.roupas.Length; i += 2) total += PrecosDoDiaZero.PrecoDaRoupa(pedido.roupas[i], pedido.roupas[i + 1]);
+            // o limite por jogador (05/11/2026, sem a vida voltando sozinha: o kit, a tala, a atadura e o antibiótico),
+            // contando o que ele já levou nas compras anteriores; passou, não cobra nada
+            foreach (byte i in pedido.produtos)
+            {
+                var p = PrecosDoDiaZero.DaLoja(loja, i);
+                if (!p.HasValue) continue;
+                var item = p.Value.item;
+                int limite = PrecosDoDiaZero.Limite(item);
+                if (limite <= 0) continue;
+                int ja = JaLevou(cliente, item), pedidos = 0;
+                foreach (byte j in pedido.produtos) if (PrecosDoDiaZero.DaLoja(loja, j)?.item == item) pedidos++;
+                if (ja + pedidos <= limite) continue;
+                LimiteRpc((byte)item, (byte)limite, (byte)Mathf.Min(255, ja), alvo);
+                return;
+            }
             int k = Carteira(cliente);
             if (k < 0)
             {
@@ -375,6 +390,14 @@ namespace ZombieCityCleaner.DiaZero
             }
             Debug.Log($"[Dia 0] O jogador {cliente} pagou {PrecosDoDiaZero.Dinheiro(total)} na {PrecosDoDiaZero.Nome(loja)} ({pedido.produtos.Length} produtos, {pedido.roupas.Length / 2} roupas); sobraram {PrecosDoDiaZero.Dinheiro(carteira.dinheiro)}.");
             ResultadoRpc(true, total, carteira.dinheiro, alvo);
+        }
+
+        // quantos do item o jogador já comprou no Dia 0 (a pilha conta pelo número)
+        int JaLevou(ulong cliente, Item item)
+        {
+            int n = 0;
+            foreach (var c in _compras) if (c.cliente == cliente && c.item == item) n += Itens.Quantos(item, c.qtd);
+            return n;
         }
 
         // a compra vai para a casa: a pilha (a comida, os remédios) completa a anterior do mesmo item; o resto, um lugar cada
@@ -409,6 +432,16 @@ namespace ZombieCityCleaner.DiaZero
             }
             else Avisar(total > 0 ? $"Não deu: o total é {PrecosDoDiaZero.Dinheiro(total)} e você tem {PrecosDoDiaZero.Dinheiro(sobrou)}. Tire alguma coisa do carrinho."
                                   : "Não deu para pagar agora.");
+        }
+
+        /// <summary>Anfitrião → quem pagou: passou do limite por jogador de um item (05/11/2026; nada foi cobrado).</summary>
+        [Rpc(SendTo.SpecifiedInParams)]
+        void LimiteRpc(byte item, byte limite, byte jaLevou, RpcParams parametros = default)
+        {
+            _pagando = false;
+            var i = (Item)item;
+            string ja = jaLevou > 0 ? $" (você já levou {Itens.ComNumero(i, jaLevou)})" : "";
+            Avisar($"Não deu: cada um só pode levar {Itens.ComNumero(i, limite)}{ja}. Tire o que passou do carrinho.");
         }
 
         // as compras à mostra no chão da casa do Dia 0 (em todas as máquinas; só o desenho). Desligado desde 03/11/2026 (a
@@ -533,6 +566,17 @@ namespace ZombieCityCleaner.DiaZero
             {
                 var inv = kv.Value.PlayerObject != null ? kv.Value.PlayerObject.GetComponent<InventarioJogador>() : null;
                 if (inv != null) inv.Pagar(Dinheiro(kv.Key));
+                // em 5 anos, o corpo sara (05/11/2026, o sistema de vida por membro: as feridas, as lesões e as talas somem)
+                var vida = kv.Value.PlayerObject != null ? kv.Value.PlayerObject.GetComponent<VidaJogador>() : null;
+                if (vida != null)
+                {
+                    if (vida.Caido.Value) vida.RenascerAgora();
+                    else
+                    {
+                        vida.Vida.Value = vida.vidaMaxima;   // (a vida não volta sozinha: os 5 anos a devolvem)
+                        vida.SararTudo();
+                    }
+                }
             }
             Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para o bunker" +
                       (fora.Count > 0 ? $"; ficaram de fora: {string.Join(", ", fora)}." : "."));

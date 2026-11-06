@@ -61,6 +61,7 @@ namespace ZombieCityCleaner.Player
         MovimentoPrimeiraPessoa _movimento;
         ArmaJogador _arma;
         CharacterController _cc;
+        VidaJogador _vida;
 
         bool _pulando;
         float _t;
@@ -77,6 +78,7 @@ namespace ZombieCityCleaner.Player
             _movimento = GetComponent<MovimentoPrimeiraPessoa>();
             _arma = GetComponent<ArmaJogador>();
             _cc = GetComponent<CharacterController>();
+            _vida = GetComponent<VidaJogador>();
         }
 
         static float Suave(float t) => Mathf.SmoothStep(0f, 1f, t);
@@ -87,6 +89,12 @@ namespace ZombieCityCleaner.Player
             if (!IsSpawned || !IsOwner || _pulando) return false;
             if (_rede.Passageiro != null && _rede.Passageiro.NoCarro) return false;
             if (!AcharJanela(out var j)) return false;
+            // a perna quebrada, exposta ou inutilizada não deixa pular a janela (05/11/2026, o sistema de vida por membro)
+            if (_vida != null && PernaNaoDeixa(_vida.Corpo.Value))
+            {
+                InventarioJogador.AvisoLocal("Com a perna assim, não dá para pular a janela");
+                return false;
+            }
             if (DiaZero.DiaZeroDaPartida.PuloBloqueado(transform.position, transform.position + j.dir * (j.distancia + j.parede + Depois)))
             {
                 InventarioJogador.AvisoLocal("Ainda não: esperem todos chegarem e liguem a TV da sala (E).");
@@ -95,6 +103,15 @@ namespace ZombieCityCleaner.Player
             Comecar(j);
             JanelaRpc();
             return true;
+        }
+
+        // uma perna quebrada (sem ou com a tala), com fratura exposta ou inutilizada
+        static bool PernaNaoDeixa(in EstadoDoCorpo e)
+        {
+            foreach (var perna in new[] { ParteDoCorpo.PernaE, ParteDoCorpo.PernaD })
+                // (com a tala, pula com dificuldade, 05/11/2026: só a perna quebrada ou inutilizada sem a tala impede)
+                if ((e.Inutil(perna) || e.LesaoDe(perna) >= Lesao.Fratura) && !e.Tala(perna)) return true;
+            return false;
         }
 
         /// <summary>A janela na frente do jogador, livre para pular (veja a classe).</summary>

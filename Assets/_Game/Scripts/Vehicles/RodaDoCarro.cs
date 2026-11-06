@@ -30,6 +30,7 @@ namespace ZombieCityCleaner.Vehicles
                     return precisa ? "Para trocar a roda, pegue o macaco no porta-malas" : null;
                 if (carro.Virado || carro.Velocidade > Carro.VelocidadeParaOMacaco) return null;
                 if (!carro.Vazio) return "Saiam do carro para apoiar o macaco";
+                if (carro.MotorLigado) return "Desligue o motor para apoiar o macaco";
                 return "[E] Apoiar o macaco";
             }
             if (!carro.NaRodaDoMacaco(roda)) return null;

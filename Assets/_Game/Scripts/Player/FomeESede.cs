@@ -8,9 +8,9 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// A fome e a sede do jogador: duas barras de 0 a 100 (cheia = satisfeito) que esvaziam com o tempo, mais rápido
-    /// correndo. A sede acaba antes: cheia até vazia em 25 minutos (pouco mais de um dia do jogo); a fome, em 40. Com uma
-    /// delas abaixo de 25 a vida para de voltar sozinha; vazia, ela tira vida aos poucos, e o jogador pode cair (volta
-    /// para casa com as duas pelo menos na metade). A lata de comida e a garrafa de água enchem as barras
+    /// correndo. A sede acaba antes: cheia até vazia em 25 minutos (pouco mais de um dia do jogo); a fome, em 40. Abaixo de
+    /// 25 a barra fica vermelha; vazia, ela tira vida aos poucos, e o jogador pode cair (volta para casa com as duas pelo
+    /// menos na metade). (A vida não volta mais sozinha desde 05/11/2026: só o tratamento cura.) A lata de comida e a garrafa de água enchem as barras
     /// (<see cref="InventarioJogador.Consumir"/>).
     /// Quem conta é o anfitrião (a rede recebe o valor uma vez por segundo); o dono vê as barras em cima da vida.
     /// </summary>
@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.Player
         [Tooltip("Como as barras começam a partida (de 0 a 100): a família saiu do bunker com pouca coisa.")]
         public float fomeInicial = 80f;
         public float sedeInicial = 70f;
-        [Tooltip("Abaixo disso a vida não volta sozinha, e a barra fica vermelha.")]
+        [Tooltip("Abaixo disso a barra fica vermelha (com fome, com sede).")]
         public float pouca = 25f;
         [Tooltip("Vida perdida por segundo com a barra vazia.")]
         public float danoDaFome = 0.25f;
@@ -35,7 +35,7 @@ namespace ZombieCityCleaner.Player
         public readonly NetworkVariable<float> Fome = new(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<float> Sede = new(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-        /// <summary>Nem com fome nem com sede: a vida pode voltar sozinha.</summary>
+        /// <summary>Nem com fome nem com sede.</summary>
         public bool Bem => Fome.Value >= pouca && Sede.Value >= pouca;
 
         JogadorRede _rede;

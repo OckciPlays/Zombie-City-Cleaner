@@ -287,6 +287,59 @@ def _bandagem():
     ]
 
 
+def _bandagem_antisseptica():
+    # A bandagem antisséptica (05/11/2026, a pedido: o sistema de vida, a etapa 2; "1 álcool + 3 bandagens = 3"): o rolo
+    # da bandagem, mas branco como a atadura (o miolo creme), com duas faixas verdes (o verde do spray) no lugar da
+    # vinho e uma cruz verde na ponta solta, para não confundir com a bandagem comum no ícone de 128 px.
+    # O mesmo tamanho da bandagem, o meio na origem (o espaço da lata).
+    return [
+        Z("branco", 0.026, 0.07, (0, 0, 0), 10, "X"),
+        Z("creme", 0.02, 0.072, (0, 0, 0), 8, "X"),
+        C("branco", (0.068, 0.002, 0.045), (0, -0.026, -0.024)),
+        C("verde", (0.007, 0.055, 0.055), (0.022, 0, 0)),
+        C("verde", (0.007, 0.055, 0.055), (-0.022, 0, 0)),
+        C("verde", (0.018, 0.002, 0.006), (0, -0.0275, -0.03)),
+        C("verde", (0.006, 0.002, 0.018), (0, -0.0275, -0.03)),
+    ]
+
+
+def _tala():
+    # A tala (05/11/2026, a pedido: o sistema de vida, "a Tala imobiliza o membro quebrado"): a tala de alumínio
+    # dobrável (a SAM splint) enrolada e deitada, o rolo achatado com o eixo em Y (a ponta do rolo para a frente, -Y,
+    # para a espiral aparecer no ícone): laranja por fora e azul por dentro, cada volta uma lâmina com as duas cores,
+    # 3 voltas em espiral (o vão escuro entre elas) e a ponta de fora solta em cima, um pouco levantada (o azul por baixo).
+    # Uns 0,10 x 0,11 x 0,06 m, o meio na origem (o espaço da lata, como a atadura).
+    larg = 0.11                    # a largura da tala (o comprimento do rolo, em Y)
+    a0, b0 = 0.05, 0.03            # os semieixos da volta de fora (X e Z: o rolo achatado)
+    passo, esp = 0.0055, 0.0042    # de uma volta à outra; a grossura da lâmina (metade laranja, metade azul)
+    voltas, n = 3, 18              # as voltas e os pedaços por volta
+    p = []
+
+    def lamina(x0, z0, x1, z1, extra=0.0012):
+        # um pedaço reto da lâmina entre dois pontos do corte (XZ): o laranja para fora, o azul para dentro
+        dx, dz = x1 - x0, z1 - z0
+        comp = math.hypot(dx, dz)
+        nx, nz = dz / comp, -dx / comp          # a normal para fora (a espiral anda no sentido anti-horário)
+        mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
+        g = math.degrees(math.atan2(-dz, dx))   # o giro em Y que leva o X da caixa ao longo do pedaço
+        for cor, lado in (("laranja_vivo", 1), ("azul", -1)):
+            k = lado * esp / 4
+            p.append(C(cor, (comp + extra, larg, esp / 2), (mx + nx * k, 0, mz + nz * k), giro=(0, g, 0)))
+
+    def ponto(t):
+        # a espiral: começa em cima (t = 0) e entra a cada volta um passo
+        encolhe = passo * t / (2 * math.pi)
+        return (a0 - encolhe) * math.cos(t + math.pi / 2), (b0 - encolhe) * math.sin(t + math.pi / 2)
+
+    ts = [2 * math.pi * voltas * i / (voltas * n) for i in range(voltas * n + 1)]
+    for t0, t1 in zip(ts, ts[1:]):
+        lamina(*ponto(t0), *ponto(t1))
+    # a ponta de fora, solta: sai de cima para +X, levantando um pouco (uns 2,5 cm)
+    x0, z0 = ponto(0)
+    lamina(x0 + 0.025 * math.cos(math.radians(12)), z0 + 0.025 * math.sin(math.radians(12)), x0, z0)
+    return p
+
+
 # ------------------------------------------------------------------ os materiais (a origem embaixo, no meio)
 
 def _madeira():
@@ -1098,6 +1151,7 @@ MODELOS = {
     "Gazua": _gazua, "PeDeCabra": _pe_de_cabra,
     "MacoDeCigarros": _maco,
     "PratoDeComida": _prato_de_comida, "PratoVazio": _prato_vazio, "PratoEstragado": _prato_estragado,
+    "Tala": _tala, "BandagemAntisseptica": _bandagem_antisseptica,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -1107,7 +1161,7 @@ MONTADAS = {
 # os deitados (vistos mais de cima no ícone)
 DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "PecasDeMetal", "Fios", "Pregos", "VaraDePesca",
             "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas", "Gazua", "PeDeCabra",
-            "PratoDeComida", "PratoVazio", "PratoEstragado"}
+            "PratoDeComida", "PratoVazio", "PratoEstragado", "Tala", "BandagemAntisseptica"}
 # os que ocupam mais de uma célula na mochila (o ícone na proporção delas, 128 px por célula; o Itens.Tamanho da Unity)
 CELULAS = {"PeDeCabra": (2, 1)}
 
@@ -1180,7 +1234,7 @@ def imagens(so=None):
         cx, cy = CELULAS.get(nome, (1, 1))
         r.resolution_x, r.resolution_y = 128 * cx, 128 * cy
         eq._camera(cena, True, centro, (0.0, -0.25, 1.0) if cx > cy else icone, 3.0,
-                   tam * (1.45 if nome in ("Atadura", "Bandagem", "FitaAdesiva") else 1.15 if cx > cy else 1.3))
+                   tam * (1.45 if nome in ("Atadura", "Bandagem", "BandagemAntisseptica", "FitaAdesiva") else 1.15 if cx > cy else 1.3))
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500

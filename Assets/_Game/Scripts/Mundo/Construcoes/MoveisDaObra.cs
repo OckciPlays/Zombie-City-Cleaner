@@ -24,9 +24,19 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>
         /// A moradia do ponto (o saque é contado por ela, o Plano_Saque.md da pasta de arte): 1 a casa; nas lojas, o andar do
         /// apartamento mais 1; nos prédios, o apartamento mais 1; 0 fora de uma moradia (a loja, a portaria, o corredor, o
-        /// hospital, e os pontos que não saem daqui).
+        /// hospital, e os pontos que não saem daqui). A farmácia (o térreo dela) e cada andar do hospital têm as unidades de
+        /// loja (<see cref="Farmacia"/>, <see cref="Hospital"/>): o saque deles nos móveis antigos.
         /// </summary>
         public int unidade;
+        /// <summary>
+        /// As unidades de loja (05/11/2026, a etapa 2 do sistema de vida: o saque da farmácia e do hospital). Só um dado do
+        /// ponto: o lugar, o tamanho e a ordem dos pontos não mudam (os índices, as chaves salvas e o NavMesh ficam iguais).
+        /// </summary>
+        public const int Farmacia = 1000, Hospital = 1001;
+        /// <summary>A unidade é de loja (a farmácia, o hospital), não uma moradia.</summary>
+        public bool DeLoja => unidade >= Farmacia;
+        /// <summary>O ponto foi espelhado (<see cref="Espelhado"/>): o móvel antigo é desenhado espelhado, e os lugares dele também.</summary>
+        public bool espelhado;
         /// <summary>A moradia é um apartamento (de um prédio ou em cima de uma loja).</summary>
         public bool apartamento;
         /// <summary>O cômodo (um número pelo lugar dele: os pontos do mesmo cômodo têm o mesmo).</summary>
@@ -41,6 +51,7 @@ namespace ZombieCityCleaner.Mundo
             var p = this;
             p.centro.x = -p.centro.x;
             p.giro = -p.giro;
+            p.espelhado = !p.espelhado;
             return p;
         }
 
@@ -229,9 +240,11 @@ namespace ZombieCityCleaner.Mundo
         {
             var receita = Receita(contexto, k.tipo);
             if (receita.Length == 0) return;
-            // a moradia dos pontos deste cômodo (a casa, o apartamento da loja ou do prédio, ou nenhuma)
+            // a moradia dos pontos deste cômodo (a casa, o apartamento da loja ou do prédio, ou nenhuma); a farmácia e o
+            // hospital, a unidade de loja (o saque deles, nos móveis antigos)
             bool morada = contexto == "casa";
-            _unidade = !morada ? 0 : k.apto >= 0 ? k.apto + 1 : obra is Loja ? k.andar + 1 : 1;
+            _unidade = !morada ? (contexto == nameof(TipoDeLoja.Farmacia) ? PontoDeMovel.Farmacia : contexto == "hospital" ? PontoDeMovel.Hospital : 0)
+                     : k.apto >= 0 ? k.apto + 1 : obra is Loja ? k.andar + 1 : 1;
             _apartamento = morada && (k.apto >= 0 || obra is Loja);
             float e = obra.m.esp / 2;
             var r = Rect.MinMaxRect(k.x0 + e, k.z0 + e, k.x1 - e, k.z1 - e);

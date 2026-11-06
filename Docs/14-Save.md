@@ -36,13 +36,14 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 
 ## O que fica salvo
 
-- **No personagem** (o computador de cada um): o nome, a aparência, o dinheiro, a vida, a fome, a sede, a mochila vestida,
+- **No personagem** (o computador de cada um): o nome, a aparência, o dinheiro, a vida, o corpo (as feridas, as fraturas e as talas, desde 05/11/2026), a fome, a sede, a mochila vestida,
   tudo o que está nela (com o pente de cada arma, o desgaste e as cores das roupas), os atalhos, o pneu nas mãos e as
   roupas vestidas (desde o merge com o saque e as portas).
 - **No mundo** (o computador de quem hospeda):
   - o dia e a hora, e o clima;
   - os itens no chão;
-  - a perua e o cupê (onde estão, as peças, os pneus, a gasolina e o desgaste);
+  - a perua e o cupê (onde estão, as peças, os pneus, a gasolina e o desgaste; o motor ligado, não: o carro volta sem a
+    chave);
   - os carros do mundo em que alguém mexeu (as peças e os pneus tirados);
   - as construções (a fogueira continua com o fogo que tinha);
   - as portas e gavetas abertas;

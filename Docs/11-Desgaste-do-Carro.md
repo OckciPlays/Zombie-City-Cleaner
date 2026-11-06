@@ -117,6 +117,13 @@ Antes, o deixado no bunker caía pelo mundo quando todos saíam (o piso da garag
 carro que já tinha caído, inclusive nos saves antigos, volta sozinho para a vaga dele no bunker. A distância fica no
 componente `Carro` de cada prefab ("Parado longe de todos"); o código, em `Vehicles/Carro.Parado.cs`.
 
+## O carro deixado ligado (05/11/2026)
+
+Quem sai com o motor ligado deixa o carro ligado; quem senta depois dirige direto. Sem ninguém, ele gasta na marcha lenta
+(~0,12 L/min: o tanque cheio dura umas 6 horas de jogo parado), e a vela e o radiador gastam como num carro parado ligado; se
+o motor morrer sozinho (ferveu, a vela, a gasolina), a chave sai. O save não guarda o motor: carregado, o carro volta sem a
+chave. O F1 tem "Ligar o motor (vazio)". O código, em `Carro.Ignicao`.
+
 ## O que ficou para depois
 
 - **O posto de gasolina:** encher o galão e o carro.

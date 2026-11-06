@@ -126,6 +126,26 @@ namespace ZombieCityCleaner.Zombies
         [Tooltip("Entre uma esquiva e outra (s): com a luz parada nele, ele pula de novo.")]
         public float intervaloDaEsquiva = 1f;
 
+        [Header("O fogo (05/11/2026: a tocha e a fogueira acesas; Zumbi.Luz.cs)")]
+        [Tooltip("Até onde (m, no plano) eles não chegam: da tocha acesa na mão e da fogueira acesa (a luz que se vê vai a 14 e 16 m).")]
+        public float raioDaTocha = 4f;
+        public float raioDaFogueira = 8f;
+        [Tooltip("A horda que cria coragem: com esta quantidade ou mais rodeando o mesmo fogo por este tempo (s), todos entram.")]
+        public int hordaQueEntraNoFogo = 5;
+        public float esperaAteACoragem = 30f;
+        [Tooltip("Quanto dura a coragem (s): nesse tempo ele não liga para fogo nenhum.")]
+        public float tempoDeCoragem = 45f;
+        [Tooltip("À noite, numa fogueira, a coragem espera mais (s): o Long da fogueira vem antes (ZombieManager.LongNaFogueira.cs).")]
+        public float esperaAteACoragemDeNoiteNaFogueira = 90f;
+
+        [Header("O Long da fogueira (05/11/2026; ZombieManager.LongNaFogueira.cs)")]
+        [Tooltip("À noite, com pelo menos esta quantidade de zumbis caçando em volta de uma fogueira acesa...")]
+        public int zumbisParaOLong = 6;
+        [Tooltip("... e um jogador parado dentro dela por este tempo (s), um Long nasce perto e vem apagá-la.")]
+        public float paradoParaOLong = 60f;
+        [Tooltip("Depois de um Long da fogueira, a mesma fogueira espera este tempo (s) para chamar outro.")]
+        public float recargaDoLongDaFogueira = 180f;
+
         [Header("Os especiais (01/11/2026; TipoDeZumbi.cs)")]
         public AjustesDoCorredor corredor = new AjustesDoCorredor();
         [Tooltip("O Long (o cuspidor).")]

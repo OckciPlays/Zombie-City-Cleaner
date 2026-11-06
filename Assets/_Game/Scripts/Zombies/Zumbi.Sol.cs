@@ -279,6 +279,7 @@ namespace ZombieCityCleaner.Zombies
                 Vector2 r = Random.insideUnitCircle.normalized * raio;
                 if (!NavMesh.SamplePosition(transform.position + new Vector3(r.x, 0f, r.y), out var hit, 2f, NavMesh.AllAreas)) continue;
                 if (Mathf.Abs(hit.position.y - transform.position.y) > 3f || _m.Exposto(hit.position)) continue;
+                if (_m.Fogos.Count > 0 && _m.NoFogo(hit.position)) continue;   // nem no fogo (05/11/2026)
                 float d = (hit.position - transform.position).sqrMagnitude;
                 if (d < melhor)
                 {
@@ -316,6 +317,7 @@ namespace ZombieCityCleaner.Zombies
                 Vector2 r = Random.insideUnitCircle.normalized * raio;
                 if (!NavMesh.SamplePosition(transform.position + new Vector3(r.x, 0f, r.y), out var hit, 2.5f, NavMesh.AllAreas)) continue;
                 if (Mathf.Abs(hit.position.y - transform.position.y) > 4f || _m.Exposto(hit.position)) continue;
+                if (_m.Fogos.Count > 0 && _m.NoFogo(hit.position)) continue;   // nem no fogo (05/11/2026)
                 float nota = Vector3.Distance(hit.position, transform.position) + (_m.Coberto(hit.position) ? 0f : 15f);
                 if (nota < melhor)
                 {

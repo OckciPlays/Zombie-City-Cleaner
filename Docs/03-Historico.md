@@ -630,6 +630,61 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
 - **Os militares:** lutam com uma reserva de 2 pentes que não fica no saque; no corpo, o pente e às vezes uma caixa pequena;
   a arma cai gasta (engasga); o colete e o capacete como itens ficaram raros. De ~98 para ~29 balas por militar.
 
+## O carro ligado, o fogo e a chuva (05/11/2026, a pedido)
+
+- **O carro:** quem sai com o motor ligado deixa o carro ligado (a chave na ignição, ou os fios juntos), e quem senta depois
+  dirige direto. Parado, ele gasta a gasolina na marcha lenta.
+- **O fogo:** os zumbis não chegam a 4 m da tocha acesa nem a 8 m da fogueira acesa. Quem caça alguém dentro rodeia a beira,
+  esperando; com 5 ou mais esperando por 30 s, a horda cria coragem e entra. O ferido entra, o Brutamonte ignora e o Long
+  cospe no fogo.
+- **A chuva:** qualquer chuva, até o chuvisco, apaga a tocha e a fogueira fora de um teto. A tocha fica apagada na mão e
+  reacende numa fogueira acesa; a fogueira perde a lenha e não acende na chuva. As fogueiras dos acampamentos também apagam.
+- Botões de teste no F1 (o carro, o clima) e detalhes no CLAUDE.md, "O carro ligado, o fogo e a chuva".
+
+## O Long da fogueira e o Brutamonte enterrado (05/11/2026, a pedido)
+
+- **O Long:** à noite, quem fica parado 1 minuto numa fogueira com 6 ou mais zumbis em volta atrai um Long, que nasce perto
+  e cospe nela até apagar. A coragem da horda na fogueira, à noite, passou para 90 s.
+- **O Brutamonte:** fica enterrado no caminho; quem chega a 10 m sente o aviso (o ronco e a poeira) e ele sai da terra a uns
+  5 m, de costas, e avança. Antes nascia a 30–45 m, fora da vista, e quase não era achado.
+
+## O corpo e os ferimentos: a etapa 1 do sistema de vida (05/11/2026, a pedido)
+
+- A vida não volta mais sozinha; a fogueira e as comidas não curam. O corpo tem 6 partes, e a parte a 0 fica inutilizada.
+- As feridas sangram (20% na mordida do Oco e do Corredor; o tiro sempre; o corte e a pancada às vezes); só a bandagem ou o
+  kit estancam. O Brutamonte não faz sangrar: quebra.
+- A queda (antes não existia): a entorse, a fratura e a fratura exposta pela altura; a morte a partir de 16 m.
+- A tala (item novo, também de receita) imobiliza o membro, que sara com ela e mais rápido com o analgésico. O kit médico
+  trata o corpo todo. A aba CORPO da mochila (a tecla H) e a silhueta no HUD.
+- O saque ajustado: a bandagem de pano rende 1, as pilhas achadas dos curativos maiores, a tala nos mortos e nos
+  comerciantes, o limite da farmácia do Dia 0. O corpo vai no save do personagem; a versão da rede subiu para 1.
+- Feito em paralelo (o núcleo e 7 partes separadas) e conferido no Play com 0 erros. Detalhes no
+  [16](16-Corpo-e-Ferimentos.md).
+
+## Os ajustes da tala e a etapa 2: a infecção (05/11/2026, à noite, a pedido)
+
+- Depois do teste do Pedro: o HUD diz por que a mira treme e por que ele manca; o analgésico alivia o tremor; com a tala, o
+  braço e a perna funcionam com dificuldade (atira, golpeia, dirige, corre); o xarope tira a febre e os comprimidos a dor; o
+  "desinfetante" virou o "álcool".
+- A etapa 2: o sorteio da infecção ao amanhecer, pela rapidez da limpeza e pela troca diária do curativo antisséptico; a
+  bandagem antisséptica (nova), o spray de 5 usos, o kit que protege tudo; a ferida infeccionada, a febre (a tela turva e os
+  calafrios) e a sepse; o antibiótico; o saque da farmácia e do hospital; a opção "Menos balanço da câmera".
+- Revisado por 5 ângulos (17 defeitos confirmados, os principais corrigidos) e conferido no Play com 0 erros.
+
+## A etapa 3 do sistema de vida: o amigo, a pose e os curativos modelados (05/11/2026, à noite, a pedido)
+
+- **O amigo trata você:** mirando nele e segurando o E, com o que está na sua mochila (as bandagens, a tala, o kit e os
+  remédios, até o antibiótico); tocar o E troca a opção. Os dois são avisados.
+- **A pose de cada curativo**, feita por código e vista por todos: agachado na perna, o braço esticado, as mãos na cabeça,
+  no peito ou na boca, inclinado para o amigo. A arma some da mão enquanto isso. Na primeira pessoa, o curativo aparece nas
+  mãos e a câmera olha para a parte.
+- **A bandagem e a tala modeladas no Blender**, na medida de cada personagem, no corpo e no retrato da mochila.
+- A versão da rede subiu para 3. Conferido no Play com 0 erros (as fotos de cada pose; o agachamento volta ao normal no
+  fim; a mão volta para a arma no fim e no cancelamento). Revisado (7 defeitos corrigidos: o amigo que sai do jogo no meio
+  não faz o item cair em você; a câmera não passa de olhar para baixo; a mão volta na hora; a janela e o item no chão
+  ganham do E; o amigo no carro não é tratado; a folga da distância no anfitrião; o controle também trata). O curativo no
+  amigo ainda precisa de dois jogadores para testar.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

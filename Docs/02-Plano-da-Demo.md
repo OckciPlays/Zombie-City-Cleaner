@@ -116,7 +116,7 @@ Depois dos testes: o cano das armas aponta para a mira, a lanterna não estoura 
 - **A barra de 3 atalhos**, embaixo, no meio da tela: o atalho aponta para um item da mochila, que continua nela. A roda do mouse passa pelos atalhos, 1, 2 e 3 escolhem, G larga e E pega.
 - **Menu do desenvolvedor (F1):** criar itens, contar, criar e matar zumbis.
 - **Comida e água:** latas de comida e garrafas de água nas mesas, balcões, cômodas e criados-mudos das casas e dos apartamentos (34, e 2 na mesa do depósito do bunker). Com o item na mão, o clique come ou bebe (com a animação e o som).
-- **Fome e sede:** duas barras que esvaziam com o tempo (mais rápido correndo); com pouca, a vida não volta sozinha; vazias, tiram vida.
+- **Fome e sede:** duas barras que esvaziam com o tempo (mais rápido correndo); vazias, tiram vida (desde 05/11/2026 a vida não volta sozinha de jeito nenhum: o [16](16-Corpo-e-Ferimentos.md)).
 - **Passos** com som de concreto, madeira, carpete ou grama (o piso de cada cômodo das casas), e o **menu de opções** no ESC (volume, limite de FPS e o FPS na tela).
 - **Soco:** com a mão vazia, o clique soca (direita e esquerda); o zumbi recua a cada soco.
 - **Correção:** correndo, a arma longa não mostra mais só uma ponta no meio de baixo da tela (e os braços voltaram a respirar, balançar andando e baixar correndo: estavam congelados no fim do sacar).

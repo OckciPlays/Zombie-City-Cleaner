@@ -106,7 +106,9 @@ namespace ZombieCityCleaner.Sobreviventes
                 float y = i * linha;
                 int tem = m.Estoque(a, banca, i);
                 int preco = PrecosDosSobreviventes.PrecoDeCompra(itens[i]);
-                Linha(new Rect(0, y, vistaA.width - 18 * u, linha - 4 * u), inv, itens[i], tem > 0 ? $"{Primeira(Itens.Nome(itens[i]))}  ·  {tem} {(tem == 1 ? "restante" : "restantes")}" : $"{Primeira(Itens.Nome(itens[i]))}  ·  acabou",
+                // (o spray sai cheio: os usos dele junto do nome)
+                string nomeDoProduto = Primeira(Itens.Nome(itens[i])) + (Itens.ComUsos(itens[i]) ? $" ({TelaDoInventario.TextoDosUsos(Itens.UsosDoSpray)})" : "");
+                Linha(new Rect(0, y, vistaA.width - 18 * u, linha - 4 * u), inv, itens[i], tem > 0 ? $"{nomeDoProduto}  ·  {tem} {(tem == 1 ? "restante" : "restantes")}" : $"{nomeDoProduto}  ·  acabou",
                       PrecoDoDiaZero(preco), tem > 0 && dinheiro >= preco, "Comprar", () => m.PedirComprar(a, banca, i));
             }
             GUI.EndScrollView();
@@ -157,6 +159,8 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             string nome = Primeira(Itens.Nome(it.item));
             if (Itens.EhMunicao(it.item)) return $"{nome}  ·  {Itens.Quantos(it.item, it.qtd)} balas";
+            // o spray antisséptico (05/11/2026): os usos que sobram
+            if (Itens.ComUsos(it.item)) return $"{nome}  ·  {TelaDoInventario.TextoDosUsos(Itens.UsosQueSobram(it.desgaste))}";
             if (Itens.EmPilha(it.item)) return $"{nome}  ·  {Itens.Quantos(it.item, it.qtd)}";
             if (it.item == Item.Galao) return $"{nome}  ·  {InventarioJogador.LitrosDe(it):0} L";
             if (Itens.ComEstado(it.item)) return $"{nome}  ·  {it.qtd}%";

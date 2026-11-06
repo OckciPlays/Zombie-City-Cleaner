@@ -124,7 +124,9 @@ namespace ZombieCityCleaner.Sobreviventes
                 var j = _golpeNoJogador;
                 if ((j.transform.position - transform.position).sqrMagnitude <= alcance * alcance)
                 {
-                    j.Vida?.Dano(d.dano * DanoNoJogador, boca, $"Golpeado com {Itens.NomeComArtigo(Identidade.Value.branca)} de um sobrevivente.");
+                    // o corte (a faca, o machado, a lança) ou a pancada (o bastão, a tocha): a parte sorteada pela briga (05/11/2026)
+                    j.Vida?.Dano(d.dano * DanoNoJogador, boca, $"Golpeado com {Itens.NomeComArtigo(Identidade.Value.branca)} de um sobrevivente.",
+                                 d.corte > 0f ? TipoDeGolpe.Corte : TipoDeGolpe.Pancada);
                     var ponto = j.transform.position + Vector3.up * 1.2f;
                     GolpeAcertouRpc(ponto, (boca - ponto).normalized);
                 }

@@ -56,16 +56,21 @@ namespace ZombieCityCleaner.Zombies
             TocarEspecial("Gosma_Splash", ponto, 1f, 30f);
         }
 
-        /// <summary>A luz mais perto para o Long cuspir (a fogueira acesa, a tocha na mão, os faróis), se ele a vê.</summary>
+        /// <summary>
+        /// A luz para o Long cuspir, se ele a vê: a fogueira acesa mais perto primeiro (05/11/2026: o Long da fogueira vem
+        /// apagá-la, mesmo com a tocha de quem está nela mais perto dele); sem fogueira à vista, a tocha na mão ou o farol mais
+        /// perto.
+        /// </summary>
         internal bool LuzParaCuspir(Vector3 centro, float alcance, Vector3 boca, out Vector3 ponto)
         {
-            ponto = default;
             _luzesPerto.Clear();
             ConstrucoesNoMundo.Instancia?.FogueirasAcesas(centro, alcance, _luzesPerto);
+            if (LuzMaisPerto(centro, boca, out ponto)) return true;
+            _luzesPerto.Clear();
             for (int k = 0; k < QuantosJogadores; k++)
             {
                 var j = Jogadores[k].jogador;
-                if (j != null && j.NaMao == Item.Tocha && (Jogadores[k].pes - centro).sqrMagnitude < alcance * alcance) _luzesPerto.Add(Jogadores[k].pes);
+                if (j != null && j.TochaAcesa && (Jogadores[k].pes - centro).sqrMagnitude < alcance * alcance) _luzesPerto.Add(Jogadores[k].pes);
             }
             foreach (var c in Carro.Todos)
             {
@@ -73,6 +78,13 @@ namespace ZombieCityCleaner.Zombies
                 Vector3 frente = c.transform.position + c.transform.forward * 2f;
                 if ((frente - centro).sqrMagnitude < alcance * alcance) _luzesPerto.Add(frente);
             }
+            return LuzMaisPerto(centro, boca, out ponto);
+        }
+
+        // a luz da lista mais perto do centro que a boca enxerga
+        bool LuzMaisPerto(Vector3 centro, Vector3 boca, out Vector3 ponto)
+        {
+            ponto = default;
             float menor = float.MaxValue;
             bool achou = false;
             foreach (var p in _luzesPerto)
