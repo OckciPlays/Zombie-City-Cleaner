@@ -56,7 +56,7 @@ namespace ZombieCityCleaner.DiaZero
             if (MenuOnline.Aberto || ModoVideo.Ligado || MenuOnline.Cinema) return;
             GUI.depth = -5;
             if (TelaDoCaixa.Aberta) TelaDoCaixa.Desenhar(this, u);
-            if (!JogadorRede.Local.Criado) return;
+            if (!JogadorRede.Local.Criado || GravacaoNoMundo.SemHud) return;
             Canto(u);
             DesenharOLobby(u);
             // o aviso do carrinho (embaixo da mira) e a mensagem do Dia 0 (mais embaixo)
@@ -77,7 +77,7 @@ namespace ZombieCityCleaner.DiaZero
             int compras = Compras(eu);
             if (compras > 0)
             {
-                Sombra(new Rect(x, y, w, 20 * u), $"{compras} {(compras == 1 ? "compra" : "compras")} em casa", _cantoPequeno);
+                Sombra(new Rect(x, y, w, 20 * u), $"{compras} {(compras == 1 ? "compra" : "compras")} no bunker", _cantoPequeno);
                 y += 22 * u;
             }
             if (Carrinho.Loja != null && Carrinho.Quantos > 0)
@@ -243,7 +243,7 @@ namespace ZombieCityCleaner.DiaZero
             if (total > tenho) _pequeno.normal.textColor = new Color(1f, 0.5f, 0.4f);
             GUI.Label(new Rect(px, py, pw, 22 * u),
                       total > tenho ? $"Você tem {PrecosDoDiaZero.Dinheiro(tenho)}: faltam {PrecosDoDiaZero.Dinheiro(total - tenho)}. Tire alguma coisa."
-                                    : $"Você tem {PrecosDoDiaZero.Dinheiro(tenho)}; sobram {PrecosDoDiaZero.Dinheiro(tenho - total)}. As compras vão direto para a sua casa.", _pequeno);
+                                    : $"Você tem {PrecosDoDiaZero.Dinheiro(tenho)}; sobram {PrecosDoDiaZero.Dinheiro(tenho - total)}. As compras vão direto para o bunker.", _pequeno);
             _pequeno.normal.textColor = cor;
             py += 34 * u;
             GUI.enabled = total <= tenho && !dia.Pagando;

@@ -173,13 +173,20 @@ namespace ZombieCityCleaner.Combat
         }
 
         /// <summary>Clarão do cano: uma luz de um instante e um brilho na boca da arma (na camada informada).</summary>
-        public static void Clarao(Transform boca, int camada)
+        public static void Clarao(Transform boca, int camada) => Clarao(boca, camada, null);
+
+        /// <summary>
+        /// O clarão com o brilho virado para a câmera <paramref name="olho"/> (null: a do mundo). A dos braços de primeira
+        /// pessoa, que ficam perto da origem (<see cref="Player.BracosNaOrigem"/>): lá, a luz dele só ilumina os braços, e a do
+        /// mundo vem da <see cref="LuzDoClarao"/>.
+        /// </summary>
+        public static void Clarao(Transform boca, int camada, Camera olho)
         {
             if (_instancia == null || boca == null) return;
-            _instancia.StartCoroutine(_instancia.ClaraoRotina(boca, camada));
+            _instancia.StartCoroutine(_instancia.ClaraoRotina(boca, camada, olho));
         }
 
-        System.Collections.IEnumerator ClaraoRotina(Transform boca, int camada)
+        System.Collections.IEnumerator ClaraoRotina(Transform boca, int camada, Camera olho)
         {
             var (go, luz, brilho) = PegarClarao();
             go.layer = camada;
@@ -190,12 +197,54 @@ namespace ZombieCityCleaner.Combat
             for (int i = 0; i < 3; i++)
             {
                 if (boca != null) go.transform.position = boca.position;
-                var cam = Camera.main;
+                var cam = olho != null ? olho : Camera.main;
                 if (cam != null) brilho.rotation = Quaternion.LookRotation(brilho.position - cam.transform.position) * Quaternion.Euler(0, 0, Random.Range(0f, 360f));
                 luz.intensity *= 0.6f;
                 yield return null;
             }
             if (go != null) go.SetActive(false);
+        }
+
+        /// <summary>O nome da luz do clarão no mundo (a <see cref="Player.BracosNaOrigem"/> não a copia para os braços).</summary>
+        public const string NomeDaLuzDoClaraoNoMundo = "Clarão (a luz no mundo)";
+
+        /// <summary>
+        /// Só a luz do clarão, num ponto do mundo: a do tiro em primeira pessoa, na frente da câmera, onde a boca da arma
+        /// estaria (o clarão dos braços fica com eles, perto da origem).
+        /// </summary>
+        public static void LuzDoClarao(Vector3 ponto)
+        {
+            if (_instancia == null) return;
+            _instancia.StartCoroutine(_instancia.LuzDoClaraoRotina(ponto));
+        }
+
+        readonly List<Light> _luzesDosClaroes = new List<Light>();
+
+        System.Collections.IEnumerator LuzDoClaraoRotina(Vector3 ponto)
+        {
+            Light luz = null;
+            for (int i = _luzesDosClaroes.Count - 1; i >= 0; i--)
+            {
+                if (_luzesDosClaroes[i] == null) _luzesDosClaroes.RemoveAt(i);
+                else if (!_luzesDosClaroes[i].gameObject.activeSelf) { luz = _luzesDosClaroes[i]; break; }
+            }
+            if (luz == null)
+            {
+                var novo = new GameObject(NomeDaLuzDoClaraoNoMundo);
+                novo.SetActive(false);
+                luz = novo.AddComponent<Light>();
+                luz.type = LightType.Point; luz.color = new Color(1f, 0.75f, 0.4f); luz.range = 6f; luz.shadows = LightShadows.None;
+                _luzesDosClaroes.Add(luz);
+            }
+            luz.transform.position = ponto;
+            luz.intensity = 5f;
+            luz.gameObject.SetActive(true);
+            for (int i = 0; i < 3; i++)
+            {
+                luz.intensity *= 0.6f;
+                yield return null;
+            }
+            if (luz != null) luz.gameObject.SetActive(false);
         }
 
         // os clarões guardados (31/10/2026: eram um objeto novo, com a luz e o quadrado, a cada tiro, ~10 por segundo numa

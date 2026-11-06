@@ -5,7 +5,8 @@
 #
 # Como rodar (Blender 5.2, em segundo plano):
 #   blender -b --factory-startup --disable-autoexec --python Blender/loot.py -- tudo
-#   (as etapas: construir, exportar, imagens; "imagens Feijao Carne" só as de alguns)
+#   (as etapas: construir, exportar, imagens; "imagens Feijao Carne" só as de alguns; "folha <saída.png>
+#   <PrincipalBloco.blend>", a folha das peças do fumo ao lado da mão do personagem principal)
 # Depois, na Unity: Zombie City Cleaner > Montar armas (ou só "Montar o saque").
 #
 # O formato é o do Itens.fbx (as funções do equipamentos.py): cada peça é um objeto <Nome>_corpo girado 90° em X, com a
@@ -21,8 +22,9 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
@@ -41,6 +43,8 @@ eq.CORES.update({
     "vinho": (6, 4), "ambar": (2, 7), "cola": (12, 1), "garrafa_verde": (2, 10), "cinza": (8, 1), "preto": (3, 2),
     "pedra": (8, 2), "pedra_escura": (10, 3), "cinza_escuro": (11, 5), "carvao": (8, 5), "colchao": (10, 5),
     "caixa_ferramenta": (8, 6), "ferrugem": (8, 3), "minhoca": (13, 0),
+    # o fumo (03/11/2026): o filtro cor de cortiça e a cinza
+    "filtro": (9, 13), "cinza_claro": (9, 3),
 })
 
 _caixa = eq._caixa
@@ -621,6 +625,462 @@ def _pe_de_cabra():
     return p
 
 
+# ------------------------------------------------------------------ o fumo (03/11/2026: o Plano_Cigarro.md da pasta de arte)
+# O maço de cigarros (o item), as peças do maço aberto (a caixa e a tampa, que gira na dobradiça), o cigarro em peças (o
+# filtro, o papel, que o jogo encolhe enquanto ele queima, a ponta apagada, a brasa e a cinza), a bituca e o isqueiro com
+# a chama. Tudo 30% maior que o de verdade (a decisão 7: a mão de blocos é 25% maior que uma mão normal, e o cigarro de
+# 8 cm sumia entre os dedos). Só o maço tem ícone e foto; as outras peças são das animações e do jogo.
+
+FUMO = 1.3
+# o maço (o de verdade: 88 x 55 x 22 mm, a tampa com 26 mm na frente e 13 atrás), a origem no meio
+MACO_A, MACO_L, MACO_P = 0.088 * FUMO, 0.055 * FUMO, 0.022 * FUMO
+TAMPA_NA_FRENTE, TAMPA_ATRAS = 0.026 * FUMO, 0.013 * FUMO
+ZF = MACO_A / 2 - TAMPA_NA_FRENTE   # onde a tampa começa na frente (o alto da caixa na frente)
+ZB = MACO_A / 2 - TAMPA_ATRAS       # e atrás (a dobradiça)
+# a dobradiça da tampa, no espaço do maço: a tampa gira em volta do X que passa aqui (aberta, uns -105°)
+DOBRADICA = (0.0, MACO_P / 2, ZB)
+# o cigarro (o de verdade: 84 mm, o filtro com 21, 7,8 mm de grossura), em pé, a boca embaixo: a origem é a emenda do
+# filtro com o papel (onde os dedos seguram), o filtro de -FILTRO a 0 e o papel de 0 a PAPEL (o jogo encolhe o papel em Z,
+# e a brasa e a cinza vão para a ponta dele)
+FILTRO, PAPEL, RAIO_DO_CIGARRO = 0.021 * FUMO, 0.063 * FUMO, 0.0039 * FUMO
+# os cigarros dentro do maço (os filtros para cima, em 3 fileiras de 7, 6 e 7): o espaço entre eles, o meio das fileiras
+# em y e de onde sai o cigarro que sobe (o meio da fileira da frente, que já está faltando)
+ENTRE_OS_CIGARROS = 0.0096
+_Y0 = (-MACO_P / 2 + 0.0015 + MACO_P / 2 - 0.0006) / 2
+_DY = 0.866 * ENTRE_OS_CIGARROS
+SAIDA_DO_CIGARRO = (0.0, _Y0 - _DY)
+# a boca do isqueiro (onde a chama nasce), no espaço dele (a origem no meio do corpo de plástico)
+BOCA_DO_ISQUEIRO = (0.0, -0.0040, 0.0545)
+
+
+def _prisma(bm, uv, cores, pontos, x0, x1, cor_lados):
+    """Um polígono convexo no plano YZ (os pontos (y, z) em volta) estendido de x0 a x1: cores[k] é a cor da face que
+    vai do ponto k ao seguinte, e cor_lados a das duas tampas (as de -X e +X). As normais saem certas no _objeto."""
+    a = [bm.verts.new((x0, y, z)) for y, z in pontos]
+    b = [bm.verts.new((x1, y, z)) for y, z in pontos]
+    n = len(pontos)
+    eq._pintar(bm, uv, [bm.faces.new(a[::-1]), bm.faces.new(b)], cor_lados)
+    for k in range(n):
+        eq._pintar(bm, uv, [bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k]))], cores[k])
+
+
+def _tronco(bm, uv, cor, r1, r2, altura, centro, lados=8):
+    """Um tronco de cone em pé (o raio r1 embaixo e r2 em cima; 0 é a ponta), com o meio no centro."""
+    cx, cy, cz = centro
+
+    def anel(r, z):
+        if r <= 0:
+            return [bm.verts.new((cx, cy, z))]
+        return [bm.verts.new((cx + r * math.cos(2 * math.pi * k / lados), cy + r * math.sin(2 * math.pi * k / lados), z))
+                for k in range(lados)]
+
+    baixo, cima = anel(r1, cz - altura / 2), anel(r2, cz + altura / 2)
+    faces = []
+    if len(baixo) > 1:
+        faces.append(bm.faces.new(baixo[::-1]))
+    if len(cima) > 1:
+        faces.append(bm.faces.new(cima))
+    for k in range(lados):
+        vs = []
+        for v in (baixo[k % len(baixo)], baixo[(k + 1) % lados % len(baixo)], cima[(k + 1) % lados % len(cima)], cima[k % len(cima)]):
+            if v not in vs:
+                vs.append(v)
+        faces.append(bm.faces.new(vs))
+    eq._pintar(bm, uv, faces, cor)
+
+
+def P(cores, pontos, x0, x1, cor_lados):
+    return (_prisma, cores, pontos, x0, x1, cor_lados)
+
+
+def T(cor, r1, r2, altura, centro, lados=8):
+    return (_tronco, cor, r1, r2, altura, centro, lados)
+
+
+def _corpo_do_maco():
+    """A caixa do maço, sem a tampa: branca, com a faixa vermelha do nome (os blocos brancos das letras de BLACKWATER, como
+    as placas da rua), a linha de baixo dela e o aviso preto embaixo, na frente e atrás."""
+    A, L, Pr = MACO_A, MACO_L, MACO_P
+    f = -Pr / 2
+    p = [P(["branco"] * 4, [(-Pr / 2, -A / 2), (Pr / 2, -A / 2), (Pr / 2, ZB), (-Pr / 2, ZF)], -L / 2, L / 2, "branco")]
+    zn = ZF - 0.017
+    p.append(C("vermelho", (L - 0.001, 0.0008, 0.016), (0, f - 0.0004, zn)))
+    # BLACKWATER: uma letra por bloco (o W mais largo)
+    larguras = [0.0042, 0.0042, 0.0042, 0.0042, 0.0042, 0.006, 0.0042, 0.0042, 0.0042, 0.0042]
+    x = -(sum(larguras) + 0.0013 * 9) / 2
+    for w in larguras:
+        p.append(C("branco", (w, 0.0006, 0.0072), (x + w / 2, f - 0.0010, zn)))
+        x += w + 0.0013
+    # a linha de baixo ("20 CLASS A CIGARETTES") e o aviso preto com as duas linhas brancas, na frente e atrás
+    p.append(C("cinza", (0.034, 0.0006, 0.002), (0, f - 0.0003, zn - 0.014)))
+    for s in (-1, 1):
+        y = s * (Pr / 2 + 0.0004)
+        p.append(C("preto", (0.058, 0.0008, 0.024), (0, y, -A / 2 + 0.019)))
+        for dz, w in ((0.004, 0.046), (-0.003, 0.034)):
+            p.append(C("branco", (w, 0.0006, 0.0022), (0, y + s * 0.0005, -A / 2 + 0.019 + dz)))
+    return p
+
+
+def _pecas_da_tampa(o=(0.0, 0.0, 0.0)):
+    """A tampa vermelha (o lado de dentro creme) com o brasão dourado na frente, no espaço do maço menos o ponto o."""
+    A, L, Pr = MACO_A, MACO_L, MACO_P
+    ox, oy, oz = o
+    pts = [(-Pr / 2 - oy, ZF - oz), (Pr / 2 - oy, ZB - oz), (Pr / 2 - oy, A / 2 - oz), (-Pr / 2 - oy, A / 2 - oz)]
+    zc = (ZF + A / 2) / 2 - oz
+    return [
+        P(["creme", "vermelho", "vermelho", "vermelho"], pts, -L / 2 - ox, L / 2 - ox, "vermelho"),
+        C("dourado", (0.016, 0.0008, 0.013), (-ox, -Pr / 2 - 0.0004 - oy, zc)),
+        C("vermelho_escuro", (0.008, 0.0006, 0.007), (-ox, -Pr / 2 - 0.0010 - oy, zc)),
+        # a fita do lacre, por cima da tampa
+        C("dourado", (L - 0.001, 0.003, 0.0006), (-ox, -oy, A / 2 + 0.0003 - oz)),
+    ]
+
+
+def _maco():
+    """O maço fechado (o item: no chão, na mochila e no ícone), a origem no meio."""
+    return _corpo_do_maco() + _pecas_da_tampa()
+
+
+def _caixa_do_maco():
+    """O maço aberto sem a tampa: a gola de papelão creme subindo na frente e nos lados, o papel-alumínio rasgado e os
+    filtros dos cigarros (17: faltam o do meio da fileira da frente, o que sai, e um do meio e um de trás)."""
+    A, L, Pr = MACO_A, MACO_L, MACO_P
+    p = _corpo_do_maco()
+    e = 0.0008
+    p.append(C("creme", (L - 0.0012, e, 0.020), (0, -Pr / 2 + 0.0003 + e / 2, ZF + 0.002)))
+    for s in (-1, 1):
+        p.append(C("creme", (e, 0.009, 0.020), (s * (L / 2 - 0.0003 - e / 2), -Pr / 2 + 0.0045, ZF + 0.002)))
+    # o papel-alumínio em volta dos cigarros, até um pouco acima da dobradiça, e a aba rasgada de trás, caída para trás
+    zfo = ZB + 0.002
+    p.append(C("prata", (L - 0.0012, Pr - 0.0021, zfo - (ZF - 0.004)), (0, _Y0, (zfo + ZF - 0.004) / 2)))
+    p.append(C("prata", (0.03, 0.0006, 0.012), (0.012, Pr / 2 - 0.0016, zfo + 0.005), giro=(-25, 0, 4)))
+    topo = A / 2 - 0.0025
+    r = ENTRE_OS_CIGARROS / 2 - 0.0001
+    faltam = {(0, 3), (1, 0), (2, 5)}
+    for fila, (n, y) in enumerate(((7, _Y0 - _DY), (6, _Y0), (7, _Y0 + _DY))):
+        for k in range(n):
+            if (fila, k) in faltam:
+                continue
+            x = (k - (n - 1) / 2) * ENTRE_OS_CIGARROS
+            p.append(Z("filtro", r, topo - ZB, (x, y, (topo + ZB) / 2), 6))
+            p.append(Z("creme", r * 0.8, 0.0006, (x, y, topo + 0.0002), 6))
+    return p
+
+
+def _tampa_do_maco():
+    """A tampa sozinha, com a origem na dobradiça (fechada, ela cai em cima da caixa quando vai para o DOBRADICA)."""
+    return _pecas_da_tampa(DOBRADICA)
+
+
+def _cigarro_filtro():
+    """O filtro cor de cortiça, de -FILTRO a 0, com a ponta creme (a da boca) e o friso dourado perto do papel."""
+    F, R = FILTRO, RAIO_DO_CIGARRO
+    return [
+        Z("filtro", R, F, (0, 0, -F / 2), 8),
+        Z("creme", R * 0.82, 0.0006, (0, 0, -F - 0.0002), 8),
+        Z("dourado", R * 1.02, 0.0012, (0, 0, -0.0022), 8),
+    ]
+
+
+def _cigarro_papel():
+    """O papel branco, de 0 a PAPEL (o jogo encolhe em Z enquanto ele queima)."""
+    return [Z("branco", RAIO_DO_CIGARRO * 0.99, PAPEL, (0, 0, PAPEL / 2), 8)]
+
+
+def _cigarro_ponta():
+    """A ponta apagada (o fumo aparecendo na boca do papel), a origem na ponta do papel."""
+    return [Z("chocolate", RAIO_DO_CIGARRO * 0.85, 0.0008, (0, 0, 0.0001), 8)]
+
+
+def _cigarro_brasa():
+    """A brasa (a faixa laranja que o jogo acende), a origem na ponta do papel."""
+    return [Z("laranja_vivo", RAIO_DO_CIGARRO * 0.97, 0.0020, (0, 0, 0.0020), 8)]
+
+
+def _cigarro_cinza():
+    """A beira queimada do papel e a cinza da ponta, em volta da brasa, a origem na ponta do papel."""
+    R = RAIO_DO_CIGARRO
+    return [
+        Z("carvao", R, 0.0012, (0, 0, 0.0004), 8),
+        T("cinza_claro", R * 0.9, R * 0.5, 0.0025, (0, 0, 0.00425), 8),
+    ]
+
+
+def _bituca():
+    """A bituca deitada (o comprido em X), a origem no meio: o filtro e o toco de papel amassado, queimado na ponta."""
+    F, R = FILTRO, RAIO_DO_CIGARRO
+    x0 = -0.01865
+    j = x0 + F   # a emenda
+    d = (math.cos(math.radians(18)), 0, -math.sin(math.radians(18)))   # o toco dobrado 18° para baixo
+
+    def em(t):
+        return (j + d[0] * t, 0, d[2] * t)
+
+    return [
+        Z("filtro", R, F, (x0 + F / 2, 0, 0), 8, "X"),
+        Z("creme", R * 0.82, 0.0006, (x0 - 0.0002, 0, 0), 8, "X"),
+        Z("dourado", R * 1.02, 0.0012, (j - 0.0022, 0, 0), 8, "X"),
+        C("branco", (0.010, 0.0112, 0.0058), em(0.005), giro=(0, 18, 0)),
+        C("carvao", (0.0025, 0.0102, 0.0052), em(0.0112), giro=(0, 18, 0)),
+        C("cinza_claro", (0.0015, 0.006, 0.004), em(0.0128), giro=(0, 18, 0)),
+    ]
+
+
+def _isqueiro():
+    """O isqueiro de plástico azul, em pé, a origem no meio do corpo: o capuz de metal baixo com as duas orelhas, a roda
+    da pedra entre elas, a alavanca do gás atrás da roda e o bico na frente (a chama nasce no BOCA_DO_ISQUEIRO)."""
+    p = [
+        C("azul", (0.0325, 0.0182, 0.087), (0, 0, 0), chanfro=0.006),
+        C("azul_escuro", (0.0315, 0.0172, 0.004), (0, 0, -0.0425), chanfro=0.0012),
+        C("aco", (0.027, 0.0155, 0.009), (0, 0, 0.0465), chanfro=0.0012),
+        Z("aco_escuro", 0.0050, 0.012, (0, 0.0025, 0.0565), 12, "X"),
+        C("preto", (0.010, 0.0055, 0.006), (0, 0.0075, 0.053), chanfro=0.001),
+        Z("carvao", 0.0016, 0.004, (0, -0.0040, 0.0525), 6),
+    ]
+    for s in (-1, 1):
+        p.append(C("aco", (0.003, 0.0125, 0.012), (s * 0.0095, 0.0005, 0.0555), chanfro=0.0008))
+    return p
+
+
+def _isqueiro_chama():
+    """A chama (que o jogo acende), a origem na boca do isqueiro: a gota, com a base azul, a barriga laranja e a ponta
+    amarela."""
+    return [
+        T("azul_claro", 0.0012, 0.0032, 0.0025, (0, 0, 0.00125), 8),
+        T("laranja_vivo", 0.0032, 0.0052, 0.0040, (0, 0, 0.0045), 8),
+        T("amarelo", 0.0052, 0.0046, 0.0040, (0, 0, 0.0085), 8),
+        T("amarelo", 0.0046, 0.0, 0.0120, (0, 0, 0.0165), 8),
+    ]
+
+
+# ------------------------------------------------------------------ o prato (04/11/2026: o Plano_NPCs_Bunker.md da pasta de arte, a parte 4)
+# O prato de comida que o cozinheiro do bunker faz: o prato fundo de inox com o ensopado (o molho, a carne, a cenoura, a
+# batata, a ervilha e o feijão) e a colher; o prato vazio (os restos e a colher) e o estragado (o mofo e a mosca). Os
+# três são itens, com o ícone e a foto. As peças, sem ícone, são das animações e do jogo: o prato sozinho, a comida (a
+# origem no fundo do prato, como ele: o jogo a encolhe em z enquanto o morador come), a comida estragada, os restos, a
+# colher (a origem onde os dedos seguram, ao longo de +X, a concha na ponta) e o bocado na colher (a mesma origem). Tudo
+# 30% maior que o de verdade, como o fumo (a mão de blocos e a mobília em ×1,30): o prato tem 29 cm. A origem do prato é
+# embaixo, no meio.
+
+PRATO = 1.3
+# onde a colher fica no prato cheio e no vazio (no espaço do prato: a pegada, o giro em z e a inclinação em y)
+# (no cheio, o cabo apoiado na aba e a concha no meio do ensopado; no vazio, a concha no fundo e o cabo subindo pela aba)
+COLHER_NO_PRATO = ((0.072 * PRATO, -0.040 * PRATO, 0.036 * PRATO), 151.0, 2.0)
+COLHER_NO_VAZIO = ((0.060 * PRATO, 0.045 * PRATO, 0.0425), 217.0, 12.0)
+
+eq.CORES.update({
+    "molho": (2, 3), "carne_cozida": (8, 4), "batata": (9, 13), "cenoura": (11, 8), "ervilha": (11, 10),
+    "feijao_cozido": (8, 13), "inox": (11, 15), "inox_fora": (8, 11),
+    "molho_estragado": (7, 6), "estragado_escuro": (5, 10), "mofo": (2, 8), "mofo_claro": (2, 12), "mofo_branco": (10, 5),
+})
+
+
+def _torno(bm, uv, pontos, lados=20, centro=(0.0, 0.0, 0.0)):
+    """Uma peça de torno: os pontos (raio, z, cor) girados em volta de z; a cor de cada ponto é a do trecho que vai dele
+    ao próximo. Um raio 0 numa ponta fecha ela num ponto (o prato é fechado: começa e acaba no eixo)."""
+    cx, cy, cz = centro
+    aneis = []
+    for r, z, _ in pontos:
+        if r <= 1e-7:
+            aneis.append([bm.verts.new((cx, cy, cz + z))])
+        else:
+            aneis.append([bm.verts.new((cx + r * math.cos(2 * math.pi * i / lados), cy + r * math.sin(2 * math.pi * i / lados),
+                                        cz + z)) for i in range(lados)])
+    for k in range(len(aneis) - 1):
+        a, b = aneis[k], aneis[k + 1]
+        faces = []
+        for i in range(lados):
+            j = (i + 1) % lados
+            if len(a) == 1 and len(b) == 1:
+                continue
+            if len(a) == 1:
+                vs = [a[0], b[j], b[i]]
+            elif len(b) == 1:
+                vs = [a[i], a[j], b[0]]
+            else:
+                vs = [a[i], a[j], b[j], b[i]]
+            faces.append(bm.faces.new(vs))
+        eq._pintar(bm, uv, faces, pontos[k][2])
+
+
+def _elipsoide(bm, uv, cor, raios, centro, giro=(0, 0, 0), u=8, v=5):
+    """Uma bolha (o bocado, o mofo, a mosca): a esfera baixa achatada pelos raios (x, y, z), girada (graus, X Y Z)."""
+    r = bmesh.ops.create_uvsphere(bm, u_segments=u, v_segments=v, radius=1.0)
+    m = Matrix.Translation(Vector(centro)) @ Matrix.Rotation(math.radians(giro[2]), 4, "Z") @ \
+        Matrix.Rotation(math.radians(giro[1]), 4, "Y") @ Matrix.Rotation(math.radians(giro[0]), 4, "X") @ \
+        Matrix.Diagonal((raios[0], raios[1], raios[2], 1.0))
+    bmesh.ops.transform(bm, matrix=m, verts=r["verts"])
+    eq._pintar(bm, uv, list({f for vv in r["verts"] for f in vv.link_faces}), cor)
+
+
+def _com_matriz(bm, uv, M, pecas):
+    """As peças (no espaço delas) levadas por M (a colher no prato). As novas são achadas pelo conjunto, e não pela posição
+    na lista: o chanfro apaga vértices, e os novos ocupam os buracos que ficaram antes (pela posição, um pedaço de cenoura
+    do ensopado ia junto com a colher)."""
+    antes = set(bm.verts)
+    for p in pecas:
+        p[0](bm, uv, *p[1:])
+    bmesh.ops.transform(bm, matrix=M, verts=[v for v in bm.verts if v not in antes])
+
+
+def E(cor, raios, centro, giro=(0, 0, 0), u=8, v=5):
+    return (_elipsoide, cor, raios, centro, giro, u, v)
+
+
+def _no_lugar(lugar):
+    (x, y, z), giro, inclina = lugar
+    return Matrix.Translation((x, y, z)) @ Matrix.Rotation(math.radians(giro), 4, "Z") @ \
+        Matrix.Rotation(math.radians(inclina), 4, "Y")
+
+
+def _prato_fundo():
+    """O prato fundo de inox (22 cm de verdade): o pé, a parede, a aba larga e o lado de dentro."""
+    k = PRATO
+    pontos = [(0.0, 0.003, "aco"), (0.064, 0.003, "aco"), (0.067, 0.0, "aco"), (0.073, 0.0, "inox_fora"),
+              (0.076, 0.005, "inox_fora"), (0.086, 0.026, "inox_fora"), (0.110, 0.034, "inox"), (0.112, 0.037, "inox"),
+              (0.110, 0.039, "inox"), (0.085, 0.031, "inox"), (0.073, 0.009, "inox"), (0.0, 0.006, "inox")]
+    return [(_torno, [(r * k, z * k, c) for r, z, c in pontos], 24)]
+
+
+def _altura_da_comida(r):
+    """O alto do monte de comida no raio r (de verdade, sem o PRATO): o perfil do _monte."""
+    perfil = [(0.0, 0.030), (0.032, 0.028), (0.055, 0.022), (0.068, 0.014), (0.071, 0.0085)]
+    for (r0, z0), (r1, z1) in zip(perfil, perfil[1:]):
+        if r <= r1:
+            return z0 + (z1 - z0) * (r - r0) / (r1 - r0)
+    return perfil[-1][1]
+
+
+def _monte(cor, cores_dos_pedacos, seed, n=18):
+    """O monte de comida no prato (o espaço do prato): o domo e os pedaços por cima, das cores sorteadas pelos pesos."""
+    import random
+    k = PRATO
+    rnd = random.Random(seed)
+    pontos = [(0.0, 0.0062, cor), (0.071, 0.0085, cor), (0.068, 0.014, cor), (0.055, 0.022, cor), (0.032, 0.028, cor),
+              (0.0, 0.030, cor)]
+    pecas = [(_torno, [(r * k, z * k, c) for r, z, c in pontos], 16)]
+    total = sum(p for _, _, p in cores_dos_pedacos)
+    for _ in range(n):
+        x = rnd.uniform(0, total)
+        for c, tam, p in cores_dos_pedacos:
+            x -= p
+            if x <= 0:
+                break
+        a = rnd.uniform(0, 2 * math.pi)
+        r = math.sqrt(rnd.random()) * 0.058
+        s = tam * rnd.uniform(0.75, 1.15)
+        z = _altura_da_comida(r) + s * 0.2
+        pecas.append(C(c, (s * k, s * rnd.uniform(0.7, 1.0) * k, s * 0.75 * k), (r * math.cos(a) * k, r * math.sin(a) * k, z * k),
+                       giro=(rnd.uniform(-25, 25), rnd.uniform(-25, 25), rnd.uniform(0, 90)), chanfro=0.0012))
+    return pecas
+
+
+def _comida():
+    return _monte("molho", [("carne_cozida", 0.016, 3), ("cenoura", 0.013, 2.5), ("batata", 0.016, 2.5),
+                            ("ervilha", 0.006, 1.5), ("feijao_cozido", 0.008, 1.2)], 4401, 22)
+
+
+def _comida_estragada():
+    import random
+    p = _monte("molho_estragado", [("estragado_escuro", 0.015, 3), ("mofo", 0.012, 2), ("batata", 0.014, 0.6)], 4401, 18)
+    rnd = random.Random(4402)
+    k = PRATO
+    # as manchas de mofo felpudo por cima, o branco esverdeado e o claro
+    for i in range(9):
+        a = rnd.uniform(0, 2 * math.pi)
+        r = math.sqrt(rnd.random()) * 0.055
+        z = _altura_da_comida(r)
+        s = rnd.uniform(0.008, 0.016)
+        p.append(E("mofo_branco" if i % 3 else "mofo_claro", (s * k, s * 0.8 * k, 0.003 * k),
+                   (r * math.cos(a) * k, r * math.sin(a) * k, (z + 0.0015) * k), (0, 0, rnd.uniform(0, 180))))
+    return p
+
+
+def _fundo_do_prato(r):
+    """O alto do fundo do prato por dentro no raio r (de verdade, sem o PRATO)."""
+    return 0.006 + 0.003 * min(r, 0.073) / 0.073
+
+
+def _restos():
+    """Os restos no prato vazio: as manchas de molho no fundo, umas ervilhas, um feijão e um pedaço de cenoura."""
+    import random
+    rnd = random.Random(4410)
+    k = PRATO
+    p = []
+    for i in range(11):
+        a = rnd.uniform(0, 2 * math.pi)
+        r = rnd.uniform(0.0, 0.055)
+        p.append(C("molho", (rnd.uniform(0.015, 0.042) * k, rnd.uniform(0.008, 0.022) * k, 0.0012 * k),
+                   (r * math.cos(a) * k, r * math.sin(a) * k, (_fundo_do_prato(r) + 0.0003) * k), giro=(0, 0, rnd.uniform(0, 180)),
+                   chanfro=0))
+    for c, x, y in (("ervilha", 0.03, -0.02), ("ervilha", -0.02, 0.035), ("feijao_cozido", 0.045, 0.02), ("cenoura", -0.04, -0.03)):
+        z = _fundo_do_prato(math.hypot(x, y)) + 0.0022
+        p.append(C(c, (0.007 * k, 0.006 * k, 0.005 * k), (x * k, y * k, z * k), giro=(0, 0, rnd.uniform(0, 90)), chanfro=0.001))
+    return p
+
+
+def _colher():
+    """A colher de inox (17,5 cm de verdade), ao longo de +X com a concha na ponta, a origem na pegada (a uns 6 cm do fim
+    do cabo): o cabo chato, a ponta redonda dele, o pescoço descendo e a concha."""
+    k = PRATO
+    return [
+        C("inox", (0.085 * k, 0.014 * k, 0.003 * k), (-0.0175 * k, 0, 0), chanfro=0.0008),
+        Z("inox", 0.0085 * k, 0.003 * k, (-0.060 * k, 0, 0), 10),
+        C("inox", (0.028 * k, 0.007 * k, 0.003 * k), (0.038 * k, 0, -0.002 * k), giro=(0, 10, 0), chanfro=0.0006),
+        E("inox", (0.030 * k, 0.020 * k, 0.0055 * k), (0.078 * k, 0, -0.0055 * k), u=10, v=5),
+    ]
+
+
+def _bocado():
+    """O bocado na concha da colher (a mesma origem da colher)."""
+    k = PRATO
+    return [
+        E("molho", (0.022 * k, 0.014 * k, 0.006 * k), (0.078 * k, 0, 0.0005 * k)),
+        C("cenoura", (0.008 * k, 0.007 * k, 0.005 * k), (0.072 * k, 0.003 * k, 0.005 * k), giro=(0, 0, 30), chanfro=0.001),
+        C("carne_cozida", (0.009 * k, 0.008 * k, 0.006 * k), (0.085 * k, -0.004 * k, 0.005 * k), giro=(0, 0, 70), chanfro=0.001),
+    ]
+
+
+def _mosca():
+    """A mosca pousada na aba do prato estragado (o corpo, a cabeça e as asas)."""
+    k = PRATO
+    x, z = 0.098 * k, 0.0372 * k
+    return [
+        E("carvao", (0.0045 * k, 0.0025 * k, 0.0022 * k), (x, 0.0, z + 0.0022 * k), (0, 0, 20)),
+        E("vermelho_escuro", (0.0018 * k, 0.0018 * k, 0.0016 * k), (x + 0.004 * k, 0.0015 * k, z + 0.0024 * k)),
+        C("cinza_claro", (0.006 * k, 0.003 * k, 0.0004 * k), (x - 0.002 * k, 0.003 * k, z + 0.0045 * k), giro=(0, 0, 50), chanfro=0),
+        C("cinza_claro", (0.006 * k, 0.003 * k, 0.0004 * k), (x - 0.002 * k, -0.002 * k, z + 0.0045 * k), giro=(0, 0, -10), chanfro=0),
+    ]
+
+
+def _prato_de_comida():
+    return _prato_fundo() + _comida() + [(_com_matriz, _no_lugar(COLHER_NO_PRATO), _colher())]
+
+
+def _prato_vazio():
+    return _prato_fundo() + _restos() + [(_com_matriz, _no_lugar(COLHER_NO_VAZIO), _colher())]
+
+
+def _prato_estragado():
+    return _prato_fundo() + _comida_estragada() + _mosca()
+
+
+# as peças do prato (sem ícone: as animações e o jogo)
+PECAS_DO_PRATO = {
+    "PratoFundo": _prato_fundo, "PratoComida": _comida, "PratoComidaEstragada": _comida_estragada,
+    "PratoRestos": _restos, "Colher": _colher, "ColherBocado": _bocado,
+}
+
+
+# as peças do fumo (sem ícone: as animações e o jogo)
+PECAS_DO_FUMO = {
+    "MacoDeCigarrosCaixa": _caixa_do_maco, "MacoDeCigarrosTampa": _tampa_do_maco,
+    "CigarroFiltro": _cigarro_filtro, "CigarroPapel": _cigarro_papel, "CigarroPonta": _cigarro_ponta,
+    "CigarroBrasa": _cigarro_brasa, "CigarroCinza": _cigarro_cinza, "Bituca": _bituca,
+    "Isqueiro": _isqueiro, "IsqueiroChama": _isqueiro_chama,
+}
+
+
 # nome do modelo -> (as peças, as células do ícone, onde a câmera do ícone olha de, onde a da foto)
 MODELOS = {
     "Feijao": _feijao, "Carne": _carne, "Milho": _milho, "Sopa": _sopa, "Salgadinho": _salgadinho,
@@ -636,6 +1096,8 @@ MODELOS = {
     "Lanterna": _lanterna, "Pilhas": _pilhas,
     "Galao": _galao,
     "Gazua": _gazua, "PeDeCabra": _pe_de_cabra,
+    "MacoDeCigarros": _maco,
+    "PratoDeComida": _prato_de_comida, "PratoVazio": _prato_vazio, "PratoEstragado": _prato_estragado,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -644,7 +1106,8 @@ MONTADAS = {
 }
 # os deitados (vistos mais de cima no ícone)
 DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "PecasDeMetal", "Fios", "Pregos", "VaraDePesca",
-            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas", "Gazua", "PeDeCabra"}
+            "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas", "Gazua", "PeDeCabra",
+            "PratoDeComida", "PratoVazio", "PratoEstragado"}
 # os que ocupam mais de uma célula na mochila (o ícone na proporção delas, 128 px por célula; o Itens.Tamanho da Unity)
 CELULAS = {"PeDeCabra": (2, 1)}
 
@@ -659,7 +1122,7 @@ def construir():
     cena = _cena()
     for o in list(cena.objects):
         bpy.data.objects.remove(o, do_unlink=True)
-    todos = list(MODELOS.items()) + list(MONTADAS.items())
+    todos = list(MODELOS.items()) + list(MONTADAS.items()) + list(PECAS_DO_FUMO.items()) + list(PECAS_DO_PRATO.items())
     for i, (nome, f) in enumerate(todos):
         o = eq._objeto(nome, f(), cena)
         o.location = ((i % 8) * 0.8, (i // 8) * 0.8, 0)
@@ -675,11 +1138,8 @@ def exportar():
     print("loot: gravado", SAIDA)
 
 
-def imagens(so=None):
-    """Os ícones (128 x 128) e as fotos (600 x 500, de 3/4), no estilo dos outros: o Workbench com a textura, a
-    cavidade, o contorno e o fundo transparente."""
-    cena = _cena()
-    bpy.context.view_layer.update()   # as posições dos objetos (sem isto, a câmera mirava a origem e saía vazio)
+def _estilo(cena):
+    """O estilo dos ícones: o Workbench com a textura, a cavidade, o contorno e o fundo transparente."""
     r = cena.render
     try:
         r.engine = "BLENDER_WORKBENCH"
@@ -696,6 +1156,15 @@ def imagens(so=None):
     s.show_object_outline = True
     s.object_outline_color = (0.05, 0.05, 0.05)
     cena.view_settings.view_transform = "Standard"
+    return r
+
+
+def imagens(so=None):
+    """Os ícones (128 x 128) e as fotos (600 x 500, de 3/4), no estilo dos outros: o Workbench com a textura, a
+    cavidade, o contorno e o fundo transparente."""
+    cena = _cena()
+    bpy.context.view_layer.update()   # as posições dos objetos (sem isto, a câmera mirava a origem e saía vazio)
+    r = _estilo(cena)
     objs = {o.name.split("_")[0]: o for o in cena.objects if o.type == "MESH"}
     for nome, o in objs.items():
         if nome not in MODELOS or (so and nome not in so):
@@ -735,6 +1204,147 @@ def prancha(caminho):
     bpy.ops.render.render(write_still=True)
 
 
+def _mao_do_principal(caminho):
+    """A mão esquerda do personagem principal (a Maos do PrincipalBloco.blend da pasta de arte, na pose T, sem o
+    esqueleto): a palma para baixo, os dedos para +X e o meio dela na origem."""
+    with bpy.data.libraries.load(caminho, link=False) as (_de, para):
+        para.objects = ["Maos", "PrincipalBloco_Rig"]
+    cena = _cena()
+    maos, rig = para.objects
+    for o in (maos, rig):
+        cena.collection.objects.link(o)
+    rig.data.pose_position = "REST"
+    bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(maos.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
+    me.transform(maos.matrix_world)
+    for o in (maos, rig):
+        bpy.data.objects.remove(o, do_unlink=True)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.x < 0.3], context="VERTS")
+    meio = sum((v.co for v in bm.verts), Vector()) / len(bm.verts)
+    bmesh.ops.translate(bm, vec=-meio, verts=bm.verts)
+    bm.to_mesh(me)
+    bm.free()
+    for im in bpy.data.images:
+        if im.filepath.startswith("//"):
+            im.filepath = os.path.normpath(os.path.join(os.path.dirname(caminho), im.filepath[2:]))
+    o = bpy.data.objects.new("MaoDoPrincipal", me)
+    cena.collection.objects.link(o)
+    return o
+
+
+def folha_do_fumo(caminho, principal):
+    """A folha da parte 2 do Plano_Cigarro.md (3 x 2 fotos): o maço de frente e de costas; o maço aberto com um cigarro
+    subindo; os cigarros em pé (o novo, o aceso, o queimado pela metade e no fim) e a bituca; o isqueiro aceso; e tudo
+    deitado ao lado da mão do personagem principal, de cima e de 3/4 (o tamanho)."""
+    import numpy as np
+    cena = _cena()
+    bpy.context.view_layer.update()
+    r = _estilo(cena)
+    base = {o.name[:-6]: o for o in cena.objects if o.type == "MESH" and o.name.endswith("_corpo")}
+    mao = _mao_do_principal(principal)
+    atual, paineis = [], []
+
+    def M(x, y, z):
+        return Matrix.Translation((x, y, z))
+
+    def R(graus, eixo):
+        return Matrix.Rotation(math.radians(graus), 4, eixo)
+
+    def por(nome, m):
+        c = base[nome].copy()   # a mesma malha
+        cena.collection.objects.link(c)
+        c.matrix_world = m @ Matrix.Rotation(math.radians(90), 4, "X")
+        atual.append(c)
+
+    def cigarro(m, sobra=None):
+        """Um cigarro inteiro na emenda m: apagado (sobra None) ou aceso, com o papel encolhido até a sobra."""
+        s = 1.0 if sobra is None else sobra
+        por("CigarroFiltro", m)
+        por("CigarroPapel", m @ Matrix.Diagonal((1.0, 1.0, s, 1.0)))
+        ponta = m @ M(0, 0, PAPEL * s)
+        if sobra is None:
+            por("CigarroPonta", ponta)
+        else:
+            por("CigarroBrasa", ponta)
+            por("CigarroCinza", ponta)
+
+    def painel(orto, direcao, folga, com_mao=False):
+        paineis.append((list(atual) + ([mao] if com_mao else []), orto, direcao, folga))
+        atual.clear()
+
+    # 1. o maço fechado, de frente e de costas
+    por("MacoDeCigarros", M(10.0, 0, MACO_A / 2) @ R(-15, "Z"))
+    por("MacoDeCigarros", M(10.085, 0.02, MACO_A / 2) @ R(165, "Z"))
+    painel(False, (0.35, -1.0, 0.45), 1.0)
+    # 2. o maço aberto (a tampa a -105°) com um cigarro subindo da fileira da frente
+    m = M(20.0, 0, MACO_A / 2)
+    por("MacoDeCigarrosCaixa", m)
+    por("MacoDeCigarrosTampa", m @ M(*DOBRADICA) @ R(-105, "X"))
+    topo = MACO_A / 2 - 0.0025
+    cigarro(m @ M(SAIDA_DO_CIGARRO[0], SAIDA_DO_CIGARRO[1], topo + 0.035 - FILTRO) @ R(180, "Y"))
+    painel(False, (0.45, -1.0, 0.95), 1.0)
+    # 3. os cigarros em pé (a boca embaixo): o novo, o aceso, pela metade e no fim; e a bituca deitada
+    for k, sobra in enumerate((None, 1.0, 0.5, 0.15)):
+        cigarro(M(30.0 + k * 0.03, 0, FILTRO), sobra)
+    por("Bituca", M(30.0 + 4 * 0.03 + 0.01, 0, RAIO_DO_CIGARRO + 0.001) @ R(-30, "Z"))
+    painel(True, (0.0, -1.0, 0.3), 1.25)
+    # 4. o isqueiro aceso
+    m = M(40.0, 0, 0.0435)
+    por("Isqueiro", m)
+    por("IsqueiroChama", m @ M(*BOCA_DO_ISQUEIRO))
+    painel(False, (0.55, -1.0, 0.35), 1.0)
+    # 5 e 6. deitados ao lado da mão do principal (a palma para baixo, os dedos para +X)
+    mao.matrix_world = M(50.0, 0.0, 0.035)
+    por("MacoDeCigarros", M(49.97, -0.13, MACO_P / 2) @ R(-90, "X"))
+    cigarro(M(50.03, -0.085, RAIO_DO_CIGARRO) @ R(90, "Y"))
+    cigarro(M(50.03, -0.11, RAIO_DO_CIGARRO) @ R(90, "Y"), 1.0)
+    por("Isqueiro", M(50.12, -0.12, 0.0091) @ R(-90, "X"))
+    grupo = list(atual)
+    painel(True, (0.0, -0.3, 1.0), 1.15, True)
+    atual.extend(grupo)
+    painel(False, (0.5, -1.0, 0.8), 0.85, True)
+
+    W, H, COLUNAS = 640, 560, 3
+    linhas = (len(paineis) + COLUNAS - 1) // COLUNAS
+    folha = np.zeros((linhas * H, COLUNAS * W, 4), np.float32)
+    folha[..., :3] = (0.20, 0.21, 0.23)
+    folha[..., 3] = 1.0
+    todos = [o for o in cena.objects if o.type == "MESH"]
+    for k, (objs, orto, direcao, folga) in enumerate(paineis):
+        for o in todos:
+            o.hide_render = o not in objs
+        bpy.context.view_layer.update()
+        cantos = [o.matrix_world @ Vector(c) for o in objs for c in o.bound_box]
+        lo = Vector((min(c.x for c in cantos), min(c.y for c in cantos), min(c.z for c in cantos)))
+        hi = Vector((max(c.x for c in cantos), max(c.y for c in cantos), max(c.z for c in cantos)))
+        tam = max(hi - lo)
+        r.resolution_x, r.resolution_y = W, H
+        if orto:
+            eq._camera(cena, True, (lo + hi) / 2, direcao, 3.0, tam * folga)
+        else:
+            eq._camera(cena, False, (lo + hi) / 2, direcao, tam * 2.3 * folga, tam)
+        arq = os.path.join(bpy.app.tempdir, f"folha_do_fumo_{k}.png")
+        r.filepath = arq
+        bpy.ops.render.render(write_still=True)
+        im = bpy.data.images.load(arq)
+        px = np.empty(W * H * 4, np.float32)
+        im.pixels.foreach_get(px)
+        px = px.reshape(H, W, 4)
+        bpy.data.images.remove(im)
+        y0, x0 = (linhas - 1 - k // COLUNAS) * H, (k % COLUNAS) * W   # as linhas da imagem contam de baixo
+        a = px[..., 3:4]
+        folha[y0:y0 + H, x0:x0 + W, :3] = folha[y0:y0 + H, x0:x0 + W, :3] * (1 - a) + px[..., :3] * a
+    out = bpy.data.images.new("FolhaDoFumo", COLUNAS * W, linhas * H, alpha=False)
+    out.pixels.foreach_set(folha.ravel())
+    out.filepath_raw = caminho
+    out.file_format = "PNG"
+    out.save()
+    print("loot: a folha do fumo em", caminho)
+
+
 if __name__ == "__main__":
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["tudo"]
     etapa = args[0] if args else "tudo"
@@ -745,3 +1355,5 @@ if __name__ == "__main__":
         imagens(args[1:] or None)
     if etapa == "prancha":
         prancha(args[1])
+    if etapa == "folha":   # -- folha <saída.png> <PrincipalBloco.blend>
+        folha_do_fumo(args[1], args[2])

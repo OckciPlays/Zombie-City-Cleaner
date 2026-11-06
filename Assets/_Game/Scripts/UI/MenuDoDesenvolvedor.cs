@@ -16,7 +16,8 @@ namespace ZombieCityCleaner.UI
     /// armas, a comida, as mochilas, as caixas de munição cheias, as peças do motor a 100%, o saque e as roupas) ficam no
     /// F3 desde 31/10/2026 (MenuDoDesenvolvedor.Itens.cs), na mochila ou no chão à frente. Fica
     /// no jogador (só o dono abre); os pedidos vão para o anfitrião, que faz. Na cena Mundo, também o painel do mundo
-    /// (MenuDoDesenvolvedor.Mundo.cs: a semente, voar com F2 e ir para um ponto).
+    /// (MenuDoDesenvolvedor.Mundo.cs: a semente, voar com F2 e ir para um ponto). Embaixo, o painel do vídeo
+    /// (MenuDoDesenvolvedor.Video.cs: gravar jogando, o F8).
     /// </summary>
     public partial class MenuDoDesenvolvedor : NetworkBehaviour
     {
@@ -62,6 +63,7 @@ namespace ZombieCityCleaner.UI
                 Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
                 Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua, Item.ChaveDoCupe,
                 Item.CaixaDeBolas, Item.TacoMadeira, Item.TacoEscuro, Item.TacoPreto, Item.TacoVermelho,
+                Item.MacoDeCigarros,
             }),
         };
         int _especie;
@@ -130,6 +132,7 @@ namespace ZombieCityCleaner.UI
             }
             AtalhosDoMundo(teclado);
             AtalhosDoMapaFixo(teclado);
+            AtalhoDoVideo(teclado);
         }
 
         void Avisar(string texto)
@@ -253,6 +256,9 @@ namespace ZombieCityCleaner.UI
             if (_boneco != null) GUI.Label(new Rect(x, y, w, 22 * u), Bonecos[_qualBoneco].nome, _texto);
             y += 26 * u;
             if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
+            // gravar um vídeo jogando (03/11/2026), embaixo
+            var video = PainelDoVideo(u, area);
+            Area = Rect.MinMaxRect(area.xMin, area.yMin, area.xMax, video.yMax);
 
             // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
             // (no Dia 0, o painel dele no lugar)
@@ -260,7 +266,7 @@ namespace ZombieCityCleaner.UI
             if (mundo.width <= 0f) mundo = PainelDoMundo(u, area);
             // ou, na cena do mapa fixo, o painel dele
             if (mundo.width <= 0f) mundo = PainelDoMapaFixo(u, area);
-            if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(area.yMax, mundo.yMax));
+            if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(Area.yMax, mundo.yMax));
             // o Oco de teste, ao lado do último painel
             var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
             Area = Rect.MinMaxRect(Area.xMin, Area.yMin, oco.xMax, Mathf.Max(Area.yMax, oco.yMax));

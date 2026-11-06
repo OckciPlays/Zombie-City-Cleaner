@@ -29,6 +29,8 @@ namespace ZombieCityCleaner.Roupas
     {
         public const string Corpo = "NPC_Corpo";
         public const string PrefixoDasPecas = "Roupa_";
+        /// <summary>O lugar do catálogo dos cabelos (com as versões de baixo do chapéu).</summary>
+        public const string LugarDoCabelo = "Cabelo";
 
         public TextAsset catalogo;
         [Tooltip("O NPC do catálogo vestido no começo (vazio: nenhuma peça, ou um sorteado do tipo)")]
@@ -181,8 +183,9 @@ namespace ZombieCityCleaner.Roupas
             Vestidas.Clear();
             Vestidas.AddRange(pedidas.Select(p => new CatalogoDasRoupas.PecaVestida { nome = p.nome, cores = (string[])p.cores.Clone() }));
             // as que se desenham: com um chapéu na cabeça, os cabelos grandes viram a versão de baixo do chapéu (as mesmas
-            // cores); as vestidas continuam as pedidas (sem o chapéu, o cabelo volta)
-            var lista = pedidas.Select(p => new CatalogoDasRoupas.PecaVestida { nome = Desenhada(p.nome), cores = p.cores }).ToList();
+            // cores), e com a balaclava o cabelo some; as vestidas continuam as pedidas (sem o chapéu, o cabelo volta)
+            var lista = pedidas.Select(p => new CatalogoDasRoupas.PecaVestida { nome = Desenhada(p.nome), cores = p.cores })
+                .Where(p => p.nome != null).ToList();
             var vestidas = new HashSet<string>(lista.Select(p => PrefixoDasPecas + p.nome));
             // as faces cobertas de cada um (o corpo e as peças vestidas), por todas as peças vestidas
             var escondidas = new Dictionary<string, HashSet<int>>();
@@ -228,11 +231,14 @@ namespace ZombieCityCleaner.Roupas
         /// <summary>
         /// A peça que se desenha no lugar de uma vestida: com um chapéu vestido (os bonés, o quepe, o gorro, o capacete e o
         /// chapéu de caubói), o cabelo grande vira a versão dele de baixo do chapéu (só a calota rente: ele saía por cima e
-        /// por trás deles); senão, ela mesma.
+        /// por trás deles); com uma peça que esconde o cabelo inteiro vestida (a balaclava, 03/11/2026, a pedido: com a versão
+        /// de baixo do chapéu, o rabo de cavalo, o coque e o cabelo curto ainda saíam por ela), o cabelo não se desenha
+        /// (null); senão, ela mesma.
         /// </summary>
         public string Desenhada(string peca)
         {
             var dados = Catalogo.DaPeca(peca);
+            if (dados != null && dados.lugar == LugarDoCabelo && Vestidas.Any(v => Catalogo.DaPeca(v.nome)?.esconde_cabelo == true)) return null;
             if (dados == null || string.IsNullOrEmpty(dados.sob_chapeu)) return peca;
             if (!Vestidas.Any(v => Catalogo.DaPeca(v.nome)?.cobre_cabelo == true)) return peca;
             return Catalogo.DaPeca(dados.sob_chapeu) != null && _renderers.ContainsKey(PrefixoDasPecas + dados.sob_chapeu)
@@ -317,12 +323,17 @@ namespace ZombieCityCleaner.Roupas
         public void Pintar(string peca, string[] cores)
         {
             Achar();
-            if (!_renderers.TryGetValue(PrefixoDasPecas + Desenhada(peca), out var r)) return;
-            _bloco ??= new MaterialPropertyBlock();
-            r.GetPropertyBlock(_bloco);
-            for (int k = 0; k < 3; k++)
-                _bloco.SetColor(k == 0 ? "_Cor1" : k == 1 ? "_Cor2" : "_Cor3", CatalogoDasRoupas.Cor(cores[Mathf.Min(k, cores.Length - 1)]));
-            r.SetPropertyBlock(_bloco);
+            // o cabelo escondido pela balaclava não se desenha, mas guarda as cores (e as sobrancelhas ficam com a dele)
+            var desenhada = Desenhada(peca);
+            if (desenhada != null)
+            {
+                if (!_renderers.TryGetValue(PrefixoDasPecas + desenhada, out var r)) return;
+                _bloco ??= new MaterialPropertyBlock();
+                r.GetPropertyBlock(_bloco);
+                for (int k = 0; k < 3; k++)
+                    _bloco.SetColor(k == 0 ? "_Cor1" : k == 1 ? "_Cor2" : "_Cor3", CatalogoDasRoupas.Cor(cores[Mathf.Min(k, cores.Length - 1)]));
+                r.SetPropertyBlock(_bloco);
+            }
             var v = Vestidas.Find(x => x.nome == peca);
             if (v != null) v.cores = (string[])cores.Clone();
             if (Catalogo.DaPeca(peca)?.pelos == true) PintarCorpo();

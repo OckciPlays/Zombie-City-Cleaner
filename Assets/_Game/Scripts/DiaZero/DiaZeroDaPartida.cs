@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.DiaZero
     ///    pronta, o anfitrião cria os jogadores na sala da nossa casa (os clientes pedem, <see cref="ProntoNaRuaRpc"/>), sem
     ///    a pistola, com 1.000 dólares cada (<see cref="PrecosDoDiaZero.Economias"/>);
     ///  - o caixa manda o carrinho ao anfitrião (<see cref="PagarRpc"/>), que confere o dinheiro pela tabela e guarda as
-    ///    compras (aparecem no chão da casa, para todos);
+    ///    compras (vão direto para o bunker: não aparecem na casa; desde 03/11/2026);
     ///  - a porta do abrigo (<see cref="FecharAPortaRpc"/>, ou o F1): quem está fora de casa perde as compras; o mundo
     ///    começa a ser gerado, e a tela dos "5 anos depois" cobre a geração. Com o mundo pronto, cada um vai para o seu
     ///    ponto de nascimento (no mundo com o bunker, a sala de operações dele), e o anfitrião guarda as compras nos
@@ -405,15 +405,20 @@ namespace ZombieCityCleaner.DiaZero
             {
                 Carrinho.Pago();
                 TelaDoCaixa.Fechar();
-                Avisar($"Pago: {PrecosDoDiaZero.Dinheiro(total)}. As compras foram para a sua casa (sobraram {PrecosDoDiaZero.Dinheiro(sobrou)}).");
+                Avisar($"Pago: {PrecosDoDiaZero.Dinheiro(total)}. As compras foram direto para o bunker (sobraram {PrecosDoDiaZero.Dinheiro(sobrou)}).");
             }
             else Avisar(total > 0 ? $"Não deu: o total é {PrecosDoDiaZero.Dinheiro(total)} e você tem {PrecosDoDiaZero.Dinheiro(sobrou)}. Tire alguma coisa do carrinho."
                                   : "Não deu para pagar agora.");
         }
 
-        // as compras à mostra no chão da casa do Dia 0 (em todas as máquinas; só o desenho)
+        // as compras à mostra no chão da casa do Dia 0 (em todas as máquinas; só o desenho). Desligado desde 03/11/2026 (a
+        // pedido: "ao comprar um item ele não vai mais aparecer na casa, vai direto pro bunker"): elas vão para as estantes
+        // dos depósitos do bunker quando o mundo fica pronto (EntregarNoBunker), e a casa fica como está
+        static readonly bool ComprasAMostraNaCasa = false;
+
         void AoMudarAsCompras(NetworkListEvent<CompraDoDia> e)
         {
+            if (!ComprasAMostraNaCasa) return;
             var rua = RuaDoDiaZero.Instancia;
             var mundo = ItensNoMundo.Instancia;
             if (!_ruaPronta || rua == null || rua.NossaCasa == null || mundo == null || rua.LugaresDasCompras.Count == 0) return;
@@ -529,7 +534,7 @@ namespace ZombieCityCleaner.DiaZero
                 var inv = kv.Value.PlayerObject != null ? kv.Value.PlayerObject.GetComponent<InventarioJogador>() : null;
                 if (inv != null) inv.Pagar(Dinheiro(kv.Key));
             }
-            Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para a casa" +
+            Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para o bunker" +
                       (fora.Count > 0 ? $"; ficaram de fora: {string.Join(", ", fora)}." : "."));
             PortaFechouRpc(string.Join(", ", fora));
             // 5 anos depois, a saída do abrigo é de manhã (o relógio volta a andar)

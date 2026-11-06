@@ -749,7 +749,7 @@ namespace ZombieCityCleaner.Player
         void OnGUI()
         {
             if (_rede == null || !_rede.IsOwner || _fase == Fase.Fora || _fase == Fase.Saindo) return;
-            if (MenuOnline.Aberto || MenuOnline.ComTela || Carro == null) return;
+            if (MenuOnline.Aberto || MenuOnline.ComTela || Carro == null || Video.GravacaoNoMundo.SemHud) return;
             float u = Screen.height / 720f;
             if (Lugar == 0)
             {

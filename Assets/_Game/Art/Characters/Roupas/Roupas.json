@@ -4157,6 +4157,7 @@
    "textura": 87,
    "pelos": false,
    "cobre_cabelo": true,
+   "esconde_cabelo": true,
    "sob_chapeu": "",
    "de": "",
    "triangulos": 1676,

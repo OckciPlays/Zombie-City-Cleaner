@@ -32,6 +32,8 @@ namespace ZombieCityCleaner.Loot
         Lanterna = 116, Pilhas,
         // a gasolina (01/11/2026, a pedido: o galão é o saque que repõe o tanque do carro)
         Galao = 118,
+        // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço é a pilha dos cigarros
+        MacoDeCigarros = 119,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
         // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
@@ -155,10 +157,24 @@ namespace ZombieCityCleaner.Loot
         /// </summary>
         public const int Punhos = QuantosModelos;
         public const int TacoFP = QuantosModelos + 1;
-        public const int QuantosModelosFP = QuantosModelos + 2;
-        public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : Modelos[modelo];
-        /// <summary>O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia; a mão com o taco).</summary>
-        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : EhTaco(i) ? TacoFP : MaoDe(i);
+        /// <summary>
+        /// O fumo (03/11/2026): a mão com o maço (acender) e a mão com o cigarro aceso (tragar e o peteleco), os dois do
+        /// Jogador_FP_Cigarro.fbx (o bloco_cigarro.py da pasta de arte), com os clipes de cada um.
+        /// </summary>
+        public const int MacoFP = QuantosModelos + 2;
+        public const int CigarroFP = QuantosModelos + 3;
+        public const int QuantosModelosFP = QuantosModelos + 4;
+        public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : modelo == MacoFP ? "Maco"
+            : modelo == CigarroFP ? "Cigarro" : Modelos[modelo];
+        /// <summary>O nome do FBX dos braços (Jogador_FP_&lt;nome&gt;.fbx) e dos objetos dentro dele: o do modelo, ou "Cigarro" no fumo.</summary>
+        public static string ArquivoFP(int modelo) => modelo == MacoFP || modelo == CigarroFP ? "Cigarro" : ModeloFP(modelo);
+        /// <summary>
+        /// O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia; a mão com o taco; com o maço, a mão
+        /// com ele: o cigarro aceso troca para o <see cref="CigarroFP"/>, no FumoJogador).
+        /// </summary>
+        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : EhTaco(i) ? TacoFP : EhFumo(i) ? MacoFP : MaoDe(i);
+        /// <summary>O maço de cigarros (03/11/2026): vai na mão, e o clique acende um cigarro.</summary>
+        public static bool EhFumo(Item i) => i == Item.MacoDeCigarros;
 
         // os modelos de mão dos comestíveis e dos remédios (os clipes Usar: itens.py, 40 e 44 quadros a 24 fps)
         const int MaoDaLata = Armas.Quantas, MaoDaGarrafa = Armas.Quantas + 1;
@@ -237,6 +253,9 @@ namespace ZombieCityCleaner.Loot
             // arrombar (02/11/2026, o Plano_Portas.md da pasta de arte)
             Material(Item.Gazua, "Gazua", "gazua", "a gazua", "gazuas", "Na mochila: segure E numa porta trancada. Abre sem barulho, e às vezes quebra.", 5),
             Material(Item.PeDeCabra, "PeDeCabra", "pé de cabra", "o pé de cabra", "pés de cabra", "Na mochila: segure E numa porta trancada. Arromba rápido, com barulho.", 1),
+            // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o número da pilha é quantos cigarros sobram (até 20)
+            Material(Item.MacoDeCigarros, "MacoDeCigarros", "maço de cigarros", "o maço de cigarros", "maços de cigarros",
+                     "Blackwater. Na mão, clique: acende um. De noite, a brasa chama os zumbis de mais longe.", 20),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -396,7 +415,7 @@ namespace ZombieCityCleaner.Loot
         /// Vai para a mão e para os atalhos? As caixas de munição e as peças, não (só ficam na mochila); o que se veste
         /// também não.
         /// </summary>
-        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0);
+        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0 || EhFumo(i));
         public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.Municao762;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;

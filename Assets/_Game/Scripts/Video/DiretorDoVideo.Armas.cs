@@ -12,13 +12,6 @@ namespace ZombieCityCleaner.Video
     // munição, a dica do E e a luneta (sem as barras e os atalhos). Enter termina a tomada; parar o Play também.
     public partial class DiretorDoVideo
     {
-        // a tela em pé corta a arma de primeira pessoa (ela foi feita para a tela deitada, à direita do meio): a câmera dos
-        // braços abre mais (de 55° para 72°) e vai 6 cm para a direita e 2,5 cm para cima, e a arma aparece mais para a
-        // esquerda, inteira. Mover a câmera não muda para onde o cano aponta na tela (ele continua na mira); deslocar a
-        // imagem dela (a projeção) mudava, e o cano apontava à esquerda e abaixo da mira
-        const float CampoDosBracosEmPe = 72f;
-        static readonly Vector3 DesvioDosBracosEmPe = new Vector3(0.06f, 0.025f, 0f);
-
         IEnumerator PrepararArmas()
         {
             Clima(horaDasArmas, 0.7f, 0.5f);
@@ -36,15 +29,11 @@ namespace ZombieCityCleaner.Video
             return AnimarArmas(jogador);
         }
 
-        /// <summary>Com a tela em pé (a proporção menor que 1), os braços com o campo mais aberto e a câmera deles deslocada; deitada, como no jogo.</summary>
+        /// <summary>A tela em pé corta a arma: o mesmo ajuste da gravação no mundo (<see cref="GravacaoNoMundo.BracosEmPe"/>).</summary>
         void BracosEmPe()
         {
             var jogador = JogadorRede.Local;
-            if (jogador == null || jogador.cameraBracos == null) return;
-            var bracos = jogador.cameraBracos;
-            bool emPe = bracos.aspect < 1f;
-            bracos.fieldOfView = emPe ? CampoDosBracosEmPe : 55f;
-            bracos.transform.localPosition = emPe ? DesvioDosBracosEmPe : Vector3.zero;
+            if (jogador != null) GravacaoNoMundo.BracosEmPe(jogador.cameraBracos);
         }
 
         IEnumerator AnimarArmas(JogadorRede jogador)

@@ -84,6 +84,11 @@ namespace ZombieCityCleaner.Player
         [Tooltip("O corpo com o taco de sinuca em pé na mão direita, e onde fica o taco (a pegada e a ponta: o TacoNaMao).")]
         public RuntimeAnimatorController controladorDoTaco;
         public Transform tacoCorpo, pontaDoTacoCorpo;
+        [Tooltip("O corpo com o maço de cigarros (segurar e acender) e com o cigarro aceso (segurar, tragar e o peteleco), e os vazios das peças do fumo (Fumo_<Peça>: o FumoJogador).")]
+        public RuntimeAnimatorController controladorDoMaco, controladorDoCigarro;
+        public Transform[] fumoCorpo;
+        [Tooltip("As malhas das peças do fumo no corpo (como o que está na mão: no dono, só aparecem com o corpo à vista).")]
+        public Renderer[] renderersDoFumo;
 
         [Header("A pele dos braços de primeira pessoa")]
         [Tooltip("Jogador_Variacao0..3: a linha k da paleta tem a pele do personagem k (as mangas e as luvas também).")]
@@ -122,6 +127,12 @@ namespace ZombieCityCleaner.Player
         public readonly NetworkVariable<ulong> Chave = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
+        /// Abaixado (03/11/2026, a pedido: o C; <see cref="MovimentoPrimeiraPessoa.Agachado"/>), escrito pelo dono: o corpo
+        /// de todos toca o agachado (o parâmetro "Agachado" da árvore da locomoção, de 0 a 1, aos poucos).
+        /// </summary>
+        public readonly NetworkVariable<bool> Agachado = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+        /// <summary>
         /// O dono cria o personagem (a tela de criar, ou o personagem salvo): a aparência vai pela rede, e o que ele leva
         /// (o salvo, ou o começo de um novo) vai para o anfitrião.
         /// </summary>
@@ -132,6 +143,17 @@ namespace ZombieCityCleaner.Player
             Aparencia.Value = a;
             Inventario?.ComecarPersonagem();
         }
+
+        /// <summary>
+        /// Um ponto dos braços de primeira pessoa (a boca da arma) no lugar dele no mundo: no dono, os braços ficam perto da
+        /// origem (<see cref="BracosNaOrigem"/>); nos outros, ele mesmo.
+        /// </summary>
+        public Vector3 NoMundo(Vector3 pontoDosBracos)
+        {
+            if (_bracosNaOrigem == null) _bracosNaOrigem = GetComponent<BracosNaOrigem>();
+            return _bracosNaOrigem != null ? _bracosNaOrigem.NoMundo(pontoDosBracos) : pontoDosBracos;
+        }
+        BracosNaOrigem _bracosNaOrigem;
 
         /// <summary>As roupas do corpo (a aparência e, depois, as roupas achadas).</summary>
         public ZombieCityCleaner.Roupas.Vestimenta Vestimenta { get; private set; }
@@ -150,6 +172,8 @@ namespace ZombieCityCleaner.Player
         public float Velocidade => _velocidade;
         public LanternaJogador Lanterna { get; private set; }
         public VidaJogador Vida { get; private set; }
+        /// <summary>O fumo (o maço e o cigarro aceso, 03/11/2026).</summary>
+        public FumoJogador Fumo { get; private set; }
 
         /// <summary>Só no anfitrião: a gosma do Long prendeu este jogador (na máquina dele, ele se debate com E).</summary>
         public void PrenderNaGosma(float tempoParaSoltar)
@@ -235,6 +259,14 @@ namespace ZombieCityCleaner.Player
                             r.enabled = visivel;
                             r.renderingLayerMask = MascaraDoDono;
                         }
+            // as peças do fumo, como o que está na mão (o cigarro do corpo fica na frente do rosto)
+            if (renderersDoFumo != null)
+                foreach (var r in renderersDoFumo)
+                    if (r != null)
+                    {
+                        r.enabled = visivel;
+                        r.renderingLayerMask = MascaraDoDono;
+                    }
             var pneu = Inventario != null ? Inventario.PneuNoCorpo : null;
             if (pneu != null)
             {
@@ -249,6 +281,7 @@ namespace ZombieCityCleaner.Player
             _corpoFisico = GetComponent<CharacterController>();
             Lanterna = GetComponent<LanternaJogador>();
             Vida = GetComponent<VidaJogador>();
+            Fumo = GetComponent<FumoJogador>();
             Inventario = GetComponent<InventarioJogador>();
             Passageiro = GetComponent<PassageiroDoCarro>();
 
@@ -271,6 +304,10 @@ namespace ZombieCityCleaner.Player
                 // Plano_Personagem.md da pasta de arte)
                 if (GetComponent<NomesDosJogadores>() == null) gameObject.AddComponent<NomesDosJogadores>();
                 if (GetComponent<RoupasNosBracos>() == null) gameObject.AddComponent<RoupasNosBracos>();
+                // a mão esquerda na arma de fogo, por cima da animação dos braços, e os braços desenhados perto da origem
+                // (sem o tremor da precisão longe do meio do mapa) (03/11/2026)
+                if (GetComponent<MaoNaArma>() == null) gameObject.AddComponent<MaoNaArma>();
+                if (GetComponent<BracosNaOrigem>() == null) gameObject.AddComponent<BracosNaOrigem>();
             }
             AplicarPersonagem(Personagem.Value);
             if (dono)
@@ -390,6 +427,10 @@ namespace ZombieCityCleaner.Player
                 controladorDoTaco = c.controladorDoTaco;
                 tacoCorpo = c.taco;
                 pontaDoTacoCorpo = c.pontaDoTaco;
+                controladorDoMaco = c.controladorDoMaco;
+                controladorDoCigarro = c.controladorDoCigarro;
+                fumoCorpo = c.fumo;
+                renderersDoFumo = c.renderersDoFumo;
                 Vestimenta = c.vestimenta;
             }
             if (IsOwner)
@@ -449,19 +490,32 @@ namespace ZombieCityCleaner.Player
                 if (peca != null && peca.sharedMesh != null && peca.transform.Find("Fogo") == null)
                 {
                     var b = peca.sharedMesh.bounds;
-                    // a luz é a dos outros (no dono, a dos braços de primeira pessoa)
+                    // a luz no mundo é esta, também no dono (03/11/2026: os braços de primeira pessoa ficam perto da origem,
+                    // BracosNaOrigem, e a luz da tocha deles só os ilumina; antes, no dono, era ela que iluminava em volta)
                     var fogo = Loot.ConstrucoesNoMundo.Fogo(peca.transform, new Vector3(b.center.x, b.center.y, b.max.z - 0.03f),
-                        Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, IsOwner ? 0f : 14f, true, naMaoCorpo[m].layer);   // a luz maior (01/11/2026: era 8 m)
+                        Loot.ConstrucoesNoMundo.Instancia.materialDoFogo, 0.3f, 14f, true, naMaoCorpo[m].layer);   // a luz maior (01/11/2026: era 8 m)
                     if (fogo.TryGetComponent<Light>(out var luz)) luz.intensity = 2.4f;
                 }
             }
-            int k = m - Armas.Quantas;
+            AtualizarControladorDoCorpo();
+            if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, id);
+        }
+
+        /// <summary>
+        /// O controlador do corpo para o que está na mão: o da arma, o do taco, o do maço (ou, com o cigarro aceso, o do
+        /// cigarro: o FumoJogador chama de novo quando acende e quando joga fora), o do item ou o dos punhos.
+        /// </summary>
+        public void AtualizarControladorDoCorpo()
+        {
+            if (animadorCorpo == null || Inventario == null) return;
+            var item = Inventario.NaMao;
+            int k = Itens.MaoDe(item) - Armas.Quantas;
             var controlador = Itens.EhArma(item) ? controladoresCorpo[(int)Itens.Arma(item)]
                 : Itens.EhTaco(item) && controladorDoTaco != null ? controladorDoTaco
+                : Itens.EhFumo(item) && controladorDoMaco != null ? (Fumo != null && Fumo.ComOCigarroNaMao && controladorDoCigarro != null ? controladorDoCigarro : controladorDoMaco)
                 : k >= 0 && controladoresDosItens != null && k < controladoresDosItens.Length && controladoresDosItens[k] != null ? controladoresDosItens[k]
                 : controladorDasMaos != null ? controladorDasMaos : controladoresCorpo[0];
             if (animadorCorpo.runtimeAnimatorController != controlador) animadorCorpo.runtimeAnimatorController = controlador;
-            if (IsOwner) GetComponent<ArmaJogador>().Trocar(item, id);
         }
 
         /// <summary>Esconde (sentado num carro) ou mostra de novo o que está na mão do corpo.</summary>
@@ -498,6 +552,29 @@ namespace ZombieCityCleaner.Player
             _velocidade = Mathf.Lerp(_velocidade, medida, 1f - Mathf.Exp(-12f * Time.deltaTime));
             animadorCorpo.SetFloat(SpeedId, _velocidade);
             animadorCorpo.SetBool(AimingId, Mirando.Value);
+            // abaixado: o corpo desce e sobe em ~0,25 s (só no controlador que tem o parâmetro)
+            _agachado = Mathf.MoveTowards(_agachado, Agachado.Value ? 1f : 0f, Time.deltaTime / 0.25f);
+            if (TemAgachado(animadorCorpo)) animadorCorpo.SetFloat(AgachadoId, _agachado);
+        }
+
+        static readonly int AgachadoId = Animator.StringToHash("Agachado");
+        float _agachado;
+        Animator _animadorVisto;
+        RuntimeAnimatorController _controladorVisto;
+        bool _temAgachado;
+
+        // o controlador do corpo tem o parâmetro "Agachado"? (lido de novo quando o Animator ou o controlador mudam; sem
+        // ele, o SetFloat avisaria no Console a cada quadro)
+        bool TemAgachado(Animator a)
+        {
+            if (a == null || !a.isInitialized) return false;
+            if (a == _animadorVisto && a.runtimeAnimatorController == _controladorVisto) return _temAgachado;
+            _animadorVisto = a;
+            _controladorVisto = a.runtimeAnimatorController;
+            _temAgachado = false;
+            foreach (var p in a.parameters)
+                if (p.nameHash == AgachadoId && p.type == AnimatorControllerParameterType.Float) _temAgachado = true;
+            return _temAgachado;
         }
 
         /// <summary>O corpo não acompanha o olhar (pulando a janela: a animação é do corpo todo).</summary>

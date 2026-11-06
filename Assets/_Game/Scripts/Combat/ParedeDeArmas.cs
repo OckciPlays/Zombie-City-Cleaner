@@ -13,7 +13,8 @@ namespace ZombieCityCleaner.Combat
     /// Quem manda é o anfitrião: o pedido vai para ele, que confere a distância e muda as vagas e o inventário. Quem sai
     /// da partida devolve as armas.
     /// O conteúdo das vagas vai pela rede num número só, 8 bits por vaga (0 = vazia, senão o tipo + 1), até 8 vagas; o
-    /// pente de cada arma guardada, em outro (8 bits por vaga): a arma volta com as balas que tinha. No começo, cheias.
+    /// pente de cada arma guardada, em outro (8 bits por vaga): a arma volta com as balas que tinha. No começo, vazio (as
+    /// armas são as que os jogadores acham e guardam nele).
     /// </summary>
     public class ParedeDeArmas : NetworkBehaviour
     {
@@ -21,9 +22,10 @@ namespace ZombieCityCleaner.Combat
         public VagaDeArma[] vagas;
         [Tooltip("A malha de cada arma, na ordem de TipoDeArma (origem no cabo, cano em +Z, topo em +Y).")]
         public Mesh[] malhas;
-        [Tooltip("O que cada vaga tem no começo da partida, na ordem das vagas (as que faltam começam vazias: os " +
-                 "jogadores nascem com a pistola).")]
-        public TipoDeArma[] inicio = { TipoDeArma.Sniper, TipoDeArma.Rifle, TipoDeArma.Espingarda, TipoDeArma.Submetralhadora };
+        // o que cada vaga tem no começo da partida, na ordem das vagas: nada (03/11/2026, a pedido: "o painel de armas da
+        // garagem já está vindo com armas, não deveria"; antes, as 4 longas). Fora da cena de propósito: as cenas ainda
+        // guardam a lista antiga das 4 armas, e com o campo serializado ela voltaria
+        [System.NonSerialized] public TipoDeArma[] inicio = new TipoDeArma[0];
         [Tooltip("Até onde o anfitrião aceita o pedido de troca (m, dos pés do jogador ao meio da vaga).")]
         public float distanciaMaxima = 3.5f;
 

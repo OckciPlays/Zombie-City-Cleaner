@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.EditorTools
         /// Os braços de primeira pessoa de um modelo (na ordem de Itens.Modelos: as armas, a lata e a garrafa; depois, os
         /// punhos da mão vazia, Itens.Punhos, e a mão com o taco de sinuca, Itens.TacoFP).
         /// </summary>
-        public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.fbx";
+        public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ArquivoFP(modelo)}.fbx";
         /// <summary>A malha avulsa de um modelo: Arma_&lt;nome&gt; ou Item_&lt;nome&gt; (origem onde a mão segura, topo em +Y).</summary>
         public static string MalhaDo(int modelo) => $"{Malhas}/{(modelo < Armas.Quantas ? "Arma" : "Item")}_{Itens.Modelos[modelo]}.asset";
         public static string ControladorFPDa(int modelo) => modelo == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.overrideController";
@@ -104,6 +104,7 @@ namespace ZombieCityCleaner.EditorTools
                 if (nomes.Any(n => n.StartsWith(Itens.ModeloDoLoot(k) + "_"))) Juntar(FbxLoot, Itens.ModeloDoLoot(k) + "_", MalhaDoLoot(k));
                 else Debug.LogWarning($"O {Itens.ModeloDoLoot(k)} não está no Loot.fbx (rode o Blender/loot.py).");
             MontagemDoSaque.JuntarMontadas();
+            MontagemDoFumo.JuntarBituca();
         }
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
@@ -134,12 +135,22 @@ namespace ZombieCityCleaner.EditorTools
         public static string ControladorTPDoItemDoPersonagem(int p, int item) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Itens.Modelos[item]}.overrideController";
         /// <summary>O corpo do personagem com o taco de sinuca em pé na mão direita (o tiro e a mira não mudam nada).</summary>
         public static string ControladorTPDoTacoDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Taco.overrideController";
+        /// <summary>O corpo com o maço de cigarros (segurar e, no lugar do tiro, acender) e com o cigarro aceso (segurar, tragar e, na recarga, o peteleco).</summary>
+        public static string ControladorTPDoMacoDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Maco.overrideController";
+        public static string ControladorTPDoCigarroDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Cigarro.overrideController";
         public static string MaterialDoPersonagem(int p) => $"{ArtePersonagens}/Materials/Personagem_{Personagens.Modelos[p]}.mat";
-        /// <summary>Os clipes do corpo que repetem (os outros tocam uma vez).</summary>
+        /// <summary>Os clipes do corpo que repetem (os outros tocam uma vez). Os dos moradores do bunker (05/11/2026, a parte 5
+        /// do Plano_NPCs_Bunker.md: o bloco_morador.py da pasta de arte) estão em <see cref="EmLacoDosMoradores"/>.</summary>
         static readonly string[] EmLacoNoCorpo = { "Parado", "Andar", "Correr", "Agachado", "Andar_Agachado", "No_Ar", "Sentado_Motorista",
                                                    "Sentado_Passageiro", "Maos_Guarda" };
+        /// <summary>Os laços dos moradores: sentados, comendo, dormindo, nas bancadas, mancando e, do peito para cima, a caixa,
+        /// a conversa e o choro (o sentar, o levantar, o deitar, a estante, a tacada e a tosse tocam uma vez).</summary>
+        public static readonly string[] EmLacoDosMoradores = { "Sentado_Cadeira", "Sentado_Sofa", "Sentado_Banco", "Sentado_Lendo",
+                                                               "Sentado_Rezando", "Sentado_Triste", "Comer", "Dormindo", "Cozinhar",
+                                                               "Lavar_Louca", "Consertar", "Andar_Mancando", "Caixa_Carregar",
+                                                               "Conversa", "Chorar" };
         /// <summary>Os clipes da camada de cima no controlador do corpo (os da pistola); os override trocam cada um.</summary>
-        static readonly string[] CamadaDeCima = { "Pistola_Segurar", "Pistola_Mirar", "Pistola_Atirar" };
+        static readonly string[] CamadaDeCima = { "Pistola_Segurar", "Pistola_Mirar", "Pistola_Atirar", "Pistola_Recarregar" };
 
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
@@ -255,6 +266,12 @@ namespace ZombieCityCleaner.EditorTools
             // o taco de sinuca: só segura (o tiro, o gatilho sem bala e a recarga nunca tocam)
             MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.TacoFP), ClipesFP,
                            c => c == "Fire" || c == "DryFire" || c == "Reload" ? "Idle" : c, ControladorFPDa(Itens.TacoFP));
+            // o fumo (03/11/2026, o bloco_cigarro.py): com o maço, os clipes Maco_* e o acender no lugar do tiro; com o
+            // cigarro aceso, os outros, com o tragar no tiro e o peteleco na recarga
+            MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.MacoFP), ClipesFP,
+                           c => c == "Fire" ? "Acender" : c == "DryFire" || c == "Reload" ? "Maco_Idle" : "Maco_" + c, ControladorFPDa(Itens.MacoFP));
+            MontarOverride(ControladorFP, FbxFP(0), FbxFP(Itens.CigarroFP), ClipesFP,
+                           c => c == "Fire" ? "Tragar" : c == "Reload" ? "Peteleco" : c == "DryFire" ? "Idle" : c, ControladorFPDa(Itens.CigarroFP));
             MontarOverride(ControladorTP, Arte + "/Jogador.fbx", Arte + "/Jogador.fbx", ClipesTP, c => $"{c}_Maos", ControladorTPDasMaos);
             PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
@@ -324,13 +341,59 @@ namespace ZombieCityCleaner.EditorTools
                         MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
                 }
                 MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => "Taco_Segurar", ControladorTPDoTacoDoPersonagem(p));
+                // o fumo (03/11/2026): o maço (segurar e acender) e o cigarro aceso (segurar, tragar e, na recarga, o peteleco)
+                MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? "Maco_Acender" : "Maco_Segurar", ControladorTPDoMacoDoPersonagem(p));
+                MontarOverride(corpo, fbx, fbx, CamadaDeCima,
+                               c => Qual(c) == "Atirar" ? "Cigarro_Tragar" : Qual(c) == "Recarregar" ? "Cigarro_Peteleco" : "Cigarro_Segurar", ControladorTPDoCigarroDoPersonagem(p));
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// A árvore da locomoção do corpo, em 2D: o Speed (parado, andando a 2 e correndo a 4,2) e o Agachado (de 0 a 1:
+        /// o agachado parado e andando a 1,2 m/s; 03/11/2026, a pedido: o C, <see cref="MovimentoPrimeiraPessoa.Agachado"/>;
+        /// o <see cref="JogadorRede"/> põe o parâmetro aos poucos).
+        /// </summary>
+        static void ArvoreDaLocomocao(BlendTree arvore, string fbx)
+        {
+            arvore.blendType = BlendTreeType.FreeformCartesian2D;
+            arvore.blendParameter = "Speed";
+            arvore.blendParameterY = "Agachado";
+            arvore.useAutomaticThresholds = false;
+            arvore.children = new ChildMotion[0];
+            arvore.AddChild(Clipe(fbx, "Parado"), new Vector2(0f, 0f));
+            arvore.AddChild(Clipe(fbx, "Andar"), new Vector2(2.0f, 0f));
+            arvore.AddChild(Clipe(fbx, "Correr"), new Vector2(4.2f, 0f));
+            arvore.AddChild(Clipe(fbx, "Agachado"), new Vector2(0f, 1f));
+            arvore.AddChild(Clipe(fbx, "Andar_Agachado"), new Vector2(1.2f, 1f));
+        }
+
+        /// <summary>
+        /// O abaixar no controlador do corpo que já existe (o parâmetro Agachado e a árvore da locomoção em 2D), sem refazer
+        /// o controlador, os override e o prefab do jogador (que apontam para ele). A montagem dos personagens já faz assim.
+        /// </summary>
+        public static void PorOAbaixarNoControlador()
+        {
+            for (int p = 0; p < Personagens.Modelos.Length; p++)
+            {
+                var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControladorDoCorpo(p));
+                if (ctrl == null) continue;
+                if (!ctrl.parameters.Any(x => x.name == "Agachado")) ctrl.AddParameter("Agachado", AnimatorControllerParameterType.Float);
+                var loc = ctrl.layers[0].stateMachine.states.Select(s => s.state).FirstOrDefault(s => s.name == "Locomoção");
+                if (loc != null && loc.motion is BlendTree arvore)
+                {
+                    ArvoreDaLocomocao(arvore, FbxDoPersonagem(p));
+                    EditorUtility.SetDirty(arvore);
+                }
+                else Debug.LogWarning($"O controlador {ControladorDoCorpo(p)} não tem a árvore da locomoção: rode a montagem dos personagens.");
+                EditorUtility.SetDirty(ctrl);
             }
             AssetDatabase.SaveAssets();
         }
 
         /// <summary>
         /// O controlador do corpo (28/10/2026, para o personagem principal em blocos: as animações dele são em camadas).
-        /// A base é o corpo todo: a árvore pelo Speed (parado, andando e correndo) e, pelo Lugar (1 o motorista, 2 os
+        /// A base é o corpo todo: a árvore pelo Speed (parado, andando e correndo; abaixado, pelo Agachado) e, pelo Lugar (1 o motorista, 2 os
         /// outros; o <see cref="PassageiroDoCarro"/> põe), sentado no carro. A camada "Braços" (a máscara do peito para
         /// cima, por cima da base) segura a arma (ou o item, ou os punhos), mira com o Aiming e atira com o Fire.
         /// </summary>
@@ -345,12 +408,11 @@ namespace ZombieCityCleaner.EditorTools
             ctrl.AddParameter("Fire", AnimatorControllerParameterType.Trigger);
             ctrl.AddParameter("Lugar", AnimatorControllerParameterType.Int);
             ctrl.AddParameter("Janela", AnimatorControllerParameterType.Trigger);
+            ctrl.AddParameter("Agachado", AnimatorControllerParameterType.Float);
             var baseSm = ctrl.layers[0].stateMachine;
-            var arvore = new BlendTree { name = "Locomoção", blendType = BlendTreeType.Simple1D, blendParameter = "Speed", useAutomaticThresholds = false };
+            var arvore = new BlendTree { name = "Locomoção" };
             AssetDatabase.AddObjectToAsset(arvore, ctrl);
-            arvore.AddChild(Clipe(fbx, "Parado"), 0f);
-            arvore.AddChild(Clipe(fbx, "Andar"), 2.0f);
-            arvore.AddChild(Clipe(fbx, "Correr"), 4.2f);
+            ArvoreDaLocomocao(arvore, fbx);
             var loc = baseSm.AddState("Locomoção");
             loc.motion = arvore;
             loc.writeDefaultValues = false;
@@ -409,6 +471,15 @@ namespace ZombieCityCleaner.EditorTools
             var tiro = sm.AddAnyStateTransition(atirar);
             tiro.AddCondition(AnimatorConditionMode.If, 0f, "Fire");
             tiro.canTransitionToSelf = true; tiro.hasExitTime = false; tiro.duration = 0.04f; tiro.hasFixedDuration = true;
+            // a recarga (03/11/2026, para o peteleco do cigarro; as armas já têm o clipe delas, mas o jogo ainda não toca),
+            // pelo Reload, e de volta como o tiro
+            ctrl.AddParameter("Reload", AnimatorControllerParameterType.Trigger);
+            var recarregar = Estado("Recarregar", "Pistola_Recarregar");
+            Ir(recarregar, mirar, AnimatorConditionMode.If, 0.1f, true);
+            Ir(recarregar, segurar, AnimatorConditionMode.IfNot, 0.15f, true);
+            var recarga = sm.AddAnyStateTransition(recarregar);
+            recarga.AddCondition(AnimatorConditionMode.If, 0f, "Reload");
+            recarga.canTransitionToSelf = false; recarga.hasExitTime = false; recarga.duration = 0.06f; recarga.hasFixedDuration = true;
             EditorUtility.SetDirty(ctrl);
         }
 
@@ -469,9 +540,25 @@ namespace ZombieCityCleaner.EditorTools
             imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), Personagens.Modelos[p]), material);
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Pistola"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Fumo_Paleta"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
+            ErroPequeno(imp);
             imp.SaveAndReimport();
-            imp.clipAnimations = Clipes(imp, t => t, n => EmLacoNoCorpo.Contains(n) || n.EndsWith("_Segurar") || n.EndsWith("_Mirar"));
+            imp.clipAnimations = Clipes(imp, t => t, n => EmLacoNoCorpo.Contains(n) || EmLacoDosMoradores.Contains(n) ||
+                                                          n.EndsWith("_Segurar") || n.EndsWith("_Mirar"));
             imp.SaveAndReimport();
+        }
+
+        /// <summary>
+        /// A compressão das animações do corpo, com um décimo do erro de sempre (03/11/2026, a pedido: os itens pequenos
+        /// mexiam na mão). Com o padrão (0,5° por osso), os erros dos ossos do braço somam uns milímetros na mão, e o que
+        /// está num osso à parte (o maço, o cigarro, a arma) escorrega em relação aos dedos.
+        /// </summary>
+        internal static void ErroPequeno(ModelImporter imp)
+        {
+            imp.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
+            imp.animationRotationError = 0.05f;
+            imp.animationPositionError = 0.05f;
+            imp.animationScaleError = 0.05f;
         }
 
         /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>
@@ -513,7 +600,8 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>Um clipe por take (o nome da faixa de NLA do Blender), do primeiro ao último quadro.</summary>
         static ModelImporterClipAnimation[] Clipes(ModelImporter imp, System.Func<string, string> nome, System.Func<string, bool> laco = null)
         {
-            laco ??= n => EmLaco.Any(l => n == l || n.StartsWith(l + "_"));
+            // (o fumo, 03/11/2026: os do maço são Maco_Idle, Maco_Walk e Maco_Run)
+            laco ??= n => EmLaco.Any(l => n == l || n.StartsWith(l + "_") || n.EndsWith("_" + l));
             return imp.importedTakeInfos.Select(t => (take: t, n: nome(t.name))).Where(x => x.n != null).Select(x => new ModelImporterClipAnimation
             {
                 name = x.n, takeName = x.take.name,
@@ -534,6 +622,11 @@ namespace ZombieCityCleaner.EditorTools
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Pistola"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
             // os braços do personagem principal em blocos: a textura dele (o material do corpo)
             imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "PrincipalBloco"), MaterialDoCorpo(0));
+            // as peças do fumo (o maço, o cigarro e o isqueiro): a paleta (a brasa e a chama acesas: a MontagemDoFumo)
+            imp.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), "Fumo_Paleta"), AssetDatabase.LoadAssetAtPath<Material>(MaterialArma));
+            // sem compressão (03/11/2026, a pedido: o maço e o cigarro mexiam na mão): a 30 cm da câmera, os milímetros
+            // que a compressão tira dos ossos do braço apareciam entre os dedos e o que está num osso à parte
+            imp.animationCompression = ModelImporterAnimationCompression.Off;
             imp.clipAnimations = Clipes(imp, t => t);
             imp.SaveAndReimport();
         }

@@ -29,7 +29,7 @@ namespace ZombieCityCleaner.UI
             y += 26 * u;
             ulong eu = NetworkManager.LocalClientId;
             GUI.Label(new Rect(x, y, w, 40 * u), $"Dinheiro: {PrecosDoDiaZero.Dinheiro(dia.Dinheiro(eu))} (gastou {PrecosDoDiaZero.Dinheiro(dia.Gasto(eu))})\n" +
-                                                 $"{dia.Compras(eu)} compras em casa · {rua.Npcs.Count} NPCs", _texto);
+                                                 $"{dia.Compras(eu)} compras no bunker · {rua.Npcs.Count} NPCs", _texto);
             y += 46 * u;
             if (GUI.Button(new Rect(x, y, w, 30 * u), "Pular o Dia 0 (ir para o mundo)", _botao))
             {

@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
-            if (_alfa <= 0.01f || MenuOnline.Aberto) return;
+            if (_alfa <= 0.01f || MenuOnline.Aberto || Video.GravacaoNoMundo.SemHud) return;
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             if (_nome == null) _nome = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
             _nome.fontSize = Mathf.RoundToInt(17 * u);

@@ -299,166 +299,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1088424262}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &288751451
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 288751453}
-  - component: {fileID: 288751452}
-  - component: {fileID: 288751454}
-  m_Layer: 0
-  m_Name: Itens no mundo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &288751452
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 288751451}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2918409219
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  m_InScenePlacedDisabledByDefault: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  m_InScenePlaced: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
---- !u!4 &288751453
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 288751451}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &288751454
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 288751451}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
-  ShowTopMostFoldoutHeaderGroup: 1
-  malhas:
-  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
-  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
-  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
-  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
-  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
-  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
-  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
-  - {fileID: 4300000, guid: b2fde4281bec0d342bbd6cdcbacb82aa, type: 2}
-  - {fileID: 4300000, guid: be71b95f80e8a124f9680c9a21859b22, type: 2}
-  - {fileID: 4300000, guid: 9371a1323ec9bef48804c5178f66cbe1, type: 2}
-  - {fileID: 4300000, guid: 98031e9a09e6b1a4ba9806b703b5c0e8, type: 2}
-  - {fileID: 4300000, guid: d0fffca3f40dd2640a130e87db100bd8, type: 2}
-  malhasDeEquipamento:
-  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
-  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
-  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
-  malhasDeMunicao:
-  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
-  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
-  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
-  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
-  malhasDePeca:
-  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
-  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
-  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
-  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
-  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
-  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
-  - {fileID: 4300000, guid: 1355c114c98e11d46b2583eebb080cd8, type: 2}
-  malhasDaSinuca:
-  - {fileID: 4300000, guid: 293272ab3de3e1e4eacc87570df5f724, type: 2}
-  - {fileID: 4300000, guid: 98f8d89c81403e1439120223a137c74b, type: 2}
-  - {fileID: 4300000, guid: aa20132c70ae96842a34839b0cfab0d2, type: 2}
-  - {fileID: 4300000, guid: 77208c546e9eb7e4ebd978d6334f10ff, type: 2}
-  - {fileID: 4300000, guid: ce0e066e0dc5cf64d8a522d0e0672e77, type: 2}
-  - {fileID: 4300000, guid: de2243a39ff4b5d4f8c4d3f3376a81fa, type: 2}
-  malhasDeLoot:
-  - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
-  - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
-  - {fileID: 4300000, guid: 35a112fcb0577c8428170c2ec05af24e, type: 2}
-  - {fileID: 4300000, guid: 7dfa4668b9d3c0e44b367ae2d9250319, type: 2}
-  - {fileID: 4300000, guid: b07640019f4d2754ea217b1515ddd3c8, type: 2}
-  - {fileID: 4300000, guid: afa4f34d998139743b2421d23e678e4d, type: 2}
-  - {fileID: 4300000, guid: 56878774c76d6d0439a7fb208b4d61f7, type: 2}
-  - {fileID: 4300000, guid: 535318737f4b0104183fa4e41b0b591f, type: 2}
-  - {fileID: 4300000, guid: 07a8454e9bb4fa742b7560479823accb, type: 2}
-  - {fileID: 4300000, guid: d5942f9298d5b4f4bbd62a2971295641, type: 2}
-  - {fileID: 4300000, guid: df9b68ec30f601540a367b541a2a3d55, type: 2}
-  - {fileID: 4300000, guid: 2c1441a1472f38a448df863d99c3c6a4, type: 2}
-  - {fileID: 4300000, guid: 45917ba29e2ffb74681d07e26ebb8202, type: 2}
-  - {fileID: 4300000, guid: c809312b44594dc40890199d7c8af87e, type: 2}
-  - {fileID: 4300000, guid: 63aff94268958bd4d9dc3532b76183dc, type: 2}
-  - {fileID: 4300000, guid: fce0b4c7de2ec6444aef849b78ddf893, type: 2}
-  - {fileID: 4300000, guid: f212852944b5d4b4eb9b4b47a389ff78, type: 2}
-  - {fileID: 4300000, guid: 65789b015c0ff5a4db417bc34cc070f6, type: 2}
-  - {fileID: 4300000, guid: 96f2e1ce0000a534dac898d9238780b8, type: 2}
-  - {fileID: 4300000, guid: 78bc40fbde1bf7749af79db90416f198, type: 2}
-  - {fileID: 4300000, guid: 05d2166127abd7441842f2fb36d3ef81, type: 2}
-  - {fileID: 4300000, guid: 740a4ef79b7adc74889a6e4b9b141b03, type: 2}
-  - {fileID: 4300000, guid: fff62f02918b6654aa6fcb782584f84d, type: 2}
-  - {fileID: 4300000, guid: 3bd9031d7f9c60348881712abfc0cd17, type: 2}
-  - {fileID: 4300000, guid: ed7bc76d9a9c97e4d833d1d42a7812a9, type: 2}
-  - {fileID: 4300000, guid: 21c635ecec593d34aae13bba19f1405e, type: 2}
-  - {fileID: 4300000, guid: c3db8e2dfa8364340b5e6d2c6ed77500, type: 2}
-  - {fileID: 4300000, guid: c665eb8cca3f51a459db0e850f818169, type: 2}
-  - {fileID: 4300000, guid: fa07e8e2a6f64714684afc29ca969289, type: 2}
-  - {fileID: 4300000, guid: 0b13b73e5c8d1e64cbf2b44751e9109d, type: 2}
-  - {fileID: 4300000, guid: d37cee0e616142d4da21a9c0c75c1b8f, type: 2}
-  - {fileID: 4300000, guid: 5ce38085cf653774aa90e18ce0379215, type: 2}
-  - {fileID: 4300000, guid: 266a25193b0b21849a6550427cf3b9bc, type: 2}
-  - {fileID: 4300000, guid: 242f9af21b4087b4483659e503affd9d, type: 2}
-  - {fileID: 4300000, guid: 97fbb1fa7e3e9de488c6dcebd6d4d3bd, type: 2}
-  - {fileID: 4300000, guid: 729e0642d1bd0af4abfba276c6b4ba7d, type: 2}
-  - {fileID: 4300000, guid: eee0a604d37ac1849b3f81b5857c1832, type: 2}
-  - {fileID: 4300000, guid: 050727802383bf14488e9dbdb3595867, type: 2}
-  - {fileID: 4300000, guid: 0a04e812f64497c4597c97e03acfdea6, type: 2}
-  - {fileID: 4300000, guid: 4c865afa75c77174e87d92843c4f0292, type: 2}
-  - {fileID: 4300000, guid: be0f8124a2fcc5d429a605f9aa68cb86, type: 2}
-  - {fileID: 4300000, guid: 17eec9be759937344b67b08587900804, type: 2}
-  - {fileID: 4300000, guid: 89913bf6b6ba6864999770de0398537d, type: 2}
-  - {fileID: 4300000, guid: 06e72f6c0b1435141aa35d610a0a8c35, type: 2}
-  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
-  lugares: []
-  itensDosLugares: 
-  girosDosLugares: []
-  distanciaMaxima: 3.5
 --- !u!1 &571145534
 GameObject:
   m_ObjectHideFlags: 0
@@ -708,6 +548,7 @@ MonoBehaviour:
     visaoDeDia: 16
     visaoDeNoite: 6
     visaoComLanterna: 26
+    visaoComBrasa: 10
     visaoSobPoste: 13
     meioAnguloDaVisao: 70
     distanciaDeContato: 2.5
@@ -978,7 +819,6 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
   - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
   - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
-  inicio: 04010302y
   distanciaMaxima: 3.5
 --- !u!1 &839413915
 GameObject:
@@ -1618,7 +1458,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.28532892, y: 0.20381165, z: 0.12}
   m_Center: {x: 0, y: 0.08190583, z: 0.06}
---- !u!1 &1134452554
+--- !u!1 &1171360891
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1626,29 +1466,29 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1134452556}
-  - component: {fileID: 1134452555}
-  - component: {fileID: 1134452557}
+  - component: {fileID: 1171360893}
+  - component: {fileID: 1171360892}
+  - component: {fileID: 1171360894}
   m_Layer: 0
-  m_Name: "Constru\xE7\xF5es no mundo"
+  m_Name: Itens no mundo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1134452555
+--- !u!114 &1171360892
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1134452554}
+  m_GameObject: {fileID: 1171360891}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2397443613
+  GlobalObjectIdHash: 3438257507
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
@@ -1663,13 +1503,13 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!4 &1134452556
+--- !u!4 &1171360893
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1134452554}
+  m_GameObject: {fileID: 1171360891}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1678,13 +1518,174 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1134452557
+--- !u!114 &1171360894
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1134452554}
+  m_GameObject: {fileID: 1171360891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b30c4b444a0c42040af4c12cd7a384b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensNoMundo
+  ShowTopMostFoldoutHeaderGroup: 1
+  malhas:
+  - {fileID: 4300000, guid: 5004c2ad83ff0a64da4e647948bf7bb6, type: 2}
+  - {fileID: 4300000, guid: fdc0ea94579f61742a369fd7b6e38a9a, type: 2}
+  - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
+  - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
+  - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
+  - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
+  - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
+  - {fileID: 4300000, guid: b2fde4281bec0d342bbd6cdcbacb82aa, type: 2}
+  - {fileID: 4300000, guid: be71b95f80e8a124f9680c9a21859b22, type: 2}
+  - {fileID: 4300000, guid: 9371a1323ec9bef48804c5178f66cbe1, type: 2}
+  - {fileID: 4300000, guid: 98031e9a09e6b1a4ba9806b703b5c0e8, type: 2}
+  - {fileID: 4300000, guid: d0fffca3f40dd2640a130e87db100bd8, type: 2}
+  malhasDeEquipamento:
+  - {fileID: 4300000, guid: 65b9ea4cbff75474db6fac7c9cfe5255, type: 2}
+  - {fileID: 4300000, guid: acb43763a57aee343b1611976194c301, type: 2}
+  - {fileID: 4300000, guid: a842d49618deb504c9ca8a96bb13e55a, type: 2}
+  malhasDeMunicao:
+  - {fileID: 4300000, guid: e2a37feea9aa37649a9b95fe054514e8, type: 2}
+  - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
+  - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
+  - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
+  malhasDePeca:
+  - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
+  - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}
+  - {fileID: 4300000, guid: a30c5b6e66834db47aa613efbd2f412f, type: 2}
+  - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
+  - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
+  - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
+  - {fileID: 4300000, guid: 1355c114c98e11d46b2583eebb080cd8, type: 2}
+  malhasDaSinuca:
+  - {fileID: 4300000, guid: 293272ab3de3e1e4eacc87570df5f724, type: 2}
+  - {fileID: 4300000, guid: 98f8d89c81403e1439120223a137c74b, type: 2}
+  - {fileID: 4300000, guid: aa20132c70ae96842a34839b0cfab0d2, type: 2}
+  - {fileID: 4300000, guid: 77208c546e9eb7e4ebd978d6334f10ff, type: 2}
+  - {fileID: 4300000, guid: ce0e066e0dc5cf64d8a522d0e0672e77, type: 2}
+  - {fileID: 4300000, guid: de2243a39ff4b5d4f8c4d3f3376a81fa, type: 2}
+  malhasDeLoot:
+  - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
+  - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
+  - {fileID: 4300000, guid: 35a112fcb0577c8428170c2ec05af24e, type: 2}
+  - {fileID: 4300000, guid: 7dfa4668b9d3c0e44b367ae2d9250319, type: 2}
+  - {fileID: 4300000, guid: b07640019f4d2754ea217b1515ddd3c8, type: 2}
+  - {fileID: 4300000, guid: afa4f34d998139743b2421d23e678e4d, type: 2}
+  - {fileID: 4300000, guid: 56878774c76d6d0439a7fb208b4d61f7, type: 2}
+  - {fileID: 4300000, guid: 535318737f4b0104183fa4e41b0b591f, type: 2}
+  - {fileID: 4300000, guid: 07a8454e9bb4fa742b7560479823accb, type: 2}
+  - {fileID: 4300000, guid: d5942f9298d5b4f4bbd62a2971295641, type: 2}
+  - {fileID: 4300000, guid: df9b68ec30f601540a367b541a2a3d55, type: 2}
+  - {fileID: 4300000, guid: 2c1441a1472f38a448df863d99c3c6a4, type: 2}
+  - {fileID: 4300000, guid: 45917ba29e2ffb74681d07e26ebb8202, type: 2}
+  - {fileID: 4300000, guid: c809312b44594dc40890199d7c8af87e, type: 2}
+  - {fileID: 4300000, guid: 63aff94268958bd4d9dc3532b76183dc, type: 2}
+  - {fileID: 4300000, guid: fce0b4c7de2ec6444aef849b78ddf893, type: 2}
+  - {fileID: 4300000, guid: f212852944b5d4b4eb9b4b47a389ff78, type: 2}
+  - {fileID: 4300000, guid: 65789b015c0ff5a4db417bc34cc070f6, type: 2}
+  - {fileID: 4300000, guid: 96f2e1ce0000a534dac898d9238780b8, type: 2}
+  - {fileID: 4300000, guid: 78bc40fbde1bf7749af79db90416f198, type: 2}
+  - {fileID: 4300000, guid: 05d2166127abd7441842f2fb36d3ef81, type: 2}
+  - {fileID: 4300000, guid: 740a4ef79b7adc74889a6e4b9b141b03, type: 2}
+  - {fileID: 4300000, guid: fff62f02918b6654aa6fcb782584f84d, type: 2}
+  - {fileID: 4300000, guid: 3bd9031d7f9c60348881712abfc0cd17, type: 2}
+  - {fileID: 4300000, guid: ed7bc76d9a9c97e4d833d1d42a7812a9, type: 2}
+  - {fileID: 4300000, guid: 21c635ecec593d34aae13bba19f1405e, type: 2}
+  - {fileID: 4300000, guid: c3db8e2dfa8364340b5e6d2c6ed77500, type: 2}
+  - {fileID: 4300000, guid: c665eb8cca3f51a459db0e850f818169, type: 2}
+  - {fileID: 4300000, guid: fa07e8e2a6f64714684afc29ca969289, type: 2}
+  - {fileID: 4300000, guid: 0b13b73e5c8d1e64cbf2b44751e9109d, type: 2}
+  - {fileID: 4300000, guid: d37cee0e616142d4da21a9c0c75c1b8f, type: 2}
+  - {fileID: 4300000, guid: 5ce38085cf653774aa90e18ce0379215, type: 2}
+  - {fileID: 4300000, guid: 266a25193b0b21849a6550427cf3b9bc, type: 2}
+  - {fileID: 4300000, guid: 242f9af21b4087b4483659e503affd9d, type: 2}
+  - {fileID: 4300000, guid: 97fbb1fa7e3e9de488c6dcebd6d4d3bd, type: 2}
+  - {fileID: 4300000, guid: 729e0642d1bd0af4abfba276c6b4ba7d, type: 2}
+  - {fileID: 4300000, guid: eee0a604d37ac1849b3f81b5857c1832, type: 2}
+  - {fileID: 4300000, guid: 050727802383bf14488e9dbdb3595867, type: 2}
+  - {fileID: 4300000, guid: 0a04e812f64497c4597c97e03acfdea6, type: 2}
+  - {fileID: 4300000, guid: 4c865afa75c77174e87d92843c4f0292, type: 2}
+  - {fileID: 4300000, guid: be0f8124a2fcc5d429a605f9aa68cb86, type: 2}
+  - {fileID: 4300000, guid: 17eec9be759937344b67b08587900804, type: 2}
+  - {fileID: 4300000, guid: 89913bf6b6ba6864999770de0398537d, type: 2}
+  - {fileID: 4300000, guid: 06e72f6c0b1435141aa35d610a0a8c35, type: 2}
+  - {fileID: 4300000, guid: 074e86efb85130d42b202ea558dfe40b, type: 2}
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  lugares: []
+  itensDosLugares: 
+  girosDosLugares: []
+  distanciaMaxima: 3.5
+--- !u!1 &1227780859
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1227780861}
+  - component: {fileID: 1227780860}
+  - component: {fileID: 1227780862}
+  m_Layer: 0
+  m_Name: "Constru\xE7\xF5es no mundo"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1227780860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1227780859}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 1123043595
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!4 &1227780861
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1227780859}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1227780862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1227780859}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 339b759b9fe2f614da61d8079b9283de, type: 3}
@@ -6019,5 +6020,5 @@ SceneRoots:
   - {fileID: 2005601261}
   - {fileID: 621969964}
   - {fileID: 792569084}
-  - {fileID: 288751453}
-  - {fileID: 1134452556}
+  - {fileID: 1171360893}
+  - {fileID: 1227780861}

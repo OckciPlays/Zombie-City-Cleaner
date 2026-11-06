@@ -336,18 +336,54 @@ namespace ZombieCityCleaner.Salvar
         [Rpc(SendTo.SpecifiedInParams)]
         void IrParaRpc(Vector3 pos, float giro, RpcParams parametros = default) => StartCoroutine(IrPara(pos, giro));
 
-        // no dono: espera o chão de lá ter colisão (o jogador fica na casa enquanto isso) e vai
+        // os jogadores, os braços, os zumbis, os corpos, o retrato e o Ignore Raycast não contam como chão
+        const int MascaraDoChao = ~((1 << 2) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 9) | (1 << 10));
+
+        /// <summary>
+        /// No dono: vai já para onde o personagem estava e fica parado lá (<see cref="MovimentoPrimeiraPessoa.Esperando"/>:
+        /// sem cair) até o chão de lá ter colisão, com as casas, e até haver chão embaixo dos pés (o andar do prédio, que só
+        /// carrega perto de alguém); depois, solta. Antes (03/11/2026, a pedido: "saiu da partida, entrou de novo e deu
+        /// spawn no bunker ao invés de onde ele estava"), ele esperava no bunker até 20 s e ia mesmo sem a colisão: longe,
+        /// no mapa grande, ele chegava antes do chão, caía abaixo de y = −20 e o movimento o devolvia ao nascimento, no
+        /// bunker. Indo já, o chão, as casas e os andares carregam em volta dele, como os de quem está lá.
+        /// </summary>
         IEnumerator IrPara(Vector3 pos, float giro)
         {
+            var j = JogadorRede.Local;
+            var mov = j != null ? j.GetComponent<MovimentoPrimeiraPessoa>() : null;
+            if (mov == null) yield break;
             var terreno = _mundo != null ? _mundo.terreno : null;
-            float ate = Time.unscaledTime + 20f;
+            Vector3 onde = pos + Vector3.up * 0.1f;
+            float comecou = Time.unscaledTime;
+            mov.Teleportar(onde, giro);
             if (terreno != null)
             {
+                mov.Esperando = true;
                 terreno.Pedir(this, pos, 40f, true);
-                while (!terreno.Pronto(pos, 12f) && Time.unscaledTime < ate) yield return null;
+                bool avisou = false;
+                float ate = comecou + 60f;
+                while (!terreno.Pronto(pos, 12f) && Time.unscaledTime < ate)
+                {
+                    if (!avisou && Time.unscaledTime - comecou > 0.5f)
+                    {
+                        avisou = true;
+                        InventarioJogador.AvisoLocal("Carregando o lugar onde você estava...");
+                    }
+                    yield return null;
+                }
+                // o piso embaixo dos pés (o de um prédio vem depois do chão); sem nada (no ar, quando salvou), até 8 s
+                float ateOPiso = Time.unscaledTime + 8f;
+                while (!Physics.Raycast(pos + Vector3.up * 1f, Vector3.down, 2.6f, MascaraDoChao, QueryTriggerInteraction.Ignore)
+                       && Time.unscaledTime < ateOPiso)
+                    yield return null;
+                if (mov != null)
+                {
+                    mov.Teleportar(onde, mov.transform.eulerAngles.y);   // o olhar de enquanto esperava fica
+                    mov.Esperando = false;
+                }
             }
-            var j = JogadorRede.Local;
-            if (j != null) j.GetComponent<MovimentoPrimeiraPessoa>().Teleportar(pos + Vector3.up * 0.1f, giro);
+            Debug.Log($"[Save] O personagem voltou para onde estava, ({pos.x:F0}, {pos.y:F1}, {pos.z:F0}), depois de " +
+                      $"{Time.unscaledTime - comecou:F1} s esperando o chão{(terreno != null && !terreno.Pronto(pos, 12f) ? " (sem ele: passou do tempo)" : "")}.");
             yield return new WaitForSeconds(2f);
             terreno?.Esquecer(this);
         }

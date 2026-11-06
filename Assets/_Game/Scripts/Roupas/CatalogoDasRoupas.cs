@@ -34,6 +34,7 @@ namespace ZombieCityCleaner.Roupas
             public int textura;
             public bool pelos;      // o cabelo e as barbas: as sobrancelhas pegam a cor deles
             public bool cobre_cabelo;   // os chapéus: com eles, os cabelos grandes viram a versão de baixo do chapéu
+            public bool esconde_cabelo; // a balaclava: com ela, nenhum cabelo se desenha (nem a versão de baixo do chapéu)
             public string sob_chapeu;   // o cabelo: o nome da versão dele de baixo do chapéu (vazio: ele mesmo serve)
             public string de;           // a versão de baixo do chapéu: o cabelo de que ela é (não entra nas trocas)
             public int triangulos;

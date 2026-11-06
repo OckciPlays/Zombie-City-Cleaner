@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.Player
         void OnGUI()
         {
             if (Event.current.type != EventType.Repaint || _rede == null || !_rede.IsOwner) return;
-            if (MenuOnline.Aberto || TelaDeCriarPersonagem.Aberta || ModoVideo.Ligado) return;
+            if (MenuOnline.Aberto || TelaDeCriarPersonagem.Aberta || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
             var cam = _rede.cameraMundo;
             if (cam == null || !cam.isActiveAndEnabled) return;
             GUI.depth = 20;   // por baixo do HUD e das telas

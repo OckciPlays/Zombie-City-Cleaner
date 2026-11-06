@@ -137,6 +137,23 @@ Mais nomes depois (os próximos comentários)? Ponha na lista e rode o menu de n
 
 Para gravar: no "Diretor do vídeo", escolha a tomada **Armas** e ligue **Gravar** (e **Deitado**, se quiser), dê Play, clique no Game view para prender o mouse e jogue.
 
+## Gravar jogando, no mapa de verdade (F8, 03/11/2026)
+
+Para os próximos vídeos, você mesmo anda pelo mapa e grava, na partida de sempre (a cena `Mundo`), sem a cena de vídeo. A `Video.unity` é uma cópia da cidade antiga da demo: o mapa do jogo de agora só aparece na partida normal.
+
+1. Dê Play na cena `Mundo` e comece a partida como sempre (Iniciar novo jogo, Continuar ou Criar local).
+2. **F8** começa a gravar. **F8** de novo para. Parar o Play também fecha o vídeo.
+3. Os vídeos ficam em `Recordings/Mundo/Mundo_<data>.mp4` (fora do git).
+
+- **Enquanto grava**, a aba da Game view diz "● GRAVANDO" (fora da imagem do vídeo) e o HUD some: as barras, os atalhos, a linha de cima com o código da partida, o FPS, os nomes dos jogadores e o painel do carro. As telas que você abrir (o TAB, o mapa no M, o F1, o ESC) aparecem no vídeo.
+- **As escolhas ficam no painel VÍDEO do F1** (embaixo do painel de sempre) e são lembradas de uma partida para a outra:
+  - **Em pé (Reels)**, 1080 × 1920, ou **Deitado**, 1920 × 1080. Em pé, os braços da primeira pessoa se ajustam para a arma caber, com o cano na mira.
+  - **Na tela, gravando:** **Nada** (o começo), **A mira** (a mira, a arma e a munição e a dica do E) ou **Tudo** (o HUD inteiro).
+  - **60 ou 30 quadros/s.**
+- **O jogo anda no tempo do vídeo:** se o Editor desenhar menos quadros do que o vídeo pede, o jogo fica um pouco lento enquanto você grava, mas o vídeo sai liso. Saindo do bunker, a 60 quadros, ficou quase no tempo real; se no meio de uma cidade grande ficar lento, use 30.
+- **Durante a gravação, a Game view fica no tamanho do vídeo** (em pé, uma faixa alta no meio da janela) e volta ao tamanho de antes quando para.
+- **Dicas:** o V troca entre a primeira e a terceira pessoa (em pé, o personagem fica no terço da esquerda); "Sempre de dia" e "Sempre de noite" ficam no F1; de noite, a imagem fica bem escura.
+
 ## Como gravar
 
 1. Abra `Assets/_Game/Scenes/Video.unity`.

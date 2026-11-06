@@ -115,6 +115,10 @@ namespace ZombieCityCleaner.Mundo
             // escritório e da oficina), o pé de cabra na oficina e no porão
             C("Gazua", I, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Cabeceira, 1, 3),
             C("PeDeCabra", I, EspecieDoSaque.Ferramenta),
+            // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço, normal, na cabeceira, na sala (a mesa de
+            // centro e o rack), nas gavetas da cozinha e do escritório e na oficina, com 2 a 20 cigarros
+            C("MacoDeCigarros", N, EspecieDoSaque.Cabeceira | EspecieDoSaque.Lanche | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Escritorio
+                                   | EspecieDoSaque.Ferramenta, 2, 20),
             // a luz e o galão
             C("Pilhas", N, EspecieDoSaque.Luz | EspecieDoSaque.GavetaDaCozinha, 1, 4), C("Lanterna", I, EspecieDoSaque.Luz | EspecieDoSaque.GavetaDaCozinha), C("Galao", I, EspecieDoSaque.Galao),
             // as armas brancas e as de fogo

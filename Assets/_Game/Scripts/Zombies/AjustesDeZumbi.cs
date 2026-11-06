@@ -21,6 +21,8 @@ namespace ZombieCityCleaner.Zombies
         public float visaoDeNoite = 6f;
         [Tooltip("À noite, com a lanterna ligada, você é visto de longe.")]
         public float visaoComLanterna = 26f;
+        [Tooltip("À noite, fumando: a brasa do cigarro (03/11/2026, o Plano_Cigarro.md da pasta de arte).")]
+        public float visaoComBrasa = 10f;
         [Tooltip("À noite, embaixo de um poste aceso.")]
         public float visaoSobPoste = 13f;
         [Tooltip("Metade do ângulo de visão, em graus.")]

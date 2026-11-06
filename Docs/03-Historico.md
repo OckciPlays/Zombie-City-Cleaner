@@ -569,6 +569,17 @@ Combinado antes de mexer ("antes de fazer qualquer alteração, vamos discutir j
   do terreno apagava as malhas dos móveis, que a partida seguinte reaproveita; agora ela deixa os móveis de fora (e os
   erros "Destroying assets" ao sair acabaram).
 
+## Gravar jogando, no mapa de verdade (03/11/2026, a pedido)
+
+- O usuário quer gravar os próximos vídeos andando pelo mapa, na partida de sempre. A cena de vídeo é uma cópia da
+  cidade antiga da demo, e o modo vídeo dela desliga a terceira pessoa, o clima e os menus.
+- **O F8** grava e para (só no Editor, pelo Unity Recorder), em `Recordings/Mundo/`. **O painel VÍDEO do F1** escolhe em
+  pé ou deitado, o que fica na tela (nada, a mira ou tudo) e 60 ou 30 quadros. Gravando, o HUD some, os braços se
+  ajustam na tela em pé (o mesmo ajuste do vídeo das armas), a aba da Game view diz "● GRAVANDO" e, no fim, a Game view
+  volta ao tamanho de antes.
+- Testado no mundo Pequeno da semente 7: três vídeos em pé (no bunker, fora em primeira pessoa e em terceira pessoa),
+  sem HUD, a ~58 quadros por segundo; a pistola e o rifle com o cano na mira; nenhum erro.
+
 ## Os ajustes da primeira partida com os amigos (03/11/2026, a pedido)
 
 O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, para ele avaliar depois. O resumo está no

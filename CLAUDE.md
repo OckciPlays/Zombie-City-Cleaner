@@ -169,7 +169,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **O começo:** o jogador nasce no salão do bunker com a pistola, e o painel vem cheio (qualquer que seja o `jogadorComArma` e o `armasNoPainel`). O diretor dá a `MochilaGrande` e o `Coldre`, liga a câmera do mundo, a dos braços e o ouvido do jogador e põe a hora (`horaDasArmas`, 21h; o dia anda no ritmo do jogo), a neblina em 70% e o brilho a mais 0,5. Com zumbis na cidade (`ComZumbis`) e sem dano (`SemDano`).
   - **No jogo:** E pega cada arma do painel (o `ModoVideo.ArmasSemLimite` tira o limite de armas no corpo; fica só o espaço da mochila), 1, 2, 3 e a roda trocam (os 3 atalhos), e a munição não acaba (`ModoVideo.MunicaoInfinita`: a reserva é 999 e a tela mostra "∞"). A tela mostra só o que o `ArmaJogador` desenha (a mira, a arma e a munição, a dica do E e a luneta), com `mostrarMira`; sem as barras, os atalhos e o FPS.
   - **Enter termina a tomada** (e o gravador fecha o arquivo e para o Play); parar o Play também.
-  - **A tela em pé** (`BracosEmPe`, a cada LateUpdate): os braços foram feitos para a tela deitada, à direita do meio, e a 1080 × 1920 a arma ficava cortada. Com a proporção menor que 1, a câmera dos braços abre de 55° para 72° e vai 6 cm para a direita e 2,5 cm para cima (`localPosition`, dentro da câmera do mundo; ela é irmã dos "Bracos"): a arma aparece mais para a esquerda e mais para baixo, inteira. A câmera do mundo não muda (a mira continua no meio). Deitada, volta ao do jogo.
+  - **A tela em pé** (`BracosEmPe`, a cada LateUpdate; o ajuste fica no `GravacaoNoMundo.BracosEmPe`, o mesmo da gravação no mundo): os braços foram feitos para a tela deitada, à direita do meio, e a 1080 × 1920 a arma ficava cortada. Com a proporção menor que 1, a câmera dos braços abre de 55° para 72° e vai 6 cm para a direita e 2,5 cm para cima (`localPosition`, dentro da câmera do mundo; ela é irmã dos "Bracos"): a arma aparece mais para a esquerda e mais para baixo, inteira. A câmera do mundo não muda (a mira continua no meio). Deitada, volta ao do jogo.
     - **Mova a câmera, não a imagem:** a primeira versão deslocava a projeção (`m02` + 0,32, `m12` + 0,08), e isso também leva o ponto de fuga do cano: ele apontava à esquerda e abaixo da mira (57 e 27 px numa tela de 360 × 640; o usuário viu a arma "torta para a esquerda"). Mover a câmera alguns centímetros muda o lugar da arma na tela, mas não para onde as retas quase paralelas ao olhar vão: o cano de todas as armas continua a até 5 px da mira (conferido nas 5, em pé e deitado). Com 8 cm, aparece um pedaço que fica fora da tela.
   - **`deitado`:** o gravador grava 1920 × 1080 (a arma como no jogo).
   - Conferido: a pistola na mão, a mochila grande e o coldre, a reserva 999, as 4 armas longas cabendo juntas e um MP4 de teste de 15 s em pé, com a pistola, a mira, "12 / ∞" e a parede dos fundadores.
@@ -187,7 +187,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Com `gravar` ligado, quando o diretor fica `Rodando`, um `RecorderController` (o Unity Recorder 5.1.7) grava um MP4 (H.264, qualidade alta) da Game view, com o áudio, em `Recordings/<vídeo>/<n>_<Tomada>_<data>.mp4`.
   - O formato é 1080 × 1920 (com `deitado`, 1920 × 1080) a 60 fps constantes (`FrameRatePlayback.Constant`: o tempo do jogo anda 1/60 s por quadro, por mais que o quadro demore).
   - No `Terminou`, ele fecha o arquivo e sai do Play. Parar o Play no meio fecha o arquivo com o que deu para gravar.
-  - A Game view fica em 1080 × 1920 depois da primeira gravação.
+  - A Game view fica em 1080 × 1920 depois de uma gravação da cena de vídeo (a do mundo volta ao tamanho de antes; veja "Gravar jogando, no mundo").
+  - Ele também grava jogando, na partida de sempre: veja a seção seguinte.
 - **Testado (parte 1):**
   - a tomada `Teste` gravou 5 s (300 quadros) em 1080 × 1920 a 60 fps, com áudio, sem HUD;
   - os 1.000 zumbis apareceram, com sombra; o jogador nasceu sem a pistola; o painel ficou vazio;
@@ -199,6 +200,16 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - o tamanho, os fps e a duração saem das propriedades do arquivo no Shell do Windows (`Shell.Application`, `GetDetailsOf`);
     - os quadros saem da folha de conferência do diretor, ou da miniatura que o Windows faz do arquivo (`IShellItemImageFactory.GetImage`, por um `Add-Type` no PowerShell: um quadro do meio do vídeo). Um `VideoPlayer` no Editor parado também solta quadros (com `EditorApplication.QueuePlayerLoopUpdate()` a cada update), mas depois de uma leitura interrompida ele parou de preparar qualquer arquivo.
   - **Não recompile com o Play rodando** (a regra do projeto): um `AssetDatabase.Refresh` com a prévia do usuário rodando recompilou no meio e derrubou a partida dele (a rede e o modo vídeo caíram). Confira o `EditorApplication.isPlaying` antes, e espere o `Assembly-CSharp.dll` ficar mais novo que o script antes de dar Play.
+
+## Gravar jogando, no mundo (F8; 03/11/2026, a pedido)
+
+- **O pedido:** "tem como eu colocar para gravar na cena normal do mundo mesmo? assim não precisamos de cena separada; os próximos vídeos eu mesmo vou andar pelo mapa e gravar". A `Video.unity` é uma cópia da Demo_Cidade (a cidade antiga), e o `ModoVideo` desliga coisas do jogo (a terceira pessoa, o clima, o menu, a tela de carregamento): para gravar jogando no mapa de verdade, a gravação ficou na partida de sempre, sem o `ModoVideo`.
+- **`Video/GravacaoNoMundo`** (estático): o `Pedido` (o jogo quer gravar), o `Gravando` (escrito pelo gravador), o `Desde` e o `Arquivo`, e as escolhas, no `PlayerPrefs`: `EmPe` (`video.empe`; em pé, 1080 × 1920, o Reels, ou deitado, 1920 × 1080), `NaTela` (`video.tela`: `Nada`, `Mira` ou `Tudo`) e `Quadros` (`video.quadros`: 60 ou 30). `Pedido` e `Gravando` voltam a falso em `SubsystemRegistration`.
+  - **O HUD gravando** (`SemHud`, com `NaTela` em `Nada` ou `Mira`; `SemMira`, com `Nada`): saem a barra da vida (o vermelho do golpe fica), a fome e a sede, os atalhos, a linha da partida (o código, os jogadores e o mundo) e o FPS do `MenuOnline`, os nomes em cima dos outros jogadores, o painel do carro (a velocidade e os avisos), a barra do chefe, a dica do montador, o canto do Dia 0 e os números do F3 e do benchmark; com `SemMira`, também o que o `ArmaJogador` desenha (a mira, a arma e a munição, a dica do E e a luneta). As telas que o jogador abre (o TAB, o M, o F1, o ESC, o comerciante, o saque, o capô, a sinuca) aparecem, e as falas dos sobreviventes também.
+  - **Os braços na tela em pé** (`BracosEmPe(câmera, emPe)`): o ajuste da tomada `Armas` (72° e 6 cm para a direita e 2,5 para cima), feito pelo `LateUpdate` do F1 enquanto grava, e desfeito no fim (55° e no lugar). Conferido com os braços do principal em blocos: o cano da pistola e do rifle a até 2 px da mira, em pé e deitado. A terceira pessoa em pé não muda: o personagem fica no terço da esquerda, inteiro até a canela.
+- **O F8 e o painel VÍDEO do F1** (`UI/MenuDoDesenvolvedor.Video.cs`, embaixo do painel principal): o F8 (só no Editor, fora do menu do ESC) liga e desliga o `Pedido`; o painel tem o botão de gravar (com o tempo, gravando), em pé ou deitado, o que fica na tela e os quadros (as escolhas travam gravando) e o nome do último arquivo. Fora do Editor, o painel avisa que a gravação é só no Editor. O F9 já era do benchmark dos zumbis.
+- **No Editor** (`GravadorDoVideo`, além das tomadas da cena de vídeo): com o `Pedido`, começa um MP4 em `Recordings/Mundo/Mundo_<data>.mp4` (a cena de vídeo grava pelo diretor e ignora o F8), e sem ele, fecha; parar o Play também fecha. Enquanto grava, a aba da Game view diz "● GRAVANDO" (fora da imagem). No fim, a Game view volta ao tamanho de antes (o `selectedSizeIndex` dela, guardado antes de o Recorder trocar, e o `SizeSelectionCallback`, por reflexão: a janela é interna do Editor).
+- **Conferido (03/11/2026, Editor, o mundo Pequeno da semente 7):** em pé, a 60 quadros, saindo do bunker, o jogo andou a ~97% do tempo real (58 quadros por segundo); três vídeos (dentro do bunker, de fora em primeira pessoa com a pistola e em terceira pessoa), sem HUD; a Game view voltou ao tamanho de antes e os braços ao campo e ao lugar do jogo; nenhum erro no Console. Não conferido: o painel do F1 na tela (os botões) e o desempenho no centro de uma cidade grande (se ficar lento gravando, os 30 quadros).
 
 ## As construções feitas pelo jogo (exemplo do gerador de mapas, 26/10/2026)
 
@@ -337,6 +348,170 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - **Na cena:** quando a estante entra de perto (o `BunkerDoMundo.PorOsMoveis`), o `EstantesDoBunker.Ligar` põe o gatilho da mira em volta (a camada 2, com o `EstanteNaMira`: "[E] Abrir a estante de aço (3 itens)") e o `ItensNaEstante`, que refaz os itens dela quando a lista muda: a malha e o material do chão (`ItensNoMundo.MalhaDe` e `MaterialDe`, as roupas pintadas), no meio das células, na tábua (deitadas as armas, em pé o resto), virados ao longo do lado mais comprido e, se forem maiores que o lugar, um pouco menores. A coluna 0 fica à esquerda de quem olha de frente.
     - **A tela** é a do inventário (`TelaDoInventario.Estante.cs`; veja lá).
 - **Falta:** os quartos com o nome de cada jogador e a volta na cama dele quando cai (a decisão 7), guardar no disco as portas, as luzes e o que está nas estantes (a M10), e juntar duas pilhas arrastando na estante.
+
+## Os moradores do bunker (o `Plano_NPCs_Bunker.md` da pasta de arte, 04/11/2026; a parte 2, a ficha e o sorteio, a parte 3, a tela, a tela das cartas e a parte 4, os modelos novos (05/11/2026), aprovadas; a parte 5, as animações, esperando a aprovação)
+
+O sistema de personagens como o do RimWorld, com a escolha em cartas (04/11/2026, a ideia do amigo do usuário, no lugar da
+tela da parte 3): cada mundo sorteia 52 NPCs, e o anfitrião escolhe os 5 do bunker em 5 rodadas de 5 cartas; os outros 47
+ficam no mapa, para serem descobertos. As 20 decisões estão no plano (aprovadas pela recomendação), com a seção "A tela das
+cartas".
+
+- **A ficha** (`Scripts/Mundo/Moradores/`, no assembly do mundo, sem nada da Unity: o jogo, a tela e os testes usam igual):
+  - `FichaDoMorador` (serializável pelo `JsonUtility`, para o save): o id, o nome, o apelido, o sobrenome, a idade (16 a 80),
+    o sexo, o parente da família (`ParenteDaFamilia`: o pai, o avô ou o tio, com a palavra pelo sexo), as histórias (`antes` e
+    `depois`, as chaves), as 8 habilidades (`Habilidade`, de 0 a 20) com a paixão (`Paixao`), o que ele não faz
+    (`Incapacidade`, em bits: a Cozinha, o Combate e a Medicina de quem não faz ficam em 0, sem paixão, e aparecem como "—"),
+    os traços e as condições (as chaves), os laços (`LacoDoMorador`: o id do outro e o que o outro é para ele, "Pai" = o
+    outro é o pai dele; o outro tem o inverso) e a aparência (`AparenciaDoMorador`: o tipo da roupa, a semente, o sexo, o
+    índice da pele, o dos pelos, o grisalho e o sem barba) e o `grupo` dele no mundo (0 é a família). `NpcsDoMundo`: a
+    semente, o próximo id e as fichas dos 52 (o primeiro é o parente da família).
+  - `ListasDosMoradores`: os nomes em inglês (os novos e os de velho, de cada sexo), os 135 sobrenomes, os apelidos (do nome
+    e do ofício), as 25 histórias de antes (`HistoriaDoMorador`: o nome de cada sexo, as idades, a idade em que começou, a
+    roupa, os pontos, a paixão, o "não faz" com a chance, o traço que ela puxa, o peso e a frase, com {N}, {o}, {anos} e
+    {escola}), as 12 dos anos do apocalipse (mais o `SeparadoDaFamilia`, "se perdeu da família no Dia 0", nunca sorteado:
+    é de quem era da família e ficou de fora do bunker), os 26 traços (`TracoDoMorador`: o par, o peso pela idade e o efeito; o fumante
+    é sorteado à parte, 40%) e as 8 condições (`CondicaoDoMorador`: o peso até 30, até 55 e acima, e o efeito). **As chaves
+    vão no save:** mude os textos, não as chaves.
+  - `SorteioDosMoradores`:
+    - `SortearMundo(semente, 52)`: o primeiro é sempre o parente (o pai, 55 a 78 anos, o avô, 68 a 80, ou o tio, 55 a 75,
+      "entrou no bunker com a família no Dia 0"), com 0 a 2 que vieram com ele (`ComOParente`: o laço sempre, o casal vira
+      parente também), o grupo 0. Depois, os grupos do mapa (`Grupos`, `TamanhosDosGrupos`: de 1 a 6, uns 17 por mundo):
+      cada novo do grupo, com 60% de chance (`ChanceDeLacoNoGrupo`), nasce com um laço com um de antes do grupo
+      (`NoGrupo`, `PedidoDoLaco`, com as idades, o sexo, o sobrenome e a pele e o cabelo parecidos), e o primeiro de um
+      grupo, com 12% (`ChanceDeLacoDeFora`), com alguém de outro (o irmão, o primo, o amigo ou o ex; o casal fica no
+      mesmo grupo). E a família que vem junto (`Propagar`: o filho de um é do outro do casal e irmão dos outros filhos, o
+      irmão tem os mesmos pais; os irmãos por tabela com no máximo 27 anos de diferença). O "entrou no bunker com a
+      família" só sai pedido (a família); quem o herdou de um laço num grupo do mapa fica com o `SeparadoDaFamilia`. O
+      nome, o sobrenome de quem não é parente e o apelido não se repetem no mundo (`Usados`: o nome, "#" o sobrenome, "@" o
+      apelido). A mesma semente dá o mesmo mundo.
+    - As cartas: `Baralho(npcs)` (os ids na ordem das cartas: o parente num lugar sorteado da primeira mão e os outros
+      embaralhados), `Mao(npcs, rodada)` (as 5 da rodada, de 0 a 4) e `Separar(npcs, escolhidos)` (os do bunker, na ordem,
+      e os do mapa; quem era da família e ficou de fora ganha o `SeparadoDaFamilia`).
+    - `CompletarMundo(npcs, semente)`: completa até 52 (um mundo da tela de antes das cartas, com os 5 moradores), com os
+      ids a partir do próximo.
+    - `SortearUm` (quem chega depois, sem a família), `OpiniaoDoComeco(a, b)` (a base do laço, os traços e ±10 de acaso,
+      de −100 a 100), os textos (`TextoDaIdade`, `FraseDeAntes`, `TextosDosLacos`, `PalavraDoLaco`...) e `Descrever` (a
+      ficha inteira). O parente da família é só o primeiro e o casal dele (`AcertarOsParentes`).
+  - **A ordem de uma ficha:** o sexo, a idade (`FaixasDeIdade`, mais jovens), o nome, as condições (pela tabela da idade; o
+    parente, 90%), as histórias (abaixo de 22, só a do estudante; acima de 66, a do aposentado 5 vezes mais), o "não faz",
+    as habilidades (0 a 3, mais até 6 pela idade, os pontos das histórias e até 3 no ofício), as paixões (1 a 3), os traços
+    (1 a 3, sem o par, o rápido sem o joelho ruim), a aparência (a roupa da história; acima de 65, a do idoso; grisalho de
+    62 em diante) e o apelido.
+- **A roupa** (`Roupas/RoupaDoMorador.cs`): o sorteio do tipo da roupa da ficha (`SorteioDosNPCs`), procurando nas sementes
+  vizinhas a que dá o sexo da ficha, com a pele da ficha, a cor dos pelos do índice dela (na lista do tipo, ou na do "Idoso"
+  se grisalho) e sem a barba nos muito novos. `RoupaDoMorador.Vestir(vestimenta, aparencia)`.
+- **A folha dos sorteados** (`Editor/FolhaDosMoradores`, menu Zombie City Cleaner > Moradores > Folha dos sorteados): a
+  primeira mão das cartas dos mundos das sementes 1 a 4, cada um vestido e na pose parada, de três quartos, numa cena de prévia (a deformação assada num
+  MeshRenderer, com o bloco das cores), e a ficha ao lado, numa tela da UI (como as imagens do mapa). Grava
+  `Imgs/Renders/Moradores_Folha.png` da pasta de arte.
+- **Os testes** (`Tests/Editor/MoradoresTestes`, 7, uns 2 s): as listas (as chaves, as idades, toda idade com uma
+  história, os pares dos traços, a história de quem se perdeu da família); a mesma semente, o mesmo mundo e o mesmo baralho;
+  **300 mundos de 52 (15.600 fichas)** com as regras (o parente primeiro e no grupo 0, as idades das histórias, as
+  habilidades, o "não faz", os traços sem o par, as condições, a roupa, o grisalho, os laços dos dois lados, um por par,
+  com as idades certas, um casal só e no mesmo grupo, os dois pais de sexos diferentes, os filhos do mesmo pai irmãos, os
+  nomes sem repetir no mundo, o "com a família" só no grupo 0) e os números (14 a 40 laços por mundo, 35 a 45% de
+  fumantes, as condições por idade a 6 pontos da tabela); o mesmo sobrenome só entre quem é da mesma família; as cartas (25
+  sem repetir, o parente na primeira mão e nos 5 lugares dela); o separar (5 + 47, a ordem, ninguém nos dois, o parente de
+  fora com a história nova); o completar um mundo de antes; e o sortear um. Uns 24 laços por mundo (2 entre grupos), 17
+  grupos no mapa, 40% de fumantes, 16% com apelido.
+- **A tela das cartas** (`UI/TelaDosMoradores`; uma classe comum, desenhada pelo `MenuOnline` antes de haver partida, no
+  estilo da `TelaDeCriarPersonagem`: os painéis escuros, o vermelho e a Bahnschrift; tudo pela unidade de 1280 × 720, no
+  meio da tela):
+  - os NPCs (`Npcs`) são sorteados ao abrir e ficam entre uma abertura e outra (voltar e abrir de novo mostra os mesmos,
+    com os escolhidos), até criar um mundo (`Esquecer`);
+  - **nas rodadas, só as cartas e o botão** (05/11/2026, a pedido: "somente as cartas aparecendo mesmo na tela, sem o
+    resto"): as cartas no meio (`TopoDasCartas`), o botão vermelho embaixo delas, no meio (`TopoDoBotao`), e as 5
+    marquinhas das rodadas (`Rodadas`: as escolhidas cheias, a de agora com a borda clara); os lugares de cima, os textos,
+    a ficha e os botões de voltar e desfazer saíram. **A ficha só aparece na revisão** (com os 5: o título, as cartas mais
+    em cima, `TopoDasCartasNaRevisao`, a ficha embaixo delas e o botão de criar no meio, embaixo);
+  - no meio, as cartas da rodada (`Fileira`: a mão, ou os 5 escolhidos na revisão), subindo uma depois da outra quando a mão
+    muda. Cada carta (`Carta`): o retrato, a fita "FAMÍLIA" do parente (e a borda âmbar), o laço que importa em cima do
+    retrato (`LacoDaCarta`: com quem já está no bunker em verde, com alguém desta mão em âmbar, ou "tem um irmão lá fora"),
+    o nome, a idade e o ofício, as 3 melhores habilidades com as chamas e os traços e as condições (em vermelho), em duas
+    linhas (`Caber` corta com as reticências o que não cabe);
+  - na revisão, embaixo das cartas, a ficha da carta escolhida (`Ficha`, em três colunas: o nome, a idade e as histórias; as 8 habilidades; os
+    traços e as condições em fichinhas, o "não faz" e os laços com onde o outro está, no bunker, nesta mão ou lá fora, e a
+    opinião); na revisão, "MUDAR O NOME" (os campos do nome, do apelido e do sobrenome e o OK; o criar fica apagado
+    enquanto isso). Com o mouse em cima de um traço, de uma condição, de uma habilidade, de um laço ou da fita, a dica ao
+    lado do mouse (`Dica`);
+  - o botão vermelho, no meio: "ESCOLHER <NOME>" (`Escolher`) ou, na revisão, o `TextoDoBotao` ("CRIAR O MUNDO",
+    "CRIAR LOCAL" ou "JOGAR"; um nome comprido diminui a letra e corta com as reticências). As teclas de 1 a 5 escolhem a
+    carta, e o Enter (ou clicar duas vezes) confirma; o ESC e o Backspace desfazem a última escolha (`Desfazer`, com a
+    carta dela selecionada), e sem nenhuma o ESC volta ao menu (o `_voltar`, que o `Desenhar` devolve como `Voltar`); com
+    o nome sendo mudado, o ESC termina a edição (`TerminarONome`, como o OK).
+  - **Os retratos** (`UI/EstudioDoMorador`): o NPC das roupas a 600 m embaixo do mundo, em x = 40, na camada do retrato,
+    com a luz fixa do retrato e o parado do mostruário, e a câmera da cintura para cima (18°). Cada carta tem a sua
+    RenderTexture (352 × 336, `NovaImagem`); a tela pede um retrato por quadro (`Retratar`: veste, gira e aponta a câmera
+    para a imagem da carta; a câmera desenha no fim do quadro, e no quadro seguinte a carta fica pronta) até ter os da
+    fileira e os do bunker, e depois a carta escolhida fica girando devagar (o mesmo retrato a cada quadro). `Parar`
+    desliga a câmera. `RetratosProntos` diz se a fileira já tem todos (para os testes).
+  - O NPC vem do `Settings/Resources/RecursosDosMoradores.asset` (`UI/RecursosDosMoradores`, um ScriptableObject com o
+    `Prefabs/Roupas/NPC`; feito por Zombie City Cleaner > Moradores > Montar a tela, `Editor/MontagemDosMoradores`).
+- **No menu** (`UI/MenuOnline`): o "Criar o mundo" do Novo mundo virou "Escolher os moradores", e o "Criar local" também abre
+  a tela (`AbrirOsMoradores`). O botão da tela (`Criar`) separa os do bunker dos do mapa (`TelaDosMoradores.Separar`), faz o
+  `PedirOMundo`, põe os NPCs no `Salvamento.Atual` (`PorOsNpcs`) e hospeda (ou hospeda local). No Continuar, o `Jogar` de um
+  mundo sem moradores abre a tela antes (`_semMoradores`), e o botão grava os NPCs no arquivo do mundo e segue
+  (`JogarNoMundo`); um mundo da tela de antes das cartas (com os moradores e sem os do mapa) ganha os 47 e é gravado
+  (`CompletarOsNpcs`, com a semente do mundo). Os acessos de teste: `AbrirOsMoradoresParaTeste`, `TelaDeMoradores` (com o
+  `SelecionarParaTeste`, o `Escolher` e o `Desfazer` da tela) e `CriarComOsMoradoresParaTeste`.
+- **O save** (`Salvar/MundoSalvo`): `moradores` (os do bunker), `npcsDoMapa` (os outros do mundo), `npcsDescobertos` (os ids
+  que os jogadores já conhecem: os do bunker no começo) e `proximoMorador`; `NpcDoId(id)` acha um deles no bunker ou no
+  mapa (os laços dos moradores apontam para os dois). O `Salvar` não mexe neles (o `Atual` é o mesmo objeto). Um mundo de
+  antes deles volta com as listas vazias.
+- **Testar a criação pelo MCP sem sujar os saves do usuário:** o `CriarComOsMoradoresParaTeste` usa o personagem escolhido no
+  painel (o salvo do usuário) e o modo automático; antes de sair do Play, ponha `Salvamento.Atual = null` e chame
+  `SessaoOnline.Instancia.Sair()` (sem isso, o `OnApplicationQuit` grava o mundo de teste no Continuar dele).
+- **Rodar os testes pelo MCP:** o `RunCommand` recusa a `TestRunnerApi` ("user interactions are not supported"). O
+  `Editor/RodarOsTestes` roda um grupo (`Rodar("MoradoresTestes")`, o nome da classe) e grava `Temp/Testes_<grupo>.txt`; pelo
+  MCP, chame-o por reflexão (`System.Type.GetType("ZombieCityCleaner.EditorTools.RodarOsTestes, Assembly-CSharp-Editor")`),
+  direto, sem o `delayCall` (que não roda com o Editor no fundo). Também no menu Zombie City Cleaner > Testes > Moradores.
+- **Conferido (04/11/2026, no Editor):** os 6 testes passam (0,8 s). Nos 2.000 grupos: 1,77 laços por grupo (10% sem
+  nenhum), 40% de fumantes, 28% com apelido, 18% com um "não faz"; com condição, 9,4% até 30 anos, 24,9% de 31 a 55, 48,8%
+  de 56 a 70 e 73,9% acima (a tabela: 10, 25, 50 e 75%); as habilidades em média de 4,4 a 5,7; 1,76 paixões por ficha (36%
+  apaixonado); as roupas: civil 22%, idoso 21% (o parente é quase sempre um), trabalhador 18%, sobrevivente 13%. A folha
+  (`Imgs/Renders/Moradores_Folha.png`): os 20 vestidos, as mulheres com o corpo delas, a pele parecida entre os parentes e os
+  velhos grisalhos.
+- **Conferido na parte 3 (04/11/2026, no Play do Editor, um jogador):** a tela aberta pelo acesso de teste (1918 × 887), a
+  troca (a Vera saiu para a reserva sem o laço com o Frank, e o Larry entrou), o mudar o nome, e o "Criar local": o mundo
+  novo com os 5 moradores no `Salvamento.Atual`, a partida começando nas operações do bunker, sem erro no Console. Os testes
+  passam (6, com o dos sobrenomes); o `MundoSalvo` com os moradores vai e volta pelo `JsonUtility` igual. As fotos em
+  `Imgs/Renders/Moradores_Tela.png` e `_Tela_Reserva.png` da pasta de arte. Os saves do usuário não foram mexidos.
+- **Conferido na tela das cartas (04/11/2026, no Editor e no Play, um jogador):** os 7 testes passam; as rodadas (a primeira
+  com o casal da família na mesma mão, com o laço "nesta mão"), o desfazer (volta a mão 2 com a carta desfeita), a revisão e
+  o "Criar local": o mundo novo com 5 moradores, 47 no mapa e 5 descobertos, sem laço quebrado, a mãe da família de fora no
+  mapa com o `SeparadoDaFamilia`, a partida nas operações do bunker, sem erro no Console; o `MundoSalvo` vai e volta igual
+  pelo `JsonUtility`. Os dois mundos do usuário jogados depois da parte 3 foram completados só na memória (47 cada, sem id
+  nem nome repetido). As fotos: `Imgs/Renders/Moradores_Cartas.png` e `_Cartas_Revisao.png` da pasta de arte. Os saves do
+  usuário não foram mexidos.
+- **Os modelos novos (a parte 4, 04/11/2026; ainda fora do jogo):**
+  - na pasta de arte, no `Mobilia.blend` (o lote `mobilia_moradores.py`), o suporte dos tacos, o cinzeiro, a panela grande e
+    a caixa de papelão (veja o `CLAUDE.md` de lá, "Convenções da mobília nova"). O suporte tem o tamanho final (×1,00, como
+    o portão: os tacos e a caixa de bolas são itens); as vagas estão no script (`VAGAS_DOS_TACOS`, `TACO_Y`, `TACO_Z` e
+    `CAIXA_NO_SUPORTE`). As peças soltas: `Cinzeiro.Bituca.1` a `.12`, `PanelaGrande.TampaSolta.1` (sem o `.Tampa.`, para a
+    `ParteQueAbre` não a pegar), `PanelaGrande.Comida.1` (encolhe em z) e `CaixaDePapelao.Conteudo.1`. **A caixa usa uma
+    textura nova, a `Papelao`** (a 23ª da tira, no fim): quando o `Mobilia_Nova.fbx` e a `T_Mobilia.png` vierem para cá (a
+    parte 6), ela entra no `CatalogoDaMobilia.Texturas` (com a escala 2,0);
+  - aqui, no `Blender/loot.py`, os pratos (a seção "o prato" e o próximo tópico); os ícones e as fotos deles já estão em
+    `Art/UI/Icones/`, mas o `Loot.fbx` ainda não foi exportado.
+- **As animações dos moradores (a parte 5, 05/11/2026; esperando a aprovação):** feitas na pasta de arte (o
+  `bloco_morador.py` do `PrincipalBloco.blend`; veja o `Plano_NPCs_Bunker.md`, "A parte 5"), 29 clipes no
+  `Personagem_PrincipalBloco.fbx` (agora com 73): `Sentar_`, `Sentado_` e `Levantar_Cadeira`, `_Sofa` e `_Banco`,
+  `Sentado_Lendo`, `_Rezando` e `_Triste`, `Comer`, `Deitar`, `Dormindo`, `Levantar_Cama`, `Cozinhar`, `Lavar_Louca`,
+  `Consertar`, `Estante_Alto`, `_Meio`, `_Baixo` e `_Chao`, `Sinuca_Tacada`, `Andar_Mancando` e, só do peito para cima,
+  `Caixa_Carregar`, `Conversa`, `Chorar` e `Tossir`. Os laços estão em `MontagemDasArmas.EmLacoDosMoradores` (o
+  `ImportarPersonagem` usa a lista; nesta parte, só os clipes do FBX foram refeitos, sem rodar o "Montar personagens": os
+  controladores e o prefab do jogador ficaram como estavam).
+  - **Cada clipe fica no lugar, com a raiz parada; o jogo põe a raiz em volta do móvel** (+z para a frente da raiz): a
+    frente do assento da cadeira e do sofá 12 cm atrás da raiz (sentado, o quadril a 0,71 m e 25 cm atrás; no sofá,
+    36 cm); no banco do refeitório, a raiz atrás do banco, olhando para a mesa (a beira de trás do banco 24 cm na frente
+    dela, a mesa a 80 cm do meio do banco, como no `MoveisDoBunker.Refeitorio`); a cama atrás da raiz, ao longo do x (a
+    cabeceira para o -x, a esquerda da raiz), a beira 12 cm atrás; o fogão, a pia e a bancada a 21 a 25 cm na frente; a
+    estante a 30 cm; a mesa de sinuca a 25 cm (a bola branca a uns 1,03 m). Na `Sinuca_Tacada`, a ponta do taco passa a
+    bola no quadro 60 (2,5 s); na estante, o item troca de lugar entre os quadros 14 e 22.
+  - **As peças:** os ossos `prato`, `colher`, `bocado` (filho da colher), `caixa` e `livro` (filhos do `chest`), cada um
+    com um vazio `Morador_<Peça>` (sem malha: o jogo põe o prato e a colher do `Loot.fbx`, a caixa de papelão da mobília
+    em ×1,30 e o livro). A escala do osso diz se a peça aparece (1) ou não (0,001). **O `NPC_Corpo` das roupas ainda não
+    tem esses ossos** (nem os do fumo): na parte 6, trazer o corpo de novo no `Roupas.blend` e exportar as roupas.
 
 ## O mundo gerado (Partes M1 a M5 e as três primeiras fatias da M6 do gerador de mapas, 26 e 27/10/2026)
 
@@ -844,7 +1019,14 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **O personagem (28/10/2026, a pedido: "pode tirar aqueles 4 personagens que temos lá e deixar somente esse"; `Art/Characters/Personagens/`):** só o personagem principal em blocos, `Personagem_PrincipalBloco` (`.fbx` e `.png`), feito no Blender pela pasta de arte (`Modelo 3D/Principal/PrincipalBloco.blend`; o export é o `bloco_exportar.py`, e as animações, os scripts `bloco_*.py` de lá: veja "Convenções do personagem principal em blocos" no `CLAUDE.md` de lá). Os 4 do Tripo (`HomemBranco`, `HomemGordo`, `Mulher` e `HomemNegro`, de 27/10/2026) saíram do projeto: os FBX, as texturas, os controladores, os materiais e os retratos foram apagados (estão no histórico do git e na pasta de arte, `Modelo 3D/Personagens`).
   - **A ordem** (`Player/Personagens.Modelos`, hoje só `PrincipalBloco`) é o número que vai pela rede. `Personagens.Escolhido` (no `PlayerPrefs`, "personagem") é o desta máquina; o retrato da tela de escolha fica em `Art/UI/Personagens/Resources/Retrato_<modelo>.png` (`Personagens.Retrato`).
   - **O FBX** tem o esqueleto dele (`PrincipalBloco_Rig`: `root`, `hips`, `spine`, `chest`, `neck`, `head`, os braços com os dedos de duas falanges, `index1` e `2`... `thumb` e `thumb2`, as pernas e o `weapon.R`, com os ossos das peças que mexem, `slide`, `mag`, `pump` e `shell`), o corpo numa malha só (`Jogador_Corpo`: o corpo, as mãos e as peças do rosto, com o material `PrincipalBloco`, a textura), **as armas e os itens já presos ao `weapon.R`** (`Arma_<modelo>`, cada um com a pegada e o tamanho dele: o rifle a 85%, a submetralhadora a 90%, a espingarda a 75% e a sniper a 85%; a boca do cano em `Boca_<modelo>`; as peças que mexem, `P_<modelo>_<peça>`, nos ossos delas, ligadas e desligadas junto com a arma pelo `Player/PecasDaArma`) e 37 clipes com os nomes das ações de lá: o corpo todo (`Parado`, `Andar`, `Correr`, `Agachado`, `Andar_Agachado`, `Pular`, `No_Ar`, `Cair`, `Sentado_Motorista` e `Sentado_Passageiro`) e, do peito para cima, `<arma>_Segurar`, `_Mirar`, `_Atirar` e `_Recarregar` (a sniper com o ferrolho), `<item>_Segurar` e `_Usar` e `Maos_Guarda`, `_SocoDireito` e `_SocoEsquerdo`.
-  - **O controlador do corpo** (`Personagem_PrincipalBloco_Corpo.controller`, `MontagemDasArmas.MontarControladorDoCorpo`; as animações são em camadas, e o `Jogador_TP.controller` não serve): a base é o corpo todo, a árvore pelo `Speed` (parado, andando a 2 e correndo a 4,2), pelo `Lugar` (1 o motorista, 2 os outros), sentado no carro, e pelo gatilho `Janela`, pulando a janela (`Pular_Janela`, uma vez, e de volta à locomoção); a camada "Braços" (a máscara `Personagem_PrincipalBloco_Tronco.mask`: o `chest` e tudo o que sai dele) segura (`Segurar`), mira com o `Aiming` (`Mirar`) e atira com o `Fire` (`Atirar`, e volta). Os override (`Personagem_PrincipalBloco_<Arma>`, `_Maos`, `_Lata` e `_Garrafa`) trocam os três clipes da camada de cima: os punhos em guarda e o soco direito; os itens segurando e, no lugar do tiro, comendo ou bebendo. O `JogadorRede` usa o do item (`controladoresDosItens`, novo) com a lata ou a garrafa na mão.
+  - **A caminhada e a corrida novas** (03/11/2026, a pedido: "tá um pouco estranha"): no jogo, o corpo andava duro e reto,
+    com as pernas quase esticadas, e corria como um trote no lugar. O `bloco_anim.py` da pasta de arte refez o `Andar` (o
+    quadril mais baixo, os joelhos dobrando em todo o passo, o pé subindo mais, o corpo um pouco inclinado) e o `Correr` (o
+    corpo inclinado para a frente, o pé pousando mais à frente, a perna de trás esticando e o joelho menos alto); só o
+    `Personagem_PrincipalBloco.fbx` foi exportado de novo (`exportar_corpo`), e o controlador e os override continuam.
+    Como do peito para cima é a camada dos braços, a inclinação e o giro estão no quadril e na coluna (o `spine`).
+    Antes e depois, filmado no jogo de lado: `Imgs/Renders/PrincipalBloco_Andar_Correr_Jogo_Antes.png` e `_Depois.png`.
+  - **O controlador do corpo** (`Personagem_PrincipalBloco_Corpo.controller`, `MontagemDasArmas.MontarControladorDoCorpo`; as animações são em camadas, e o `Jogador_TP.controller` não serve): a base é o corpo todo, a árvore pelo `Speed` (parado, andando a 2 e correndo a 4,2) e, desde 03/11/2026, pelo `Agachado` (uma árvore 2D, Freeform Cartesian: de 0 a 1, o `Agachado` parado e o `Andar_Agachado` a 1,2 m/s; o `JogadorRede` põe o parâmetro aos poucos, pela rede; `MontagemDasArmas.ArvoreDaLocomocao`, e `PorOAbaixarNoControlador` muda o controlador que já existe sem refazer o prefab), pelo `Lugar` (1 o motorista, 2 os outros), sentado no carro, e pelo gatilho `Janela`, pulando a janela (`Pular_Janela`, uma vez, e de volta à locomoção); a camada "Braços" (a máscara `Personagem_PrincipalBloco_Tronco.mask`: o `chest` e tudo o que sai dele) segura (`Segurar`), mira com o `Aiming` (`Mirar`) e atira com o `Fire` (`Atirar`, e volta). Os override (`Personagem_PrincipalBloco_<Arma>`, `_Maos`, `_Lata` e `_Garrafa`) trocam os três clipes da camada de cima: os punhos em guarda e o soco direito; os itens segurando e, no lugar do tiro, comendo ou bebendo. O `JogadorRede` usa o do item (`controladoresDosItens`, novo) com a lata ou a garrafa na mão.
   - **Sentado no carro:** com o parâmetro `Lugar` no controlador, o `PassageiroDoCarro` não faz a pose dele: liga o `Lugar` (e tira o peso da camada dos braços) e, ao sair, volta o `Lugar` a 0 e o peso a 1. Sem o parâmetro, a pose feita no código, como antes.
   - **A montagem** (`MontagemDasArmas.PrepararPersonagens`, também dentro da montagem das armas; menu Zombie City Cleaner > Montar personagens, que refaz também o prefab do jogador): a importação (Generic, avatar do próprio modelo, sem "Bake Axis Conversion", um clipe por faixa, com o nome dela; em laço os de `EmLacoNoCorpo` e os `_Segurar` e `_Mirar`), o material `Materials/Personagem_<modelo>.mat` (URP Lit com a textura, suavidade 0,15, sem o passe de motion vectors), o controlador do corpo e os override.
   - **Os braços de primeira pessoa** são os dele (os `Jogador_FP_<modelo>.fbx` foram trocados pelos do `bloco_exportar.py`, no mesmo formato: `FP_Rig_<modelo>`, `FP_Bracos_<modelo>` e `Boca_FP_<modelo>`, com os mesmos clipes), com o material dele (o `PrincipalBloco` do FBX vai para o `Personagem_PrincipalBloco.mat`); a `Jogador_FP_Sniper.fbx` é a dele (não a feita pelo `Blender/sniper_construir.py` a partir do rifle). O `JogadorRede.variacoes` tem o material do corpo de cada personagem (não mais as linhas da paleta).
@@ -857,7 +1039,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - **O shader** `Shaders/Roupas.shader` ("ZombieCityCleaner/Roupas"): a PBR da URP, como o da mobília. A cor é a base × ((1 − (R + G + B)) + 2 × (`_Cor1` × R + `_Cor2` × G + `_Cor3` × B)), com R, G e B da máscara (a mesma conta do Blender). Um material só, `M_Roupas.mat`, para todas as peças e o corpo (na camada −1, ele lê as texturas do corpo, `_CorpoCor` e `_CorpoMascara`, com a mesma conta: as cores dele são a pele, a cueca e a dos pelos); as cores vão por peça, no `MaterialPropertyBlock`. **Os vidros** (o lote 6: a lente dos óculos de proteção e a viseira): o alfa da textura de cor (a Texture2DArray importa o alfa) diz o quanto eles cobrem, desenhado em pontilhado (a matriz de Bayer 4 × 4 na tela, `Pontilhado`, a mesma nos passes da cor, da profundidade e das normais); na sombra, o vidro (alfa abaixo de 0,5) não entra. **O retrato** (`_Retrato` = 1, a cópia do material feita pelo `RetratoDoJogador`, com `_Ambiente`, `_Luz` e `_DirecaoDaLuz` do `Retrato.mat`): a luz fixa do shader do retrato, sem as luzes da cena, a neblina e o ambiente.
   - **`Roupas/Vestimenta`** (na raiz do modelo): `Vestir(npc)` ou `Vestir(peças)`.
     - Liga só as peças vestidas e pinta cada uma (`Pintar`).
-    - **O cabelo de baixo do chapéu** (`Desenhada`): com um chapéu que cobre a cabeça vestido (os bonés, o quepe, o gorro, o capacete e o chapéu de caubói), os cabelos grandes (o penteado, o penteado para trás, o cacheado, o rabo de cavalo e o coque) se desenham na versão de baixo do chapéu, com as cores deles (eles saíam por cima e por trás dos chapéus). As `Vestidas` continuam as pedidas: tirando o chapéu, o cabelo volta. As versões não entram no `TrocarNoLugar`.
+    - **O cabelo de baixo do chapéu** (`Desenhada`): com um chapéu que cobre a cabeça vestido (os bonés, o quepe, o gorro, o capacete e o chapéu de caubói), os cabelos grandes (o penteado, o penteado para trás, o cacheado, o rabo de cavalo e o coque) se desenham na versão de baixo do chapéu, com as cores deles (eles saíam por cima e por trás dos chapéus). As `Vestidas` continuam as pedidas: tirando o chapéu, o cabelo volta. As versões não entram no `TrocarNoLugar`. **Com a balaclava** (03/11/2026, a pedido: "alguns cabelos ficam para fora"; a marca `esconde_cabelo` do catálogo, do `ESCONDE_CABELO` do `roupas_kit.py` da pasta de arte), nenhum cabelo se desenha (`Desenhada` devolve null; o rabo de cavalo e o coque de baixo do chapéu, o curto e o rabo baixo saíam por ela); as cores dele ficam guardadas e as sobrancelhas continuam com a cor dele.
     - O corpo (`corpo`: "Homem" ou uma forma do catálogo, a "Mulher", pela blend shape a 100 no corpo e em cada peça ligada; `TrocarCorpo`) e a pele (`pele`, hex; `TrocarPele`). As sobrancelhas pegam a cor 1 da primeira peça de pelos vestida (o cabelo, a barba).
     - Tira as faces cobertas (as do corpo e as das peças de baixo) numa cópia da malha, guardada por combinação. O FBX é Read/Write para isso.
     - `TrocarNoLugar(lugar)`: troca a peça vestida num lugar do corpo (o lugar do catálogo: "Cabeca", "Cabelo", "Oculos", "Mascara", "Cintura"...) pela próxima do catálogo nesse lugar, com as cores do começo dela (depois da última, nenhuma; as outras do mesmo lugar saem).
@@ -910,6 +1092,35 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - a camada "Ações" tem os estados `Fire`, `DryFire`, `Reload` e `Sacar`, que o código toca do começo (`ArmaJogador.Acao`). No automático, um tiro recomeça o anterior. Cada um volta sozinho ao estado vazio;
   - **o peso da camada "Ações" é do código** (`ArmaJogador.PesoDasAcoes`): 1 durante uma ação e, quando ela volta ao estado vazio, descendo até 0 em 0,15 s. Parado no estado vazio, com o Write Defaults desligado, ela segurava a última pose da ação para sempre: os braços ficavam congelados no fim do `Sacar`, e a arma não respirava, não balançava andando nem baixava correndo (medido: o osso `gun` não mudava entre parado, andando e correndo);
   - `Jogador_FP_<Arma>.overrideController` troca os clipes pelos da arma; os dos itens põem o `Usar` no `Fire` (e o `Idle` no `DryFire` e no `Reload`, que não tocam). O dos punhos (`Jogador_FP_Maos`) põe o `SocoDireito` no `Fire`, o `SocoEsquerdo` no `DryFire` e o `Idle` no `Reload`.
+- **A mão esquerda na arma** (`Player/MaoNaArma`, 03/11/2026, a pedido: "ao correr segurando uma arma, como o rifle, a mão
+  de apoio não acompanha e fica saindo da arma"; posto no dono pelo `JogadorRede`): em cada animação dos braços a mão esquerda
+  fica parada no mesmo lugar da arma (na espingarda, da telha; medido no Blender: 0,0 cm em todas, menos a recarga), mas a
+  árvore do `Speed` mistura os ossos de andando e correndo, e no meio da mistura a mão saía até 12 cm do rifle (4 da
+  submetralhadora, 1,4 da espingarda, 0,5 da pistola e da sniper). Depois do Animator, um IK de dois ossos (o do Daniel
+  Holden: o cotovelo no plano que a animação deu) leva a mão de volta para a pegada, a do quadro 0 do `Idle` (lida uma vez
+  por arma, pelo `SampleAnimation`, com a pose de agora guardada e devolvida), com o giro dela. Na recarga (o `Recarregando`
+  ou o estado `Reload` da camada "Ações"), o peso sai em 0,08 s e volta em 0,2 s. Medido no Play com o robô correndo de
+  2 em 2 s: a mão fora da pegada, de 12 cm para no máximo 0,18 cm.
+- **Os braços perto da origem** (`Player/BracosNaOrigem`, 03/11/2026, a pedido: "a mão na primeira pessoa fica meio
+  tremendo"; no dono): o float só guarda 0,24 mm de 2 a 4 km do meio do mapa (0,49 mm além de 4 km), e cada osso dos
+  braços, a 30 cm do olho, ia para o degrau mais perto, um diferente a cada quadro (no bunker do Grande, em x = 3.078, as
+  posições andando de 0,000244 em 0,000244 m: a mão vestida pulava 0,2 a 0,3 mm por quadro, cerca de um pixel). O
+  "Bracos" e a "CameraBracos" saem de baixo da câmera do mundo e ficam numa raiz em (0, −300, 0) (`Origem`; 0,03 mm de
+  precisão, 300 m embaixo do chão, onde nada mais há), com o giro da câmera do mundo a cada quadro (`DefaultExecutionOrder`
+  300, depois de tudo o que mexe nela); a câmera dos braços continua na pilha da do mundo. Lá, a luz do sol e da lua é a
+  mesma, e as luzes de ponto e de foco que alcançam a câmera (as lâmpadas do bunker, a fogueira, a lanterna dos outros, o
+  carro; sem as do próprio jogador) são copiadas para perto dos braços, no mesmo lugar em relação à câmera (as 4 mais
+  fortes ali, procuradas a cada 0,25 s). O que precisa do lugar dos braços no mundo usa `JogadorRede.NoMundo(ponto)`: o
+  clarão do tiro em primeira pessoa fica nos braços (o brilho virado para a câmera deles, `Efeitos.Clarao(boca, camada,
+  olho)`) e a luz no mundo nasce na frente da câmera (`Efeitos.LuzDoClarao`); a tocha do corpo do dono agora tem a luz
+  dela (antes, no dono, a luz era a dos braços). Os sons da arma do dono são 2D (o lugar não importa). Medido no Play, no
+  mesmo bunker: a mão vestida varia no máximo 0,09 mm de um quadro para o outro parada (média 0,03), sem saltos.
+  - **Ainda pode tremer** o resto do mundo visto de longe do meio (a 4 km, 0,5 mm em tudo), mas só os braços ficam tão perto
+    do olho para isso aparecer.
+  - **O que aparece na primeira pessoa vai na câmera dos braços** (`JogadorRede.cameraBracos`), nunca na do mundo: na
+    camada dos braços e preso à câmera do mundo, fica longe da câmera deles, e a do mundo não desenha essa camada. Foi o
+    que sumiu com o pneu nas mãos (04/11/2026: o `InventarioJogador.CriarPneus` o punha na câmera do mundo; o usuário
+    pegou um pneu e não o viu nem na mão nem na mochila, porque ele vai para as mãos quando não cabe nos bolsos).
 - **Write Defaults desligado nos Animators:** está desligado em todos os estados (do jogador e do zumbi). Com ele ligado, o estado vazio de uma camada de cima jogaria o personagem na pose T. Desligado, a camada de cima segura a última pose: tire o peso dela quando não houver ação (veja acima).
 - **Lanterna:** não a cole na câmera, porque ela estoura a arma de luz. Ela fica no peito (veja "Rede e jogador online") e não ilumina os braços de primeira pessoa: o `LanternaJogador` a desliga só durante o desenho da câmera dos braços (`RenderPipelineManager.beginCameraRendering`). Sem isso, a arma e a manga esquerda, dentro do facho, ficavam brancas. De perto, ela ainda clareia muito as armas escuras do suporte.
 
@@ -959,6 +1170,8 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
     - `JogadorRede`: as câmeras, os corpos (`corpos`, um `CorpoDoPersonagem` por personagem), o personagem (`Personagem`, que o dono escreve quando nasce: ele liga o corpo dele, passa a usar o Animator, os ossos, o que está na mão e os controladores dele e pinta os braços de primeira pessoa com a pele dele; avisa `CorpoMudou`), o que está na mão (`NaMao`, do `InventarioJogador`) e o RPC do tiro. A cor da família saiu (dois jogadores podem ter o mesmo personagem).
       - **A aparência** (`Aparencia`, uma `NetworkVariable<AparenciaDoJogador>` escrita pelo dono quando ele cria o personagem; o `Plano_Personagem.md` da pasta de arte, a parte 1, 31/10/2026): o nome, o sexo, a pele, o cabelo, a cor dos pelos, a barba, a camiseta e a calça (cada uma o índice numa lista do `Player/AparenciaDoJogador`, as mesmas em todas as máquinas; `PecasDoCorpo(catálogo)` dá o cabelo, a barba e os cílios da mulher; `RoupasDoComeco()`, a camiseta, a calça e o tênis de cano como itens com as cores; `Pecas(catálogo)`, as duas juntas, para o estúdio da tela de criar; e `Pecas(catálogo, roupas)`, as do corpo com as roupas vestidas do inventário, a do jogo, com o top na mulher sem nada no tronco). Vem da tela de criar o personagem (`Criar`); quando o personagem é criado, o anfitrião veste as do começo no inventário (`InventarioJogador.VestirOComeco`, uma vez por partida), e daí em diante as roupas são as do inventário (veja "As roupas", na seção do inventário); o robô de teste sai sorteado (`AparenciaDoJogador.Sortear`, o nome "Robô N"). `AplicarAparencia` (também quando as roupas vestidas mudam, `InventarioJogador.RoupasMudaram`) veste o corpo (a `Vestimenta` do corpo) e, no dono, pinta os braços de primeira pessoa (sem efeito desde a parte 5: veja "As roupas nos braços") (`PintarBracos`: a cor base do material deles, `_BaseColor` no `MaterialPropertyBlock`, é a pele pedida dividida pela da textura, `PeleDaTextura`, na luz linear: eles são só pele).
     - `MovimentoPrimeiraPessoa`: andar 2,0 m/s, correr 4,2 m/s, mirando 1,3 m/s, pulo; abaixo de y = −20, volta ao ponto de nascimento.
+      - **Abaixar no C** (03/11/2026, a pedido; a ação `Player/Crouch`: o C, e o B no controle): o C abaixa e levanta (`Agachado`; `PedirAbaixar(bool)` para os testes). Abaixado: anda a 1,2 m/s (`velocidadeAgachado`), não corre, a cápsula fica com 1,4 m (`alturaAgachado`, os pés no mesmo lugar) e o olho desce de 1,62 para 1,27 m em 0,22 s (`olhoAgachado`: a cabeça do corpo desce 0,35 m no `Agachado`). O Espaço só levanta (sem pular) e o correr levanta e corre; sem lugar em cima (uma cápsula de checagem da altura que falta, sem o jogador, os braços, os corpos e o Ignore Raycast), ele continua abaixado. Voando, levanta (o C desce). O carro e o pulo da janela desligam o movimento: ele sai em pé (`OnDisable`). Vai pela rede no `JogadorRede.Agachado` (o corpo de todos toca o agachado). Conferido no Play (03/11/2026): a cápsula, o olho, o parâmetro do corpo em 1 e a cabeça do corpo a 1,16 m; levantando, tudo de volta.
+      - **`Esperando`** (o save, veja "O save"): parado, sem cair, até o chão de onde ele foi posto ficar pronto; solta sozinho depois de 75 s.
     - `InventarioJogador`, `TelaDoInventario`, `FomeESede`, `PassosJogador` e `MenuDoDesenvolvedor`: veja "Inventário, comida e água".
     - `ArmaJogador`: o que está na mão (uma arma, os números em `Combat/Armas`; a comida ou a água; ou nada), raycast do centro da tela, recarga com R, mira no botão direito (FOV 70 → 58), mira, munição e o nome da arma na tela (só com arma).
       - Tem os 8 modelos de primeira pessoa, na ordem de `Itens.Modelos` (as 5 armas, a lata e a garrafa: `modelos`, `animadores`, `bocas`) e, por último, os punhos (`Itens.Punhos`, os da mão vazia); `Trocar(item, id)` liga o do item novo (`Itens.ModeloNaMao`) e toca o `Sacar` (0,4 s sem atirar). Cada arma da mochila guarda o pente dela (pelo Id): trocar de arma não recarrega.
@@ -1044,7 +1257,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
 - **O painel de armas ("Parede de armas"):** montado pela montagem das armas no lugar do móvel `Painel_Armas`, na parede do fundo do salão do bunker, de frente para a porta (pedido junto com o bunker maior; substituiu o suporte de 4 prateleiras e a vaga da sniper na mesa).
   - **Cada arma tem o seu lugar** (`VagasDoPainel`, o `VAGAS_DO_PAINEL` do `cidade_moveis.py`): sniper, rifle, espingarda e submetralhadora uma embaixo da outra, e uma coluna de 4 vagas de pistola. Cada vaga ("Vaga N (arma)") tem o tipo dela (`VagaDeArma.dono`), um BoxCollider gatilho do tamanho da arma dela (o que a mira procura) e a arma em pé no apoio ("Arma": a malha muda com o que está na vaga).
   - A arma fica com o cano ao longo do painel, o lado esquerdo para fora e a parte de baixo no apoio, centrada pelo tamanho da malha.
-  - Começa com as 4 longas; as vagas de pistola começam vazias, porque cada jogador nasce com a dele.
+  - **Começa vazio** (03/11/2026, a pedido: "o painel de armas da garagem já está vindo com armas, não deveria"; antes, as 4 longas): as armas são as que os jogadores guardam nele. O `inicio` saiu da serialização (`[NonSerialized]`): as cenas ainda guardam a lista antiga das 4 armas. Um mundo salvo antes guarda as armas que tinha no painel.
   - **Com o inventário** (`VagaRpc`): a arma pega vai para a mochila, se couber (e para um atalho livre e a mão; veja "Inventário, comida e água"). Sem espaço, ela fica na vaga ("Sem espaço na mochila para …", a dica avisa); a troca com a arma da mão saiu com a mochila em grade. Mirando uma vaga vazia com a arma dela na mão, E guarda a arma (ela sai da mochila). A arma pega vem com o pente que tinha na vaga (cheias no começo); as balas de reserva vêm das caixas de munição (veja "A munição").
 - **A parede dos fundadores ("Fundadores (bunker)", a pedido em 25/10/2026):** os nomes dos primeiros comentários dos vídeos, pintados em tinta spray na parede do fundo do salão, à direita do painel de armas: "FUNDADORES" em vermelho em cima e os nomes em branco embaixo, cada um um pouco torto, com as bordas ásperas e uns escorridos.
   - **Os nomes** ficam em `Settings/Fundadores.txt` (UTF-8, um por linha, até 26 letras; as linhas vazias e as que começam com # não contam), até 10 por coluna e até 4 colunas. A fonte é a `LegacyRuntime.ttf` da Unity (letras com acento servem; emojis, não).
@@ -1140,6 +1353,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - Ainda não são salvos: a partida começa com os 50 do começo (34 de comida e água e 16 caixas de munição).
 - **O menu do desenvolvedor (`UI/MenuDoDesenvolvedor`, F1; a pedido, 24/10/2026):** um painel no canto de cima, à esquerda, por cima da tela do inventário (`GUI.depth` menor; a tela não pega cliques nele, `Area`).
   - **Onde ele existe** (`Disponivel`): no Editor, nas builds de desenvolvimento e no jogo compilado com a opção "Menu do desenvolvedor (F1)" ligada (ESC > Configurações, `Opcoes.LiberarF1`; a pedido em 27/10/2026). Numa partida, os pedidos valem pela opção do anfitrião: com ela desligada lá, ele ignora os do F1 dos outros. Desde 28/10/2026, o anfitrião passa a opção dele para todos (`LiberadoNoAnfitriao`, uma NetworkVariable em cada jogador), e quem entra vê no painel, em vermelho, "Desligado no anfitrião..." (antes, o painel abria e os itens não vinham, sem explicação, até o anfitrião ligar o F1 dele). As conferências do F1 gravam o relatório, no jogo compilado, na pasta de dados dele (`Application.persistentDataPath`, como o benchmark da cidade).
+  - Embaixo do painel principal, o painel VÍDEO (03/11/2026): gravar jogando, o F8 (veja "Gravar jogando, no mundo").
   - Mostra os zumbis vivos (no anfitrião, todos, com os níveis de detalhe e os mortos; num cliente, os que chegaram perto dele).
   - "Matar todos os zumbis" (`ZombieManager.MatarTodos`: cada um de pé cai morto, como com um tiro no corpo).
   - "Criar N zumbis perto de mim" (até 300; `ZombieManager.CriarPerto`: de 6 a 14 m em volta, no NavMesh, sem tirar os que já estão e até nas áreas livres, como o bunker).
@@ -1252,6 +1466,72 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
     construções montadas (`FogueiraMontada`, `CamaMontada`, `BarricadaMontada`) e a bancada (`Construcao_<nome>.asset`,
     `MontagemDoSaque`). Uns 3.400 triângulos ao todo. As embalagens usam 16 células novas da `Paleta.png` (a linha 11 de cima,
     colunas 6 a 15, e a linha 0, colunas 0 a 5: estavam vazias, cinza `404040`, e a cidade não usa: veja `Mundo/Paleta.cs`).
+  - **O fumo** (03/11/2026, as partes 2 e 3 do `Plano_Cigarro.md` da pasta de arte, aprovadas; a 4, no jogo, logo abaixo): a seção "o fumo" do
+    `loot.py`, 30% maior que o de verdade (`FUMO`): o `MacoDeCigarros` (o item, com o ícone e a foto) e as peças das
+    animações e do jogo, sem ícone (`PECAS_DO_FUMO`): a caixa aberta e a tampa (a origem na `DOBRADICA`), o cigarro em peças
+    (a origem na emenda do filtro com o papel: o `CigarroPapel` vai de 0 a `PAPEL` e encolhe em Z; na ponta dele, o
+    `CigarroPonta` apagado ou o `CigarroBrasa` com o `CigarroCinza`), a `Bituca`, o `Isqueiro` e a `IsqueiroChama` (no
+    `BOCA_DO_ISQUEIRO`). A folha de conferência é a etapa `folha` do script. As peças estão no `Loot.fbx` (a bituca vira a
+    malha `Malhas/Fumo_Bituca.asset` na `JuntarLoot`).
+  - **O prato** (04/11/2026, a parte 4 do `Plano_NPCs_Bunker.md` da pasta de arte; esperando a aprovação; o `Loot.fbx` ainda
+    não foi exportado com ele): a seção "o prato" do `loot.py`, 30% maior que o de verdade (`PRATO`, como o `FUMO`): os itens
+    `PratoDeComida` (o prato fundo de inox, o ensopado com os pedaços e a colher apoiada na aba), `PratoVazio` (os restos e a
+    colher no fundo) e `PratoEstragado` (o ensopado esverdeado, o mofo e a mosca), com o ícone e a foto (deitados, no
+    `DEITADOS`), e as peças, sem ícone (`PECAS_DO_PRATO`): `PratoFundo`, `PratoComida` (a origem no fundo do prato: encolhe
+    em z), `PratoComidaEstragada`, `PratoRestos`, `Colher` (ao longo de +X, a concha na ponta, a origem na pegada) e
+    `ColherBocado` (a mesma origem). A colher no prato: `COLHER_NO_PRATO` e `COLHER_NO_VAZIO`. As cores são células que já
+    existiam na paleta. As peças levadas por uma matriz (`_com_matriz`) são achadas pelo conjunto dos vértices, e não pela
+    posição na lista: o chanfro apaga vértices, e os novos ocupam os buracos de antes.
+    **As animações** (a parte 3, o `bloco_cigarro.py` da pasta de arte): o `Personagem_PrincipalBloco.fbx` ganhou os ossos
+    do fumo (`maco`, `tampa`, `cigarro`, `brasa`, `isqueiro` e
+    `chama`, que não deformam, filhos do `chest`), os vazios `Fumo_<Peça>` neles (no espaço da peça do `loot.py`, com as
+    malhas `Fumo_<Peça>_<Parte>` dentro; a escala do osso diz se ela aparece) e os clipes `Maco_Segurar`, `Maco_Acender`,
+    `Cigarro_Segurar`, `Cigarro_Tragar` e `Cigarro_Peteleco` (do peito para cima); o `Jogador_FP_Cigarro.fbx` é novo (os
+    braços, os mesmos ossos, filhos da raiz, os vazios `Fumo_FP_<Peça>` e os clipes `Maco_Idle`, `Maco_Walk`, `Maco_Run`,
+    `Maco_Sacar`, `Acender`, `Idle`, `Walk`, `Run`, `Sacar`, `Tragar` e `Peteleco`). Os tempos (a brasa acende no quadro
+    46 do `Acender`; a baforada sai no 24 do `Tragar`; a bituca sai da mão no 6 do `Peteleco`) estão no `Plano_Cigarro.md`.
+    **No jogo** (a parte 4; esperando a aprovação e o teste com dois jogadores):
+    - **O item:** `Item.MacoDeCigarros` (119), um material do saque com a pilha de 20 (`Itens.EhFumo`, `VaiNaMao`), normal
+      no `CatalogoDoSaque` (o `ItensDoSaque` refeito) e no F3 ("Outros"). Na primeira pessoa, dois modelos do mesmo
+      `Jogador_FP_Cigarro.fbx` (`Itens.MacoFP` e `CigarroFP`, depois do taco: `QuantosModelosFP` + 2 e + 3; `ArquivoFP`
+      devolve "Cigarro" para os dois); o `ArmaJogador.ModeloDaMao` escolhe o do cigarro com ele aceso, e o
+      `JogadorRede.AtualizarControladorDoCorpo` faz o mesmo no corpo (`controladorDoMaco` e `controladorDoCigarro`).
+    - **O `Player/FumoJogador`** (no prefab do jogador, `DefaultExecutionOrder(160)`, depois da animação): o estado (nada,
+      acendendo, aceso, jogando) e quanto do papel sobra são `NetworkVariable` do dono; o clique (o `ArmaJogador`, com o
+      `Ocupar` enquanto acende e no peteleco) acende ou traga, o R joga fora, e a troca de item (`AoTrocar`, chamado pelo
+      `ArmaJogador.Trocar` antes de mudar) deixa a bituca cair. Os clipes vão pelos gatilhos de sempre: no corpo, o `Fire`
+      (acender e tragar, o estado `Atirar`) e o `Reload` (o peteleco, o estado `Recarregar`, novo no controlador do corpo,
+      com o `Pistola_Recarregar` de base); na primeira pessoa, o `Fire` (o `Acender` no maço, o `Tragar` no cigarro) e o
+      `Reload` (o `Peteleco`). Os override: no maço, o `Atirar` é o `Maco_Acender` e o resto o `Maco_Segurar`; no cigarro,
+      `Cigarro_Tragar`, `Cigarro_Peteleco` e `Cigarro_Segurar`. **O cigarro sai do maço no peteleco** (`InventarioJogador.FumarUm`,
+      o `FumarRpc` do anfitrião), não no acender.
+    - **As peças:** o `LateUpdate` primeiro põe cada vazio do fumo na cabeça do osso dele e cada malha na origem do vazio
+      (`Assentar`: o export do Blender grava a posição dos vazios e das malhas a cada quadro, e nos ossos que encolhem a
+      0,001 para sumir, a brasa e a chama, a conta estraga em centímetros; nos braços, até a posição fixa no FBX vem
+      assim: não confie nela). Depois encolhe o papel (pelo eixo comprido da malha, até 15%), leva a ponta (o fim do papel,
+      pelos limites da malha) e a brasa junto, acende o fio de fumaça e a luz pela escala do osso da
+      brasa e da chama, e só mostra as peças do corpo com o maço na mão (os estados do corpo não escrevem o padrão, e os
+      ossos do fumo ficavam onde a última ação deixou). A luz (só no corpo; nos braços, a cópia do `BracosNaOrigem`) é
+      fraca: 0,003 a 0,008 na brasa e 0,012 na chama (o rosto fica a uns 10 cm; com 0,45, o corpo inteiro ficava laranja).
+      No dono, as peças do corpo vão na camada de luz dele, como as armas (`CorpoDoDono`): nas cenas de teste com lâmpadas
+      na camada normal (a sinuca), o cigarro do corpo fica escuro na terceira pessoa, como as armas.
+    - **A fumaça** (`NovaFumaca`): partículas de malha (um icosaedro de faces planas, feito no código), o material
+      `Art/Fumo/M_Fumaca.mat` (o Particles/Simple Lit transparente, da `MontagemDoFumo`), no espaço do mundo: o fio da
+      ponta e a baforada (na boca do corpo ou, no dono em primeira pessoa, na frente da câmera dos braços, na camada dos
+      braços). Na primeira pessoa, menores e mais fracas (`fp`): a câmera fica a 30 cm do cigarro. A bituca: a malha com
+      física e um fio de fumaça (18 s; some nos 22 s), em todas as máquinas (`BitucaRpc`).
+    - **Os zumbis:** de noite, quem fuma é visto até o `visaoComBrasa` (10 m) dos `AjustesDeZumbi` (o `Alvo.fumando` do
+      `ZombieManager`).
+    - **Os sons:** `Combat/SomDoFumo` (gerados na primeira vez: o maço, a pedra, a chama, a tragada, o sopro e o peteleco).
+    - **A montagem** (`Editor/MontagemDoFumo`, chamada pela `MontagemDaRede` e pela `MontagemDasArmas`): a bituca, os
+      materiais da fumaça e das peças acesas (`M_Fumo_Aceso.mat`, o Unlit com a paleta, para a brasa e a chama), as malhas
+      das peças nos vazios do corpo e dos braços (sem sombra) e o `FumoJogador` do prefab.
+    - **A compressão das animações** (03/11/2026, a pedido: o maço e o cigarro mexiam na mão): com o padrão da Unity
+      (até 0,5° de erro por osso), os erros dos ossos do braço somavam uns milímetros na mão, e o que fica num osso à
+      parte (as peças do fumo, a arma, a lata) escorregava em relação aos dedos. Os `Jogador_FP_*.fbx` vêm sem compressão
+      (`ImportarFP`) e o corpo com um décimo do erro (`MontagemDasArmas.ErroPequeno`). Depois de um FBX novo: Montar
+      armas (ou, só o item, Itens > Montar só o saque, que refaz o "Itens no mundo" da cena `Mundo`) e Exemplos > Variações
+      das construções (as mesas).
   - **Na mão:** o que se consome vai na mão com os braços da lata (a comida e os remédios) ou da garrafa (a bebida), com a
     malha dele no lugar (`Player/ItemNaMaoProprio`: a montagem, `MontagemDoItemNaMao`, guarda os braços sem a lata e o
     "Item na mão" na pose exata dela, achada pelos vértices da malha avulsa; no corpo, o mesmo no `Arma_Lata`). Os modelos
@@ -1822,6 +2102,52 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
     lanterna depois de trocar as pilhas;
   - **a sombra das construções.**
 
+- **A cena de teste dos especiais** (03/11/2026, a pedido: "uma cena de testes para a gente testar os zumbis especiais,
+  começando pelo brutamonte"; o modelo novo da pasta de arte, `Monstros\MonstroGigante`, "no lugar do atual, mas primeiro a
+  cena de comparação com os dois lado a lado"): `Scenes/Exemplos/ZumbisEspeciais.unity`, menu **Exemplos > Zumbis especiais
+  (comparar)** (`MontagemDosZumbis.CenaDosEspeciais.cs`, que refaz a cena). O Brutamonte de hoje (o `Brutamonte_V1`) e o novo
+  (o `Brutamonte_Novo`) lado a lado, cada um com o avatar genérico e os 20 clipes gravados no esqueleto dele (os mesmos do
+  jogo), um controlador por modelo (`ZumbisEspeciais/<modelo>.controller`, um estado por animação) e o material do Oco.
+  O `Zombies/MostruarioDosEspeciais` (no Play): ← → (1 a 9) trocam a animação dos dois, Espaço pausa, − + a velocidade,
+  R recomeça, F de frente e de costas (o olho), Tab a câmera, o mouse gira, a roda aproxima, H esconde o texto.
+  - **O Brutamonte novo** (`Blender/Especiais/brutamonte_novo.py`, com as funções do `especiais.py`): o Tripo de uma malha só
+    (5.126 faces, a textura de cor), na altura do V1 (2,18 m), com o esqueleto do Oco encaixado pelas medidas (o queixo, o
+    fim de baixo da massa de bolhas, é uma fração fixa da altura; a linha da perna sobe do pé seguindo o grupo mais perto,
+    porque a mão desce até o joelho e o grupo maior era ela), os ossos do olho e das pálpebras (o globo, achado pela cor
+    âmbar da textura, preso inteiro ao `olho`; as pálpebras sem malha) e os pesos pela casca. Sai
+    `Especiais/Brutamonte_Novo.fbx` e as três texturas (a cor do Tripo, a normal lisa e o metal/liso fosco). Ele entra pelo
+    `ImportarOco` como os especiais, mas fica fora da lista do jogo (`EspeciaisDeTeste`). Para pôr no jogo: no lugar do V1
+    (ou como uma variante) em `Especiais`, e a montagem dos especiais.
+  - Conferido no Play (03/11/2026): os dois tocam as mesmas animações, e o novo deforma bem (andar, perseguir, correr,
+    atacar, apanhar, emergir, fúria, gritar). As fotos em `Imgs/Renders/Brutamonte_Novo_Comparar.png` e `_Poses.png` da
+    pasta de arte.
+  - **As animações próprias do novo** (03/11/2026, a pedido: "refaça as animações dele, porque tem umas bem estranhas;
+    ainda mantenha somente na cena de comparação"). As do Oco passadas pelo Humanoid deixavam o tronco reto, as pernas de
+    gente e a cabeça girando sozinha (nele, a massa de bolhas do peito para cima está presa ao osso `head`: girando sozinha,
+    ela se soltava dos ombros). Agora elas vêm do `Blender/Especiais/brutamonte_novo_animacoes.py` (Blender em segundo
+    plano), feitas no esqueleto dele com as medidas dele e com as ferramentas do `equilibrio_oco.py` (o IK de dois ossos e as
+    curvas). A postura é a de um gorila pesado: as pernas abertas e dobradas, o tronco curvado, o pescoço e a cabeça seguindo
+    o peito, os ombros para a frente e os braços pendurados.
+    - **As 9 animações:**
+      - laços: `Idle` (72 quadros), `Walk` (40 quadros, a 0,9 m/s), `Chase` (32, a 1,6 m/s), `Correr` (o avanço: 18
+        quadros, a 6 m/s) e `Furia` (36 quadros, uma braçada a cada 0,6 s);
+      - uma vez: `Attack` (a marretada com as duas mãos, 40 quadros), `HitReact` (20 quadros), `Emergir` (108 quadros =
+        3,6 s, o `TempoDeEmergir`) e `Gritar` (o rugido batendo no peito, 66 quadros).
+    - **Os pés:** a caminhada, a perseguição e a corrida saem de um gerador de passos, calculado quadro a quadro. O pé de
+      apoio anda para trás na velocidade do passo (bate o calcanhar, assenta e sai na ponta, com os dedos no chão), e o pé
+      no ar faz a curva com a sola acima do chão. As outras animações são feitas pose a pose. As mãos vão pelo pulso em
+      relação ao ombro, ou plantadas no mundo (no emergir), misturadas por um peso.
+    - **Conferido no Blender:** o pé de apoio escorrega no máximo 0,6 mm por quadro e os pés não afundam.
+    - **Na Unity:** o script grava o `Especiais/Brutamonte_Novo_Animacoes.fbx` (o esqueleto, a malha e uma faixa do NLA por
+      animação). A cena de comparação (`AnimacoesProprias`, no `MontagemDosZumbis.CenaDosEspeciais.cs`) importa esse FBX como
+      Generic e usa os clipes dele no lugar dos gravados do Oco, para todo modelo que tiver um `<modelo>_Animacoes.fbx`. As
+      setas só passam pelas 9 que os dois modelos têm. As que o Brutamonte nunca usa no jogo saíram da cena: cair,
+      rastejar, mancar e levantar (ele não perde membros), a agonia (ele não sente a luz) e o cuspir (é do Long).
+    - Conferido no Play: os clipes pegam nos ossos do novo. A folha em `Imgs/Renders/Brutamonte_Novo_Animacoes_Comparar.png`
+      e as do Blender em `Brutamonte_Novo_Anim_<animação>.png`, na pasta de arte.
+    - **Para pôr no jogo** (ainda não feito): o andar dos especiais dele com os limites nas velocidades dos clipes (0,9, 1,6
+      e 6 m/s, no lugar de 0,6, 1,12 e 3,8) e o ritmo do avanço em 1,5 (9 m/s ÷ 6), não 1,8.
+
 ## O Dia 0 (01/11/2026, a pedido; `Scripts/DiaZero/`, `Scenes/DiaZero.unity`)
 
 O resumo para gente está em `Docs/12-Dia-Zero.md`. O pedido: o jogo novo começa no mundo normal (a introdução na TV, a rua
@@ -1921,7 +2247,10 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - o anfitrião soma pela tabela, confere a `CarteiraDoDia` e guarda as `CompraDoDia` (a pilha completa a anterior; cada
     uma tem o lugar dela na casa);
   - o anfitrião responde (`ResultadoRpc`);
-  - as compras aparecem no chão da casa em todas as máquinas (só o desenho).
+  - as compras vão direto para o bunker (03/11/2026, a pedido: "ao comprar um item ele não vai mais aparecer na casa, vai direto pro bunker"):
+    não aparecem mais no chão da casa (o desenho, `AoMudarAsCompras`, ficou desligado pelo `ComprasAMostraNaCasa`), e
+    os textos dizem "no bunker". A entrega nas estantes dos depósitos, com o mundo pronto, é a de sempre. Quem fica fora
+    de casa quando a porta fecha continua perdendo as compras (a regra não mudou).
 - **A porta** (`PortaDoAbrigo`: E duas vezes; `FecharAPortaRpc`, só de dentro de casa; o F1 pula com `pular`):
   - quem está fora perde as compras, e o `PortaFechouRpc` avisa quem ficou;
   - o relógio vai para as 8h, e o `AcabarODiaZero` solta a geração.
@@ -2060,8 +2389,15 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
       direto, sem o som) e as estantes (`EstantesDoBunker.Restaurar`, com os Ids de novo). Cada um tem o `Copia` do `Salvar`;
     - os dois carros (`CriarCarro`): nascem cinemáticos até o chão de lá ter colisão (`TerrenoDoMundo.Pedir`/`Pronto`), e
       `Carro.Restaurar` põe o estado. O macaco apoiado volta ao porta-malas.
-  - **A posição:** quem entra com o personagem salvo vai para onde estava (`AoCarregarPersonagem` → `IrParaRpc` no dono,
-    que espera o chão de lá e teleporta). Quem sai fica lembrado (`LembrarPosicao`, no `JogadorRede.OnNetworkDespawn`).
+  - **A posição:** quem entra com o personagem salvo vai para onde estava (`AoCarregarPersonagem` → `IrParaRpc` no dono).
+    Quem sai fica lembrado (`LembrarPosicao`, no `JogadorRede.OnNetworkDespawn`). **Desde 03/11/2026** (a pedido: "saiu da
+    partida, entrou de novo e deu spawn no bunker"), o dono vai já para lá e fica parado (`MovimentoPrimeiraPessoa.Esperando`:
+    sem cair) até o chão de lá ficar pronto com as casas (até 60 s, com o aviso "Carregando o lugar onde você estava...")
+    e haver piso embaixo dos pés (o andar do prédio só carrega perto de alguém; até mais 8 s), e então solta; o log diz
+    quanto esperou (`[Save] O personagem voltou para onde estava`). Antes, ele esperava no bunker até 20 s e ia mesmo sem a
+    colisão: no Grande, longe da partida, chegava antes do chão, caía abaixo de y = −20 e o movimento o punha no
+    nascimento, no bunker (no log do usuário, a casca do bunker montada de novo logo depois de ele entrar). Conferido no
+    Play, no Grande 727254, com a posição salva dele (3.687; 45,8; −1.225): esperou 0,5 s e ficou lá.
   - **O Dia 0:** o personagem salvo que entra no Dia 0 de outro espera a porta (`GuardarParaDepois`) e entra no
     `FicouPronto` seguinte.
   - **As variáveis estáticas** (`Atual`, `EscolhaDoPersonagem.Atual`) são zeradas no começo de cada Play

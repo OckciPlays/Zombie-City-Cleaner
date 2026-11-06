@@ -31,8 +31,17 @@ namespace ZombieCityCleaner.EditorTools
             ("Corredor_V1", TipoDeZumbi.Corredor), ("Corredor_V2", TipoDeZumbi.Corredor), ("Corredor_V3", TipoDeZumbi.Corredor),
         };
 
-        static bool EhEspecial(string nome) => Especiais.Any(e => e.nome == nome);
-        static TipoDeZumbi TipoDe(string nome) => Especiais.FirstOrDefault(e => e.nome == nome).tipo;
+        /// <summary>
+        /// Os especiais só da cena de teste (Exemplos > Zumbis especiais), fora da lista do jogo: o Brutamonte novo
+        /// (03/11/2026, o Blender/Especiais/brutamonte_novo.py), para comparar com o de hoje antes de trocar.
+        /// </summary>
+        static readonly (string nome, TipoDeZumbi tipo)[] EspeciaisDeTeste =
+        {
+            ("Brutamonte_Novo", TipoDeZumbi.Brutamonte),
+        };
+
+        static bool EhEspecial(string nome) => Especiais.Any(e => e.nome == nome) || EspeciaisDeTeste.Any(e => e.nome == nome);
+        static TipoDeZumbi TipoDe(string nome) => Especiais.Concat(EspeciaisDeTeste).FirstOrDefault(e => e.nome == nome).tipo;
 
         /// <summary>Todos os modelos, na ordem da lista do ZombieManager: os Ocos e, depois, os especiais.</summary>
         static IEnumerable<string> TodosOsModelos => Modelos.Concat(Especiais.Select(e => e.nome));

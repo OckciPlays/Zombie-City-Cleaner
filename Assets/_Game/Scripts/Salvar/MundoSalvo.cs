@@ -65,6 +65,24 @@ namespace ZombieCityCleaner.Salvar
         public List<PortaSalva> portas = new List<PortaSalva>();
         /// <summary>Os itens guardados nas estantes e nas prateleiras do bunker da família.</summary>
         public List<ItemNaEstanteSalvo> estantes = new List<ItemNaEstanteSalvo>();
+        /// <summary>
+        /// Os moradores do bunker (o Plano_NPCs_Bunker.md da pasta de arte): as fichas, escolhidas nas cartas antes do mundo
+        /// (<c>UI/TelaDosMoradores</c>). Vazia num mundo de antes deles: o Continuar abre a tela na primeira vez.
+        /// </summary>
+        public List<FichaDoMorador> moradores = new List<FichaDoMorador>();
+        /// <summary>
+        /// Os outros NPCs do mundo (a tela das cartas, 04/11/2026): os 52 sorteados com o mundo, menos os do bunker. Eles vão
+        /// estar pelo mapa (as comunidades, as bases, os que esperam resgate; a parte do mapa vem depois). Os laços dos
+        /// moradores podem apontar para eles (o irmão que ficou lá fora).
+        /// </summary>
+        public List<FichaDoMorador> npcsDoMapa = new List<FichaDoMorador>();
+        /// <summary>Os ids dos NPCs que os jogadores já conhecem (os do bunker no começo); a lista do computador mostra os outros com "?".</summary>
+        public List<int> npcsDescobertos = new List<int>();
+        /// <summary>O id do próximo NPC (quem for sorteado depois).</summary>
+        public int proximoMorador = 1;
+
+        /// <summary>O NPC do mundo com o id (no bunker ou no mapa), ou null.</summary>
+        public FichaDoMorador NpcDoId(int id) => moradores?.Find(f => f.id == id) ?? npcsDoMapa?.Find(f => f.id == id);
 
         public ModoDeSalvar Modo => (ModoDeSalvar)Mathf.Clamp(modo, 0, 2);
         public PedidoDoMundo Pedido => new PedidoDoMundo

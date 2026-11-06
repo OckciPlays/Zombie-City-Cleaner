@@ -205,6 +205,7 @@ namespace ZombieCityCleaner.Player
             // golpe: a tela pisca vermelho; com pouca vida, fica um vermelho fraco
             float vermelho = Mathf.Max(_clarao * 0.35f, (1f - fracao) * 0.18f);
             if (vermelho > 0.01f) Retangulo(0, 0, Screen.width, Screen.height, new Color(0.55f, 0f, 0f, vermelho));
+            if (GravacaoNoMundo.SemHud) return;   // gravando: o vermelho do golpe fica, a barra sai
             float x = 20 * u, y = Screen.height - 44 * u, w = 200 * u, h = 10 * u;
             var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Bold);
             estilo.normal.textColor = new Color(0.9f, 0.88f, 0.8f);

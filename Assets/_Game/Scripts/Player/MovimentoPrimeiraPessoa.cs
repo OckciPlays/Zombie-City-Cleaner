@@ -37,6 +37,40 @@ namespace ZombieCityCleaner.Player
 
         public bool Correndo { get; private set; }
 
+        [Header("Abaixar (C)")]
+        [Tooltip("Andando abaixado (m/s): a do Andar_Agachado do corpo.")]
+        public float velocidadeAgachado = 1.2f;
+        [Tooltip("A altura da cápsula abaixado (m; em pé, a do CharacterController).")]
+        public float alturaAgachado = 1.4f;
+        [Tooltip("A altura do olho abaixado (m; em pé, 1,62): a cabeça do corpo desce 0,35 m no Agachado.")]
+        public float olhoAgachado = 1.27f;
+        [Tooltip("Quanto a câmera leva para descer ou subir (s).")]
+        public float tempoDeAbaixar = 0.22f;
+
+        /// <summary>
+        /// Abaixado (03/11/2026, a pedido: "colocar sistema de abaixar no C, já temos a animação"): o C abaixa e levanta
+        /// (o B no controle); abaixado, ele anda devagar e não corre. O Espaço e o correr levantam (se houver lugar em cima:
+        /// embaixo de uma coisa baixa, ele fica abaixado). A cápsula fica mais baixa e a câmera desce; o corpo de todos toca
+        /// o agachado (<see cref="JogadorRede.Agachado"/>).
+        /// </summary>
+        public bool Agachado { get; private set; }
+
+        /// <summary>
+        /// Parado esperando o chão (o save: indo para onde o personagem estava, até a colisão de lá ficar pronta): sem andar,
+        /// sem cair e sem pular; o olhar continua. Solta sozinho depois de 75 s (se quem pôs não tirar).
+        /// </summary>
+        public bool Esperando
+        {
+            get => _esperando && Time.unscaledTime - _esperandoDesde < 75f;
+            set
+            {
+                _esperando = value;
+                _esperandoDesde = Time.unscaledTime;
+            }
+        }
+        bool _esperando;
+        float _esperandoDesde;
+
         [Header("Voar (o F1 do mundo grande)")]
         public float velocidadeVoando = 25f;
         [Tooltip("Quantas vezes mais rápido voando com o correr apertado.")]
@@ -59,7 +93,12 @@ namespace ZombieCityCleaner.Player
         }
 
         CharacterController _controle;
-        InputAction _mover, _olhar, _pular, _correr, _interagir;
+        InputAction _mover, _olhar, _pular, _correr, _interagir, _abaixar;
+        // em pé: a cápsula e o olho (lidos no começo); _abaixado vai de 0 (em pé) a 1 (abaixado), a câmera atrás dele
+        float _alturaEmPe, _olhoEmPe, _abaixado;
+        Vector3 _centroEmPe;
+        // o que pode tapar o lugar de levantar (sem o Ignore Raycast, os braços, os corpos caídos, o jogador e o retrato)
+        const int MascaraDoTeto = ~((1 << 2) | (1 << 6) | (1 << 8) | (1 << 9) | (1 << 10));
 
         // preso na gosma do Long (01/11/2026): sem andar, correr nem pular até segurar E o bastante
         float _presoPrecisa, _presoFeito;
@@ -89,7 +128,75 @@ namespace ZombieCityCleaner.Player
             _pular = acoes.FindAction("Player/Jump", true);
             _interagir = acoes.FindAction("Player/Interact", true);
             _correr = acoes.FindAction("Player/Sprint", true);
+            _abaixar = acoes.FindAction("Player/Crouch", false);
             _yaw = transform.eulerAngles.y;
+            _alturaEmPe = _controle.height;
+            _centroEmPe = _controle.center;
+            _olhoEmPe = cabeca != null ? cabeca.localPosition.y : 1.62f;
+        }
+
+        // o carro e o pulo da janela desligam o movimento e mexem na cabeça (e a põem de volta onde estava): ele sai em pé
+        void OnDisable()
+        {
+            if (_controle == null || cabeca == null) return;
+            if (Agachado) Levantar(true);
+            if (_abaixado > 0f)
+            {
+                _abaixado = 0f;
+                var p = cabeca.localPosition;
+                p.y = _olhoEmPe;
+                cabeca.localPosition = p;
+            }
+        }
+
+        bool EscreveNaRede => rede != null && rede.IsSpawned && rede.IsOwner;
+
+        /// <summary>Abaixa ou levanta, como o C (sem lugar em cima, não levanta). Devolve se ficou como foi pedido.</summary>
+        public bool PedirAbaixar(bool abaixar)
+        {
+            if (_voando) return !abaixar;
+            if (abaixar) Abaixar();
+            else Levantar();
+            return Agachado == abaixar;
+        }
+
+        void Abaixar()
+        {
+            if (Agachado) return;
+            Agachado = true;
+            _controle.height = alturaAgachado;
+            _controle.center = new Vector3(_centroEmPe.x, _centroEmPe.y - (_alturaEmPe - alturaAgachado) * 0.5f, _centroEmPe.z);
+            if (EscreveNaRede && !rede.Agachado.Value) rede.Agachado.Value = true;
+        }
+
+        /// <summary>Levanta, se houver lugar em cima (com <paramref name="sempre"/>, sem conferir). Devolve se levantou.</summary>
+        bool Levantar(bool sempre = false)
+        {
+            if (!Agachado) return true;
+            if (!sempre)
+            {
+                // a parte da cápsula em pé que fica acima da abaixada
+                float r = _controle.radius * 0.95f;
+                Vector3 de = transform.TransformPoint(new Vector3(_centroEmPe.x, alturaAgachado - r + 0.02f, _centroEmPe.z));
+                Vector3 ate = transform.TransformPoint(new Vector3(_centroEmPe.x, _alturaEmPe - r + 0.02f, _centroEmPe.z));
+                if (Physics.CheckCapsule(de, ate, r, MascaraDoTeto, QueryTriggerInteraction.Ignore)) return false;
+            }
+            Agachado = false;
+            _controle.height = _alturaEmPe;
+            _controle.center = _centroEmPe;
+            if (EscreveNaRede && rede.Agachado.Value) rede.Agachado.Value = false;
+            return true;
+        }
+
+        // a câmera desce e sobe aos poucos (só mexe na cabeça quando abaixa: em pé e parado, ela fica como está)
+        void CameraDoAbaixar(float dt)
+        {
+            float alvo = Agachado ? 1f : 0f;
+            if (_abaixado == alvo) return;
+            _abaixado = Mathf.MoveTowards(_abaixado, alvo, dt / Mathf.Max(0.01f, tempoDeAbaixar));
+            var p = cabeca.localPosition;
+            p.y = Mathf.Lerp(_olhoEmPe, olhoAgachado, Mathf.SmoothStep(0f, 1f, _abaixado));
+            cabeca.localPosition = p;
         }
 
         public void Teleportar(Vector3 posicao, float yaw)
@@ -150,7 +257,7 @@ namespace ZombieCityCleaner.Player
             bool controla = bot || MenuOnline.Controla;
 
             Vector2 olhar = Vector2.zero, mover = Vector2.zero;
-            bool correr = false, pular = false;
+            bool correr = false, pular = false, abaixar = false;
             if (bot)
             {
                 var zumbi = AlvoDoRobo();
@@ -180,6 +287,7 @@ namespace ZombieCityCleaner.Player
                 mover = _mover.ReadValue<Vector2>();
                 correr = _correr.IsPressed();
                 pular = _pular.WasPressedThisFrame();
+                abaixar = _abaixar != null && _abaixar.WasPressedThisFrame();
             }
 
             _yaw += olhar.x;
@@ -191,8 +299,18 @@ namespace ZombieCityCleaner.Player
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
 
             if (mover.sqrMagnitude > 1f) mover.Normalize();
+            // esperando o chão de onde o save o pôs: parado, sem cair (o olhar continua)
+            if (Esperando)
+            {
+                _velocidade = Vector3.zero;
+                Correndo = false;
+                CameraDoAbaixar(dt);
+                return;
+            }
             if (_voando)
             {
+                if (Agachado) Levantar(true);   // voando, o C desce
+                CameraDoAbaixar(dt);
                 // voando: para onde a câmera olha, atravessando tudo
                 var teclado = Keyboard.current;
                 float sobe = 0f;
@@ -219,10 +337,23 @@ namespace ZombieCityCleaner.Player
             if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
             bool pesado = _inventario != null && _inventario.CarregandoPneu;
             if (pesado) correr = pular = false;
+            // abaixar (o C): abaixa e levanta. Abaixado, o Espaço só levanta (sem pular) e o correr levanta e corre; sem
+            // lugar em cima para levantar, ele continua abaixado
+            if (abaixar)
+            {
+                if (Agachado) Levantar();
+                else Abaixar();
+            }
+            if (Agachado && (pular || (correr && mover.y > 0.1f)))
+            {
+                if (!Levantar()) correr = false;
+                pular = false;
+            }
+            CameraDoAbaixar(dt);
             // de frente para uma janela livre, o pulo é por ela (o PuloDaJanela leva o jogador daqui em diante)
             if (pular && _controle.isGrounded && _janela != null && _janela.Tentar()) return;
-            Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value;
-            float alvo = rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
+            Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value && !Agachado;
+            float alvo = Agachado ? velocidadeAgachado : rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
             if (pesado) alvo *= InventarioJogador.LentidaoDoPneu;
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
             Vector3 horizontal = new Vector3(_velocidade.x, 0f, _velocidade.z);

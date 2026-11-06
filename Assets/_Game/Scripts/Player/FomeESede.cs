@@ -108,7 +108,7 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
             float u = Screen.height / 720f;
             // em cima da barra da vida (VidaJogador): a sede logo acima, a fome acima dela
             float yVida = Screen.height - 44 * u;

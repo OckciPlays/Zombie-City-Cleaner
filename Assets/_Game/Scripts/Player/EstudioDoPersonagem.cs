@@ -46,13 +46,14 @@ namespace ZombieCityCleaner.Player
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
             _modelo = copia.transform;
-            // nada na mão
+            // nada na mão, nem as peças do fumo (04/11/2026: os vazios Fumo_<Peça> ficam no peito, e as malhas deles,
+            // ligadas abaixo com as outras, punham o maço, o cigarro e o isqueiro na frente do corpo)
             var naMao = new HashSet<string>();
             foreach (var a in rede.naMaoCorpo) if (a != null) naMao.Add(a.name);
             foreach (var t in copia.GetComponentsInChildren<Transform>(true))
             {
                 t.gameObject.layer = JogadorRede.CamadaRetrato;
-                if (naMao.Contains(t.name) || t.name.StartsWith("P_")) t.gameObject.SetActive(false);
+                if (naMao.Contains(t.name) || t.name.StartsWith("P_") || t.name.StartsWith("Fumo_")) t.gameObject.SetActive(false);
             }
             _animador = copia.GetComponent<Animator>();
             if (_animador != null)

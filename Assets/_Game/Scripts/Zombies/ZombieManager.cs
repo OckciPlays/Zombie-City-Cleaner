@@ -46,6 +46,8 @@ namespace ZombieCityCleaner.Zombies
             public IAlvoDeZumbi quem;
             public Vector3 pes, peito, olho, olhar;
             public bool lanterna, correndo, iluminado;
+            /// <summary>Fumando (o cigarro aceso, 03/11/2026): de noite, a brasa faz o jogador ser visto de um pouco mais longe.</summary>
+            public bool fumando;
             /// <summary>
             /// De dia ou amanhecendo, onde o sol bate (ou vai bater): o zumbi só observa (prioriza se esconder), a não ser
             /// atacado.
@@ -283,6 +285,7 @@ namespace ZombieCityCleaner.Zombies
                 olho = pes + Vector3.up * 1.62f,
                 olhar = olhar,
                 lanterna = j.Lanterna != null && j.Lanterna.Ligada.Value,
+                fumando = j.Fumo != null && j.Fumo.Aceso,
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
@@ -330,6 +333,8 @@ namespace ZombieCityCleaner.Zombies
             float alcance = Mathf.Lerp(ajustes.visaoDeDia, ajustes.visaoDeNoite, noite);
             if (p.iluminado) alcance = Mathf.Max(alcance, ajustes.visaoSobPoste);
             if (p.lanterna) alcance = Mathf.Max(alcance, Mathf.Lerp(ajustes.visaoDeDia, ajustes.visaoComLanterna, noite));
+            // a brasa do cigarro: de noite, um pouco mais longe que no escuro (de dia não muda nada: a de dia já é maior)
+            if (p.fumando) alcance = Mathf.Max(alcance, Mathf.Lerp(ajustes.visaoDeDia, ajustes.visaoComBrasa, noite));
             return alcance;
         }
 
@@ -772,7 +777,7 @@ namespace ZombieCityCleaner.Zombies
 
         void OnGUI()
         {
-            if (!_info || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado) return;
+            if (!_info || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
             ContarNiveis(out int perto, out int medio, out int longe);
             float u = Screen.height / 720f;
             var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u));

@@ -98,7 +98,13 @@ namespace ZombieCityCleaner.Player
             _referencia = prefab != null ? prefab.transform.Find(original.name) : null;   // o corpo do mesmo personagem
             if (_referencia != null) Repouso(_referencia, copia.transform);
 
-            foreach (var t in copia.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = JogadorRede.CamadaRetrato;
+            foreach (var t in copia.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.layer = JogadorRede.CamadaRetrato;
+                // sem as peças do fumo (04/11/2026): as malhas são ligadas abaixo com as outras, e o maço, o cigarro e o
+                // isqueiro apareciam na frente do corpo
+                if (t.name.StartsWith("Fumo_")) t.gameObject.SetActive(false);
+            }
             // o material do retrato com a textura (e o deslocamento da variação da cor) de cada material do corpo
             foreach (var r in copia.GetComponentsInChildren<Renderer>(true))
             {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using ZombieCityCleaner.Mundo;
@@ -95,6 +96,12 @@ namespace ZombieCityCleaner.UI
         bool _fogoAmigoNovo;
         static readonly string[] NomesDoFogoAmigo = { "Desligado", "Ligado" };
         Vector2 _rolagemDosMundos;
+        // a tela dos moradores do bunker (04/11/2026, o Plano_NPCs_Bunker.md, a parte 3; em cartas desde o mesmo dia): entre
+        // o "Novo mundo" e a partida, e no Continuar de um mundo salvo antes deles (o _semMoradores); o _criarLocal diz se o
+        // mundo novo é local
+        readonly TelaDosMoradores _telaDosMoradores = new TelaDosMoradores();
+        bool _criarLocal;
+        MundoSalvo _semMoradores;
         static readonly string[] NomesDosModos = { "Automático (5 min)", "Ao sair", "Só dormindo" };
 
         void OnEnable() => _esperarSoltar = true;
@@ -155,6 +162,11 @@ namespace ZombieCityCleaner.UI
                 _mundos = null;
             }
             _estavaNaPartida = naPartida;
+            if (_telaDosMoradores.Aberta)
+            {
+                if (_sessao.Atual != SessaoOnline.Estado.Desconectado) _telaDosMoradores.Fechar();
+                else _telaDosMoradores.Atualizar();
+            }
             FundoDoMenu.Pedido = !naPartida && MundoDaPartida.Instancia != null && !ModoVideo.Ligado;
             if (!naPartida) _ultimoGravado = false;
             else if (!_ultimoGravado) GravarOUltimoMundo();
@@ -257,7 +269,7 @@ namespace ZombieCityCleaner.UI
             float u = Screen.height / 720f;
             Menu(u);
             // o contador de FPS por cima do menu (o OnGUI do jogador não usa o canto de cima, à direita)
-            if (Event.current.type == EventType.Repaint) Opcoes.Contador(u);
+            if (Event.current.type == EventType.Repaint && !GravacaoNoMundo.SemHud) Opcoes.Contador(u);
         }
 
         void Menu(float u)
@@ -280,7 +292,7 @@ namespace ZombieCityCleaner.UI
                     string mundo = m != null && m.Semente != 0 ? $"  ·  {m.Nome}: semente {m.Semente}, {Tamanhos.Lado(m.Tamanho) / 1000} km" : "";
                     _textoDaPartida = $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}  ·  ESC: menu";
                 }
-                GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), _textoDaPartida, _linhaDaPartida);
+                if (!GravacaoNoMundo.SemHud) GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), _textoDaPartida, _linhaDaPartida);
                 if (_pausa) Pausa(u);
                 return;
             }
@@ -289,6 +301,11 @@ namespace ZombieCityCleaner.UI
             if (doJogo && _principal && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
             {
                 MenuPrincipal(u);
+                return;
+            }
+            if (doJogo && _telaDosMoradores.Aberta && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
+            {
+                Moradores();
                 return;
             }
             if (doJogo && _continuar && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
@@ -338,8 +355,9 @@ namespace ZombieCityCleaner.UI
             y += 26 * u;
             if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), doMundo ? "Criar local" : "Hospedar local", _botao))
             {
-                if (doMundo) PedirOMundo();
-                _sessao.HospedarLocal();
+                // na cena Mundo, o mundo local também passa pela tela dos moradores
+                if (doMundo) AbrirOsMoradores(true, null);
+                else _sessao.HospedarLocal();
             }
             _ip = GUI.TextField(new Rect(x + w * 0.52f, y, w * 0.26f, 32 * u), _ip, 40, _campo);
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao))
@@ -483,12 +501,108 @@ namespace ZombieCityCleaner.UI
             y += 24 * u;
             _fogoAmigoNovo = GUI.SelectionGrid(new Rect(x, y, w, 32 * u), _fogoAmigoNovo ? 1 : 0, NomesDoFogoAmigo, 2, _botao) == 1;
             y += 42 * u;
-            if (GUI.Button(new Rect(x, y, w, 46 * u), "Criar o mundo", _botao))
-            {
-                PedirOMundo();
-                _sessao.Hospedar();
-            }
+            // o mundo só é criado depois da tela dos moradores (04/11/2026, o Plano_NPCs_Bunker.md, a parte 3)
+            if (GUI.Button(new Rect(x, y, w, 46 * u), "Escolher os moradores", _botao)) AbrirOsMoradores(false, null);
             return y + 66 * u;
+        }
+
+        // ------------------------------------------------------------------ os moradores do bunker (04/11/2026)
+
+        /// <summary>
+        /// Abre a tela dos moradores: para o mundo novo (local ou não) ou para um mundo salvo antes deles (<paramref name="semMoradores"/>,
+        /// do Continuar). O grupo da última vez fica, até criar um mundo.
+        /// </summary>
+        void AbrirOsMoradores(bool local, MundoSalvo semMoradores)
+        {
+            _criarLocal = local;
+            _semMoradores = semMoradores;
+            _telaDosMoradores.TextoDoBotao = semMoradores != null ? "JOGAR" : local ? "CRIAR LOCAL" : "CRIAR O MUNDO";
+            _telaDosMoradores.Abrir();
+        }
+
+        void Moradores()
+        {
+            var saida = _telaDosMoradores.Desenhar();
+            if (saida == TelaDosMoradores.Saida.Voltar)
+            {
+                _telaDosMoradores.Fechar();
+                _semMoradores = null;
+            }
+            else if (saida == TelaDosMoradores.Saida.Criar) Criar();
+        }
+
+        // o "Criar o mundo" da tela das cartas: o mundo novo com os 52 (os 5 escolhidos no bunker e os outros no mapa), ou o
+        // de antes deles, que ganha os NPCs agora
+        void Criar()
+        {
+            var npcs = _telaDosMoradores.Npcs;
+            var (bunker, mapa) = _telaDosMoradores.Separar();
+            _telaDosMoradores.Fechar();
+            _telaDosMoradores.Esquecer();
+            Debug.Log($"[Moradores] {bunker.Count} no bunker e {mapa.Count} no mapa: " +
+                      string.Join(", ", bunker.ConvertAll(f => $"{f.NomeCompleto} ({f.idade})")));
+            if (_semMoradores != null)
+            {
+                // o mundo de antes dos moradores ganha os NPCs agora (e grava, para a tela não voltar)
+                var m = _semMoradores;
+                _semMoradores = null;
+                PorOsNpcs(m, npcs, bunker, mapa);
+                m.Gravar();
+                JogarNoMundo(m);
+                return;
+            }
+            PedirOMundo();
+            PorOsNpcs(Salvamento.Atual, npcs, bunker, mapa);
+            if (_criarLocal) _sessao.HospedarLocal();
+            else _sessao.Hospedar();
+        }
+
+        static void PorOsNpcs(MundoSalvo m, NpcsDoMundo npcs, List<FichaDoMorador> bunker, List<FichaDoMorador> mapa)
+        {
+            m.moradores = bunker;
+            m.npcsDoMapa = mapa;
+            m.npcsDescobertos = bunker.ConvertAll(f => f.id);
+            m.proximoMorador = npcs.proximoId;
+        }
+
+        // um mundo da tela de antes das cartas (com os moradores e sem os do mapa) ganha os outros NPCs (e grava)
+        static void CompletarOsNpcs(MundoSalvo m)
+        {
+            var npcs = new NpcsDoMundo { semente = m.semente ^ 0x5A17, proximoId = m.proximoMorador, fichas = new List<FichaDoMorador>(m.moradores) };
+            SorteioDosMoradores.CompletarMundo(npcs, npcs.semente);
+            var mapa = npcs.fichas.FindAll(f => !m.moradores.Contains(f));
+            PorOsNpcs(m, npcs, m.moradores, mapa);
+            m.Gravar();
+            Debug.Log($"[Moradores] O mundo {m.nome}, de antes das cartas, ganhou {mapa.Count} NPCs no mapa.");
+        }
+
+        /// <summary>Para os testes (o MCP no Play): a tela dos moradores.</summary>
+        public TelaDosMoradores TelaDeMoradores => _telaDosMoradores;
+
+        /// <summary>Para os testes: o "Criar o mundo" da tela dos moradores aberta (local ou não).</summary>
+        public void CriarComOsMoradoresParaTeste(bool local)
+        {
+            if (!_telaDosMoradores.Aberta) return;
+            _criarLocal = local;
+            Criar();
+        }
+
+        /// <summary>
+        /// Para os testes (o MCP no Play): abre a tela dos moradores como o "Escolher os moradores" do Novo mundo, ou, com
+        /// <paramref name="fechar"/>, fecha e volta ao menu principal.
+        /// </summary>
+        public void AbrirOsMoradoresParaTeste(bool fechar = false)
+        {
+            if (fechar)
+            {
+                _telaDosMoradores.Fechar();
+                _principal = true;
+                return;
+            }
+            _principal = false;
+            _continuar = false;
+            _opcoes = false;
+            AbrirOsMoradores(false, null);
         }
 
         // o pedido do menu para o MundoDaPartida. Uma palavra vira um número (o mesmo para todos que digitarem ela)
@@ -632,6 +746,19 @@ namespace ZombieCityCleaner.UI
                 _mundos = null;
                 return;
             }
+            // um mundo salvo antes dos moradores do bunker abre a tela das cartas na primeira vez; um da tela de antes das
+            // cartas (com os moradores e sem os NPCs do mapa) ganha os do mapa
+            if (m.moradores == null || m.moradores.Count == 0)
+            {
+                AbrirOsMoradores(_continuarLocal, m);
+                return;
+            }
+            if (m.npcsDoMapa == null || m.npcsDoMapa.Count == 0) CompletarOsNpcs(m);
+            JogarNoMundo(m);
+        }
+
+        void JogarNoMundo(MundoSalvo m)
+        {
             AplicarAEscolha();
             Salvamento.Atual = m;
             MundoDaPartida.Pedido = m.Pedido;

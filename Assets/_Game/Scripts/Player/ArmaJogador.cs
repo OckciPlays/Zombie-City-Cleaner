@@ -94,10 +94,11 @@ namespace ZombieCityCleaner.Player
         {
             get
             {
-                int m = Itens.ModeloNaMao(NaMao);
+                int m = ModeloDaMao(NaMao);
                 return m >= 0 && m < animadores.Length ? animadores[m] : null;
             }
         }
+        FumoJogador _fumo;
 
         Transform Boca => bocas[(int)Atual];
 
@@ -135,6 +136,7 @@ namespace ZombieCityCleaner.Player
         {
             Municao = Dados.capacidade;
             Inventario = GetComponent<InventarioJogador>();
+            _fumo = GetComponent<FumoJogador>();
             _corpo = GetComponent<CharacterController>();
             var acoes = InputSystem.actions;
             _atirar = acoes.FindAction("Player/Attack", true);
@@ -170,6 +172,8 @@ namespace ZombieCityCleaner.Player
                 _pentes[_id] = Municao;
                 Inventario.GuardarPente(_id, Municao);   // a cópia do anfitrião (vai junto se ela for largada ou guardada)
             }
+            // o cigarro aceso que sai da mão vai para o chão (o peteleco), e o acender pela metade para
+            if (_fumo != null) _fumo.AoTrocar(novo, id);
             StopAllCoroutines();
             Recarregando = false;
             Usando = false;
@@ -177,7 +181,7 @@ namespace ZombieCityCleaner.Player
             SairDaLuneta();
             NaMao = novo;
             _id = id;
-            int m = Itens.ModeloNaMao(novo);   // a mão vazia mostra os punhos
+            int m = ModeloDaMao(novo);   // a mão vazia mostra os punhos
             bool ocupadas = MaosOcupadas;   // com o pneu nas mãos, os braços somem
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
             // os do saque vão com a malha deles no lugar da lata ou da garrafa
@@ -198,6 +202,36 @@ namespace ZombieCityCleaner.Player
             if (m >= 0) Acao(SacarId);
             _proximoTiro = Time.time + 0.4f;
         }
+
+        /// <summary>
+        /// O modelo de primeira pessoa do item: o de <see cref="Itens.ModeloNaMao"/> ou, com o maço e o cigarro aceso na
+        /// mão, o do cigarro (o FumoJogador).
+        /// </summary>
+        int ModeloDaMao(Item item)
+        {
+            int m = Itens.ModeloNaMao(item);
+            return m == Itens.MacoFP && _fumo != null && _fumo.ComOCigarroNaMao ? Itens.CigarroFP : m;
+        }
+
+        // ------------------------------------------------------------------ para o fumo (o FumoJogador, 03/11/2026)
+
+        /// <summary>A mão ocupada (acendendo o cigarro): como comendo, nada troca, nem larga.</summary>
+        public void Ocupar(bool ocupada) => Usando = ocupada;
+
+        /// <summary>Toca uma ação no modelo da mão: 0 o tiro (acender ou tragar), 1 a recarga (o peteleco), 2 o sacar.</summary>
+        public void TocarAcao(int qual) => Acao(qual == 1 ? ReloadId : qual == 2 ? SacarId : FireId);
+
+        /// <summary>Mostra o modelo de primeira pessoa da mão de novo (o fumo mudou: o maço ou o cigarro), sacando ou não.</summary>
+        public void MostrarModeloDaMao(bool sacar)
+        {
+            int m = ModeloDaMao(NaMao);
+            bool ocupadas = MaosOcupadas;
+            for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
+            if (sacar && m >= 0) Acao(SacarId);
+        }
+
+        /// <summary>O id do que está na mão (o do maço, para o fumo).</summary>
+        public ushort IdNaMao => _id;
 
         /// <summary>
         /// As balas no pente de uma arma da mochila (a que nunca esteve na mão nesta máquina: o que o anfitrião guardou).
@@ -351,6 +385,12 @@ namespace ZombieCityCleaner.Player
             }
             else if (Itens.EhConsumivel(NaMao) && !Usando && !bot && Time.time >= _proximoTiro && _atirar.WasPressedThisFrame())
                 StartCoroutine(Usar());
+            // o maço na mão (03/11/2026): o clique acende um cigarro ou, aceso, traga; o R joga fora (o FumoJogador)
+            else if (Itens.EhFumo(NaMao) && _fumo != null && !bot && Time.time >= _proximoTiro)
+            {
+                if (_atirar.WasPressedThisFrame()) _fumo.Clicar();
+                else if (_recarregar.WasPressedThisFrame()) _fumo.JogarFora();
+            }
             // a mão vazia soca (segurando o botão, um soco atrás do outro)
             else if (NaMao == Item.Nada && !bot && Time.time >= _proximoTiro && _atirar.IsPressed())
                 StartCoroutine(Socar());
@@ -531,7 +571,13 @@ namespace ZombieCityCleaner.Player
             Acao(FireId);
             // na terceira pessoa, o clarão é o da arma do corpo, na camada de todo mundo
             if (rede.EmTerceiraPessoa) Efeitos.Clarao(rede.bocasCorpo[(int)Atual], 0);
-            else Efeitos.Clarao(Boca, JogadorRede.CamadaBracos);
+            else
+            {
+                // os braços ficam perto da origem (BracosNaOrigem): o clarão deles ilumina os braços, e a luz no mundo vai
+                // para onde a boca estaria, na frente da câmera
+                Efeitos.Clarao(Boca, JogadorRede.CamadaBracos, rede.cameraBracos);
+                Efeitos.LuzDoClarao(rede.NoMundo(Boca.position));
+            }
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
@@ -975,8 +1021,8 @@ namespace ZombieCityCleaner.Player
 
         void OnGUI()
         {
-            // com o inventário ou o menu do desenvolvedor, sem mira; gravando um vídeo, só no das armas
-            if (MenuOnline.Aberto || MenuOnline.ComTela || MenuOnline.Cinema || (ModoVideo.Ligado && !ModoVideo.MostrarMira)) return;
+            // com o inventário ou o menu do desenvolvedor, sem mira; gravando um vídeo, só no das armas (e, no mundo, com "a mira")
+            if (MenuOnline.Aberto || MenuOnline.ComTela || MenuOnline.Cinema || (ModoVideo.Ligado && !ModoVideo.MostrarMira) || GravacaoNoMundo.SemMira) return;
             float u = Screen.height / 720f, cx = Screen.width / 2f, cy = Screen.height / 2f;
             float t = Mathf.Max(1f, Mathf.Round(2 * u));
             if (NaLuneta) Luneta(cx, cy, u);

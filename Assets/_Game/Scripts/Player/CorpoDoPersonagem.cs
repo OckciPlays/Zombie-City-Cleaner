@@ -31,6 +31,12 @@ namespace ZombieCityCleaner.Player
         public RuntimeAnimatorController controladorDoTaco;
         [Tooltip("O taco na mão (o vazio Arma_Taco, no weapon.R: a pegada) e a ponta dele (Boca_Taco); o TacoNaMao põe o taco de cada cor entre os dois.")]
         public Transform taco, pontaDoTaco;
+        [Tooltip("O corpo com o maço de cigarros (segurar e acender) e com o cigarro aceso (segurar, tragar e o peteleco).")]
+        public RuntimeAnimatorController controladorDoMaco, controladorDoCigarro;
+        [Tooltip("Os vazios das peças do fumo nos ossos delas (Fumo_Maco, _Tampa, _Cigarro, _Brasa, _Isqueiro e _Chama), com as malhas dentro.")]
+        public Transform[] fumo;
+        [Tooltip("As malhas das peças do fumo (nos vazios).")]
+        public Renderer[] renderersDoFumo;
 
         [Header("Medidas do corpo em repouso (no espaço do corpo, olhando para +Z)")]
         [Tooltip("A superfície das costas na altura do peito (z negativo).")]

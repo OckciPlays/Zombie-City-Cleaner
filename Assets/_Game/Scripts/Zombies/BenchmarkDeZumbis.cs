@@ -205,7 +205,7 @@ namespace ZombieCityCleaner.Zombies
 
         void OnGUI()
         {
-            if (ModoVideo.Ligado || (!Rodando && Time.unscaledTime > _statusAte)) return;
+            if (ModoVideo.Ligado || GravacaoNoMundo.SemHud || (!Rodando && Time.unscaledTime > _statusAte)) return;
             float u = Screen.height / 720f;
             var estilo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(18 * u), alignment = TextAnchor.UpperCenter, fontStyle = FontStyle.Bold };
             estilo.normal.textColor = new Color(0.95f, 0.85f, 0.5f);

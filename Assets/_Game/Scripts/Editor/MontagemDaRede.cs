@@ -101,6 +101,8 @@ namespace ZombieCityCleaner.EditorTools
             var inventario = raiz.AddComponent<InventarioJogador>();
             var tela = raiz.AddComponent<TelaDoInventario>();
             raiz.AddComponent<FomeESede>();
+            // o fumo (03/11/2026): o maço e o cigarro aceso, a fumaça e a bituca
+            MontagemDoFumo.NoJogador(raiz.AddComponent<FumoJogador>());
             var passos = raiz.AddComponent<PassosJogador>();
             raiz.AddComponent<MenuDoDesenvolvedor>();
             raiz.AddComponent<PassageiroDoCarro>();
@@ -165,8 +167,11 @@ namespace ZombieCityCleaner.EditorTools
                 anim.applyRootMotion = false;
                 modelosFP[i] = fp;
                 animadoresFP[i] = anim;
-                bocasFP[i] = Buscar(fp.transform, "Boca_FP_" + modelo);
-                smrBracos[i] = Buscar(fp.transform, "FP_Bracos_" + modelo).GetComponent<SkinnedMeshRenderer>();
+                // (o maço e o cigarro são o mesmo FBX, o Jogador_FP_Cigarro, com os objetos dele)
+                bocasFP[i] = Buscar(fp.transform, "Boca_FP_" + Itens.ArquivoFP(i));
+                smrBracos[i] = Buscar(fp.transform, "FP_Bracos_" + Itens.ArquivoFP(i)).GetComponent<SkinnedMeshRenderer>();
+                // o fumo: as peças nos vazios dos ossos do fumo, com os materiais (a paleta; a brasa e a chama acesas)
+                if (i == Itens.MacoFP || i == Itens.CigarroFP) MontagemDoFumo.NasPecas(fp.transform, "Fumo_FP_");
                 // as armas novas (Blender/Armas) no lugar das antigas, nos mesmos ossos
                 ArmasNovas.NosBracos(modelo, smrBracos[i]);
                 // a lata e a garrafa levam também os itens do saque, com a malha deles no lugar
@@ -205,6 +210,10 @@ namespace ZombieCityCleaner.EditorTools
             rede.controladorDoTaco = primeiro.controladorDoTaco;
             rede.tacoCorpo = primeiro.taco;
             rede.pontaDoTacoCorpo = primeiro.pontaDoTaco;
+            rede.controladorDoMaco = primeiro.controladorDoMaco;
+            rede.controladorDoCigarro = primeiro.controladorDoCigarro;
+            rede.fumoCorpo = primeiro.fumo;
+            rede.renderersDoFumo = primeiro.renderersDoFumo;
             // a pele dos braços de primeira pessoa: o material do corpo de cada personagem (o principal em blocos: a textura)
             rede.variacoes = Enumerable.Range(0, Personagens.Quantos).Select(p => Carregar<Material>(MontagemDasArmas.MaterialDoPersonagem(p))).ToArray();
             rede.pintaveis = smrBracos.Cast<Renderer>().ToArray();
@@ -310,6 +319,11 @@ namespace ZombieCityCleaner.EditorTools
             c.controladorDoTaco = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoTacoDoPersonagem(p));
             c.taco = todos.FirstOrDefault(t => t.name == "Arma_Taco");
             c.pontaDoTaco = todos.FirstOrDefault(t => t.name == "Boca_Taco");
+            // o fumo (03/11/2026): os controladores do maço e do cigarro, e as peças nos vazios dos ossos do fumo
+            c.controladorDoMaco = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoMacoDoPersonagem(p));
+            c.controladorDoCigarro = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoCigarroDoPersonagem(p));
+            c.fumo = MontagemDoFumo.Vazios(corpo.transform, "Fumo_");
+            c.renderersDoFumo = MontagemDoFumo.NasPecas(corpo.transform, "Fumo_");
             c.controladoresDosItens = Enumerable.Range(Armas.Quantas, n - Armas.Quantas)
                 .Select(i => Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoItemDoPersonagem(p, i))).ToArray();
             var m = MedidasDosCorpos[p];

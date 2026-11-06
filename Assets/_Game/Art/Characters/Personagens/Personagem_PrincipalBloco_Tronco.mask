@@ -23,6 +23,48 @@ AvatarMask:
     m_Weight: 0
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest
     m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/brasa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/brasa/Fumo_Brasa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/brasa/Fumo_Brasa/Fumo_Brasa_Brasa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/brasa/Fumo_Brasa/Fumo_Brasa_Cinza
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/Fumo_Cigarro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/Fumo_Cigarro/Fumo_Cigarro_Filtro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/Fumo_Cigarro/Fumo_Cigarro_Papel
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/Fumo_Cigarro/Fumo_Cigarro_Ponta
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/chama
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/chama/Fumo_Chama
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/chama/Fumo_Chama/Fumo_Chama_Chama
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/Fumo_Isqueiro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/Fumo_Isqueiro/Fumo_Isqueiro_Corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco/Fumo_Maco
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco/Fumo_Maco/Fumo_Maco_Caixa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco/tampa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco/tampa/Fumo_Tampa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco/tampa/Fumo_Tampa/Fumo_Tampa_Tampa
+    m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck/head

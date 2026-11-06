@@ -1014,6 +1014,19 @@ namespace ZombieCityCleaner.Player
             ConsumirRpc(id);
         }
 
+        /// <summary>
+        /// O dono terminou um cigarro do maço (03/11/2026, o FumoJogador: no peteleco, quando ele acaba ou sai da mão): um
+        /// cigarro a menos na pilha; com o último, o maço some.
+        /// </summary>
+        public void FumarUm(ushort id) => FumarRpc(id);
+
+        [Rpc(SendTo.Server)]
+        void FumarRpc(ushort id, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !Itens.EhFumo(Do(id))) return;
+            TirarUm(id);
+        }
+
         void AoMudarMochila(NetworkListEvent<ItemNaMochila> e)
         {
             // o anfitrião tirou as balas gastas das caixas: a conta já não precisa descontar
@@ -1339,9 +1352,12 @@ namespace ZombieCityCleaner.Player
             }
             if (IsOwner)
             {
-                if (_rede.cameraMundo != null)
+                // na câmera dos braços (04/11/2026): desde 03/11, ela e os braços ficam perto da origem (BracosNaOrigem), e o
+                // pneu preso na câmera do mundo ficava longe dela, na camada que a do mundo não desenha: não aparecia
+                var olho = _rede.cameraBracos != null ? _rede.cameraBracos.transform : _rede.cameraMundo != null ? _rede.cameraMundo.transform : null;
+                if (olho != null)
                 {
-                    _pneuNoOlho = Peca("Pneu nas mãos (primeira pessoa)", _rede.cameraMundo.transform, new Vector3(0f, -0.50f, 0.48f),
+                    _pneuNoOlho = Peca("Pneu nas mãos (primeira pessoa)", olho, new Vector3(0f, -0.50f, 0.48f),
                         Quaternion.Euler(72f, 0f, 0f), malha, mundo.material, JogadorRede.CamadaBracos);
                     _pneuNoOlho.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 }
@@ -1420,7 +1436,7 @@ namespace ZombieCityCleaner.Player
         // a barra de atalhos, embaixo, no meio (com a tela do inventário aberta, ela fica lá dentro)
         void OnGUI()
         {
-            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || (_tela != null && _tela.Aberta)) return;
+            if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || GravacaoNoMundo.SemHud || (_tela != null && _tela.Aberta)) return;
             float u = Screen.height / 720f;
             float w = 112 * u, h = 56 * u, vao = 8 * u;
             float x0 = (Screen.width - (w * Atalhos + vao * (Atalhos - 1))) / 2f, y = Screen.height - h - 16 * u;
@@ -1470,6 +1486,14 @@ namespace ZombieCityCleaner.Player
                 linha = $"{Itens.Nome(naMao)}{(n > 1 ? $" ({n})" : "")}   ·   clique: {Itens.Consumivel(naMao).verbo}   ·   G: largar";
             }
             else if (Itens.EhTaco(naMao)) linha = $"{Itens.Nome(naMao)}   ·   E na mesa de sinuca: jogar   ·   G: largar";
+            else if (Itens.EhFumo(naMao))
+            {
+                // o maço (03/11/2026): quantos cigarros sobram e o que o clique faz (o FumoJogador)
+                int n = Achar(IdNaMao, out var pilha) ? Itens.Quantos(naMao, pilha.qtd) : 1;
+                var fumo = GetComponent<FumoJogador>();
+                linha = fumo != null && fumo.ComOCigarroNaMao ? "cigarro aceso   ·   clique: tragar   ·   R: jogar fora"
+                    : $"{Itens.Nome(naMao)} ({n} {(n == 1 ? "cigarro" : "cigarros")})   ·   clique: acender um   ·   G: largar";
+            }
             else if (Time.time < _nomeAte)
             {
                 linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco"

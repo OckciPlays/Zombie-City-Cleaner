@@ -78,6 +78,7 @@ namespace ZombieCityCleaner.Mundo
             ("Lanterna", 116, new Vector3(0.215f, 0.054f, 0.054f), ""),
             ("Pilhas", 117, new Vector3(0.056f, 0.026f, 0.053f), ""),
             ("Galao", 118, new Vector3(0.302f, 0.33f, 0.184f), ""),
+            ("MacoDeCigarros", 119, new Vector3(0.072f, 0.115f, 0.031f), ""),
             ("CaixaDeBolas", 128, new Vector3(0.508f, 0.184f, 0.184f), ""),
             ("CaixaDeBolasVazia", 129, new Vector3(0.508f, 0.184f, 0.184f), ""),
             ("TacoMadeira", 130, new Vector3(1.45f, 0.029f, 0.029f), ""),
