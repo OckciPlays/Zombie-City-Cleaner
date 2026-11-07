@@ -641,13 +641,17 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        // o Tiro abafado (06/11/2026, o Assassino): o barulho do tiro chega 30% menos longe (-1: o normal)
+        float RaioDoMeuTiro() => Habilidades.Tem(this, Habilidade.TiroAbafado) && ZombieManager.Instancia != null
+            ? ZombieManager.Instancia.ajustes.barulhoDoTiro * 0.7f : -1f;
+
         /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro (e de que arma).</summary>
         public void AnunciarTiro(TipoDeArma arma, Impacto[] impactos)
         {
             animadorCorpo.SetTrigger(FireId);
             if (IsServer)
             {
-                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this, RaioDoMeuTiro());
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);   // o tiro num carro com alarme dispara
                 Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);   // o grupo de sobreviventes perto ouve
             }
@@ -711,7 +715,7 @@ namespace ZombieCityCleaner.Player
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele (e dispara o alarme do carro em que pegou)
             if (IsServer)
             {
-                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this);
+                ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this, RaioDoMeuTiro());
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);
                 Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);
             }

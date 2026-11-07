@@ -27,6 +27,7 @@ namespace ZombieCityCleaner.Player
 
         bool _semLata;
 
+
         /// <summary>Mostra na mão o item: a lata (ou a garrafa) dos braços, ou a malha dele no lugar dela.</summary>
         public static void Aplicar(GameObject modelo, Item item)
         {
@@ -34,6 +35,13 @@ namespace ZombieCityCleaner.Player
             if (p == null) return;
             var mundo = ItensNoMundo.Instancia;
             p.Mostrar(Itens.NaMaoComMalhaPropria(item) && mundo != null ? mundo.MalhaDoLoot(item) : null);
+            // a vara de pesca (06/11/2026): no lugar da lata, mas apontando para onde ele olha (a lata fica em pé na mão)
+            if (p.lugar != null)
+            {
+                var vara = p.lugar.GetComponent<VaraNaMao>();
+                if (item == Item.VaraDePesca && vara == null) vara = p.lugar.AddComponent<VaraNaMao>();
+                if (vara != null) vara.Ligar(item == Item.VaraDePesca);
+            }
         }
 
         /// <summary>A malha do item no lugar da lata (null: a lata de volta).</summary>

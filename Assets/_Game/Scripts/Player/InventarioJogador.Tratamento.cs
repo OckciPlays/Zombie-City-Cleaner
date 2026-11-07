@@ -80,7 +80,11 @@ namespace ZombieCityCleaner.Player
                 GastarUso(id, false);
             }
             else TirarUm(id);
-            string texto = vida.Tratar(item, p);
+            bool infectado = vida.Corpo.Value.Infectado;
+            string texto = vida.Tratar(item, p, _rede);
+            // o XP (06/11/2026): o curativo, e a infecção que o antibiótico curou
+            if (!string.IsNullOrEmpty(texto)) GanharXp(Habilidades.XpDoCurativo, "curativo");
+            if (infectado && !vida.Corpo.Value.Infectado) GanharXp(Habilidades.XpDaInfeccaoCurada, "infecção curada");
             if (acabou)
             {
                 string fim = $"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(item))} acabou";
@@ -101,6 +105,26 @@ namespace ZombieCityCleaner.Player
             if (!IsOwner || alvo == null || !PartesDoCorpo.EhTratamento(Do(id))) return;
             VoltarAMaoSeForOUltimo(id);
             TratarOutroRpc(id, (byte)parte, alvo.NetworkObject);
+        }
+
+        /// <summary>No dono: acorda o amigo desmaiado na mira (06/11/2026, a mente: o colapso).</summary>
+        public void AcordarOAmigo(JogadorRede alvo)
+        {
+            if (!IsOwner || alvo == null) return;
+            AcordarRpc(alvo.NetworkObject);
+        }
+
+        [Rpc(SendTo.Server)]
+        void AcordarRpc(NetworkObjectReference quem, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId || !AmigoPerto(quem, out var alvo)) return;
+            if (!alvo.Vida.Desmaiado.Value && !alvo.Vida.Dormindo.Value) return;
+            var minhaVida = GetComponent<VidaJogador>();
+            if (minhaVida != null && (minhaVida.Caido.Value || minhaVida.Desmaiado.Value || minhaVida.Dormindo.Value)) return;
+            alvo.Vida.Acordar();
+            alvo.Vida.AcordarDoSono(true);   // (a etapa 3: quem dorme também, até o sono do calmante)
+            alvo.Inventario?.AvisarDono($"{NomeDeQuemTrata} acordou você");
+            AvisoRpc($"Você acordou {(string.IsNullOrEmpty(alvo.Aparencia.Value.nome.ToString()) ? "o amigo" : alvo.Aparencia.Value.nome.ToString())}");
         }
 
         /// <summary>No dono, ao começar o curativo num amigo: ele fica sabendo ("Fulano está enfaixando o seu braço esquerdo").</summary>
@@ -165,7 +189,10 @@ namespace ZombieCityCleaner.Player
                 GastarUso(id, false);
             }
             else TirarUm(id);
-            string texto = alvo.Vida.Tratar(item, p);
+            bool infectado = alvo.Vida.Corpo.Value.Infectado;
+            string texto = alvo.Vida.Tratar(item, p, _rede);
+            if (!string.IsNullOrEmpty(texto)) GanharXp(Habilidades.XpDoCurativoNoAmigo, "curativo no amigo");
+            if (infectado && !alvo.Vida.Corpo.Value.Infectado) GanharXp(Habilidades.XpDaInfeccaoCurada, "infecção curada");
             string nomeDoAmigo = alvo.Aparencia.Value.nome.ToString();
             if (string.IsNullOrEmpty(nomeDoAmigo)) nomeDoAmigo = "o amigo";
             string meu = string.IsNullOrEmpty(texto) ? $"Você tratou {nomeDoAmigo}" : $"{nomeDoAmigo}: {texto}";

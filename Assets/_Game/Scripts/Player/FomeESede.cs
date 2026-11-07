@@ -8,7 +8,9 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// A fome e a sede do jogador: duas barras de 0 a 100 (cheia = satisfeito) que esvaziam com o tempo, mais rápido
-    /// correndo. A sede acaba antes: cheia até vazia em 25 minutos (pouco mais de um dia do jogo); a fome, em 40. Abaixo de
+    /// correndo. A sede acaba antes: cheia até vazia em 30 minutos (1,25 dia do jogo); a fome, em 45 (quase 1,9 dia). Eram
+    /// 25 e 40 até 06/11/2026; no mesmo dia, 40 e 60 ("estão caindo rápido demais") e, para a árvore de habilidades, um
+    /// pouco mais rápido de novo ("valores próximos, mas ainda assim um pouco acima" dos de antes). Abaixo de
     /// 25 a barra fica vermelha; vazia, ela tira vida aos poucos, e o jogador pode cair (volta para casa com as duas pelo
     /// menos na metade). (A vida não volta mais sozinha desde 05/11/2026: só o tratamento cura.) A lata de comida e a garrafa de água enchem as barras
     /// (<see cref="InventarioJogador.Consumir"/>).
@@ -17,8 +19,8 @@ namespace ZombieCityCleaner.Player
     public class FomeESede : NetworkBehaviour
     {
         [Tooltip("Minutos de cheia até vazia (parado ou andando).")]
-        public float minutosDaFome = 40f;
-        public float minutosDaSede = 25f;
+        public float minutosDaFome = 45f;
+        public float minutosDaSede = 30f;
         [Tooltip("Correndo, gasta esta vezes mais.")]
         public float correndo = 1.6f;
         [Tooltip("Como as barras começam a partida (de 0 a 100): a família saiu do bunker com pouca coisa.")]
@@ -67,9 +69,15 @@ namespace ZombieCityCleaner.Player
             // no Dia 0 e nos 5 anos depois (o mundo ainda não está pronto), a fome e a sede não descem: a vida é normal
             var mundo = World.MundoDaPartida.Instancia;
             if (mundo != null && !mundo.Pronto) return;
-            float dt = Time.deltaTime * (_rede.Velocidade > 3f ? correndo : 1f);
-            _fome = Mathf.Max(0f, _fome - 100f / (minutosDaFome * 60f) * dt);
-            _sede = Mathf.Max(0f, _sede - 100f / (minutosDaSede * 60f) * dt);
+            // as habilidades (06/11/2026): o Estômago forte e o Cantil (15% mais devagar), o Camelo (30%), o Fôlego (correr
+            // gasta menos)
+            bool camelo = Habilidades.Tem(_rede, Habilidade.Camelo);
+            float kFome = camelo ? 0.7f : Habilidades.Tem(_rede, Habilidade.EstomagoForte) ? 0.85f : 1f;
+            float kSede = camelo ? 0.7f : Habilidades.Tem(_rede, Habilidade.Cantil) ? 0.85f : 1f;
+            float vezesCorrendo = Habilidades.Tem(_rede, Habilidade.Folego) ? Mathf.Min(correndo, 1.25f) : correndo;
+            float dt = Time.deltaTime * (_rede.Velocidade > 3f ? vezesCorrendo : 1f);
+            _fome = Mathf.Max(0f, _fome - 100f / (minutosDaFome * 60f) * dt * kFome);
+            _sede = Mathf.Max(0f, _sede - 100f / (minutosDaSede * 60f) * dt * kSede);
             if (_fome <= 0f) _dano += danoDaFome * Time.deltaTime;
             if (_sede <= 0f) _dano += danoDaSede * Time.deltaTime;
             if (_dano >= 1f)
@@ -92,8 +100,9 @@ namespace ZombieCityCleaner.Player
         public void Consumir(DadosDoLoot d)
         {
             if (!IsServer) return;
-            _fome = Mathf.Clamp(_fome + d.fome, 0f, 100f);
-            _sede = Mathf.Clamp(_sede + d.sede, 0f, 100f);
+            float k = Habilidades.Tem(_rede, Habilidade.BemNutrido) ? 1.25f : 1f;   // (o Bem nutrido, 06/11/2026)
+            _fome = Mathf.Clamp(_fome + d.fome * k, 0f, 100f);
+            _sede = Mathf.Clamp(_sede + d.sede * k, 0f, 100f);
             Gravar();
         }
 

@@ -128,12 +128,19 @@ namespace ZombieCityCleaner.Mundo
             // a bandagem antisséptica (05/11/2026, a etapa 2): no banheiro, no acampamento, na farmácia e no hospital. Como a
             // tala, só entra no saque depois do modelo no Loot.fbx e do "Itens > Escrever os itens do saque"
             C("BandagemAntisseptica", I, EspecieDoSaque.Remedio | EspecieDoSaque.Farmacia, 1, 2),
+            // o calmante (06/11/2026, a mente): raro nas casas (o banheiro, o acampamento) e incomum na farmácia e no hospital,
+            // como o antibiótico. Só entra no saque depois do modelo no Loot.fbx e do "Itens > Escrever os itens do saque"
+            C("Calmante", R, EspecieDoSaque.Remedio, 1, 2),
+            C("Calmante", I, EspecieDoSaque.Farmacia, 1, 3),
             // os materiais
             C("Pano", N, EspecieDoSaque.Pano, 1, 3), C("Madeira", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Lenha, 1, 3), C("Pregos", N, EspecieDoSaque.Ferramenta, 3, 12),
             C("FitaAdesiva", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio | EspecieDoSaque.GavetaDaCozinha), C("Fios", N, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio),
             C("Isca", N, EspecieDoSaque.Pesca, 2, 6), C("Corda", I, EspecieDoSaque.Ferramenta), C("Toras", I, EspecieDoSaque.Lenha, 1, 2),
             C("PecasDeMetal", I, EspecieDoSaque.Ferramenta, 1, 3), C("Ferramenta", I, EspecieDoSaque.Ferramenta), C("VaraDePesca", I, EspecieDoSaque.Pesca),
             C("KitDeReparo", R, EspecieDoSaque.Ferramenta),
+            // a pólvora (06/11/2026, o Armeiro): incomum, com a munição e na oficina (só entra depois do modelo no Loot.fbx e
+            // do "Itens > Escrever os itens do saque")
+            C("Polvora", I, EspecieDoSaque.Municao | EspecieDoSaque.Ferramenta, 1, 2),
             // arrombar (02/11/2026, o Plano_Portas.md da pasta de arte): a gazua nas gavetas (do quarto, da cozinha, do
             // escritório e da oficina), o pé de cabra na oficina e no porão
             C("Gazua", I, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Cabeceira, 1, 3),

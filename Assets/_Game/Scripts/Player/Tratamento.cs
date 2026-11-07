@@ -110,7 +110,7 @@ namespace ZombieCityCleaner.Player
             var item = _inventario.Do(id);
             if (item == Item.Nada || !PartesDoCorpo.EhTratamento(item)) return false;
             if (_arma != null && (_arma.Usando || _arma.Montando)) return false;
-            if (_vida.Caido.Value) return false;
+            if (_vida.Caido.Value || _vida.Desmaiado.Value || _vida.Dormindo.Value) return false;
             if (id == _esperaId && Time.time < _esperaAte) return false;   // o anterior ainda não voltou do anfitrião
             string motivo = null;
             bool pode = false;
@@ -141,7 +141,7 @@ namespace ZombieCityCleaner.Player
                 _inventario.AvisarQueTrata(alvo, item, parte);
             }
             _inicio = Time.time;
-            _tempo = Mathf.Max(0.2f, PartesDoCorpo.TempoDe(item));
+            _tempo = Mathf.Max(0.2f, Habilidades.TempoDoCurativo(item, JogadorRede.Local));   // (as habilidades, 06/11/2026)
             _proximaVolta = 0.6f;
             _rasgouNoKit = false;
             Ativo = true;
@@ -176,7 +176,7 @@ namespace ZombieCityCleaner.Player
         void Update()
         {
             if (!Ativo) return;
-            if (_vida == null || _inventario == null || _vida.Caido.Value)
+            if (_vida == null || _inventario == null || _vida.Caido.Value || _vida.Desmaiado.Value || _vida.Dormindo.Value)
             {
                 Cancelar();
                 return;

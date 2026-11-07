@@ -179,6 +179,17 @@ namespace ZombieCityCleaner.World
         }
 
         /// <summary>
+        /// O andar do ponto (0, a garagem e a casinha, até o último), ou -1 fora da caixa e da casinha (06/11/2026, a mente
+        /// do jogador: a luz do andar dele).
+        /// </summary>
+        public static int AndarDe(Vector3 p)
+        {
+            var b = Instancia;
+            if (b == null || b._raiz == null || !Abrigado(p)) return -1;
+            return AndarEm(b._raiz.InverseTransformPoint(p).y);
+        }
+
+        /// <summary>
         /// O ponto (mundo) está debaixo do teto do bunker (05/11/2026, o fogo na chuva): na caixa (a garagem e os andares) ou
         /// na casinha da escada. O alto do morro, a céu aberto, não (o <see cref="Dentro"/> o conta). Só a geometria: vale com
         /// a casca desmontada.
@@ -730,6 +741,11 @@ namespace ZombieCityCleaner.World
             {
                 int ponto = i++;
                 if (m.andar != f) continue;
+                if (m.modelo == "MesaDeOficina")
+                {
+                    PorAMesaDeOficina(pai, m.lugar, m.giro);
+                    continue;
+                }
                 var go = Novo(m.modelo, pai, m.lugar, m.giro, m.escala);
                 if (go == null) continue;
                 if (!UI.Graficos.SombraDosMoveis) SemSombra(go);
@@ -797,6 +813,26 @@ namespace ZombieCityCleaner.World
             if (malha == null) return;
             var m = Matrix4x4.TRS(lugar, Quaternion.Euler(0f, giro, 0f), Vector3.one);
             for (int s = 0; s < malha.subMeshCount; s++) _juntar.Add(new CombineInstance { mesh = malha, subMeshIndex = s, transform = m });
+        }
+
+        /// <summary>
+        /// A mesa de oficina (06/11/2026, a árvore de habilidades): o prefab do Resources (Resources/MesaDeOficina, feito pela
+        /// montagem: o modelo do Blender/oficina.py, a caixa e a <see cref="Loot.Bancada"/> com a oficina), com as costas na
+        /// parede da garagem. Sem o prefab, uma bancada comum no lugar (marcada como oficina).
+        /// </summary>
+        void PorAMesaDeOficina(Transform pai, Vector3 lugar, float giro)
+        {
+            var prefab = Resources.Load<GameObject>("MesaDeOficina");
+            GameObject go = prefab != null ? Instantiate(prefab, pai, false) : Novo("Bancada", pai, lugar, giro, MedidasDaMobilia.Escala);
+            if (go == null) return;
+            go.name = "MesaDeOficina";
+            if (prefab != null) go.transform.SetLocalPositionAndRotation(lugar, Quaternion.Euler(0f, giro, 0f));
+            foreach (var b in go.GetComponentsInChildren<Loot.Bancada>(true)) b.oficina = true;
+            if (go.GetComponentInChildren<Loot.Bancada>(true) == null)
+            {
+                var c = go.GetComponentInChildren<Collider>(true);
+                (c != null ? c.gameObject : go).AddComponent<Loot.Bancada>().oficina = true;
+            }
         }
 
         GameObject Novo(string modelo, Transform pai, Vector3 lugar, float giro, float escala)

@@ -64,7 +64,7 @@ Jogo de sobrevivência online (até 4 jogadores, a família) numa cidade infesta
   - 8 "Corpos" (os zumbis mortos, com física): só colide com o cenário e com ela mesma, e o tiro passa por ela;
   - 9 "Jogador" (a raiz do jogador, com o CharacterController);
   - 10 "Retrato" (o retrato do inventário);
-  - 11 "Veiculo" (o carro): não colide com os zumbis (7), com a cápsula de perto deles (2, Ignore Raycast), com os braços (6) nem com o retrato (10). O atropelamento é por código.
+  - 11 "Veiculo" (o carro): não colide com os zumbis (7), com a cápsula de perto deles (2, Ignore Raycast), com os braços (6) nem com o retrato (10). O atropelamento é por código (`Carro.Atropelar`: os zumbis e, desde 06/11/2026, os sobreviventes da camada 12, a pedido: "NPC não é atropelado").
   - O cenário fica na Default.
   - Um corpo sólido na camada 7 ficaria parado em cima da cápsula de um zumbi ou do jogador e taparia o tiro na cabeça (faísca em vez de sangue). Por isso os corpos têm camada própria (antes, era a dos membros caídos).
 
@@ -447,8 +447,9 @@ cartas".
     desliga a câmera. `RetratosProntos` diz se a fileira já tem todos (para os testes).
   - O NPC vem do `Settings/Resources/RecursosDosMoradores.asset` (`UI/RecursosDosMoradores`, um ScriptableObject com o
     `Prefabs/Roupas/NPC`; feito por Zombie City Cleaner > Moradores > Montar a tela, `Editor/MontagemDosMoradores`).
-- **No menu** (`UI/MenuOnline`): o "Criar o mundo" do Novo mundo virou "Escolher os moradores", e o "Criar local" também abre
-  a tela (`AbrirOsMoradores`). O botão da tela (`Criar`) separa os do bunker dos do mapa (`TelaDosMoradores.Separar`), faz o
+- **No menu** (`UI/MenuOnline`): o botão vermelho do Novo jogo, "Escolher os moradores", abre a tela (`AbrirOsMoradores`,
+  local ou não pela escolha "Pela internet / Rede local" do painel dos amigos; antes de 06/11/2026, o "Criar local" também
+  abria). O botão da tela (`Criar`) separa os do bunker dos do mapa (`TelaDosMoradores.Separar`), faz o
   `PedirOMundo`, põe os NPCs no `Salvamento.Atual` (`PorOsNpcs`) e hospeda (ou hospeda local). No Continuar, o `Jogar` de um
   mundo sem moradores abre a tela antes (`_semMoradores`), e o botão grava os NPCs no arquivo do mundo e segue
   (`JogarNoMundo`); um mundo da tela de antes das cartas (com os moradores e sem os do mapa) ganha os 47 e é gravado
@@ -713,13 +714,27 @@ cartas".
   - **`World/MundoDaPartida`:** o anfitrião põe a semente (a do `MundoDaPartida.Pedido`, do menu, ou sorteada), o tamanho, a versão e o nome em NetworkVariables; cada máquina gera em outra thread, liga o terreno e espera a colisão em volta da partida. **O jogador só nasce quando o mundo está pronto na máquina dele:** a aprovação da conexão (`Aprovar`) não cria o personagem; o anfitrião cria o dele quando fica pronto, e cada cliente avisa (`ProntoRpc`, com o resumo). O anfitrião compara o resumo (se não bater, avisa o cliente, `DiferenteRpc`, e registra no log) e cria o personagem (`SpawnAsPlayerObject`) no lugar de nascimento dele (`PontosDeNascimento.Definir`, com os 4 lugares da partida). O anfitrião também cria **o carro** ao lado da laje (`carro`, até os carros entrarem nas casas). **A rede de segurança** (`ManterNoChao`): se o jogador local passou pelo chão (chegou num lugar antes da colisão) e a colisão dali ficou pronta, ele volta à superfície. Sem a cena recarregar, uma partida nova apaga o mundo da anterior (`Reiniciar`).
   - **`World/TerrenoDoMundo`** (o `WorldStreamer` do Guardiões; nada vai pela rede, cada máquina monta o seu): os blocos até 180 m do jogador local viram malha, com o detalhe máximo até 100 m, o passo 2 até 144 m e o 4 além; a colisão (o `MeshCollider` da malha de detalhe máximo, cozida em outra thread com `Physics.BakeMesh`) até 90 m de cada jogador (no cliente, só do local) e, no anfitrião, até 30 m de cada carro, mais 0,75 s à frente dele. As malhas são montadas em outra thread (até 8 ao mesmo tempo: primeiro o chão onde alguém precisa da colisão, depois as casas de verdade e então o resto) e entregues com limite de 4 por quadro e 3 ms; os blocos longe saem depois de 3 s. **Nada espera um cozimento na thread principal** (`Cozinhando`, `CozinhandoAlgo`): um bloco (ou as casas dele) só sai, e uma malha nova só entra, quando as colisões dele terminam de cozinhar. Com o `Wait()`, o cozimento ficava na fila atrás das montagens das casas, e a travessia teve um quadro de 305 ms. Os objetos dos blocos se chamam "Chão" (os passos tocam a grama) e não são reaproveitados (no Guardiões, a Unity às vezes recusava a malha no colisor reaproveitado); a água é filha deles, na camada Water. Também ficam aqui a laje da partida e as paredes invisíveis da borda (1,2 km de altura), 2,5 m atrás da cerca da quarentena (`MontarBorda`): quem passasse do alambrado ou dos contêineres para ali. Os outros pedem áreas com `Pedir(dono, ponto, raio, colisão)`/`Esquecer` e perguntam `Pronto(ponto, raio)`.
   - **`UI/TelaDeCarregamento`** (OnGUI, por cima de tudo): o nome, o tamanho, a semente, a etapa e a barra, até o jogador local nascer; o erro com o botão de voltar ao menu; e, por 12 s depois de nascer, o aviso de mundo diferente.
-  - **O menu (`UI/MenuOnline`):** na cena Mundo, o começo é o "Novo mundo": o nome (até 30 letras), o tamanho (os três botões), a semente (um número; uma palavra vira um número pelo FNV; vazia, sorteada; "Sortear") e "Criar o mundo" (com o Relay) ou "Criar local"; o entrar com código e o modo local continuam. Na partida, o canto mostra também o nome, a semente e o tamanho. Linha de comando: `-semente N`, `-tamanho pequeno|medio|grande` e `-nome TEXTO` (para quem hospeda).
+  - **O menu (`UI/MenuOnline`):** na cena Mundo, o Novo jogo (repaginado em 06/11/2026; veja "O menu do jogo"): o nome (até 30 letras; vazio, "Mundo novo"), o tamanho (os três botões), a semente (um número; uma palavra vira um número pelo FNV; vazia, sorteada; "Sortear"), pela internet (o Relay) ou na rede local; o entrar com o código (ou o IP) também. Na partida, o canto mostra também o nome, a semente e o tamanho. Linha de comando: `-semente N`, `-tamanho pequeno|medio|grande` e `-nome TEXTO` (para quem hospeda).
   - **O F1 do mundo** (`UI/MenuDoDesenvolvedor.Mundo.cs`, ao lado do menu do desenvolvedor): o nome, o tamanho, a semente, a versão e o resumo; onde você está, a altura do chão, o bloco e quantos blocos estão montados (e com colisão); **voar (F2)** (`MovimentoPrimeiraPessoa.Voando`: sem gravidade nem colisão, para onde a câmera olha, Espaço sobe, Ctrl ou C desce, o correr acelera 6 vezes); ir para x, z (o chão do destino é pedido por 10 s; até 5 m antes da cerca); a partida, a margem do lago, o meio e as quatro bordas (30 m antes da cerca); **trazer o carro** (o livre mais perto, 4,5 m à frente; `TrazerOCarroRpc`, no anfitrião); **o teste de travessia** (`ComecarTravessia`: voa a 2,5 m do chão, a 160 km/h, para o canto oposto, por 60 s, e registra no log a média, o 1% pior e o pior quadro, o maior tempo do terreno num quadro e os quadros sem colisão embaixo); **o benchmark da cidade** (M5, veja "As cidades em blocos"); **a conferência das casas por perto** (M6, veja "As casas de verdade"), a dos prédios e a das lojas (veja "Os prédios de verdade" e "As lojas de verdade"); **mostrar os pontos dos móveis** (veja "Os pontos dos móveis"); copiar a semente. O painel mostra também quantas casas de verdade estão montadas.
   - **O mapa (`UI/MapaDoMundo`, tecla M; OnGUI, uma tela do jogo: solta o mouse e para o jogador, `MenuOnline.Tela`; M ou ESC fecha):** assim que o mundo fica pronto, a imagem é pintada em outra thread (`resolucao` 2048, com mipmaps: no mapa inteiro ela fica 2 a 3 vezes menor na tela) e os nomes são ordenados. A roda do mouse aproxima no ponto do mouse (1 a 24 vezes), arrastar move, Espaço centra em você. Os nomes: as cidades sempre, os outros lugares a partir de ~0,11 px/m, os bairros a partir de 0,3 px/m; o que encostaria num nome já escrito fica de fora. Os jogadores são setas para onde olham (`Seta()`, feita por código, tingida pelo `GUI.color`): você em ciano, por cima dos outros (o amarelo é o da casa da família), os outros brancos com "jogador N". Por enquanto mostra o mapa inteiro; a descoberta (só onde o grupo passou, os mapas de papel) vem depois.
   - `SessaoOnline.Sair(erro)` sai com a mensagem que o menu mostra.
 - **A prévia no Editor** (`Editor/PreviaDoMundo`, menu Zombie City Cleaner > Mundo > Prévia com semente): a janela com a semente e o tamanho gera o mundo sem Play e mostra o mapa inteiro na cena aberta (o terreno em células de 32 m com o material do chão, o lago, a partida com um marco amarelo de 60 m e a borda em vermelho), com `DontSave`; "Apagar a prévia" tira (o objeto antes das malhas: com o GPU Resident Drawer, um renderer com a malha destruída dá erro de desenho).
 - **As imagens do mapa** (`Editor/ImagensDoMapa`, menu Zombie City Cleaner > Mundo > Imagens do mapa (10 sementes de cada tamanho); `Gerar(sementes, tamanhos...)`): as sementes 1 a 10 de cada tamanho em `Imgs/Mapas/Mapa_<tamanho>_<semente>.png` da pasta de arte (o mapa de 1024 px, com o título, a casa da família, os nomes e a legenda, escritos por uma câmera escondida na camada 31 num canvas de uGUI, sem Play) e as folhas `Mapas_<tamanho>.png` (as 10 em 5 × 2). Os três tamanhos levam uns 45 s; pelo MCP, um ou dois tamanhos por chamada.
 - **A build de teste** (menu Zombie City Cleaner > Mundo > Build de teste da cena do mundo, `MontagemDoMundo.BuildDeTeste`): só a cena Mundo, Development, em `Builds/TesteMundo/`, devolvendo os Preloaded Assets ao que eram. O resultado vai para o console e para `Builds/TesteMundo/build.txt`. Leva uns 12 minutos e põe a cena Mundo nas Build Settings: tire de lá depois (a demo continua sendo a Demo_Cidade). O usuário testa os dois jogadores ele mesmo (pedido em 26/10/2026): não gere a build para isso sem ele pedir. O `RunCommand` do MCP não chama `BuildPipeline` direto ("user interactions are not supported"): chame o menu num `EditorApplication.delayCall`.
+- **A build do jogo completo** (06/11/2026, a pedido): as cenas Mundo e DiaZero (as duas marcadas nas Build Settings), sem
+  Development, em `Builds/Jogo/ZombieCityCleaner.exe` (930 MB; para os amigos, a pasta compactada sem a
+  `ZombieCityCleaner_BackUpThisFolder_ButDontShipItWithYourGame`). Feita pelo `BuildPipeline.BuildPlayer` num `delayCall`,
+  devolvendo os Preloaded Assets. A primeira levou 11 min; com os shaders já no cache, menos de 1 min. Com pouca memória
+  (a Unity perto de 10 GB), o compilador de shaders falha ("out of memory while parsing"): refazer a build resolve.
+  **Os efeitos criados no jogo:** a URP corta da build os efeitos de pós-processamento que nenhum perfil de volume salvo
+  em `Assets` usa ligado (o `ShaderBuildPreprocessor`); o desfoque Gaussiano da febre e do Sonolento (`EfeitosDoCorpo`)
+  só vai porque o `Assets/_Game/Settings/Build_EfeitosCriadosNoJogo.asset` tem um `DepthOfField` Gaussian ligado (nenhuma
+  cena usa esse perfil). Um efeito novo criado por código (lens distortion, aberração cromática, motion blur, film grain)
+  precisa entrar nesse perfil, ligado. O registro do jogo (`-logFile`) avisa "is not supported or has been stripped".
+  Depois de mudar o que a URP corta, a build precisa do `BuildOptions.CleanBuildCache` (o `Library/PlayerDataCache`
+  reaproveita o shader cortado da build anterior). Com a Unity em segundo plano, o `delayCall` pode ficar parado na fila
+  por minutos: outro `RunCommand` (qualquer um) acorda o Editor e a build começa. Para os amigos: o zip
+  `Builds/ZombieCityCleaner_teste_06-11.zip` (412 MB, os arquivos na raiz).
 - **Conferido na M1 (26/10/2026):** com o Editor hospedando local e a build como cliente robô (`-entrar-local 127.0.0.1 -bot`), os dois geraram o mesmo resumo, o cliente nasceu no lugar dele e andou, e cada um viu o outro; o anfitrião foi até a borda norte e o cliente o viu lá; sair apaga o mundo, e hospedar de novo funciona.
 - **Conferido na M2 (26/10/2026, no Editor):** os 15 testes passam; com a semente 4242 (8 km), o mundo fica pronto em ~1,5 s, o jogador nasce na laje e o carro fica parado no chão ao lado; a travessia (2,7 km em 60 s a 160 km/h) deu média de 3,1 ms por quadro (~320 FPS), 1% pior 4,7 ms, nenhum quadro acima de 33 ms, o terreno no máximo 3,2 ms num quadro e nenhum quadro sem a colisão embaixo. O carro vazio, empurrado a 90 km/h, freia sozinho e para em cima do chão. Dirigir o carro de verdade e o cliente vendo o mesmo chão ficaram para o teste do usuário (aprovada por ele).
 - **Conferido na M3 (26/10/2026, no Editor):** os 23 testes passam; nas sementes 1 a 10 de cada tamanho, todas as cidades estão na rede de rodovias, todo lugar tem a sua estrada e há casa da família; as quantidades seguem a tabela (no Grande, 31 a 45 cabanas, 15 a 20 postos e 20 a 29 bunkers), com 13 a 18 km de estrada no Pequeno, 32 a 39 no Médio e 68 a 76 no Grande (uns 45% de rodovia). Em Play (Médio, semente 7): o jogador nasce na casa da família (Recanto São Jorge, em São Sebastião), o M abre o mapa, a roda aproxima, o Espaço centra, a seta acompanha o olhar e o ESC fecha sem abrir o menu, com o mouse preso de novo; sem erros no console. Mexer num script com o Play rodando recompila e derruba a partida (os erros do Netcode no console são dessa queda): saia do Play antes.
@@ -1134,7 +1149,7 @@ cartas".
   - Quando o anfitrião sai ou a conexão cai, o estado volta a `Desconectado` com uma mensagem, e o menu reaparece.
 - **Menu (`UI/MenuOnline`, OnGUI):**
   - **o menu principal** (na cena Mundo, ao abrir o jogo e ao sair de uma partida, sobre o vídeo da cidade; veja "O menu do jogo"): Iniciar novo jogo (as telas abaixo, com "< Voltar"), Continuar, Configurações e Sair;
-  - telas de hospedar, entrar com código e modo local (a escolha dos retratos à esquerda saiu em 31/10/2026: o personagem é criado ao entrar na partida, na tela de criar, abaixo);
+  - o Novo jogo e o Continuar (`MenuOnline.NovoJogo.cs`, repaginados em 06/11/2026; veja "O menu do jogo"); fora da cena Mundo (a Demo_Cidade), a tela simples de hospedar, entrar com o código e o modo local (a escolha dos retratos à esquerda saiu em 31/10/2026: o personagem é criado ao entrar na partida, na tela de criar, abaixo);
   - na partida, o código e o número de jogadores ficam no canto, e ESC abre o menu (o mundo continua rodando): Continuar, Configurações e Sair da partida;
   - **Configurações** (`UI/Opcoes`; a tela se chamava Opções até 29/10/2026; também no menu do começo; ESC nelas volta ao menu), em duas abas: **Gráficos** (veja "Os gráficos") e **Geral**: o volume geral (`AudioListener.volume`, de 0 a 100%) e, por baixo dele, a música, os zumbis e os sons de ambiente (veja "Os volumes separados"; `trilha.volume`, `zumbis.volume`, `ambiente.volume`), o limite de FPS (VSync, 30, 60, 120, 144 ou sem limite; com um número, o VSync desliga, senão o limite não vale) mostrar o FPS na tela (no canto de cima, à direita, a média de meio segundo, verde a partir de 50, amarelo de 30 a 50 e vermelho abaixo) e o menu do desenvolvedor (F1) no jogo compilado (`LiberarF1`, a pedido em 27/10/2026, para os testes do usuário; no Editor e nas builds de desenvolvimento ele sempre está). Ficam no `PlayerPrefs` (`opcoes.volume`, `opcoes.limite`, `opcoes.fps`, `opcoes.f1`); os volumes são gravados 0,6 s depois de soltar a barra. O menu carrega as opções antes da linha de comando (o `-bot` fica em 60 FPS);
   - `MenuOnline.Aberto` bloqueia os comandos do jogador. Ele também conta como aberto com uma tela obrigatória (`Tela(dona, true, obrigatoria: true)`: a de criar o personagem), e aí ESC abre o menu da partida por cima dela (`Pausado`; as telas embaixo não respondem) em vez de fechá-la; a linha da partida no canto some com ela. O menu desenha com `GUI.depth` -18 (por cima das telas do jogo; embaixo da de carregamento).
@@ -1385,7 +1400,7 @@ cartas".
 - **O equipamento no corpo dos jogadores** (`Player/EquipamentoDoJogador`, 28/10/2026, a pedido: a mochila não aparecia nas costas dos jogadores; a fatia 2 das mochilas): a mochila, o coldre e as armas penduradas no corpo de cada jogador, em todas as máquinas, pelo inventário que vem pela rede (`EquipamentoNoCorpo.OQueVeste`, a mesma regra do retrato do TAB: a mochila e o coldre vestidos; a arma da alça; a longa nas costas; a curta no coldre ou nas costas; a da mão não), presas aos ossos (acompanham a animação), refeitas quando muda alguma delas. No dono, como o corpo: só a sombra na primeira pessoa (fora da sombra da lanterna dele) e inteiras na terceira; no carro, somem. As peças têm o nome começando com `Equipamento: ` (`EquipamentoNoCorpo.Prefixo`): o retrato do TAB, que copia o corpo, tira as que vieram junto (`TirarCopiadas`) e põe as dele.
 - **O boneco equipado (F1 > "Boneco equipado (teste)"; `Player/EquipamentoNoCorpo`):** uma cópia do "Corpo" do prefab, só nesta máquina, 2 m à frente e de costas, com 5 combinações (Pôr, Próximo, Tirar). As peças ficam presas ao peito e ao quadril, com as posições medidas no corpo em repouso. Sem mochila, a arma da alça na diagonal das costas (a pistola no cós, atrás); com mochila, as armas presas nas laterais dela (a da alça à direita, a das costas à esquerda); a curta no coldre do quadril direito. É a prévia da fatia 2 (o equipamento no corpo de todos). O retrato do TAB usa o mesmo script.
 - **Fome e sede (`Player/FomeESede`):** duas barras de 0 a 100 (cheia = satisfeito), do anfitrião (`Fome`, `Sede`, gravadas na rede uma vez por segundo).
-  - Esvaziam de cheia a vazia em 40 min (a fome) e 25 min (a sede) de jogo, parado ou andando (um dia do jogo dura 24 min); correndo (mais de 3 m/s), 1,6 vez mais rápido. A partida começa com a fome em 80 e a sede em 70.
+  - Esvaziam de cheia a vazia em 45 min (a fome) e 30 min (a sede) de jogo, parado ou andando (um dia do jogo dura 24 min). Eram 40 e 25 até 06/11/2026; no mesmo dia viraram 60 e 40 ("estão caindo rápido demais") e, pensando na árvore de habilidades, voltaram para perto dos de antes ("valores próximos, mas ainda assim um pouco acima"). Correndo (mais de 3 m/s), 1,6 vez mais rápido. A partida começa com a fome em 80 e a sede em 70.
   - Abaixo de 25, a barra fica vermelha com o aviso ("com fome", "com sede") (desde 05/11/2026 a vida não volta sozinha de jeito nenhum). Vazia, o fundo dela pisca e ela tira vida (0,25 por segundo a fome, 0,4 a sede, por `VidaJogador.Perder`). Se a vida acaba, o jogador cai e volta para casa com as duas pelo menos em 50.
   - Na tela: FOME (âmbar) e SEDE (azul) em cima da barra da vida, no canto de baixo, à esquerda.
 - **Passos (`Player/PassosJogador`, em todas as cópias, sem nada na rede):** um passo a cada 0,6 m mirando (devagar), 0,75 m andando e 1,15 m correndo, contado pela distância andada e pela velocidade (a do dono, ou a medida dos outros). Parado, o próximo passo sai na metade. No ar, nada (o dono pelo `isGrounded`; os outros, por um raio de 30 cm para baixo); ao cair de um pulo de mais de 0,3 s, os dois pés.
@@ -1795,10 +1810,10 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   - 4 `WheelCollider` (suspensão de 18 cm) e os modelos das rodas, que seguem as rodas da física no dono (e um raio até o chão nos outros).
   - A colisão são 3 caixas: a parte de baixo, a cabine e o para-brisa inclinado (não uma caixa do tamanho do carro todo).
   - As portas: a folha (o modelo) e, à parte, um gatilho do lado de fora da porta fechada com o `Vehicles/PortaDoCarro` (o `Interagivel` que a mira acha).
-  - "Lugares": o quadril de quem senta em cada lugar e o ponto de saída do lado de cada porta. Os faróis (2 spots quentes, sem sombra; as lentes viram Unlit em HDR), o motor e a buzina (AudioSources em laço).
+  - "Lugares": o quadril de quem senta em cada lugar e o ponto de saída do lado de cada porta. Os faróis (2 spots quentes, sem sombra; as lentes viram Unlit em HDR; intensidade 160, alcance 60 m, 76°/44° desde 06/11/2026, a pedido: "melhorar o farol do carro (para clarear mais)"; eram 60, 34 m, 68°/36°; o da moto, 130, 54 m, 70°/38°, era 48, 30 m, 62°/30°; a montagem e os prefabs Carro, Cupe, Moto_Cross e Moto_FatBoy), o motor e a buzina (AudioSources em laço).
   - **O painel** (`Editor/PainelDoCarro`): um quadro de 30 × 9 cm na frente do quadro de instrumentos do modelo (olhando para o motorista, -Z), com a textura `Art/Veiculos/Painel.png` feita por código (o velocímetro de 0 a 160 km/h, a gasolina com o E, o F e a reserva vermelha, e embaixo o ícone verde do farol), os dois ponteiros (malhas em `Art/Veiculos/Malhas/`, o eixo no centro de cada mostrador, a agulha para +Y) e o ícone. Aceso, Unlit em HDR; apagado, Lit (a lanterna clareia). Os ângulos são os de `Carro.AnguloDoVelocimetro` e `AnguloDoCombustivel` (graus no sentido do relógio a partir de cima; no Unity, o giro negativo em Z).
   - **A ignição** ("Ignição", no painel em (−0,23; 0,655; 0,62), à direita da coluna, embaixo dos mostradores: do banco do motorista, ela aparece pelo vão de baixo, à direita, do volante; conferido por raios do olho até ela): o anel (aceso, Unlit âmbar, com o motorista sentado e o motor desligado), o miolo com as 3 marcas das posições e a "Chave" (o cabo preto, a haste, a argola e o chaveiro vermelho; peças primitivas sem colisor). O grupo olha para dentro do painel (+Z); a chave gira em volta do Z dele e entra pelo −Z.
-  - **As luzes de dentro** (pontuais, sem sombra): a "Luz do painel" (âmbar, perto do retrovisor, para clarear o volante e as mãos pela frente; `intensidadeDoPainel` 0,22) e a "Luz de teto" com a lente no forro (`intensidadeDoTeto` 0,5).
+  - **As luzes de dentro** (pontuais, sem sombra): a "Luz do painel" (âmbar, perto do retrovisor, para clarear o volante e as mãos pela frente; `intensidadeDoPainel` 0,22) e a "Luz de teto" com a lente no forro (`intensidadeDoTeto` 0,5). Só clareiam com o carro parado (06/11/2026, a pedido: "a luz de dentro em primeira pessoa atrapalha um pouco para dirigir ... acenda quando o carro estiver parado e desligue quando estiver em movimento"): acima de 6 km/h apagam em ~0,4 s, abaixo de 3 km/h voltam em ~0,8 s (`_luzDeDentro`, no `Painel()`, em todas as máquinas); os mostradores continuam acesos.
   - Os AudioSources em laço: o motor, a buzina e o "Arranque" (o motor de arranque).
   - Na cena: a raiz "Carro", em (−24; 0; −37,6), virado para o oeste, na rua em frente à casa da família.
 - **`Vehicles/Carro`:** 4 lugares (0 o motorista, 1 o do lado, 2 e 3 atrás; a porta de cada um na mesma ordem).
@@ -2080,15 +2095,51 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
 - **As animações:** `Blender/especiais_animacoes.py` faz `Correr`, `Emergir`, `Furia`, `Cuspir` e `Gritar`.
   - Usa o esqueleto, o IK, as curvas e o espelho do `equilibrio_oco.py`.
   - Os laços (`Laco`) dão a volta sem tranco.
-  - O `Correr` e a `Furia` são meio ciclo mais o espelho.
+  - O `Correr` é meio ciclo mais o espelho.
+  - **A `Furia` é o golpe no chão** (05/11/2026, a pedido: "Ao invés dele começar a dar uns socos no ar como está hoje, seria
+    interessante ele começar a bater no chão com os dois punhos e dar dano em área"; eram braçadas no ar em laço, e um
+    braço cruzava o tronco): 100 quadros (3,33 s), sem laço. Três golpes com os punhos juntos (impactos nos quadros 15, 41
+    e 71; o terceiro, o maior, com o rugido lá no alto), a antecipação no alto, a descida em 4 quadros e o corpo afundando
+    no impacto; no fim, ele arfa agachado e se levanta cansado.
+    - **O código** (`Zumbi.Brutamonte.cs`): `GolpesDaFuria`/`ForcaDosGolpes`/`TempoDaFuria` são os tempos da animação
+      (mudando um impacto no Blender, mude lá). No anfitrião, cada impacto chama `GolpeNoChao`: o dano em área em volta dos
+      punhos (`danoDoGolpeNoChao` 40 × a força 0,85/1/1,35; inteiro até `raioCheioDoGolpe` 1,8 m e caindo até um quarto em
+      `raioDoGolpeNoChao` 4,5 m; uma parede no meio segura; quem está 1,6 m acima ou abaixo não sente) e as barricadas em
+      volta caem. Em todas as máquinas, `GolpesNoChaoDepoisDaAnimacao` mostra o efeito na mesma hora (contada do começo da
+      fase): `ZombieManager.EfeitoDoGolpeNoChao` (o som `Brutamonte_GolpeNoChao`, de `Ferramentas/especiais_sons.py golpe`;
+      `Efeitos.GolpeNoChao`, a onda de poeira rente ao chão, o bafo do meio e os torrões; e `MovimentoPrimeiraPessoa.Tremer`,
+      a câmera de quem está a menos de 18 m, só na tela, sem mexer na mira). O rugido curto sai na chegada; o urro longo,
+      no alto do terceiro golpe. Os números antigos (`tempoDaFuria`, `raioDaFuria`, `danoDaFuria`, `intervaloDaFuria`)
+      saíram: os nomes novos valem pelo código, sem o que a cena Mundo guardava.
+    - **As mãos no chão** (`Editor/MontagemDosZumbis.MaosNoChao.cs`): o Humanoid guarda os ângulos, e os Brutamontes têm
+      o braço mais comprido que o Oco: as mãos afundavam no chão (até 35 cm no V1). Na gravação da `Furia`, a mão que
+      passou do chão sobe até encostar (um IK de dois ossos; o cotovelo abre para fora, como um gorila).
+    - **F1 > "Fúria do Brutamonte"** (ao lado do "Amanhecer (5h)"): o mais perto, até 40 m, vira para quem pediu e faz a
+      fúria onde está (`Zumbi.FuriaAgora`; para testar e para gravar os vídeos).
+    - Conferido no Play (05/11/2026, Mundo, de dia ao ar livre e no bunker): os três golpes com a poeira e o tremor; o
+      jogador a ~3,4 m dos punhos perdeu 21, 28 e 33 de vida. O backup de antes: `Backups/Brutamonte_antes_do_golpe_no_chao_2026-11-05`.
   - Saem em `Art/Characters/Oco/Oco_AnimacoesEspeciais.fbx`.
   - **A gravação:** `Editor/MontagemDosZumbis.AnimacoesEspeciais.cs`, menu **Zumbis > Gravar as animações dos especiais (sem
-    remontar)**. Grava nos 21 modelos e põe os estados no `Zombie.controller`:
+    remontar)**. Grava nos 21 modelos (e, desde 05/11/2026, nos novos da comparação já montados) e põe os estados no
+    `Zombie.controller`:
     - **"Andar dos especiais"** (`Pernas` = 7: Idle, Walk, Chase e Correr a 3,8 m/s). Só o Corredor e o Brutamonte usam
       (`CorreComoEspecial`), então os Ocos não mudam;
     - `Emergir`, `Furia`, `Cuspir` e `Gritar` (`Pernas` = 6, sem transição; o código toca com `Tocar`).
   - **O ritmo:** `RitmoDoEspecial` acelera o Animator: 1,8× no avanço do Brutamonte e até 1,3× no bote do Corredor (multiplica
     o `animador.speed` do `MostrarPedra`).
+- **Os novos da comparação (NovoBrutamonte e NovoCorredor, do Tripo; 05/11/2026, a pedido):**
+  - **O avesso da roupa:** os rasgos da calça (e da camisa) são buracos na malha, sem a pele por baixo, e por eles via-se o
+    fundo através da perna ("uma parte que fica transparente dentro da calça"). O shader `ZombieCityCleaner/Oco` ganhou
+    `_Cull` (padrão Back: os Ocos ficam iguais) e `_CorDoAvesso`; com `_Cull` em Off, o lado de dentro sai escuro, na cor
+    de carne na sombra, com a normal virada (também nos passes de sombra e de profundidade). A montagem (`MaterialDoOco`)
+    liga o Off só para os novos (`EhNovo`). Conferido: o avesso pintado de verde não aparece mais em nenhuma pose.
+  - **A cabeça sem os braços:** os pesos pelo calor punham parte das peças da cabeça no braço, no antebraço e no ombro (o
+    Corredor em T; o Brutamonte com a cabeça entre os ombros), e na corrida um espinho do alto e o lado da cabeça
+    escorregavam até 5 cm do crânio. O `Blender/Especiais/novos.py` tem `cabeca_sem_bracos` (antes das peças soltas
+    rígidas): o vértice com 20% ou mais na cabeça perde o braço, e com metade ou mais, o ombro. Refeitos os dois (175 e
+    1.013 vértices soltos; os mesmos 10.314 e 21.260 triângulos) e remontados (menu dos novos). A cópia para conferir agora
+    vai para `Backups/Novos_Conferir/` (era `D:\teste blender\Novos`, a pasta do O OCO). O backup de antes:
+    `Backups/NovosZumbis_antes_do_avesso_e_da_cabeca_2026-11-05`.
 - **A lanterna e as pilhas** (`Item.Lanterna`, `Item.Pilhas`; `InventarioJogador`, a parte "a lanterna e as pilhas"):
   - a carga é o desgaste da lanterna; `DuracaoDasPilhas` é 480 s acesa;
   - `TrocarPilhas` fica no menu da mochila;
@@ -2169,7 +2220,7 @@ com as pessoas e as lojas, 1.000 dólares para cada um), e a porta do abrigo lev
   - a luz da prévia (`LuzDaPrevia`, desligada no Play).
   A montagem também põe o `DiaZeroDaPartida` no "Mundo" da cena do mundo (a `MontagemDoMundo` põe ao montar a cena).
 - **O encaixe com o mundo:**
-  - **O pedido.** O "Criar o mundo" e o "Criar local" do menu põem o `PedidoDoMundo.diaZero`; o Continuar, não.
+  - **O pedido.** O Novo jogo do menu (pela internet ou na rede local) põe o `PedidoDoMundo.diaZero`; o Continuar, não.
   - **A geração espera.** O pedido vira o `MundoDaPartida._diaZero` (NetworkVariable, o anfitrião escreve no spawn). Com
     ele ligado (`NoDiaZero`), o `MundoDaPartida` não começa a geração. `AcabarODiaZero()`, no anfitrião, solta, e cada
     máquina gera o mundo (`AoMudarODiaZero`). `VeioDoDiaZero` diz que a partida desta máquina começou no Dia 0.
@@ -2433,11 +2484,12 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
 - **O dia do mundo:** `CicloDoDia.Dia` (mais um a cada meia-noite, no anfitrião; `DiaRede` para os outros) e
   `CicloDoDia.Definir(hora, dia)`.
 - **O menu** (`UI/MenuOnline`):
-  - o painel do personagem (`PainelDoPersonagem`, à direita do "Novo mundo" e do Continuar): os salvos e o "Novo
+  - o painel do personagem (`PainelDoPersonagem`, à direita do Novo jogo e do Continuar): os salvos e o "Novo
     personagem", com as setas e o apagar (dois cliques);
-  - o "Salvar o jogo" (os três modos) antes do "Criar o mundo". `PedirOMundo` põe o Dia 0 só para o personagem novo e cria
+  - o "Salvar o jogo" (os três modos) nas REGRAS do Novo jogo. `PedirOMundo` põe o Dia 0 só para o personagem novo e cria
     o `MundoSalvo`;
-  - o Continuar abre a lista (`TelaDoContinuar`): o Jogar e o Apagar de cada mundo, e o "Jogar local";
+  - o Continuar abre a lista (`TelaDoContinuar`): clicar escolhe o mundo, dois cliques ou o "Jogar" abrem, o "Apagar" de
+    cada linha pede o segundo clique; pela internet ou na rede local (o `_redeLocal`, o mesmo do Novo jogo);
   - entrar com o código usa o personagem escolhido, sem mundo salvo (`ParaEntrar`);
   - o ESC da partida diz como o mundo salva e quando salvou;
   - o `UltimoMundo` dos PlayerPrefs saiu (o `GravarOUltimoMundo` ficou para os testes).
@@ -2838,7 +2890,7 @@ cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo
   - `MochilasNoChao.DaMorte` põe as roupas vestidas (com as cores) na mochila e zera o `InventarioJogador.Roupas`; o save
     do personagem caído guarda a vida cheia.
 - **O fogo amigo:** `PedidoDoMundo.fogoAmigo` → `MundoDaPartida._fogoAmigo` (`FogoAmigo`; `DefinirFogoAmigo` no F1, que
-  muda o `Salvamento.Atual` junto) e `MundoSalvo.fogoAmigo`; o `MenuOnline` (o "Fogo amigo" no Novo mundo e a linha no
+  muda o `Salvamento.Atual` junto) e `MundoSalvo.fogoAmigo`; o `MenuOnline` (o "Fogo amigo" nas REGRAS do Novo jogo e a linha no
   ESC). No `ArmaJogador`, `OutroJogador(collider)` (o `CharacterController` de outro jogador, com o fogo amigo ligado) no
   `Disparar` (vai para `_jogadores` e `MandarAcertosNosJogadores`: um acerto por jogador, a distância mais perto) e no
   `Golpear`; `JogadorRede.AcertarJogador` → `AcertoNoJogadorRpc` → `FerirJogador` (o fogo amigo ligado, os dois vivos, o
@@ -3106,6 +3158,307 @@ dando uma sensação de que ele estava debaixo da terra, e quando chegamos perto
   (fogo apagado 5 s depois) e o Brutamonte saindo a 5,5 m, de costas, e avançando; 0 erros. Não conferido: dois jogadores,
   o aviso visto por um cliente.
 
+## As motos (06/11/2026, a pedido; `Docs/18-As-Motos.md`)
+
+O pedido: "vamos pôr as duas motos em jogo, adicionar luz e buzina, vamos também fazer um mecanismo de mecânica dela
+diferente. Para arrumar o motor a gente precisa agachar e ir em direção ao motor. Na moto, apenas a vela estará
+comprometida. Não terá sistema de pneu, bateria ou radiador." Decidido com o usuário: cada moto tem a sua chave; as duas
+levam dois (piloto e garupa); nascem perto do começo da partida.
+
+**As duas motos:**
+- **A Fat Boy** (`Moto_FatBoy`, preta e cromada, 7.824 triângulos) é do `Blender/Motos/moto.py` (a v3).
+- **A cross** (`Moto_Cross`, laranja, branca e roxa, 7.192 triângulos) é do `Blender/Motos/cross.py`. A v2 ganhou o
+  farol de LED na placa da frente, a lanterna no paralama de trás, as pedaleiras do garupa e o radiador menor (o cabeçote
+  aparece na janela da carenagem, onde fica a vela).
+- Os editáveis, as fotos e os relatórios ficam em `D:\teste blender\A Moto` e `A Moto Cross`.
+- Os FBX estão em `Art/Veiculos/Motos/` (`Moto_FatBoy.fbx` e `Moto_Cross.fbx`), no formato do `Carro.fbx`: as malhas nos
+  eixos da Unity, cada peça na origem dela.
+- Os materiais (URP Lit, `Art/Veiculos/Motos/Materiais/Moto_<nome>`) vêm da tabela `CoresDasMotos` da montagem.
+- **O metal ficou menos brilhante** depois do primeiro teste ("o brilho delas está muito alto, o cromo das partes
+  metálicas"). Os valores (cor linear, metal e suavidade):
+
+  | Material | Antes | Agora |
+  |---|---|---|
+  | Cromado | 0,93 · 1 · 0,92 | 0,50 · 0,9 · 0,72 |
+  | Alumínio | 0,77 · 1 · 0,75 | 0,42 · 0,85 · 0,55 |
+  | Titânio | 0,62 · 1 · 0,68 | 0,40 · 0,85 · 0,5 |
+  | Escuro (metal e suavidade) | 0,55 · 0,55 | 0,4 · 0,45 |
+  | Preto (suavidade) | 0,62 | 0,55 |
+
+  Para mudar de novo, mexa na tabela e rode a "Montar as motos".
+
+**A montagem** (`Editor/Motos/MontagemDasMotos.cs`, uma parte da `MontagemDosVeiculos`):
+- **"Montar as motos"** (Zombie City Cleaner > Veículos) faz os prefabs `Prefabs/Veiculos/Moto_FatBoy` e `Moto_Cross`
+  e os põe na lista dos prefabs da rede. Precisa antes da "Montar veículos" (os materiais do carro) e da "Montar as peças
+  do carro (e a chave)" (a malha da vela).
+- **"Pôr as motos no mundo e na Demo_Cidade"** liga o `MundoDaPartida.motos` na cena Mundo e põe as duas na rua da
+  Demo_Cidade, atrás do cupê. A `MontagemDoMundo` também liga as motos quando os prefabs existem.
+
+**A moto é um `Carro` com `moto` ligado** (`Vehicles/Carro.Moto.cs`). Ela usa os mesmos lugares, a rede, a chave e a
+ligação direta, a gasolina, o atropelamento e o desvirar (R levanta a moto).
+- **As peças do prefab:**
+  - O "Modelo" é o que inclina nas curvas: o corpo, a direção, a roda de trás, o descanso, os lugares, as pedaleiras e o
+    motor.
+  - A direção tem o pivô no eixo da direção, tombada pelo ângulo do garfo (32° e 26,5°). Ela vira em volta do Y dela e
+    leva a roda da frente, os punhos, o farol e, na cross, a ignição.
+  - Na raiz, em pé, ficam as duas rodas da física (`rodas[0]` a da frente, `rodas[1]` a de trás), a colisão, os gatilhos
+    e os sons.
+- **A física** (`DirigirMoto`): o guidão vira até 30° parado e ~5° rápido, a roda de trás puxa, e o S freia as duas.
+  - A ré é devagar (1,6 m/s), como empurrar a moto. O Espaço trava a roda de trás, e rápida ela escorrega de lado.
+  - O corpo da física fica sempre em pé (`EmPe`: um giro que desfaz o tombo para o lado, `ficarEmPe` 500 e
+    `amortecerEmPe` 45). As forças dos pneus vão na altura do centro de massa (`forceAppPointDistance`), para a moto não
+    tombar para fora nas curvas.
+  - Quem inclina é só o modelo (`VisualDaMoto`, em todas as máquinas), pela conta da curva: tan = v² tan(giro) /
+    (g × entre-eixos), até `inclinacaoMaxima` (34° e 40°).
+- **O descanso** baixa com a moto quase parada e vazia e recolhe com alguém nela.
+- **Os números:**
+  - A Fat Boy: 300 kg, 520 N·m na roda, 34 m/s no máximo, tanque de 18,9 L.
+  - A cross: 150 kg, 330 N·m, 30 m/s, tanque de 7,2 L.
+- **Sem pneus, bateria e radiador:**
+  - A bateria e o radiador ficam em 100% e não gastam nem esquentam.
+  - Os pneus não gastam nem furam, e o tiro não pega nas rodas da moto.
+  - As batidas e os atropelamentos não estragam nada.
+  - Gastam só a vela (com o motor ligado, como no carro) e a gasolina.
+- **A vela vem queimada (0%):** "apenas a vela estará comprometida". Sem uma vela boa, o motor só tosse.
+- **O farol e a lanterna:** L acende o farol (um spot na direção, que vira com o guidão; a lente vira o `FarolAceso`) e a
+  lanterna de trás (a malha do corpo, `lanterna2`, vira a `LanternaAcesa`). B buzina.
+
+**Os sons** (06/11/2026, a pedido: "vamos arrumar os sons delas", com três vídeos do usuário como referência: a cross em
+ponto morto, ela acelerando e a Harley):
+- **O gerador** é o `Ferramentas/motos.py` (numpy e scipy), que grava os WAV em `Audio/Motos/`:
+  - `<moto>_Motor_<n>`: os laços de 1 s do motor, do giro lento ao rápido;
+  - `<moto>_Pegar`: o motor pegando;
+  - `<moto>_Buzina`: uma buzina de disco, de um tom só (415 Hz na Fat Boy, 470 Hz na cross).
+  - Com `--so FatBoy` ou `--so Cross`, só os sons daquela moto.
+- **Dos vídeos saíram só as medidas;** o som deles não entra no jogo.
+  - **A Harley:** o ciclo de 720° a cada 92 ms em marcha lenta, com as duas explosões desiguais do V2 de 45° (40 e
+    52 ms) e um eco no escape. 95% da energia fica abaixo de 150 Hz.
+  - **A cross:** 15,5 explosões por segundo em ponto morto, com a energia entre 60 e 400 Hz e ~15% de chiado. No giro
+    alto, ~150 a 210 por segundo e rasgada (44% de 2,5 a 6 kHz).
+  - O gerador compara as faixas do espectro de cada laço com as do vídeo no giro parecido, e elas batem perto.
+- **Como cada explosão é feita:** um pulso de pressão e ruídos curtos passam pelas ressonâncias do escape (um banco de
+  filtros de pico). A mistura tem quatro partes, o ronco, o ruído grave, o rasgado do meio e o chiado, e a proporção delas
+  muda com o giro. O laço tem um número inteiro de ciclos e é filtrado três vezes seguidas (só a do meio é usada), então
+  não tem emenda.
+- **No jogo, o motor toca em camadas** (`Carro.Moto.cs`, `SomEmCamadas`, em vez do laço único do carro):
+  - O giro vai de 1 vez a marcha lenta (a rotação 0,12) até o `giroNoMaximo` (4 na Fat Boy, 13,5 na cross). Ele sobe
+    rápido e cai devagar, como nas aceleradas da cross.
+  - Os dois laços em volta do giro tocam juntos, misturados com a mesma potência na escala do log do giro, cada um com o
+    pitch giro / o giro dele (perto de 1). Assim o tom do escape não estica.
+  - A Fat Boy tem 4 laços (1; 1,6; 2,5; 3,6). Os AudioSources são o "Motor" do prefab e cópias dele.
+  - A cross tem 5 laços (1; 2; 3,4; 5,5; 8,5) e o `giroNoMaximo` 10,5.
+- **A cross foi refeita no mesmo dia,** a pedido ("muito agudo... um pouco irritante"; a Harley ficou como estava,
+  conferida byte a byte):
+  - **Antes:** seguia o vídeo acelerando. No giro alto o chiado de 2,5 a 6,5 kHz tomava conta (até 37% da energia de 2 a
+    5 kHz, com o centróide em 2,4 a 3 kHz). Andando em primeira, a moto já ficava a ~11 vezes o ponto morto.
+  - **Agora:** o rasgado fica nos médios (350 a 1.800 Hz), o chiado é pouco e para em 4,5 kHz, e o estalo é mais macio
+    (4,5 ms). Um passa-baixa de 5 kHz entra só na cross, e o giro máximo caiu de 13,5 para 9.
+  - **O resultado:** o centróide fica entre 350 e 670 Hz, e de 2 a 5 kHz sobram de 3 a 8%.
+  - **Para refazer só uma moto:** `python Ferramentas/motos.py --so Cross`.
+- **A terceira versão da cross**, a aprovada ("o som melhorou bastante, gostei de como está"), veio depois do pedido
+  "precisa voltar um pouco mais pro agudo" e fica no meio das duas:
+  - o rasgado vai até 2,4 kHz, o chiado volta até 5,5 kHz e o estalo tem 3,6 ms;
+  - o passa-baixa fica em 7 kHz, e o `giroNoMaximo` em 10,5;
+  - andando, o centróide fica em 900 a 1.140 Hz (era 1.760 a 2.380 na primeira e 560 a 670 na segunda), e de 2 a 5 kHz
+    ficam 14 a 18% (21 a 29% e 7 a 8%).
+  - O `pegarProprio` troca o motor pegando do carro, e a buzina do prefab já vem com o clip da moto. O motor de arranque e
+    a tossida são os do carro.
+- **Para refazer:** `python Ferramentas/motos.py` e a "Montar as motos", que importa os WAV em PCM, mono e descomprimidos
+  ao carregar.
+- **Conferido no Play:** a cross em primeira, a 19 km/h, toca os laços 4 e 5 misturados (pitch 1,16 e 0,84, ~11 vezes a
+  marcha lenta), sem erros. O som em si fica para o usuário ouvir.
+
+**Montar e descer:**
+- Um gatilho só, "Subir (mira)" (`PortaDoCarro` sem a folha), serve o piloto e, com ele ocupado, a garupa: "[E] Pilotar a
+  moto" e "[E] Subir na garupa". A `PortaDoCarro.Ciclo` não faz nada sem a folha.
+- Desce-se do lado esquerdo (as "Saídas"), o do descanso.
+
+**A pose** (`PassageiroDoCarro.PoseDaMoto`, feita no código mesmo com as animações de sentado):
+- As pernas vão do quadril até as pedaleiras do lugar, com uma conta de dois ossos (`DoisOssos`: os joelhos para a frente
+  e para fora).
+- As mãos do piloto vão até os punhos (os cotovelos para fora e para baixo) e viram com o guidão. O garupa põe as mãos nas
+  coxas.
+- O tronco do piloto deita `troncoDoPiloto` (3° na Fat Boy, 16° na cross), e o olho vai junto (`OlhoDe`).
+- A câmera de trás (V) fica mais perto (4,2 m).
+
+**A partida:** a ignição é a do carro (o anel, o miolo e a chave), com o chaveiro da moto.
+- Na Fat Boy, ela fica no tanque, atrás do velocímetro; na cross, em cima da mesa do guidão, na frente dos suportes.
+- Com a chave da moto na mochila, a partida é direta; sem ela, a ligação direta com o mini-game.
+- **As chaves** são `Item.ChaveDaFatBoy` (71, o chaveiro de couro marrom com o emblema) e `Item.ChaveDaCross` (72, o
+  chaveiro laranja), do `Blender/pecas.py`. O `Itens.EhPeca` vai até a `ChaveDaCross`, e o `EhChave` inclui as duas.
+- No mundo novo, as chaves ficam no chão da sala, ao lado das dos carros.
+
+**A vela, agachado** (`Vehicles/MotorDaMoto`):
+- O gatilho "Motor (mira)" fica em volta do motor, embaixo do tanque. Em pé, a dica é "Agache (C) para mexer no motor";
+  agachado, "[E] Ver o motor (a vela)", com a moto parada, de pé e vazia.
+- O E abre a `TelaDoCapo` no cofre da moto ("Motor (vela)", um `CofreDoMotor` com um lugar só). A câmera vai até o lado
+  direito do motor, na altura de quem está agachado.
+- Na Fat Boy, a vela fica do lado direito do cabeçote da frente, na frente do filtro de ar; na cross, do lado direito do
+  cabeçote, pela janela da carenagem.
+- A tela da moto diz "MOTOR · FAT BOY" e só mostra a etiqueta e as velas da mochila (`LugaresDoCofre`, `NaMoto`). O resto
+  é o capô do carro: clique na vela para tirar, no lugar vazio ou numa vela da mochila para pôr, e nada com o motor
+  ligado.
+- Os avisos da moto mandam agachar perto do motor, não abrir o capô.
+
+**No mundo** (`MundoDaPartida.motos`, `PorAsMotos`, `LugarDaMoto`):
+- No bunker da família, as motos ficam lado a lado na primeira das 4 vagas da garagem, a de antes da da perua. A
+  procura desliza dentro da vaga até achar o lugar sem nada.
+  - No primeiro teste elas ficavam na vaga depois da do cupê, mas lá estão o macaco-jacaré e os pneus da oficina
+    (`MoveisDoBunker`), e a cross nascia empinada em cima do macaco.
+  - Sem o bunker, ficam ao lado da laje da partida, no primeiro lugar livre e longe dos outros veículos.
+- **O save:** `CarroSalvo.qual` é 2 para a Fat Boy e 3 para a cross (`QualDoCarro`, `PrefabDoCarro`). Num save de antes
+  delas, as motos e as chaves aparecem uma vez ao carregar (`MundoSalvo.motos`).
+- O carro que cai do mundo volta para a vaga dele (`VagaDoCarro`); a moto, para a dela.
+
+**Conferido no Play** (o Mundo, partida local):
+- As duas nascem na garagem do bunker, e as 4 chaves ficam no chão da sala.
+- O piloto monta na Fat Boy com a pose certa (as mãos nos punhos, os pés nas plataformas), e ela liga pela ligação direta
+  e anda.
+- 0 erros das motos.
+
+**Não conferido:** dois jogadores (a garupa e a moto vista por um cliente).
+
+## A mente: a sanidade (06/11/2026, a pedido; as etapas 1, 2 e 3; `Docs/17-A-Mente.md`)
+
+O pedido: um mecanismo de sanidade. Ela cai com o medo e volta com a segurança e a companhia; a 0, o colapso, sem game
+over. A barra da vida virou um monitor cardíaco ("com onda P, QRS e onda T; quando está taquicárdico, diminuição do RR"), com
+a cor pela vida (verde, amarelo, vermelho), e a mente é um cérebro. As etapas 2 (a crise de pânico, os vultos, os sons
+falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s, o desmaio que o amigo acorda com o E) e 3
+(o sono de verdade, o calmante, o vício na nicotina, a sinuca) vêm depois.
+
+- **O estado** (`Player/VidaJogador.Mente.cs`, partial do `VidaJogador`; o anfitrião conta a cada 0,5 s no `Update`):
+  `NetworkVariable<float> Sanidade` (0 a 100) e `NetworkVariable<uint> MotivosDaMente` (um bit por `MotivoDaMente`: 0 a 15
+  o que abala, 16 em diante o que acalma). As taxas são por hora do jogo (`CicloDoDia.HorasPorSegundo`): o escuro −4 (a
+  noite sem luz própria, fogueira ou bunker aceso; no bunker, as luzes apagadas, de dia também); os zumbis caçando a 15 m
+  −6 +2 por zumbi (até −16; `Zombies/ZombieManager.Mente.cs`, `PerigoParaAMente`, só no anfitrião, separado do
+  `Ameaca` da trilha); a tensão −1,5; sozinho à noite (com outro jogador na partida) −2; a tempestade fora do teto −2; a dor
+  −1,5; a febre −3 (a sepse −5); o sangue −2; a fome e a sede baixas −1 (vazias −2). O dia +2 (até 85), os amigos a 8 m +3
+  cada (até +6), a fogueira +4, o bunker aceso +2,5 (fechado +5; o do mundo pela luz do andar onde ele está,
+  `BunkerDoMundo.AndarDe` e `Acesa(andar)`, e fechado com o portão e a portinhola fechados; o `BunkerRede` é o da cidade
+  antiga). De uma vez (`AbalarAgora`/`AcalmarAgora`, ficam 6 s no
+  motivo): o susto (um zumbi novo caçando a 7 m) −4 a −10, o Brutamonte emergindo a 14 m −12, o raio a 35 m −5 (direto
+  −10), o golpe −1,5 (um a cada 1,5 s), a fratura −6, o amigo caindo a 25 m −15, matar um sobrevivente −8
+  (`Sobrevivente.Ferir`; as habilidades de assassino, no futuro, tiram isso), a tragada +2,5 (`FumoJogador` → `TragouRpc`).
+  Não anda no Dia 0 (`CorpoAnda`); renasce com pelo menos 30; os 5 anos acalmam (`AcalmarTudo`).
+- **O HUD (no dono):** `Player/MonitorCardiaco` (no lugar da barra da vida, que saiu do `VidaJogador.OnGUI`; o ECG por
+  gaussianas no tempo, a P 0,13, o R 1,0, a T 0,30, o PR que encurta com a frequência e o QT de Bazett; a varredura com o
+  vão; o bpm sobe com o esforço, a mente abaixo de 70, a vida abaixo de 60, a febre e o golpe; a extrassístole com a vida
+  abaixo de 15; o `Extra` é para a crise da etapa 2) e `Player/MenteNoHud` (o cérebro de `UI/IconesDaMente`, cheio de
+  baixo para cima; as faixas 70/40/15; o porquê em cima das barras, até a silhueta do corpo).
+- **O save e a rede:** `PersonagemSalvo.abaloDaMente` e `PacoteDoPersonagem.abaloDaMente` (100 menos a mente: o save antigo
+  entra calmo). `SessaoOnline.VersaoDaRede = 4`. O F1: a linha "Mente" da aba Corpo.
+- **Conferido no Play (06/11/2026, mundo pequeno, 0 erros):** no bunker aceso, "ACALMANDO: O BUNKER"; fora, à noite, sem
+  lanterna, "ESCURO"; os batimentos de 70 a 118 (mente 30, vida 25) e 146 (mente 10, vida 10, com as extrassístoles); o
+  cérebro nas 4 faixas. No mesmo dia, a pedido, a silhueta do corpo (o HUD e a aba CORPO) ficou de frente: o lado esquerdo
+  do personagem à direita da imagem, e as etiquetas da aba CORPO trocaram de coluna junto.
+- **A etapa 2, os efeitos (só no dono; ninguém mais vê):** `Player/CriseDePanico` (abaixo de 70 o tremor; abaixo de 40 a
+  palpitação baixa a cada R do `MonitorCardiaco.UltimaBatida`, a respiração funda e a vinheta no ritmo; a crise: a queda de
+  3,5+ de uma vez abaixo de 40, ou sozinha abaixo de 25, de 20 a 35 s: `MonitorCardiaco.Extra` +55, a palpitação alta, a
+  `SomDoCorpo.RespiracaoPesada` seguida, o `TremorAgora` que o `EfeitosDoCorpo` soma ao `TremorDaMira`; a `Intensidade`
+  é para a trilha), `Player/Alucinacoes` (abaixo de 40 os vultos, Ocos pretos de 10 a 20 m a 40-70° do olhar que somem
+  olhados, e os sons falsos, as vozes do `SonsDoOco` e o `SomDaMente.Sussurro`; abaixo de 15, a cada 18-35 s: os amigos como
+  zumbis de 8 a 12 s, com os renderers do corpo desligados só aqui e o nome escondido no `NomesDosJogadores`; os zumbis
+  falsos de 1 a 3, que viram fantasma no `ArmaJogador.AtirouLocal` ou chegando a 1,8 m; a fuga; o desmaio, um a cada 2 min;
+  os Ocos são os `ZombieManager.modelos` instanciados sob um pai desligado, sem o `Zumbi`, o `NavMeshAgent` e os colisores,
+  com o "Speed" do Animator; o preto e o pálido são o `Universal Render Pipeline/Unlit`), `Player/ColapsoDoJogador` (a fuga
+  de até 6 s com o `MovimentoPrimeiraPessoa` e o `ArmaJogador` desligados, o `CharacterController.Move` e a volta pelo
+  `Olhar`; a tela do desmaio, o `SomDaMente.Desmaio` e o `AudioLowPassFilter` no `JogadorRede.ouvido`) e
+  `Player/VidaJogador.Desmaio` (`NetworkVariable<bool> Desmaiado` do anfitrião, de 4 a 14 s, `PedirDesmaio`/`DesmaiarRpc`,
+  `Acordar`; o corpo deita como o caído; os zumbis continuam; o amigo acorda pelo `TratarOAmigo` → `AcordarRpc`).
+  `SessaoOnline.VersaoDaRede = 5`. O F1: a linha dos efeitos na aba Corpo.
+- **A etapa 3, o sono, o calmante, o vício e a sinuca** (`Player/VidaJogador.Sono.cs`, no anfitrião, dentro da conta da mente
+  pelo `MenteDoSonoEDosRemedios`; `AtualizarSono` a cada quadro): o cansaço +100 em `HorasAteExaustao` (72 h, 3 dias,
+  ajustado no mesmo dia a pedido: "está cansando muito fácil"; acima de `ComSono` 83, `Sono` −1; acima de 92 o dono pisca a
+  vista; em 100 apaga e dorme à força 4 h, `Dormir(true, 4)`); `Dormindo` (a cama: `ConstrucoesNoMundo`/`CamaDeDormir` →
+  `PedirDormir`; o `ColapsoDoJogador` apaga a tela, tira o controle e o E chama o `PedirAcordar`); dormindo, sozinho o
+  cansaço −16 e a mente +2,5 por hora (`Descanso`); com `TodosDormindo` o `CicloDoDia.Pressa` vai a 12 (a `PressaRede`; o
+  `HorasPorSegundo` multiplica junto, e volta a 1 em cada partida), o cansaço −20 e a mente +5, e quem dormiu de noite
+  acorda às 6h30; o golpe acorda
+  (`Dano`), o amigo acorda (`AcordarRpc`). O calmante (`Item.Calmante = 91`, pela boca, sempre pode): `TomarCalmante`, +8 por
+  hora por 5 h (até 8 h); seguidos em menos de 3 h, o 2º sonolento 2 h (`EfeitoSonolento`: o `EfeitosDoCorpo` embaça de 14
+  a 45 m, a linha da mente escreve "SONOLENTO"), o 3º dorme à força 3 h (`EfeitoSonoForcado`, o som do desmaio); com o motivo
+  `Calmante`, a `CriseDePanico` não começa. O vício: a tragada +0,35 na nicotina (cai 10 por dia), viciado com 50 (sai abaixo
+  de 25); 4 h sem fumar, `Abstinencia` −2 e o tremor 0,15; 10 h, −4 e 0,3. A sinuca: o `SinucaDoMundo.FimRpc` chama o
+  `JogouSinuca` (+1,2 por tacada, um a cada 3 s; +6 no fim da partida). O save: `cansaco`, `nicotina`, `viciado` no
+  `PersonagemSalvo` e no `PacoteDoPersonagem`. O modelo do calmante: o `_calmante` do `Blender/loot.py` (o frasco
+  `azul_claro` com a tampa `roxo`), montado pelo "Itens > Montar só o saque" e medido pelo "Escrever os itens do saque".
+  `SessaoOnline.VersaoDaRede = 6`. O F1: a linha "Sono 90", "Exausto", "Dormir aqui", "Viciar".
+- **Os ajustes depois do teste (06/11/2026, a pedido):** o bunker é o abrigo ("dentro do bunker, independente se há zumbis
+  perto, que eu não perca sanidade": `Abrigado()`, a caixa e a casinha pelo `BunkerDoMundo.AndarDe`; lá dentro o `Abala`
+  e o `AbalarAgora` não contam, e o bunker aceso acalma com ou sem ameaça); fora dele, com zumbi por perto
+  (`PerigoParaAMente` conta também os zumbis soltos a 12 m, `perto`: a `Tensao` −2) a fogueira e o dia não acalmam (os
+  amigos continuam); a febre vence o sono no monitor (a febre +22, e o dormindo −12 só sem febre e com a vida a
+  60 ou mais); o sono de 3 dias (acima); a fome e a sede mais devagar (o `FomeESede` 60 e 40 min, no prefab também; no
+  mesmo dia, 45 e 30, para a árvore de habilidades).
+
+## A árvore de habilidades, o lago e a oficina (06/11/2026, a pedido; `Docs/18-Habilidades.md`)
+
+- **O que é:** o XP das ações num total só; cada nível dá 1 ponto livre (o nível 1 já dá o primeiro); 45 habilidades
+  (3 áreas × 3 ramos × 5, a última a ponta) e 30 níveis (o 30 com 5.510 de XP, umas 12 h de jogo; do 1 para o 2, 50, e
+  10 a mais a cada nível). Morrer não tira nada; no Dia 0 não se ganha XP. As decisões do Pedro e as tabelas estão no Docs/18.
+- **O catálogo** `Player/Habilidades.cs`: os enums (a ordem do `Habilidade` é o bit do save: não mudar), o
+  `ProgressoDoPersonagem` (o XP e um `ulong` das aprendidas, `INetworkSerializeByMemcpy`, no JSON do save), a curva, o
+  `PodeAprender` (tem ponto, não tem, e tem a anterior do ramo), os textos, o `Pronta` (desde a tarde de 06/11/2026 as
+  45 têm efeito), o XP de cada ação (`XpDo*`, `XpDaReceita`) e o `TempoDoCurativo`.
+  `Habilidades.Tem(jogador, h)` serve em qualquer máquina.
+- **O progresso** no `InventarioJogador` (partial `InventarioJogador.Habilidades.cs`, para não mexer no prefab): a
+  `NetworkVariable<ProgressoDoPersonagem> Progresso` (o anfitrião escreve), `GanharXp(quanto, motivo)` (só no anfitrião; o
+  dono recebe o `GanhouXp` e o `XpNaTela` mostra), `PedirAprender`/`AprenderRpc`, `DefinirProgresso` (o save),
+  `LigouDireto` (o XP da ligação direta, uma vez por carro) e `ProgressoDeTeste` (o F1, aba "Habil."). O save:
+  `PersonagemSalvo.progresso` e `PacoteDoPersonagem.progresso` (no fim do `NetworkSerialize`). `VersaoDaRede` 7.
+- **A aba HABILIDADES** (`TelaDoInventario.Habilidades.cs`, a tecla K): o nível, os pontos e a barra; as 3 áreas em botões;
+  os 3 ramos com os 5 nós; a coluna da direita com o botão APRENDER e "COMO GANHAR XP". As abas encolheram para caber 4
+  (MOCHILA 336/112, CRIAR 454/100, CORPO 560/104, HABILIDADES 670/160, até a coluna da direita em 840).
+- **O XP é dado** no `ZombieManager.Acertar` (o zumbi que morreu com o autor jogador; o carro conta), no
+  `Sobrevivente.Ferir`, no `VidaJogador.Amanhecer`, no `TratarRpc`/`TratarOutroRpc` (o curativo e a infecção curada), no
+  `CriarRpc`, no `MobiliaNovaDoMundo.Saque.PegarRpc` (pela raridade) e pelo `PassageiroDoCarro.Ligou`.
+- **A ligação direta virou a ponta do Ladrão** (a pedido): sem ela, o `PassageiroDoCarro.SemALigacaoDireta` avisa e o carro
+  só liga com a chave (o `Carro.FazerLigacaoDireta` não confere: os testes e o F1 continuam ligando). O remendo do pneu
+  passou a exigir o Borracheiro (`InventarioJogador.Remendar`/`RemendarRpc`).
+- **Os efeitos** ficam onde a conta é feita: no dono, o dano (`ArmaJogador.DanoDeFogo`; a branca no `Golpear`), o coice, a
+  recarga (as esperas e o `Animador.speed`, que volta no fim ou no `Update`), o emperrar, o tremor (`EfeitosDoCorpo`), o
+  tempo do curativo, o desgaste e o pneu nas mãos; no anfitrião, o `VidaJogador.Tratar(item, parte, quemTrata)` (as
+  habilidades de quem trata), a infecção, a mente, a fome e a sede, as pilhas, a gasolina de quem dirige, o kit de
+  reparo (`PoupouOKit`), o alarme (`PecasDosCarrosDoMundo.Susto`), o barulho do tiro (`JogadorRede.RaioDoMeuTiro`) e o
+  Aproveitador (`CriarRpc`).
+- **As habilidades que mexem em sistemas** (a tarde de 06/11/2026): os Passos leves (o `Alvo.passos` do ZombieManager,
+  0,5: o `barulhoDeCorrida` no `Zumbi.Perceber` e a poça no `BarulhoDaPoca`); Pelas costas (`ArmaJogador.PelasCostas`:
+  o Oco de costas, sem perseguir nem atacar, leva 1000); o Discreto (o alcance ×0,7 e o ouvido ×0,5 no
+  `Sobrevivente.Olhar`); as Mãos leves e o Chaveiro (`PortasDoMundo.Arrombar`: o tempo ×0,7, sem o barulho do pé de cabra,
+  a gazua não quebra; o `Grampo`, a ferramenta de mentira do Chaveiro, `(Item)254`, 6 s, sem gastar nada); o Abutre (o
+  `Sobrevivente.matador` e o `SobreviventesDoMundo.DoAbutre` no `LargarAMochila`); o Olho bom, o Garimpeiro e o Pé de
+  coelho (`MobiliaNovaDoMundo.Saque.Sorte`: a pilha +25% e o item a mais, do `CatalogoDoSaque.DaRaridade`, sem as armas e
+  as roupas); o Faro (`FaroNaTela`, no dono, pelo `MobiliaNovaDoMundo.SaqueAVista`); as Mãos hábeis (o dobro em 25%).
+- **A água** (`Player/Agua.cs`: o nível num ponto, no lago do mundo e no mapa fixo): o nado no
+  `MovimentoPrimeiraPessoa.Nadar` (entra com 1,25 m nos pés, sai com 1,05; boia com os pés a 1,42 m da superfície;
+  Espaço sobe, C mergulha; o `ArmaJogador` não age nadando); o fôlego no `VidaJogador.Agua.cs` (o anfitrião, pela posição
+  da rede: 30 s, volta em 4 s; sem ele, 8 por segundo do tronco, "Afogou-se."; a `NetworkVariable<byte> Folego`); a tela
+  no `AguaNaTela` (a cor embaixo da água e a barra).
+- **O caiaque** (`Vehicles/Caiaque.cs`, `PortaDoCaiaque.cs`, `Player/PassageiroDoCaiaque.cs`): os 2 lugares do anfitrião
+  (`EntrarRpc`/`SairRpc`, o dono é quem rema, o `NetworkTransform` do dono como no carro); cada máquina senta os jogadores
+  (o corpo preso no banco, o "Lugar" 2 do Animator, sem a cápsula); no dono, o olhar do banco e o E sai (meio segundo
+  depois de entrar); o lugar 1 fica com o `ArmaJogador` (pesca e atira). Remar no dono (`Navegar`: W/S, A/D, o nível da
+  água, encalha na proa com menos de 0,25 m). O prefab é o `Resources/Caiaque` (a montagem `Editor/MontagemDoLago.cs`, que
+  também põe na lista dos prefabs da rede); o `MundoDaPartida.PorOCaiaque` (na beira, do lado do bunker) e o save
+  (`MundoSalvo.caiaque`, `caiaques`). O `PassageiroDoCarro.NoCarro` não sabe do caiaque: quem precisar, olhe o
+  `PassageiroDoCaiaque.Sentado`.
+- **A pesca** (`Player/PescaJogador.cs`, no dono; `InventarioJogador.Pesca.cs`, no anfitrião): a vara vai na mão no lugar da
+  lata (`Itens.NaMao`); o clique no `ArmaJogador` (antes do comer); lançar (o olhar até a água funda, 18 m), esperar, a
+  mordida (1,2 s) e a puxada (a faixa verde pelo peixe); o anfitrião confere (a vara, a isca, a água perto, 3 s entre
+  peixes) e dá o peixe e o XP. Os peixes e a pólvora são os itens 120 a 124 (no fim do `_loot`).
+- **As árvores** (`World/FlorestaDoMundo.Corte.cs`, `World/MundoDaPartida.Arvores.cs`): a chave (o bloco e a ordem no
+  `Floresta.DoBloco`), a `NetworkList<long>` do mundo (no save), o corte no anfitrião (refaz o `DoBloco` do bloco para
+  conferir; as toras no pé; o barulho de 30 m), a cortada vira `TocoA` em cada máquina (o `AplicarCortadas` também quando
+  um bloco fica pronto) e cai perto de quem vê (`ArvoreCaindo`). O golpe: `ArmaJogador.GolpeNaArvore` (5 com o machado).
+- **A oficina:** `Bancada.oficina` (`PertoDaOficina`), `Receita.oficina` e `Receita.habilidade` (o `PodeCriar` confere;
+  as receitas da árvore no fim de `Receitas.Todas`); a mesa no lugar da bancada da garagem do bunker
+  (`MoveisDoBunker`: "MesaDeOficina"; `BunkerDoMundo.PorAMesaDeOficina`, o `Resources/MesaDeOficina`; sem o prefab, uma
+  bancada marcada). As bancadas do bunker novo e das casas ganharam o componente no `MobiliaNovaDoMundo.Novo` (antes só a
+  cena antiga tinha).
+- **O outono:** `Mancha.Outono` (o lago com Q de 1,45 a 2,4: bordos, bétulas, pinheiros).
+- **Os testes:** o F1, aba "Habil." (os níveis; Ir ao caiaque, Vara + 10 iscas, Machado, Pólvora + metal).
+  `VersaoDaRede` 8.
+
 ## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
 
 O pedido: "a vida não se regenera mais sozinha ... cada membro do jogador terá uma vida", com o sangramento, as bandagens,
@@ -3121,16 +3474,31 @@ de cada curativo, a bandagem e a tala modeladas) estão no fim desta seção.
   `DispersaoExtra`, `DuasMaos`).
 - **O anfitrião** (`Player/VidaJogador.Corpo.cs`, partial do `VidaJogador`; a `NetworkVariable<EstadoDoCorpo> Corpo`, gravada
   uma vez por segundo e na hora de cada golpe e tratamento): `Dano(valor, de, causa, tipo, parte, lesao)` (os três últimos
-  opcionais; sem o tipo, só a vida geral, como o raio); a chance de abrir ferida pelo jeito (mordida 20%, corte 70%, pancada
-  35%, tiro sempre, tornado 30%, esmagamento nunca) e o sangue por segundo (0,10 a 0,30, a exposta); o sangramento sai pela
-  `Perder` ("Sangrou até morrer."); o tempo do corpo anda em horas vividas (`CicloDoDia.HorasPorSegundo`), só com o mundo
+  opcionais; sem o tipo, vai para o tronco, como o raio); a chance de abrir ferida pelo jeito (mordida 20%, corte 70%,
+  pancada 35%, tiro sempre, tornado 30%, esmagamento nunca) e o sangue por segundo (0,10 a 0,30, a exposta); o
+  sangramento sai da parte que sangra ("Sangrou até morrer."); o tempo do corpo anda em horas vividas (`CicloDoDia.HorasPorSegundo`), só com o mundo
   pronto e fora do Dia 0 (`CorpoAnda`); a ferida enfaixada fecha em 3 dias do jogo; a lesão com tala sara em 6 h (entorse),
   18 h (fratura) e 36 h (exposta) com o analgésico agindo, o dobro sem ele; `Cair(h)` (as faixas: abaixo de 3 m nada; 3-4,5
   entorse às vezes; 4,5-7 fratura ou entorse; 7-11 exposta ou fratura; 11-16 a exposta e mais uma; 16 ou mais, a morte);
-  `Tratar(item, parte)` (a atadura 30% no membro, +8 e 1,5/s por 5 s; a bandagem 20%, +3 e 1/s por 5 s; o kit estanca tudo,
-  50% em cada membro, +40 e 2/s por 10 s; a tala; os comprimidos 6 h e o xarope 4 h de analgésico); `SararTudo` (nascer,
+  `Tratar(item, parte)` (a atadura 30% na parte, a antisséptica 25%, a de pano 20%; o kit estanca tudo e dá 50% em cada
+  parte; a tala; os comprimidos 6 h e o xarope 4 h de analgésico); `SararTudo` (nascer,
   renascer, os 5 anos do Dia 0, a ConferenciaDasCasas) e `DefinirCorpo` (o save). Os testes: `AbrirFeridaDeTeste`,
   `LesaoDeTeste`, `InutilizarDeTeste`, `PassarHorasNoCorpo`, `ResumoDoCorpo`.
+- **A vida geral sai das partes** (06/11/2026, a pedido: "se todos os membros estiverem 100% a minha vida geral também
+  estará 100%"; ela ficava em 62 com só um braço a 88%, porque o curativo devolvia mais ao membro que à vida e o sangue, a
+  fome e a infecção tiravam só da vida). **Desde a tarde de 06/11/2026** ("ainda está um pouco bugado": a soma dava 67 com
+  o braço a 77% e a perna a 90%): `VidaDasPartes()` = a média das partes pelo `PesoNaVida` (cabeça 0,12, tronco 0,30,
+  braços 0,12, pernas 0,17), limitada pelo tronco e pela cabeça, com a porcentagem que a parte mostra (`Mostrado`: o que
+  conta mais a lesão, arredondado para cima); a morte vem do tronco ou da cabeça a 0. O golpe e o sangue tiram
+  `DanoNaParte` (2) vezes da parte; no membro a 0, o resto vai para o tronco (`PorNaParte`). O texto abaixo, da soma, ficou
+  como histórico: a `Vida` é escrita só pelo `ConferirAVida(causa)` (que também derruba a 0). O golpe vai para a parte pelo `PorNaParte` (o mesmo
+  tanto que a vida geral perde, como antes); o sangramento, para cada parte que sangra, pelo sangue dela; o `Perder` (a
+  fome, a sede, a infecção, o raio, o Dia 0) vai para o tronco; o `Curar` tira das partes, a mais machucada primeiro. O
+  extra da lesão (`DanoNoMembro`: 15, 40, 60) fica no `_soNaParte`: entra na porcentagem do membro (o `EstadoDoCorpo` leva a
+  soma), mas não na vida geral, e sai quando o osso cola; o tratamento tira primeiro o que conta. Sem a regeneração dos
+  curativos (o `Regenerar` saiu: a parte tratada já devolve à vida). O save não mudou: o `DefinirCorpo` divide o dano salvo
+  de cada parte entre o que conta e o `_soNaParte` pela vida salva (já posta antes dele), e um save com a vida abaixo do que
+  as partes explicam volta com a vida das partes. O `InutilizarDeTeste` põe o que falta no `_soNaParte` (não mata).
 - **Quem bate:** os zumbis pelo `ZombieManager.Ferimentos.cs` (o zumbi que age, `_quemAge`, posto em volta do `Pensar` e do
   `QuadroNoServidor`, sem mexer no Zumbi.cs: o Oco e o Corredor mordem; o rastejante pega as pernas; o Brutamonte esmaga,
   nunca faz sangrar, e quebra: o avanço 35% no membro, o golpe no chão pela força que chegou); o tiro e a arma branca dos
@@ -3291,16 +3659,22 @@ depois de cada falha.
 - **Em blocos, sem laço** (a pedido: "não apenas repetindo o mesmo som de 2:47 infinitamente"): cada família é feita de muitos blocos curtos no mesmo andamento e no mesmo tom, que se encaixam em qualquer ordem. Cada arquivo é o bloco mais a cauda do eco; o próximo começa no fim do bloco (pelo relógio do áudio, `AudioSource.PlayScheduled`), e a cauda do anterior soa por baixo.
   - A neblina (de dia, 56 bpm, blocos de 17,1 s): 38 blocos (entrada, piano, cordas, cello, vazio, saída).
   - A noite (46 bpm, blocos de 20,9 s): 29 blocos (entrada, cello, coro, coração, vidro, saída).
-  - O perigo (88 bpm, blocos de 10,9 s): 9 blocos (planos A, B e C), cada um em três camadas tocadas juntas: 1 a tensão, 2 a perseguição, 3 a horda. Mais as entradas ("te viram": dois tempos de piano ao contrário até o golpe, que cai no primeiro tempo do perigo), as saídas e as saídas pela pedra.
+  - O perigo, "o lamento que caça" (04/11/2026, a pedido: "Eu gostei muito desse lamento do coro ... dessa vez a trilha seja mais medonha, aterrorizante, com esse coro dando suspense, nível filme de terror de hollywood"; `Ferramentas/trilha/lamento.py` e `instrumentos_terror.py`): 66 bpm (o andamento e o eco do lamento do tornado), blocos de 14,5 s, 14 blocos (A×6, B×4, C×4), cada um em três camadas tocadas juntas. O centro é o lamento do tornado (duas vozes do coro em trítono descendo um semitom por compasso), que corre por 8 compassos na alternância do maestro (o A cai de F5 até D5; o B continua até a dominante; o C sobe de volta) e muda de cara a cada nível: 1 a tensão, "o lamento de boca fechada" (o coro em 'u', longe, o coração em repouso, os tiques do arco de madeira, os sussurros; sem ostinato, −27,5 dB); 2 a perseguição, "o lamento abre a boca" (o lamento do tornado igualzinho, as cordas em trêmulo, o tímpano manco, o coração disparando; −19 dB); 3 a horda, "o grito" (os metais graves no máximo dois por bloco, o coro dos homens uma oitava abaixo, a soprano em cluster, o motor do cello, as cordas em enxame; −17,5 dB). Metade dos B/C cortam tudo nos 2 últimos tempos, e dois A param o pulso por um compasso. Mais as entradas ("te viram": 2 tempos de subida até o golpe, encaixe 1,818 s; o grito do coro vira o lamento), 3 saídas (o lamento expira) e 2 saídas pela pedra (a pedra se formando, estalando). O perigo antigo (88 bpm, 9 blocos) continua no `blocos.py` e no `Backups/Trilha_perigo_antes_do_terror_2026-11-04`.
   - O vento (o silêncio, a pedido: "um silêncio com som de vento batendo em nossa direção e nada mais"): 10 blocos de dia e 10 de noite (mais escuros), de 24 a 36 s, com rajadas que vêm de um lado, batem e passam; um entra 4 s antes de o outro acabar.
   - O amanhecer e a morte: as faixas curtas, como o Pedro aprovou.
 - **O maestro** (`Music/MaestroDaTrilha`, criado sozinho ao abrir o jogo se houver o `Audio/Resources/TrilhaDoJogo.asset`): roda em cada jogador, sem rede, só durante a partida (e fora do Dia 0, que tem os sons dele). As regras são as do `Ferramentas/trilha/maestro.py`:
   - A exploração vem em trechos: uma entrada, de 4 a 8 blocos do meio (na noite, de 3 a 6), escolhidos na hora por quem pode vir depois de quem e sem repetir os últimos, e uma saída. Depois, de 1 a 3 minutos só de vento. Neblina de dia, noite à noite (pelo `CicloDoDia.Noite`, no começo de cada trecho). O vento nunca para; com música, fica a 35%.
-  - O nível do perigo, pelos zumbis em volta do jogador (`ZombieManager.Ameaca`, pelas cópias nos outros jogadores): 1 se um investiga ou procura a até 20 m; 2 se um caça (persegue, ataca ou se esquiva no meio da caça) a até 30 m; 3 com 4 caçando ou 2 atacando. Sobe na hora; desce um degrau a cada 4 s sem motivo. Cada camada sobe em 0,6 s e desce em 3 s.
-  - Os momentos são do conjunto, não de cada zumbi (o Pedro: "cuidado!!"): o "te viram" toca uma vez por perigo, quando alguém começa a caçar (no meio da tensão, o golpe cai num tempo do perigo que já toca); se o último perigo acabou há menos de 40 s, o perigo volta sem o golpe. O fim espera o compasso: a saída, ou a saída pela pedra se um dos que caçavam virou estátua nos últimos 15 s. O amanhecer toca quando o sol chega (`Noite` passa de 0,5 para baixo); no meio de uma perseguição, espera e vira a saída dela. A morte (`VidaJogador.Caiu`, no dono) corta tudo; por 13 s o perigo não volta.
-  - Os números ficam no componente (`blocosNaNeblina`, `silencioDepoisDoTrecho`, `raioDaCaca`, `hordaAPartirDe`, `desceUmNivel`, `entradaDeNovo`, `volumeDasCamadas`, `ventoNaMusica` etc.).
-- **No F1, o painel "TRILHA (TESTE)"** (embaixo do dos zumbis, que ficou com os botões em pares; `UI/MenuDoDesenvolvedor.Trilha.cs`): o que toca e o nível (com quantos caçam e investigam em volta); ligar e desligar; o volume da trilha (25 a 100%, gravado no computador; o mesmo da barra Música das Configurações, que vai de 0 a 100%; o padrão é 70%); forçar o perigo em 0, 1, 2 ou 3 (sem zumbis); o silêncio curto (15 a 30 s, para testar); "Música agora"; "Amanhecer agora"; "Morte agora (só a música)". Só nesta máquina.
-- **Refazer a trilha:** em `Ferramentas/trilha/`, `python blocos.py` (os blocos, em `blocos/`), `python compor.py saida amanhecer morte` e `python exportar.py` (os .ogg em `Audio/Trilha/` e o `trilha.json`); depois o menu Zombie City Cleaner > Trilha > Montar a trilha (Vorbis, comprimidos na memória). `python maestro.py blocos dia` (ou `noite`) monta uma sessão simulada de 10 min para ouvir antes. As faixas inteiras do começo saem do `compor.py`.
+  - **Contra o cansaço (04/11/2026, a pedido: os amigos do Pedro acharam a música de luta "muito cansativa, pois toda hora a música entra")**: antes, um zumbi investigando a 20 m (todo tiro chama vários) já ligava a música, não havia pausa depois do perigo, a caça de qualquer um contava como sua e, nos clientes, passar a lanterna num zumbi dava a perseguição e o "te viram". Agora a música de luta só entra quando é com você, e é rara de propósito (as regras R1 a R13; os números estão no componente e no `maestro.py`):
+    - Quem conta (`ZombieManager.Ameaca`, `Zumbi.Caca`): te caça o zumbi cujo alvo é você e que está engajado, a até 30 m (no anfitrião pelo alvo; nos clientes por um bit, o 0x80 do byte do modelo no pacote dos zumbis, `CacaQuemRecebe`, que apaga se a cópia passa 0,75 s sem notícias), ou qualquer um perseguindo ou atacando a até 8 m (o grupo que luta junto ouve junto). O Brutamonte conta pelo `_travadoEm`, e o Long que cospe em você fica engajado. Só dão a tensão: um zumbi brigando com outro a 8-15 m, 2 investigando ou procurando a até 12 m, ou 1 colado (a até 6 m). A horda: 5 te caçando ou 3 te atacando. O nível sobe na hora e desce um degrau a cada 4 s (da horda, 6 s).
+    - A tensão sozinha não abre o perigo: na exploração, nada muda; no silêncio, depois de 8 s, abre a **sombra** (só a camada 1 a 75%, entrando em 4 s, no máximo 2 blocos, uma a cada 3 min, sem clipe de saída).
+    - O perigo só começa com a caça confirmada: 2 s (1 s com o golpe livre e um deles a até 15 m; 6 s na recarga de 45 s depois de um perigo; a horda, 0,5 s). No máximo 3 entradas a cada 5 min (a horda fura). Uma caça que não pode entrar fecha o trecho da exploração no fim do bloco, sem corte, e segura a próxima música por 30 s.
+    - O "te viram": no máximo 1 por perigo, 1 a cada 2 min, 90 s depois do último perigo (a horda não espera), com um deles a até 15 m; só na entrada, na sombra virando caça ou na primeira chegada da horda.
+    - O fim: 6 s no nível 0 (a graça: duas caças perto viram uma só; o coro segura até a barra), ou 20 s sem ninguém te caçando, ou na hora se um dos teus caçadores virou estátua nos últimos 25 s. No compasso: o amanhecer pendente, a pedra, a saída (se a caça durou 12 s e a última saída foi há 45 s) ou o fim mudo (4 s, sem clipe).
+    - Simulado (`maestro.py`, 10 min de noite pesada, roteiro 'zumbis'): de 14 entradas para 4 (mais 1 sombra), de 2 para 3 golpes com sentido, o perigo de 73% para 34% do tempo e a exploração de 32 s para ~210 s.
+  - O amanhecer toca quando o sol chega (`Noite` passa de 0,5 para baixo); no meio de uma perseguição, espera e vira a saída dela. A morte (`VidaJogador.Caiu`, no dono) corta tudo; por 13 s o perigo não volta. Para os dois (e para o tornado avistado), a sombra é como o silêncio.
+  - Os números ficam no componente (`blocosNaNeblina`, `silencioDepoisDoTrecho`, `raioDaCaca`, `raioDaBrigaJunto`, `hordaAPartirDe`, `confirmarCaca`, `recargaDoPerigo`, `entradasPorJanela`, `golpeACada`, `sombraACada`, `volumeDaSombra`, `volumeDasCamadas`, `ventoNaMusica` etc.); o `maestro.py` tem os mesmos.
+- **No F1, o painel "TRILHA (TESTE)"** (embaixo do dos zumbis, que ficou com os botões em pares; `UI/MenuDoDesenvolvedor.Trilha.cs`): o que toca e o nível (com quantos caçam e investigam em volta); ligar e desligar; o volume da trilha (25 a 100%, gravado no computador; o mesmo da barra Música das Configurações, que vai de 0 a 100%; o padrão é 70%); forçar o perigo em 0, 1, 2 ou 3 (sem zumbis; forçado, as confirmações e o orçamento são pulados); ao lado, o quadro "REGRAS" (04/11/2026): a recarga, as entradas nos últimos 5 min (n/3), quando o "te viram" fica livre, a confirmação em andamento, os zumbis que te caçam e os que brigam com outro, e as contagens da partida (entradas, sombras, golpes, saídas, pedras, fins mudos; a meta é 3 a 5 entradas a cada 10 min); a SOMBRA aparece na primeira linha; o silêncio curto (15 a 30 s, para testar); "Música agora"; "Amanhecer agora"; "Morte agora (só a música)". Só nesta máquina.
+- **Refazer a trilha:** em `Ferramentas/trilha/`, `python blocos.py` (os blocos, em `blocos/`), `python compor.py saida amanhecer morte` e `python exportar.py` (os .ogg em `Audio/Trilha/` e o `trilha.json`); depois o menu Zombie City Cleaner > Trilha > Montar a trilha (Vorbis, comprimidos na memória). **Cuidado:** o `exportar.py` apaga todos os .ogg da trilha, a tempestade e o tornado também, e tira as chaves deles do `trilha.json`; depois dele, rode `python clima.py exportar` e `python lamento.py perigo` + `python lamento.py exportar` (o `blocos.py perigo` refaz o perigo ANTIGO). Só o perigo: `python lamento.py` (a prévia em `blocos/lamento/` e as demos em `saida/ZCC_Lamento_*.mp3`), `python lamento.py perigo` (no lugar do perigo) e `python lamento.py exportar` (só `Audio/Trilha/perigo` e as chaves do perigo no `trilha.json`). A sessão simulada: `python maestro.py blocos <dia|noite|zumbis|cerco> [novas|velhas]` (as regras de hoje ou as de antes de 04/11/2026; `FAMILIA_DO_PERIGO=lamento` usa a prévia), em `saida/ZCC_Sessao_<roteiro>_<regras>.mp3` com o `_roteiro.txt` (as decisões e um resumo). O Montar também roda em lote, com o Unity fechado: `Unity.exe -batchmode -nographics -projectPath <pasta> -executeMethod ZombieCityCleaner.EditorTools.MontagemDaTrilha.Montar -quit -logFile <log>`. As faixas inteiras do começo saem do `compor.py`.
 - **Conferido (29/10/2026, Mundo, hospedando local):** à noite, um trecho da noite bloco a bloco; zumbis de verdade investigando trouxeram a tensão devagar; o "te viram" no meio dela, com a camada 2 entrando no golpe; a horda; o fim no compasso; o perigo de volta sem o golpe 18 s depois; uma horda de 8 (direto ao nível 3, com o golpe), petrificada pelo F1: a saída pela pedra; o jogador caindo: a morte; "Sempre de dia": o amanhecer e o vento de dia. Sem erros no Console. O Pedro ouviu no jogo e aprovou (29/10/2026); falta testar com dois jogadores.
 
 ## O alarme dos carros (29/10/2026, a pedido; `Vehicles/PecasDosCarrosDoMundo.Alarme.cs`)
@@ -3338,10 +3712,20 @@ depois de cada falha.
 ## O menu do jogo (29/10/2026, a pedido; `UI/MenuOnline`, `UI/FundoDoMenu`, `UI/CameraDoMenu`, `Video/FilmeDoMenu`)
 
 - **O pedido:** "um menu de game. Com botão de Iniciar novo jogo, Continuar. Configurações. Sair", com uma imagem de fundo, uma trilha só do menu ("algo mais calmo também, transparecendo o medo e angústia") e um vídeo em laço (a cidade bem devagar, os Ocos petrificados, alguns dentro de casa observando, luzes piscando), "de forma leve e sem pesar o menu".
-- **As opções** (à esquerda: o título com a linha dourada, sem subtítulo; a opção sob o mouse acende em âmbar, com um tracinho na frente):
+- **O título: "BUNKER: Outbreak"** (06/11/2026, a pedido: "quero colocar o novo como (seguir as letras maiúsculas e minúsculas): BUNKER: Outbreak", com a imagem de um logo): `MenuOnline.TituloDoJogo`, em duas linhas na Bahnschrift (72 px a 720p), o K e o "Out" em vermelho como no logo, o "Outbreak" um pouco para a direita, com a sombra (`SombreadoRico`: a sombra sai do texto sem as cores) e a linha vermelha embaixo (era dourada). **O logo em imagem ainda não está no projeto** (o Pedro mandou só pelo chat): com uma `Resources/Logo_BunkerOutbreak` (o fundo preto tirado, PNG com alfa), ela entra sozinha no lugar do texto, com 540 px de largura a 720p. A tela da Demo_Cidade também diz "BUNKER: Outbreak". O `productName` das Player Settings continua "Zombie City Cleaner": a pasta dos saves (`AppData/LocalLow/DefaultCompany/Zombie City Cleaner`) sai dele, e trocar faria os saves sumirem do jogo.
+- **O Novo jogo e o Continuar repaginados** (06/11/2026, a pedido: "aquele menu está muito bugado, algumas coisas em cima do outro, precisamos dar uma repaginada e melhorar aquela interface, algumas coisas nem utilizamos mais"; `UI/MenuOnline.NovoJogo.cs`, uma parte da classe):
+  - **O que estava errado** (conferido em fotos no Play em 1280 × 720, 1920 × 1080 e 1024 × 768): o "Configurações", preso embaixo, caía em cima da linha do "Criar local", do IP e do "Entrar" em todas as resoluções (tudo crescia pela altura da tela); a mensagem de erro da conexão ficava abaixo da borda da tela (em 720p, no y 706); em 4:3 e 5:4 o painel do personagem saía pela direita; e os botões cortavam o texto ("utomático (5 mi", "pagar personage"). Os botões cinza da pele padrão da Unity também destoavam das outras telas.
+  - **O que saiu** (com o Pedro): o "Configurações" (já está no menu principal), o título grande e o "Teste sem internet": a rede local virou uma escolha, **"Pela internet / Rede local"**, no painel dos amigos (o `_redeLocal`, o mesmo no Novo jogo e no Continuar; o "Jogar local" do Continuar também virou essa escolha). Ela decide como o mundo é aberto (o Relay ou o IP direto) e se o campo do amigo pede o código ou o IP.
+  - **O estilo:** o das telas de criar o personagem e das cartas (os painéis escuros, o destaque vermelho e a Bahnschrift), sobre o vídeo do menu escurecido (62%). Tudo é medido num quadro de 1280 × 720 no meio da tela (`Quadro`, `R`; a unidade é a menor entre a altura/720 e a largura/1280), então cabe em 4:3 (com faixas em cima e embaixo). As peças: `Caixa` (o painel com o título e o texto à direita), `Sub` (o nome pequeno de um grupo), `Campo` (o campo escuro, com a borda vermelha enquanto se escreve e a dica apagada quando vazio; o estilo vem do rótulo: do `textField`, mesmo sem o `background`, o cinza da pele padrão continuava), `Escolha` (a opção de um grupo, com a linha de baixo; a escolhida com a borda vermelha), `Botao`, `BotaoPequeno` (o apagar, vermelho no segundo clique) e `BotaoVermelho` (o que leva adiante, embaixo, à direita).
+  - **O Novo jogo:** à esquerda, MUNDO (o nome, o tamanho "PEQUENO 3 km / MÉDIO 5 km / GRANDE 8 km" e a semente com o "Sortear") e REGRAS (salvar o jogo: "AUTOMÁTICO a cada 5 min e ao sair", "AO SAIR e ao dormir", "SÓ DORMINDO numa cama"; e o fogo amigo); à direita, PERSONAGEM (as setas, "N DE M", o resumo, o último mundo e o apagar) e JOGAR COM AMIGOS (a escolha da rede e o entrar no mundo de um amigo, com o código ou o IP; Enter no campo também entra); embaixo, "‹ VOLTAR", o erro da conexão (em vermelho, entre os dois) e "ESCOLHER OS MORADORES". Conectando, a tela fica apagada e o botão diz "CONECTANDO...".
+  - **O Continuar:** à esquerda, MUNDOS SALVOS (cada linha com o nome, o tamanho e o resumo, o aviso do gerador antigo em vermelho e o "APAGAR", que pede o segundo clique; clicar escolhe, com a borda vermelha, e dois cliques jogam; a roda do mouse rola, com uma barrinha fina). Os cliques da lista são lidos à mão e só com o mouse dentro dela (um botão de uma linha rolada para fora pegaria o clique de quem está embaixo), e a barra de baixo é desenhada antes da lista. À direita, o PERSONAGEM e a escolha da rede; embaixo, "‹ VOLTAR", o erro e "JOGAR" (o mundo escolhido; o primeiro, de começo).
+  - **O ESC** no Novo jogo e no Continuar volta ao menu principal (`Voltar`; a tela das cartas cuida do ESC dela). O nome vazio vira "Mundo novo" (`PedirOMundo`).
+  - **Para os testes:** `MostrarParaTeste("novo" | "continuar" | "principal", redeLocal)`. As fotos no Play pelo MCP: `PlayModeWindow.SetCustomRenderingResolution(l, a, nome)` muda a resolução do Game view (também no Play) e `ScreenCapture.CaptureScreenshot` grava no fim do quadro, então a tela tem de mudar um passo antes da foto. As fotos de antes e depois foram tiradas no mesmo Play, com a tela antiga num arquivo temporário (já apagado).
+  - **Ainda sem teste com o mouse:** as fotos conferem o desenho; os cliques (as escolhas, o entrar, o apagar, o jogar com dois cliques) e o Enter não foram clicados no Play.
+- **As opções** (à esquerda: o título "BUNKER: Outbreak" com a linha vermelha, sem subtítulo; a opção sob o mouse acende em âmbar, com um tracinho na frente):
   - **O texto com sombra e o mouse** (corrigido no mesmo dia: "quando passo o mouse em cima fica uma imagem duplicada"): o rótulo da pele padrão tem a própria cor com o mouse em cima (cinza claro, 0,9). Os estilos só trocavam a cor normal, então, sob o mouse, a sombra (a cópia escura, 2 px deslocada) ficava clara e virava uma imagem duplicada, no título, no subtítulo e nas opções; e a opção não ficava âmbar. Agora toda cor de texto passa pelo `Opcoes.Cor` (a mesma cor em todos os estados), no menu, nas Configurações e no contador de FPS.
-  - **Iniciar novo jogo:** a tela de antes (o nome, o tamanho e a semente do mundo, o código de um amigo, o modo local, a escolha do personagem), agora com "< Voltar".
-  - **Continuar:** reabre o último mundo criado aqui como anfitrião (o mesmo nome, tamanho e semente, no `PlayerPrefs`: `mundo.ultimo.semente/tamanho/nome`; quem entra no mundo de um amigo não grava), pelo Relay, como o "Criar o mundo". Embaixo, o mundo que vai abrir; sem nenhum, a opção fica apagada. **O jogo ainda não salva:** o mapa é o mesmo, mas a partida começa do zero.
+  - **Iniciar novo jogo:** o Novo jogo (acima, repaginado em 06/11/2026).
+  - **Continuar:** a lista dos mundos salvos (desde 02/11/2026, veja "O save"; repaginada em 06/11/2026, acima). Embaixo da opção, o mundo mais recente; sem nenhum, a opção fica apagada. (Até o save, reabria o último mundo criado aqui pelo `PlayerPrefs`, `mundo.ultimo.*`, que ficou só para os testes.)
   - **Configurações:** a tela das opções (veja "Os volumes separados").
   - **Sair:** fecha o jogo (no Editor, para o Play).
   - Ao sair de uma partida, o menu principal volta.

@@ -31,7 +31,7 @@ namespace ZombieCityCleaner.Mundo
     /// faixas). Nada = onde não nasce planta (as estradas, as ruas e as construções, a água, os lugares do mapa e o pátio
     /// das fazendas, a cerca).
     /// </summary>
-    public enum Mancha : byte { Nada, Campo, Rebrota, Mista, Coniferas, Serra, Beira, Pinheiral, Viveiro, Baldio, Quintal, Lavoura }
+    public enum Mancha : byte { Nada, Campo, Rebrota, Mista, Coniferas, Serra, Beira, Pinheiral, Viveiro, Baldio, Quintal, Lavoura, Outono }
 
     /// <summary>
     /// A floresta do mundo gerado (Plano_Mapa, Parte M9a): anos depois do apocalipse, a mata tomou conta do que fica entre
@@ -438,6 +438,13 @@ namespace ZombieCityCleaner.Mundo
                 chance = 0.45f;
                 return Mancha.Beira;
             }
+            // o outono em volta do lago (06/11/2026, a pedido: "um cenário parecido com o do print ... sem a neve"): depois
+            // da beira, uma mata de bordos vermelhos e laranja, bétulas e pinheiros escuros
+            if (_d.Lago != null && _d.Lago.Q(x, z) < 2.4f)
+            {
+                chance = 0.55f;
+                return Mancha.Outono;
+            }
             float serra = Geo.Suave(0.3f, 0.6f, _d.Borda(x, z));
             float v = ValorDaMata(x, z);
             if (serra > 0.5f)
@@ -686,6 +693,7 @@ namespace ZombieCityCleaner.Mundo
                     Mancha.Quintal => 0.9f,
                     Mancha.Rebrota => 0.85f,
                     Mancha.Beira => 0.8f,
+                    Mancha.Outono => 0.7f,
                     Mancha.Viveiro => 0.8f,
                     Mancha.Pinheiral => 0.55f,
                     Mancha.Serra => 0.5f,
@@ -823,6 +831,12 @@ namespace ZombieCityCleaner.Mundo
             (Especie.BordoVermelho, 4), (Especie.AbetoB, 8), (Especie.AbetoC, 8), (Especie.MortaA, 3),
         };
 
+        static readonly (Especie, float)[] DoOutono =
+        {
+            (Especie.BordoVermelho, 20), (Especie.BordoLaranja, 20), (Especie.BetulaA, 10), (Especie.BetulaB, 8),
+            (Especie.BordoVerde, 5), (Especie.AbetoA, 10), (Especie.AbetoB, 8), (Especie.PinheiroBrancoA, 6), (Especie.CarvalhoA, 4),
+        };
+
         Especie EspecieDaArvore(Mancha m, ref Dado dado, float x, float z)
         {
             var tabela = m switch
@@ -832,13 +846,14 @@ namespace ZombieCityCleaner.Mundo
                 Mancha.Campo or Mancha.Lavoura => DoCampo,
                 Mancha.Serra => DaSerra,
                 Mancha.Beira => DaBeira,
+                Mancha.Outono => DoOutono,
                 Mancha.Baldio => DoBaldio,
                 Mancha.Quintal => DoQuintal,
                 _ => DaMista,
             };
             // dois ruídos juntam as espécies em grupos: as bétulas num trecho, os bordos do outono em outro
             float betulas = _tipo.Amostra01(x / 60f, z / 60f);
-            float outono = _tipo.Amostra01(x / 90f + 50f, z / 90f - 20f);
+            float outono = m == Mancha.Outono ? 1f : _tipo.Amostra01(x / 90f + 50f, z / 90f - 20f);   // (o outono do lago: sempre)
             float soma = 0f;
             foreach (var (e, peso) in tabela) soma += Peso(e, peso, betulas, outono);
             float r = dado.Fracao() * soma;

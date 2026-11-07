@@ -52,7 +52,7 @@ namespace ZombieCityCleaner.UI
             ("Remédios", new[]
             {
                 Item.Remedio, Item.Comprimidos, Item.KitMedico, Item.Atadura, Item.Gaze, Item.Desinfetante, Item.SprayAntisseptico, Item.Antibiotico, Item.Bandagem,
-                Item.BandagemAntisseptica, Item.Tala,
+                Item.BandagemAntisseptica, Item.Tala, Item.Calmante,
             }),
             ("Materiais", new[]
             {
@@ -62,7 +62,7 @@ namespace ZombieCityCleaner.UI
             ("Outros", new[]
             {
                 Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
-                Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua, Item.ChaveDoCupe,
+                Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua, Item.ChaveDoCupe, Item.ChaveDaFatBoy, Item.ChaveDaCross,
                 Item.CaixaDeBolas, Item.TacoMadeira, Item.TacoEscuro, Item.TacoPreto, Item.TacoVermelho,
                 Item.MacoDeCigarros,
             }),
@@ -281,7 +281,7 @@ namespace ZombieCityCleaner.UI
             // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
             // (e os sobreviventes, 02/11/2026, na terceira aba; o corpo, 05/11/2026, na quarta: as quatro numa faixa logo
             // acima do painel, que a Area também cobre)
-            var zumbis = _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
+            var zumbis = _abaDasHabilidades ? PainelDasHabilidades(u, oco) : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
                        : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
             AbasDoCanto(u, zumbis);
             Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));

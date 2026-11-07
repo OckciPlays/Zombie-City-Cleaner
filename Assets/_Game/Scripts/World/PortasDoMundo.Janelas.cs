@@ -39,7 +39,7 @@ namespace ZombieCityCleaner.World
         internal float TempoDeArrombar(JanelaDaCasa j, ArmaJogador quem)
         {
             if (j.Aberta || !Trancada(j) || !SabidaTrancada(j.chave) || j.DoLadoDeDentro(quem.transform.position)) return 0f;
-            return TempoDa(FerramentaDe(quem.Inventario));
+            return TempoDa(FerramentaDe(quem.Inventario), quem.Inventario);
         }
 
         internal string TextoDoArrombar(JanelaDaCasa j, ArmaJogador quem) => TextoDoArrombar(FerramentaDe(quem.Inventario));

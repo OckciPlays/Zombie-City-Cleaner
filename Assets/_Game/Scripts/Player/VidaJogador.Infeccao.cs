@@ -86,6 +86,7 @@ namespace ZombieCityCleaner.Player
         {
             _desdeOAmanhecer = 0f;
             _amanheceres++;
+            _inventario?.GanharXp(Habilidades.XpDoDia, "mais um dia vivo");   // (06/11/2026, a árvore de habilidades)
             if (_semente == 0) _semente = (uint)Random.Range(1, int.MaxValue);
             bool tinhaProtecao = false;
             for (int p = 0; p < PartesDoCorpo.Quantas; p++)
@@ -99,6 +100,7 @@ namespace ZombieCityCleaner.Player
                 if (_infeccao == 0)
                 {
                     float risco = RiscoDeInfeccao(dia, _sujas[p], _lesao[p] == Lesao.Exposta);
+                    if (Habilidades.Tem(_rede, Habilidade.Imunidade)) risco *= 0.6f;   // (a Imunidade, 06/11/2026)
                     float r = Sorteio.FracaoDoHash(Sorteio.Hash((int)_semente, _amanheceres, p, dia));
                     if (r < risco) ComecarInfeccao((ParteDoCorpo)p);
                 }

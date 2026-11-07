@@ -38,6 +38,11 @@ namespace ZombieCityCleaner.World
         public GameObject carro;
         [Tooltip("Um segundo carro que se dirige (Prefabs/Veiculos/Cupe), posto pelo anfitrião ao lado da laje da partida. Vazio: só o carro da família.")]
         public GameObject segundoCarro;
+        [Tooltip("As motos (06/11/2026, a pedido: Prefabs/Veiculos/Moto_FatBoy e Moto_Cross), postas pelo anfitrião perto da " +
+                 "partida (no bunker, na vaga livre depois da do cupê), com as chaves no chão da sala. Vazio: sem motos.")]
+        public GameObject[] motos;
+        [Tooltip("A chave de cada moto, na mesma ordem.")]
+        public Loot.Item[] chavesDasMotos = { Loot.Item.ChaveDaFatBoy, Loot.Item.ChaveDaCross };
 
         readonly NetworkVariable<int> _semente = new NetworkVariable<int>();
         readonly NetworkVariable<byte> _tamanho = new NetworkVariable<byte>();
@@ -91,6 +96,7 @@ namespace ZombieCityCleaner.World
         {
             Instancia = this;
             IniciarAsMarcas();   // (a lista da rede antes do spawn: MundoDaPartida.Marcas.cs)
+            IniciarAsArvores();   // (as árvores cortadas, 06/11/2026: MundoDaPartida.Arvores.cs)
             // sem o personagem na conexão: ele nasce quando o mundo estiver pronto na máquina do jogador
             _rede = FindAnyObjectByType<NetworkManager>();
             if (_rede != null) _rede.ConnectionApprovalCallback = Aprovar;
@@ -115,6 +121,7 @@ namespace ZombieCityCleaner.World
             if (IsServer)
             {
                 _marcas.Clear();   // as marcas do mapa da partida anterior (as do save voltam no Salvamento)
+                _arvoresCortadas.Clear();   // (e as árvores cortadas)
                 var p = Pedido;
                 _semente.Value = p.semente > 0 ? p.semente : GeradorDoMundo.NovaSemente();
                 _tamanho.Value = (byte)p.tamanho;
@@ -126,6 +133,7 @@ namespace ZombieCityCleaner.World
                 NetworkManager.OnClientDisconnectCallback += AoSair;
             }
             VeioDoDiaZero = _diaZero.Value;
+            FlorestaDoMundo.DefinirCortadas(Copia(_arvoresCortadas));   // (quem entra recebe as cortadas)
             _diaZero.OnValueChanged += AoMudarODiaZero;
             if (_diaZero.Value) Etapa = "No Dia 0";
             else if (_semente.Value != 0) Comecar();
@@ -310,7 +318,150 @@ namespace ZombieCityCleaner.World
             Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.ChaveDaPerua, chave, Dados.GiroDaPartida + 35f);
             CriarSegundoCarro(novo);
             if (PorAChaveDoCupe() && Salvar.Salvamento.Atual != null) Salvar.Salvamento.Atual.chaveDoCupe = true;
+            if (PorAsMotos() && Salvar.Salvamento.Atual != null) Salvar.Salvamento.Atual.motos = true;
+            if (PorOCaiaque() && Salvar.Salvamento.Atual != null) Salvar.Salvamento.Atual.caiaque = true;
         }
+
+        // ------------------------------------------------------------------------------------------ o caiaque (06/11/2026)
+
+        /// <summary>
+        /// No anfitrião: o caiaque na água, na beira do lago do lado do bunker (a direção do centro do lago à partida), de
+        /// lado para a margem. O prefab é o Resources/Caiaque (a montagem: Zombie City Cleaner > Veículos > Montar o
+        /// caiaque). No mundo novo, com os carros; num save de antes dele, uma vez ao carregar. Devolve se ele foi posto.
+        /// </summary>
+        public bool PorOCaiaque()
+        {
+            if (Dados == null || Dados.Lago == null) return false;
+            var lago = Dados.Lago;
+            Vector2 dir = new Vector2(Dados.Partida.x, Dados.Partida.z) - lago.Centro;
+            dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector2.right;
+            float raio = lago.RaioNaDirecao(dir.x, dir.y);
+            for (float t = 0.98f; t > 0.5f; t -= 0.02f)
+            {
+                var c = lago.Centro + dir * (raio * t);
+                if (Dados.FunduraDaAgua(c.x, c.y) < 0.8f) continue;
+                var giro = Quaternion.LookRotation(new Vector3(-dir.y, 0f, dir.x));
+                return CriarCaiaque(new Vector3(c.x, lago.Nivel, c.y), giro);
+            }
+            return false;
+        }
+
+        /// <summary>No anfitrião: um caiaque no ponto (o do save, ou o da beira do lago).</summary>
+        public bool CriarCaiaque(Vector3 ponto, Quaternion giro)
+        {
+            var prefab = Resources.Load<GameObject>("Caiaque");
+            if (prefab == null)
+            {
+                Debug.LogWarning("[Caiaque] Sem o prefab Resources/Caiaque: rode Zombie City Cleaner > Veículos > Montar o caiaque.");
+                return false;
+            }
+            var novo = Instantiate(prefab, ponto, giro);
+            novo.name = "Caiaque";
+            novo.GetComponent<NetworkObject>().Spawn(true);
+            return true;
+        }
+
+        // ------------------------------------------------------------------------------------------ as motos (06/11/2026)
+
+        /// <summary>
+        /// No anfitrião: as motos perto da partida e as chaves delas no chão da sala, ao lado das dos carros (para o lado do
+        /// primeiro nascimento). No mundo novo, junto com os carros; num save de antes delas, uma vez ao carregar
+        /// (<see cref="Salvar.MundoSalvo.motos"/>). Devolve se elas foram postas.
+        /// </summary>
+        public bool PorAsMotos()
+        {
+            var itens = Loot.ItensNoMundo.Instancia;
+            if (motos == null || motos.Length == 0 || Dados == null) return false;
+            Physics.SyncTransforms();
+            for (int i = 0; i < motos.Length; i++)
+            {
+                if (motos[i] == null || !LugarDaMoto(i, true, out var ponto, out var giro)) continue;
+                var nova = Instantiate(motos[i], ponto, giro);
+                nova.name = motos[i].name;
+                nova.GetComponent<NetworkObject>().Spawn(true);
+                Physics.SyncTransforms();   // a próxima procura vê esta
+                if (itens == null || Dados.Nascimentos.Length < 2 || chavesDasMotos == null || i >= chavesDasMotos.Length) continue;
+                var meio = Vector3.Lerp(Dados.Nascimentos[0], Dados.Nascimentos[1], 0.5f);
+                var lado = Dados.Nascimentos[0] - Dados.Nascimentos[1];
+                lado.y = 0f;
+                var chave = meio + (lado.sqrMagnitude > 0.01f ? lado.normalized * (0.3f + 0.3f * i) : Vector3.zero) + Vector3.down * 0.05f;
+                itens.Criar(chavesDasMotos[i], chave, Dados.GiroDaPartida - 20f - 25f * i);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// O lugar da moto i: no bunker da família, a primeira das 4 vagas da garagem, a de antes da da perua (as duas
+        /// lado a lado, 1,7 m uma da outra; a vaga depois da do cupê tem o macaco-jacaré e os pneus da oficina, e a cross
+        /// nascia em cima do macaco); sem o bunker, ao lado da laje da partida. Com <paramref name="procurar"/>, o primeiro
+        /// lugar sem nada no caminho (no bunker, deslizando dentro da vaga) e longe dos outros veículos; sem, o da lista,
+        /// para a vaga de quem caiu do mundo.
+        /// </summary>
+        public bool LugarDaMoto(int i, bool procurar, out Vector3 ponto, out Quaternion giro)
+        {
+            ponto = Vector3.zero;
+            giro = Quaternion.identity;
+            if (Dados == null) return false;
+            if (Dados.LugarDoCarro.HasValue && Dados.LugarDoSegundoCarro.HasValue)
+            {
+                var a = Dados.LugarDoCarro.Value;
+                var b = Dados.LugarDoSegundoCarro.Value;
+                var passo = b - a;
+                passo.y = 0f;
+                var ao = passo.sqrMagnitude > 0.01f ? passo.normalized : Vector3.right;
+                giro = Quaternion.Euler(0f, Dados.GiroDoCarro, 0f);
+                var vaga = a - passo;   // o chão da vaga (as dos carros nascem 0,45 m acima dele)
+                float[] desvios = { -0.85f, 0.85f, -1.3f, 1.3f, 0f };
+                if (procurar)
+                    foreach (float d in desvios)
+                    {
+                        var p = vaga + ao * d;
+                        if (Physics.CheckBox(p + Vector3.up * 0.6f, new Vector3(0.42f, 0.5f, 1.2f), giro, ~0, QueryTriggerInteraction.Ignore)) continue;
+                        ponto = p + Vector3.up * 0.3f;
+                        return true;
+                    }
+                ponto = vaga + ao * (i == 0 ? -0.85f : 0.85f) + Vector3.up * 0.3f;
+                return true;
+            }
+            giro = Quaternion.Euler(0f, Dados.GiroDaPartida, 0f);
+            float lado = DadosDoMundo.LadoDaPartida * 0.5f + 1.6f;
+            var candidatos = new[] { -lado, -lado - 1.8f, lado, lado + 1.8f, -lado - 3.6f, lado + 3.6f, -lado - 5.4f, lado + 5.4f };
+            int pulando = i;   // sem procurar: a vaga da moto i é o i-ésimo da lista
+            foreach (float x in candidatos)
+            {
+                var p = Dados.Partida + giro * new Vector3(x, 0f, 0f);
+                p.y = Dados.Altura(p.x, p.z) + 0.3f;
+                if (!procurar)
+                {
+                    if (pulando-- > 0) continue;
+                    ponto = p;
+                    return true;
+                }
+                bool perto = false;
+                foreach (var c in Vehicles.Carro.Todos)
+                    if (c != null && Vector3.Distance(p, c.transform.position) < (c.moto ? 1.6f : 3.4f)) perto = true;
+                if (perto || Physics.CheckBox(p + Vector3.up * 0.75f, new Vector3(0.45f, 0.45f, 1.25f), giro, ~0, QueryTriggerInteraction.Ignore)) continue;
+                ponto = p;
+                return true;
+            }
+            ponto = Dados.Partida + giro * new Vector3(-lado - 1.8f * (i + 1), 0f, 0f);
+            ponto.y = Dados.Altura(ponto.x, ponto.z) + 0.3f;
+            return true;
+        }
+
+        /// <summary>Qual é o veículo, para o save: 0 a perua, 1 o cupê, 2 em diante as motos (na ordem de <see cref="motos"/>).</summary>
+        public int QualDoCarro(Vehicles.Carro c)
+        {
+            if (c == null) return 0;
+            if (motos != null)
+                for (int i = 0; i < motos.Length; i++)
+                    if (motos[i] != null && c.name.StartsWith(motos[i].name)) return 2 + i;
+            return segundoCarro != null && c.name.StartsWith(segundoCarro.name) ? 1 : 0;
+        }
+
+        /// <summary>O prefab do veículo pelo número do save (<see cref="QualDoCarro"/>), ou null.</summary>
+        public GameObject PrefabDoCarro(int qual) => qual == 1 ? segundoCarro
+            : qual >= 2 ? (motos != null && qual - 2 < motos.Length ? motos[qual - 2] : null) : carro;
 
         /// <summary>
         /// No anfitrião: a chave do cupê (04/11/2026, a pedido) no chão da sala, ao lado da da perua (30 cm para o lado do
@@ -339,7 +490,9 @@ namespace ZombieCityCleaner.World
             ponto = Vector3.zero;
             giro = Quaternion.identity;
             if (Dados == null || c == null) return false;
-            bool segundo = segundoCarro != null && c.name.StartsWith(segundoCarro.name);
+            int qual = QualDoCarro(c);
+            if (qual >= 2) return LugarDaMoto(qual - 2, false, out ponto, out giro);
+            bool segundo = qual == 1;
             var vaga = segundo ? Dados.LugarDoSegundoCarro : Dados.LugarDoCarro;
             if (vaga.HasValue)
             {

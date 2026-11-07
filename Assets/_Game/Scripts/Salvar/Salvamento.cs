@@ -141,12 +141,16 @@ namespace ZombieCityCleaner.Salvar
                 foreach (var c in ConstrucoesNoMundo.Instancia.Copia())
                     m.construcoes.Add(new ConstrucaoSalva { tipo = (int)c.tipo, pos = c.pos, giro = c.giro, valor = c.valor, dono = unchecked((long)c.dono) });
 
+            // os caiaques (06/11/2026)
+            m.caiaques.Clear();
+            foreach (var k in Caiaque.Todos)
+                if (k != null && k.IsSpawned) m.caiaques.Add(new CaiaqueSalvo { pos = k.transform.position, giro = k.transform.rotation });
             m.carros.Clear();
             foreach (var carro in Carro.Todos)
             {
                 if (carro == null || !carro.IsSpawned) continue;
                 var s = carro.ParaSalvar();
-                s.qual = _mundo.segundoCarro != null && carro.name.StartsWith(_mundo.segundoCarro.name) ? 1 : 0;
+                s.qual = _mundo.QualDoCarro(carro);   // 0 a perua, 1 o cupê, 2 em diante as motos
                 m.carros.Add(s);
             }
 
@@ -159,6 +163,7 @@ namespace ZombieCityCleaner.Salvar
                     m.carrosDoMundo.Add(s);
                 }
 
+            m.arvoresCortadas = _mundo.ArvoresCortadas();   // (06/11/2026)
             m.mobiliaAberta.Clear();
             if (MobiliaNovaDoMundo.Instancia != null)
                 foreach (var k in MobiliaNovaDoMundo.Instancia.Copia()) m.mobiliaAberta.Add(unchecked((long)k));
@@ -431,6 +436,7 @@ namespace ZombieCityCleaner.Salvar
             }
             PecasDosCarrosDoMundo.Instancia?.Restaurar(mexidos);
 
+            _mundo.RestaurarArvores(m.arvoresCortadas);   // as árvores cortadas (06/11/2026)
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
             foreach (long k in m.mobiliaAberta) abertas.Add(unchecked((ulong)k));
             MobiliaNovaDoMundo.Instancia?.Restaurar(abertas);
@@ -518,6 +524,21 @@ namespace ZombieCityCleaner.Salvar
                 m.chaveDoCupe = true;
                 Debug.Log("[Save] Um save de antes da chave do cupê: a chave apareceu no chão da sala do bunker.");
             }
+            // os caiaques (06/11/2026): os do save; num save de antes deles, um na beira do lago
+            if (m.caiaques != null)
+                foreach (var k in m.caiaques) _mundo.CriarCaiaque(k.pos, k.giro);
+            if (m.caiaques != null && m.caiaques.Count > 0) m.caiaque = true;
+            else if (!m.caiaque && _mundo.PorOCaiaque())
+            {
+                m.caiaque = true;
+                Debug.Log("[Save] Um save de antes do caiaque: ele apareceu na beira do lago.");
+            }
+            // um save de antes das motos (06/11/2026): elas aparecem uma vez perto da partida, e as chaves no chão da sala
+            if (!m.motos && _mundo.PorAsMotos())
+            {
+                m.motos = true;
+                Debug.Log("[Save] Um save de antes das motos: as motos apareceram perto da partida, e as chaves no chão da sala.");
+            }
             Debug.Log($"[Save] O mundo \"{m.nome}\" voltou: dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
                       $"{m.carros.Count} carros, {mexidos.Count} carros do mundo mexidos, {pegos.Count} itens do saque pegos, {portas.Count} portas e janelas mexidas, " +
                       $"{estantes.Count} itens nas estantes.");
@@ -528,10 +549,10 @@ namespace ZombieCityCleaner.Salvar
         // do bunker pronto). O que caiu do mundo num save de antes volta para a vaga dele.
         void CriarCarro(CarroSalvo c)
         {
-            var prefab = c.qual == 1 ? _mundo.segundoCarro : _mundo.carro;
+            var prefab = _mundo.PrefabDoCarro(c.qual);
             if (prefab == null) return;
             var novo = Instantiate(prefab, c.pos + Vector3.up * 0.15f, c.giro);
-            novo.name = c.qual == 1 ? prefab.name : "Carro";
+            novo.name = c.qual >= 1 ? prefab.name : "Carro";
             var corpo = novo.GetComponent<Rigidbody>();
             if (corpo != null) corpo.isKinematic = true;
             novo.GetComponent<NetworkObject>().Spawn(true);

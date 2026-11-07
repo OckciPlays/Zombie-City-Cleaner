@@ -56,7 +56,8 @@ namespace ZombieCityCleaner.Player
         static readonly Rect AreaDoNome = new Rect(840, 58, 302, 40);
         static readonly Rect AreaDaFoto = new Rect(840, 106, 302, 250);
         static readonly Rect AreaDosDetalhes = new Rect(840, 364, 302, 208);
-        static readonly Rect AbaMochila = new Rect(336, 14, 150, 36), AbaCriar = new Rect(492, 14, 150, 36);
+        // (06/11/2026: as 4 abas, com a HABILIDADES, cabem até a coluna da direita)
+        static readonly Rect AbaMochila = new Rect(336, 14, 112, 36), AbaCriar = new Rect(454, 14, 100, 36);
         static readonly Rect BotaoFechar = new Rect(W - 52, 12, 36, 36);
         const float AtalhoY = 478f, AtalhoW = 92f, AtalhoH = 60f, AtalhoVao = 12f;
         // o que se veste e já existe: a mochila (o coldre saiu em 31/10/2026), embaixo das roupas da direita (os lugares das
@@ -90,8 +91,9 @@ namespace ZombieCityCleaner.Player
         static readonly Color Destaque = new Color(0.98f, 0.82f, 0.36f);
         static readonly CultureInfo Br = new CultureInfo("pt-BR");
 
-        // a aba Corpo (05/11/2026, o sistema de vida por membro): TelaDoInventario.Corpo.cs
-        enum Aba { Mochila, Criar, Corpo }
+        // a aba Corpo (05/11/2026, o sistema de vida por membro): TelaDoInventario.Corpo.cs; a aba Habilidades (06/11/2026,
+        // a árvore de habilidades): TelaDoInventario.Habilidades.cs
+        enum Aba { Mochila, Criar, Corpo, Habilidades }
         enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa, Estante }
 
         Aba _aba;
@@ -188,6 +190,8 @@ namespace ZombieCityCleaner.Player
             if (teclado != null && teclado.tabKey.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!Aberta);
             // H: direto na aba Corpo (05/11/2026; não enquanto digita num campo de texto)
             else if (teclado != null && teclado.hKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0) TeclaDoCorpo();
+            // K: direto na aba HABILIDADES (06/11/2026)
+            else if (teclado != null && teclado.kKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0) TeclaDasHabilidades();
             if (!Aberta) return;
             ConferirEstante();
             if (!Aberta) return;
@@ -416,6 +420,8 @@ namespace ZombieCityCleaner.Player
                     else if (Em(AbaCriar).Contains(m)) _aba = Aba.Criar;
                     else if (Em(AbaCorpo).Contains(m)) IrParaAbaCorpo();
                     else if (_aba == Aba.Corpo && CliqueNaAbaCorpo(m)) { }
+                    else if (Em(AbaHabilidades).Contains(m)) IrParaAbaHabilidades();
+                    else if (_aba == Aba.Habilidades && CliqueNaAbaHabilidades(m)) { }
                     else if (_aba == Aba.Criar && ReceitaEm(m, out int receita, out bool noBotao))
                     {
                         _receita = receita;
@@ -678,6 +684,7 @@ namespace ZombieCityCleaner.Player
                 Rodape();
             }
             else if (_aba == Aba.Corpo) Corpo(mouse);
+            else if (_aba == Aba.Habilidades) AbaDasHabilidades(mouse);
             else Criar(mouse);
             if (_estante >= 0 && FormaAberta != null) DesenharEstante(mouse);
             else Detalhes();
@@ -691,7 +698,7 @@ namespace ZombieCityCleaner.Player
         {
             float u = _u;
             Rotulo(Em(new Rect(AreaDoRetrato.x + 4, 18, 300, 28)), "EQUIPAMENTO", _titulo);
-            foreach (var (r, nome, aba) in new[] { (AbaMochila, "MOCHILA", Aba.Mochila), (AbaCriar, "CRIAR", Aba.Criar), (AbaCorpo, "CORPO", Aba.Corpo) })
+            foreach (var (r, nome, aba) in new[] { (AbaMochila, "MOCHILA", Aba.Mochila), (AbaCriar, "CRIAR", Aba.Criar), (AbaCorpo, "CORPO", Aba.Corpo), (AbaHabilidades, "HABILIDADES", Aba.Habilidades) })
             {
                 var a = Em(r);
                 bool ativa = _aba == aba;
@@ -702,7 +709,7 @@ namespace ZombieCityCleaner.Player
                 PorCor(_titulo, CorDoTexto);
             }
             bool comEstante = _estante >= 0 && FormaAberta != null;
-            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : "DETALHES", _titulo);
+            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : _aba == Aba.Habilidades ? "A HABILIDADE" : "DETALHES", _titulo);
             // o dinheiro do personagem (02/11/2026: o que sobrou do Dia 0; os comerciantes vêm depois); com a estante aberta,
             // o nome dela fica no lugar
             if (!comEstante && inventario != null && inventario.IsSpawned)
@@ -1018,7 +1025,9 @@ namespace ZombieCityCleaner.Player
                 var partes = new List<(string texto, bool ok)>();
                 foreach (var g in rec.gasta) partes.Add((Itens.ComNumero(g.item, g.qtd), inventario.Quantos(g.item) >= g.qtd));
                 if (rec.ferramenta != Item.Nada) partes.Add(("+ " + Itens.Nome(rec.ferramenta), inventario.Quantos(rec.ferramenta) > 0));
-                if (rec.bancada) partes.Add(("na bancada", Bancada.Perto(inventario.transform.position)));
+                if (rec.habilidade >= 0) partes.Insert(0, ("[" + Habilidades.Nome((Habilidade)rec.habilidade) + "]", Habilidades.Tem(rede, (Habilidade)rec.habilidade)));
+                if (rec.oficina) partes.Add(("na mesa de oficina", Bancada.PertoDaOficina(inventario.transform.position)));
+                else if (rec.bancada) partes.Add(("na bancada", Bancada.Perto(inventario.transform.position)));
                 float reticencias = linha.CalcSize(new GUIContent("...")).x;
                 for (int p = 0; p < partes.Count; p++)
                 {
@@ -1082,8 +1091,14 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(new Rect(x, y, w, linha), $"Ferramenta (não gasta): {Itens.Nome(rec.ferramenta)}", _texto);
                 y += linha;
             }
-            GUI.Label(new Rect(x, y, w, linha), rec.bancada ? "Só perto de uma bancada" : "Em qualquer lugar", _texto);
-            y += linha + 4 * u;
+            GUI.Label(new Rect(x, y, w, linha), rec.oficina ? "Só na mesa de oficina (no bunker)" : rec.bancada ? "Só perto de uma bancada" : "Em qualquer lugar", _texto);
+            y += linha;
+            if (rec.habilidade >= 0)
+            {
+                GUI.Label(new Rect(x, y, w, linha), $"Habilidade: {Habilidades.Nome((Habilidade)rec.habilidade)} ({Habilidades.Nome(Habilidades.RamoDe((Habilidade)rec.habilidade))})", _texto);
+                y += linha;
+            }
+            y += 4 * u;
             if (!inventario.PodeCriar(rec, out var falta))
             {
                 var f = new GUIStyle(_texto);
@@ -1108,6 +1123,12 @@ namespace ZombieCityCleaner.Player
             if (_aba == Aba.Corpo)
             {
                 ColunaDoCorpo(_ultimoMouse);
+                return;
+            }
+            // a aba Habilidades: a escolhida, o botão de aprender e de onde vem o XP (TelaDoInventario.Habilidades.cs)
+            if (_aba == Aba.Habilidades)
+            {
+                ColunaDasHabilidades(_ultimoMouse);
                 return;
             }
             float u = _u;
@@ -1202,7 +1223,8 @@ namespace ZombieCityCleaner.Player
                 }
                 else if (Itens.EhChave(item))
                 {
-                    Linha("Serve para", item == Item.ChaveDoCupe ? "dar a partida no cupê" : "dar a partida na perua");
+                    Linha("Serve para", item == Item.ChaveDoCupe ? "dar a partida no cupê" : item == Item.ChaveDaFatBoy ? "dar a partida na Fat Boy"
+                        : item == Item.ChaveDaCross ? "dar a partida na moto cross" : "dar a partida na perua");
                     Linha("Sem ela", "só com a ligação direta");
                 }
                 else if (item == Item.Pneu)

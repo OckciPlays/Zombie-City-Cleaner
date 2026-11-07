@@ -24,7 +24,7 @@ import sys
 
 import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
@@ -45,6 +45,9 @@ eq.CORES.update({
     "caixa_ferramenta": (8, 6), "ferrugem": (8, 3), "minhoca": (13, 0),
     # o fumo (03/11/2026): o filtro cor de cortiça e a cinza
     "filtro": (9, 13), "cinza_claro": (9, 3),
+    # a pesca (06/11/2026): o grafite da vara e as cores dos peixes (todas já existiam na paleta)
+    "grafite": (11, 1), "azul_aco": (9, 2), "verde_cinza": (5, 3), "verde_cinza_escuro": (9, 0), "perola": (5, 5),
+    "musgo_escuro": (2, 1), "verde_quase_preto": (7, 1),
 })
 
 _caixa = eq._caixa
@@ -57,6 +60,41 @@ def C(cor, tam, centro, giro=(0, 0, 0), chanfro=0.0):
 
 def Z(cor, raio, altura, centro, lados=12, eixo="Z"):
     return (_cilindro, cor, raio, altura, centro, eixo, lados)
+
+
+def _ripa(bm, uv, cor, a, b, largura, grossura, lado=(0.0, 1.0, 0.0)):
+    """Uma barra de a até b: a largura na direção do lado (sem a parte ao longo da barra) e a grossura na outra."""
+    a, b = Vector(a), Vector(b)
+    z = (b - a).normalized()
+    x = Vector(lado) - z * z.dot(Vector(lado))
+    if x.length < 1e-6:
+        x = Vector((1.0, 0.0, 0.0)) - z * z.x
+    x.normalize()
+    y = z.cross(x)
+    base = Matrix((x, y, z)).transposed().to_4x4()
+    vs = bmesh.ops.create_cube(bm, size=1.0)["verts"]
+    m = Matrix.Translation((a + b) / 2) @ base @ Matrix.Diagonal((largura, grossura, (b - a).length, 1.0))
+    bmesh.ops.transform(bm, matrix=m, verts=vs)
+    eq._pintar(bm, uv, list({f for v in vs for f in v.link_faces}), cor)
+
+
+def R(cor, a, b, largura, grossura, lado=(0.0, 1.0, 0.0)):
+    return (_ripa, cor, a, b, largura, grossura, lado)
+
+
+def _placa(bm, uv, cor, pontos, z0, z1):
+    """Um polígono convexo no plano XY (os pontos (x, y) em volta) estendido de z0 a z1 (as nadadeiras, a serra)."""
+    a = [bm.verts.new((x, y, z0)) for x, y in pontos]
+    b = [bm.verts.new((x, y, z1)) for x, y in pontos]
+    n = len(pontos)
+    faces = [bm.faces.new(a[::-1]), bm.faces.new(b)]
+    for k in range(n):
+        faces.append(bm.faces.new((a[k], a[(k + 1) % n], b[(k + 1) % n], b[k])))
+    eq._pintar(bm, uv, faces, cor)
+
+
+def F(cor, pontos, z0, z1):
+    return (_placa, cor, pontos, z0, z1)
 
 
 # ------------------------------------------------------------------ a comida (o espaço da lata: o meio na origem)
@@ -340,6 +378,22 @@ def _tala():
     return p
 
 
+def _calmante():
+    # O calmante (06/11/2026, a pedido: a sanidade, o Item.Calmante): o frasco de comprimidos de receita, baixo e largo,
+    # de plástico claro (o azul-claro do copo), com a tampa de segurança roxa (o roxo da mente), um pouco mais larga que
+    # o frasco e com a borda de baixo saliente, e o rótulo branco com a faixa roxa em cima. Para não confundir
+    # com o xarope (o vidro âmbar, alto, a tampa branca) nem com os comprimidos (a cartela prateada) no ícone de 128 px.
+    # Uns 5 x 9 cm, o meio na origem (o espaço da lata).
+    return [
+        Z("azul_claro", 0.022, 0.066, (0, 0, -0.013), 12),
+        Z("azul_claro", 0.0195, 0.006, (0, 0, 0.022), 10),
+        Z("branco", 0.0222, 0.04, (0, 0, -0.016), 12),
+        Z("roxo", 0.0224, 0.008, (0, 0, -0.004), 12),
+        Z("roxo", 0.0242, 0.02, (0, 0, 0.036), 14),
+        Z("roxo", 0.0252, 0.005, (0, 0, 0.0275), 14),
+    ]
+
+
 # ------------------------------------------------------------------ os materiais (a origem embaixo, no meio)
 
 def _madeira():
@@ -434,15 +488,7 @@ def _isca():
     ]
 
 
-def _vara():
-    # a vara deitada (desmontada em dois gomos, lado a lado), com o molinete e a linha
-    return [
-        Z("preto", 0.007, 0.62, (0, -0.012, 0.008), 6, "X"),
-        Z("preto", 0.005, 0.6, (0.01, 0.012, 0.007), 6, "X"),
-        Z("madeira_clara", 0.012, 0.16, (-0.22, -0.012, 0.012), 8, "X"),
-        Z("aco", 0.025, 0.02, (-0.12, -0.04, 0.026), 10, "Y"),
-        C("aco_escuro", (0.01, 0.03, 0.01), (-0.12, -0.025, 0.012)),
-    ]
+# (a vara de pesca, _vara, está na seção da pesca, mais abaixo)
 
 
 def _kit_reparo():
@@ -1118,6 +1164,364 @@ def _prato_estragado():
     return _prato_fundo() + _comida_estragada() + _mosca()
 
 
+# ------------------------------------------------------------------ a pesca (06/11/2026, a pedido: a vara refeita, os peixes e a pólvora)
+# A vara de pesca nova (a de antes, os dois gomos deitados lado a lado, "achei um pouco ruim"): a vara montada, de 2 m em
+# dois gomos (a emenda no meio, com as amarrações), afinando até a ponta; o cabo de cortiça atrás e na frente, a tampa de
+# borracha, o porta-molinete grafite com as duas roscas de aço; o molinete pendurado embaixo (o pé, a haste, a caixa, o
+# rotor, o carretel com a linha amarela, o freio vermelho, a alça de arame e a manivela); 5 passadores embaixo, cada vez
+# menores, com as amarrações vermelhas, e a ponteira.
+# Ela vai na mão para pescar: a origem é a pegada (o pé do molinete, no eixo da vara), a ponta para a frente (-Y no
+# Blender, +Z na Unity), o molinete embaixo (-Z; -Y na Unity) e a manivela à esquerda de quem segura (+X no Blender, -X
+# na Unity). No chão a Unity apoia pela caixa da malha, como os outros.
+VARA = 2.0                    # o comprimento, do fim do cabo à ponta
+PEGADA_DA_VARA = 0.365        # a pegada (o pé do molinete), a contar do fim do cabo
+# a ponta da vara (de onde a linha sai), no espaço do item (eixos do Blender); na Unity, (0, 0, VARA - PEGADA_DA_VARA)
+PONTA_DA_VARA = (0.0, -(VARA - PEGADA_DA_VARA), 0.0)
+# a vara é feita em pé (o eixo em +Z, o fim do cabo em z = 0, o molinete e os passadores do lado -X) e deitada no fim
+# por esta matriz: o z da vara vai para -Y, o x para +Z (o molinete, no -X da vara, fica embaixo) e o y para -X
+_VARA_DEITADA = Matrix(((0, -1, 0, 0), (0, 0, -1, 0), (1, 0, 0, 0), (0, 0, 0, 1))) @ Matrix.Translation((0, 0, -PEGADA_DA_VARA))
+# o perfil da vara em pé (o raio, a altura e a cor do trecho até o próximo ponto), do fim do cabo à ponta
+_PERFIL_DA_VARA = [
+    (0.0, 0.0, "preto"), (0.0115, 0.0, "preto"), (0.0145, 0.007, "preto"), (0.0145, 0.026, "preto"),   # a tampa
+    (0.0138, 0.026, "filtro"), (0.0143, 0.16, "filtro"),                                              # o cabo de trás
+    (0.013, 0.298, "aco"), (0.0132, 0.298, "aco"), (0.0132, 0.314, "aco"),                             # a rosca de baixo
+    (0.0112, 0.318, "grafite"),                                                                       # o porta-molinete
+    (0.0112, 0.412, "aco"), (0.0128, 0.416, "aco"), (0.0128, 0.432, "aco"),                            # a rosca de cima
+    (0.0124, 0.432, "filtro"),                                                                        # o cabo da frente
+    (0.0106, 0.528, "aco"), (0.0088, 0.528, "aco"), (0.0088, 0.536, "aco"),                            # o anel do fim
+    (0.0068, 0.536, "grafite"), (0.0067, 0.555, "vermelho_escuro"), (0.0067, 0.575, "grafite"),        # o gomo de baixo
+    (0.0054, 0.99, "vermelho_escuro"), (0.0062, 0.99, "vermelho_escuro"), (0.0062, 1.004, "grafite"),  # a emenda
+    (0.0062, 1.056, "vermelho_escuro"), (0.0062, 1.07, "grafite"), (0.0048, 1.07, "grafite"),          # o gomo de cima
+    (0.0016, VARA - 0.015, "aco"), (0.0026, VARA - 0.015, "aco"), (0.0026, VARA, "aco"), (0.0, VARA, "aco"),  # a ponteira
+]
+# os passadores: onde (a contar do fim do cabo), o raio do anel e o quanto o meio do anel fica embaixo do eixo
+PASSADORES = [(0.80, 0.0125, 0.030), (1.12, 0.0092, 0.023), (1.40, 0.0072, 0.018), (1.63, 0.0058, 0.014),
+              (1.83, 0.0047, 0.011)]
+
+
+def _raio_da_vara(z):
+    """O raio da vara (o blank) em z, dos gomos do _PERFIL_DA_VARA."""
+    if z < 0.99:
+        return 0.0068 + (0.0054 - 0.0068) * (z - 0.536) / (0.99 - 0.536)
+    if z < 1.07:
+        return 0.0062
+    return 0.0048 + (0.0016 - 0.0048) * (z - 1.07) / (VARA - 0.015 - 1.07)
+
+
+def _passador(z, r, h):
+    """Um passador embaixo da vara em pé: o anel de aço com o miolo escuro, as duas pernas em V até a vara e as
+    amarrações vermelhas dos pés."""
+    rb = _raio_da_vara(z)
+    p = [(_com_matriz, Matrix.Translation((-h, 0, 0)), _anel("aco", r, 0.0016, 0.0024, z, 10)),
+         (_com_matriz, Matrix.Translation((-h, 0, 0)), _anel("grafite", r - 0.0015, 0.0012, 0.0026, z, 10))]
+    topo = -h + r
+    for s in (-1, 1):
+        p.append(R("aco", (topo, 0, z), (-rb + 0.0004, 0, z + s * (0.006 + h * 0.4)), 0.0024, 0.0014))
+        p.append(Z("vermelho_escuro", rb + 0.0007, 0.008, (0, 0, z + s * (0.008 + h * 0.4)), 8))
+    return p
+
+
+def _molinete():
+    """O molinete pendurado embaixo do porta-molinete (o lado -X da vara em pé), o carretel virado para a ponta (+Z): o
+    pé, a haste, a caixa das engrenagens, o rotor com os braços, o carretel com a linha, o freio, a alça de arame e a
+    manivela do lado -Y (a esquerda de quem segura)."""
+    x0, zp = -0.077, PEGADA_DA_VARA
+    p = [
+        C("grafite", (0.004, 0.011, 0.052), (-0.0132, 0, zp), chanfro=0.001),
+        R("grafite", (-0.014, 0, zp), (x0 + 0.02, 0, zp + 0.008), 0.011, 0.008),
+        Z("grafite", 0.024, 0.032, (x0, 0, zp + 0.004), 14, "Y"),
+        Z("aco", 0.016, 0.004, (x0, -0.017, zp + 0.004), 12, "Y"),
+        Z("aco", 0.012, 0.004, (x0, 0.017, zp + 0.004), 12, "Y"),
+        Z("preto", 0.0235, 0.028, (x0, 0, zp + 0.034), 14),
+        Z("aco", 0.0215, 0.006, (x0, 0, zp + 0.051), 14),
+        Z("amarelo", 0.0195, 0.018, (x0, 0, zp + 0.063), 14),
+        Z("aco", 0.0215, 0.004, (x0, 0, zp + 0.074), 14),
+        Z("vermelho", 0.009, 0.012, (x0, 0, zp + 0.082), 12),
+    ]
+    for s in (-1, 1):
+        p.append(C("preto", (0.006, 0.005, 0.03), (x0, s * 0.0245, zp + 0.05)))
+    # a alça: o arco de arame na frente do carretel, de um braço ao outro, passando por baixo (longe da vara)
+    n, ra, za = 8, 0.026, zp + 0.064
+    pts = [(x0 - ra * math.sin(math.pi * k / n), ra * math.cos(math.pi * k / n)) for k in range(n + 1)]
+    for (xa, ya), (xb, yb) in zip(pts, pts[1:]):
+        p.append(R("prata", (xa, ya, za), (xb, yb, za), 0.0022, 0.0022, lado=(0, 0, 1)))
+    p.append(Z("aco", 0.0032, 0.007, (x0, 0.026, za), 8, "X"))
+    # a manivela: o eixo, o braço para longe da vara e o punho
+    p += [
+        Z("aco", 0.003, 0.014, (x0, -0.024, zp + 0.004), 8, "Y"),
+        R("prata", (x0, -0.031, zp + 0.004), (x0 - 0.042, -0.031, zp - 0.006), 0.007, 0.004, lado=(0, 0, 1)),
+        Z("preto", 0.0065, 0.02, (x0 - 0.042, -0.042, zp - 0.006), 10, "Y"),
+    ]
+    return p
+
+
+def _vara():
+    p = [(_torno, _PERFIL_DA_VARA, 10)]
+    for z, r, h in PASSADORES:
+        p += _passador(z, r, h)
+    # a ponteira: o anelzinho na ponta
+    p.append((_com_matriz, Matrix.Translation((-0.0042, 0, 0)), _anel("aco", 0.0026, 0.0012, 0.004, VARA - 0.008, 8)))
+    p += _molinete()
+    return [(_com_matriz, _VARA_DEITADA, p)]
+
+
+# Os peixes (06/11/2026, a pedido: a pesca): o lambari (o pequeno), a tilápia (o médio), o tucunaré (o grande) e o dourado
+# (o raro), deitados de lado como no chão (o flanco para cima), a cabeça para +X e as costas para +Y; a origem embaixo, no
+# meio. Cada um é um corpo de anéis elípticos (as costas, o flanco e a barriga de cores diferentes, as faixas e a guelra
+# pintadas nos anéis), as nadadeiras em placas finas (a cauda em garfo ou redonda) e, por cima do flanco (dos dois
+# lados), o olho, a boca, as manchas e as linhas.
+
+def _perfil_do_peixe(u, pico, ponta, fim, expoente=0.8):
+    """A altura (ou a grossura) do corpo em u (0 no focinho, 1 no pedúnculo), de 0 a 1: sobe rápido da ponta até o pico
+    e desce devagar até o fim."""
+    if u <= pico:
+        return ponta + (1 - ponta) * math.sin(u / pico * math.pi / 2) ** expoente
+    return fim + (1 - fim) * math.cos((u - pico) / (1 - pico) * math.pi / 2) ** 1.2
+
+
+class _Peixe:
+    """A forma de um peixe (o dicionário da espécie): onde fica cada u do corpo, a altura, a grossura e o flanco."""
+
+    def __init__(self, e):
+        self.e = e
+        self.xs = e["comp"] / 2                    # o focinho
+        self.lb = e["comp"] * (1 - e["cauda"])      # o corpo, do focinho ao pedúnculo (o resto é a cauda)
+        self.xp = self.xs - self.lb                # o pedúnculo
+        self.zc = e["grossura"] / 2                # o meio da grossura (o flanco de baixo no chão)
+
+    def x(self, u):
+        return self.xs - u * self.lb
+
+    def u_de(self, x):
+        return min(1.0, max(0.0, (self.xs - x) / self.lb))
+
+    def hd(self, u):
+        """A meia altura."""
+        return self.e["altura"] / 2 * _perfil_do_peixe(u, self.e["pico"], self.e.get("ponta", 0.16), self.e["pedunculo"],
+                                                       self.e.get("cabeca", 0.8))
+
+    def ht(self, u):
+        """A meia grossura."""
+        return self.e["grossura"] / 2 * _perfil_do_peixe(u, min(0.6, self.e["pico"] * 1.1), 0.34, 0.3, 0.6)
+
+    def cy(self, u):
+        """O meio da altura (as costas mais arqueadas que a barriga)."""
+        return self.e["altura"] * self.e.get("arco", 0.03) * math.sin(math.pi * u)
+
+    def costas(self, u):
+        return self.cy(u) + self.hd(u)
+
+    def barriga(self, u):
+        return self.cy(u) - self.hd(u)
+
+    def ponto(self, u, f, folga=0.0004):
+        """O ponto no flanco de cima em u, na altura f (de -1, a barriga, a 1, as costas), um pouco para fora."""
+        return (self.x(u), self.cy(u) + f * self.hd(u), self.zc + self.ht(u) * math.sqrt(max(0.0, 1 - f * f)) + folga)
+
+    def espelho(self, q):
+        """O mesmo ponto no flanco de baixo."""
+        return (q[0], q[1], 2 * self.zc - q[2])
+
+
+def _corpo_do_peixe(bm, uv, p):
+    """O corpo: os anéis elípticos do focinho ao pedúnculo, fechados na ponta do focinho e no pedúnculo."""
+    e = p.e
+    n = 16
+    us = [0.012, 0.03, 0.06, 0.1, 0.15, 0.21, 0.28, 0.36, 0.44, 0.52, 0.6, 0.68, 0.76, 0.84, 0.92, 1.0]
+    for u0, u1, _ in e.get("faixas", []) + ([e["guelra"]] if "guelra" in e else []):
+        us += [u0, u1]
+    us = sorted(set(round(u, 4) for u in us))
+    angs = [2 * math.pi * k / n for k in range(n)]
+    aneis = [[bm.verts.new((p.x(u), p.cy(u) + p.hd(u) * math.cos(a), p.zc + p.ht(u) * math.sin(a))) for a in angs]
+             for u in us]
+    ponta = bm.verts.new((p.xs + 0.004 * e["comp"], p.cy(0.0), p.zc))
+    fim = bm.verts.new((p.x(1.0) - 0.001, p.cy(1.0), p.zc))
+
+    def cor(um, a):
+        c = math.cos(a)
+        regiao = e["costas"] if c > 0.62 else e["barriga"] if c < -0.55 else e["flanco"]
+        for u0, u1, cf in e.get("faixas", []):
+            if u0 <= um <= u1 and c > -0.45:
+                regiao = cf
+        if "guelra" in e:
+            u0, u1, cg = e["guelra"]
+            if u0 <= um <= u1 and -0.6 < c < 0.75:
+                regiao = cg
+        return regiao
+
+    for k in range(n):
+        j = (k + 1) % n
+        am = math.pi * (2 * k + 1) / n
+        eq._pintar(bm, uv, [bm.faces.new((ponta, aneis[0][j], aneis[0][k]))], cor(0.0, am))
+        for i in range(len(us) - 1):
+            f = bm.faces.new((aneis[i][k], aneis[i][j], aneis[i + 1][j], aneis[i + 1][k]))
+            eq._pintar(bm, uv, [f], cor((us[i] + us[i + 1]) / 2, am))
+        eq._pintar(bm, uv, [bm.faces.new((aneis[-1][k], aneis[-1][j], fim))], e["flanco"])
+
+
+def _peixe(e):
+    p = _Peixe(e)
+    L, D = e["comp"], e["altura"]
+    tf = max(0.0012, e["grossura"] * 0.05)       # a grossura das nadadeiras
+    z0, z1 = p.zc - tf / 2, p.zc + tf / 2
+    emb = 0.05 * D                               # o quanto a base das nadadeiras entra no corpo
+    cn, ca = e["nadadeira"], e.get("cor_anal", e["nadadeira"])
+    pecas = [(_corpo_do_peixe, p)]
+    # a cauda: em garfo (dois lobos) ou redonda
+    hp, cyp, xt = p.hd(1.0), p.cy(1.0), -L / 2
+    xb = p.xp + 0.012 * L
+    ht = e["cauda_alt"] * D
+    cc = e.get("cor_cauda", cn)
+    if e.get("forma_cauda", "garfo") == "garfo":
+        g = e.get("garfo", 0.5) * (xb - xt)
+        for s in (1, -1):
+            pecas.append(F(cc, [(xb, cyp), (xb, cyp + s * hp * 0.9), (xt, cyp + s * ht), (xt + g, cyp)], z0, z1))
+        if "listra_cauda" in e:
+            xf = xt + g + 0.01 * L
+            pecas.append(F(e["listra_cauda"], [(xb, cyp + 0.3 * hp), (xb, cyp - 0.3 * hp), (xf, cyp - 0.025 * D),
+                                               (xf, cyp + 0.025 * D)], z0 - 0.0005, z1 + 0.0005))
+    else:
+        cauda = [(xb, cyp - hp * 0.9), (xb, cyp + hp * 0.9)]
+        for k in range(7):
+            a = math.radians(70 - 140 * k / 6)
+            cauda.append((xb - (xb - xt) * (0.55 + 0.45 * math.cos(a)), cyp + ht * math.sin(a)))
+        pecas.append(F(cc, cauda, z0, z1))
+    # as dorsais (a de espinhos e a mole), a adiposa, a anal e as pélvicas
+    for u0, u1, h0, h1, inclina in e.get("dorsais", []):
+        pecas.append(F(cn, [(p.x(u0), p.costas(u0) - emb), (p.x(u1), p.costas(u1) - emb),
+                            (p.x(u1) - inclina * L, p.costas(u1) + h1 * D),
+                            (p.x(u0) - inclina * L * 0.4, p.costas(u0) + h0 * D)], z0, z1))
+    if "adiposa" in e:
+        u0, u1, h = e["adiposa"]
+        pecas.append(F(cn, [(p.x(u0), p.costas(u0) - emb * 0.5), (p.x(u1), p.costas(u1) - emb * 0.5),
+                            (p.x(u1) - 0.01 * L, p.costas(u1) + h * D)], z0, z1))
+    if "anal" in e:
+        u0, u1, h0, h1, inclina = e["anal"]
+        pecas.append(F(ca, [(p.x(u0), p.barriga(u0) + emb), (p.x(u1), p.barriga(u1) + emb),
+                            (p.x(u1) - inclina * L, p.barriga(u1) - h1 * D),
+                            (p.x(u0) - inclina * L * 0.4, p.barriga(u0) - h0 * D)], z0, z1))
+    if "pelvica" in e:
+        u0, u1, h = e["pelvica"]
+        pecas.append(F(ca, [(p.x(u0), p.barriga(u0) + emb), (p.x(u1), p.barriga(u1) + emb),
+                            (p.x(u1) - 0.03 * L, p.barriga(u1) - h * D)], z0, z1))
+    # as peitorais, deitadas nos flancos, para trás
+    if "peitoral" in e:
+        u, comp, larg = e["peitoral"]
+        x0, y0 = p.x(u), p.cy(u) - 0.3 * p.hd(u)
+        c, w = comp * L, larg * D
+        pts = [(x0, y0 + w / 2), (x0, y0 - w / 2), (x0 - c, y0 - w * 0.9), (x0 - c * 0.92, y0 - w * 0.2)]
+        topo = max(p.ponto(p.u_de(x), (y - p.cy(p.u_de(x))) / p.hd(p.u_de(x)), 0.0)[2] for x, y in pts)
+        pecas += [F(ca, pts, topo - 0.0006, topo + tf * 0.8), F(ca, pts, 2 * p.zc - topo - tf * 0.8, 2 * p.zc - topo + 0.0006)]
+    # o olho (a íris e a pupila), a boca, as manchas e as linhas, dos dois lados
+    u, f, r, iris = e["olho"]
+    a = p.ponto(u, f, 0.0003)
+    for q in (a, p.espelho(a)):
+        s = 1 if q[2] > p.zc else -1
+        pecas += [Z(iris, r * D, 0.0016, q, 12), Z("preto", r * D * 0.55, 0.0016, (q[0], q[1], q[2] + s * 0.0008), 10)]
+    if "boca" in e:
+        u1, f = e["boca"]
+        a, b = p.ponto(0.012, f, 0.0005), p.ponto(u1, f - 0.08, 0.0005)
+        pecas += [R("preto", a, b, 0.006 * L, 0.0012), R("preto", p.espelho(a), p.espelho(b), 0.006 * L, 0.0012)]
+    for u, f, r, fora, dentro in e.get("manchas", []):
+        a = p.ponto(u, f, 0.0003)
+        for q in (a, p.espelho(a)):
+            s = 1 if q[2] > p.zc else -1
+            pecas.append(Z(fora, r * D, 0.0014, q, 12))
+            if dentro:
+                pecas.append(Z(dentro, r * D * 0.55, 0.0014, (q[0], q[1], q[2] + s * 0.0007), 10))
+    for u0, u1, f, cor, larg in e.get("linhas", []):
+        pts = [p.ponto(u0 + (u1 - u0) * k / 6, f, 0.0004) for k in range(7)]
+        for lado in (pts, [p.espelho(q) for q in pts]):
+            for q0, q1 in zip(lado, lado[1:]):
+                pecas.append(R(cor, q0, q1, larg * D, 0.001))
+    return pecas
+
+
+# as espécies: o tamanho (o comprimento com a cauda, a altura e a grossura do corpo, em m), a forma (a cauda, o pico da
+# altura, o pedúnculo, o arco das costas, a altura do focinho e o expoente da cabeça, mais cheia quanto menor, em
+# frações), as cores e as nadadeiras (em u, do focinho ao pedúnculo, e em frações da altura)
+PEIXES = {
+    # o lambari-do-rabo-amarelo (uns 15 cm): prateado, as costas azuladas, a mancha preta atrás da guelra, a listra preta
+    # do pedúnculo até o meio da cauda, a cauda em garfo e a dorsal amarelas, o olho grande
+    "PeixePequeno": dict(
+        comp=0.15, altura=0.042, grossura=0.016, cauda=0.24, pico=0.36, pedunculo=0.24, arco=0.02, ponta=0.2,
+        costas="azul_aco", flanco="prata", barriga="branco", nadadeira="amarelo", cor_anal="prata",
+        guelra=(0.25, 0.275, "azul_aco"), dorsais=[(0.47, 0.57, 0.3, 0.32, 0.02)], adiposa=(0.8, 0.86, 0.1),
+        anal=(0.62, 0.92, 0.14, 0.1, 0.01), pelvica=(0.44, 0.5, 0.14), peitoral=(0.27, 0.12, 0.12),
+        cauda_alt=0.44, garfo=0.55, listra_cauda="preto", olho=(0.09, 0.2, 0.1, "branco"), boca=(0.04, -0.1),
+        manchas=[(0.31, 0.3, 0.09, "preto", None)], linhas=[(0.72, 1.0, 0.0, "preto", 0.06)]),
+    # a tilápia (uns 30 cm): alta e achatada, cinza-esverdeada com as barras verticais escuras, a dorsal comprida (a de
+    # espinhos e a mole, alta atrás) e a cauda reta
+    "PeixeMedio": dict(
+        comp=0.30, altura=0.115, grossura=0.036, cauda=0.17, pico=0.42, pedunculo=0.33, arco=0.05, ponta=0.32,
+        cabeca=0.6,
+        costas="verde_cinza_escuro", flanco="verde_cinza", barriga="perola", nadadeira="musgo_escuro",
+        guelra=(0.24, 0.265, "musgo_escuro"),
+        faixas=[(u, u + 0.035, "verde_cinza_escuro") for u in (0.33, 0.43, 0.53, 0.63, 0.73, 0.83)],
+        dorsais=[(0.24, 0.66, 0.14, 0.2, 0.0), (0.64, 0.97, 0.22, 0.34, 0.07)], anal=(0.7, 0.96, 0.18, 0.3, 0.06),
+        pelvica=(0.3, 0.37, 0.24), peitoral=(0.27, 0.14, 0.14), cauda_alt=0.36, forma_cauda="redonda",
+        olho=(0.11, 0.3, 0.075, "dourado"), boca=(0.05, -0.02)),
+    # o tucunaré (uns 50 cm): verde, a barriga amarela, as 3 faixas pretas, o olho vermelho, as nadadeiras de baixo
+    # laranja, a dorsal dupla, a cauda redonda e o ocelo (a mancha preta com o anel amarelo) na base da cauda
+    "PeixeGrande": dict(
+        comp=0.50, altura=0.13, grossura=0.06, cauda=0.17, pico=0.4, pedunculo=0.34, arco=0.03, ponta=0.3,
+        cabeca=0.65,
+        costas="verde_escuro", flanco="verde", barriga="amarelo", nadadeira="verde_escuro", cor_anal="laranja_vivo",
+        guelra=(0.25, 0.27, "verde_escuro"),
+        faixas=[(0.33, 0.39, "verde_quase_preto"), (0.52, 0.58, "verde_quase_preto"), (0.7, 0.76, "verde_quase_preto")],
+        dorsais=[(0.27, 0.56, 0.12, 0.17, 0.0), (0.56, 0.93, 0.18, 0.28, 0.05)], anal=(0.72, 0.94, 0.15, 0.24, 0.04),
+        pelvica=(0.31, 0.37, 0.2), peitoral=(0.28, 0.12, 0.13), cauda_alt=0.36, forma_cauda="redonda",
+        olho=(0.085, 0.3, 0.065, "vermelho"), boca=(0.09, -0.15), manchas=[(0.96, 0.0, 0.12, "amarelo", "preto")]),
+    # o dourado (o raro, uns 45 cm): dourado, as costas alaranjadas, as linhas escuras ao longo do flanco, as nadadeiras
+    # laranja, a adiposa e a cauda em garfo laranja com a listra preta no meio
+    "PeixeDourado": dict(
+        comp=0.45, altura=0.115, grossura=0.05, cauda=0.2, pico=0.36, pedunculo=0.26, arco=0.04, ponta=0.24,
+        cabeca=0.7,
+        costas="laranja_escuro", flanco="dourado", barriga="filtro", nadadeira="laranja_vivo",
+        guelra=(0.24, 0.265, "laranja_escuro"), dorsais=[(0.42, 0.55, 0.22, 0.24, 0.03)], adiposa=(0.82, 0.88, 0.07),
+        anal=(0.72, 0.9, 0.12, 0.16, 0.02), pelvica=(0.43, 0.49, 0.16), peitoral=(0.27, 0.12, 0.12),
+        cauda_alt=0.42, garfo=0.5, listra_cauda="preto", olho=(0.09, 0.25, 0.065, "amarelo"), boca=(0.11, -0.05),
+        linhas=[(0.27, 0.95, f, "chocolate", 0.018) for f in (0.55, 0.3, 0.05, -0.2)]),
+}
+
+
+def _peixe_pequeno():
+    return _peixe(PEIXES["PeixePequeno"])
+
+
+def _peixe_medio():
+    return _peixe(PEIXES["PeixeMedio"])
+
+
+def _peixe_grande():
+    return _peixe(PEIXES["PeixeGrande"])
+
+
+def _peixe_dourado():
+    return _peixe(PEIXES["PeixeDourado"])
+
+
+def _polvora():
+    # A pólvora (06/11/2026, a pedido: a matéria-prima da munição): a lata redonda de pólvora, em pé: o corpo de lata com
+    # as bordas, o rótulo vermelho-escuro com a faixa preta em cima, o losango amarelo de perigo com a chama preta, duas
+    # linhas brancas de letras embaixo e a tampa de rosca preta em cima. Uns 8,6 x 12 cm, a origem embaixo, no meio.
+    r, h = 0.043, 0.105
+    return [
+        Z("lata", r * 0.97, h, (0, 0, h / 2), 16),
+        Z("lata", r, 0.006, (0, 0, 0.003), 16),
+        Z("lata", r, 0.006, (0, 0, h - 0.003), 16),
+        Z("vermelho_escuro", r * 0.995, h * 0.72, (0, 0, h * 0.47), 16),
+        Z("preto", r, 0.014, (0, 0, h * 0.76), 16),
+        C("amarelo", (0.018, 0.005, 0.018), (0, -r + 0.0012, h * 0.47), giro=(0, 45, 0)),
+        C("preto", (0.007, 0.004, 0.009), (0, -r - 0.0016, h * 0.47)),
+        C("branco", (0.022, 0.004, 0.0035), (0, -r + 0.0012, h * 0.25)),
+        C("branco", (0.016, 0.004, 0.003), (0, -r + 0.0012, h * 0.19)),
+        Z("lata_clara", r * 0.8, 0.004, (0, 0, h + 0.001), 16),
+        Z("preto", 0.019, 0.004, (0, 0, h + 0.004), 14),
+        Z("preto", 0.017, 0.012, (0, 0, h + 0.008), 14),
+    ]
+
+
 # as peças do prato (sem ícone: as animações e o jogo)
 PECAS_DO_PRATO = {
     "PratoFundo": _prato_fundo, "PratoComida": _comida, "PratoComidaEstragada": _comida_estragada,
@@ -1151,7 +1555,9 @@ MODELOS = {
     "Gazua": _gazua, "PeDeCabra": _pe_de_cabra,
     "MacoDeCigarros": _maco,
     "PratoDeComida": _prato_de_comida, "PratoVazio": _prato_vazio, "PratoEstragado": _prato_estragado,
-    "Tala": _tala, "BandagemAntisseptica": _bandagem_antisseptica,
+    "Tala": _tala, "BandagemAntisseptica": _bandagem_antisseptica, "Calmante": _calmante,
+    "PeixePequeno": _peixe_pequeno, "PeixeMedio": _peixe_medio, "PeixeGrande": _peixe_grande,
+    "PeixeDourado": _peixe_dourado, "Polvora": _polvora,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -1161,9 +1567,16 @@ MONTADAS = {
 # os deitados (vistos mais de cima no ícone)
 DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "PecasDeMetal", "Fios", "Pregos", "VaraDePesca",
             "Roupa", "Fogueira", "Cama", "Barricada", "Atadura", "Bandagem", "Lanterna", "Pilhas", "Gazua", "PeDeCabra",
-            "PratoDeComida", "PratoVazio", "PratoEstragado", "Tala", "BandagemAntisseptica"}
+            "PratoDeComida", "PratoVazio", "PratoEstragado", "Tala", "BandagemAntisseptica",
+            "PeixePequeno", "PeixeMedio", "PeixeGrande", "PeixeDourado"}
 # os que ocupam mais de uma célula na mochila (o ícone na proporção delas, 128 px por célula; o Itens.Tamanho da Unity)
-CELULAS = {"PeDeCabra": (2, 1)}
+CELULAS = {"PeDeCabra": (2, 1), "PeixeGrande": (2, 1), "PeixeDourado": (2, 1)}
+# as vistas próprias (a direção da câmera do ícone e a da foto, o giro da câmera do ícone em graus, a escala do ícone e
+# a distância da foto, vezes o tamanho): a vara comprida, vista de lado (o molinete e a manivela para a câmera), na
+# diagonal no ícone e com a foto de trás do cabo; os peixes, deitados de lado, quase de cima (o perfil deles)
+VISTAS = {"VaraDePesca": ((1.0, 0.0, 0.3), (0.9, 1.0, 0.6), 45.0, 0.75, 1.45)}
+VISTAS.update({nome: ((0.22, -0.5, 1.0), (0.3, -0.5, 1.0), 0.0, 1.2, 2.2)
+               for nome in ("PeixePequeno", "PeixeMedio", "PeixeGrande", "PeixeDourado")})
 
 SAIDA = os.path.join(eq.UNITY, "Loot.fbx")
 
@@ -1231,14 +1644,21 @@ def imagens(so=None):
         deitado = nome in DEITADOS
         icone = (0.35, -0.7, 1.0) if deitado else (0.45, -1.0, 0.45)
         foto = (0.6, -0.9, 1.0) if deitado else (0.8, -1.0, 0.6)
+        vista = VISTAS.get(nome)
+        if vista:
+            icone, foto = vista[0], vista[1]
         cx, cy = CELULAS.get(nome, (1, 1))
         r.resolution_x, r.resolution_y = 128 * cx, 128 * cy
-        eq._camera(cena, True, centro, (0.0, -0.25, 1.0) if cx > cy else icone, 3.0,
-                   tam * (1.45 if nome in ("Atadura", "Bandagem", "BandagemAntisseptica", "FitaAdesiva") else 1.15 if cx > cy else 1.3))
+        cam = eq._camera(cena, True, centro, icone if vista else (0.0, -0.25, 1.0) if cx > cy else icone, 3.0,
+                         tam * (vista[3] if vista else 1.45 if nome in ("Atadura", "Bandagem", "BandagemAntisseptica", "FitaAdesiva")
+                                else 1.15 if cx > cy else 1.3))
+        if vista:
+            # o giro em volta do eixo da câmera (a vara na diagonal)
+            cam.rotation_euler = (cam.rotation_euler.to_quaternion() @ Quaternion((0, 0, 1), math.radians(vista[2]))).to_euler()
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500
-        eq._camera(cena, False, centro, foto, tam * 2.4, tam)
+        eq._camera(cena, False, centro, foto, tam * (vista[4] if vista else 2.4), tam)
         r.filepath = os.path.join(eq.ICONES, f"Foto_{nome}.png")
         bpy.ops.render.render(write_still=True)
     for o in objs.values():

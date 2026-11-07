@@ -11608,6 +11608,9 @@ MonoBehaviour:
   sensibilidadeMouse: 0.08
   sensibilidadeControle: 160
   pitchMaximo: 85
+  velocidadeNadando: 1.9
+  velocidadeMergulho: 1.6
+  alturaBoiando: 1.42
   velocidadeAgachado: 1.2
   alturaAgachado: 1.4
   olhoAgachado: 1.27
@@ -11790,6 +11793,8 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 886f48c87e1884a46a30d44374604753, type: 3}
   - {fileID: 2800000, guid: b513d9099b98bf04ca859e28071f23d2, type: 3}
   - {fileID: 2800000, guid: 98b94654280d7194cb0c34bee6ca32be, type: 3}
+  - {fileID: 2800000, guid: 3beec8c7d49ddaa43a5ed83972c1799e, type: 3}
+  - {fileID: 2800000, guid: 7e897a0c99d29294690b2be25a8487cc, type: 3}
   fotosDePeca:
   - {fileID: 2800000, guid: a45164fa85fc8a94ba7626fbda5bc646, type: 3}
   - {fileID: 2800000, guid: c8b9c48f13e2dd64395cf1e18272db25, type: 3}
@@ -11798,6 +11803,8 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 728509401991c9149876bc5dc6444481, type: 3}
   - {fileID: 2800000, guid: 91354b084aa840845ad561c3ed0b2ff1, type: 3}
   - {fileID: 2800000, guid: 464f7acd5c963ad41a54d140e738b2a3, type: 3}
+  - {fileID: 2800000, guid: fdffacbde64787142a053bb6c3d75fe8, type: 3}
+  - {fileID: 2800000, guid: ccb604c097b87e64f8817e77659d3663, type: 3}
   iconesDaSinuca:
   - {fileID: 2800000, guid: 14442bc80efaf0444be7ab369045494e, type: 3}
   - {fileID: 2800000, guid: 7c5d3b5812ddec54b84f18cd00dd7c79, type: 3}
@@ -11860,6 +11867,12 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 0878073dd2af5ae4ca9e9c89e005134d, type: 3}
   - {fileID: 2800000, guid: 3e2241ffa10832c41a70c39127f20f80, type: 3}
   - {fileID: 2800000, guid: 40cf57f6e95ab194192684ab065dc62b, type: 3}
+  - {fileID: 2800000, guid: e59a6eb8b8e63af4e8a88d970c0712b2, type: 3}
+  - {fileID: 2800000, guid: c83a5e2af70e5b242abc0a8920d613af, type: 3}
+  - {fileID: 2800000, guid: 1bd4e066505ba4f419b1f99d5f373ddb, type: 3}
+  - {fileID: 2800000, guid: 9570621bba822c549806a94dffc795c0, type: 3}
+  - {fileID: 2800000, guid: 4a3c564feefaf6f4aa78db94440ddfc2, type: 3}
+  - {fileID: 2800000, guid: e3bb3c9726fe08746a5a003aa798dc02, type: 3}
   fotosDeLoot:
   - {fileID: 2800000, guid: 9b455d59a6e5c9644a25c42e84a47aaf, type: 3}
   - {fileID: 2800000, guid: 96927f4431c82524eb9a8fe2e491acad, type: 3}
@@ -11908,6 +11921,12 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 1abe8a8d48280c944a53ae2448a459a3, type: 3}
   - {fileID: 2800000, guid: fced13d145a1dd64d9ff101613af17e1, type: 3}
   - {fileID: 2800000, guid: 309ba6f5aed751044a6c3e4b6369f30e, type: 3}
+  - {fileID: 2800000, guid: f34f6ae2ee276224894f1376e36e37bd, type: 3}
+  - {fileID: 2800000, guid: 7f1bf4bb4f4bdeb4eaff4159cc694f85, type: 3}
+  - {fileID: 2800000, guid: 1a1dfb296cedca942af9e6e481acad89, type: 3}
+  - {fileID: 2800000, guid: f4cf4f27aee6f434688e717ec15c8ad0, type: 3}
+  - {fileID: 2800000, guid: f3ee995bfd2ad3b47b715afe127e2e06, type: 3}
+  - {fileID: 2800000, guid: 1b8aa350a100fbc44bd144e2c9ed1309, type: 3}
 --- !u!114 &4620897733806836672
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11937,8 +11956,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Player.FomeESede
   ShowTopMostFoldoutHeaderGroup: 1
-  minutosDaFome: 40
-  minutosDaSede: 25
+  minutosDaFome: 45
+  minutosDaSede: 30
   correndo: 1.6
   fomeInicial: 80
   sedeInicial: 70

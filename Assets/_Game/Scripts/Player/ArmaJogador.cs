@@ -166,6 +166,11 @@ namespace ZombieCityCleaner.Player
         static Texture2D _texturaDaLuneta;
         Interagivel _alvo;
         string _dica;
+        /// <summary>
+        /// No dono, a cada tiro (06/11/2026, a mente: o zumbi falso na linha vira fantasma, o Player/Alucinacoes): de onde e
+        /// para onde a câmera apontava.
+        /// </summary>
+        public static event System.Action<Vector3, Vector3> AtirouLocal;
         /// <summary>O E tem um alvo agora (a porta, o item, a janela): o curativo no amigo cede a vez (TratarOAmigo).</summary>
         public bool TemAlvoDoE => _alvo != null;
         // o pente de cada arma da mochila, pelo Id dela (a que nunca esteve na mão: o que o anfitrião guardou)
@@ -306,6 +311,7 @@ namespace ZombieCityCleaner.Player
 
         void Update()
         {
+            if (_recargaAcelerada && !Recarregando) VoltarVelocidadeDosBracos();   // (a recarga parou no meio)
             bool bot = MenuOnline.Bot;
             bool controla = bot || MenuOnline.Controla;
             // o pneu nas mãos: os braços somem (e voltam sacando quando ele sai)
@@ -372,6 +378,7 @@ namespace ZombieCityCleaner.Player
             if (NaMao == Item.Tocha && !bot && Inventario != null && !Inventario.TochaDaMaoApagada)
                 Inventario.Desgastar(_id, Time.deltaTime / Itens.SegundosDaTochaPorDesgaste);
             if (!controla || Montando) return;
+            if (movimento != null && movimento.Nadando) return;   // (nadando, 06/11/2026: as mãos nadam)
             // fazendo um curativo: nada de atirar, recarregar, golpear, socar nem usar o E (a troca e o largar, no inventário)
             if (tratando)
             {
@@ -420,7 +427,7 @@ namespace ZombieCityCleaner.Player
                     _proximoTiro = (Time.time - _proximoTiro > Time.deltaTime ? Time.time : _proximoTiro) + d.intervalo;
                     // a arma gasta: quebrada, não atira; muito gasta, emperra às vezes (o clique sem tiro)
                     int desgaste = bot ? 0 : Inventario.DesgasteDe(_id);
-                    if (desgaste >= 100 || (Municao > 0 && desgaste >= Itens.DesgasteQueEmperra
+                    if (desgaste >= 100 || (Municao > 0 && desgaste >= Itens.DesgasteQueEmperra && !Habilidades.Tem(rede, Habilidade.Remendao)
                                             && Random.value < (desgaste - Itens.DesgasteQueEmperra) / (100f - Itens.DesgasteQueEmperra) * 0.3f))
                     {
                         Acao(DryFireId);
@@ -445,6 +452,11 @@ namespace ZombieCityCleaner.Player
             else if (PartesDoCorpo.EhTratamento(NaMao) && !Usando && !bot && Time.time >= _proximoTiro && _atirar.WasPressedThisFrame())
             {
                 if (Tratamento.Local != null) Tratamento.Local.Comecar(_id, PartesDoCorpo.Sortear);
+            }
+            // a vara de pesca (06/11/2026): o clique lança, fisga e puxa (PescaJogador)
+            else if (NaMao == Item.VaraDePesca && !bot)
+            {
+                if (_atirar.WasPressedThisFrame() && PescaJogador.Local != null) PescaJogador.Local.Clicar();
             }
             else if (Itens.EhConsumivel(NaMao) && !Usando && !bot && Time.time >= _proximoTiro && _atirar.WasPressedThisFrame())
                 StartCoroutine(Usar());
@@ -525,7 +537,7 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.55f, false);
             rede.AnunciarSoco();
             yield return new WaitForSeconds(b.impacto);
-            Golpear(b.alcance, b.raio, b.dano, true, b.porRegiao, b.corte);
+            Golpear(b.alcance, b.raio, b.dano * (Habilidades.Tem(rede, Habilidade.BracoForte) ? 1.15f : 1f), true, b.porRegiao, b.corte);
         }
 
         // o golpe: na cabeça (todas as armas, o soco também), o dano vale 3 vezes no zumbi, e o golpe que mata só explode a
@@ -575,6 +587,8 @@ namespace ZombieCityCleaner.Player
                         if (faca) Sangue.Respingo(ponto, cam.forward);
                     }
                     _marcaAte = Time.time + 0.18f;
+                    // Pelas costas (06/11/2026, o Assassino): a arma branca nas costas de um Oco que não caça você mata
+                    if (faca && !pedra && PelasCostas(hitbox.zumbi)) dano = 1000f;
                     bool naCabeca = hitbox.regiao == RegiaoDoCorpo.Cabeca;
                     _marcaNaCabeca = naCabeca;
                     if (naCabeca) rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Cabeca, Membro.Nenhum, dano, ponto, false, corte);
@@ -605,6 +619,7 @@ namespace ZombieCityCleaner.Player
                 if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
                 rede.AnunciarPancada(ponto, false);
                 if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
+                if (NaMao == Item.Machado) GolpeNaArvore(hit.collider, ponto);   // (o machado corta a árvore, 06/11/2026)
                 return;
             }
         }
@@ -651,9 +666,11 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
-            movimento.Coice(d.coiceGraus * (Corpo.AlgumBracoRuim ? 1.35f : 1f));   // (o braço quebrado segura mal o coice)
+            movimento.Coice(d.coiceGraus * (Corpo.AlgumBracoRuim ? 1.35f : 1f)   // (o braço quebrado segura mal o coice)
+                            * (Habilidades.Tem(rede, Habilidade.MaoFirme) ? 0.75f : 1f));   // (a Mão firme, 06/11/2026)
 
             var cam = rede.Olho;
+            AtirouLocal?.Invoke(cam.position, cam.forward);
             _marcaNaCabeca = false;
             // correndo (só acima de 3 m/s: a perna quebrada que "corre" mancando não conta), e o braço machucado ou quebrado
             // (05/11/2026: a mira treme)
@@ -714,7 +731,7 @@ namespace ZombieCityCleaner.Player
                 float perto = _jogadores[i].distancia;
                 for (int k = i; k < _jogadores.Count; k++) if (_jogadores[k].alvo == alvo) perto = Mathf.Min(perto, _jogadores[k].distancia);
                 // o tiro pega na parte do ponto (05/11/2026: sempre abre uma ferida)
-                rede.AcertarJogador(alvo, Armas.Dano(d, perto), _jogadores[i].ponto, TipoDeGolpe.Tiro, PartesDoCorpo.PeloPonto(alvo.transform, _jogadores[i].ponto));
+                rede.AcertarJogador(alvo, Armas.Dano(d, perto) * DanoDeFogo, _jogadores[i].ponto, TipoDeGolpe.Tiro, PartesDoCorpo.PeloPonto(alvo.transform, _jogadores[i].ponto));
             }
         }
 
@@ -749,7 +766,7 @@ namespace ZombieCityCleaner.Player
                     if (Peso(_gente[k].parte.regiao) > Peso(_gente[melhor].parte.regiao)) melhor = k;
                 }
                 // o dano da distância (na espingarda, o do tiro inteiro, como nos zumbis)
-                rede.AcertarSobrevivente(s, _gente[melhor].parte.regiao, Armas.Dano(d, perto), _gente[melhor].ponto, true);
+                rede.AcertarSobrevivente(s, _gente[melhor].parte.regiao, Armas.Dano(d, perto) * DanoDeFogo, _gente[melhor].ponto, true);
             }
         }
 
@@ -822,10 +839,50 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        // Pelas costas (06/11/2026): o Oco de costas para quem golpeia (a frente dele a mais de ~110° de quem bate), sem
+        // estar perseguindo nem atacando
+        bool PelasCostas(Zumbi z)
+        {
+            if (z == null || z.tipo != TipoDeZumbi.Oco || !Habilidades.Tem(rede, Habilidade.PelasCostas)) return false;
+            if (z.Atual == Zumbi.Estado.Perseguindo || z.Atual == Zumbi.Estado.Atacando) return false;
+            Vector3 deMim = transform.position - z.transform.position;
+            deMim.y = 0f;
+            Vector3 frente = z.transform.forward;
+            frente.y = 0f;
+            return deMim.sqrMagnitude > 0.01f && Vector3.Dot(frente.normalized, deMim.normalized) < -0.35f;
+        }
+
+        // o machado na árvore (06/11/2026, a pedido: "o machado cortar árvore"): 5 golpes na mesma árvore e o anfitrião
+        // corta (MundoDaPartida.Arvores.cs)
+        public const int GolpesNaArvore = 5;
+        readonly System.Collections.Generic.Dictionary<long, int> _golpesNaArvore = new System.Collections.Generic.Dictionary<long, int>();
+
+        void GolpeNaArvore(Collider c, Vector3 ponto)
+        {
+            var floresta = World.FlorestaDoMundo.Instancia;
+            var mundo = World.MundoDaPartida.Instancia;
+            if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out long chave, out _)) return;
+            _golpesNaArvore.TryGetValue(chave, out int n);
+            n++;
+            if (n >= GolpesNaArvore)
+            {
+                _golpesNaArvore.Remove(chave);
+                mundo.PedirCorte(chave);
+                InventarioJogador.AvisoLocal("A árvore caiu: as toras ficaram no pé dela");
+                return;
+            }
+            _golpesNaArvore[chave] = n;
+            if (_golpesNaArvore.Count > 32) _golpesNaArvore.Clear();
+            InventarioJogador.AvisoLocal($"Cortando a árvore ({n} de {GolpesNaArvore})");
+        }
+
+        // o Tiro forte (06/11/2026, a árvore de habilidades): +10% no dano da arma de fogo (o dono conta o dano)
+        float DanoDeFogo => Habilidades.Tem(rede, Habilidade.TiroForte) ? 1.1f : 1f;
+
         void Mandar(in NaCarne c, DadosDaArma d)
         {
             // o dano da distância; a parte do corpo (a cabeça 3 vezes, o membro metade) multiplica no zumbi
-            float dano = Armas.Dano(d, c.distancia);
+            float dano = Armas.Dano(d, c.distancia) * DanoDeFogo;
             bool arremesso = d.arremessoAte > 0f && c.distancia <= d.arremessoAte;
             rede.AcertarZumbi(c.hitbox.zumbi, c.hitbox.regiao, c.hitbox.membro, dano, c.ponto, arremesso);
         }
@@ -974,6 +1031,14 @@ namespace ZombieCityCleaner.Player
         {
             Recarregando = true;
             var d = Dados;
+            // a Recarga rápida (06/11/2026): as esperas e a animação dos braços 15% mais rápidas (a velocidade volta no fim,
+            // ou no Update, se a recarga parar no meio)
+            float rapido = Habilidades.Tem(rede, Habilidade.RecargaRapida) ? 0.85f : 1f;
+            if (rapido < 1f && Animador != null)
+            {
+                Animador.speed = 1f / rapido;
+                _recargaAcelerada = true;
+            }
             if (d.cartuchoACartucho)
             {
                 // um cartucho por vez (cada um sai de uma caixa); o cartucho entra perto do fim da animação (quadro 9 a 10
@@ -981,22 +1046,22 @@ namespace ZombieCityCleaner.Player
                 while (Municao < d.capacidade && Reserva > 0)
                 {
                     Acao(ReloadId);
-                    yield return new WaitForSeconds(d.tempoRecarga * 0.72f);
+                    yield return new WaitForSeconds(d.tempoRecarga * 0.72f * rapido);
                     if (Reserva <= 0) break;
                     Efeitos.Som(Efeitos.Cartucho, Boca.position, 0.7f, false);
                     Municao++;
                     GastarDaReserva(1);
-                    yield return new WaitForSeconds(d.tempoRecarga * 0.28f);
+                    yield return new WaitForSeconds(d.tempoRecarga * 0.28f * rapido);
                 }
             }
             else
             {
                 Acao(ReloadId);
-                yield return new WaitForSeconds(d.carregadorSai);
+                yield return new WaitForSeconds(d.carregadorSai * rapido);
                 Efeitos.Som(Efeitos.Carregador, Boca.position, 0.6f, false);
-                yield return new WaitForSeconds(d.carregadorEntra - d.carregadorSai);
+                yield return new WaitForSeconds((d.carregadorEntra - d.carregadorSai) * rapido);
                 Efeitos.Som(Efeitos.Carregador, Boca.position, 0.8f, false);
-                yield return new WaitForSeconds(d.tempoRecarga - d.carregadorEntra);
+                yield return new WaitForSeconds((d.tempoRecarga - d.carregadorEntra) * rapido);
                 // o pente é completado com o que houver nas caixas (o que sobrou nele continua)
                 int balas = Mathf.Min(d.capacidade - Municao, Reserva);
                 Municao += balas;
@@ -1004,6 +1069,16 @@ namespace ZombieCityCleaner.Player
             }
             Recarregando = false;
             _recarga = null;
+            VoltarVelocidadeDosBracos();
+        }
+
+        bool _recargaAcelerada;
+
+        void VoltarVelocidadeDosBracos()
+        {
+            if (!_recargaAcelerada) return;
+            _recargaAcelerada = false;
+            if (Animador != null) Animador.speed = 1f;
         }
 
         void PararRecarga()

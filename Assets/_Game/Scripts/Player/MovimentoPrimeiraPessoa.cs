@@ -37,6 +37,18 @@ namespace ZombieCityCleaner.Player
 
         public bool Correndo { get; private set; }
 
+        /// <summary>
+        /// Nadando (06/11/2026, a pedido: "conseguir nadar"): com a água acima do peito, ele boia com a cabeça de fora; o
+        /// Espaço sobe, o C (ou o Ctrl) mergulha; mais devagar, sem correr nem pular. O fôlego é do anfitrião
+        /// (VidaJogador.Agua.cs).
+        /// </summary>
+        public bool Nadando { get; private set; }
+        [Header("Nadar")]
+        public float velocidadeNadando = 1.9f;
+        public float velocidadeMergulho = 1.6f;
+        [Tooltip("Boiando, os pés ficam esta altura abaixo da água (os olhos um pouco acima dela).")]
+        public float alturaBoiando = 1.42f;
+
         [Header("Abaixar (C)")]
         [Tooltip("Andando abaixado (m/s): a do Andar_Agachado do corpo.")]
         public float velocidadeAgachado = 1.2f;
@@ -231,6 +243,12 @@ namespace ZombieCityCleaner.Player
         /// <summary>Coice do tiro: a mira sobe um pouco e volta sozinha.</summary>
         public void Coice(float graus) => _coice += graus;
 
+        // o tremor da câmera (05/11/2026: o golpe no chão do Brutamonte), de 0 a 1, sumindo sozinho em uns 0,7 s
+        float _tremor;
+
+        /// <summary>Sacode a câmera (0 a 1): o chão tremendo perto do jogador. Só nesta máquina, nada pela rede.</summary>
+        public void Tremer(float forca) => _tremor = Mathf.Max(_tremor, Mathf.Clamp01(forca));
+
         // robô: o zumbi vivo mais perto (até 18 m), procurado duas vezes por segundo
         Transform _alvoDoRobo;
         float _proximaBusca;
@@ -297,6 +315,15 @@ namespace ZombieCityCleaner.Player
             float pitchFinal = Mathf.Clamp(_pitch - _coice, -pitchMaximo, pitchMaximo);
             cabeca.localRotation = Quaternion.Euler(pitchFinal, 0f, 0f);
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
+            if (_tremor > 0.001f)
+            {
+                // o chão tremendo: só na câmera (a mira e o Pitch da rede ficam onde estavam)
+                float a = _tremor * _tremor, t = Time.time * 23f;
+                cabeca.localRotation *= Quaternion.Euler((Mathf.PerlinNoise(t, 1.3f) - 0.5f) * 5.2f * a,
+                                                         (Mathf.PerlinNoise(t, 7.9f) - 0.5f) * 3.0f * a,
+                                                         (Mathf.PerlinNoise(t, 13.1f) - 0.5f) * 5.8f * a);
+                _tremor = Mathf.Max(0f, _tremor - dt * 1.5f);
+            }
 
             if (mover.sqrMagnitude > 1f) mover.Normalize();
             // esperando o chão de onde o save o pôs: parado, sem cair (o olhar continua)
@@ -352,9 +379,11 @@ namespace ZombieCityCleaner.Player
             CameraDoAbaixar(dt);
             // de frente para uma janela livre, o pulo é por ela (o PuloDaJanela leva o jogador daqui em diante)
             if (pular && _controle.isGrounded && _janela != null && _janela.Tentar()) return;
+            // a água funda (06/11/2026): ele nada
+            if (Nadar(mover, pesado, controla, dt)) return;
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value && !Agachado;
             float alvo = Agachado ? velocidadeAgachado : rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
-            if (pesado) alvo *= InventarioJogador.LentidaoDoPneu;
+            if (pesado) alvo *= Habilidades.Tem(rede, Habilidade.Borracheiro) ? 0.8f : InventarioJogador.LentidaoDoPneu;   // (o Borracheiro)
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
             Vector3 horizontal = new Vector3(_velocidade.x, 0f, _velocidade.z);
             horizontal = Vector3.Lerp(horizontal, desejada, 1f - Mathf.Exp(-(_controle.isGrounded ? aceleracao : aceleracao * 0.2f) * dt));
@@ -376,6 +405,35 @@ namespace ZombieCityCleaner.Player
             }
         }
     
+        // nadando: boia com os olhos um pouco acima da água, anda devagar para onde olha (no plano), o Espaço sobe e o C
+        // mergulha. Entra com a água acima do peito (1,25 m nos pés) e sai abaixo de 1,05 m. Devolve se nadou.
+        bool Nadar(Vector2 mover, bool pesado, bool controla, float dt)
+        {
+            bool agua = Agua.Nivel(transform.position, out float nivel);
+            float fundo = agua ? nivel - transform.position.y : 0f;
+            Nadando = agua && fundo > (Nadando ? 1.05f : 1.25f);
+            if (!Nadando) return false;
+            if (Agachado) Levantar(true);
+            Correndo = false;
+            float sobe = 0f;
+            var teclado = Keyboard.current;
+            if (controla && teclado != null)
+            {
+                if (teclado.spaceKey.isPressed) sobe += 1f;
+                if (teclado.leftCtrlKey.isPressed || teclado.cKey.isPressed) sobe -= 1f;
+            }
+            float vel = velocidadeNadando * (pesado ? 0.5f : 1f);
+            Vector3 quer = (transform.right * mover.x + transform.forward * mover.y) * vel;
+            Vector3 horizontal = Vector3.Lerp(new Vector3(_velocidade.x, 0f, _velocidade.z), quer, 1f - Mathf.Exp(-3f * dt));
+            float alvoY = nivel - alturaBoiando;
+            float vy = sobe < 0f ? -velocidadeMergulho
+                     : sobe > 0f && transform.position.y < alvoY ? velocidadeMergulho * 1.2f
+                     : Mathf.Clamp((alvoY - transform.position.y) * 2.5f, -1.2f, 1.2f);
+            _velocidade = new Vector3(horizontal.x, Mathf.Lerp(_velocidade.y, vy, 1f - Mathf.Exp(-4f * dt)), horizontal.z);
+            _controle.Move((_velocidade + Vento) * dt);
+            return true;
+        }
+
         static GUIStyle _estiloDoPreso;
 
         void OnGUI()

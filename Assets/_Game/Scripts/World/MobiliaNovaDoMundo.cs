@@ -35,6 +35,19 @@ namespace ZombieCityCleaner.World
         [Min(1)] public int malhasPorQuadro = 2;
 
         public static MobiliaNovaDoMundo Instancia { get; private set; }
+
+        /// <summary>
+        /// Os itens do saque postos agora nos móveis de perto (desta máquina; o Faro, 06/11/2026, os marca). Os já pegos
+        /// ficam escondidos (confira o activeInHierarchy).
+        /// </summary>
+        public static IEnumerable<SaqueNaMira> SaqueAVista
+        {
+            get
+            {
+                if (Instancia == null) yield break;
+                foreach (var s in Instancia._saqueVivo.Values) if (s != null) yield return s;
+            }
+        }
         /// <summary>O material dos móveis novos (o dos prefabs).</summary>
         public Material Material { get; private set; }
         /// <summary>Quantos de perto estão na cena (o F1 mostra).</summary>
@@ -223,6 +236,10 @@ namespace ZombieCityCleaner.World
             if (modelo == "CamaCasal" || modelo == "CamaSolteiro" || modelo == "Beliche")
                 foreach (var c in go.GetComponentsInChildren<Collider>(true))
                     if (c.GetComponent<Interagivel>() == null) c.gameObject.AddComponent<Salvar.CamaDeDormir>();
+            // as bancadas (06/11/2026): a do bunker novo e as das casas eram só o desenho (o Bancada só estava na cena antiga)
+            if (modelo == "Bancada")
+                foreach (var c in go.GetComponentsInChildren<Collider>(true))
+                    if (c.GetComponent<Interagivel>() == null) c.gameObject.AddComponent<Loot.Bancada>();
             var v = VariacaoDe(modelo, variacao);
             if (v == null) return go;
             var filtros = go.GetComponentsInChildren<MeshFilter>(true);

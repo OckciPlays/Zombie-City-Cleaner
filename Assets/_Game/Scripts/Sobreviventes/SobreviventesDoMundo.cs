@@ -468,6 +468,26 @@ namespace ZombieCityCleaner.Sobreviventes
         /// No anfitrião: a mochila de quem morreu fica no chão, ao lado do corpo: a arma (com o pente), o que ele levava, os
         /// 'extras' (a mercadoria do comerciante) e o dinheiro.
         /// </summary>
+        // o Abutre (06/11/2026, o Sortudo): de 2 a 3 coisas a mais na mochila de quem ele matou (comida, bebida, remédio e,
+        // com a arma de fogo, uma caixa com umas balas dela)
+        static readonly Item[] CoisasDoAbutre =
+        {
+            Item.Comida, Item.Feijao, Item.BarraDeEnergia, Item.Agua, Item.Suco, Item.Atadura, Item.Comprimidos, Item.Pilhas,
+            Item.MacoDeCigarros,
+        };
+
+        static void DoAbutre(Sobrevivente s, List<ItemNaMochila> itens)
+        {
+            int n = Random.Range(2, 4);
+            for (int i = 0; i < n; i++)
+            {
+                var it = CoisasDoAbutre[Random.Range(0, CoisasDoAbutre.Length)];
+                itens.Add(new ItemNaMochila { item = it, qtd = (ushort)Mathf.Max(1, Itens.QuantidadePadrao(it)) });
+            }
+            if (!s.ComBranca && Itens.EhArma(s.ItemDaArma))
+                itens.Add(new ItemNaMochila { item = Itens.CaixaDe(Itens.CalibreDaArma(s.ItemDaArma)), qtd = (ushort)Random.Range(6, 15) });
+        }
+
         internal static void LargarAMochila(Sobrevivente s, List<ItemNaMochila> extras)
         {
             var itens = new List<ItemNaMochila>(s.mochila);
@@ -476,6 +496,7 @@ namespace ZombieCityCleaner.Sobreviventes
             itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)(s.ComBranca ? 1 : Mathf.Max(0, s.pente)),
                                                 desgaste = (byte)(militar ? Random.Range(50, 86) : Random.Range(15, 60)) });
             if (extras != null) itens.AddRange(extras);
+            if (Habilidades.Tem(s.matador, Player.Habilidade.Abutre)) DoAbutre(s, itens);   // (o Abutre, 06/11/2026)
             var lugar = s.transform.position + s.transform.right * 0.6f;
             MochilasNoChao.Instancia?.Criar(lugar, s.transform.eulerAngles.y, s.nome, s.mochilaVestida, itens, s.dinheiro);
         }

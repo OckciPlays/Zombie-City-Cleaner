@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.World
     ///  - O vento: a direção vira devagar e as rajadas vêm e vão (o global _ZccVento do shader da vegetação).
     /// Fica no objeto "Mundo" da cena Mundo; as malhas e o material vêm da montagem da cena.
     /// </summary>
-    public class FlorestaDoMundo : MonoBehaviour
+    public partial class FlorestaDoMundo : MonoBehaviour
     {
         [Tooltip("O material da vegetação (shader ZombieCityCleaner/Vegetacao, com instâncias).")]
         public Material material;
@@ -428,6 +428,7 @@ namespace ZombieCityCleaner.World
                     else
                     {
                         b.Plantas = b.Montando.Result;
+                        AplicarCortadas(b);   // (as árvores cortadas viram toco: FlorestaDoMundo.Corte.cs)
                         _prontos.Add(b);
                     }
                     b.Montando = null;

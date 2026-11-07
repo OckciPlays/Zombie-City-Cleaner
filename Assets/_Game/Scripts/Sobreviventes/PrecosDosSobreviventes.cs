@@ -49,16 +49,22 @@ namespace ZombieCityCleaner.Sobreviventes
         static readonly Item[][] _itens =
         {
             new[] { Item.Comida, Item.Feijao, Item.Milho, Item.Sopa, Item.Carne, Item.Salgadinho, Item.Chocolate, Item.BarraDeEnergia,
-                    Item.Agua, Item.CopoDeAgua, Item.Leite, Item.Suco, Item.RefrigeranteLata, Item.RefrigeranteGarrafa, Item.Energetico, Item.GarrafaTermica },
+                    Item.Agua, Item.CopoDeAgua, Item.Leite, Item.Suco, Item.RefrigeranteLata, Item.RefrigeranteGarrafa, Item.Energetico, Item.GarrafaTermica,
+                    // (06/11/2026) no fim: os peixes da pesca
+                    Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado },
             new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca },
             new[] { Item.Municao9mm, Item.Municao12, Item.Municao556, Item.Municao762 },
             new[] { Item.Remedio, Item.Comprimidos, Item.Antibiotico, Item.KitMedico, Item.Atadura, Item.Bandagem, Item.Gaze, Item.Desinfetante,
                     Item.SprayAntisseptico, Item.Lanterna, Item.Pilhas, Item.Tocha, Item.Fogueira, Item.Cama, Item.Barricada,
                     // (05/11/2026) no fim: o save guarda o estoque pelo índice do produto (a tala; a bandagem antisséptica,
                     // da etapa 2)
-                    Item.Tala, Item.BandagemAntisseptica },
+                    Item.Tala, Item.BandagemAntisseptica,
+                    // (06/11/2026) o calmante, da mente
+                    Item.Calmante },
             new[] { Item.Pneu, Item.Bateria, Item.Vela, Item.Radiador, Item.Macaco, Item.Galao, Item.KitDeReparo, Item.Ferramenta },
-            new[] { Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos, Item.Isca, Item.VaraDePesca },
+            new[] { Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos, Item.Isca, Item.VaraDePesca,
+                    // (06/11/2026) no fim: a pólvora do Armeiro
+                    Item.Polvora },
             new[] { Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande, Item.Coldre, Item.Roupa, Item.Pano },
         };
 
@@ -84,6 +90,8 @@ namespace ZombieCityCleaner.Sobreviventes
             [Item.Madeira] = 4, [Item.Toras] = 6, [Item.Pano] = 3, [Item.PecasDeMetal] = 6, [Item.Fios] = 4, [Item.Roupa] = 5,
             [Item.Bastao] = 15, [Item.Lanca] = 25, [Item.Tocha] = 10, [Item.CopoDeAgua] = 1, [Item.Fogueira] = 12, [Item.Cama] = 30,
             [Item.Barricada] = 25,
+            // (06/11/2026) os peixes e a pólvora
+            [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14,
         };
 
         static Dictionary<Item, int> _base;

@@ -443,7 +443,10 @@ namespace ZombieCityCleaner.Vehicles
         // (PecasDosCarrosDoMundo.Alarme.cs)
         void Susto(int carro, ulong cliente, string oQue)
         {
-            Disparar(carro, oQue);
+            // o Alarme mudo (06/11/2026, o Ladrão): mexendo no carro, o alarme quase nunca dispara (o tiro ainda dispara)
+            bool mudo = Jogador(cliente, out var quem) && Player.Habilidades.Tem(quem.GetComponent<Player.JogadorRede>(), Player.Habilidade.AlarmeMudo)
+                        && UnityEngine.Random.value < 0.85f;
+            if (!mudo) Disparar(carro, oQue);
             var zumbis = Zombies.ZombieManager.Instancia;
             if (zumbis != null && Jogador(cliente, out var j)) zumbis.MexeramNoCarro(carro, j.GetComponent<Player.JogadorRede>());
         }

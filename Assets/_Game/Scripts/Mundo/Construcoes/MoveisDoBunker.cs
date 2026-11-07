@@ -91,7 +91,8 @@ namespace ZombieCityCleaner.Mundo
             // a garagem, a oficina e o combustível
             Solto(0, "Macaco", 25.6f, 19.6f),
             Solto(0, "Pneus", 26.6f, 22.4f, 20),
-            Enc(0, "Bancada", -90, 31.8f, 11.0f),
+            // a mesa de oficina (06/11/2026, a árvore de habilidades: as receitas maiores), no lugar da bancada da garagem
+            Enc(0, "MesaDeOficina", -90, 31.8f, 11.0f),
             Enc(0, "EstanteAco90", -90, 31.8f, 8.0f),
             Enc(0, "EstanteAco120", -90, 31.8f, 14.5f), Enc(0, "EstanteAco120", -90, 31.8f, 16.2f),
             Solto(0, "Pneus", 30.0f, 20.6f, 35),

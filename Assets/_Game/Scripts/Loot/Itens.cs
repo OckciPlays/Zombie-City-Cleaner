@@ -20,12 +20,16 @@ namespace ZombieCityCleaner.Loot
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
         Municao9mm = 48, Municao556, Municao12, Municao762,
         Vela = 64, Bateria, Radiador, Pneu, Macaco, ChaveDaPerua, ChaveDoCupe,
+        // as chaves das motos (06/11/2026, a pedido: cada moto com a sua chave)
+        ChaveDaFatBoy = 71, ChaveDaCross = 72,
         // os remédios
         Remedio = 80, Comprimidos, KitMedico, Atadura, Gaze, Desinfetante, SprayAntisseptico, Antibiotico, Bandagem,
         // a tala (05/11/2026, o sistema de vida por membro: imobiliza o braço ou a perna quebrados)
         Tala = 89,
         // a bandagem antisséptica (05/11/2026, a etapa 2: 1 álcool + 3 bandagens = 3; protege a ferida da infecção)
         BandagemAntisseptica = 90,
+        // o calmante (06/11/2026, a mente, a etapa 3: acalma por hora; dois seguidos dão sono, três fazem apagar)
+        Calmante = 91,
         // os materiais (a matéria-prima da fabricação)
         Madeira = 96, Toras, Pano, Corda, FitaAdesiva, Ferramenta, PecasDeMetal, Fios, Pregos, Isca, VaraDePesca, KitDeReparo, Roupa,
         // arrombar as portas e as janelas trancadas (02/11/2026, o Plano_Portas.md da pasta de arte)
@@ -38,6 +42,8 @@ namespace ZombieCityCleaner.Loot
         Galao = 118,
         // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço é a pilha dos cigarros
         MacoDeCigarros = 119,
+        // a pesca (06/11/2026, a árvore de habilidades): os peixes do lago; e a pólvora, a munição do Armeiro
+        PeixePequeno = 120, PeixeMedio, PeixeGrande, PeixeDourado, Polvora,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
         // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
@@ -193,6 +199,13 @@ namespace ZombieCityCleaner.Loot
         static DadosDoLoot Remedio(Item i, string modelo, string nome, string artigo, string plural, string resumo, int pilha, float vida) =>
             new DadosDoLoot { item = i, modelo = modelo, nome = nome, nomeComArtigo = artigo, plural = plural, resumo = resumo, tipo = TipoDeLoot.Remedio, pilha = pilha,
                               verbo = "usar", vida = vida, tempoDeUso = UsoDaLata, mao = MaoDaLata };
+        // o item que vai na mão no lugar da lata (a vara de pesca, 06/11/2026)
+        static DadosDoLoot NaMao(DadosDoLoot d)
+        {
+            d.mao = MaoDaLata;
+            return d;
+        }
+
         static DadosDoLoot Material(Item i, string modelo, string nome, string artigo, string plural, string resumo, int pilha, TipoDeLoot tipo = TipoDeLoot.Material) =>
             new DadosDoLoot { item = i, modelo = modelo, nome = nome, nomeComArtigo = artigo, plural = plural, resumo = resumo, tipo = tipo, pilha = pilha };
 
@@ -250,8 +263,10 @@ namespace ZombieCityCleaner.Loot
             Material(Item.PecasDeMetal, "PecasDeMetal", "peças de metal", "as peças de metal", "peças de metal", "Parafusos, molas e chapas.", 10),
             Material(Item.Fios, "Fios", "fios", "os fios", "fios", "Fio de cobre e linha.", 10),
             Material(Item.Pregos, "Pregos", "pregos", "os pregos", "pregos", "Um punhado de pregos.", 50),
-            Material(Item.Isca, "Isca", "isca", "a isca", "iscas", "Para pescar (a pesca ainda não existe).", 20),
-            Material(Item.VaraDePesca, "VaraDePesca", "vara de pesca", "a vara de pesca", "varas de pesca", "Com linha e anzol (a pesca ainda não existe).", 1),
+            Material(Item.Isca, "Isca", "isca", "a isca", "iscas", "Para pescar: cada peixe (e cada um que escapa) gasta uma.", 20),
+            // a vara vai na mão (06/11/2026, a pesca): no lugar da lata, com a malha dela
+            NaMao(Material(Item.VaraDePesca, "VaraDePesca", "vara de pesca", "a vara de pesca", "varas de pesca",
+                           "Na mão, com isca na mochila: clique mirando a água funda para lançar; quando a boia afundar, clique, e puxe na faixa verde.", 1)),
             Material(Item.KitDeReparo, "KitDeReparo", "kit de reparo", "o kit de reparo", "kits de reparo", "Conserta uma arma ou remenda um pneu furado.", 3),
             Material(Item.Roupa, "Roupa", "roupa", "a roupa", "roupas", "Roupa velha. Desmontada, vira pano.", 5),
             // os kits de montar (a fogueira, a cama e a barricada)
@@ -275,6 +290,17 @@ namespace ZombieCityCleaner.Loot
             // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o número da pilha é quantos cigarros sobram (até 20)
             Material(Item.MacoDeCigarros, "MacoDeCigarros", "maço de cigarros", "o maço de cigarros", "maços de cigarros",
                      "Blackwater. Na mão, clique: acende um. De noite, a brasa chama os zumbis de mais longe.", 20),
+            // o calmante (06/11/2026, a mente, a etapa 3): no fim da lista, para os índices dos outros modelos não mudarem (o
+            // modelo "Calmante" sai do Blender/loot.py)
+            Remedio(Item.Calmante, "Calmante", "calmante", "o calmante", "calmantes",
+                    "Acalma a mente aos poucos, por umas 5 h, e passa a crise de pânico. Dois seguidos dão sono; três, você apaga.", 6, 0f),
+            // a pesca (06/11/2026, a árvore de habilidades): os peixes (comem-se assim mesmo) e a pólvora, no fim da lista
+            // (os modelos saem do Blender/loot.py)
+            Comer(Item.PeixePequeno, "PeixePequeno", "lambari", "o lambari", "lambaris", "Um peixinho do lago. Mata um pouco a fome.", 4, 15f, 2f),
+            Comer(Item.PeixeMedio, "PeixeMedio", "tilápia", "a tilápia", "tilápias", "Um peixe do lago. Mata bem a fome.", 3, 30f, 3f),
+            Comer(Item.PeixeGrande, "PeixeGrande", "tucunaré", "o tucunaré", "tucunarés", "Um peixe grande do lago: a fome de quase um dia.", 2, 50f, 5f),
+            Comer(Item.PeixeDourado, "PeixeDourado", "dourado", "o dourado", "dourados", "Raro, do fundo do lago. Os comerciantes pagam bem.", 1, 45f, 5f),
+            Material(Item.Polvora, "Polvora", "pólvora", "a pólvora", "latas de pólvora", "Na mesa de oficina, com o Armeiro: vira munição.", 5),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -388,6 +414,10 @@ namespace ZombieCityCleaner.Loot
             new DadosDaPeca { modelo = "ChaveDaPerua", nome = "chave da perua", nomeComArtigo = "a chave da perua", resumo = "Liga a perua direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
             // a chave do cupê (04/11/2026, a pedido): a mesma chave, com o chaveiro vermelho; cada carro pega só com a dele
             new DadosDaPeca { modelo = "ChaveDoCupe", nome = "chave do cupê", nomeComArtigo = "a chave do cupê", resumo = "Liga o cupê direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
+            // as chaves das motos (06/11/2026, a pedido): a mesma chave, com o chaveiro de couro preto (a Fat Boy) e o
+            // laranja (a cross)
+            new DadosDaPeca { modelo = "ChaveDaFatBoy", nome = "chave da Fat Boy", nomeComArtigo = "a chave da Fat Boy", resumo = "Liga a Fat Boy direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
+            new DadosDaPeca { modelo = "ChaveDaCross", nome = "chave da moto cross", nomeComArtigo = "a chave da moto cross", resumo = "Liga a moto cross direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
         };
         public static int QuantasPecas => _pecas.Length;
 
@@ -417,12 +447,12 @@ namespace ZombieCityCleaner.Loot
         public static int IndiceDoTaco(Item i) => EhTaco(i) ? i - Item.TacoMadeira : -1;
         public static Item DaSinuca(int k) => (Item)((int)Item.CaixaDeBolas + k);
         public static string ModeloDaSinuca(int k) => _sinuca[k].modelo;
-        /// <summary>Uma peça do carro (as 3 do motor, o pneu, o macaco e as chaves da perua e do cupê), feita pelo pecas.py.</summary>
-        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.ChaveDoCupe;
+        /// <summary>Uma peça do carro (as 3 do motor, o pneu, o macaco e as chaves da perua, do cupê e das motos), feita pelo pecas.py.</summary>
+        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.ChaveDaCross;
         /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco e as chaves.</summary>
         public static bool ComEstado(Item i) => EhPeca(i) && i != Item.Macaco && !EhChave(i);
-        /// <summary>Uma chave de veículo (a da perua e a do cupê; cada veículo novo terá a sua, no Carro.chaveDoVeiculo).</summary>
-        public static bool EhChave(Item i) => i == Item.ChaveDaPerua || i == Item.ChaveDoCupe;
+        /// <summary>Uma chave de veículo (a da perua, a do cupê e as das motos; cada veículo novo terá a sua, no Carro.chaveDoVeiculo).</summary>
+        public static bool EhChave(Item i) => i == Item.ChaveDaPerua || i == Item.ChaveDoCupe || i == Item.ChaveDaFatBoy || i == Item.ChaveDaCross;
         /// <summary>Uma peça do capô (a vela, a bateria e o radiador; o pneu, não).</summary>
         public static bool EhPecaDoMotor(Item i) => i >= Item.Vela && i <= Item.Radiador;
         /// <summary>O índice da peça (0 a 2 as do motor, a ordem de <see cref="Vehicles.PecasDoMotor"/>; 3 o pneu), ou -1.</summary>
@@ -593,6 +623,7 @@ namespace ZombieCityCleaner.Loot
             if (EhPeca(i)) return _pecas[IndiceDaPeca(i)].tamanho;
             if (i == Item.Galao) return new UnityEngine.Vector2Int(2, 2);   // o galão: maior que o resto do saque
             if (i == Item.PeDeCabra) return new UnityEngine.Vector2Int(2, 1);   // o pé de cabra: comprido
+            if (i == Item.PeixeGrande || i == Item.PeixeDourado) return new UnityEngine.Vector2Int(2, 1);   // os peixes grandes
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

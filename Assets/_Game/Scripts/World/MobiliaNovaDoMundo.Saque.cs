@@ -160,6 +160,34 @@ namespace ZombieCityCleaner.World
         /// de todos os jogadores estão carregadas nele), confere se ainda está lá e a distância, e põe na mochila; sem lugar,
         /// ele fica onde está (a dica avisa). A pilha que só cabe em parte: o resto cai aos pés dele.
         /// </summary>
+        // o Sortudo (06/11/2026): pegando um item das casas, às vezes ele acha mais um (o Olho bom, um normal em 10%; o
+        // Garimpeiro, um incomum em 8%; o Pé de coelho, um raro em 4%), do catálogo do saque (sem as armas e as roupas)
+        static void Sorte(InventarioJogador inventario, Vector3 pes, float giro)
+        {
+            var j = inventario.GetComponent<JogadorRede>();
+            if (Habilidades.Tem(j, Player.Habilidade.PeDeCoelho) && Random.value < 0.04f && AchouMais(inventario, Raridade.Raro, pes, giro)) return;
+            if (Habilidades.Tem(j, Player.Habilidade.Garimpeiro) && Random.value < 0.08f && AchouMais(inventario, Raridade.Incomum, pes, giro)) return;
+            if (Habilidades.Tem(j, Player.Habilidade.OlhoBom) && Random.value < 0.10f) AchouMais(inventario, Raridade.Normal, pes, giro);
+        }
+
+        static bool AchouMais(InventarioJogador inventario, Raridade r, Vector3 pes, float giro)
+        {
+            var lista = CatalogoDoSaque.DaRaridade(r);
+            if (lista == null || lista.Count == 0) return false;
+            for (int t = 0; t < 8; t++)
+            {
+                var c = lista[Random.Range(0, lista.Count)];
+                var item = (Item)c.numero;
+                if (item == Item.Nada || Itens.EhArma(item) || Itens.EhRoupa(item)) continue;
+                int n = Itens.Quantos(item, Random.Range(c.min, c.max + 1));
+                bool cabe = Itens.EmPilha(item) ? inventario.ReceberEmPilha(item, n) < n : inventario.Receber(item, -1, 0);
+                if (!cabe) ItensNoMundo.Instancia?.Criar(item, pes, giro + 40f, Itens.EmPilha(item) ? n : 1);
+                inventario.AvisarDono($"Sorte: achou também {Itens.ComNumero(item, n)}");
+                return true;
+            }
+            return false;
+        }
+
         [Rpc(SendTo.Server)]
         void PegarRpc(ulong obra, int ponto, int peca, int lugar, RpcParams parametros = default)
         {
@@ -177,6 +205,8 @@ namespace ZombieCityCleaner.World
             if (Itens.EmPilha(item))
             {
                 int n = Itens.Quantos(item, it.qtd);
+                // o Olho bom (06/11/2026): a pilha vem com 25% a mais (pelo menos um)
+                if (Habilidades.Tem(inventario.GetComponent<JogadorRede>(), Player.Habilidade.OlhoBom)) n += Mathf.Max(1, Mathf.CeilToInt(n * 0.25f));
                 int sobra = inventario.ReceberEmPilha(item, n);
                 pegou = sobra < n;
                 if (pegou && sobra > 0) ItensNoMundo.Instancia?.Criar(item, pes, cliente.PlayerObject.transform.eulerAngles.y + 40f, sobra);
@@ -187,6 +217,8 @@ namespace ZombieCityCleaner.World
             {
                 _pegos.Add(chave);
                 _pegosAqui.Add(chave);
+                inventario.GanharXp(Mathf.Clamp((int)it.raridade + 1, 1, 4), "saque");   // (06/11/2026, a árvore de habilidades)
+                Sorte(inventario, pes, cliente.PlayerObject.transform.eulerAngles.y);
             }
         }
     }

@@ -41,6 +41,16 @@ namespace ZombieCityCleaner.Salvar
         /// faltam. Guarda o dano (não a vida): num save de antes dele, o campo vem zerado = o corpo sadio.
         /// </summary>
         public EstadoDoCorpo corpo;
+        /// <summary>
+        /// O abalo da mente (06/11/2026, a sanidade): 100 menos a mente. Guarda o abalo (não a mente): num save de antes dela,
+        /// o campo vem zerado = a mente calma.
+        /// </summary>
+        public float abaloDaMente;
+        /// <summary>O cansaço, a dependência da nicotina e se está viciado (06/11/2026, a etapa 3 da mente; 0 = descansado).</summary>
+        public float cansaco, nicotina;
+        public bool viciado;
+        /// <summary>O XP e as habilidades aprendidas (06/11/2026, a árvore de habilidades; zerado = o começo, nível 1).</summary>
+        public Player.ProgressoDoPersonagem progresso;
         public int mochila;
         public int pneu = InventarioJogador.SemPneu;
         public List<ItemSalvo> itens = new List<ItemSalvo>();

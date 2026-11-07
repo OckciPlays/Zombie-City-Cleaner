@@ -17,11 +17,24 @@ namespace ZombieCityCleaner.World
     public partial class PortasDoMundo
     {
         public const float TempoDaGazua = 4f, TempoDoPeDeCabra = 2f, ChanceDeQuebrarAGazua = 0.25f, RaioDoBarulho = 25f;
+        /// <summary>O grampo do Chaveiro (06/11/2026): abre sem ferramenta, sem barulho e sem quebrar, em 6 s.</summary>
+        public const float TempoDoGrampo = 6f;
+        /// <summary>O "grampo" do Chaveiro: não é um item (não se gasta nem se carrega), só a ferramenta da conta.</summary>
+        const Item Grampo = (Item)254;
+
+        static JogadorRede DonoDe(InventarioJogador inv) => inv != null ? inv.GetComponent<JogadorRede>() : null;
 
         static Item FerramentaDe(InventarioJogador inv) =>
-            inv == null ? Item.Nada : inv.Quantos(Item.Gazua) > 0 ? Item.Gazua : inv.Quantos(Item.PeDeCabra) > 0 ? Item.PeDeCabra : Item.Nada;
+            inv == null ? Item.Nada : inv.Quantos(Item.Gazua) > 0 ? Item.Gazua : inv.Quantos(Item.PeDeCabra) > 0 ? Item.PeDeCabra
+            : Habilidades.Tem(DonoDe(inv), Habilidade.Chaveiro) ? Grampo : Item.Nada;
 
-        static float TempoDa(Item ferramenta) => ferramenta == Item.Gazua ? TempoDaGazua : ferramenta == Item.PeDeCabra ? TempoDoPeDeCabra : 0f;
+        // (as Mãos leves, 06/11/2026: 30% mais rápido)
+        static float TempoDa(Item ferramenta, InventarioJogador inv = null)
+        {
+            float t = ferramenta == Item.Gazua ? TempoDaGazua : ferramenta == Item.PeDeCabra ? TempoDoPeDeCabra : ferramenta == Grampo ? TempoDoGrampo : 0f;
+            if (Habilidades.Tem(DonoDe(inv), Habilidade.MaosLeves)) t *= 0.7f;
+            return t;
+        }
 
         /// <summary>A dica da porta que o jogador sabe trancada (e o que ele tem para arrombar).</summary>
         internal string DicaDaTrancada(PortaDaCasa p, ArmaJogador quem) => DicaDaTrancada(FerramentaDe(quem.Inventario));
@@ -31,6 +44,7 @@ namespace ZombieCityCleaner.World
         {
             Item.Gazua => "Trancada · segure [E]: arrombar com a gazua (sem barulho)",
             Item.PeDeCabra => "Trancada · segure [E]: arrombar com o pé de cabra (faz barulho)",
+            Grampo => "Trancada · segure [E]: abrir com um grampo (o Chaveiro, sem barulho)",
             _ => "Trancada · uma gazua ou um pé de cabra arromba",
         };
 
@@ -39,11 +53,12 @@ namespace ZombieCityCleaner.World
         {
             if (p.Aberta || !Trancada(p) || !SabidaTrancada(p.chave)) return 0f;
             if (p.dados.DeFora && p.DoLadoQueAbre(quem.transform.position)) return 0f;   // por dentro, destranca sem ferramenta
-            return TempoDa(FerramentaDe(quem.Inventario));
+            return TempoDa(FerramentaDe(quem.Inventario), quem.Inventario);
         }
 
         internal static string TextoDoArrombar(Item ferramenta) =>
-            ferramenta == Item.Gazua ? "Arrombando com a gazua" : ferramenta == Item.PeDeCabra ? "Arrombando com o pé de cabra" : null;
+            ferramenta == Item.Gazua ? "Arrombando com a gazua" : ferramenta == Item.PeDeCabra ? "Arrombando com o pé de cabra"
+            : ferramenta == Grampo ? "Abrindo com um grampo" : null;
 
         internal string TextoDoArrombar(PortaDaCasa p, ArmaJogador quem) => TextoDoArrombar(FerramentaDe(quem.Inventario));
 
@@ -60,7 +75,7 @@ namespace ZombieCityCleaner.World
             if (!IsSpawned)
             {
                 EscreverChave(chave, true, true);
-                Efeitos.Som(f == Item.Gazua ? SomDasPortas.Gazua : SomDasPortas.PeDeCabra, onde, 1f, true, 30f);
+                Efeitos.Som(f != Item.PeDeCabra ? SomDasPortas.Gazua : SomDasPortas.PeDeCabra, onde, 1f, true, 30f);
                 return;
             }
             ArrombarRpc(chave, (byte)f);
@@ -77,11 +92,14 @@ namespace ZombieCityCleaner.World
             var f = (Item)ferramenta;
             var inv = cliente.PlayerObject.GetComponent<InventarioJogador>();
             var pes = cliente.PlayerObject.transform.position;
-            if (inv == null || (f != Item.Gazua && f != Item.PeDeCabra) || inv.Quantos(f) <= 0) return;
+            var jogador = cliente.PlayerObject.GetComponent<JogadorRede>();
+            if (inv == null || (f != Item.Gazua && f != Item.PeDeCabra && f != Grampo)) return;
+            if (f == Grampo ? !Habilidades.Tem(jogador, Habilidade.Chaveiro) : inv.Quantos(f) <= 0) return;
+            bool maosLeves = Habilidades.Tem(jogador, Habilidade.MaosLeves);
             var meio = janela ? MeioDaJanela(r.c, r.i) : MeioDa(r.c, r.i);
             if ((meio - (pes + Vector3.up)).sqrMagnitude > distanciaMaxima * distanciaMaxima) return;
             if (janela ? JanelaAbertaAgora(r.c, r.i) || !JanelaTrancadaAgora(r.c, r.i) : AbertaAgora(r.c, r.i) || !TrancadaAgora(r.c, r.i)) return;
-            bool quebrou = f == Item.Gazua && Random.value < ChanceDeQuebrarAGazua;
+            bool quebrou = f == Item.Gazua && !maosLeves && Random.value < ChanceDeQuebrarAGazua;
             if (quebrou)
             {
                 inv.GastarItem(Item.Gazua, 1);
@@ -90,7 +108,8 @@ namespace ZombieCityCleaner.World
             EscreverChave(chave, true, true);
             ArrombouRpc(chave, ferramenta);
             // o pé de cabra arrebentando a fechadura chama os zumbis de perto
-            if (f == Item.PeDeCabra) Zombies.ZombieManager.Barulho(meio, cliente.PlayerObject.GetComponent<JogadorRede>(), RaioDoBarulho);
+            // (as Mãos leves, 06/11/2026: em silêncio)
+            if (f == Item.PeDeCabra && !maosLeves) Zombies.ZombieManager.Barulho(meio, jogador, RaioDoBarulho);
         }
 
         /// <summary>Anfitrião → todos: a porta foi arrombada (o som do fim).</summary>
@@ -101,7 +120,7 @@ namespace ZombieCityCleaner.World
             Vector3? onde = _vivas.TryGetValue(chave, out var p) && p != null ? p.Meio
                           : _janelasVivas.TryGetValue(chave, out var j) && j != null ? j.Meio : (Vector3?)null;
             if (onde.HasValue)
-                Efeitos.Som((Item)ferramenta == Item.Gazua ? SomDasPortas.Gazua : SomDasPortas.PeDeCabra, onde.Value, 1f, true, (Item)ferramenta == Item.Gazua ? 12f : 35f);
+                Efeitos.Som((Item)ferramenta != Item.PeDeCabra ? SomDasPortas.Gazua : SomDasPortas.PeDeCabra, onde.Value, 1f, true, (Item)ferramenta != Item.PeDeCabra ? 12f : 35f);
         }
 
         // o jogador local segurando o E numa porta trancada: o som da ferramenta repete nela
@@ -126,8 +145,9 @@ namespace ZombieCityCleaner.World
             if (Time.time < _proximoSom || f == Item.Nada) return;
             Vector3 onde = alvo is PortaDaCasa p ? p.Meio : ((JanelaDaCasa)alvo).Meio;
             // a gazua: os cliques dos pinos; o pé de cabra: a madeira forçando (o estalo do fim vem do anfitrião)
-            Efeitos.Som(f == Item.Gazua ? SomDasPortas.Gazua : SomDasPortas.Forcando, onde, f == Item.Gazua ? 0.7f : 0.8f, true, f == Item.Gazua ? 10f : 25f);
-            _proximoSom = Time.time + (f == Item.Gazua ? 1.45f : 0.7f);
+            bool silencio = f != Item.PeDeCabra;
+            Efeitos.Som(silencio ? SomDasPortas.Gazua : SomDasPortas.Forcando, onde, silencio ? 0.7f : 0.8f, true, silencio ? 10f : 25f);
+            _proximoSom = Time.time + (silencio ? 1.45f : 0.7f);
         }
     }
 }

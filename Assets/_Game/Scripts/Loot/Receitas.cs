@@ -25,6 +25,10 @@ namespace ZombieCityCleaner.Loot
         public Parte[] gasta;
         public Item ferramenta;
         public bool bancada;
+        /// <summary>Só na mesa de oficina (06/11/2026: a do bunker; ela também vale como bancada).</summary>
+        public bool oficina;
+        /// <summary>A habilidade que destrava a receita (o número do <see cref="Player.Habilidade"/>; -1: nenhuma).</summary>
+        public int habilidade = -1;
     }
 
     /// <summary>
@@ -53,6 +57,10 @@ namespace ZombieCityCleaner.Loot
         static Receita R(Item resultado, int qtd, bool bancada, Item ferramenta, params Parte[] gasta) =>
             new Receita { resultado = resultado, qtd = qtd, bancada = bancada, ferramenta = ferramenta, gasta = gasta };
 
+        // a receita da árvore de habilidades (06/11/2026): só com a habilidade, na bancada ou na mesa de oficina
+        static Receita H(Player.Habilidade h, Item resultado, int qtd, bool oficina, Item ferramenta, params Parte[] gasta) =>
+            new Receita { resultado = resultado, qtd = qtd, bancada = !oficina, oficina = oficina, ferramenta = ferramenta, gasta = gasta, habilidade = (int)h };
+
         /// <summary>As receitas, na ordem da aba Criar (o anfitrião recebe o índice).</summary>
         public static readonly Receita[] Todas =
         {
@@ -78,6 +86,20 @@ namespace ZombieCityCleaner.Loot
             R(Item.MochilaPequena, 1, true, Item.Nada, P(Item.Pano, 6), P(Item.Corda, 2), P(Item.FitaAdesiva)),
             R(Item.KitDeReparo, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 3), P(Item.FitaAdesiva), P(Item.Fios)),
             R(Item.Lanca, 1, true, Item.Nada, P(Item.Madeira, 2), P(Item.PecasDeMetal), P(Item.FitaAdesiva)),
+            // a árvore de habilidades (06/11/2026): no fim (o índice vai pela rede). O Faz-tudo, na bancada
+            H(Player.Habilidade.FazTudo, Item.Gazua, 2, false, Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Fios)),
+            H(Player.Habilidade.FazTudo, Item.Faca, 1, false, Item.Nada, P(Item.PecasDeMetal, 2), P(Item.FitaAdesiva), P(Item.Madeira)),
+            H(Player.Habilidade.FazTudo, Item.MochilaMedia, 1, false, Item.Nada, P(Item.Pano, 8), P(Item.Corda, 2), P(Item.FitaAdesiva, 2)),
+            // o Artesão, na mesa de oficina
+            H(Player.Habilidade.Artesao, Item.Machado, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 3), P(Item.Madeira, 2), P(Item.FitaAdesiva)),
+            H(Player.Habilidade.Artesao, Item.PeDeCabra, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 4)),
+            H(Player.Habilidade.Artesao, Item.MochilaGrande, 1, true, Item.Nada, P(Item.Pano, 12), P(Item.Corda, 3), P(Item.FitaAdesiva, 3)),
+            H(Player.Habilidade.Artesao, Item.Lanterna, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Fios, 2), P(Item.FitaAdesiva)),
+            // o Armeiro, na mesa de oficina: a munição, com a pólvora
+            H(Player.Habilidade.Armeiro, Item.Municao9mm, 15, true, Item.Ferramenta, P(Item.Polvora), P(Item.PecasDeMetal)),
+            H(Player.Habilidade.Armeiro, Item.Municao12, 8, true, Item.Ferramenta, P(Item.Polvora), P(Item.PecasDeMetal), P(Item.Pano)),
+            H(Player.Habilidade.Armeiro, Item.Municao556, 12, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal)),
+            H(Player.Habilidade.Armeiro, Item.Municao762, 10, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal, 2)),
         };
 
         static Desmontagem D(Item item, string verbo, Item ferramenta, params Parte[] vira) =>

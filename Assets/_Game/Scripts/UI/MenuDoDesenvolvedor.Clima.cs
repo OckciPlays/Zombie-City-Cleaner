@@ -27,7 +27,7 @@ namespace ZombieCityCleaner.UI
         bool _abaDoClima;
         static readonly GUIContent _conteudoDoClima = new GUIContent();
 
-        static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo" };
+        static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo", "Habil." };
 
         /// <summary>A faixa das abas acima do painel do canto (o <see cref="AbasDoCanto"/>), para a Area pegar os cliques nela.</summary>
         static float AlturaDasAbas(float u) => 24 * u;
@@ -38,7 +38,7 @@ namespace ZombieCityCleaner.UI
         {
             float vao = 4 * u, h = 20 * u, y = painel.y - AlturaDasAbas(u);
             float w = (painel.width - vao * (NomesDasAbas.Length - 1)) / NomesDasAbas.Length;
-            int ativa = _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
+            int ativa = _abaDasHabilidades ? 4 : _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
             var antes = GUI.color;
             for (int i = 0; i < NomesDasAbas.Length; i++)
             {
@@ -55,6 +55,7 @@ namespace ZombieCityCleaner.UI
             _abaDoClima = qual == 1;
             _abaDosSobreviventes = qual == 2;
             _abaDoCorpo = qual == 3;
+            _abaDasHabilidades = qual == 4;   // (06/11/2026: MenuDoDesenvolvedor.Habilidades.cs)
         }
 
         Rect PainelDoClima(float u, Rect aoLado)

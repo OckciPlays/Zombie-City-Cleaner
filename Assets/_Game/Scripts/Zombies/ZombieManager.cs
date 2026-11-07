@@ -54,6 +54,8 @@ namespace ZombieCityCleaner.Zombies
             /// </summary>
             public bool exposto;
             public float aumento, meioCone;
+            /// <summary>O quanto os passos dele se ouvem (1; 0,5 com os Passos leves, 06/11/2026).</summary>
+            public float passos;
             /// <summary>
             /// A distância de visão deste jogador (UI/Graficos): até onde os zumbis são desenhados e mandados para ele, e de
             /// onde os novos nascem perto dele (m).
@@ -298,6 +300,7 @@ namespace ZombieCityCleaner.Zombies
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
+                passos = Habilidades.Tem(j, Habilidade.PassosLeves) ? 0.5f : 1f,
                 visao = Graficos.Metros(j.Visao.Value),
                 nascer = Graficos.NascerAPartirDe(j.Visao.Value),
             };
@@ -387,7 +390,20 @@ namespace ZombieCityCleaner.Zombies
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
             // o limite (é co-op, mas um número absurdo não passa): o maior acerto é o carro muito rápido (500 a 110 km/h)
             z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 1000f), ponto, direcao, arremesso, autor, Time.time, Mathf.Clamp(corte, 0f, 4f));
+            // o XP de quem matou (06/11/2026, a árvore de habilidades; o carro conta: o acerto vem pelo motorista)
+            if (z.Morto && autor is JogadorRede quem) quem.Inventario?.GanharXp(XpDoZumbi(z), NomeNoXp(z));
         }
+
+        static int XpDoZumbi(Zumbi z) => z.Petrificado ? Habilidades.XpDaEstatua : z.tipo switch
+        {
+            TipoDeZumbi.Corredor => Habilidades.XpDoCorredor, TipoDeZumbi.Long => Habilidades.XpDoLong,
+            TipoDeZumbi.Brutamonte => Habilidades.XpDoBrutamonte, _ => Habilidades.XpDoOco,
+        };
+
+        static string NomeNoXp(Zumbi z) => z.Petrificado ? "estátua" : z.tipo switch
+        {
+            TipoDeZumbi.Corredor => "Corredor", TipoDeZumbi.Long => "Long", TipoDeZumbi.Brutamonte => "Brutamonte", _ => "Oco",
+        };
 
         internal void Golpear(IAlvoDeZumbi alvo, float dano, Vector3 de)
         {

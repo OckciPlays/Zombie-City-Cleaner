@@ -33,6 +33,15 @@ namespace ZombieCityCleaner.Salvar
         /// carregar). Falso num save de antes dela: ao carregar, ela aparece uma vez no chão da sala do bunker.
         /// </summary>
         public bool chaveDoCupe;
+        /// <summary>
+        /// As motos e as chaves delas já foram postas no mundo (06/11/2026). Falso num save de antes delas: ao carregar, elas
+        /// aparecem uma vez perto da partida (e as chaves, no chão da sala).
+        /// </summary>
+        public bool motos;
+        /// <summary>O caiaque já foi posto no lago (06/11/2026). Falso num save de antes dele: ao carregar, ele aparece uma vez.</summary>
+        public bool caiaque;
+        /// <summary>Onde os caiaques ficaram (06/11/2026).</summary>
+        public List<CaiaqueSalvo> caiaques = new List<CaiaqueSalvo>();
         public string criadoEm, salvoEm;
         public int dia = 1;
         public float hora = 8f;
@@ -44,6 +53,8 @@ namespace ZombieCityCleaner.Salvar
         public List<CarroSalvo> carros = new List<CarroSalvo>();
         public List<CarroDoMundoSalvo> carrosDoMundo = new List<CarroDoMundoSalvo>();
         public List<long> mobiliaAberta = new List<long>();
+        /// <summary>As árvores cortadas pelo machado (06/11/2026; a chave da FlorestaDoMundo).</summary>
+        public List<long> arvoresCortadas = new List<long>();
         public List<int> sustos = new List<int>();
         public long armasNaParede, pentesNaParede;
         public List<PosicaoSalva> posicoes = new List<PosicaoSalva>();
@@ -233,10 +244,18 @@ namespace ZombieCityCleaner.Salvar
         public long dono;
     }
 
+    /// <summary>Um caiaque do mundo (06/11/2026): onde ficou.</summary>
+    [Serializable]
+    public class CaiaqueSalvo
+    {
+        public Vector3 pos;
+        public Quaternion giro;
+    }
+
     [Serializable]
     public class CarroSalvo
     {
-        /// <summary>0, a perua (o carro da família); 1, o cupê.</summary>
+        /// <summary>0, a perua (o carro da família); 1, o cupê; 2 em diante, as motos (MundoDaPartida.motos: 2 a Fat Boy, 3 a cross).</summary>
         public int qual;
         public Vector3 pos;
         public Quaternion giro;

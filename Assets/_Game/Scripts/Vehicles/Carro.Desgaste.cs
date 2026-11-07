@@ -400,14 +400,15 @@ namespace ZombieCityCleaner.Vehicles
         [Rpc(SendTo.Server)]
         void AtropelouRpc(byte direita, RpcParams parametros = default)
         {
-            if (parametros.Receive.SenderClientId != OwnerClientId || _carencia > 0f) return;
+            if (parametros.Receive.SenderClientId != OwnerClientId || _carencia > 0f || moto) return;   // a moto não tem o sistema de pneus
             if (Random.value < desgaste.furoNoAtropelo) Furo(direita != 0 ? 1 : 0, true, false);
         }
 
         [Rpc(SendTo.Server)]
         void BateuRpc(Vector3 local, float dv, RpcParams parametros = default)
         {
-            if (parametros.Receive.SenderClientId != OwnerClientId) return;
+            // a moto (06/11/2026): só a vela se compromete; as batidas não estragam o radiador nem os pneus, que ela não tem
+            if (parametros.Receive.SenderClientId != OwnerClientId || moto) return;
             var a = desgaste;
             float forca = dv - a.batidaQueEstraga;
             // de frente: o radiador amassa e pode furar
@@ -506,7 +507,9 @@ namespace ZombieCityCleaner.Vehicles
             if (ligado && _litros > 0f)
             {
                 float giro = _ocupantes.Value[0] == 0 ? MarchaLenta : _rotacao.Value / 255f;
-                _litros = Mathf.Max(0f, _litros - Mathf.Lerp(a.gastoParado, a.gastoNoMaximo, Mathf.Pow(giro, 1.5f)) * dt / 60f);
+                // o Econômico de quem dirige (06/11/2026): a gasolina dura 25% mais
+                float economia = _ocupantes.Value[0] != 0 && Habilidades.Tem(Ocupante(0), Habilidade.Economico) ? 0.8f : 1f;
+                _litros = Mathf.Max(0f, _litros - Mathf.Lerp(a.gastoParado, a.gastoNoMaximo, Mathf.Pow(giro, 1.5f)) * dt / 60f * economia);
             }
             if (Mathf.Abs(_litros - _gasolina.Value) >= 0.02f || (_litros <= 0f && _gasolina.Value > 0f)) _gasolina.Value = _litros;
             if (!ligado) return;
@@ -525,7 +528,7 @@ namespace ZombieCityCleaner.Vehicles
                     mudouPeca = true;
                 }
             }
-            if (pc.Tem(PecasDoMotor.Radiador))
+            if (!moto && pc.Tem(PecasDoMotor.Radiador))
             {
                 bool vazando = RadiadorVazando;
                 _gastoDoRadiador += dt / 60f * (100f / Mathf.Max(1f, a.minutosDoRadiador) / _resistenciaDoRadiador + (vazando ? a.vazamentoPorMinuto : 0f));

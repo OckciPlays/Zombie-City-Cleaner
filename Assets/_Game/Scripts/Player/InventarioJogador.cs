@@ -352,7 +352,11 @@ namespace ZombieCityCleaner.Player
         public bool PodeCriar(Receita r, out string falta)
         {
             falta = null;
-            if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
+            // (06/11/2026, a árvore de habilidades: a receita destravada pela habilidade; a mesa de oficina do bunker)
+            if (r.habilidade >= 0 && !Habilidades.Tem(_rede, (Habilidade)r.habilidade))
+                falta = $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
+            else if (r.oficina && !Bancada.PertoDaOficina(transform.position)) falta = "Precisa da mesa de oficina (no bunker)";
+            else if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
             else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
             else
                 foreach (var g in r.gasta)
@@ -763,12 +767,21 @@ namespace ZombieCityCleaner.Player
         {
             int k = Indice(id);
             if (parametros.Receive.SenderClientId != OwnerClientId || k < 0 || !PodeReparar(id)) return;
-            if (!GastarItem(Item.KitDeReparo, 1)) return;
+            bool poupou = PoupouOKit();
+            if (!poupou && !GastarItem(Item.KitDeReparo, 1)) return;
             k = Indice(id);
             var it = Mochila[k];
             it.desgaste = 0;
             Mochila[k] = it;
-            AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada");
+            AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada" + (poupou ? " (o kit não foi gasto)" : ""));
+        }
+
+        // o Reparador (06/11/2026): 30% de chance de o kit de reparo não ser gasto
+        bool PoupouOKit() => Habilidades.Tem(_rede, Habilidade.Reparador) && Random.value < 0.3f;
+
+        void SemOBorracheiro()
+        {
+            if (IsOwner) AvisoLocal("Só quem tem o Borracheiro (o Ladrão, K) remenda o pneu");
         }
 
         [Rpc(SendTo.Owner)]
@@ -798,6 +811,19 @@ namespace ZombieCityCleaner.Player
             foreach (var g in r.gasta) TirarQuantos(g.item, g.qtd);
             Entregar(r.resultado, r.qtd);
             CriouRpc(k);
+            // a árvore de habilidades (06/11/2026): o XP de criar, e o Aproveitador às vezes devolve um material
+            GanharXp(Habilidades.XpDaReceita(r), "criar");
+            if (Habilidades.Tem(_rede, Habilidade.MaosHabeis) && Random.value < 0.25f)   // (as Mãos hábeis)
+            {
+                Entregar(r.resultado, r.qtd);
+                AvisoRpc("Mãos hábeis: saiu em dobro");
+            }
+            if (r.gasta.Length > 0 && Habilidades.Tem(_rede, Habilidade.Aproveitador) && Random.value < 0.2f)
+            {
+                var sobra = r.gasta[Random.Range(0, r.gasta.Length)];
+                Entregar(sobra.item, 1);
+                AvisoRpc($"Aproveitou: sobrou {Itens.ComNumero(sobra.item, 1)}");
+            }
         }
 
         [Rpc(SendTo.Owner)]
@@ -966,6 +992,7 @@ namespace ZombieCityCleaner.Player
         public void Desgastar(ushort id, float quanto)
         {
             if (id == 0 || quanto <= 0f || !Itens.ComDesgaste(Do(id))) return;
+            if (Habilidades.Tem(_rede, Habilidade.Cuidadoso)) quanto *= 0.8f;   // (o Cuidadoso, 06/11/2026)
             _desgastePendente.TryGetValue(id, out float p);
             p += quanto;
             // (a folga: 1/30 somado 30 vezes dá 0,99999, e o 1% sairia um tiro depois)
@@ -1259,7 +1286,7 @@ namespace ZombieCityCleaner.Player
         {
             var lanterna = _rede != null ? _rede.Lanterna : null;
             if (lanterna == null || !lanterna.Ligada.Value) return;
-            _gastoDaLanterna += dt * 100f / DuracaoDasPilhas;
+            _gastoDaLanterna += dt * 100f / DuracaoDasPilhas * (Habilidades.Tem(_rede, Habilidade.Economico) ? 0.8f : 1f);   // (o Econômico)
             if (_gastoDaLanterna < 1f) return;
             int n = Mathf.FloorToInt(_gastoDaLanterna);
             _gastoDaLanterna -= n;
@@ -1334,6 +1361,11 @@ namespace ZombieCityCleaner.Player
         public void Remendar(ushort id)
         {
             if (!PodeRemendar(id)) return;
+            if (!Habilidades.Tem(_rede, Habilidade.Borracheiro))
+            {
+                SemOBorracheiro();
+                return;
+            }
             RemendarRpc(id);
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 1.1f, 0.6f, false);
         }
@@ -1342,11 +1374,14 @@ namespace ZombieCityCleaner.Player
         void RemendarRpc(ushort id, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId || !PodeRemendar(id)) return;
-            if (!GastarItem(Item.KitDeReparo, 1)) return;
+            if (!Habilidades.Tem(_rede, Habilidade.Borracheiro)) return;   // (o Borracheiro, 06/11/2026)
+            bool poupou = PoupouOKit();
+            if (!poupou && !GastarItem(Item.KitDeReparo, 1)) return;
+            string fim = poupou ? " (o kit não foi gasto)" : "";
             if (id == 0)
             {
                 PneuNasMaos.Value = Vehicles.PneusDoCarro.Remendo;
-                AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%");
+                AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%{fim}");
                 return;
             }
             int k = Indice(id);
@@ -1354,7 +1389,7 @@ namespace ZombieCityCleaner.Player
             var it = Mochila[k];
             it.qtd = Vehicles.PneusDoCarro.Remendo;
             Mochila[k] = it;
-            AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%");
+            AvisoRpc($"Pneu remendado: {Vehicles.PneusDoCarro.Remendo}%{fim}");
         }
 
         /// <summary>Um aviso no HUD de quem joga nesta máquina.</summary>
