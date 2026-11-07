@@ -8,10 +8,10 @@
   "comprimento": 20.869565217391305
  },
  "perigo": {
-  "bpm": 88,
-  "comprimento": 10.909090909090908
+  "bpm": 66,
+  "comprimento": 14.545454545454545
  },
- "encaixeDaEntrada": 1.3636,
+ "encaixeDaEntrada": 1.818182,
  "sobreposicaoDoVento": 4.0,
  "rajadasDeDia": [
   {

@@ -141,6 +141,9 @@ namespace ZombieCityCleaner.Zombies
             if (NoNavMesh && agente.hasPath) agente.ResetPath();
             Atual = Estado.Parado;
             OlharPara(alvo.pes);
+            // 04/11/2026: o Long na distância, vendo e mirando você, está na briga: engajado por 8 s (como quando o chamam),
+            // e a trilha o conta como caçador seu (Zumbi.Caca; antes ele cuspia e a música nem sabia). Sem papo, não ameaça
+            if (!_semPapo) _engajadoAte = Mathf.Max(_engajadoAte, agora + 8f);
             if (_semPapo || agora < _proximoCuspe)
             {
                 Decisao = _semPapo ? "sem papo" : $"na distância ({menor:0} m): o próximo cuspe em {_proximoCuspe - agora:0.0} s";

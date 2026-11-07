@@ -12,7 +12,8 @@ namespace ZombieCityCleaner.Music
     /// <list type="bullet">
     /// <item>No silêncio (só o vento), o ambiente aparece mais (um som a cada 9 a 20 s); com a música da exploração, raro e
     /// mais baixo (a cada 25 a 50 s); no perigo e nos momentos (o "te viram", a saída, o amanhecer, a morte), nada além do
-    /// vento.</item>
+    /// vento. A sombra (só a tensão, baixinho, no silêncio; 04/11/2026) não cala o ambiente: conta como a música da
+    /// exploração.</item>
     /// <item>O que o vento mexe (a janela batendo, a porta, a placa de metal rangendo, a lata rolando) acontece logo depois
     /// de uma rajada do vento da trilha passar (os tempos das rajadas vêm do Ferramentas/trilha, no trilha.json).</item>
     /// <item>Os uivos dos cachorros e as placas de metal estão nas notas do ré menor da trilha.</item>
@@ -90,6 +91,9 @@ namespace ZombieCityCleaner.Music
         // dentro, o vento chega abafado
         float CorteDoVento => Abafamento.Corte(_dentro * 0.85f);
 
+        // uma música calma tocando (a exploração, ou a sombra): o ambiente fica mais raro e mais baixo, mas não some
+        bool ComMusicaCalma => _estado == Estado.Exploracao || NaSombra;
+
         void ComecarOAmbiente(double agora)
         {
             _rajadas.Clear();
@@ -141,7 +145,7 @@ namespace ZombieCityCleaner.Music
                 _rajadas.Clear();
                 return;
             }
-            bool quieto = _estado == Estado.Perigo || MomentoTocando(agora);
+            bool quieto = PerigoDeVerdade || MomentoTocando(agora);   // na sombra, o ambiente continua (04/11/2026)
             // as rajadas: o que o vento mexe bate logo depois de ela passar
             for (int i = _rajadas.Count - 1; i >= 0; i--)
             {
@@ -156,7 +160,7 @@ namespace ZombieCityCleaner.Music
             }
             if (agora >= _proximoEvento)
             {
-                var faixa = _estado == Estado.Exploracao ? ambienteNaMusica : ambienteNoSilencio;
+                var faixa = ComMusicaCalma ? ambienteNaMusica : ambienteNoSilencio;
                 _proximoEvento = agora + Random.Range(faixa.x, faixa.y);
                 TocarEvento(Sortear(dia), agora + 0.05, "solto");
             }
@@ -180,7 +184,7 @@ namespace ZombieCityCleaner.Music
         void Grilos(float dt, bool ligado)
         {
             float noite = Mathf.InverseLerp(0.3f, 0.8f, CicloDoDia.Noite);
-            float musica = _estado == Estado.Perigo ? 0.4f : _estado == Estado.Exploracao ? 0.6f : 1f;
+            float musica = PerigoDeVerdade ? 0.4f : ComMusicaCalma ? 0.6f : 1f;
             float alvo = ligado && _trilha.grilos != null && _trilha.grilos.Length > 0 ? volumeDosGrilos * noite * musica * Mathf.Lerp(1f, 0.35f, _dentro) : 0f;
             _volumeDosGrilosAgora = Mathf.MoveTowards(_volumeDosGrilosAgora, alvo, dt * 0.12f);
             if (_volumeDosGrilosAgora <= 0.001f)
@@ -314,7 +318,7 @@ namespace ZombieCityCleaner.Music
             if (distancia > 30f) tapado *= 0.6f;   // de longe, o som passa por cima dos telhados: nunca chega todo tapado
             som.GetComponent<AudioLowPassFilter>().cutoffFrequency =
                 Mathf.Min(22000f * Mathf.Pow(0.15f, Mathf.Clamp01(distancia / alcance)), Abafamento.Corte(tapado));
-            float comMusica = _estado == Estado.Exploracao ? ambienteComMusica : 1f;
+            float comMusica = ComMusicaCalma ? ambienteComMusica : 1f;
             som.volume = volume * comMusica * Mathf.Lerp(1f, Abafamento.VolumeTapado, tapado) * VolumeDoAmbiente;
             som.PlayScheduled(System.Math.Max(quando, AudioSettings.dspTime + 0.02));
             _eventos.Add(new Evento { som = som, fim = quando + clipe.length });

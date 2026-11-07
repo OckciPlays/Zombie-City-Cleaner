@@ -256,8 +256,8 @@ MonoBehaviour:
       clipe: {fileID: 8300000, guid: 6a7cfdb7815eb114c828135a4df9954f, type: 3}
     - tipo: saida
       clipe: {fileID: 8300000, guid: 5b0f343f67ed741428d075848b572300, type: 3}
-  bpmDoPerigo: 88
-  comprimentoDoPerigo: 10.909091
+  bpmDoPerigo: 66
+  comprimentoDoPerigo: 14.545455
   perigo:
   - plano: A
     camadas:
@@ -274,6 +274,21 @@ MonoBehaviour:
     - {fileID: 8300000, guid: f3dec1578a026064a9cc71c486cad9de, type: 3}
     - {fileID: 8300000, guid: 7e3c786759b911846ba0a2f5260fa5e9, type: 3}
     - {fileID: 8300000, guid: 07b1541342c08cc4885e8b0831df3916, type: 3}
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: 9e6da6482a1a9ea4497918bd4721b520, type: 3}
+    - {fileID: 8300000, guid: d6cecf466362cf34b8e1b924c88e0e28, type: 3}
+    - {fileID: 8300000, guid: cb6d1d90e4ae8464ea4829d9a776a0a1, type: 3}
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: a5c34de268ed0d345aaaa937b29f5930, type: 3}
+    - {fileID: 8300000, guid: 372f2d78ee69c25488317fac0821e5ee, type: 3}
+    - {fileID: 8300000, guid: f40038f4efd50db49a18ecf70bb76735, type: 3}
+  - plano: A
+    camadas:
+    - {fileID: 8300000, guid: 396d5efd3b74b5649b471bd110a3d6e7, type: 3}
+    - {fileID: 8300000, guid: 23d97025fae064d4b9f11dd88b4fd3de, type: 3}
+    - {fileID: 8300000, guid: bd476e0f022da7f4aa258fd3702f2113, type: 3}
   - plano: B
     camadas:
     - {fileID: 8300000, guid: df7e55557c8d2b743848ac7b6a09e42f, type: 3}
@@ -289,6 +304,11 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 2700577da56863a43b6fd044ce87df43, type: 3}
     - {fileID: 8300000, guid: d41612bc07347734fb17f6f6c123e359, type: 3}
     - {fileID: 8300000, guid: bc5189f28abefe94e9ec0f3e4dee903d, type: 3}
+  - plano: B
+    camadas:
+    - {fileID: 8300000, guid: f2f911354bbb02e44931184876564ccf, type: 3}
+    - {fileID: 8300000, guid: dae7aa2f83d50314389c660c5604c0c6, type: 3}
+    - {fileID: 8300000, guid: 8190cc5ac78368e479e79beb447d3b55, type: 3}
   - plano: C
     camadas:
     - {fileID: 8300000, guid: 5d416afbae635f7489981ddeb6a3e28d, type: 3}
@@ -304,14 +324,20 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 54c34e630dc4ee54f880262037ae4685, type: 3}
     - {fileID: 8300000, guid: e2440c3a8251b0d4f8ab75a6e65ab9f9, type: 3}
     - {fileID: 8300000, guid: af83efb74194fc04eb568867ead08bcb, type: 3}
+  - plano: C
+    camadas:
+    - {fileID: 8300000, guid: 1de40fc5fdccc934d98737e2e07ac238, type: 3}
+    - {fileID: 8300000, guid: b43242eb8943edb42af00dc5e6ccda5e, type: 3}
+    - {fileID: 8300000, guid: 68ba205e6d3f17a4babce6cc9a82e27a, type: 3}
   entradas:
   - {fileID: 8300000, guid: 3d4e15edc068fca4ea36473f3e266b54, type: 3}
   - {fileID: 8300000, guid: 6bd2ed397ece38b42a2ee2b1fed16fea, type: 3}
   - {fileID: 8300000, guid: ac2dc455ac3e84b438c29cbde4295295, type: 3}
-  encaixeDaEntrada: 1.3636
+  encaixeDaEntrada: 1.818182
   saidas:
   - {fileID: 8300000, guid: 97cf0717603e54d44942ee315c91bb2b, type: 3}
   - {fileID: 8300000, guid: 342041a9de6ed68418da0ffc4435e29d, type: 3}
+  - {fileID: 8300000, guid: 3dd11196a519fad4ca4039fdb638496e, type: 3}
   saidasPelaPedra:
   - {fileID: 8300000, guid: bfe46f20c0559a5428e0542107abbf0a, type: 3}
   - {fileID: 8300000, guid: 795cf3a1825dc3543a3e817fd8b37c5f, type: 3}

@@ -91,6 +91,16 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Perseguindo, atacando ou levou tiro há pouco: nunca cai de nível.</summary>
         public bool Engajado => Atual == Estado.Perseguindo || Atual == Estado.Atacando || (Atual == Estado.Esquivando && _alvo != null) || Time.time < _engajadoAte
                                 || Deitado;
+        /// <summary>
+        /// "Te caça" (04/11/2026): o alvo dele é este jogador e ele está engajado (perseguindo, atacando, se esquivando da
+        /// luz no meio da caça, o Long cuspindo, quem levou tiro há pouco). Só o anfitrião sabe disso; para os outros
+        /// jogadores vai pela rede, um bit por zumbi (<see cref="CacaQuemRecebe"/>). É o que a trilha conta como caçador,
+        /// para a música da briga só entrar quando é com você (a pedido: os amigos acharam a música de luta "muito
+        /// cansativa, pois toda hora a música entra"). O Brutamonte não tem alvo: quem ele caça é quem o olho travou (por
+        /// 20 s depois de travar ou de levar tiro; Zumbi.Brutamonte.cs), em todas as fases, não só no avanço.
+        /// </summary>
+        internal bool Caca(IAlvoDeZumbi quem) =>
+            quem != null && ReferenceEquals(tipo == TipoDeZumbi.Brutamonte ? _travadoEm : _alvo, quem) && Engajado;
         internal float mortoEm;
 
         ZombieManager _m;
@@ -428,6 +438,7 @@ namespace ZombieCityCleaner.Zombies
         internal void Zerar()
         {
             _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f; _ameacadoAte = 0f; _feridoAte = 0f; _temCerco = false; _noAlcanceDesde = -1f; ZerarLuz();
+            CacaQuemRecebe = false;   // a cópia que volta ao pool não caça mais ninguém (04/11/2026)
             _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f; _arremessado = false;
             for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? VidaDoMembro : 3f;
             ZerarEspecial();
@@ -613,7 +624,8 @@ namespace ZombieCityCleaner.Zombies
                 Vector3 para = p.peito - olho;
                 float d = para.magnitude;
                 float forca;
-                bool perto = d < a.distanciaDeContato || (p.correndo && d < a.barulhoDeCorrida);
+                // (os Passos leves, 06/11/2026: correndo, ouvido pela metade; os sobreviventes valem 1)
+                bool perto = d < a.distanciaDeContato || (p.correndo && d < a.barulhoDeCorrida * (p.passos > 0f ? p.passos : 1f));
                 if (perto) forca = 100f;   // sente ou ouve: na hora
                 else
                 {
@@ -961,10 +973,18 @@ namespace ZombieCityCleaner.Zombies
         int _qtd;
         float _intervalo = 0.1f, _atraso = 0.2f;
         internal float ultimoRecebido;
+        /// <summary>
+        /// Na cópia: o anfitrião disse que este zumbi caça quem joga aqui (o <see cref="Caca"/> dele, no bit de cima do byte
+        /// do modelo; ZombieManager.Rede.cs, 04/11/2026). A trilha usa isto no lugar do <see cref="Caca"/>, que a cópia não
+        /// sabe (ela não tem o alvo). Zera no pool, na cópia nova e quando a cópia fica sem notícias (ZombieManager.Rede.cs,
+        /// AtualizarCopias): um zumbi que deixou de vir não fica te caçando.
+        /// </summary>
+        internal bool CacaQuemRecebe;
 
         internal void PrepararCopia(int id, byte geracao, ZombieManager m)
         {
             Id = id; Geracao = geracao; Copia = true; _m = m;
+            CacaQuemRecebe = false;   // quem diz se ela te caça é o pacote que a criou (04/11/2026)
             agente.enabled = false;
             _qtd = 0; _intervalo = 0.1f; _atraso = 0.2f;
             _visivel = true;

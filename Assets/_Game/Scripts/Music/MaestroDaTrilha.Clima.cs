@@ -13,7 +13,8 @@ namespace ZombieCityCleaner.Music
     /// <item>Com o tornado perto, a família do tornado, mais angustiante; quando quem joga aqui avista o tornado, o que estiver
     /// tocando da exploração (ou o silêncio) dá lugar na hora a um trecho do tornado, que abre com o golpe (a entrada dele).
     /// Enquanto ele está perto, o silêncio entre os trechos é curto.</item>
-    /// <item>O perigo dos zumbis continua por cima de tudo (o tornado não interrompe uma perseguição).</item>
+    /// <item>O perigo dos zumbis continua por cima de tudo (o tornado não interrompe uma perseguição). A sombra (só a
+    /// tensão, baixinho, no silêncio; 04/11/2026) não é perigo de verdade: o tornado avistado passa na frente dela.</item>
     /// </list>
     /// Os blocos saem do Ferramentas/trilha/clima.py.
     /// </summary>
@@ -76,9 +77,11 @@ namespace ZombieCityCleaner.Music
             if (_trilha == null) return;
             bool avistou = ClimaNaTela.AvistouEm > _avistouVisto + 0.01f;
             if (avistou) _avistouVisto = ClimaNaTela.AvistouEm;
-            if (_estado != Estado.Silencio && _estado != Estado.Exploracao) return;
+            // a sombra (a tensão baixinho no silêncio, 04/11/2026) é como o silêncio: o tornado avistado passa na frente dela
+            if (_estado != Estado.Silencio && _estado != Estado.Exploracao && !NaSombra) return;
             if (avistou && _familia != "tornado" && TemBlocos(_trilha.tornado))
             {
+                if (NaSombra) SairDaSombra(agora, 1.2f);
                 ApagarGrupos(agora, 1.2f, "exploracao");
                 Anotar(agora, "o tornado foi avistado");
                 ComecarTrecho(agora, dia);

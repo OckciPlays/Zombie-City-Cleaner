@@ -9,7 +9,7 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// Os zumbis na rede. Não são NetworkObjects (seriam centenas): o anfitrião manda, para cada cliente, um pacote
     /// próprio só com os zumbis perto dele. Os que estão a menos de 15 m vão 10 vezes por segundo, os de 15 a 40 m a cada
-    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 16 bytes: posição em centímetros a partir do jogador que recebe
+    /// 3 envios, e os mais longe não vão. Cada zumbi ocupa 18 bytes (BytesPorZumbi): posição em centímetros a partir do jogador que recebe
     /// (o pacote leva a posição dele: em centímetros num short, a posição do mundo só cabia até 327 m da origem, e no
     /// mapa gerado, de quilômetros, os zumbis chegavam presos na borda, longe de quem entrou; 28/10/2026), giro, estado (com as
     /// contagens de golpes e de tiros levados), velocidade, como ele morreu (morto, a velocidade dá lugar à direção do
@@ -17,6 +17,10 @@ namespace ZombieCityCleaner.Zombies
     /// inclinação, Zumbi.Equilibrio.cs). As mensagens são não confiáveis e em
     /// ordem: um pacote perdido é coberto pelo próximo, e como o estado inteiro vai em todos, nada se perde de vez.
     /// No cliente, cada zumbi recebido vira uma cópia (do mesmo pool), que some se ficar sem notícias.
+    /// Desde 04/11/2026 o byte do modelo leva, no bit de cima, o "te caça": se aquele zumbi caça quem recebe o pacote
+    /// (<see cref="Zumbi.Caca"/>). Só o anfitrião sabe o alvo de cada zumbi, e a trilha de cada jogador passou a contar só
+    /// os caçadores dele (a pedido: os amigos acharam a música de luta "muito cansativa, pois toda hora a música entra").
+    /// O pacote continua com 18 bytes por zumbi, e o modelo fica nos 7 bits de baixo (cabem 127 modelos).
     /// </summary>
     public partial class ZombieManager
     {
@@ -27,6 +31,9 @@ namespace ZombieCityCleaner.Zombies
         // em 3 bits e a inclinação em 5; o 17º e o 18º, desde 01/11/2026: o modelo (os especiais não saem do Id, como os
         // Ocos) e o byte do especial: a fase e a vida do Brutamonte, o cuspe e o grito do Long)
         const int BytesPorZumbi = 18;
+        // o bit de cima do byte do modelo (o 17º): este zumbi caça quem recebe o pacote (04/11/2026). O modelo fica nos 7 de
+        // baixo; hoje são uns 21 modelos, e o EnviarParaClientes confere que são menos de 128
+        const int BitDaCaca = 0x80;
 
         [Header("Rede")]
         [Tooltip("Intervalo entre envios (s). Os zumbis perto de cada cliente vão em todos.")]
@@ -70,6 +77,8 @@ namespace ZombieCityCleaner.Zombies
             _tick++;
             using (MarcaRede.Auto())
             {
+                // o modelo divide o byte com o "te caça" (04/11/2026): com 128 modelos ou mais, o bit de cima viraria parte do número
+                Debug.Assert(modelos.Length < BitDaCaca, "ZombieManager: com 128 modelos ou mais o modelo não cabe nos 7 bits de baixo do byte (o de cima é o \"te caça\", ZombieManager.Rede.cs).");
                 double tempo = NetworkManager.ServerTime.Time;
                 int clientes = 0;
                 for (int j = 0; j < QuantosJogadores; j++)
@@ -95,14 +104,15 @@ namespace ZombieCityCleaner.Zombies
                         if (n == Zumbi.Nivel.Perto || (n == Zumbi.Nivel.Medio && (_tick + z.Id) % divisorMedio == 0)
                             || (n == Zumbi.Nivel.Longe && d < Jogadores[j].visao && (_tick + z.Id) % divisorLonge == 0)) _envio.Add(z);
                     }
-                    if (_envio.Count > 0) Mandar(cliente, tempo, Jogadores[j].jogador.transform.position, _envio);
+                    if (_envio.Count > 0) Mandar(cliente, tempo, Jogadores[j].jogador.transform.position, _envio, Jogadores[j].jogador);
                 }
                 ClientesNaRede = clientes;
             }
         }
 
-        // origem: o jogador do cliente (os zumbis que vão estão até a distância de visão dele, no máximo 85 m, ou 160 na luneta)
-        void Mandar(ulong cliente, double tempo, Vector3 origem, List<Zumbi> lista)
+        // origem: o jogador do cliente (os zumbis que vão estão até a distância de visão dele, no máximo 85 m, ou 160 na luneta);
+        // receptor: ele mesmo, para o "te caça" de cada zumbi (04/11/2026)
+        void Mandar(ulong cliente, double tempo, Vector3 origem, List<Zumbi> lista, IAlvoDeZumbi receptor)
         {
             for (int i = 0; i < lista.Count; i += PorPacote)
             {
@@ -129,7 +139,8 @@ namespace ZombieCityCleaner.Zombies
                     w.WriteValueSafe(z.Cortes);
                     w.WriteValueSafe((byte)Mathf.RoundToInt(z.Pedra * 255f));
                     w.WriteValueSafe(z.EquilibrioNaRede);
-                    w.WriteValueSafe((byte)z.modelo);
+                    // o modelo, com o "te caça" no bit de cima: o mesmo zumbi vai com 1 para quem ele caça e 0 para os outros
+                    w.WriteValueSafe((byte)(z.modelo | (z.Caca(receptor) ? BitDaCaca : 0)));
                     w.WriteValueSafe(z.EspecialNaRede);
                 }
                 NetworkManager.CustomMessagingManager.SendNamedMessage(NomeDaMensagem, cliente, w, NetworkDelivery.UnreliableSequenced);
@@ -164,6 +175,10 @@ namespace ZombieCityCleaner.Zombies
                     r.ReadValueSafe(out byte equilibrio);
                     r.ReadValueSafe(out byte modelo);
                     r.ReadValueSafe(out byte especial);
+                    // o bit de cima é o "te caça" (04/11/2026); o modelo são os 7 de baixo, separados antes de qualquer conta com
+                    // ele (o teste abaixo, a troca de cópia e o pool)
+                    bool teCaca = (modelo & BitDaCaca) != 0;
+                    modelo = (byte)(modelo & ~BitDaCaca);
                     if (id >= MaxZumbis || modelo >= modelos.Length) continue;
                     var c = _porId[id];
                     if (c == null || c.Geracao != geracao || c.modelo != modelo)
@@ -175,6 +190,7 @@ namespace ZombieCityCleaner.Zombies
                     var e = (Zumbi.Estado)(estado & 15);
                     c.Receber(tempo, origem + new Vector3(x, y, z) * 0.01f, yaw * (360f / 256f), e, (byte)((estado >> 4) & 3), (byte)((estado >> 6) & 3),
                               morte, e == Zumbi.Estado.Morto ? velocidade * (360f / 256f) : velocidade / 40f, cortes, pedra, equilibrio, especial);
+                    c.CacaQuemRecebe = teCaca;
                 }
             }
         }
@@ -206,15 +222,21 @@ namespace ZombieCityCleaner.Zombies
             {
                 double agora = NetworkManager.ServerTime.Time;
                 float dt = Time.deltaTime, limite = Time.unscaledTime - tempoParaSumir;
+                // o "te caça" sem notícias (04/11/2026): quem te caça está a menos de 30 m, então vem a cada envio (perto) ou a
+                // cada divisorMedio envios (0,3 s). Passadas 2,5 vezes isso (0,75 s) sem pacote, ele parou de vir (ou os pacotes
+                // se perderam): a cópia só some com o tempoParaSumir (1,5 s), parada onde estava, mas já não conta para a trilha.
+                // Se ele voltar a vir, o próximo pacote traz o bit de novo
+                float limiteDaCaca = Time.unscaledTime - intervaloDeEnvio * Mathf.Max(1, divisorMedio) * 2.5f;
                 var local = AlvoLocal();
                 for (int i = _copias.Count - 1; i >= 0; i--)
                 {
                     var c = _copias[i];
                     if (c.ultimoRecebido < limite)
                     {
-                        DevolverCopia(c);
+                        DevolverCopia(c);   // o pool zera o "te caça" (Zumbi.Zerar)
                         continue;
                     }
+                    if (c.ultimoRecebido < limiteDaCaca) c.CacaQuemRecebe = false;
                     c.QuadroDaCopia(agora, dt);
                     // hitboxes e sombra pela distância de quem joga aqui (a cópia só existe até ~40 m, ou mais na luneta)
                     float daqui = Distancia(local, c.transform.position);
