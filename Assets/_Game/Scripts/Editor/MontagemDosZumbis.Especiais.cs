@@ -40,8 +40,10 @@ namespace ZombieCityCleaner.EditorTools
             ("Brutamonte_Novo", TipoDeZumbi.Brutamonte),
         };
 
-        static bool EhEspecial(string nome) => Especiais.Any(e => e.nome == nome) || EspeciaisDeTeste.Any(e => e.nome == nome);
-        static TipoDeZumbi TipoDe(string nome) => Especiais.Concat(EspeciaisDeTeste).FirstOrDefault(e => e.nome == nome).tipo;
+        // os de teste e os novos da comparação (MontagemDosZumbis.Novos.cs) são montados como especiais, mas ficam fora de
+        // TodosOsModelos (05/11/2026: as duas listas vieram de sessões diferentes, juntas no merge)
+        static bool EhEspecial(string nome) => Especiais.Any(e => e.nome == nome) || EspeciaisDeTeste.Any(e => e.nome == nome) || EhNovo(nome);
+        static TipoDeZumbi TipoDe(string nome) => Especiais.Concat(EspeciaisDeTeste).Concat(Novos).FirstOrDefault(e => e.nome == nome).tipo;
 
         /// <summary>Todos os modelos, na ordem da lista do ZombieManager: os Ocos e, depois, os especiais.</summary>
         static IEnumerable<string> TodosOsModelos => Modelos.Concat(Especiais.Select(e => e.nome));

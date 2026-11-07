@@ -87,6 +87,133 @@ namespace ZombieCityCleaner.Combat
             }
             _faiscas = Particulas("Faíscas", new Color(1f, 0.8f, 0.4f), 0.03f, 0.25f, 6f);
             _poeira = Particulas("Poeira", new Color(0.55f, 0.52f, 0.48f), 0.07f, 0.6f, 1.2f);
+            PrepararOGolpeNoChao();
+        }
+
+        // ------------------------------------------------------------------ o golpe no chão do Brutamonte (05/11/2026)
+
+        ParticleSystem _nuvemDoGolpe, _terraDoGolpe;
+
+        /// <summary>
+        /// As partículas do golpe no chão (uma vez, como as outras): a nuvem (fumaça macia, que cresce, freia e some) e os
+        /// torrões de terra (pequenos, caem e quicam no chão). Tudo sai por <see cref="GolpeNoChao"/>, partícula a partícula.
+        /// </summary>
+        void PrepararOGolpeNoChao()
+        {
+            _nuvemDoGolpe = Particulas("Nuvem do golpe", Color.white, 0.8f, 2f, 0f);
+            var main = _nuvemDoGolpe.main;
+            main.maxParticles = 160; main.gravityModifier = -0.02f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 2f * Mathf.PI);
+            var freio = _nuvemDoGolpe.limitVelocityOverLifetime; freio.enabled = true; freio.limit = 0.25f; freio.dampen = 0.05f;
+            var cresce = _nuvemDoGolpe.sizeOverLifetime; cresce.enabled = true;
+            cresce.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.55f), new Keyframe(0.25f, 1.2f), new Keyframe(1f, 1.9f)));
+            var gira = _nuvemDoGolpe.rotationOverLifetime; gira.enabled = true; gira.z = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
+            var cor = _nuvemDoGolpe.colorOverLifetime; cor.enabled = true;
+            var some = new Gradient();
+            some.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                         new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.8f, 0.06f), new GradientAlphaKey(0.35f, 0.4f), new GradientAlphaKey(0f, 1f) });
+            cor.color = some;
+            var desenho = _nuvemDoGolpe.GetComponent<ParticleSystemRenderer>();
+            if (materialParticulas != null)
+            {
+                // o material das partículas com uma nuvem macia (o ponto dele, grande, virava uma bola)
+                var nuvem = TexturaDeNuvem();
+                var m = new Material(materialParticulas) { name = "Nuvem do golpe" };
+                m.SetTexture("_BaseMap", nuvem);
+                m.mainTexture = nuvem;
+                desenho.sharedMaterial = m;
+            }
+            desenho.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            desenho.sortMode = ParticleSystemSortMode.Distance;
+
+            _terraDoGolpe = Particulas("Terra do golpe", Color.white, 0.06f, 1.4f, 0f);
+            var mt = _terraDoGolpe.main;
+            mt.maxParticles = 200; mt.gravityModifier = 1.6f;
+            var colisao = _terraDoGolpe.collision;   // os torrões param no chão, quicando um pouco
+            colisao.enabled = true; colisao.type = ParticleSystemCollisionType.World; colisao.mode = ParticleSystemCollisionMode.Collision3D;
+            colisao.dampen = 0.6f; colisao.bounce = 0.25f; colisao.lifetimeLoss = 0.15f; colisao.quality = ParticleSystemCollisionQuality.Low;
+            colisao.collidesWith = 1 << 0;
+        }
+
+        /// <summary>Uma mancha redonda que some devagar até a borda, com um pouco de ruído (64 px).</summary>
+        static Texture2D TexturaDeNuvem()
+        {
+            const int n = 64;
+            var textura = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "Nuvem do golpe" };
+            var pixels = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                    a = Mathf.Pow(a * a * (3f - 2f * a), 1.6f) * (0.6f + 0.4f * Mathf.PerlinNoise(x * 0.13f + 5.3f, y * 0.13f + 1.7f));
+                    pixels[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                }
+            textura.SetPixels32(pixels);
+            textura.Apply();
+            return textura;
+        }
+
+        /// <summary>
+        /// O golpe no chão do Brutamonte (05/11/2026, a fúria): uma onda de poeira que corre rente ao chão em volta dos
+        /// punhos, um bafo subindo do meio e os torrões de terra voando e caindo. 'forca' em volta de 1 (o terceiro golpe,
+        /// 1,35, é o maior). De noite, a poeira fica um pouco mais escura (o material é sem luz).
+        /// </summary>
+        public static void GolpeNoChao(Vector3 ponto, float forca)
+        {
+            if (_instancia == null || _instancia._nuvemDoGolpe == null) return;
+            // (de noite, só um pouco mais escura: com 1/3, no chão escuro ela sumia; o primeiro teste no bunker, 05/11/2026. E
+            // mais rala e mais curta: no segundo teste, ao ar livre, depois do terceiro golpe a nuvem escondia o Brutamonte)
+            float tom = Mathf.Lerp(1f, 0.62f, CicloDoDia.Noite);
+            Color Poeira()
+            {
+                var c = Color.Lerp(new Color(0.55f, 0.51f, 0.45f), new Color(0.66f, 0.62f, 0.55f), Random.value) * tom;
+                c.a = 0.6f;
+                return c;
+            }
+            var nuvem = _instancia._nuvemDoGolpe;
+            var p = new ParticleSystem.EmitParams();
+            // a onda: um anel saindo rápido, rente ao chão, que freia e cresce
+            int anel = Mathf.RoundToInt(20f * forca);
+            float giro = Random.value * 360f;
+            for (int i = 0; i < anel; i++)
+            {
+                float a = (giro + i * 360f / anel + Random.Range(-6f, 6f)) * Mathf.Deg2Rad;
+                var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                p.position = ponto + dir * Random.Range(0.25f, 0.5f) + Vector3.up * Random.Range(0.12f, 0.3f);
+                p.velocity = dir * (Random.Range(3.5f, 6.5f) * forca) + Vector3.up * Random.Range(0.1f, 0.5f);
+                p.startSize = Random.Range(0.45f, 0.9f) * forca;
+                p.startLifetime = Random.Range(1.0f, 1.7f);
+                p.startColor = Poeira();
+                nuvem.Emit(p, 1);
+            }
+            // o bafo do meio, subindo devagar
+            int meio = Mathf.RoundToInt(6f * forca);
+            for (int i = 0; i < meio; i++)
+            {
+                Vector2 r = Random.insideUnitCircle * 0.35f;
+                p.position = ponto + new Vector3(r.x, 0.2f, r.y);
+                p.velocity = new Vector3(r.x * 2.2f, Random.Range(0.7f, 1.8f) * forca, r.y * 2.2f);
+                p.startSize = Random.Range(0.6f, 1.1f) * forca;
+                p.startLifetime = Random.Range(1.2f, 2.0f);
+                p.startColor = Poeira();
+                nuvem.Emit(p, 1);
+            }
+            // os torrões
+            var terra = _instancia._terraDoGolpe;
+            var q = new ParticleSystem.EmitParams();
+            int torroes = Mathf.RoundToInt(34f * forca);
+            for (int i = 0; i < torroes; i++)
+            {
+                Vector2 r = Random.insideUnitCircle;
+                var dir = new Vector3(r.x, 0f, r.y);
+                q.position = ponto + dir * 0.4f + Vector3.up * 0.06f;
+                q.velocity = dir * (Random.Range(1f, 3.4f) * forca) + Vector3.up * (Random.Range(2.4f, 5.2f) * forca);
+                q.startSize = Random.Range(0.025f, 0.075f);
+                q.startLifetime = Random.Range(1.1f, 1.8f);
+                q.startColor = Color.Lerp(new Color(0.15f, 0.12f, 0.09f), new Color(0.30f, 0.25f, 0.19f), Random.value) * Mathf.Lerp(1f, 0.6f, CicloDoDia.Noite);
+                terra.Emit(q, 1);
+            }
         }
 
         static AudioClip Gerar(string nome, float duracao, System.Func<float, System.Random, float> onda)

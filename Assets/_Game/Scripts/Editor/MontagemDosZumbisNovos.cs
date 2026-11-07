@@ -11,7 +11,7 @@ namespace ZombieCityCleaner.EditorTools
     /// <summary>
     /// Os zumbis novos para teste (a pedido em 31/10/2026), feitos no Blender em "D:\teste blender\O &lt;nome&gt;" (fora do
     /// repositório), ~5 mil triângulos, visual low-poly facetado (sombreamento plano; textura só de cor e rugosidade):
-    ///  - O Parrudo: o tanque; o único olho, nas costas, é o ponto fraco (<see cref="OlhoDoParrudo"/>: abre, olha e fecha).
+    ///  - O Parrudo: o tanque; o único olho, nas costas, é o ponto fraco (<see cref="OlhoDoBrutamonte"/>, que era o OlhoDoParrudo: abre, olha e fecha).
     /// Cada um: Art/Characters/&lt;Nome&gt;/&lt;Nome&gt;.fbx (Humanoid, o mesmo esqueleto de nomes do Oco, então as animações
     /// dos zumbis servem pelo Oco.controller), Texturas/ e Materiais/, e o prefab Prefabs/Zumbis/Resources/&lt;Nome&gt;_Teste,
     /// com o <see cref="OcoDeTeste"/> (o F1 põe pelo nome; mesmas regras: só nesta máquina, sem dano).
@@ -185,7 +185,7 @@ namespace ZombieCityCleaner.EditorTools
         // o olho das costas: os ossos do Blender (olho, palpebra_sup, palpebra_inf) e o colisor do ponto fraco no globo
         static void MontarOlho(GameObject raiz, Transform modelo, OcoDeTeste oco)
         {
-            var olho = raiz.AddComponent<OlhoDoParrudo>();
+            var olho = raiz.AddComponent<OlhoDoBrutamonte>();
             olho.olho = Achar(modelo, "olho");
             olho.palpebraSup = Achar(modelo, "palpebra_sup");
             olho.palpebraInf = Achar(modelo, "palpebra_inf");

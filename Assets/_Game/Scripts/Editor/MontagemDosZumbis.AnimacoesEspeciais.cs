@@ -23,9 +23,10 @@ namespace ZombieCityCleaner.EditorTools
         const string AnimacoesHumanoidesEspeciais = "Assets/_Game/Art/Characters/Oco/Oco_AnimacoesEspeciais.fbx";
         const string EstadoDoAndarDosEspeciais = "Andar dos especiais";
 
+        // a Furia (05/11/2026) é o golpe no chão, três golpes e o levantar, uma vez só: não é mais um laço
         static readonly (string nome, bool loop)[] ClipesEspeciais =
         {
-            ("Correr", true), ("Emergir", false), ("Furia", true), ("Cuspir", false), ("Gritar", false),
+            ("Correr", true), ("Emergir", false), ("Furia", false), ("Cuspir", false), ("Gritar", false),
         };
 
         static Dictionary<string, AnimationClip> ClipesHumanoidesEspeciais() =>
@@ -77,8 +78,28 @@ namespace ZombieCityCleaner.EditorTools
                 aoc.ApplyOverrides(trocas);
                 EditorUtility.SetDirty(aoc);
             }
+            // os novos da comparação (05/11/2026, para o golpe no chão aparecer neles também): só os já montados (com o
+            // avatar Humanoid e o controlador), fora da lista do jogo como sempre
+            int novos = 0;
+            foreach (var (nome, _) in Novos)
+            {
+                string fbx = FbxDe(nome), caminho = $"{Arte}/Zombie_{nome}.overrideController";
+                var humano = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Avatar>().FirstOrDefault(a => a.isHuman && a.isValid);
+                var aoc = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(caminho);
+                if (humano == null || aoc == null) continue;
+                var clipes = Gravar(nome, fbx, humano, fontes, ClipesEspeciais);
+                var trocas = new List<KeyValuePair<AnimationClip, AnimationClip>>(aoc.overridesCount);
+                aoc.GetOverrides(trocas);
+                for (int k = 0; k < trocas.Count; k++)
+                    foreach (var (clipe, _) in ClipesEspeciais)
+                        if (trocas[k].Key == doPrimeiro[clipe])
+                            trocas[k] = new KeyValuePair<AnimationClip, AnimationClip>(trocas[k].Key, clipes[clipe]);
+                aoc.ApplyOverrides(trocas);
+                EditorUtility.SetDirty(aoc);
+                novos++;
+            }
             AssetDatabase.SaveAssets();
-            Debug.Log($"As animações dos especiais foram gravadas em {porModelo.Count} modelos.");
+            Debug.Log($"As animações dos especiais foram gravadas em {porModelo.Count} modelos (e em {novos} dos novos da comparação).");
         }
 
         /// <summary>Os estados dos especiais na camada base (refeitos se já existem), com os clipes do primeiro modelo.</summary>

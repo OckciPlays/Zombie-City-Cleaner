@@ -7,6 +7,11 @@
 // grão; a frente da pedra (onde ela está subindo) é uma faixa escura e irregular, como uma rachadura.
 // Iluminação: a PBR da URP (UniversalFragmentPBR), como o shader dos zumbis leves (Zumbi.shader). SRP Batcher: todas as
 // propriedades no UnityPerMaterial.
+// O avesso (05/11/2026, a pedido: "corrigir uma parte que fica transparente dentro da calça do novo brutamonte"): os
+// modelos novos (o NovoBrutamonte e o NovoCorredor, do Tripo) têm os rasgos da roupa abertos, sem a pele por baixo; por
+// eles via-se o fundo através da perna (as faces de dentro não eram desenhadas). Com _Cull em Off (só nos materiais
+// deles; o padrão continua Back, e os Ocos ficam como eram), o lado de dentro aparece escuro, na cor de carne na sombra
+// (_CorDoAvesso, com o claro e o escuro da textura), como a perna por baixo do rasgo.
 Shader "ZombieCityCleaner/Oco"
 {
     Properties
@@ -23,6 +28,10 @@ Shader "ZombieCityCleaner/Oco"
         _AlturaDoCorpo("Altura do corpo (m)", Float) = 1.85
         _CorPedra("Cor da pedra", Color) = (0.58, 0.56, 0.52, 1)
         _LisuraPedra("Lisura da pedra", Range(0, 1)) = 0.06
+
+        [Header(O avesso da roupa rasgada)]
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull("Faces (Off: desenha o lado de dentro)", Float) = 2
+        _CorDoAvesso("Cor do lado de dentro", Color) = (0.13, 0.075, 0.065, 1)
     }
 
     SubShader
@@ -41,6 +50,7 @@ Shader "ZombieCityCleaner/Oco"
             float _AlturaDoCorpo;
             half4 _CorPedra;
             half _LisuraPedra;
+            half4 _CorDoAvesso;
         CBUFFER_END
         ENDHLSL
 
@@ -49,6 +59,7 @@ Shader "ZombieCityCleaner/Oco"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.5
@@ -129,11 +140,14 @@ Shader "ZombieCityCleaner/Oco"
                 return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
             }
 
-            half4 Frag(Varyings input) : SV_Target
+            half4 Frag(Varyings input, FRONT_FACE_TYPE lado : FRONT_FACE_SEMANTIC) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 uv = input.uv;
+                // o avesso (só com _Cull em Off): a normal virada para quem olha
+                bool avesso = !IS_FRONT_VFACE(lado, true, false);
+                if (avesso) input.normalWS = -input.normalWS;
 
                 half3 cor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).rgb;
                 half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, uv), _BumpScale);
@@ -157,6 +171,17 @@ Shader "ZombieCityCleaner/Oco"
                     normalTS = normalize(lerp(normalTS, half3((grao - 0.5) * 0.35, 0.0, 1.0), pedra * 0.6));
                 }
 
+                // o lado de dentro: a carne na sombra, com um pouco do claro e do escuro da textura, sem brilho nem relevo
+                half oclusao = 1.0;
+                if (avesso)
+                {
+                    half luzDoAvesso = dot(cor, half3(0.3, 0.59, 0.11));
+                    cor = _CorDoAvesso.rgb * (0.7 + 0.6 * luzDoAvesso);
+                    lisura = 0.05;
+                    normalTS = half3(0.0, 0.0, 1.0);
+                    oclusao = 0.35;
+                }
+
                 float sinal = input.tangentWS.w;
                 float3 bitangente = sinal * cross(input.normalWS, input.tangentWS.xyz);
                 half3x3 tbn = half3x3(input.tangentWS.xyz, bitangente, input.normalWS);
@@ -167,7 +192,7 @@ Shader "ZombieCityCleaner/Oco"
                 surface.metallic = 0.0;
                 surface.specular = half3(0.0, 0.0, 0.0);
                 surface.smoothness = lisura;
-                surface.occlusion = 1.0;
+                surface.occlusion = oclusao;
                 surface.normalTS = normalTS;
 
                 InputData inputData = (InputData)0;
@@ -197,6 +222,7 @@ Shader "ZombieCityCleaner/Oco"
         {
             Name "ShadowCaster"
             Tags { "LightMode" = "ShadowCaster" }
+            Cull [_Cull]
             ZWrite On
             ZTest LEqual
             ColorMask 0
@@ -249,6 +275,7 @@ Shader "ZombieCityCleaner/Oco"
         {
             Name "DepthOnly"
             Tags { "LightMode" = "DepthOnly" }
+            Cull [_Cull]
             ZWrite On
             ColorMask R
 
@@ -287,6 +314,7 @@ Shader "ZombieCityCleaner/Oco"
         {
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormals" }
+            Cull [_Cull]
             ZWrite On
 
             HLSLPROGRAM
@@ -320,12 +348,13 @@ Shader "ZombieCityCleaner/Oco"
                 return o;
             }
 
-            void Frag(Varyings input, out half4 outNormalWS : SV_Target0
+            void Frag(Varyings input, FRONT_FACE_TYPE lado : FRONT_FACE_SEMANTIC, out half4 outNormalWS : SV_Target0
             #ifdef _WRITE_RENDERING_LAYERS
                 , out uint outRenderingLayers : SV_Target1
             #endif
             )
             {
+                if (!IS_FRONT_VFACE(lado, true, false)) input.normalWS = -input.normalWS;   // o avesso
             #if defined(_GBUFFER_NORMALS_OCT)
                 float2 oct = saturate(PackNormalOctQuadEncode(normalize(input.normalWS)) * 0.5 + 0.5);
                 outNormalWS = half4(PackFloat2To888(oct), 0.0);

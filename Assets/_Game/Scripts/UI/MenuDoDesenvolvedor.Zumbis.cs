@@ -76,10 +76,16 @@ namespace ZombieCityCleaner.UI
                 Avisar("As estátuas se soltaram (no sol, a pedra volta a subir).");
             }
             y += 30 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), "Amanhecer (5h, o relógio anda)", _botao))
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), "Amanhecer (5h)", _botao))
             {
                 AmanhecerRpc();
-                Avisar("5h: os zumbis procuram abrigo; o sol petrifica a partir das ~6h30 (1 hora = 1 minuto).");
+                Avisar("5h, com o relógio andando: os zumbis procuram abrigo; o sol petrifica a partir das ~6h30 (1 hora = 1 minuto).");
+            }
+            // a fúria do Brutamonte agora (05/11/2026: o golpe no chão; para testar e para gravar os vídeos)
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Fúria do Brutamonte", _botao))
+            {
+                FuriaDoBrutamonteRpc();
+                Avisar("O Brutamonte mais perto (até 40 m) vira para você e bate no chão com os dois punhos, três vezes, onde está.");
             }
             y += 30 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), "Horda de 8 vindo atrás de mim", _botao))
@@ -187,6 +193,23 @@ namespace ZombieCityCleaner.UI
         void CriarEspecialRpc(TipoDeZumbi tipo, RpcParams parametros = default)
         {
             if (Aceita(parametros) && ZombieManager.Instancia != null) ZombieManager.Instancia.CriarEspecialPerto(tipo, transform.position, transform.forward);
+        }
+
+        // a fúria do Brutamonte mais perto (até 40 m), onde ele está, virado para quem pediu
+        [Rpc(SendTo.Server)]
+        void FuriaDoBrutamonteRpc(RpcParams parametros = default)
+        {
+            var zm = ZombieManager.Instancia;
+            if (!Aceita(parametros) || zm == null) return;
+            Zumbi melhor = null;
+            float menor = 40f * 40f;
+            foreach (var z in zm.Ativos)
+            {
+                if (z == null || z.Morto || z.tipo != TipoDeZumbi.Brutamonte) continue;
+                float d = (z.transform.position - transform.position).sqrMagnitude;
+                if (d < menor) { menor = d; melhor = z; }
+            }
+            if (melhor != null) melhor.FuriaAgora(transform.position);
         }
 
         // arranca a coxa (a perna inteira) de um lado sorteado do zumbi de pé, com as duas pernas, mais perto (até 25 m)

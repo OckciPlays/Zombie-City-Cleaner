@@ -231,6 +231,20 @@ namespace ZombieCityCleaner.Zombies
 
         internal void BaqueDoBrutamonte(Zumbi z) => TocarEspecial("Brutamonte_Baque", z.transform.position + Vector3.up * 0.5f, 0.9f, 40f);
 
+        /// <summary>
+        /// Um golpe no chão da fúria do Brutamonte (05/11/2026; em cada máquina, na hora do impacto): o estrondo, a poeira que
+        /// corre rente ao chão, a terra que sobe e, na tela de quem está perto, o chão tremendo (inteiro até 2 m, nada a 18 m).
+        /// </summary>
+        internal void EfeitoDoGolpeNoChao(Zumbi z, Vector3 ponto, float forca)
+        {
+            TocarEspecial("Brutamonte_GolpeNoChao", ponto + Vector3.up * 0.3f, Mathf.Clamp01(0.7f + 0.3f * forca), 70f);
+            Efeitos.GolpeNoChao(ponto, forca);
+            var local = JogadorRede.Local;
+            if (local == null || !local.TryGetComponent<MovimentoPrimeiraPessoa>(out var movimento) || !movimento.enabled) return;
+            float perto = Mathf.Clamp01(1f - (Vector3.Distance(local.transform.position, ponto) - 2f) / 16f);
+            if (perto > 0f) movimento.Tremer(perto * perto * (0.55f + 0.45f * forca));
+        }
+
         internal void SomDoLong(Zumbi z, bool grito) => TocarEspecial(grito ? "Long_Grito" : "Long_Cuspe", z.transform.position + Vector3.up * 2f, 1f, grito ? 110f : 35f);
 
         internal void AgoniaDoLong(Zumbi z) => TocarEspecial("Long_Agonia", z.transform.position + Vector3.up * 2f, 1f, 50f);

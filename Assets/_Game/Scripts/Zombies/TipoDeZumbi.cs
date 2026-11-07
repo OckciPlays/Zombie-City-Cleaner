@@ -93,11 +93,13 @@ namespace ZombieCityCleaner.Zombies
         public float avancoMaximo = 30f;
         [Tooltip("Batendo numa parede no avanço, fica tonto (s).")]
         public float tonto = 4f;
-        [Tooltip("A fúria: quanto dura (s), o raio dos braços (m), o dano de cada braçada e o intervalo entre elas (s).")]
-        public float tempoDaFuria = 3f;
-        public float raioDaFuria = 2.6f;
-        public float danoDaFuria = 35f;
-        public float intervaloDaFuria = 0.6f;
+        // a fúria (05/11/2026): o golpe no chão com os dois punhos, três vezes, no lugar das braçadas no ar. Os tempos e a
+        // força de cada golpe vêm da animação (Zumbi.Brutamonte.cs, GolpesDaFuria); aqui, só o dano e o alcance. (Os nomes
+        // são novos de propósito: a cena Mundo guardava os números das braçadas.)
+        [Tooltip("O golpe no chão da fúria: o dano no meio (vezes a força do golpe: 0,85, 1 e 1,35 no terceiro), até onde ele é inteiro (m) e até onde chega (m; na borda, um quarto).")]
+        public float danoDoGolpeNoChao = 40f;
+        public float raioCheioDoGolpe = 1.8f;
+        public float raioDoGolpeNoChao = 4.5f;
         [Tooltip("Cansado depois da fúria (s): o olho abre devagar.")]
         public float cansado = 2f;
         [Tooltip("Andando atrás de quem o olho viu (m/s), entre os avanços.")]

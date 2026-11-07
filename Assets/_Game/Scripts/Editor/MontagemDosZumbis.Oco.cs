@@ -155,7 +155,7 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static Dictionary<string, AnimationClip> GravarClipes(Modelo m, Avatar humano)
         {
-            var fontes = ClipesHumanoides();
+            var fontes = _fontesSoLidas ?? ClipesHumanoides();
             return Gravar(m.nome, m.fbx, humano, fontes,
                           Clipes.Concat(ClipesExtra).Concat(ClipesDaAgonia).Concat(ClipesDoEquilibrio.Where(c => fontes.ContainsKey(c.nome)))
                                  .Concat(ClipesEspeciais.Where(c => fontes.ContainsKey(c.nome))));
@@ -186,11 +186,20 @@ namespace ZombieCityCleaner.EditorTools
             string[] lugar = { "m_LocalPosition.x", "m_LocalPosition.y", "m_LocalPosition.z" };
 
             var saida = new Dictionary<string, AnimationClip>();
+            MaosNoChao maos = null;   // (05/11/2026: na Furia, as mãos não entram no chão; MontagemDosZumbis.MaosNoChao.cs)
+            bool procurouAsMaos = false;
             try
             {
                 foreach (var (nome, loop) in lista)
                 {
                     var fonte = fontes[nome];
+                    bool maosNoChao = ClipesComAsMaosNoChao.Contains(nome);
+                    if (maosNoChao && !procurouAsMaos)
+                    {
+                        procurouAsMaos = true;
+                        maos = MaosNoChao.De(inst, smr, nomeDoModelo);
+                        if (maos == null) Debug.LogWarning($"{nomeDoModelo}: sem os ossos ou os vértices das mãos; a {nome} vai sem o ajuste das mãos no chão.");
+                    }
                     animador.Rebind();
                     var gravador = new GameObjectRecorder(inst);
                     foreach (var o in ossos)
@@ -205,6 +214,7 @@ namespace ZombieCityCleaner.EditorTools
                     {
                         animador.Play(nome, 0, (float)i / quadros);
                         animador.Update(0f);
+                        if (maosNoChao) maos?.Aplicar();
                         gravador.TakeSnapshot(i == 0 ? 0f : fonte.length / quadros);
                     }
                     string arquivo = $"{pasta}/{nome}.anim";
@@ -227,7 +237,8 @@ namespace ZombieCityCleaner.EditorTools
                 Object.DestroyImmediate(inst);
                 Object.DestroyImmediate(ctrl);
             }
-            AssetDatabase.SaveAssets();
+            // (a montagem dos novos salva só os arquivos dela, no fim: MontagemDosZumbis.Novos.cs)
+            if (_fontesSoLidas == null) AssetDatabase.SaveAssets();
             return saida;
         }
 
@@ -403,6 +414,9 @@ namespace ZombieCityCleaner.EditorTools
             // com o mapa, a lisura é o alfa dele vezes este valor. O mapa do Blender dá 0,5 a 0,7 em média (a pele molhada):
             // de perto, a lanterna estourava o Oco de branco. Com 0,35, fica em ~0,2, perto dos zumbis de antes (0,15)
             m.SetFloat("_Smoothness", 0.35f);
+            // o avesso (05/11/2026): os novos do Tripo têm os rasgos da roupa abertos; com as duas faces, o lado de dentro
+            // aparece escuro (a perna na sombra) em vez do fundo através da perna (Shaders/Oco.shader). Os outros, só a de fora
+            m.SetFloat("_Cull", EhNovo(nome) ? (float)UnityEngine.Rendering.CullMode.Off : (float)UnityEngine.Rendering.CullMode.Back);
             m.SetShaderPassEnabled("MotionVectors", false);
             m.enableInstancing = false;
             EditorUtility.SetDirty(m);

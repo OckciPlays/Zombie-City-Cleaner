@@ -6,8 +6,8 @@
 #            primeira), curvado para a frente, os braços socando o ar com as mãos em garra
 #   Emergir  o Brutamonte brotando da terra (108 quadros = 3,6 s, o TempoDeEmergir): a mão direita fura o chão e bate
 #            nele, depois a esquerda; ele se puxa para fora, põe o pé direito na borda, sobe e ruge de braços abertos
-#   Furia    as braçadas do Brutamonte (laço de 36 quadros = 1,2 s: duas braçadas, uma a cada 0,6 s, o
-#            intervaloDaFuria), de pernas abertas, o tronco girando de um lado para o outro
+#   Furia    o Brutamonte batendo no chão com os dois punhos (100 quadros = 3,33 s, sem laço: três golpes, o último o
+#            maior, e ele se levantando cansado; 05/11/2026, no lugar das braçadas no ar)
 #   Cuspir   o Long cuspindo (33 quadros): joga a cabeça para trás enchendo o papo e chicoteia para a frente; a gosma
 #            sai no quadro 13 (0,45 s, o LancamentoDoCuspe)
 #   Gritar   o Long gritando (51 quadros = 1,7 s): se encolhe, explode para trás de braços abertos e treme
@@ -107,37 +107,130 @@ def correr():
 
 # ================================================================================================ Furia (o Brutamonte)
 #
-# Meio ciclo (18 quadros): a braçada da direita. Os pés plantados, abertos; o tronco gira (a virada: negativo vira para
-# a direita do zumbi). A outra metade é o espelho (a braçada da esquerda).
+# O golpe no chão (05/11/2026, a pedido: "Ao invés dele começar a dar uns socos no ar como está hoje, seria interessante
+# ele começar a bater no chão com os dois punhos e dar dano em área"). Era um laço de braçadas no ar (um braço cruzava o
+# tronco); agora são três golpes com os dois punhos juntos, numa animação só, sem laço (100 quadros = 3,33 s,
+# TempoDaFuria no Zumbi.Brutamonte.cs):
+#   1. chega do avanço freando, ergue os punhos rápido e bate (o impacto no quadro 15 = 0,5 s);
+#   2. levanta os punhos de novo, mais alto, e bate (quadro 41 = 1,37 s);
+#   3. o maior: estufa o peito, joga a cabeça para trás (o rugido), segura lá em cima e bate com o corpo todo, mais fundo
+#      (quadro 71 = 2,37 s);
+#   e fica um tempo agachado, arfando, e se levanta cansado (a fase Cansado vem depois).
+# Os impactos são os GolpesDaFuria do Zumbi.Brutamonte.cs (o dano em área e a poeira saem neles): mudando um quadro de
+# impacto aqui, mude lá também.
+# Cada golpe: a antecipação lá no alto (o corpo arqueado, os ombros erguidos, uns quadros parados), a descida em 4 quadros
+# (o tronco puxa e os braços vêm atrás; quase todo o caminho nos dois últimos, para bater rápido, sem frear), o impacto (o
+# quadril afunda mais um pouco depois de bater, a cabeça passa do ponto e volta; as mãos ficam plantadas) e a volta.
+# As mãos batem de lado, como martelos (a borda do punho no chão: os Brutamontes não têm dedos, a mão é a garra fechada).
 
-PES_ABERTOS = {"pe.L": (0.30, 0.0, 0.09), "joelho.L": (0.5, -1, 0.1), "foot.L": (0, 0, -18),
-               "pe.R": (-0.30, 0.0, 0.09), "joelho.R": (-0.5, -1, 0.1), "foot.R": (0, 0, 18)}
+PES_ABERTOS = {"pe.L": (0.29, 0.03, 0.09), "joelho.L": (0.7, -1, 0.15), "foot.L": (0, 0, -16),
+               "pe.R": (-0.29, 0.03, 0.09), "joelho.R": (-0.7, -1, 0.15), "foot.R": (0, 0, 16)}
 
-FURIA_MEIO = [
-    # 0: armando: o tronco virado para a direita, o braço direito lá atrás e no alto; o esquerdo na frente
-    (0, {"hips": (0.03, 0.02, 0.84), "hips.rot": (10, 3, -18), **coluna(18, 18, 16, 6, -6, r=-4, y=-42, rh=-4, yh=-20),
-         **PES_ABERTOS,
-         "mao.R": (-0.62, 0.30, 1.62), "dedos.R": (-0.3, 0.4, 1), "palma.R": (-0.2, -1, 0), "cotovelo.R": (-1, 0.5, 0.3),
-         "mao.L": (0.20, -0.42, 1.10), "dedos.L": (-0.4, -1, 0), "palma.L": (-1, 0, -0.2), "cotovelo.L": (1, 0.2, -0.3),
-         "shoulder.R": (4, -8, -12), "shoulder.L": (14, 0, 8)}),
-    # 5: a braçada passa na frente, na altura do peito (o tronco de frente)
-    (5, {"hips": (0.0, 0.0, 0.82), "hips.rot": (12, 0, -2), **coluna(22, 24, 24, 12, 4, r=0, y=-4, yh=-4),
-         "mao.R": (-0.38, -0.70, 1.20), "dedos.R": (0.6, -1, 0), "palma.R": (0, 0, -1), "cotovelo.R": (-1, 0, -0.2),
-         "mao.L": (0.36, -0.10, 1.04), "dedos.L": (0, -0.5, -1), "palma.L": (-1, 0, 0), "cotovelo.L": (1, 0.6, 0)}),
-    # 9: o golpe: o braço direito cruza até a esquerda, baixo; o quadril afunda (o peso todo na braçada)
-    (9, {"hips": (-0.03, -0.02, 0.77), "hips.rot": (16, -4, 14), **coluna(28, 30, 30, 18, 10, r=4, y=34, rh=4, yh=16),
-         "mao.R": (0.32, -0.52, 0.92), "dedos.R": (1, -0.3, -0.3), "palma.R": (0, 0.2, -1), "cotovelo.R": (-0.3, 1, -0.6),
-         "mao.L": (0.48, 0.20, 1.12), "dedos.L": (0.3, 0.5, -1), "palma.L": (-1, 0, 0), "cotovelo.L": (0.6, 1, 0.2),
-         "shoulder.R": (16, 0, 14)}),
-    # 13: o tranco de volta; o braço esquerdo já sobe para armar o outro lado
-    (13, {"hips": (-0.03, 0.0, 0.81), "hips.rot": (12, -3, 18), **coluna(20, 20, 18, 8, -2, r=4, y=40, rh=4, yh=18),
-          "mao.R": (0.18, -0.30, 0.80), "dedos.R": (0.4, -0.4, -1), "palma.R": (1, 0, 0), "cotovelo.R": (-0.4, 1, 0),
-          "mao.L": (0.60, 0.28, 1.50), "dedos.L": (0.3, 0.4, 1), "palma.L": (0.2, -1, 0), "cotovelo.L": (1, 0.5, 0.3)}),
-]
+# os impactos (quadros), na ordem dos golpes
+IMPACTOS_DA_FURIA = (15, 41, 71)
 
 
-def furia():
-    return FURIA_MEIO + [(f + 18, espelho_de(d)) for f, d in FURIA_MEIO], 36
+def _maos(lx, ly, lz, dedos, palma, cotovelo, rx=None, ry=None, rz=None):
+    """As duas mãos (a direita é o espelho da esquerda, ou o ponto dado)."""
+    rx = -lx if rx is None else rx
+    ry = ly if ry is None else ry
+    rz = lz if rz is None else rz
+    return {"mao.L": (lx, ly, lz), "dedos.L": dedos, "palma.L": palma, "cotovelo.L": cotovelo,
+            "mao.R": (rx, ry, rz), "dedos.R": (-dedos[0], dedos[1], dedos[2]), "palma.R": (-palma[0], palma[1], palma[2]),
+            "cotovelo.R": (-cotovelo[0], cotovelo[1], cotovelo[2])}
+
+
+def _ombros(p, r, y):
+    return {"shoulder.L": (p, r, y), "shoulder.R": (p, -r, -y)}
+
+
+# os punhos lá no alto, quase juntos em cima da cabeça (os dedos para cima, as palmas uma para a outra, os cotovelos abertos)
+def _no_alto(z, y=0.20, x=0.11):
+    return _maos(x, y, z, (0.0, 0.3, 1), (-1, 0.1, 0), (1, 0.4, 0.2))
+
+
+# os punhos no chão, juntos na frente do rosto: a borda do punho batendo (os dedos para a frente e para baixo, a palma
+# para dentro), os cotovelos para fora
+def _no_chao(x=0.17, y=-0.42, z=0.07):
+    return _maos(x, y, z, (0.1, -1, -0.8), (-1, 0, 0), (1, 0.6, 0.5))
+
+
+# o corpo no impacto (o gorila batendo: as pernas dobradas e abertas, a bacia para trás, o tronco deitado para a frente,
+# a cabeça erguida olhando para a frente)
+def _corpo_no_chao(fundo=0.0, cabeca=36):
+    return {"hips": (0.0, 0.16, 0.58 - fundo), "hips.rot": (44, 0, 0), **coluna(70, 82, 88, 60, cabeca)}
+
+
+def _golpe(alto, espera, impacto, forca=1.0, virada=0.0, rugido=False):
+    """Um golpe: do alto (o quadro 'alto' e a espera até 'espera') até o impacto e as mãos plantadas depois dele."""
+    k = []
+    arco = 1.0 + 0.8 * (forca - 1.0)   # o maior golpe arqueia mais
+    cab_alto = -30 if rugido else -4   # no rugido, a cabeça vai para trás (a boca para o céu)
+    z_alto = 1.86 + 0.08 * (forca - 1.0)
+    # no alto: o quadril sobe (as pernas quase retas) e vai para a frente, as costas arqueadas, os ombros erguidos
+    k.append((alto, {"hips": (0.0, -0.01, 0.87), "hips.rot": (-6 * arco, 0, virada * 0.3),
+                     **coluna(-10 * arco, -17 * arco, -24 * arco, -16 * arco + cab_alto * 0.4, cab_alto, y=virada),
+                     **_no_alto(z_alto), **_ombros(0, -14, 6)}))
+    # a espera: ainda subindo e arqueando um pouco (a antecipação; não fica parado de todo)
+    k.append((espera, {"hips": (0.0, -0.02, 0.88), "hips.rot": (-7 * arco, 0, virada * 0.3),
+                       **coluna(-12 * arco, -20 * arco, -28 * arco, -18 * arco + cab_alto * 0.5, cab_alto - 4, y=virada),
+                       **_no_alto(z_alto + 0.03, y=0.24), **_ombros(0, -17, 8)}))
+    # a descida: o tronco puxa primeiro e os braços vêm atrás, em arco pela frente (quase todo o caminho nos dois
+    # últimos quadros, para bater rápido)
+    k.append((impacto - 2, {"hips": (0.0, 0.09, 0.78), "hips.rot": (10, 0, virada * 0.2),
+                            **coluna(16, 20, 24, 12, 2, y=virada * 0.6),
+                            **_maos(0.13, -0.30, 1.52, (0.0, -0.6, 0.8), (-1, 0, 0), (1, 0.5, 0.1)), **_ombros(0, -6, -2)}))
+    k.append((impacto - 1, {"hips": (0.0, 0.13, 0.66), "hips.rot": (30, 0, virada * 0.1),
+                            **coluna(50, 62, 70, 44, 24, y=virada * 0.3),
+                            **_maos(0.16, -0.52, 0.70, (0.1, -1, -0.3), (-1, 0, 0), (1, 0.6, 0.3)), **_ombros(0, 4, -12)}))
+    # o impacto: os braços esticados, os punhos no chão na frente do rosto (o maior afunda mais)
+    fundo = 0.10 * (forca - 1.0)
+    k.append((impacto, {**_corpo_no_chao(fundo), "hips.rot": (44 + 8 * (forca - 1.0), 0, 0), **_no_chao(),
+                        **_ombros(0, 10, -18)}))
+    # o tranco: o quadril afunda mais um pouco, a cabeça passa do ponto (as mãos plantadas)
+    k.append((impacto + 1, {"hips": (0.0, 0.17, 0.55 - fundo * 1.5), **coluna(72, 84, 90, 66, 46), **_no_chao()}))
+    # a cabeça volta e olha para a frente (para quem ele queria acertar), ainda com as mãos no chão
+    k.append((impacto + 4, {"hips": (0.0, 0.16, 0.585 - fundo), "hips.rot": (43, 0, 0), **coluna(68, 80, 86, 48, 16),
+                            **_no_chao()}))
+    return k
+
+
+def _furia():
+    k = []
+    # 0: chega do avanço freando: agachado, os braços para trás (vindos da corrida)
+    k.append((0, {"hips": (0.0, 0.06, 0.78), "hips.rot": (22, 0, 0), **coluna(32, 38, 40, 22, 8), **PES_ABERTOS,
+                  **_maos(0.34, 0.12, 0.74, (0.2, 0.4, -1), (-1, 0, 0), (0.6, 1, 0.2)), **_ombros(8, 0, 0)}))
+    # 5: os braços sobem pela frente (a mão passa na altura do peito), o tronco se endireita
+    k.append((5, {"hips": (0.0, 0.04, 0.84), "hips.rot": (8, 0, 0), **coluna(10, 8, 4, 0, 2),
+                  **_maos(0.26, -0.36, 1.30, (0, -0.6, 0.8), (-1, 0, 0), (1, 0.4, -0.4)), **_ombros(0, -8, 0)}))
+    # o primeiro golpe: rápido, com raiva (pouca espera)
+    k += _golpe(9, 11, IMPACTOS_DA_FURIA[0], forca=1.0, virada=-5)
+    # 24: a volta: as mãos saem do chão, o tronco sobe
+    k.append((24, {"hips": (0.0, 0.08, 0.66), "hips.rot": (22, 0, 0), **coluna(36, 40, 44, 26, 10),
+                   **_maos(0.26, -0.40, 0.50, (0.1, -0.8, -0.6), (-1, 0, 0), (1, 0.6, 0.2)), **_ombros(0, 2, -6)}))
+    # 28: os braços passam pela frente, subindo
+    k.append((28, {"hips": (0.0, 0.05, 0.80), "hips.rot": (6, 0, 0), **coluna(8, 4, 0, -2, 2),
+                   **_maos(0.25, -0.30, 1.22, (0, -0.6, 0.8), (-1, 0, 0), (1, 0.4, -0.4)), **_ombros(0, -8, 0)}))
+    # o segundo golpe: mais alto, virado um pouco para o outro lado
+    k += _golpe(33, 36, IMPACTOS_DA_FURIA[1], forca=1.1, virada=6)
+    # 50, 54: a volta, mais devagar (ele se prepara para o maior)
+    k.append((50, {"hips": (0.0, 0.08, 0.64), "hips.rot": (24, 0, 0), **coluna(38, 44, 48, 28, 12),
+                   **_maos(0.27, -0.42, 0.46, (0.1, -0.8, -0.6), (-1, 0, 0), (1, 0.6, 0.2)), **_ombros(0, 2, -6)}))
+    k.append((55, {"hips": (0.0, 0.05, 0.80), "hips.rot": (6, 0, 0), **coluna(6, 2, -4, -8, -6),
+                   **_maos(0.27, -0.26, 1.28, (0, -0.5, 0.9), (-1, 0, 0), (1, 0.4, -0.4)), **_ombros(0, -10, 0)}))
+    # o terceiro: o rugido lá no alto (o peito estufado, a cabeça para trás), uma espera mais longa e o golpe mais fundo
+    k += _golpe(60, 67, IMPACTOS_DA_FURIA[2], forca=1.35, virada=0, rugido=True)
+    # 79 a 86: agachado, arfando (o quadril sobe e desce, a cabeça pesada), as mãos ainda no chão
+    k.append((79, {"hips": (0.0, 0.16, 0.59), "hips.rot": (42, 0, 0), **coluna(68, 79, 85, 46, 14), **_no_chao()}))
+    k.append((83, {"hips": (0.0, 0.16, 0.565), "hips.rot": (45, 0, 0), **coluna(71, 83, 89, 62, 40), **_no_chao()}))
+    k.append((86, {"hips": (0.0, 0.16, 0.58), "hips.rot": (44, 0, 0), **coluna(70, 81, 87, 54, 26), **_no_chao()}))
+    # 93: empurra o chão e se levanta, as mãos sobem até os joelhos
+    k.append((93, {"hips": (0.0, 0.07, 0.72), "hips.rot": (20, 0, 0), **coluna(34, 38, 40, 24, 12),
+                   **_maos(0.32, -0.26, 0.58, (0.1, -0.6, -0.8), (-1, 0, 0), (0.8, 1, 0.1)), **_ombros(4, 4, -4)}))
+    # 100: de pé, cansado: curvado, os ombros caídos, os braços pendurados (a fase Cansado começa aqui)
+    k.append((100, {"hips": (0.0, 0.04, 0.83), "hips.rot": (12, 0, 0), **coluna(24, 28, 30, 16, 10), **PES_ABERTOS,
+                    **_maos(0.30, -0.12, 0.76, (-0.05, -0.4, -1), (-1, 0, 0), (0.5, 1, 0)), **_ombros(8, 4, 0)}))
+    return k
 
 
 # ================================================================================================ Emergir (o Brutamonte)
@@ -278,7 +371,8 @@ def _gritar():
 TREMORES = {
     "Gritar": [(12, 16, 42, 3.4)],
     "Emergir": [(40, 52, 66, 1.8), (66, 74, 84, 1.6), (98, 101, 106, 2.4)],
-    "Furia": [],
+    # o tranco de cada golpe no chão (o terceiro, o maior) e o rugido lá no alto antes dele
+    "Furia": [(15, 16, 22, 2.4), (41, 42, 48, 2.6), (60, 64, 68, 1.6), (71, 72, 84, 3.4)],
     "Cuspir": [(5, 9, 12, 1.2)],
     "Correr": [],
 }
@@ -308,11 +402,10 @@ class Laco(eq.Linha):
 def animacoes():
     """(nome, linha, último quadro, laço)."""
     c, pc = correr()
-    fu, pf = furia()
     return [
         ("Correr", Laco(c, pc), pc, True),
         ("Emergir", eq.Linha(_emergir()), 108, False),
-        ("Furia", Laco(fu, pf), pf, True),
+        ("Furia", eq.Linha(_furia()), 100, False),   # (05/11/2026: o golpe no chão, sem laço; era o laço das braçadas)
         ("Cuspir", eq.Linha(_cuspir()), 33, False),
         ("Gritar", eq.Linha(_gritar()), 51, False),
     ]

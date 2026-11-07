@@ -129,6 +129,34 @@ def brutamonte_baque():
     gravar("Brutamonte_Baque", saturar(corpo + poeira, 1.8))
 
 
+def brutamonte_golpe_no_chao():
+    """O golpe no chão da fúria (05/11/2026, a pedido: os dois punhos batendo no chão): o estalo seco do impacto, o
+    estrondo grave que desce (o chão inteiro), a terra e as pedras caindo em volta e o ronco que fica."""
+    d = 1.8
+    tt = t(d)
+    n = len(tt)
+    # o estalo do impacto (os primeiros milissegundos: concreto e osso)
+    estalo = passa_alta(ruido(n), 1200) * np.exp(-tt * 70) * 0.9
+    estalo += banda(ruido(n), 2400, 2.0) * np.exp(-tt * 45) * 0.5
+    # o estrondo: um seno que despenca de 85 para 26 Hz, com o soco no começo
+    f = 59 * np.exp(-tt * 11) + 26
+    estrondo = np.sin(2 * np.pi * np.cumsum(f) / TAXA) * np.exp(-tt * 2.6)
+    estrondo += 0.5 * np.sin(2 * np.pi * np.cumsum(f * 1.5) / TAXA) * np.exp(-tt * 6)
+    # a terra se abrindo: ruído grave que sobe rápido e cai devagar
+    terra = passa_baixa(ruido(n), 420) * envelope(n, 0.02, d * 0.85) * np.exp(-tt * 1.6) * 1.2
+    # as pedras e os torrões caindo em volta (estalos curtos, cada vez mais espaçados)
+    pedras = np.zeros(n)
+    for _ in range(40):
+        p = int(rng.uniform(0.04, 1.3) ** 1.6 * TAXA)
+        m = int(rng.uniform(0.006, 0.02) * TAXA)
+        if p + m >= n:
+            continue
+        pedras[p:p + m] += ruido(m) * np.exp(-np.linspace(0, 7, m)) * rng.uniform(0.2, 0.9) * (1.2 - p / n)
+    pedras = banda(pedras, 1300, 1.3) + 0.6 * banda(pedras, 500, 1.4)
+    x = saturar(1.5 * estrondo + terra, 2.2) + estalo + 0.45 * pedras
+    gravar("Brutamonte_GolpeNoChao", eco(x, (0.11, 0.23), (0.22, 0.1)), 1.0)
+
+
 # ------------------------------------------------------------------ o Long
 
 def long_grito():
@@ -203,6 +231,11 @@ def gosma_splash():
 
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "golpe":
+        # só o golpe no chão (os outros ficam como estão: podem ter sido trocados por sons gravados)
+        brutamonte_golpe_no_chao()
+        sys.exit(0)
     brutamonte_terra()
     rugido(1.6, 62, 0.35, 0.5, "Brutamonte_Rugido")
     rugido(2.2, 70, 0.7, 0.7, "Brutamonte_Furia", 1.0)
