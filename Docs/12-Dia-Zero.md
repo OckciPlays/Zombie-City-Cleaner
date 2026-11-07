@@ -14,7 +14,7 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 
 ## Como funciona
 
-- **Iniciar novo jogo** (no menu, "Criar o mundo" ou "Criar local") começa pelo Dia 0. O **Continuar** vai direto para o
+- **Iniciar novo jogo** (no menu, pela internet ou na rede local) começa pelo Dia 0. O **Continuar** vai direto para o
   mundo (é o mesmo mapa de antes).
 - **A cena é separada** (`Scenes/DiaZero.unity`): ela é carregada por cima da cena do mundo, e o mundo só é gerado depois
   da porta (a tela dos "5 anos depois" cobre a geração).

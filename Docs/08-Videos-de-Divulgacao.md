@@ -141,7 +141,7 @@ Para gravar: no "Diretor do vídeo", escolha a tomada **Armas** e ligue **Gravar
 
 Para os próximos vídeos, você mesmo anda pelo mapa e grava, na partida de sempre (a cena `Mundo`), sem a cena de vídeo. A `Video.unity` é uma cópia da cidade antiga da demo: o mapa do jogo de agora só aparece na partida normal.
 
-1. Dê Play na cena `Mundo` e comece a partida como sempre (Iniciar novo jogo, Continuar ou Criar local).
+1. Dê Play na cena `Mundo` e comece a partida como sempre (Iniciar novo jogo ou Continuar, pela internet ou na rede local).
 2. **F8** começa a gravar. **F8** de novo para. Parar o Play também fecha o vídeo.
 3. Os vídeos ficam em `Recordings/Mundo/Mundo_<data>.mp4` (fora do git).
 

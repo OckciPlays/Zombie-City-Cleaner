@@ -19,9 +19,10 @@ namespace ZombieCityCleaner.UI
     /// atira sozinho) e -personagem 1 a 4; na cena Mundo, também -semente N, -tamanho pequeno|medio|grande e -nome TEXTO
     /// (o mundo de quem hospeda). O personagem é criado ao entrar na partida (a tela de criar, a TelaDeCriarPersonagem do
     /// jogador; o Plano_Personagem.md da pasta de arte): a escolha dos retratos saiu do menu.
-    /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o "Novo mundo": o nome, o tamanho e a semente.
+    /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o menu principal; o "Novo jogo" e o "Continuar" estão
+    /// no MenuOnline.NovoJogo.cs (repaginados em 06/11/2026).
     /// </summary>
-    public class MenuOnline : MonoBehaviour
+    public partial class MenuOnline : MonoBehaviour
     {
         /// <summary>Menu aberto (ou uma tela obrigatória, a de criar o personagem): o jogador local não recebe comandos.</summary>
         public static bool Aberto { get; private set; } = true;
@@ -83,10 +84,9 @@ namespace ZombieCityCleaner.UI
         // o "Novo mundo" da cena Mundo
         string _nomeDoMundo = "Mundo novo", _semente = "";
         TamanhoDoMundo _tamanho = TamanhoDoMundo.Grande;
-        static readonly string[] NomesDosTamanhos = { "Pequeno (3 km)", "Médio (5 km)", "Grande (8 km)" };
         // o save (02/11/2026): o personagem escolhido aqui, o modo de salvar do mundo novo e a tela do Continuar (a lista
         // dos mundos salvos)
-        bool _continuar, _continuarLocal;
+        bool _continuar;
         System.Collections.Generic.List<PersonagemSalvo> _personagens;
         System.Collections.Generic.List<MundoSalvo> _mundos;
         int _indiceDoPersonagem;
@@ -94,7 +94,6 @@ namespace ZombieCityCleaner.UI
         ModoDeSalvar _modoNovo = ModoDeSalvar.Automatico;
         // o fogo amigo do mundo novo (03/11/2026): desligado de começo
         bool _fogoAmigoNovo;
-        static readonly string[] NomesDoFogoAmigo = { "Desligado", "Ligado" };
         Vector2 _rolagemDosMundos;
         // a tela dos moradores do bunker (04/11/2026, o Plano_NPCs_Bunker.md, a parte 3; em cartas desde o mesmo dia): entre
         // o "Novo mundo" e a partida, e no Continuar de um mundo salvo antes deles (o _semMoradores); o _criarLocal diz se o
@@ -102,7 +101,6 @@ namespace ZombieCityCleaner.UI
         readonly TelaDosMoradores _telaDosMoradores = new TelaDosMoradores();
         bool _criarLocal;
         MundoSalvo _semMoradores;
-        static readonly string[] NomesDosModos = { "Automático (5 min)", "Ao sair", "Só dormindo" };
 
         void OnEnable() => _esperarSoltar = true;
 
@@ -144,8 +142,11 @@ namespace ZombieCityCleaner.UI
             bool naPartida = _sessao.Atual == SessaoOnline.Estado.Conectado;
             var teclado = Keyboard.current;
             bool esc = teclado != null && teclado.escapeKey.wasPressedThisFrame;
-            // ESC nas opções volta para o menu; com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
+            // ESC nas opções volta para o menu; no Novo jogo e no Continuar, volta ao menu principal (a tela das cartas cuida
+            // do ESC dela); com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
             if (esc && _opcoes) _opcoes = false;
+            else if (esc && !naPartida && !_principal && MundoDaPartida.Instancia != null && !_telaDosMoradores.Aberta &&
+                     _sessao.Atual == SessaoOnline.Estado.Desconectado) Voltar();
             else if (naPartida && esc && _telas.Count > _obrigatorias.Count && !_pausa) FecharTelas?.Invoke();
             else if (naPartida && esc) _pausa = !_pausa;
             if (naPartida && !_pausa) _opcoes = false;
@@ -308,9 +309,11 @@ namespace ZombieCityCleaner.UI
                 Moradores();
                 return;
             }
-            if (doJogo && _continuar && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
+            // o Novo jogo e o Continuar (repaginados em 06/11/2026: MenuOnline.NovoJogo.cs); também enquanto conecta
+            if (doJogo && !_opcoes)
             {
-                TelaDoContinuar(u);
+                if (_continuar) TelaDoContinuar();
+                else TelaDoNovoJogo();
                 return;
             }
             GUI.color = new Color(0, 0, 0, doJogo ? 0.55f : 0.6f);
@@ -321,54 +324,39 @@ namespace ZombieCityCleaner.UI
                 if (Opcoes.Painel(u, Screen.height * 0.16f, _titulo, _botao)) _opcoes = false;
                 return;
             }
-            // na cena Mundo, o "Novo mundo" (o nome, o tamanho e a semente) no lugar do "Hospedar partida"
-            bool doMundo = MundoDaPartida.Instancia != null;
-            float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * (doMundo ? 0.07f : 0.18f);
-            GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
-            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), doMundo ? "Novo mundo" : "Demo · até 4 jogadores", _texto);
-            y += (doMundo ? 84 : 110) * u;
+            // fora da cena Mundo (a Demo_Cidade): hospedar, entrar com o código e o modo local
+            float w = 420 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.18f;
+            GUI.Label(new Rect(0, y, Screen.width, 50 * u), "BUNKER: Outbreak", _titulo);
+            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Demo · até 4 jogadores", _texto);
+            y += 110 * u;
             if (estado == SessaoOnline.Estado.Conectando)
             {
                 GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
                 return;
             }
-            if (doMundo)
-            {
-                PainelDoPersonagem(u, x + w + 36 * u, Screen.height * 0.07f + 84 * u, 300 * u);
-                y = NovoMundo(u, x, y, w);
-            }
-            else
-            {
-                if (GUI.Button(new Rect(x, y, w, 46 * u), "Hospedar partida", _botao)) _sessao.Hospedar();
-                y += 70 * u;
-            }
+            if (GUI.Button(new Rect(x, y, w, 46 * u), "Hospedar partida", _botao)) _sessao.Hospedar();
+            y += 70 * u;
             GUI.Label(new Rect(x, y, w, 24 * u), "ou entre com o código de um amigo:", _texto);
             y += 28 * u;
             _codigo = GUI.TextField(new Rect(x, y, w * 0.62f, 40 * u), _codigo, 12, _campo);
             if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 40 * u), "Entrar", _botao))
             {
-                ParaEntrar(doMundo);
+                ParaEntrar(false);
                 _sessao.Entrar(_codigo);
             }
             y += 64 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "Teste sem internet (mesma rede):", _texto);
             y += 26 * u;
-            if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), doMundo ? "Criar local" : "Hospedar local", _botao))
-            {
-                // na cena Mundo, o mundo local também passa pela tela dos moradores
-                if (doMundo) AbrirOsMoradores(true, null);
-                else _sessao.HospedarLocal();
-            }
+            if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), "Hospedar local", _botao)) _sessao.HospedarLocal();
             _ip = GUI.TextField(new Rect(x + w * 0.52f, y, w * 0.26f, 32 * u), _ip, 40, _campo);
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao))
             {
-                ParaEntrar(doMundo);
+                ParaEntrar(false);
                 _sessao.EntrarLocal(_ip);
             }
             y += 50 * u;
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Configurações", _botao)) _opcoes = true;
-            if (doMundo && GUI.Button(new Rect(24 * u, Screen.height - 70 * u, 150 * u, 34 * u), "< Voltar", _botao)) _principal = true;
         }
 
         // ------------------------------------------------------------------ o menu principal (a cena Mundo)
@@ -392,12 +380,12 @@ namespace ZombieCityCleaner.UI
             if (_alfa <= 0.001f) return;
             EstilosDoPrincipal(u);
             GUI.color = new Color(1f, 1f, 1f, _alfa);
-            float x = 84 * u, y = Screen.height * 0.24f, w = 520 * u;
-            Sombreado(new Rect(x, y, Screen.width, 70 * u), "ZOMBIE CITY CLEANER", _grande, u);
-            GUI.color = new Color(0.72f, 0.58f, 0.2f, 0.9f * _alfa);
-            GUI.DrawTexture(new Rect(x + 2 * u, y + 72 * u, 300 * u, 2 * u), Texture2D.whiteTexture);
+            float x = 84 * u, y = Screen.height * 0.17f, w = 520 * u;
+            y = TituloDoJogo(x, y, u);
+            GUI.color = new Color(0.77f, 0.14f, 0.14f, 0.9f * _alfa);
+            GUI.DrawTexture(new Rect(x + 2 * u, y + 6 * u, 300 * u, 2 * u), Texture2D.whiteTexture);
             GUI.color = new Color(1f, 1f, 1f, _alfa);
-            y += 150 * u;
+            y += 64 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Iniciar novo jogo", true, u))
             {
                 _principal = false;
@@ -421,6 +409,49 @@ namespace ZombieCityCleaner.UI
             if (Opcao(new Rect(x, y, w, 46 * u), "Sair", true, u)) SairDoJogo();
             if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x, y + 70 * u, w, 50 * u), _sessao.Erro, _erro);
             GUI.color = Color.white;
+        }
+
+        // o título do jogo (06/11/2026, a pedido: "BUNKER: Outbreak", com as maiúsculas e as minúsculas do logo do Pedro; o K
+        // e o "Out" em vermelho, como no logo, e o "Outbreak" um pouco para a direita). Com a imagem do logo em
+        // Resources/Logo_BunkerOutbreak (o fundo transparente), ela fica no lugar do texto. Devolve onde o título acaba
+        [System.NonSerialized] Texture2D _logo;
+        [System.NonSerialized] bool _logoProcurado;
+        GUIStyle _tituloDoJogo;
+
+        float TituloDoJogo(float x, float y, float u)
+        {
+            if (!_logoProcurado)
+            {
+                _logoProcurado = true;
+                _logo = Resources.Load<Texture2D>("Logo_BunkerOutbreak");
+            }
+            if (_logo != null)
+            {
+                float largura = 540 * u, altura = largura * _logo.height / _logo.width;
+                GUI.DrawTexture(new Rect(x - 6 * u, y, largura, altura), _logo, ScaleMode.ScaleToFit, true);
+                return y + altura;
+            }
+            int tamanho = Mathf.RoundToInt(72 * u);
+            if (_tituloDoJogo == null || _tituloDoJogo.fontSize != tamanho)
+            {
+                _tituloDoJogo = new GUIStyle(GUI.skin.label) { font = Fonte(), fontSize = tamanho, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, richText = true };
+                _tituloDoJogo.padding = new RectOffset(0, 0, 0, 0);
+            }
+            Opcoes.Cor(_tituloDoJogo, new Color(0.88f, 0.85f, 0.78f));
+            SombreadoRico(new Rect(x, y, Screen.width, 72 * u), "BUNKER:", "BUN<color=#C42424>K</color>ER:", _tituloDoJogo, u);
+            SombreadoRico(new Rect(x + 26 * u, y + 64 * u, Screen.width, 72 * u), "Outbreak", "<color=#C42424>Out</color>break", _tituloDoJogo, u);
+            return y + 136 * u;
+        }
+
+        // o texto com a sombra, com as cores no texto (a sombra sai do texto sem as cores, senão as letras coloridas ficariam
+        // sem a sombra escura)
+        static void SombreadoRico(Rect r, string semCor, string comCor, GUIStyle estilo, float u)
+        {
+            var cor = estilo.normal.textColor;
+            Opcoes.Cor(estilo, new Color(0f, 0f, 0f, 0.8f));
+            GUI.Label(new Rect(r.x + 3 * u, r.y + 3 * u, r.width, r.height), semCor, estilo);
+            Opcoes.Cor(estilo, cor);
+            GUI.Label(r, comCor, estilo);
         }
 
         // uma opção do menu principal: o texto que acende sob o mouse, com o tracinho na frente (só responde com o menu já
@@ -473,37 +504,6 @@ namespace ZombieCityCleaner.UI
             PlayerPrefs.SetInt("mundo.ultimo.tamanho", (int)m.Tamanho);
             PlayerPrefs.SetString("mundo.ultimo.nome", string.IsNullOrEmpty(m.Nome) ? PedidoDoMundo.Padrao.nome : m.Nome);
             PlayerPrefs.Save();
-        }
-
-        // o "Novo mundo": o nome, o tamanho e a semente, e o botão de criar (hospedar); devolve onde o menu continua
-        float NovoMundo(float u, float x, float y, float w)
-        {
-            GUI.Label(new Rect(x, y, w, 22 * u), "Nome do mundo:", _texto);
-            y += 24 * u;
-            _nomeDoMundo = GUI.TextField(new Rect(x, y, w, 36 * u), _nomeDoMundo, 30, _campo);
-            y += 46 * u;
-            GUI.Label(new Rect(x, y, w, 22 * u), "Tamanho do mapa:", _texto);
-            y += 24 * u;
-            _tamanho = (TamanhoDoMundo)GUI.SelectionGrid(new Rect(x, y, w, 34 * u), (int)_tamanho, NomesDosTamanhos, 3, _botao);
-            y += 44 * u;
-            GUI.Label(new Rect(x, y, w, 22 * u), "Semente (um número ou uma palavra; vazia, sorteada):", _texto);
-            y += 24 * u;
-            _semente = GUI.TextField(new Rect(x, y, w * 0.62f, 34 * u), _semente, 20, _campo);
-            if (GUI.Button(new Rect(x + w * 0.65f, y, w * 0.35f, 34 * u), "Sortear", _botao)) _semente = GeradorDoMundo.NovaSemente().ToString();
-            y += 44 * u;
-            // quando o mundo salva (02/11/2026, a pedido: as três formas)
-            GUI.Label(new Rect(x, y, w, 22 * u), "Salvar o jogo:", _texto);
-            y += 24 * u;
-            _modoNovo = (ModoDeSalvar)GUI.SelectionGrid(new Rect(x, y, w, 32 * u), (int)_modoNovo, NomesDosModos, 3, _botao);
-            y += 42 * u;
-            // o fogo amigo (03/11/2026, a pedido: "uma opção na tela de começo")
-            GUI.Label(new Rect(x, y, w, 22 * u), "Fogo amigo (o tiro e o golpe ferem os outros jogadores):", _texto);
-            y += 24 * u;
-            _fogoAmigoNovo = GUI.SelectionGrid(new Rect(x, y, w, 32 * u), _fogoAmigoNovo ? 1 : 0, NomesDoFogoAmigo, 2, _botao) == 1;
-            y += 42 * u;
-            // o mundo só é criado depois da tela dos moradores (04/11/2026, o Plano_NPCs_Bunker.md, a parte 3)
-            if (GUI.Button(new Rect(x, y, w, 46 * u), "Escolher os moradores", _botao)) AbrirOsMoradores(false, null);
-            return y + 66 * u;
         }
 
         // ------------------------------------------------------------------ os moradores do bunker (04/11/2026)
@@ -615,7 +615,9 @@ namespace ZombieCityCleaner.UI
             // o jogo novo começa pelo Dia 0 (01/11/2026), menos para um personagem que já existe (02/11/2026, a pedido: ele
             // pula o Dia 0); o Continuar vai direto para o mundo
             AplicarAEscolha();
-            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = _nomeDoMundo, diaZero = EscolhaDoPersonagem.Novo, fogoAmigo = _fogoAmigoNovo };
+            // (o nome vazio vira o padrão: o campo mostra o "Mundo novo" apagado quando vazio)
+            string nome = string.IsNullOrWhiteSpace(_nomeDoMundo) ? PedidoDoMundo.Padrao.nome : _nomeDoMundo.Trim();
+            MundoDaPartida.Pedido = new PedidoDoMundo { tamanho = _tamanho, semente = semente, nome = nome, diaZero = EscolhaDoPersonagem.Novo, fogoAmigo = _fogoAmigoNovo };
             Salvamento.Atual = MundoSalvo.Novo(MundoDaPartida.Pedido, _modoNovo);
         }
 
@@ -639,104 +641,6 @@ namespace ZombieCityCleaner.UI
             Salvamento.Atual = null;
         }
 
-        /// <summary>
-        /// O painel do personagem (na tela do mundo novo e na do Continuar): os salvos neste computador e o "Novo personagem",
-        /// com as setas; o salvo mostra o dinheiro e o que leva, e pode ser apagado (com um segundo clique).
-        /// </summary>
-        void PainelDoPersonagem(float u, float x, float y, float w)
-        {
-            var lista = Personagens();
-            _indiceDoPersonagem = Mathf.Clamp(_indiceDoPersonagem, 0, lista.Count);
-            GUI.color = new Color(0f, 0f, 0f, 0.45f);
-            GUI.DrawTexture(new Rect(x - 12 * u, y - 10 * u, w + 24 * u, 214 * u), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUI.Label(new Rect(x, y, w, 24 * u), "Personagem:", _texto);
-            y += 30 * u;
-            bool novo = _indiceDoPersonagem >= lista.Count;
-            var p = novo ? null : lista[_indiceDoPersonagem];
-            var nome = new GUIStyle(_texto) { fontSize = Mathf.RoundToInt(22 * u), fontStyle = FontStyle.Bold };
-            if (GUI.Button(new Rect(x, y, 34 * u, 38 * u), "<", _botao)) { _indiceDoPersonagem = (_indiceDoPersonagem + lista.Count) % (lista.Count + 1); _apagarPersonagem = null; }
-            GUI.Label(new Rect(x + 38 * u, y, w - 76 * u, 38 * u), novo ? "Novo personagem" : p.nome, nome);
-            if (GUI.Button(new Rect(x + w - 34 * u, y, 34 * u, 38 * u), ">", _botao)) { _indiceDoPersonagem = (_indiceDoPersonagem + 1) % (lista.Count + 1); _apagarPersonagem = null; }
-            y += 46 * u;
-            var detalhe = new GUIStyle(_texto) { fontSize = Mathf.RoundToInt(14 * u) };
-            GUI.Label(new Rect(x, y, w, 60 * u), novo
-                ? "Você cria a aparência ao entrar. Num mundo novo, começa pelo Dia 0."
-                : $"{p.Resumo()}\n{(string.IsNullOrEmpty(p.ultimoMundo) ? "" : "Último mundo: " + p.ultimoMundo)}", detalhe);
-            y += 66 * u;
-            if (!novo)
-            {
-                bool confirmar = _apagarPersonagem == p.id;
-                if (GUI.Button(new Rect(x + w * 0.25f, y, w * 0.5f, 28 * u), confirmar ? "Clique de novo para apagar" : "Apagar personagem", _botao))
-                {
-                    if (!confirmar) _apagarPersonagem = p.id;
-                    else
-                    {
-                        PersonagemSalvo.Apagar(p.id);
-                        _personagens = null;
-                        _apagarPersonagem = null;
-                    }
-                }
-            }
-        }
-
-        // a tela do Continuar: os mundos salvos, cada um com o jogar e o apagar, e o personagem que vai entrar
-        void TelaDoContinuar(float u)
-        {
-            GUI.color = new Color(0, 0, 0, 0.55f);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            float w = 560 * u, x = Screen.width * 0.5f - w * 0.5f - 170 * u, y = Screen.height * 0.07f;
-            GUI.Label(new Rect(0, y, Screen.width, 50 * u), "ZOMBIE CITY CLEANER", _titulo);
-            GUI.Label(new Rect(0, y + 48 * u, Screen.width, 24 * u), "Continuar", _texto);
-            y += 84 * u;
-            if (_sessao.Atual == SessaoOnline.Estado.Conectando)
-            {
-                GUI.Label(new Rect(0, y, Screen.width, 30 * u), "Conectando...", _texto);
-                return;
-            }
-            PainelDoPersonagem(u, x + w + 36 * u, y, 300 * u);
-            var marca = new GUIStyle(GUI.skin.toggle) { fontSize = Mathf.RoundToInt(15 * u) };
-            Opcoes.Cor(marca, new Color(0.8f, 0.8f, 0.78f));
-            _continuarLocal = GUI.Toggle(new Rect(x, y, w, 26 * u), _continuarLocal, "  Jogar local (mesma rede, sem o código para os amigos)", marca);
-            y += 34 * u;
-            var mundos = Mundos();
-            var nome = new GUIStyle(_texto) { alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold, fontSize = Mathf.RoundToInt(18 * u) };
-            var detalhe = new GUIStyle(_texto) { alignment = TextAnchor.MiddleLeft, fontSize = Mathf.RoundToInt(13 * u) };
-            float linha = 62 * u, altura = Mathf.Min(mundos.Count * linha, Screen.height - y - 130 * u);
-            _rolagemDosMundos = GUI.BeginScrollView(new Rect(x, y, w + 18 * u, altura), _rolagemDosMundos, new Rect(0, 0, w, mundos.Count * linha));
-            for (int i = 0; i < mundos.Count; i++)
-            {
-                var m = mundos[i];
-                float ly = i * linha;
-                GUI.color = new Color(1f, 1f, 1f, i % 2 == 0 ? 0.06f : 0.03f);
-                GUI.DrawTexture(new Rect(0, ly, w, linha - 6 * u), Texture2D.whiteTexture);
-                GUI.color = Color.white;
-                GUI.Label(new Rect(10 * u, ly + 4 * u, w - 220 * u, 26 * u), m.nome, nome);
-                string antigo = m.versaoDoGerador != 0 && m.versaoDoGerador != GeradorDoMundo.Versao ? " · gerador antigo: o mapa pode ter mudado" : "";
-                GUI.Label(new Rect(10 * u, ly + 30 * u, w - 220 * u, 22 * u), $"{NomesDosTamanhos[Mathf.Clamp(m.tamanho, 0, 2)]} · {m.Resumo()}{antigo}", detalhe);
-                if (GUI.Button(new Rect(w - 204 * u, ly + 12 * u, 100 * u, 32 * u), "Jogar", _botao)) Jogar(m.id);
-                bool confirmar = _apagarMundo == m.id;
-                if (GUI.Button(new Rect(w - 98 * u, ly + 12 * u, 92 * u, 32 * u), confirmar ? "Confirmar" : "Apagar", _botao))
-                {
-                    if (!confirmar) _apagarMundo = m.id;
-                    else
-                    {
-                        MundoSalvo.Apagar(m.id);
-                        _mundos = null;
-                        _apagarMundo = null;
-                    }
-                }
-            }
-            GUI.EndScrollView();
-            if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x, Screen.height - 120 * u, w, 40 * u), _sessao.Erro, _erro);
-            if (GUI.Button(new Rect(24 * u, Screen.height - 70 * u, 150 * u, 34 * u), "< Voltar", _botao))
-            {
-                _continuar = false;
-                _principal = true;
-            }
-        }
-
         // abre o mundo salvo: o pedido vem do arquivo (a semente, o tamanho e o nome; sem o Dia 0) e o Salvamento põe o resto
         void Jogar(string id)
         {
@@ -750,7 +654,7 @@ namespace ZombieCityCleaner.UI
             // cartas (com os moradores e sem os NPCs do mapa) ganha os do mapa
             if (m.moradores == null || m.moradores.Count == 0)
             {
-                AbrirOsMoradores(_continuarLocal, m);
+                AbrirOsMoradores(_redeLocal, m);
                 return;
             }
             if (m.npcsDoMapa == null || m.npcsDoMapa.Count == 0) CompletarOsNpcs(m);
@@ -765,7 +669,7 @@ namespace ZombieCityCleaner.UI
             _nomeDoMundo = m.nome;
             _tamanho = (TamanhoDoMundo)Mathf.Clamp(m.tamanho, 0, 2);
             _semente = m.semente.ToString();
-            if (_continuarLocal) _sessao.HospedarLocal();
+            if (_redeLocal) _sessao.HospedarLocal();
             else _sessao.Hospedar();
         }
 

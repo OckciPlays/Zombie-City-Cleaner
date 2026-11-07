@@ -12,14 +12,17 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
 
 ## No menu
 
+(A tela foi repaginada em 06/11/2026; veja o fim do `03-Historico.md`.)
+
 - **Iniciar novo jogo:** à direita fica o painel do **personagem**. As setas passam pelos personagens salvos neste
   computador e pelo **"Novo personagem"**. O salvo mostra o dinheiro, a mochila e o último mundo, e dá para apagar (com um
-  segundo clique). Embaixo da semente, **"Salvar o jogo"**: Automático (5 min), Ao sair ou Só dormindo.
+  segundo clique). No painel **Regras**, **"Salvar o jogo"**: Automático, Ao sair ou Só dormindo.
 - **Personagem novo:** passa pela tela de criar ao entrar e, num mundo novo, começa pelo Dia 0. **Personagem que já
   existe:** entra direto, com as coisas dele, e pula o Dia 0.
-- **Continuar:** a lista dos mundos salvos (o nome, o tamanho, o dia, a hora, o modo e quando salvou), cada um com
-  **Jogar** e **Apagar**, e o painel do personagem ao lado. "Jogar local" hospeda sem o código (só na mesma rede). Um
-  mundo salvo numa versão anterior do gerador avisa que o mapa pode ter mudado.
+- **Continuar:** a lista dos mundos salvos (o nome, o tamanho, o dia, a hora, o modo e quando salvou). Clicar escolhe
+  o mundo, e **Jogar** (ou dois cliques) abre; **Apagar** pede um segundo clique. O painel do personagem fica ao lado, e
+  a escolha **"Pela internet / Rede local"** decide se os amigos entram com o código ou só na mesma rede. Um mundo salvo
+  numa versão anterior do gerador avisa que o mapa pode ter mudado.
 - **Entrar com o código de um amigo:** vale o personagem escolhido no painel. As coisas dele vão junto e voltam com ele.
 
 ## As três formas de salvar

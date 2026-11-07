@@ -685,6 +685,28 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
   ganham do E; o amigo no carro não é tratado; a folga da distância no anfitrião; o controle também trata). O curativo no
   amigo ainda precisa de dois jogadores para testar.
 
+## O menu do Novo jogo repaginado e o título "BUNKER: Outbreak" (06/11/2026, a pedido)
+
+- **O pedido:** "aquele menu está muito bugado, algumas coisas em cima do outro, precisamos dar uma repaginada e melhorar
+  aquela interface, algumas coisas nem utilizamos mais".
+- **O que estava errado:** o botão Configurações ficava em cima da linha do "Criar local" (o IP e o Entrar) em todas as
+  resoluções; a mensagem de erro da conexão ficava fora da tela; em 4:3 o painel do personagem saía pela direita; e os
+  botões cortavam o texto ("utomático (5 mi", "pagar personage").
+- **O que saiu (com o Pedro):** o Configurações (já está no menu principal), o título grande e o "Teste sem internet". A
+  rede local virou uma escolha, "Pela internet / Rede local", que decide como o seu mundo abre e se o campo do amigo pede
+  o código ou o IP. Ela vale também no Continuar (no lugar do "Jogar local").
+- **O Novo jogo agora:** no estilo da tela de criar o personagem (os painéis escuros e o vermelho). À esquerda, Mundo (o
+  nome, o tamanho e a semente) e Regras (salvar o jogo e o fogo amigo); à direita, Personagem e Jogar com amigos; embaixo,
+  Voltar, o erro da conexão e "Escolher os moradores". Tudo fica num quadro de 1280 × 720 no meio da tela, que cabe em
+  qualquer resolução. O ESC volta ao menu principal.
+- **O Continuar agora:** a lista dos mundos num painel (clicar escolhe, dois cliques jogam, o Apagar pede o segundo
+  clique), o personagem e a rede ao lado e o botão Jogar embaixo.
+- **O título do jogo:** "BUNKER: Outbreak", com o K e o "Out" em vermelho, como no logo do Pedro. O logo em imagem entra
+  depois: com o arquivo `Resources/Logo_BunkerOutbreak` (o fundo transparente), ele aparece no lugar do texto. O nome do
+  produto nas configurações da Unity continua o antigo, porque a pasta dos saves sai dele.
+- Conferido em fotos no Play, antes e depois, em 1280 × 720, 1920 × 1080 e 1024 × 768, sem erros. Os cliques ainda não
+  foram testados com o mouse.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |
