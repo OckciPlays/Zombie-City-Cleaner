@@ -18,8 +18,8 @@ namespace ZombieCityCleaner.Vehicles
     /// ou de pé (<see cref="PassageiroDoCarro"/>).
     /// </para>
     /// <para>
-    /// Atropelar: o dono, acima de 3 m/s, procura zumbis na frente (ou atrás, de ré) e manda o acerto ao anfitrião pelo
-    /// motorista, como um tiro no tronco (o dano cresce com a velocidade; rápido, o corpo voa).
+    /// Atropelar: o dono, acima de 3 m/s, procura zumbis e sobreviventes na frente (ou atrás, de ré) e manda o acerto ao
+    /// anfitrião pelo motorista, como um tiro no tronco (o dano cresce com a velocidade; rápido, o corpo voa).
     /// </para>
     /// <para>
     /// O capô (<see cref="ICapo"/>, aberto pela <see cref="CapoDoCarro"/>): as 3 peças do motor (<see cref="PecasDoMotor"/>,
@@ -253,6 +253,7 @@ namespace ZombieCityCleaner.Vehicles
         float _giroDasRodas, _volanteVisto;
         readonly float[] _mudouEm = { -99f, -99f, -99f, -99f };
         readonly Dictionary<int, float> _atropelados = new Dictionary<int, float>();
+        readonly Dictionary<ulong, float> _pessoasAtropeladas = new Dictionary<ulong, float>();
         static readonly Collider[] _encostados = new Collider[32];
         Material[] _matsApagados, _matsAcesos;
         bool _faroisAplicados, _buzinaLocal, _painelAceso, _tetoAceso, _anelAceso = true;
@@ -262,6 +263,9 @@ namespace ZombieCityCleaner.Vehicles
         float _anguloDaChave, _anguloVisto, _chaveEntrouEm = -99f, _pegouEm = -99f, _puxando;
         bool _presaNaPartida, _arranqueGirando;
         float _brilhoPainel, _brilhoTeto, _tetoAte = -99f, _ponteiroVel, _ponteiroComb;
+        // as luzes de dentro com o carro parado (1) ou andando (0)
+        float _luzDeDentro = 1f;
+        bool _dentroParado = true;
         Quaternion _volanteRepouso, _capoRepouso;
         // no anfitrião: a carga da bateria e a temperatura (as da rede são arredondadas) e quem está com o capô aberto
         float _carga, _temperatura;
@@ -384,6 +388,7 @@ namespace ZombieCityCleaner.Vehicles
             AplicarFarois(false);
             _posAntes = transform.position;
             PrepararDesgaste();
+            PrepararMoto();   // (Carro.Moto.cs) só na moto
         }
 
         void OnEnable() => Todos.Add(this);
@@ -394,12 +399,13 @@ namespace ZombieCityCleaner.Vehicles
             _ocupantes.OnValueChanged += AoMudarOcupantes;
             if (IsServer)
             {
-                _pecas.Value = PecasDoMotor.Com(velaInicial, bateriaInicial, radiadorInicial);
+                // a moto só tem a vela (a bateria e o radiador ficam em 100% e não gastam; os pneus não contam)
+                _pecas.Value = PecasDoMotor.Com(velaInicial, moto ? 100 : bateriaInicial, moto ? 100 : radiadorInicial);
                 _carga = _pecas.Value.Estado(PecasDoMotor.Bateria);
                 _temperatura = 0f;
                 _olhandoOCapo.Clear();
                 _capoAberto.Value = false;
-                _pneus.Value = PneusDoCarro.Com(pneusIniciais);
+                _pneus.Value = PneusDoCarro.Com(moto ? new[] { 100, 100, 100, 100 } : pneusIniciais);
                 _malasAberto.Value = false;
                 _macaco.Value = macacoInicial;
                 _estepe.Value = estepeInicial < 0 ? PneusDoCarro.Vazio : (byte)Mathf.Clamp(estepeInicial, 0, 100);
@@ -643,9 +649,10 @@ namespace ZombieCityCleaner.Vehicles
             if (!p.VelaBoa || Fervendo || SemGasolina)
             {
                 Tossir();
+                string onde = moto ? "agache perto do motor" : "abra o capô";
                 motivo = Fervendo ? "O motor está quente demais: espere esfriar"
                     : SemGasolina && p.VelaBoa ? "O motor não pega: acabou a gasolina (abasteça com um galão)"
-                    : p.Tem(PecasDoMotor.Vela) ? "O motor não pega: a vela está queimada (abra o capô)" : "O motor não pega: falta a vela (abra o capô)";
+                    : p.Tem(PecasDoMotor.Vela) ? $"O motor não pega: a vela está queimada ({onde})" : $"O motor não pega: falta a vela ({onde})";
                 return false;
             }
             _presaNaPartida = false;
@@ -776,7 +783,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (antes == EstadoDoMotor.Arranque && e >= EstadoDoMotor.Ligado)
                 {
                     _pegouEm = Time.time;
-                    Efeitos.Som(SomDoCarro.Pegar, noMotor, 0.6f, true, 35f);
+                    Efeitos.Som(pegarProprio != null ? pegarProprio : SomDoCarro.Pegar, noMotor, 0.6f, true, 35f);
                 }
             }
 
@@ -835,6 +842,12 @@ namespace ZombieCityCleaner.Vehicles
         {
             // vazio e longe de todos, ou sem chão embaixo: parado, sem a física (Carro.Parado.cs)
             if (CuidarDoParado()) return;
+            // a moto: duas rodas e o corpo sempre em pé (Carro.Moto.cs)
+            if (moto)
+            {
+                if (Simula) DirigirMoto(Time.fixedDeltaTime);
+                return;
+            }
             if (IsSpawned && IsServer && IsOwner && MacacoNaRoda >= 0 && rodas != null && rodas.Length >= 4)
             {
                 NoMacaco(Time.fixedDeltaTime);
@@ -1233,7 +1246,7 @@ namespace ZombieCityCleaner.Vehicles
             normal = -direcao;
             foreach (var c in Todos)
             {
-                if (c == null || !c.IsSpawned || c.rodasVisuais == null) continue;
+                if (c == null || !c.IsSpawned || c.rodasVisuais == null || c.moto) continue;   // a moto não tem o sistema de pneus
                 // o raio passa longe do carro (mais de 3 m do meio dele): nem olha as rodas
                 Vector3 ate = c.transform.position - origem;
                 float ao = Vector3.Dot(ate, direcao);
@@ -1374,8 +1387,11 @@ namespace ZombieCityCleaner.Vehicles
             if (Mathf.Abs(v) < 3f) return;
             var motorista = Ocupante(0);
             if (motorista == null || !motorista.IsOwner) return;
-            Vector3 centro = transform.TransformPoint(new Vector3(0f, 0.85f, v > 0f ? 1.75f : -1.75f));
-            int n = Physics.OverlapBoxNonAlloc(centro, new Vector3(1.0f, 0.65f, 0.75f), _encostados, transform.rotation, 1 << Zumbi.CamadaZumbi, QueryTriggerInteraction.Collide);
+            // a moto: uma caixa estreita na frente da roda (ou atrás, de ré)
+            Vector3 centro = moto ? transform.TransformPoint(new Vector3(0f, 0.7f, v > 0f ? 1.2f : -1.25f))
+                : transform.TransformPoint(new Vector3(0f, 0.85f, v > 0f ? 1.75f : -1.75f));
+            var meia = moto ? new Vector3(0.45f, 0.6f, 0.45f) : new Vector3(1.0f, 0.65f, 0.75f);
+            int n = Physics.OverlapBoxNonAlloc(centro, meia, _encostados, transform.rotation, 1 << Zumbi.CamadaZumbi, QueryTriggerInteraction.Collide);
             for (int i = 0; i < n; i++)
             {
                 var h = _encostados[i].GetComponent<Hitbox>();
@@ -1403,20 +1419,46 @@ namespace ZombieCityCleaner.Vehicles
                 _corpo.linearVelocity *= pedra ? 0.8f : dano >= 100f ? 0.9f : 0.96f;
             }
             if (_atropelados.Count > 64) _atropelados.Clear();
+
+            // os sobreviventes (06/11/2026, a pedido: "NPC não é atropelado"): as partes do corpo deles não esbarram no carro
+            // (a camada 12 não bate na 11), então o carro passava por dentro; agora levam o acerto no tronco, com o dano dos
+            // zumbis (o militar, com o colete, metade). Ferir alguém do acampamento ou da estrada deixa o grupo hostil.
+            n = Physics.OverlapBoxNonAlloc(centro, meia, _encostados, transform.rotation, 1 << Sobreviventes.Sobrevivente.Camada, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                var parte = _encostados[i].GetComponent<Sobreviventes.ParteDoSobrevivente>();
+                var s = parte != null ? parte.sobrevivente : null;
+                if (s == null || s.Morto) continue;
+                ulong id = s.NetworkObjectId;
+                if (_pessoasAtropeladas.TryGetValue(id, out float ate) && Time.time < ate) continue;
+                _pessoasAtropeladas[id] = Time.time + 0.7f;
+                float rapidez = Mathf.Abs(v);
+                float dano = Mathf.Max(1f, (rapidez * 3.6f - KmhSemDano) * DanoPorKmh);
+                Vector3 ponto = s.transform.position + Vector3.up * 1.0f;
+                motorista.AcertarSobrevivente(s, Sobreviventes.RegiaoDoSobrevivente.Tronco, dano, ponto, false);
+                Atropelou(s.transform.position);
+                Efeitos.Som(Efeitos.SocoCarne, ponto, 1f, true, 30f);
+                Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
+                _corpo.linearVelocity *= dano >= 100f ? 0.9f : 0.96f;
+            }
+            if (_pessoasAtropeladas.Count > 32) _pessoasAtropeladas.Clear();
         }
 
         // ------------------------------------------------------------------------------------------ o capô e as peças
 
-        public string NomeDoCarro => "Perua da família";
+        public string NomeDoCarro => nomeDoVeiculo;
         public CofreDoMotor Cofre => cofre;
-        public Vector3 Ponto => transform.TransformPoint(0f, 0.9f, 1.6f);
-        public bool Aberto => IsSpawned && !Virado && Velocidade < 1.5f;
+        /// <summary>O meio do capô (na moto, o motor): a tela fecha longe dele.</summary>
+        public Vector3 Ponto => transform.TransformPoint(pontoDoMotor);
+        // na moto, ninguém montado
+        public bool Aberto => IsSpawned && !Virado && Velocidade < 1.5f && (!moto || Vazio);
         public string Impedimento => MotorLigado ? "Desligue o motor para mexer nas peças" : null;
 
         public string Situacao
         {
             get
             {
+                if (moto) return $"Gasolina: {Gasolina:0.0} de {Tanque:0} litros   ·   " + (MotorLigado ? "Motor ligado" : "Motor desligado");
                 float t = Temperatura;
                 string motor = Fervendo ? "fervendo" : t < 0.3f ? "frio" : t < 0.75f ? "normal" : "quente";
                 return Pecas.Tem(PecasDoMotor.Bateria)
@@ -1480,7 +1522,8 @@ namespace ZombieCityCleaner.Vehicles
         {
             var p = _pecas.Value;
             var e = Estado;
-            if (p.Tem(PecasDoMotor.Bateria))
+            // a moto não tem bateria nem radiador: não gasta, não carrega e não esquenta
+            if (!moto && p.Tem(PecasDoMotor.Bateria))
             {
                 float gasto = e == EstadoDoMotor.Arranque && p.BateriaGira ? gastoDaPartida
                     : e == EstadoDoMotor.Ligado ? -cargaDoMotor
@@ -1493,7 +1536,7 @@ namespace ZombieCityCleaner.Vehicles
                     _pecas.Value = p;
                 }
             }
-            bool ligado = e == EstadoDoMotor.Ligado;
+            bool ligado = e == EstadoDoMotor.Ligado && !moto;
             _temperatura = ligado
                 ? Mathf.MoveTowards(_temperatura, p.TemperaturaAlvo, Mathf.Abs(p.TemperaturaAlvo - _temperatura) * dt / esquentar + 0.0005f * dt)
                 : Mathf.MoveTowards(_temperatura, 0f, _temperatura * dt / esfriar + 0.0005f * dt);
@@ -1538,8 +1581,12 @@ namespace ZombieCityCleaner.Vehicles
             if (Virado) { if (_viradoDesde < 0f) _viradoDesde = Time.time; }
             else _viradoDesde = -1f;
 
-            AplicarPneus();
-            Rodas(dt);
+            if (moto) VisualDaMoto(dt);   // (Carro.Moto.cs) a inclinação, o guidão, as rodas e o descanso
+            else
+            {
+                AplicarPneus();
+                Rodas(dt);
+            }
             // os faróis precisam da bateria
             bool farois = _farois.Value && Pecas.BateriaAcende && !FaroisSujos;
             if (_faroisAplicados != farois) AplicarFarois(farois);
@@ -1595,12 +1642,19 @@ namespace ZombieCityCleaner.Vehicles
             _faroisAplicados = ligados;
             if (farois != null) foreach (var f in farois) if (f != null) f.enabled = ligados;
             if (carroceria != null && _matsApagados != null) carroceria.sharedMaterials = ligados ? _matsAcesos : _matsApagados;
+            AplicarLanterna2(ligados);   // (Carro.Moto.cs) a lanterna da moto fica no corpo
         }
 
         // o laço do motor: entra quando o som de pegar já assentou na marcha lenta; desligado, morre (o tom cai e some)
         void Motor(float dt)
         {
             if (motor == null) return;
+            // as motos têm os laços próprios, em camadas (Carro.Moto.cs)
+            if (MotorEmCamadas)
+            {
+                SomEmCamadas(dt);
+                return;
+            }
             bool ligado = MotorLigado;
             float rot = IsOwner ? _rotacaoLocal : _rotacao.Value / 255f;
             float alvo = ligado && Time.time > _pegouEm + SomDoCarro.LacoEntra ? 0.35f + rot * 0.45f : 0f;
@@ -1626,7 +1680,9 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>
         /// O painel acende com a ignição (a chave na primeira posição) e fica mais fraco enquanto o motor de arranque
         /// gira; os ponteiros mostram a velocidade e a gasolina (sem ignição, os dois caem para o zero). A luz de teto
-        /// acende quando uma porta abre e apaga devagar uns segundos depois de ela fechar.
+        /// acende quando uma porta abre e apaga devagar uns segundos depois de ela fechar. As luzes de dentro (a do painel e a
+        /// do teto) só clareiam com o carro parado (06/11/2026, a pedido: "a luz de dentro em primeira pessoa atrapalha um
+        /// pouco para dirigir"): acima de 6 km/h apagam devagar, e abaixo de 3 km/h voltam. Os mostradores continuam acesos.
         /// </summary>
         void Painel(float dt)
         {
@@ -1642,10 +1698,14 @@ namespace ZombieCityCleaner.Vehicles
                 if (painel != null) painel.sharedMaterial = aceso ? painelAceso : painelApagado;
                 if (ponteiros != null) foreach (var p in ponteiros) if (p != null) p.sharedMaterial = aceso ? ponteiroAceso : ponteiroApagado;
             }
+            float kmhAgora = Mathf.Abs(VelocidadeParaFrente) * 3.6f;
+            if (kmhAgora > 6f) _dentroParado = false;
+            else if (kmhAgora < 3f) _dentroParado = true;
+            _luzDeDentro = Mathf.MoveTowards(_luzDeDentro, _dentroParado ? 1f : 0f, dt * (_dentroParado ? 1.2f : 2.5f));
             if (luzDoPainel != null)
             {
-                luzDoPainel.enabled = aceso;
-                luzDoPainel.intensity = intensidadeDoPainel * _brilhoPainel;
+                luzDoPainel.enabled = aceso && _luzDeDentro > 0.01f;
+                luzDoPainel.intensity = intensidadeDoPainel * _brilhoPainel * _luzDeDentro;
             }
 
             float kmh = ignicao ? Mathf.Abs(VelocidadeParaFrente) * 3.6f : 0f;
@@ -1666,8 +1726,8 @@ namespace ZombieCityCleaner.Vehicles
             }
             if (luzDoTeto != null)
             {
-                luzDoTeto.enabled = tetoLigado;
-                luzDoTeto.intensity = intensidadeDoTeto * _brilhoTeto;
+                luzDoTeto.enabled = tetoLigado && _luzDeDentro > 0.01f;
+                luzDoTeto.intensity = intensidadeDoTeto * _brilhoTeto * _luzDeDentro;
             }
         }
     }

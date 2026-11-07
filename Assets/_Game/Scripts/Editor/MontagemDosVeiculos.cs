@@ -434,7 +434,8 @@ namespace ZombieCityCleaner.EditorTools
             Caixa(colisao, "Cabine", new Vector3(0f, 1.19f, -0.82f), new Vector3(1.60f, 0.52f, 2.30f), Quaternion.identity);
             Caixa(colisao, "Para-brisa", new Vector3(0f, 1.18f, 0.65f), new Vector3(1.58f, 0.10f, 0.85f), Quaternion.Euler(33.9f, 0f, 0f));
 
-            // os faróis: duas luzes quentes, sem sombra (desligados no começo)
+            // os faróis: duas luzes quentes, sem sombra (desligados no começo). Mais fortes e mais longe desde 06/11/2026 (a
+            // pedido: "para clarear mais"; eram 60, 34 m, 68°/36°)
             carro.farois = new Light[2];
             for (int i = 0; i < 2; i++)
             {
@@ -445,10 +446,10 @@ namespace ZombieCityCleaner.EditorTools
                 var luz = f.AddComponent<Light>();
                 luz.type = LightType.Spot;
                 luz.color = new Color(1f, 0.92f, 0.78f);
-                luz.intensity = 60f;
-                luz.range = 34f;
-                luz.spotAngle = 68f;
-                luz.innerSpotAngle = 36f;
+                luz.intensity = 160f;
+                luz.range = 60f;
+                luz.spotAngle = 76f;
+                luz.innerSpotAngle = 44f;
                 luz.shadows = LightShadows.None;
                 luz.enabled = false;
                 carro.farois[i] = luz;

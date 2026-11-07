@@ -958,10 +958,10 @@ Light:
   serializedVersion: 13
   m_Type: 0
   m_Color: {r: 1, g: 0.92, b: 0.78, a: 1}
-  m_Intensity: 60
-  m_Range: 34
-  m_SpotAngle: 68
-  m_InnerSpotAngle: 36
+  m_Intensity: 160
+  m_Range: 60
+  m_SpotAngle: 76
+  m_InnerSpotAngle: 44
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
     m_Type: 0
@@ -3619,10 +3619,10 @@ Light:
   serializedVersion: 13
   m_Type: 0
   m_Color: {r: 1, g: 0.92, b: 0.78, a: 1}
-  m_Intensity: 60
-  m_Range: 34
-  m_SpotAngle: 68
-  m_InnerSpotAngle: 36
+  m_Intensity: 160
+  m_Range: 60
+  m_SpotAngle: 76
+  m_InnerSpotAngle: 44
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
     m_Type: 0
@@ -5214,6 +5214,30 @@ MonoBehaviour:
     reserva: 3
   tampaDoTanque: {x: -0.894, y: 0.83, z: -1.86}
   desenharTampa: 0
+  moto: 0
+  modelo: {fileID: 0}
+  guidao: {fileID: 0}
+  descanso: {fileID: 0}
+  peDoDescanso: {x: -0.3, y: 0.01, z: 0}
+  descansoRecolhido: {x: -0.12, y: 0.1, z: -1}
+  punhos: []
+  pedaleiras: []
+  troncoDoPiloto: 6
+  lanterna2: {fileID: 0}
+  submeshLanterna2: -1
+  lanterna2Acesa: {fileID: 0}
+  inclinacaoMaxima: 38
+  ficarEmPe: 500
+  amortecerEmPe: 45
+  centroDaMoto: {x: 0, y: 0.48, z: -0.05}
+  pontoDoMotor: {x: 0, y: 0.9, z: 1.6}
+  nomeDoVeiculo: "Perua da fam\xEDlia"
+  ondeFicaAIgnicao: "\xE0 direita do volante"
+  lacosDoMotor: []
+  giroDosLacos: []
+  giroNoMaximo: 3.6
+  pegarProprio: {fileID: 0}
+  distanciaParaParar: 60
   rodas:
   - {fileID: 3471912381726076458}
   - {fileID: 6834780825509340706}
