@@ -212,12 +212,20 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ o clique
 
+        /// <summary>Quantos lugares o cofre tem (o do carro, os 3; o da moto, só a vela).</summary>
+        int LugaresDoCofre => _cofre != null && _cofre.lugares != null && _cofre.lugares.Length > 0
+            ? Mathf.Min(_cofre.lugares.Length, PecasDoMotor.Quantas) : PecasDoMotor.Quantas;
+
+        /// <summary>A moto (06/11/2026): o motor, sem capô.</summary>
+        bool NaMoto => _capo is Carro c && c != null && c.moto;
+
         void PecasNaMochila()
         {
             _naMochila.Clear();
             if (inventario == null) return;
+            int lugares = LugaresDoCofre;
             foreach (var it in inventario.Mochila)
-                if (Itens.EhPecaDoMotor(it.item)) _naMochila.Add(it);
+                if (Itens.EhPecaDoMotor(it.item) && Itens.IndiceDaPeca(it.item) < lugares) _naMochila.Add(it);
             // por tipo (a vela, a bateria e o radiador), as melhores primeiro
             _naMochila.Sort((a, b) => a.item != b.item ? a.item.CompareTo(b.item) : b.qtd.CompareTo(a.qtd));
         }
@@ -345,7 +353,7 @@ namespace ZombieCityCleaner.Player
             var r = new Rect(24 * u, 24 * u, 470 * u, 66 * u);
             Ret(r, FundoEscuro);
             Moldura(r, Mathf.Max(1f, Mathf.Round(u)), Borda);
-            GUI.Label(new Rect(r.x + 14 * u, r.y + 8 * u, r.width - 28 * u, 26 * u), "CAPÔ   ·   " + _capo.NomeDoCarro.ToUpperInvariant(), _titulo);
+            GUI.Label(new Rect(r.x + 14 * u, r.y + 8 * u, r.width - 28 * u, 26 * u), (NaMoto ? "MOTOR   ·   " : "CAPÔ   ·   ") + _capo.NomeDoCarro.ToUpperInvariant(), _titulo);
             GUI.Label(new Rect(r.x + 14 * u, r.y + 36 * u, r.width - 28 * u, 22 * u), _capo.Situacao ?? "", _texto);
         }
 
@@ -357,7 +365,8 @@ namespace ZombieCityCleaner.Player
             var pecas = _capo.Pecas;
             float u = _u;
             int destaque = _cofre.Destaque;
-            for (int k = 0; k < PecasDoMotor.Quantas; k++)
+            int lugares = LugaresDoCofre;
+            for (int k = 0; k < lugares; k++)
             {
                 var tela = cam.WorldToScreenPoint(_cofre.Topo(k) + Vector3.up * 0.03f);
                 if (tela.z <= 0f) continue;
@@ -443,7 +452,8 @@ namespace ZombieCityCleaner.Player
             }
             if (texto == null)
             {
-                texto = "Clique numa peça para tirar   ·   num lugar vazio ou numa peça da mochila para pôr   ·   E ou ESC: sair";
+                texto = NaMoto ? "Clique na vela para tirar   ·   no lugar vazio ou numa vela da mochila para pôr   ·   E ou ESC: sair"
+                    : "Clique numa peça para tirar   ·   num lugar vazio ou numa peça da mochila para pôr   ·   E ou ESC: sair";
                 cor = TextoApagado;
             }
             var estilo = new GUIStyle(_centro);

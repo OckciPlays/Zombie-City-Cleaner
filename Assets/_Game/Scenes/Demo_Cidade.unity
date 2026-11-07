@@ -17911,6 +17911,7 @@ MonoBehaviour:
   - {fileID: 4300000, guid: a0568ce9f8e5a4e44adf5ea2921d3423, type: 2}
   - {fileID: 4300000, guid: 520f57035f8bc704aadee3518c50b86f, type: 2}
   - {fileID: 4300000, guid: 4bad19a6556d2e940a9f1462132f7fcd, type: 2}
+  malhasDaSinuca: []
   malhasDeLoot:
   - {fileID: 4300000, guid: a6e71dcf318088d499f2a842a382076c, type: 2}
   - {fileID: 4300000, guid: beda7010f5e11cc4691a3584e5f8622f, type: 2}
@@ -82342,6 +82343,67 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.65, y: 0.1, z: 0.39000002}
   m_Center: {x: 0, y: 0.030999996, z: 0}
+--- !u!1001 &1032205983
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12.499999
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -36.699997
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4790598262502498254, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8140396595916075181, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 405539995
+      objectReference: {fileID: 0}
+    - target: {fileID: 8393152533273774992, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
+      propertyPath: m_Name
+      value: Moto_Cross
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
 --- !u!1 &1032504260
 GameObject:
   m_ObjectHideFlags: 0
@@ -98260,6 +98322,37 @@ MonoBehaviour:
     intensidadeLuz: 0.4
     alturaLuz: 38
     neblinaDeAltura: 0.05
+  limpo:
+    neblina: {r: 0.7, g: 0.78, b: 0.86, a: 1}
+    ceu: {r: 0.6, g: 0.68, b: 0.78, a: 1}
+    horizonte: {r: 0.56, g: 0.58, b: 0.56, a: 1}
+    chao: {r: 0.36, g: 0.34, b: 0.3, a: 1}
+    luz: {r: 1, g: 0.95, b: 0.84, a: 1}
+    densidade: 0.0045
+    intensidadeLuz: 1.35
+    alturaLuz: 47
+    neblinaDeAltura: 0.003
+  tempestadeDia:
+    neblina: {r: 0.4, g: 0.43, b: 0.45, a: 1}
+    ceu: {r: 0.3, g: 0.32, b: 0.35, a: 1}
+    horizonte: {r: 0.26, g: 0.28, b: 0.3, a: 1}
+    chao: {r: 0.17, g: 0.17, b: 0.17, a: 1}
+    luz: {r: 0.62, g: 0.66, b: 0.72, a: 1}
+    densidade: 0.05
+    intensidadeLuz: 0.25
+    alturaLuz: 55
+    neblinaDeAltura: 0.1
+  tempestadeNoite:
+    neblina: {r: 0.05, g: 0.06, b: 0.07, a: 1}
+    ceu: {r: 0.07, g: 0.085, b: 0.1, a: 1}
+    horizonte: {r: 0.05, g: 0.06, b: 0.07, a: 1}
+    chao: {r: 0.025, g: 0.028, b: 0.032, a: 1}
+    luz: {r: 0.4, g: 0.46, b: 0.56, a: 1}
+    densidade: 0.05
+    intensidadeLuz: 0.12
+    alturaLuz: 38
+    neblinaDeAltura: 0.07
+  corDoClarao: {r: 0.75, g: 0.8, b: 1, a: 1}
   alturaBase: 0.2
   queda: 0.32
   vento: {x: 0.6, y: 0.25}
@@ -98281,6 +98374,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.CicloDoDia
   ShowTopMostFoldoutHeaderGroup: 1
+  climaLigado: 1
+  ritmoDeTeste: 1
+  chanceDoTornado: 0.6
   horaInicial: 21
   minutosPorDia: 24
 --- !u!1 &1252322428
@@ -130309,6 +130405,12 @@ MonoBehaviour:
   tempoDoCorpo: 15
   empurraoDoTiro: 30
   arremesso: {x: 4.5, y: 2.2}
+  distanciaDoEnterrado: {x: 25, y: 40}
+  raioDoDespertar: 10
+  distanciaDaSaida: 5.5
+  avisoDoDespertar: 1.2
+  tempoEnterrado: 120
+  longeAoSair: 4.5
   pedacosNoPool: 24
   empurraoDoPedaco: {x: 2.2, y: 1.6}
   celulaDoPovoamento: 40
@@ -130339,6 +130441,7 @@ MonoBehaviour:
   - {x: 4.35, y: 1}
   povoarAoComecar: 1
   criadosPorQuadro: 6
+  aquecerPorModelo: 6
   areasLivres:
   - centro: {x: -20, y: 0, z: -20}
     raio: 11
@@ -130361,6 +130464,7 @@ MonoBehaviour:
     visaoDeDia: 16
     visaoDeNoite: 6
     visaoComLanterna: 26
+    visaoComBrasa: 10
     visaoSobPoste: 13
     meioAnguloDaVisao: 70
     distanciaDeContato: 2.5
@@ -130380,6 +130484,18 @@ MonoBehaviour:
     vidaDoMembro: 50
     fatorMancando: 0.55
     fatorRastejando: 0.35
+    chanceDeCairNaHora: 0.4
+    chanceDeCairCambaleando: 0.5
+    tempoCambaleando: {x: 1.2, y: 2.8}
+    inclinacaoDeQueda: 34
+    chanceDeCambalearComTiro: 0.45
+    tempoDaQueda: 2
+    tempoDeitado: {x: 0.6, y: 2}
+    chanceDeTentarLevantar: 0.5
+    chanceDeLevantar: 0.6
+    tentativasDeLevantar: 3
+    rastejandoAteTentar: {x: 5, y: 10}
+    tempoParaLevantar: 4.45
     tempoParaPetrificar: 10
     tempoParaRecuar: 20
     lentidaoNaPedra: 0.1
@@ -130397,6 +130513,69 @@ MonoBehaviour:
     distanciaDaEsquiva: 2.2
     velocidadeDaEsquiva: 3.2
     intervaloDaEsquiva: 1
+    raioDaTocha: 4
+    raioDaFogueira: 8
+    hordaQueEntraNoFogo: 5
+    esperaAteACoragem: 30
+    tempoDeCoragem: 45
+    esperaAteACoragemDeNoiteNaFogueira: 90
+    zumbisParaOLong: 6
+    paradoParaOLong: 60
+    recargaDoLongDaFogueira: 180
+    corredor:
+      vida: 60
+      vidaDoMembro: 30
+      velocidadePerseguindo: 3.8
+      velocidadeDoBote: 4.6
+      distanciaDoBote: 4
+      alcanceDoGolpe: 1.6
+      atrasoDoDano: 0.2
+      alcanceDoDano: 2.1
+      intervaloDoGolpe: 1
+      fatorAndando: 1.6
+      tempoParaPetrificar: 5
+      fracaoDeDia: 0.02
+      fracaoDeNoite: 0.08
+    cuspidor:
+      vida: 150
+      vidaDoMembro: 60
+      distancia: {x: 14, y: 30}
+      velocidade: 1.5
+      alcanceDoCuspe: 26
+      intervaloDoCuspe: {x: 6, y: 9}
+      velocidadeDaGosma: 16
+      raioDaPoca: 2.2
+      tempoDaPoca: 20
+      tempoParaSoltar: 2
+      raioDoGrito: 60
+      intervaloDoGrito: 20
+      chamadosPeloGrito: {x: 5, y: 9}
+      alcanceDaLanterna: 7
+      tempoNaLuz: 2
+      chance: 0.35
+      intervaloDoNascimento: 120
+      maximo: 2
+    brutamonte:
+      vida: 500
+      danoNoCasco: 0.3
+      danoNoOlho: 3
+      alcanceDoOlho: 35
+      tempoParaTravar: 1
+      preparo: 0.6
+      velocidadeDoAvanco: 9
+      danoDoAvanco: 50
+      avancoMaximo: 30
+      tonto: 4
+      danoDoGolpeNoChao: 40
+      raioCheioDoGolpe: 1.8
+      raioDoGolpeNoChao: 4.5
+      cansado: 2
+      velocidade: 1.3
+      chanceDeNoite: 0.3
+      chanceDeDia: 0.05
+      intervaloDoNascimento: 180
+      voltaParaATerra: 120
+      tempoSemNinguem: 60
 --- !u!1 &1669386826
 GameObject:
   m_ObjectHideFlags: 0
@@ -141819,7 +141998,6 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
   - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
   - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
-  inicio: 04010302y
   distanciaMaxima: 3.5
 --- !u!1 &1813803619
 GameObject:
@@ -157225,6 +157403,67 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.1, y: 0.124, z: 0.1}
   m_Center: {x: 0, y: 0.044, z: -9.313226e-10}
+--- !u!1001 &2017165455
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1554109960253713553, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: GlobalObjectIdHash
+      value: 613139545
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12.499999
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -38.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4440613240266276618, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8314695595197481460, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
+      propertyPath: m_Name
+      value: Moto_FatBoy
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
 --- !u!1 &2017606551
 GameObject:
   m_ObjectHideFlags: 0
@@ -166277,3 +166516,5 @@ SceneRoots:
   - {fileID: 1812710352}
   - {fileID: 255219561}
   - {fileID: 1493238839}
+  - {fileID: 2017165455}
+  - {fileID: 1032205983}

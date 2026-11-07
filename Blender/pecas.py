@@ -1,4 +1,4 @@
-# As peças do carro (a vela, a bateria, o radiador, o pneu, o macaco e as chaves da perua e do cupê): os modelos, o Pecas.fbx e os ícones e as fotos do inventário.
+# As peças do carro (a vela, a bateria, o radiador, o pneu, o macaco e as chaves da perua, do cupê e das duas motos): os modelos, o Pecas.fbx e os ícones e as fotos do inventário.
 # As do motor se acham no capô dos carros da cidade e vão no capô do carro que se dirige; o pneu vai numa das rodas.
 #
 # Como rodar (Blender 5.2, numa cena qualquer):
@@ -20,6 +20,8 @@
 # - Macaco: o macaco sanfona fechado, deitado (a base, os 4 braços em losango, o fuso com o olhal e o apoio de cima).
 # - ChaveDaPerua: a chave do carro, deitada (a cabeça de plástico preto, a lâmina com os dentes, a argola e o chaveiro amarelo).
 # - ChaveDoCupe (04/11/2026, a pedido): a mesma chave, com o chaveiro vermelho e um emblema prateado na cabeça.
+# - ChaveDaFatBoy e ChaveDaCross (06/11/2026, a pedido: cada moto com a sua chave): a mesma chave, com o chaveiro de couro
+#   marrom-escuro e o emblema (a Fat Boy) e o laranja vivo (a cross).
 # Os ícones têm a proporção das células da peça no inventário (Itens.cs): a vela 1 x 1, a bateria 2 x 2, o radiador 3 x 2,
 # o pneu 3 x 3, o macaco 3 x 1 e as chaves 1 x 1.
 
@@ -31,10 +33,12 @@ from mathutils import Vector
 
 import equipamentos as eq
 
-NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco", "ChaveDaPerua", "ChaveDoCupe"]
+NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco", "ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross"]
 # as células de cada uma no inventário (o ícone tem esta proporção, 128 px por célula)
 CELULAS = {"Vela": (1, 1), "Bateria": (2, 2), "Radiador": (3, 2), "Pneu": (3, 3), "Macaco": (3, 1), "ChaveDaPerua": (1, 1),
-           "ChaveDoCupe": (1, 1)}
+           "ChaveDoCupe": (1, 1), "ChaveDaFatBoy": (1, 1), "ChaveDaCross": (1, 1)}
+# as chaves (para as câmeras dos ícones e das fotos)
+CHAVES = ("ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross")
 
 # as cores novas, (linha da imagem, coluna) na Paleta.png
 eq.CORES.update({
@@ -45,6 +49,8 @@ eq.CORES.update({
     "borracha": (8, 5), "aro": (8, 2), "calota": (8, 11), "furo_aro": (10, 14),
     # o macaco (os braços pintados de azul-acinzentado)
     "macaco": (8, 7),
+    # os chaveiros das motos (06/11/2026): o de couro marrom-escuro da Fat Boy e o laranja vivo da cross
+    "couro_chaveiro": (8, 4), "laranja_vivo": (11, 8),
 })
 
 _caixa = eq._caixa
@@ -188,8 +194,18 @@ def _chave_do_cupe():
     return _chave("polo_mais", True)
 
 
+def _chave_da_fatboy():
+    # a chave da Fat Boy (06/11/2026): o chaveiro de couro marrom-escuro e o emblema prateado
+    return _chave("couro_chaveiro", True)
+
+
+def _chave_da_cross():
+    # a chave da moto cross (06/11/2026): o chaveiro laranja vivo, sem emblema
+    return _chave("laranja_vivo", False)
+
+
 MODELOS = {"Vela": _vela, "Bateria": _bateria, "Radiador": _radiador, "Pneu": _pneu, "Macaco": _macaco, "ChaveDaPerua": _chave,
-           "ChaveDoCupe": _chave_do_cupe}
+           "ChaveDoCupe": _chave_do_cupe, "ChaveDaFatBoy": _chave_da_fatboy, "ChaveDaCross": _chave_da_cross}
 
 
 def _cena():
@@ -266,14 +282,14 @@ def imagens(so=None):
         tam = max((max(c[i] for c in cantos) - min(c[i] for c in cantos)) for i in range(3))
         cx, cy = CELULAS[nome]
         # a frente é -Y no Blender. O radiador, deitado, é visto mais de cima (as aletas)
-        icone = {"Vela": (0.6, -1.0, 0.45), "Bateria": (0.45, -1.0, 0.6), "Radiador": (0.0, -0.55, 1.0), "Pneu": (0.25, -0.6, 1.0), "Macaco": (0.0, -1.0, 0.3), "ChaveDaPerua": (0.15, -0.4, 1.0), "ChaveDoCupe": (0.15, -0.4, 1.0)}[nome]
-        foto = {"Vela": (0.9, -1.0, 0.6), "Bateria": (0.8, -1.0, 0.75), "Radiador": (0.6, -0.8, 1.0), "Pneu": (0.6, -1.0, 0.9), "Macaco": (0.8, -1.0, 0.6), "ChaveDaPerua": (0.5, -0.8, 1.0), "ChaveDoCupe": (0.5, -0.8, 1.0)}[nome]
+        icone = {"Vela": (0.6, -1.0, 0.45), "Bateria": (0.45, -1.0, 0.6), "Radiador": (0.0, -0.55, 1.0), "Pneu": (0.25, -0.6, 1.0), "Macaco": (0.0, -1.0, 0.3)}.get(nome, (0.15, -0.4, 1.0))
+        foto = {"Vela": (0.9, -1.0, 0.6), "Bateria": (0.8, -1.0, 0.75), "Radiador": (0.6, -0.8, 1.0), "Pneu": (0.6, -1.0, 0.9), "Macaco": (0.8, -1.0, 0.6)}.get(nome, (0.5, -0.8, 1.0))
         r.resolution_x, r.resolution_y = 128 * cx, 128 * cy
         eq._camera(cena, True, centro, icone, 3.0, tam * 1.15)
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500
-        eq._camera(cena, False, centro, foto, tam * (1.9 if nome in ("Radiador", "Pneu", "ChaveDaPerua", "ChaveDoCupe") else 1.5 if nome == "Macaco" else 2.6), tam)
+        eq._camera(cena, False, centro, foto, tam * (1.9 if nome in ("Radiador", "Pneu") + CHAVES else 1.5 if nome == "Macaco" else 2.6), tam)
         r.filepath = os.path.join(eq.ICONES, f"Foto_{nome}.png")
         bpy.ops.render.render(write_still=True)
     for o in objs.values():

@@ -104,6 +104,19 @@ namespace ZombieCityCleaner.EditorTools
                     EditorUtility.SetDirty(lista);
                 }
             }
+            // as motos (06/11/2026, Editor/Motos/MontagemDasMotos), se já foram montadas: também na lista da rede
+            var fatboy = AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDosVeiculos.PrefabFatBoy);
+            var cross = AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDosVeiculos.PrefabCross);
+            if (fatboy != null && cross != null)
+            {
+                partida.motos = new[] { fatboy, cross };
+                foreach (var moto in partida.motos)
+                    if (lista != null && !lista.PrefabList.Any(p => p.Prefab == moto))
+                    {
+                        lista.Add(new NetworkPrefab { Prefab = moto });
+                        EditorUtility.SetDirty(lista);
+                    }
+            }
             mundo.AddComponent<TelaDeCarregamento>();
             mundo.AddComponent<MapaDoMundo>();
             mundo.AddComponent<Salvar.Salvamento>();   // o save (02/11/2026)

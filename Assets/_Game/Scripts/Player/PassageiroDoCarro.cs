@@ -287,7 +287,7 @@ namespace ZombieCityCleaner.Player
             Vector3 alvoP = banco.position - banco.rotation * _quadrilNaRaiz;
             float k = _fase == Fase.Entrando ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(MoverDe, MoverAte, _tempo)) : 1f;
             transform.SetPositionAndRotation(Vector3.Lerp(_deP, alvoP, k), Quaternion.Slerp(_deR, banco.rotation, k));
-            if (_fase == Fase.Dentro || _tempo >= MoverDe) Pose(Lugar == 0);
+            if (_fase == Fase.Dentro || _tempo >= MoverDe) Pose(Carro, Lugar);
             if (_fase == Fase.Entrando && _tempo >= MoverAte) _fase = Fase.Dentro;
             if (!dono) return;
             Comandos();
@@ -309,7 +309,7 @@ namespace ZombieCityCleaner.Player
             // o dono desce do banco até o chão; os outros seguem a posição dele pela rede (até ela começar, o banco)
             if (dono) transform.SetPositionAndRotation(Vector3.Lerp(noBanco, _saida, s), Quaternion.Slerp(banco.rotation, Quaternion.Euler(0f, _yawSaida, 0f), s));
             else if (_tempo < SairDe + 0.15f) transform.SetPositionAndRotation(noBanco, banco.rotation);
-            if (_tempo < MoverAte) Pose(_lugarSaindo == 0);
+            if (_tempo < MoverAte) Pose(c, _lugarSaindo);
             if (dono)
             {
                 _camera.localPosition = Vector3.zero;
@@ -352,7 +352,7 @@ namespace ZombieCityCleaner.Player
             if (teclado != null && teclado.vKey.wasPressedThisFrame) _terceira = !_terceira;
             if (_fase == Fase.Dentro && _interagir.WasPressedThisFrame())
             {
-                if (Carro.Velocidade > Carro.VelocidadeParaSair) Avisar("Pare o carro para sair");
+                if (Carro.Velocidade > Carro.VelocidadeParaSair) Avisar($"Pare {Carro.OVeiculo} para sair");
                 else Carro.PedirSair();
             }
         }
@@ -399,6 +399,7 @@ namespace ZombieCityCleaner.Player
                         Carro.DesfazerLigacaoDireta();
                         Carro.PorAChave();
                     }
+                    else if (SemALigacaoDireta()) { }
                     else
                     {
                         Carro.FazerLigacaoDireta();
@@ -410,6 +411,7 @@ namespace ZombieCityCleaner.Player
                 {
                     // com a chave do veículo na mochila, ela entra na ignição; sem ela, a ligação direta (o mini-game)
                     if (TemAChave) Carro.PorAChave();
+                    else if (SemALigacaoDireta()) { }
                     else
                     {
                         Carro.FazerLigacaoDireta();
@@ -567,6 +569,15 @@ namespace ZombieCityCleaner.Player
             return false;
         }
 
+        // a ligação direta é a ponta do Ladrão (06/11/2026, a pedido: "A ligação direta que está hoje passaria a exigir a
+        // árvore do ladrão"): sem ela, o aviso, e o carro só liga com a chave
+        bool SemALigacaoDireta()
+        {
+            if (Habilidades.Tem(Habilidade.LigacaoDireta)) return false;
+            Avisar("Sem a chave, não liga: a ligação direta é a ponta do Ladrão (K: habilidades)", 3.5f);
+            return true;
+        }
+
         bool Ligou()
         {
             _segurandoChave = false;
@@ -579,6 +590,7 @@ namespace ZombieCityCleaner.Player
                 return true;
             }
             Avisar("Motor ligado");
+            if (Carro.LigacaoDireta) GetComponent<InventarioJogador>()?.LigouDireto(Carro);   // (o XP, 06/11/2026)
             return true;
         }
 
@@ -608,7 +620,8 @@ namespace ZombieCityCleaner.Player
                 _yaw = Mathf.Clamp(_yaw + olhar.x, -135f, 135f);
                 _pitch = Mathf.Clamp(_pitch - olhar.y, -60f, 75f);
             }
-            Vector3 olho = _quadrilNaRaiz + OlhoNoQuadril;
+            var c = Carro != null ? Carro : _carroSaindo;
+            Vector3 olho = _quadrilNaRaiz + OlhoDe(c, Carro != null ? Lugar : _lugarSaindo);
             _cabeca.localPosition = Vector3.Lerp(_cabecaLocal, olho, k);
             _cabeca.localRotation = Quaternion.Slerp(_cabecaAntes, Quaternion.Euler(_pitch, _yaw, 0f), k);
         }
@@ -626,8 +639,9 @@ namespace ZombieCityCleaner.Player
             Vector3 frente = Vector3.ProjectOnPlane(Carro.transform.forward, Vector3.up);
             float rumo = frente.sqrMagnitude > 0.01f ? Quaternion.LookRotation(frente).eulerAngles.y : Carro.transform.eulerAngles.y;
             var rot = Quaternion.Euler(_pitch3, rumo + _yaw3, 0f);
-            Vector3 pivo = Carro.transform.position + Vector3.up * 1.4f;
-            float distancia = 6f;
+            // a moto é menor: a câmera fica mais perto e mais baixa
+            Vector3 pivo = Carro.transform.position + Vector3.up * (Carro.moto ? 1.3f : 1.4f);
+            float distancia = Carro.moto ? 4.2f : 6f;
             if (Physics.SphereCast(pivo, 0.25f, rot * Vector3.back, out var batida, distancia, MascaraDoCenario, QueryTriggerInteraction.Ignore))
                 distancia = Mathf.Max(0.8f, batida.distance - 0.1f);
             // aproxima na hora (para não atravessar a parede) e afasta devagar
@@ -674,7 +688,9 @@ namespace ZombieCityCleaner.Player
             if (c.UltimoEngasgo > _engasgoAvisado + 25f && Time.time - c.UltimoEngasgo < 0.5f)
             {
                 _engasgoAvisado = c.UltimoEngasgo;
-                Avisar(c.NaReserva ? "O motor está falhando: a gasolina está acabando" : "O motor está falhando: a vela está gasta (troque no capô)", 3.5f);
+                Avisar(c.NaReserva ? "O motor está falhando: a gasolina está acabando"
+                    : c.moto ? "O motor está falhando: a vela está gasta (agache perto do motor para trocar)"
+                    : "O motor está falhando: a vela está gasta (troque no capô)", 3.5f);
             }
         }
 
@@ -691,9 +707,16 @@ namespace ZombieCityCleaner.Player
         /// para a frente e as canelas para baixo; o motorista põe as mãos no volante, os outros no colo. Cada osso aponta
         /// para uma direção no espaço do carro (o eixo Y do osso vai ao longo dele), como no retrato do inventário.
         /// </summary>
-        void Pose(bool motorista)
+        void Pose(Carro carro, int lugar)
         {
+            bool motorista = lugar == 0;
             var animador = _rede.animadorCorpo;
+            // na moto, a pose de quem monta (feita aqui, mesmo com as animações de sentado do carro)
+            if (carro != null && carro.moto)
+            {
+                PoseDaMoto(carro, lugar);
+                return;
+            }
             // o personagem com as animações de sentado (o principal em blocos, 28/10/2026): o Animator toca a do lugar
             // (o parâmetro Lugar: 1 o motorista, 2 os outros) e a camada dos braços sai; sem elas, a pose feita aqui
             if (TemLugar(animador))
@@ -750,6 +773,89 @@ namespace ZombieCityCleaner.Player
             osso.rotation = Quaternion.FromToRotation(osso.up, d) * osso.rotation;
         }
 
+        // ------------------------------------------------------------------------------------------ na moto
+
+        /// <summary>
+        /// Montado na moto (06/11/2026): o corpo parte do repouso (o Animator fica desligado), o tronco deita para a frente
+        /// (o piloto, <see cref="Carro.troncoDoPiloto"/>: a cross mais, a Fat Boy quase nada), as pernas vão do quadril até
+        /// as pedaleiras do lugar (os joelhos para a frente e para fora) e as mãos do piloto até os punhos (os cotovelos para
+        /// fora e para baixo), que viram com o guidão. O garupa põe as mãos nas coxas. Tudo segue a moto inclinada (o banco
+        /// é filho do modelo que inclina).
+        /// </summary>
+        void PoseDaMoto(Carro c, int lugar)
+        {
+            var animador = _rede.animadorCorpo;
+            if (_repouso.Count == 0) return;
+            if (animador.enabled) animador.enabled = false;
+            foreach (var (osso, pos, rot) in _repouso) osso.SetLocalPositionAndRotation(pos, rot);
+            bool piloto = lugar == 0;
+            Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
+            if (_ossos.TryGetValue("spine", out var coluna))
+                coluna.rotation = Quaternion.AngleAxis(piloto ? c.troncoDoPiloto : 5f, direita) * coluna.rotation;
+            for (int s = 0; s < 2; s++)   // 0 o lado direito, 1 o esquerdo
+            {
+                string l = s == 0 ? ".R" : ".L";
+                float lado = s == 0 ? 1f : -1f;
+                int i = lugar * 2 + s;
+                var pe = c.pedaleiras != null && i < c.pedaleiras.Length ? c.pedaleiras[i] : null;
+                if (pe != null)
+                {
+                    // o tornozelo fica acima e atrás do apoio (a sola em cima da pedaleira)
+                    Vector3 tornozelo = pe.position + cima * 0.08f - frente * 0.06f;
+                    DoisOssos("thigh" + l, "shin" + l, tornozelo, frente * 0.8f + cima * 0.45f + direita * (lado * 0.35f));
+                    Mirar("foot" + l, frente * 0.92f - cima * 0.3f + direita * (lado * 0.1f));
+                }
+                if (piloto && c.punhos != null && s < c.punhos.Length && c.punhos[s] != null)
+                    DoisOssos("upper_arm" + l, "forearm" + l, c.punhos[s].position, -cima * 0.55f + direita * (lado * 0.75f) - frente * 0.3f);
+                else if (_ossos.TryGetValue("thigh" + l, out var coxa) && _ossos.TryGetValue("shin" + l, out var joelho))
+                {
+                    // o garupa: as mãos nas coxas, perto dos joelhos
+                    Vector3 naCoxa = Vector3.Lerp(coxa.position, joelho.position, 0.6f) + cima * 0.07f + direita * (lado * 0.02f);
+                    DoisOssos("upper_arm" + l, "forearm" + l, naCoxa, -frente * 0.6f + direita * (lado * 0.6f) - cima * 0.2f);
+                }
+            }
+        }
+
+        /// <summary>Dois ossos (o de cima e o do meio) que levam a ponta até o alvo, dobrando para o lado de <paramref name="dobra"/> (no mundo).</summary>
+        void DoisOssos(string de, string meio, Vector3 alvo, Vector3 dobra)
+        {
+            if (!_ossos.TryGetValue(de, out var a) || !_ossos.TryGetValue(meio, out var b)) return;
+            var fimDoMeio = b.childCount > 0 ? b.GetChild(0) : null;
+            if (fimDoMeio == null) return;
+            Vector3 pa = a.position;
+            float l1 = (b.position - pa).magnitude, l2 = (fimDoMeio.position - b.position).magnitude;
+            if (l1 < 1e-4f || l2 < 1e-4f) return;
+            Vector3 para = alvo - pa;
+            Vector3 dir = para.sqrMagnitude > 1e-8f ? para.normalized : transform.forward;
+            float d = Mathf.Clamp(para.magnitude, Mathf.Abs(l1 - l2) + 0.01f, l1 + l2 - 0.002f);
+            float x = (l1 * l1 - l2 * l2 + d * d) / (2f * d);
+            float h = Mathf.Sqrt(Mathf.Max(0f, l1 * l1 - x * x));
+            Vector3 p = Vector3.ProjectOnPlane(dobra, dir);
+            if (p.sqrMagnitude < 1e-6f) p = Vector3.ProjectOnPlane(transform.forward, dir);
+            Vector3 dobrado = pa + dir * x + p.normalized * h;
+            Mirar(a, dobrado - pa);
+            Mirar(b, pa + dir * d - b.position);
+        }
+
+        void Mirar(string nome, Vector3 direcaoNoMundo)
+        {
+            if (_ossos.TryGetValue(nome, out var osso)) Mirar(osso, direcaoNoMundo);
+        }
+
+        static void Mirar(Transform osso, Vector3 direcaoNoMundo)
+        {
+            if (direcaoNoMundo.sqrMagnitude < 1e-8f) return;
+            osso.rotation = Quaternion.FromToRotation(osso.up, direcaoNoMundo.normalized) * osso.rotation;
+        }
+
+        /// <summary>O olho de quem senta, a partir do quadril (no espaço do veículo): na moto, mais para a frente com o tronco deitado.</summary>
+        static Vector3 OlhoDe(Carro c, int lugar)
+        {
+            if (c == null || !c.moto) return OlhoNoQuadril;
+            float t = (lugar == 0 ? c.troncoDoPiloto : 5f) * Mathf.Deg2Rad;
+            return new Vector3(0f, 0.70f * Mathf.Cos(t), 0.62f * Mathf.Sin(t) - 0.03f);
+        }
+
         // ------------------------------------------------------------------------------------------ na tela
 
         void OnGUI()
@@ -766,7 +872,7 @@ namespace ZombieCityCleaner.Player
                 float ly = Screen.height - 80 * u;
                 if (Carro.FaroisLigados && Carro.Pecas.BateriaAcende)
                 {
-                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), "FARÓIS", f, new Color(0.95f, 0.85f, 0.5f));
+                    Sombra(new Rect(Screen.width - 260 * u, ly, 240 * u, 22 * u), Carro.moto ? "FAROL" : "FARÓIS", f, new Color(0.95f, 0.85f, 0.5f));
                     ly -= 20 * u;
                 }
                 // os avisos das peças: o motor quente (pisca fervendo) e a bateria fraca
@@ -809,12 +915,14 @@ namespace ZombieCityCleaner.Player
                 }
             }
             var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Normal, TextAnchor.LowerCenter);
-            string linha = Lugar == 0 ? "WASD: dirigir   ·   Espaço: freio de mão   ·   L: faróis   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   "
-                    + (Carro.MotorLigado ? "E: sair (fica ligado)" : "E: sair")
-                : "F: lanterna   ·   V: câmera   ·   E: sair";
+            string linha = Lugar == 0
+                ? (Carro.moto ? "WASD: pilotar   ·   Espaço: freio de trás   ·   L: farol   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   "
+                              : "WASD: dirigir   ·   Espaço: freio de mão   ·   L: faróis   ·   B: buzina   ·   F: lanterna   ·   V: câmera   ·   ")
+                  + (Carro.moto ? (Carro.MotorLigado ? "E: descer (fica ligada)" : "E: descer") : Carro.MotorLigado ? "E: sair (fica ligado)" : "E: sair")
+                : Carro.moto ? "F: lanterna   ·   V: câmera   ·   E: descer" : "F: lanterna   ·   V: câmera   ·   E: sair";
             Sombra(new Rect(Screen.width / 2f - 400 * u, Screen.height - 34 * u, 800 * u, 24 * u), linha, dica, new Color(0.8f, 0.78f, 0.72f));
             if (Lugar == 0) TelaDaChave(u, dica);
-            string aviso = Lugar == 0 && Carro.PodeDesvirar ? "[R] Desvirar o carro" : Time.time < _avisoAte ? _aviso : null;
+            string aviso = Lugar == 0 && Carro.PodeDesvirar ? (Carro.moto ? "[R] Levantar a moto" : "[R] Desvirar o carro") : Time.time < _avisoAte ? _aviso : null;
             if (aviso != null)
             {
                 var a = EstilosDoHud.Rotulo(Mathf.RoundToInt(18 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
@@ -836,7 +944,8 @@ namespace ZombieCityCleaner.Player
             var meio = EstilosDoHud.Rotulo(Mathf.RoundToInt(16 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
             if (_terceira)
             {
-                if (!ligado) Sombra(new Rect(cx - 300 * u, Screen.height - 62 * u, 600 * u, 24 * u), "Para dar a partida, volte para dentro do carro (V)", dica, new Color(0.95f, 0.85f, 0.55f));
+                if (!ligado) Sombra(new Rect(cx - 300 * u, Screen.height - 62 * u, 600 * u, 24 * u),
+                    Carro.moto ? "Para dar a partida, volte para a primeira pessoa (V)" : "Para dar a partida, volte para dentro do carro (V)", dica, new Color(0.95f, 0.85f, 0.55f));
                 return;
             }
             if (_segurandoChave)
@@ -854,14 +963,17 @@ namespace ZombieCityCleaner.Player
             if (mira)
             {
                 string texto = Carro.LigacaoDireta ? (ligado ? "[Clique] Separar os fios (desligar)" : TemAChave ? "[Clique] Pôr a chave" : "[Clique] Tentar a ligação direta de novo")
-                    : e == Carro.EstadoDoMotor.SemChave ? (TemAChave ? "[Clique] Pôr a chave" : $"[Clique] Ligação direta ({SemAChave})") : "[Clique] Pegar a chave";
+                    : e == Carro.EstadoDoMotor.SemChave ? (TemAChave ? "[Clique] Pôr a chave" : !Habilidades.Tem(Habilidade.LigacaoDireta) ? $"{SemAChave}: só com a ligação direta (Ladrão)"
+                        : $"[Clique] Ligação direta ({SemAChave})") : "[Clique] Pegar a chave";
                 Sombra(new Rect(cx - 320 * u, cy + 14 * u, 640 * u, 26 * u), texto, meio, new Color(0.97f, 0.95f, 0.88f));
             }
             else if (!ligado)
             {
+                string onde = Carro.ondeFicaAIgnicao;
                 string texto = e == Carro.EstadoDoMotor.SemChave
-                    ? (TemAChave ? "Olhe para a ignição, à direita do volante, e clique para pôr a chave"
-                                 : $"S{SemAChave.Substring(1)}: olhe para a ignição, à direita do volante, e clique para fazer a ligação direta")
+                    ? (TemAChave ? $"Olhe para a ignição, {onde}, e clique para pôr a chave"
+                                 : !Habilidades.Tem(Habilidade.LigacaoDireta) ? $"S{SemAChave.Substring(1)}: o carro só liga com a chave (a ligação direta é a ponta do Ladrão, K)"
+                                 : $"S{SemAChave.Substring(1)}: olhe para a ignição, {onde}, e clique para fazer a ligação direta")
                     : Carro.LigacaoDireta ? "Olhe para a ignição e clique para tentar a ligação direta de novo"
                     : "Olhe para a chave e clique nela para dar a partida";
                 Sombra(new Rect(cx - 360 * u, Screen.height - 62 * u, 720 * u, 24 * u), texto, dica, new Color(0.95f, 0.85f, 0.55f));

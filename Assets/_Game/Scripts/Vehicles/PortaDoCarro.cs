@@ -33,6 +33,7 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>Abre, fica aberta enquanto a pessoa entra ou sai e bate.</summary>
         public void Ciclo()
         {
+            if (folha == null) return;   // a moto não tem porta: quem sobe monta direto
             // se ela já estava aberta (alguém entrou logo depois de outro sair), não estala de novo
             if (_tempo < 0f || _tempo > Carro.FecharEm) Efeitos.Som(SomDoCarro.PortaAbrir, folha.position, 0.7f, true, 20f);
             _tempo = _tempo >= 0f && _tempo <= Carro.FecharEm ? Mathf.Min(_tempo, Carro.AbrirPorta) : 0f;
@@ -89,7 +90,9 @@ namespace ZombieCityCleaner.Vehicles
             var p = quem.GetComponent<PassageiroDoCarro>();
             if (p != null && p.Sentado) return null;
             if (carro.MacacoNaRoda >= 0) return "Tire o macaco para entrar no carro";
-            if (quem.Inventario != null && quem.Inventario.CarregandoPneu) return "Largue o pneu (G) para entrar no carro";
+            if (quem.Inventario != null && quem.Inventario.CarregandoPneu) return carro.moto ? "Largue o pneu (G) para subir na moto" : "Largue o pneu (G) para entrar no carro";
+            // a moto (06/11/2026): o mesmo gatilho serve o piloto e, com ele ocupado, a garupa
+            if (carro.moto) return livre == 0 ? "[E] Pilotar a moto" : "[E] Subir na garupa";
             return livre == 0 ? "[E] Dirigir" : livre == lugarDeTras ? "[E] Entrar no banco de trás" : "[E] Entrar no carro";
         }
 
