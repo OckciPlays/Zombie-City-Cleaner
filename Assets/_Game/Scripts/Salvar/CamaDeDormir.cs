@@ -15,7 +15,11 @@ namespace ZombieCityCleaner.Salvar
 
         public override void Usar(ArmaJogador quem)
         {
-            if (NaCasaDaFamilia()) Salvamento.PedirDormir();
+            if (NaCasaDaFamilia())
+            {
+                Salvamento.PedirDormir();
+                Player.JogadorRede.Local?.Vida?.PedirDormir();   // a mente (06/11/2026): dormir de verdade
+            }
         }
 
         // a cama está na casa da família (a menos de 13 m do meio dela, no mesmo andar ou no de cima)

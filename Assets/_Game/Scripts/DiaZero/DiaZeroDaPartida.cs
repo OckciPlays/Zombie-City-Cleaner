@@ -575,6 +575,7 @@ namespace ZombieCityCleaner.DiaZero
                     {
                         vida.Vida.Value = vida.vidaMaxima;   // (a vida não volta sozinha: os 5 anos a devolvem)
                         vida.SararTudo();
+                        vida.AcalmarTudo();   // (e a mente, 06/11/2026)
                     }
                 }
             }

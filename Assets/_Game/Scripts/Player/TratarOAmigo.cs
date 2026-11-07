@@ -43,7 +43,7 @@ namespace ZombieCityCleaner.Player
         }
 
         bool PodeMirar => _rede != null && _rede.IsSpawned && _rede.IsOwner && MenuOnline.Controla && !MenuOnline.Cinema && !ModoVideo.Ligado
-                          && (_tela == null || !_tela.Aberta) && _vida != null && !_vida.Caido.Value
+                          && (_tela == null || !_tela.Aberta) && _vida != null && !_vida.Caido.Value && !_vida.Desmaiado.Value && !_vida.Dormindo.Value
                           && (_rede.Passageiro == null || !_rede.Passageiro.NoCarro)
                           && (Tratamento.Local == null || !Tratamento.Local.Ativo);
 
@@ -68,6 +68,23 @@ namespace ZombieCityCleaner.Player
                 return;
             }
             if (Time.time >= _proximaRefeita) RefazerAsOpcoes();
+            // desmaiado (06/11/2026, a mente): segurar o E acorda, antes de qualquer curativo
+            if (_alvo.Vida.Desmaiado.Value || _alvo.Vida.Dormindo.Value)
+            {
+                if (_interagir == null) return;
+                if (_interagir.WasPressedThisFrame())
+                {
+                    _apertouEm = Time.time;
+                    _comecou = false;
+                }
+                if (_apertouEm >= 0f && _interagir.IsPressed() && !_comecou && Time.time - _apertouEm >= SegurarPor)
+                {
+                    _comecou = true;
+                    _inventario.AcordarOAmigo(_alvo);
+                }
+                if (_interagir.WasReleasedThisFrame()) _apertouEm = -1f;
+                return;
+            }
             if (_interagir == null || _opcoes.Count == 0) return;
             // tocar troca a opção; segurar começa o curativo
             if (_interagir.WasPressedThisFrame())
@@ -121,6 +138,8 @@ namespace ZombieCityCleaner.Player
             foreach (var it in _inventario.Mochila)
             {
                 if (!PartesDoCorpo.EhTratamento(it.item) || !vistos.Add(it.item)) continue;
+                // o calmante (06/11/2026): só para o amigo abalado (a mente abaixo de 70)
+                if (it.item == Item.Calmante && _alvo.Vida.Sanidade.Value >= 70f) continue;
                 if (PartesDoCorpo.CorpoTodo(it.item) || PartesDoCorpo.PelaBoca(it.item))
                 {
                     var p = PartesDoCorpo.Sortear;
@@ -149,6 +168,7 @@ namespace ZombieCityCleaner.Player
             if (item == Item.Tala) return 3;
             if (item == Item.Antibiotico) return 4;
             if (item == Item.Remedio && e.ComFebre) return 5;
+            if (item == Item.Calmante) return 6;   // (a mente, 06/11/2026)
             if (item == Item.KitMedico) return 6;
             return 7;
         }
@@ -160,7 +180,12 @@ namespace ZombieCityCleaner.Player
             string nome = _alvo.Aparencia.Value.nome.ToString();
             if (string.IsNullOrEmpty(nome)) nome = "o amigo";
             string linha1, linha2;
-            if (_opcoes.Count == 0)
+            if (_alvo.Vida.Desmaiado.Value || _alvo.Vida.Dormindo.Value)
+            {
+                linha1 = $"Segure E: acordar {nome} ({(_alvo.Vida.Desmaiado.Value ? "desmaiado" : "dormindo")})";
+                linha2 = null;
+            }
+            else if (_opcoes.Count == 0)
             {
                 linha1 = _alvo.Vida.Corpo.Value.AlgoErrado || _alvo.Vida.Vida.Value < _alvo.Vida.vidaMaxima - 0.5f
                     ? $"{nome}: nenhum curativo da sua mochila serve agora" : $"{nome} está inteiro";

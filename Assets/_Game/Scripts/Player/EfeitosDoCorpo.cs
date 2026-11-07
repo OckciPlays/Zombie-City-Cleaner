@@ -69,7 +69,7 @@ namespace ZombieCityCleaner.Player
         bool _temOriginais;
 
         // o mancar: a fase do passo (anda só com o jogador andando) e o peso (entra e sai aos poucos)
-        float _fase, _pesoDoMancar, _tremor;
+        float _fase, _pesoDoMancar, _tremor, _sono;
         bool _forteE, _forteD;
 
         // a febre: o peso (0 a 1, entra e sai aos poucos), o quanto é sepse (0 a 1) e o quanto a tela mostra (0 caído, no vídeo)
@@ -169,7 +169,11 @@ namespace ZombieCityCleaner.Player
 
             // o tremor da mira entra e sai aos poucos
             bool mirando = _rede != null && _rede.Mirando.Value;
-            float tremor = PartesDoCorpo.TremorDaMira(e);
+            // (06/11/2026, a mente: a mão da mente abalada e da crise de pânico também treme; vale o maior)
+            float tremor = Mathf.Max(PartesDoCorpo.TremorDaMira(e), CriseDePanico.TremorAgora);
+            // as habilidades (06/11/2026): a Mira de aço não treme; a Mão firme treme menos
+            if (Habilidades.Tem(Habilidade.MiraDeAco)) tremor = 0f;
+            else if (Habilidades.Tem(Habilidade.MaoFirme)) tremor *= 0.75f;
             if (mirando) tremor *= 0.5f;
             _tremor = Mathf.MoveTowards(_tremor, tremor, dt * 2f);
 
@@ -231,7 +235,9 @@ namespace ZombieCityCleaner.Player
             }
             else if (!comFebre) _proximaRespiracao = -1f;
 
-            AtualizarVolume(_febre * _mostrar, t);
+            // (06/11/2026, a mente: dois calmantes seguidos, sonolento: a vista embaça um pouco, bem pouco)
+            _sono = Mathf.MoveTowards(_sono, _vida.TemEfeito(VidaJogador.EfeitoSonolento) && !_vida.Caido.Value ? 1f : 0f, dt * 0.4f);
+            AtualizarVolume(_febre * _mostrar, t, _sono * _mostrar);
         }
 
         void Tocar(AudioClip clip, float volume)
@@ -243,9 +249,9 @@ namespace ZombieCityCleaner.Player
         // o Volume da febre: cada valor é o da tela de agora (o dia e a noite) misturado com o da febre pelo peso; por isso o
         // Volume fica com o peso 1 e é desligado sem a febre. (O DepthOfField não se mistura pelo peso: o modo liga de uma
         // vez e o raio não desce de 0,5. A visão turva entra trazendo o começo do borrão de longe, na neblina, para perto.)
-        void AtualizarVolume(float f, float t)
+        void AtualizarVolume(float f, float t, float sono)
         {
-            if (f <= 0.001f)
+            if (f <= 0.001f && sono <= 0.001f)
             {
                 if (_volume != null && _volume.enabled) _volume.enabled = false;
                 return;
@@ -271,8 +277,9 @@ namespace ZombieCityCleaner.Player
             if (turva)
             {
                 float comeco = Mathf.Lerp(6f, 4f, _sepse);
-                _turva.gaussianStart.Override(Mathf.Lerp(80f, comeco, f));
-                _turva.gaussianEnd.Override(Mathf.Lerp(120f, 25f, f));
+                // (sonolento: o borrão começa a 14 m e fecha aos 45; vale o mais perto dos dois)
+                _turva.gaussianStart.Override(Mathf.Min(Mathf.Lerp(80f, comeco, f), Mathf.Lerp(80f, 14f, sono)));
+                _turva.gaussianEnd.Override(Mathf.Min(Mathf.Lerp(120f, 25f, f), Mathf.Lerp(120f, 45f, sono)));
             }
         }
 
@@ -288,6 +295,8 @@ namespace ZombieCityCleaner.Player
             _cor.postExposure.Override(0f);
             _cor.saturation.Override(0f);
             _cor.colorFilter.Override(Color.white);
+            // Na build, o shader do desfoque só vai porque o perfil Build_EfeitosCriadosNoJogo (em _Game/Settings) tem um
+            // DepthOfField Gaussian ligado: a URP corta os efeitos que nenhum perfil salvo no projeto usa.
             _turva = _perfil.Add<DepthOfField>();
             _turva.mode.Override(DepthOfFieldMode.Gaussian);
             _turva.gaussianStart.Override(80f);

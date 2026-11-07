@@ -283,6 +283,9 @@ namespace ZombieCityCleaner.World
         {
             int i = Indice(chave);
             if (i < 0 || _mesas[i].jogador != parametros.Receive.SenderClientId || final.pos == null || !_mesas[i].comBolas) return;
+            // a mente (06/11/2026): jogar acalma (cada tacada um pouco; o fim da partida mais)
+            if (NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var quem) && quem.PlayerObject != null)
+                quem.PlayerObject.GetComponent<Player.VidaJogador>()?.JogouSinuca(recomecar);
             if (recomecar)
             {
                 Arrumar(i);

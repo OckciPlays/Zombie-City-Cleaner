@@ -29,7 +29,49 @@ namespace ZombieCityCleaner.UI
         const byte CorpoFerida = 0, CorpoLesao = 1, CorpoInutilizar = 2, CorpoSarar = 3, CorpoHoras = 4, CorpoCurativos = 5,
                    CorpoQueda = 6, CorpoBrutamonte = 7, CorpoMordida = 8, CorpoTiro = 9,
                    // a etapa 2 (a limpeza e a infecção)
-                   CorpoAmanhecer = 10, CorpoInfeccao = 11, CorpoSpray = 12;
+                   CorpoAmanhecer = 10, CorpoInfeccao = 11, CorpoSpray = 12,
+                   // a mente (06/11/2026, a sanidade): o valor e o susto
+                   CorpoMente = 13, CorpoSusto = 14,
+                   // a etapa 3 da mente: o cansaço, o vício e dormir aqui
+                   CorpoCansaco = 15, CorpoVicio = 16, CorpoDormir = 17;
+
+        static readonly int[] MentesDeTeste = { 100, 70, 40, 15, 0 };
+        static readonly string[] EfeitosDaMente = { "Crise", "Vulto", "Falsos", "Amigos", "Fuga", "Desmaio" };
+        static readonly string[] TestesDoSono = { "Sono 90", "Exausto", "Dormir aqui", "Viciar" };
+
+        // no dono: um efeito da mente agora (a crise de 25 s, um vulto, 3 zumbis falsos, os amigos como zumbis, a fuga de 6 s,
+        // o desmaio de 10 s)
+        void EfeitoDaMente(int qual)
+        {
+            var al = Alucinacoes.Local;
+            switch (qual)
+            {
+                case 0:
+                    CriseDePanico.Local?.Comecar(25f);
+                    Avisar("Crise de pânico por 25 s.");
+                    break;
+                case 1:
+                    al?.NovoVulto();
+                    Avisar("Um vulto na beira da vista (olhe para ele).");
+                    break;
+                case 2:
+                    al?.ZumbisFalsos(3);
+                    Avisar("Zumbis falsos vindo pela frente: o tiro os vira fantasmas.");
+                    break;
+                case 3:
+                    al?.AmigosComoZumbis();
+                    Avisar("Os amigos a até 40 m viram zumbis por uns 10 s (sem amigo perto, nada).");
+                    break;
+                case 4:
+                    var olho = GetComponent<JogadorRede>().Olho;
+                    if (ColapsoDoJogador.Local == null || !ColapsoDoJogador.Local.Fugir(-olho.forward, ColapsoDoJogador.FugaMaxima)) Avisar("Agora não dá para fugir (no carro, caído ou desmaiado).");
+                    break;
+                case 5:
+                    GetComponent<VidaJogador>()?.PedirDesmaio(10f);
+                    Avisar("Desmaio de 10 s (um amigo acorda mirando e segurando o E).");
+                    break;
+            }
+        }
 
         static readonly string[] FasesDaInfeccao = { "ferida", "febre", "sepse", "curar" };
 
@@ -45,12 +87,12 @@ namespace ZombieCityCleaner.UI
             const float passo = 28f, alto = 24f;
             // o texto primeiro: a altura do painel acompanha (as linhas crescem com a ferida, a lesão e o analgésico)
             var vida = GetComponent<VidaJogador>();
-            string texto = vida != null && vida.IsSpawned ? vida.ResumoDoCorpo().Replace(" | ", "\n") : "sem o corpo do jogador";
+            string texto = vida != null && vida.IsSpawned ? vida.ResumoDoCorpo().Replace(" | ", "\n") + "\n" + vida.ResumoDaMente() + "\n" + vida.ResumoDoSono() : "sem o corpo do jogador";
             if (vida != null && vida.IsSpawned && vida.Caido.Value) texto += "\nCAÍDO: \"Sarar tudo\" renasce aqui";
             if (!VidaJogador.CorpoAnda) texto += "\nO corpo não anda agora (o Dia 0, ou o mundo carregando): os golpes só tiram da vida geral, e a queda não machuca";
             _conteudoDoCorpo.text = texto;
             float alturaDoTexto = _texto.CalcHeight(_conteudoDoCorpo, w);
-            const int linhas = 11;
+            const int linhas = 14;
             const float rotuloDaInfeccao = 20f;   // a linha do rótulo "Infecção" (menor que um botão)
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + linhas * passo * u + rotuloDaInfeccao * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
@@ -123,6 +165,26 @@ namespace ZombieCityCleaner.UI
                     TesteDoCorpoRpc(CorpoInfeccao, parte, (byte)(k < 3 ? k + 1 : 0));
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "Os curativos (na mochila)", _botao)) TesteDoCorpoRpc(CorpoCurativos, parte, 0);
+            y += passo * u;
+            // a mente: o valor (100, 70, 40, 15, 0) e um susto
+            float rotuloDaMente = 44 * u, sextoDaMente = (w - rotuloDaMente - 5 * 4 * u) / 6f;
+            GUI.Label(new Rect(x, y + 3 * u, rotuloDaMente, 20 * u), "Mente", _texto);
+            for (int k = 0; k < MentesDeTeste.Length; k++)
+                if (GUI.Button(new Rect(x + rotuloDaMente + k * (sextoDaMente + 4 * u), y, sextoDaMente, alto * u), MentesDeTeste[k].ToString(), _botao))
+                    TesteDoCorpoRpc(CorpoMente, parte, (byte)MentesDeTeste[k]);
+            if (GUI.Button(new Rect(x + rotuloDaMente + 5 * (sextoDaMente + 4 * u), y, sextoDaMente, alto * u), "Susto", _botao))
+                TesteDoCorpoRpc(CorpoSusto, parte, 0);
+            y += passo * u;
+            // a etapa 2 da mente: cada efeito na hora (só aqui, no dono; o desmaio pede ao anfitrião)
+            for (int k = 0; k < EfeitosDaMente.Length; k++)
+                if (GUI.Button(new Rect(x + k * (sextoDaMente + 4 * u), y, sextoDaMente + (k == 0 ? rotuloDaMente - 4 * u : 0f), alto * u), EfeitosDaMente[k], _botao))
+                    EfeitoDaMente(k);
+            y += passo * u;
+            // a etapa 3: o cansaço (70: com sono; 95: exausto), dormir aqui (como na cama) e viciar (já em abstinência)
+            float quartoDoSono = (w - 3 * 4 * u) / 4f;
+            for (int k = 0; k < TestesDoSono.Length; k++)
+                if (GUI.Button(new Rect(x + k * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), TestesDoSono[k], _botao))
+                    TesteDoCorpoRpc(k == 0 ? CorpoCansaco : k == 1 ? CorpoCansaco : k == 2 ? CorpoDormir : CorpoVicio, parte, (byte)(k == 0 ? 90 : 100));
             return area;
         }
 
@@ -160,7 +222,7 @@ namespace ZombieCityCleaner.UI
             var parte = (ParteDoCorpo)parteDoTeste;
             if (!PartesDoCorpo.Valida(parte)) return;
             string aviso = null;
-            if (vida.Caido.Value && acao != CorpoSarar && acao != CorpoCurativos)
+            if (vida.Caido.Value && acao != CorpoSarar && acao != CorpoCurativos && acao != CorpoMente)
             {
                 AvisoDoTesteRpc("Caído: \"Sarar tudo\" renasce aqui.", RpcTarget.Single(parametros.Receive.SenderClientId, RpcTargetUse.Temp));
                 return;
@@ -217,6 +279,34 @@ namespace ZombieCityCleaner.UI
                 case CorpoSpray:
                     aviso = DarOSprayQuaseNoFim();
                     break;
+                case CorpoMente:
+                    vida.MenteDeTeste(valor);
+                    aviso = $"A mente em {valor}" + (corpoAnda ? "." : " (no Dia 0 ela não anda: fica parada aí).");
+                    break;
+                case CorpoCansaco:
+                    vida.CansacoDeTeste(valor);
+                    aviso = valor >= 100 ? "Os 3 dias sem dormir: ele apaga e dorme onde está." : "Com sono (90): a mente cai 1 por hora e a vista pisca às vezes.";
+                    break;
+                case CorpoVicio:
+                    vida.VicioDeTeste();
+                    aviso = "Viciado em nicotina, há 5 h sem fumar: a abstinência começou (fume para passar).";
+                    break;
+                case CorpoDormir:
+                    if (!corpoAnda) aviso = semCorpo;
+                    else
+                    {
+                        vida.DormirDeTeste();
+                        aviso = "Dormindo aqui (E levanta). Com todos dormindo, a noite passa.";
+                    }
+                    break;
+                case CorpoSusto:
+                    if (!corpoAnda) aviso = semCorpo;
+                    else
+                    {
+                        vida.AbalarAgora(10f, MotivoDaMente.Susto);
+                        aviso = "Um susto: −10 na mente.";
+                    }
+                    break;
                 case CorpoQueda:
                     if (!corpoAnda) aviso = semCorpo;
                     else
@@ -267,7 +357,7 @@ namespace ZombieCityCleaner.UI
         {
             new Parte(Item.Atadura, 2), new Parte(Item.Bandagem, 5), new Parte(Item.BandagemAntisseptica, 3), new Parte(Item.SprayAntisseptico, 1),
             new Parte(Item.KitMedico, 1), new Parte(Item.Tala, 2), new Parte(Item.Comprimidos, 1), new Parte(Item.Antibiotico, 2),
-            new Parte(Item.Remedio, 1), new Parte(Item.Desinfetante, 1),
+            new Parte(Item.Remedio, 1), new Parte(Item.Desinfetante, 1), new Parte(Item.Calmante, 3),
         };
 
         // no anfitrião: um spray com 1 uso só (o desgaste 80), para ver ele acabar

@@ -174,8 +174,9 @@ namespace ZombieCityCleaner.Player
         // ------------------------------------------------------------------ a silhueta
 
         /// <summary>
-        /// Desenha a silhueta das 6 partes na área (esticada sem deformar, no meio dela): vista de costas, como o jogador
-        /// se vê (o braço esquerdo dele à esquerda). Cada parte na cor da vida dela; a inutilizada cinza riscada; os ícones
+        /// Desenha a silhueta das 6 partes na área (esticada sem deformar, no meio dela): de frente, como quem olha o
+        /// personagem (06/11/2026, a pedido: o braço esquerdo dele fica à direita da imagem; era vista de costas). Cada parte
+        /// na cor da vida dela; a inutilizada cinza riscada; os ícones
         /// do estado por cima. A parte <paramref name="realce"/> (<see cref="PartesDoCorpo.Sortear"/>: nenhuma) acende com
         /// a moldura amarela, no <paramref name="brilho"/> (0 a 1). A tela do corpo (TelaDoInventario.Corpo.cs) usa a grande.
         /// </summary>
@@ -297,15 +298,16 @@ namespace ZombieCityCleaner.Player
 
         static float Escala(Rect area) => Mathf.Min(area.width / CaixaW, area.height / CaixaH);
 
-        // as partes na caixa de 52 × 102: a cabeça (o círculo de 14), o tronco 20 × 35, os braços 7,5 × 38 e as pernas 9 × 48
+        // as partes na caixa de 52 × 102: a cabeça (o círculo de 14), o tronco 20 × 35, os braços 7,5 × 38 e as pernas 9 × 48;
+        // de frente: os do lado esquerdo do personagem à direita da imagem
         static Rect Forma(ParteDoCorpo p) => p switch
         {
             ParteDoCorpo.Cabeca => new Rect(19f, 0f, 14f, 14f),
             ParteDoCorpo.Tronco => new Rect(16f, 16f, 20f, 35f),
-            ParteDoCorpo.BracoE => new Rect(7f, 16f, 7.5f, 38f),
-            ParteDoCorpo.BracoD => new Rect(37.5f, 16f, 7.5f, 38f),
-            ParteDoCorpo.PernaE => new Rect(16.5f, 53f, 9f, 48f),
-            _ => new Rect(26.5f, 53f, 9f, 48f),
+            ParteDoCorpo.BracoE => new Rect(37.5f, 16f, 7.5f, 38f),
+            ParteDoCorpo.BracoD => new Rect(7f, 16f, 7.5f, 38f),
+            ParteDoCorpo.PernaE => new Rect(26.5f, 53f, 9f, 48f),
+            _ => new Rect(16.5f, 53f, 9f, 48f),
         };
 
         // os ícones (até 3 no meio da parte, um embaixo do outro; o anel da entorse vai na ponta: o tornozelo, o pulso)

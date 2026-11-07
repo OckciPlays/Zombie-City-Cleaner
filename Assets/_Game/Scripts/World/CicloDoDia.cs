@@ -41,7 +41,24 @@ namespace ZombieCityCleaner.World
         /// horas vividas, não pelo relógio do mundo, que o Page Up e o Sempre de dia pulam). Com 24 minutos por dia, 1 h do
         /// jogo = 60 s reais.
         /// </summary>
-        public static float HorasPorSegundo => 24f / ((Instancia != null ? Instancia.minutosPorDia : 24f) * 60f);
+        public static float HorasPorSegundo => 24f / ((Instancia != null ? Instancia.minutosPorDia : 24f) * 60f) * Pressa;
+
+        /// <summary>
+        /// Quantas vezes o relógio corre (06/11/2026, a mente: todos dormindo, a noite passa: <c>VidaJogador.PressaDoSono</c>);
+        /// 1, normal. Vai pela rede; as horas do corpo e da mente correm junto (<see cref="HorasPorSegundo"/>).
+        /// </summary>
+        public static float Pressa { get; private set; } = 1f;
+        public readonly NetworkVariable<float> PressaRede = new(1f);
+
+        /// <summary>Só no anfitrião: a pressa do relógio.</summary>
+        public static void DefinirPressa(float pressa)
+        {
+            pressa = Mathf.Max(1f, pressa);
+            if (Mathf.Approximately(Pressa, pressa)) return;
+            Pressa = pressa;
+            var c = Instancia;
+            if (c != null && c.IsSpawned && c.IsServer) c.PressaRede.Value = pressa;
+        }
 
         float _proximoEnvio;
 
@@ -61,6 +78,7 @@ namespace ZombieCityCleaner.World
 
         public override void OnNetworkSpawn()
         {
+            Pressa = 1f;   // (06/11/2026: a pressa do sono não passa de uma partida para outra)
             TempoAoComecar();
             if (IsServer)
             {
@@ -92,6 +110,7 @@ namespace ZombieCityCleaner.World
         {
             HoraRede.OnValueChanged -= AoReceber;
             Parado = false;
+            Pressa = 1f;
             TempoAoAcabar();
         }
 
@@ -132,10 +151,11 @@ namespace ZombieCityCleaner.World
         {
             float h0 = Hora;
             if (IsSpawned) Parado = ParadoRede.Value;
+            if (IsSpawned && !IsServer) Pressa = Mathf.Max(1f, PressaRede.Value);
             if (!Parado)
             {
                 float antes = Hora;
-                Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Time.deltaTime, 24f);
+                Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Pressa * Time.deltaTime, 24f);
                 // passou da meia-noite: mais um dia (no anfitrião; os outros recebem)
                 if (Hora < antes && (!IsSpawned || IsServer)) Dia++;
             }

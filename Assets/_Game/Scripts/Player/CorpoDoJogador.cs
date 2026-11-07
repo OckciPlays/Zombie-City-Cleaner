@@ -427,7 +427,7 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public static bool EhTratamento(Item i) => i == Item.Atadura || i == Item.Bandagem || i == Item.KitMedico || i == Item.Tala
                                                    || i == Item.Comprimidos || i == Item.Remedio || i == Item.BandagemAntisseptica
-                                                   || i == Item.SprayAntisseptico || i == Item.Antibiotico;
+                                                   || i == Item.SprayAntisseptico || i == Item.Antibiotico || i == Item.Calmante;
 
         /// <summary>O kit trata o corpo todo (a parte não importa).</summary>
         public static bool CorpoTodo(Item i) => i == Item.KitMedico;
@@ -436,7 +436,7 @@ namespace ZombieCityCleaner.Player
         public static bool EhAnalgesico(Item i) => i == Item.Comprimidos;
 
         /// <summary>Pela boca, não numa parte: os comprimidos, o xarope (a febre) e o antibiótico (a infecção).</summary>
-        public static bool PelaBoca(Item i) => i == Item.Comprimidos || i == Item.Remedio || i == Item.Antibiotico;
+        public static bool PelaBoca(Item i) => i == Item.Comprimidos || i == Item.Remedio || i == Item.Antibiotico || i == Item.Calmante;
 
         /// <summary>As faixas: a atadura, a bandagem de pano e a antisséptica.</summary>
         public static bool Enfaixa(Item i) => i == Item.Atadura || i == Item.Bandagem || i == Item.BandagemAntisseptica;
@@ -456,7 +456,8 @@ namespace ZombieCityCleaner.Player
         {
             Item.Atadura or Item.Bandagem or Item.BandagemAntisseptica => "Enfaixando", Item.Tala => "Pondo a tala",
             Item.KitMedico => "Usando o kit médico", Item.SprayAntisseptico => "Borrifando o spray",
-            Item.Antibiotico => "Tomando o antibiótico", Item.Remedio => "Tomando o xarope", _ => "Tomando o analgésico",
+            Item.Antibiotico => "Tomando o antibiótico", Item.Remedio => "Tomando o xarope", Item.Calmante => "Tomando o calmante",
+            _ => "Tomando o analgésico",
         };
 
         /// <summary>
@@ -568,6 +569,10 @@ namespace ZombieCityCleaner.Player
                     if (e.xarope > 60) { motivo = "O xarope ainda está agindo"; return false; }
                     return true;
                 }
+                case Item.Calmante:
+                    // a mente (06/11/2026): toma quando quiser (dois seguidos dão sono; três, apaga)
+                    parte = ParteDoCorpo.Cabeca;
+                    return true;
                 case Item.Antibiotico:
                 {
                     parte = ParteDoCorpo.Cabeca;

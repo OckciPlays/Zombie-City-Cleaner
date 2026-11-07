@@ -27,7 +27,7 @@ namespace ZombieCityCleaner.Player
     public partial class TelaDoInventario
     {
         // as medidas, a 720p: a área da grade (a silhueta e as etiquetas) e a coluna dos detalhes (os curativos)
-        static readonly Rect AbaCorpo = new Rect(648, 14, 150, 36);
+        static readonly Rect AbaCorpo = new Rect(560, 14, 104, 36);
         static readonly Rect AreaDoCorpo = new Rect(GradeX, 58, GradeMaxW, 486);
         static readonly Rect SilhuetaGrande = new Rect(500, 66, 158, 310);
         static readonly Rect BotaoParar = new Rect(GradeX + GradeMaxW - 96, 458, 90, 30);
@@ -43,7 +43,7 @@ namespace ZombieCityCleaner.Player
         static readonly Item[] Curativos =
         {
             Item.Atadura, Item.Bandagem, Item.BandagemAntisseptica, Item.SprayAntisseptico, Item.KitMedico, Item.Tala,
-            Item.Comprimidos, Item.Remedio, Item.Antibiotico,
+            Item.Comprimidos, Item.Remedio, Item.Antibiotico, Item.Calmante,
         };
 
         // os curativos da coluna agora (os que estão na mochila), refeitos a cada desenho e a cada clique
@@ -97,10 +97,11 @@ namespace ZombieCityCleaner.Player
             _estante = -1;
         }
 
-        // a etiqueta da parte: as da esquerda do jogador à esquerda (a silhueta é vista de costas), de cima para baixo
+        // a etiqueta da parte: a silhueta é de frente (06/11/2026), então as do lado direito do personagem ficam à esquerda
+        // da tela e as do esquerdo à direita, cada uma ao lado do membro dela; de cima para baixo
         static Rect Etiqueta(ParteDoCorpo p)
         {
-            bool esquerda = p == ParteDoCorpo.Cabeca || p == ParteDoCorpo.BracoE || p == ParteDoCorpo.PernaE;
+            bool esquerda = p == ParteDoCorpo.Cabeca || p == ParteDoCorpo.BracoD || p == ParteDoCorpo.PernaD;
             int linha = p <= ParteDoCorpo.Tronco ? 0 : p <= ParteDoCorpo.BracoD ? 1 : 2;
             return new Rect(esquerda ? GradeX + 6f : GradeX + GradeMaxW - 6f - EtiquetaW, 66f + linha * PassoDaEtiqueta, EtiquetaW, EtiquetaH);
         }
@@ -245,7 +246,7 @@ namespace ZombieCityCleaner.Player
         // o que o clique faz, já com a parte
         static string CliqueDo(in EstadoDoCorpo e, Item item, ParteDoCorpo parte)
         {
-            string tempo = Numero(PartesDoCorpo.TempoDe(item)) + " s";
+            string tempo = Numero(Habilidades.TempoDoCurativo(item, JogadorRede.Local)) + " s";
             return item switch
             {
                 Item.Atadura or Item.Bandagem => $"Clique: enfaixar {PartesDoCorpo.NomeComArtigo(parte)} ({tempo})",
@@ -255,6 +256,7 @@ namespace ZombieCityCleaner.Player
                 Item.KitMedico => $"Clique: tratar o corpo todo ({tempo})",
                 Item.Antibiotico => $"Clique: tomar a dose, {PorCento(VidaJogador.ChanceDoAntibiotico(e.Infeccao))} de cura ({tempo})",
                 Item.Remedio => $"Clique: tomar, tira a febre ({tempo})",
+                Item.Calmante => $"Clique: tomar, acalma a mente ({tempo})",
                 _ => $"Clique: tomar ({tempo})",
             };
         }
@@ -281,7 +283,7 @@ namespace ZombieCityCleaner.Player
                 Opcao((item == Item.KitMedico ? "Usar no corpo todo" : PartesDoCorpo.PelaBoca(item) ? "Tomar" : "Tratar") + " (ocupado)", null);
                 return;
             }
-            string tempo = $" ({Numero(PartesDoCorpo.TempoDe(item))} s)";
+            string tempo = $" ({Numero(Habilidades.TempoDoCurativo(item, JogadorRede.Local))} s)";
             if (SemParte(item))
             {
                 var auto = PartesDoCorpo.Sortear;
@@ -342,7 +344,7 @@ namespace ZombieCityCleaner.Player
                 if (inventario.Quantos(item) <= 0) continue;
                 n++;
                 bool pode = ServeAgora(item, SemParte(item) ? PartesDoCorpo.Sortear : parte, out var aqui, out var motivo);
-                string tempo = $" ({Numero(PartesDoCorpo.TempoDe(item))} s)";
+                string tempo = $" ({Numero(Habilidades.TempoDoCurativo(item, JogadorRede.Local))} s)";
                 string texto = item switch
                 {
                     Item.Atadura => "Enfaixar com a atadura",
@@ -353,6 +355,7 @@ namespace ZombieCityCleaner.Player
                     Item.KitMedico => "Usar o kit médico (o corpo todo)",
                     Item.Comprimidos => "Tomar um comprimido (a dor)",
                     Item.Antibiotico => "Tomar o antibiótico (a infecção)",
+                    Item.Calmante => "Tomar um calmante (a mente)",
                     _ => "Tomar o xarope (a febre)",
                 };
                 if (!PrimeiraPilha(item, out ushort id)) continue;
@@ -370,7 +373,7 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         void LinhasDoTratamento(Item item, System.Action<string, string> linha)
         {
-            string leva = Numero(PartesDoCorpo.TempoDe(item)) + " s";
+            string leva = Numero(Habilidades.TempoDoCurativo(item, JogadorRede.Local)) + " s";
             string trata = item switch
             {
                 Item.Atadura => $"Estanca 1 ferida · +30% no membro · +8 de vida · regenera 5 s · leva {leva}",
@@ -381,6 +384,7 @@ namespace ZombieCityCleaner.Player
                 Item.Tala => $"Imobiliza o membro quebrado ou torcido · leva {leva}",
                 Item.Comprimidos => "Tira a dor por 6 h do jogo (a mira treme a metade)",
                 Item.Antibiotico => $"Cura a infecção: {ChancesDoAntibiotico()} · 1 dose a cada 6 h",
+                Item.Calmante => "Acalma a mente por umas 5 h do jogo · 2 seguidos dão sono; 3, você apaga",
                 _ => "Tira a febre por 4 h do jogo (não cura a infecção)",
             };
             linha("Trata", trata);

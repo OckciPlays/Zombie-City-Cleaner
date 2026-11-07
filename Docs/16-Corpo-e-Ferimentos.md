@@ -10,6 +10,19 @@ modeladas).
 - **A vida não volta mais sozinha.** A fogueira e as comidas também não curam mais. Só o tratamento cura.
 - **O corpo tem 6 partes:** a cabeça, o tronco, os dois braços e as duas pernas. O golpe tira da vida geral (que continua
   de 0 a 100; a 0, o jogador cai) e da parte onde pegou.
+- **A vida geral sai das partes** (06/11/2026, a pedido: "se todos os membros estiverem 100% a minha vida geral também
+  estará 100%"; e, à tarde, "ainda está um pouco bugado a parte da vida": o braço a 77% e a perna a 90% davam 67, a soma do
+  que faltava): é **a média das partes**, com o tronco e a cabeça pesando mais (a cabeça 12%, o tronco 30%, cada braço 12%,
+  cada perna 17%), **mas nunca acima do tronco nem da cabeça**.
+  - O braço a 77% e a perna a 90% dão uns 96. O tronco a 10% dá 10, por melhor que esteja o resto.
+  - **A morte vem do tronco ou da cabeça a 0** (aí a vida geral é 0).
+  - **O golpe tira o dobro da parte** (a mordida do Oco, 12, tira 24% da parte), para a média não deixar o jogador forte
+    demais: morrer leva uns 12 a 14 golpes de Oco (eram 9), e o tiro no tronco, 3 ou 4.
+  - **O membro perdido** (a 0) passa o resto do golpe para o tronco.
+  - O sangramento tira da parte que sangra (também em dobro); a fome, a sede, a infecção, o afogamento e o raio, do tronco.
+  - Tratar uma parte sobe a vida geral pelo peso dela. A lesão (a entorse 15, a fratura 40, a exposta 60) conta na parte e
+    na média, e some quando o osso cola.
+  - Um personagem salvo antes volta com a vida das partes (o tronco e a cabeça com pelo menos 10%).
 - **A parte a 0 fica inutilizada:** o braço não segura arma de duas mãos e a mira treme; a perna manca forte e não corre;
   o tronco a 0 não deixa correr; a cabeça a 0 escurece as bordas da tela.
 - **A morte não muda:** quem renasce volta com a vida cheia e o corpo inteiro.
@@ -26,7 +39,8 @@ modeladas).
 | A fratura exposta | — | sempre | 0,30 por segundo |
 | O Brutamonte | o esmagamento | **nunca** (ele quebra) | — |
 
-- O sangue sai da vida geral, devagar e sem parar. Duas feridas somam. Uma mordida sozinha mata em uns 17 minutos.
+- O sangue sai da parte que sangra (e a vida geral desce junto), devagar e sem parar. Duas feridas somam. Uma mordida
+  sozinha mata em uns 17 minutos.
 - **Só a bandagem (ou o kit) estanca.** A ferida enfaixada fecha em 3 dias do jogo (72 minutos reais). Um golpe novo na
   mesma parte abre de novo e rasga o curativo.
 - O Corredor tem a mesma chance do Oco, mas bate mais vezes, então faz sangrar mais.
@@ -69,11 +83,11 @@ e a chance da fratura sobe com a força que chegou (perto e no 3º golpe, 70%).
 
 | O item | O que faz | Leva |
 |---|---|---|
-| **Kit médico** (o superior) | trata o corpo todo: estanca todas as feridas, +50% em cada membro, +40 de vida e mais 2 por segundo por 10 s | 6 s |
-| **Atadura** | estanca uma ferida, +30% no membro, +8 de vida e mais 1,5 por segundo por 5 s | 3 s |
-| **Bandagem** (de pano) | estanca uma ferida, +20% no membro, +3 de vida e mais 1 por segundo por 5 s | 4 s |
+| **Kit médico** (o superior) | trata o corpo todo: estanca todas as feridas e dá +50% em cada parte (a vida geral sobe junto) | 6 s |
+| **Atadura** | estanca uma ferida e dá +30% na parte (a vida geral sobe junto) | 3 s |
+| **Bandagem** (de pano) | estanca uma ferida e dá +20% na parte | 4 s |
 | **Tala** (nova) | imobiliza o braço ou a perna com entorse ou fratura: começa a sarar | 5 s |
-| **Bandagem antisséptica** (nova) | como a bandagem (+25% no membro, +5 de vida) e protege a ferida da infecção até o amanhecer | 4 s |
+| **Bandagem antisséptica** (nova) | como a bandagem (+25% na parte) e protege a ferida da infecção até o amanhecer | 4 s |
 | **Spray antisséptico** (5 usos) | limpa a ferida: a bandagem comum posta depois também protege | 2 s |
 | **Comprimidos** (o analgésico) | tiram a dor por 6 h do jogo | 1,7 s |
 | **Xarope** | tira a febre por umas 4 h do jogo (não cura) | 1,7 s |
@@ -163,6 +177,10 @@ ajustadas à medida de cada personagem. Aparecem no corpo (todos veem) e no retr
   save, e o `PartesDoCorpo` com as contas que o dono e o anfitrião fazem iguais).
 - O anfitrião conta tudo no `Player/VidaJogador.Corpo.cs` (o dano por parte, o sangramento, o tempo, a queda, os
   tratamentos). O `VidaJogador.Dano` ganhou o jeito, a parte e a lesão (todos opcionais).
+- A vida geral (06/11/2026): `VidaDasPartes()` = a máxima × (1 − a soma do `_danoDaParte` / 100); o `_soNaParte` (o que a
+  lesão tira a mais) entra só na porcentagem do membro. `ConferirAVida` põe a `Vida` e derruba o jogador a 0; `Perder` põe
+  no tronco; `Curar` tira das partes (a mais machucada primeiro); o `DefinirCorpo` divide o machucado salvo entre os dois
+  pela vida salva.
 - Os zumbis: `Zombies/ZombieManager.Ferimentos.cs` decide o jeito e a parte pelo zumbi que bateu.
 - O tempo do corpo anda em horas vividas (`CicloDoDia.HorasPorSegundo`), só com o mundo pronto e fora do Dia 0, e vai no
   save do personagem (passa de um mundo a outro).

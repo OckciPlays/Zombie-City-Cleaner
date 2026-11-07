@@ -71,7 +71,7 @@ namespace ZombieCityCleaner.Player
                 _quadrilMexido = null;
             }
             if (_vida == null || !_vida.IsSpawned) return;
-            byte v = _vida.Caido.Value ? (byte)0 : _vida.Tratando.Value;
+            byte v = _vida.Caido.Value || _vida.Desmaiado.Value || _vida.Dormindo.Value ? (byte)0 : _vida.Tratando.Value;
             if (v != 0) _qual = v;
             float dt = Time.deltaTime;
             _peso = Mathf.MoveTowards(_peso, v != 0 ? 1f : 0f, dt * 4f);

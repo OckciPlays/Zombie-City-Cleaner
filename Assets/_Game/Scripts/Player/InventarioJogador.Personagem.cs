@@ -24,6 +24,13 @@ namespace ZombieCityCleaner.Player
         public bool comRoupas;
         /// <summary>O corpo (05/11/2026; vazio = sadio, como num save de antes dele).</summary>
         public EstadoDoCorpo corpo;
+        /// <summary>O abalo da mente (06/11/2026; 0 = calma, como num save de antes dela).</summary>
+        public float abaloDaMente;
+        /// <summary>O cansaço e a nicotina (06/11/2026, a etapa 3 da mente).</summary>
+        public float cansaco, nicotina;
+        public bool viciado;
+        /// <summary>O XP e as habilidades (06/11/2026, a árvore de habilidades).</summary>
+        public ProgressoDoPersonagem progresso;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
@@ -44,6 +51,11 @@ namespace ZombieCityCleaner.Player
             s.SerializeValue(ref roupas);
             s.SerializeValue(ref comRoupas);
             s.SerializeValue(ref corpo);
+            s.SerializeValue(ref abaloDaMente);
+            s.SerializeValue(ref cansaco);
+            s.SerializeValue(ref nicotina);
+            s.SerializeValue(ref viciado);
+            s.SerializeValue(ref progresso);
         }
 
         public static PacoteDoPersonagem De(PersonagemSalvo p)
@@ -94,6 +106,9 @@ namespace ZombieCityCleaner.Player
                 itens = itens, mochila = (Item)p.mochila, pneu = (byte)Mathf.Clamp(p.pneu, 0, 255), dinheiro = p.dinheiro,
                 vida = p.vida, fome = p.fome, sede = p.sede, a0 = A(0), a1 = A(1), a2 = A(2), escolhido = (byte)Mathf.Clamp(p.escolhido, 0, 2),
                 roupas = roupas, comRoupas = comRoupas, corpo = p.corpo.Conferido(),
+                abaloDaMente = Mathf.Clamp(p.abaloDaMente, 0f, VidaJogador.MenteMaxima),
+                cansaco = Mathf.Clamp(p.cansaco, 0f, 100f), nicotina = Mathf.Clamp(p.nicotina, 0f, 100f), viciado = p.viciado,
+                progresso = p.progresso,
             };
         }
     }
@@ -296,8 +311,11 @@ namespace ZombieCityCleaner.Player
             {
                 vida.Vida.Value = Mathf.Clamp(p.vida, 10f, vida.vidaMaxima);
                 vida.DefinirCorpo(p.corpo);   // as feridas, as lesões e as talas de quando ele saiu (05/11/2026)
+                vida.DefinirAbalo(p.abaloDaMente);   // e a mente (06/11/2026)
+                vida.DefinirSonoEVicio(p.cansaco, p.nicotina, p.viciado);
             }
             GetComponent<FomeESede>()?.Definir(p.fome, p.sede);
+            DefinirProgresso(p.progresso);   // o XP e as habilidades (06/11/2026)
             if (p.comRoupas) VestirAsSalvas(p.roupas);
             // (um save antigo pode ter no atalho um item que não vai mais na mão: a gaze e o desinfetante, 05/11/2026)
             ushort A(int k) => k >= 0 && k < n && Itens.VaiNaMao(p.itens[k].item) ? ids[k] : (ushort)0;
@@ -360,7 +378,12 @@ namespace ZombieCityCleaner.Player
                 {
                     p.vida = _rede.Vida.Caido.Value ? _rede.Vida.vidaMaxima : _rede.Vida.Vida.Value;   // (caído: renasce inteiro)
                     p.corpo = _rede.Vida.Caido.Value ? default : _rede.Vida.Corpo.Value;
+                    p.abaloDaMente = _rede.Vida.AbaloParaOSave;
+                    p.cansaco = _rede.Vida.Cansaco.Value;
+                    p.nicotina = _rede.Vida.Nicotina.Value;
+                    p.viciado = _rede.Vida.TemEfeito(VidaJogador.EfeitoViciado);
                 }
+                p.progresso = Progresso.Value;   // o XP e as habilidades (06/11/2026)
                 if (_rede.Criado) p.Vestir(_rede.Aparencia.Value);
             }
             var fs = GetComponent<FomeESede>();

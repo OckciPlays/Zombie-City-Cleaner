@@ -18,6 +18,9 @@ namespace ZombieCityCleaner.Player
     /// Desde 05/11/2026 (a pedido: "a vida não se regenera mais sozinha"), só o tratamento cura: a bandagem, o kit médico
     /// e a tala tratam o corpo por partes (<see cref="Corpo"/>, no VidaJogador.Corpo.cs: as feridas que sangram, as
     /// fraturas, a queda). A fogueira e as comidas não dão mais vida.
+    /// A vida geral sai das partes (06/11/2026, a pedido: "se todos os membros estiverem 100% a minha vida geral também
+    /// estará 100%"): é a máxima menos tudo o que as partes perderam. O golpe tira da parte que pegou; o sangramento, da
+    /// parte que sangra; a fome, a sede, a infecção e o raio, do tronco. O que a lesão tira a mais do membro fica só nele.
     /// </summary>
     public partial class VidaJogador : NetworkBehaviour
     {
@@ -67,19 +70,36 @@ namespace ZombieCityCleaner.Player
                 if (GetComponent<Tratamento>() == null) gameObject.AddComponent<Tratamento>();
                 if (GetComponent<CorpoNoHud>() == null) gameObject.AddComponent<CorpoNoHud>();
                 if (GetComponent<TratarOAmigo>() == null) gameObject.AddComponent<TratarOAmigo>();   // a fase 3: mirar no amigo e segurar E
+                // a mente (06/11/2026): o monitor cardíaco no lugar da barra da vida e o cérebro da sanidade
+                if (GetComponent<MonitorCardiaco>() == null) gameObject.AddComponent<MonitorCardiaco>();
+                if (GetComponent<MenteNoHud>() == null) gameObject.AddComponent<MenteNoHud>();
+                // a etapa 2 da mente: a crise de pânico, as alucinações e o colapso (a fuga e o desmaio)
+                if (GetComponent<CriseDePanico>() == null) gameObject.AddComponent<CriseDePanico>();
+                if (GetComponent<Alucinacoes>() == null) gameObject.AddComponent<Alucinacoes>();
+                if (GetComponent<ColapsoDoJogador>() == null) gameObject.AddComponent<ColapsoDoJogador>();
+                // a árvore de habilidades (06/11/2026): o "+3 XP" e o nível novo embaixo da mira
+                if (GetComponent<XpNaTela>() == null) gameObject.AddComponent<XpNaTela>();
+                if (GetComponent<FaroNaTela>() == null) gameObject.AddComponent<FaroNaTela>();   // (o Faro, a ponta do Sortudo)
+                if (GetComponent<AguaNaTela>() == null) gameObject.AddComponent<AguaNaTela>();   // (a água: embaixo dela e o fôlego)
+                if (GetComponent<PescaJogador>() == null) gameObject.AddComponent<PescaJogador>();   // (a pesca)
             }
             if (GetComponent<CurativosNoCorpo>() == null) gameObject.AddComponent<CurativosNoCorpo>();
+            if (GetComponent<PassageiroDoCaiaque>() == null) gameObject.AddComponent<PassageiroDoCaiaque>();   // (o caiaque, 06/11/2026)
             if (GetComponent<PoseDoCurativo>() == null) gameObject.AddComponent<PoseDoCurativo>();   // a fase 3: o corpo enfaixando a parte
         }
 
-        public override void OnNetworkDespawn() => SumirCorpo();
+        public override void OnNetworkDespawn()
+        {
+            SumirCorpo();
+            PararDeOuvirOsRaios();
+        }
 
         /// <summary>
         /// Só no anfitrião: um golpe (ou um tiro) tira vida. Se acabar, o jogador cai. A causa vai para a tela de morte
         /// ("Mordido pelos zumbis", "Morto por Fulano"...). Com o jeito do golpe (05/11/2026), ele também pega numa parte do
         /// corpo (a <paramref name="parte"/>, ou sorteada pelo jeito e pelo lado de quem bate), que perde vida, e pode abrir
         /// uma ferida que sangra e quebrar ou torcer o membro (<paramref name="lesao"/>: a queda e o Brutamonte). Sem o
-        /// jeito (Nenhum), só a vida geral, como antes (o raio, o F1).
+        /// jeito (Nenhum), e no Dia 0, o golpe vai para o tronco (o raio, o F1).
         /// </summary>
         public void Dano(float valor, Vector3 de, string causa = null, TipoDeGolpe tipo = TipoDeGolpe.Nenhum,
                          ParteDoCorpo parte = PartesDoCorpo.Sortear, Lesao lesao = Lesao.Nenhuma)
@@ -92,32 +112,53 @@ namespace ZombieCityCleaner.Player
             // no Dia 0 (e nos 5 anos depois), o corpo não guarda nada: só a vida geral
             if (tipo != TipoDeGolpe.Nenhum && CorpoAnda) Ferir(valor, de, tipo, ref parte, lesao, out abriu, out nova);
             else parte = PartesDoCorpo.Sortear;
-            Perder(valor, causa);
+            MenteNoGolpe(nova);   // a mente (06/11/2026): o golpe abala um pouco, a fratura mais
+            AcordarDoSono(true);   // (e acorda quem dormia)
+            // a vida geral sai das partes (06/11/2026): o Ferir já pôs o golpe na parte; sem ela, ele vai para o tronco
+            if (PartesDoCorpo.Valida(parte)) ConferirAVida(causa);
+            else Perder(valor, causa);
             GolpeRpc(de, (byte)parte, (byte)tipo, (byte)nova, abriu);
         }
 
-        /// <summary>Só no anfitrião: um tratamento devolve vida geral, até a máxima.</summary>
+        /// <summary>
+        /// Só no anfitrião: devolve vida geral, até a máxima. Como ela sai das partes (06/11/2026), o machucado delas diminui
+        /// (a mais machucada primeiro).
+        /// </summary>
         public void Curar(float valor)
         {
             if (!IsServer || !IsSpawned || valor <= 0f || Caido.Value) return;
-            Vida.Value = Mathf.Min(vidaMaxima, Vida.Value + valor);
+            CurarAsPartes(EmPorcento(valor));
+            ConferirAVida(null);
         }
 
-        /// <summary>Só no anfitrião: tira vida sem golpe (a fome e a sede). Se acabar, o jogador cai.</summary>
+        /// <summary>
+        /// Só no anfitrião: tira vida sem golpe (a fome, a sede, a infecção, o raio). Ela sai do tronco (06/11/2026: a vida
+        /// geral é o que as partes perderam). Se acabar, o jogador cai.
+        /// </summary>
         public void Perder(float valor, string causa = null)
         {
-            if (!IsServer || !IsSpawned || Caido.Value) return;
-            float nova = Vida.Value - valor;
-            if (nova > 0f)
+            if (!IsServer || !IsSpawned || Caido.Value || valor <= 0f) return;
+            PorNaParte(ParteDoCorpo.Tronco, EmPorcento(valor));
+            ConferirAVida(causa);
+        }
+
+        // no anfitrião: a vida geral é a que as partes deixam; se elas perderam tudo, ele cai
+        void ConferirAVida(string causa)
+        {
+            if (Caido.Value) return;
+            float nova = VidaDasPartes();
+            if (nova > 0.001f)
             {
-                Vida.Value = nova;
+                if (Vida.Value != nova) Vida.Value = nova;
                 return;
             }
             Vida.Value = 0f;
             Caido.Value = true;
             _caiuNoServidor = Time.time;
+            MenteDeQuemViuCair();   // a mente (06/11/2026): quem está perto vê o amigo cair
             if (_fomeESede != null) _fomeESede.AoCair();
             Vehicles.Carro.TirarDeTodos(OwnerClientId);   // caiu dentro de um carro: o lugar fica vazio
+            Vehicles.Caiaque.TirarDeTodos(OwnerClientId);   // (e no caiaque)
             // a mochila, com tudo dentro, e as roupas vestidas ficam onde ele caiu (02/11 e 03/11/2026, a pedido); no Dia 0
             // não se perde nada
             var mundo = World.MundoDaPartida.Instancia;
@@ -130,6 +171,7 @@ namespace ZombieCityCleaner.Player
         void GolpeRpc(Vector3 de, byte parte, byte tipo, byte lesao, bool abriu)
         {
             _clarao = 1f;
+            UltimoGolpeNoDono = Time.time;
             // a queda já teve o tranco e o baque no dono (QuedaDoJogador): aqui, só o osso
             if ((TipoDeGolpe)tipo == TipoDeGolpe.Queda)
             {
@@ -171,6 +213,7 @@ namespace ZombieCityCleaner.Player
             if (Time.time - _caiuNoServidor < esperaParaRenascer - 0.5f) return;
             Vida.Value = vidaMaxima;
             SararTudo();   // a morte não muda (05/11/2026): renasce com tudo inteiro
+            MenteAoVoltar();   // (a mente fica como estava, mas não volta em colapso)
             Caido.Value = false;
             _ultimaCausa = null;
             VoltarRpc();
@@ -182,6 +225,7 @@ namespace ZombieCityCleaner.Player
             if (!IsServer || !Caido.Value) return;
             Vida.Value = vidaMaxima;
             SararTudo();
+            MenteAoVoltar();
             Caido.Value = false;
             _ultimaCausa = null;
             VoltarRpc();
@@ -202,12 +246,24 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsSpawned) return;
             _clarao = Mathf.Max(0f, _clarao - Time.deltaTime * 2.5f);
-            Deitar(Caido.Value);
+            // (06/11/2026: o desmaio também deita o corpo)
+            bool deitado = Caido.Value || Desmaiado.Value || Dormindo.Value;
+            Deitar(deitado);
             // (a luneta, saindo dela, liga os braços de novo: caído, continuam apagados)
-            if (Caido.Value && IsOwner && _rede != null && _rede.cameraBracos != null && _rede.cameraBracos.enabled) _rede.cameraBracos.enabled = false;
+            if (deitado && IsOwner && _rede != null && _rede.cameraBracos != null && _rede.cameraBracos.enabled) _rede.cameraBracos.enabled = false;
             // a vida não volta mais sozinha (05/11/2026): o corpo anda (o sangramento, os curativos, as lesões sarando)
-            if (IsServer) AtualizarCorpo(Time.deltaTime);
+            if (IsServer)
+            {
+                AtualizarCorpo(Time.deltaTime);
+                AtualizarMente(Time.deltaTime);   // a mente (06/11/2026): o medo e o alívio de cada momento
+                AtualizarDesmaio();
+                AtualizarSono();   // a etapa 3 da mente: dormir, acordar e a noite passando
+                AtualizarFolego(Time.deltaTime);   // a água (06/11/2026): o fôlego e o afogamento
+            }
         }
+
+        /// <summary>No dono: quando foi o último golpe (o coração dispara no monitor).</summary>
+        public float UltimoGolpeNoDono { get; private set; } = -99f;
 
         // o corpo (o que os outros veem, e a sombra do dono) deita de costas no chão enquanto ele está caído
         void Deitar(bool caido)
@@ -234,13 +290,7 @@ namespace ZombieCityCleaner.Player
             // golpe: a tela pisca vermelho; com pouca vida, fica um vermelho fraco
             float vermelho = Mathf.Max(_clarao * 0.35f, (1f - fracao) * 0.18f);
             if (vermelho > 0.01f) Retangulo(0, 0, Screen.width, Screen.height, new Color(0.55f, 0f, 0f, vermelho));
-            if (GravacaoNoMundo.SemHud) return;   // gravando: o vermelho do golpe fica, a barra sai
-            float x = 20 * u, y = Screen.height - 44 * u, w = 200 * u, h = 10 * u;
-            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Bold);
-            estilo.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
-            GUI.Label(new Rect(x, y - 22 * u, w, 20 * u), "VIDA", estilo);
-            Retangulo(x, y, w, h, new Color(0f, 0f, 0f, 0.5f));
-            Retangulo(x, y, w * fracao, h, fracao > 0.35f ? new Color(0.78f, 0.74f, 0.62f, 0.9f) : new Color(0.85f, 0.25f, 0.2f, 0.95f));
+            // (a barra da vida virou o monitor cardíaco, 05/11/2026: o MonitorCardiaco, com a cor pela vida)
         }
 
         static void Retangulo(float x, float y, float w, float h, Color c)

@@ -78,6 +78,8 @@ namespace ZombieCityCleaner.DiaZero
                 new Produto(Item.Tala, 10),
                 // a bandagem antisséptica (05/11/2026, a etapa 2): também no fim
                 new Produto(Item.BandagemAntisseptica, 7),
+                // o calmante (06/11/2026, a mente): também no fim
+                new Produto(Item.Calmante, 14),
             },
             [LojaDoDia.Armas] = new[]
             {
@@ -127,6 +129,7 @@ namespace ZombieCityCleaner.DiaZero
             Item.Gaze => 4,
             Item.Desinfetante => 2,
             Item.Antibiotico => 2,
+            Item.Calmante => 3,
             _ => 0,
         };
 

@@ -510,7 +510,11 @@ namespace ZombieCityCleaner.Loot
         {
             var d = mundo.Dados(id);
             // na própria cama, E dorme e salva (02/11/2026, o save); o clique recolhe
-            if (d != null && Minha(d.Value)) Salvar.Salvamento.PedirDormir();
+            if (d != null && Minha(d.Value))
+            {
+                Salvar.Salvamento.PedirDormir();
+                JogadorRede.Local?.Vida?.PedirDormir();   // a mente (06/11/2026): dormir de verdade (o cansaço, a noite passando)
+            }
             else mundo.PedirUsar(id);
         }
 

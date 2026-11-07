@@ -171,6 +171,7 @@ namespace ZombieCityCleaner.Player
             Baforar();
             yield return new WaitForSeconds(TempoDeTragar - Baforada);
             _tragadas++;
+            GetComponent<VidaJogador>()?.Tragou();   // a mente (06/11/2026): cada tragada acalma um pouco
             _tragando = false;
             _rotina = null;
         }

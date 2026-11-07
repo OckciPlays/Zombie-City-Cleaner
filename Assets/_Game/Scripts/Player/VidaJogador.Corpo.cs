@@ -18,6 +18,9 @@ namespace ZombieCityCleaner.Player
     /// <see cref="EstadoDoCorpo"/> uma vez por segundo, e na hora de cada golpe e tratamento. O tempo das feridas e das
     /// lesões anda em minutos do jogo (<see cref="CicloDoDia.HorasPorSegundo"/>: 1 minuto do jogo = 1 s real), só com o
     /// mundo pronto e fora do Dia 0, e vai no save do personagem (passa de um mundo a outro).
+    /// A vida geral sai das partes (06/11/2026, a pedido: com os membros a 100%, a vida geral a 100%): ela é a máxima menos
+    /// a soma do machucado que conta (<c>_danoDaParte</c>). O que a lesão tira a mais do membro (<c>_soNaParte</c>) aparece
+    /// na porcentagem dele, mas não tira da vida geral (senão a queda que quebra a perna matava), e some quando o osso cola.
     /// </summary>
     public partial class VidaJogador
     {
@@ -71,14 +74,16 @@ namespace ZombieCityCleaner.Player
         /// <summary>O que a lesão tira do membro além do golpe (a perna quebrada fica bem machucada).</summary>
         static float DanoNoMembro(Lesao l) => l switch { Lesao.Entorse => 15f, Lesao.Fratura => 40f, Lesao.Exposta => 60f, _ => 0f };
 
-        // só no anfitrião: o corpo com as frações (a rede leva os números redondos)
+        // só no anfitrião: o corpo com as frações (a rede leva os números redondos). O machucado de cada parte que conta para
+        // a vida geral (06/11/2026) e o que só a parte sente (a lesão); a porcentagem dela mostra os dois juntos
         readonly float[] _danoDaParte = new float[PartesDoCorpo.Quantas];
+        readonly float[] _soNaParte = new float[PartesDoCorpo.Quantas];
         readonly float[] _feridaFalta = new float[PartesDoCorpo.Quantas];
         readonly float[] _sangramento = new float[PartesDoCorpo.Quantas];
         readonly float[] _sararFalta = new float[PartesDoCorpo.Quantas];
         readonly Lesao[] _lesao = new Lesao[PartesDoCorpo.Quantas];
         byte _sangra, _faixa, _talas;
-        float _analgesicoFalta, _sangue, _regenAte, _regenPorSegundo, _regenSobra, _proximaGravacaoDoCorpo, _ultimaQueda = -10f;
+        float _analgesicoFalta, _sangue, _proximaGravacaoDoCorpo, _ultimaQueda = -10f;
         bool _corpoMudou;
         // a etapa 2 (a limpeza e a infecção), só no anfitrião: a idade e as horas suja de cada ferida (horas do jogo), os
         // dias sorteados, a proteção até o amanhecer, a limpeza do spray, a cobertura do antibiótico, a infecção e os tempos
@@ -123,12 +128,11 @@ namespace ZombieCityCleaner.Player
             if (!IsServer) return;
             for (int p = 0; p < PartesDoCorpo.Quantas; p++)
             {
-                _danoDaParte[p] = _feridaFalta[p] = _sangramento[p] = _sararFalta[p] = 0f;
+                _danoDaParte[p] = _soNaParte[p] = _feridaFalta[p] = _sangramento[p] = _sararFalta[p] = 0f;
                 _lesao[p] = Lesao.Nenhuma;
             }
             _sangra = _faixa = _talas = 0;
-            _analgesicoFalta = _sangue = _regenSobra = 0f;
-            _regenAte = 0f;
+            _analgesicoFalta = _sangue = 0f;
             // a etapa 2: as feridas e a infecção somem (a semente fica: é do personagem)
             for (int p = 0; p < PartesDoCorpo.Quantas; p++)
             {
@@ -139,6 +143,7 @@ namespace ZombieCityCleaner.Player
             _infeccao = _origem = 0;
             _infeccaoFalta = _doseFalta = _xarope = _sepse = 0f;
             _amanhecerVisto = CicloDoDia.Amanheceres;
+            if (!Caido.Value) Vida.Value = vidaMaxima;   // (a vida geral sai das partes: inteiras, ela fica cheia)
             GravarCorpo();
         }
 
@@ -183,6 +188,12 @@ namespace ZombieCityCleaner.Player
             _desdeOAmanhecer = e.desdeOAmanhecer;
             // quem entra no meio do dia não sorteia na hora: o próximo amanhecer do mundo é o primeiro
             _amanhecerVisto = CicloDoDia.Amanheceres;
+            // a vida geral sai das partes (06/11/2026): a do save não conta. O tronco e a cabeça voltam com pelo menos 10%
+            // (um save no limite não pode nascer morto)
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++) _soNaParte[p] = 0f;
+            _danoDaParte[(int)ParteDoCorpo.Tronco] = Mathf.Min(_danoDaParte[(int)ParteDoCorpo.Tronco], 90f);
+            _danoDaParte[(int)ParteDoCorpo.Cabeca] = Mathf.Min(_danoDaParte[(int)ParteDoCorpo.Cabeca], 90f);
+            ConferirAVida(null);
             GravarCorpo();
         }
 
@@ -194,7 +205,7 @@ namespace ZombieCityCleaner.Player
             {
                 var pp = (ParteDoCorpo)p;
                 // arredonda para cima: um arranhão de 0,4 ainda aparece (e conta para o curativo)
-                e.PorDano(pp, Mathf.CeilToInt(_danoDaParte[p] - 0.01f));
+                e.PorDano(pp, Mathf.CeilToInt(Mathf.Min(100f, _danoDaParte[p] + _soNaParte[p]) - 0.01f));
                 e.PorFerida(pp, Mathf.CeilToInt(_feridaFalta[p]));
                 e.PorLesao(pp, _lesao[p]);
                 e.PorSarar(pp, Mathf.CeilToInt(_sararFalta[p]));
@@ -250,7 +261,10 @@ namespace ZombieCityCleaner.Player
             if (!PartesDoCorpo.Valida(parte)) parte = PartesDoCorpo.SortearParte(PartesDoCorpo.PesosDo(tipo), transform, de);
             if (!PartesDoCorpo.EhMembro(parte)) lesao = Lesao.Nenhuma;   // a cabeça e o tronco não quebram (por enquanto)
             int p = (int)parte;
-            _danoDaParte[p] = Mathf.Min(100f, _danoDaParte[p] + Mathf.Max(0f, valor) + DanoNoMembro(lesao));
+            // o golpe tira o dobro da parte (06/11/2026: a vida geral é a média das partes, e a morte vem do tronco ou da
+            // cabeça); o que a lesão tira a mais fica só no membro
+            PorNaParte(parte, EmPorcento(Mathf.Max(0f, valor)) * DanoNaParte);
+            _soNaParte[p] = Mathf.Min(100f, _soNaParte[p] + DanoNoMembro(lesao));
             // a ferida: a fratura exposta sempre sangra; o resto, pela chance do jeito do golpe
             if (lesao == Lesao.Exposta && _lesao[p] != Lesao.Exposta)
             {
@@ -296,18 +310,11 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------ o tempo ------------------------------------------------
 
-        // no anfitrião, a cada quadro (no lugar da recuperação sozinha de antes): a regeneração dos tratamentos, o
-        // sangramento, as feridas fechando, o analgésico passando e as lesões sarando
+        // no anfitrião, a cada quadro (no lugar da recuperação sozinha de antes): o sangramento, as feridas fechando, o
+        // analgésico passando e as lesões sarando
         void AtualizarCorpo(float dt)
         {
             if (!IsServer || Caido.Value) return;
-            // a regeneração do curativo e do kit (segundos reais)
-            if (_regenAte > Time.time) _regenSobra += _regenPorSegundo * dt;
-            if (_regenSobra >= 0.5f || (_regenAte <= Time.time && _regenSobra > 0f))
-            {
-                Curar(_regenSobra);
-                _regenSobra = 0f;
-            }
             if (CorpoAnda)
             {
                 AndarOCorpo(dt, dt * CicloDoDia.HorasPorSegundo * 60f);
@@ -326,10 +333,11 @@ namespace ZombieCityCleaner.Player
         // o corpo andando: dt em segundos reais (o sangramento) e min em minutos do jogo (o resto)
         void AndarOCorpo(float dt, float min)
         {
-            // o sangramento: tira da vida geral, de 1 em 1, como a fome
+            // o sangramento: de 1 em 1, como a fome, da parte que sangra (06/11/2026: e a vida geral, que sai das partes,
+            // acompanha); com duas sangrando, cada uma perde pelo seu sangue
             float taxa = 0f;
             for (int p = 0; p < PartesDoCorpo.Quantas; p++)
-                if ((_sangra & (1 << p)) != 0) taxa += _sangramento[p] > 0f ? _sangramento[p] : Sangramento(TipoDeGolpe.Nenhum);
+                if ((_sangra & (1 << p)) != 0) taxa += SangueDa(p);
             if (taxa > 0f)
             {
                 _sangue += taxa * dt;
@@ -337,7 +345,9 @@ namespace ZombieCityCleaner.Player
                 {
                     float d = Mathf.Floor(_sangue);
                     _sangue -= d;
-                    Perder(d, "Sangrou até morrer.");
+                    for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+                        if ((_sangra & (1 << p)) != 0) PorNaParte((ParteDoCorpo)p, EmPorcento(d) * DanoNaParte * SangueDa(p) / taxa);
+                    ConferirAVida("Sangrou até morrer.");
                     if (Caido.Value) return;
                 }
             }
@@ -398,6 +408,7 @@ namespace ZombieCityCleaner.Player
                 _lesao[m] = Lesao.Nenhuma;
                 _sararFalta[m] = 0f;
                 _talas &= (byte)~(1 << m);
+                _soNaParte[m] = Mathf.Max(0f, _soNaParte[m] - DanoNoMembro(antes));   // o osso colou: o membro volta
                 _corpoMudou = true;
                 var parte = (ParteDoCorpo)m;
                 AvisarAoDono(antes == Lesao.Entorse
@@ -513,14 +524,19 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// No anfitrião (o <see cref="InventarioJogador"/>.TratarRpc, depois de conferir e gastar o item): o tratamento faz
-        /// efeito. A atadura estanca a ferida da parte, devolve 30% ao membro e 8 à vida geral, e mais 1,5 por segundo por 5
-        /// s; a bandagem de pano, 20%, 3 e 1 por segundo por 5 s; o kit (05/11/2026: "o item superior ... trata o corpo
-        /// todo") estanca todas as feridas, devolve 50% a cada membro e 40 à vida geral, e mais 2 por segundo por 10 s; a
-        /// tala imobiliza o membro quebrado ou torcido (ele começa a sarar); os comprimidos (6 h do jogo) e o xarope (4 h)
-        /// tiram a dor. Devolve o aviso para o dono.
+        /// efeito. A atadura estanca a ferida da parte e devolve 30% a ela (a antisséptica 25%, a de pano 20%); o kit
+        /// (05/11/2026: "o item superior ... trata o corpo todo") estanca todas as feridas e devolve 50% a cada parte; a vida
+        /// geral sobe junto (06/11/2026: ela sai das partes); a tala imobiliza o membro quebrado ou torcido (ele começa a
+        /// sarar); os comprimidos (6 h do jogo) e o xarope (4 h) tiram a dor. Devolve o aviso para o dono.
         /// </summary>
-        public string Tratar(Item item, ParteDoCorpo parte)
+        public string Tratar(Item item, ParteDoCorpo parte, JogadorRede quemTrata = null)
         {
+            // as habilidades de quem trata (06/11/2026): o Curativo bem feito (+10%), o Médico de campo (a bandagem comum
+            // protege) e o Farmacêutico (o analgésico e o xarope 50% mais tempo)
+            if (quemTrata == null) quemTrata = _rede;
+            bool bemFeito = Habilidades.Tem(quemTrata, Habilidade.CurativoBemFeito);
+            bool medico = Habilidades.Tem(quemTrata, Habilidade.MedicoDeCampo);
+            float farmaceutico = Habilidades.Tem(quemTrata, Habilidade.Farmaceutico) ? 1.5f : 1f;
             if (!IsServer || Caido.Value) return null;
             string texto = null;
             switch (item)
@@ -535,13 +551,11 @@ namespace ZombieCityCleaner.Player
                     bool estancou = Estancar(parte);
                     // a proteção até o amanhecer: a antisséptica, ou a comum por cima do spray (só numa ferida)
                     bool ferida = _feridaFalta[p] > 0f;
-                    bool protege = ferida && (antisseptica || (_limpa & b) != 0);
+                    bool protege = ferida && (antisseptica || medico || (_limpa & b) != 0);
                     if (ferida) _faixa |= (byte)b;
                     if (protege) _protegida |= (byte)b;
                     _limpa &= (byte)~b;
-                    Melhorar(parte, atadura ? 30f : antisseptica ? 25f : 20f);
-                    Curar(atadura ? 8f : antisseptica ? 5f : 3f);
-                    Regenerar(atadura ? 1.5f : antisseptica ? 1.2f : 1f, 5f);
+                    Melhorar(parte, (atadura ? 30f : antisseptica ? 25f : 20f) + (bemFeito ? 10f : 0f));
                     var nome = PartesDoCorpo.NomeComArtigo(parte);
                     string fim = nome[0] == 'a' ? "a" : "o";
                     texto = $"{Maiuscula(nome)} enfaixad{fim}" + (estancou ? ": parou de sangrar" : "")
@@ -560,6 +574,9 @@ namespace ZombieCityCleaner.Player
                 case Item.Antibiotico:
                     texto = TomarAntibiotico();
                     break;
+                case Item.Calmante:
+                    texto = TomarCalmante();   // a mente (06/11/2026, a etapa 3: VidaJogador.Sono.cs)
+                    break;
                 case Item.KitMedico:
                 {
                     bool estancou = false;
@@ -575,8 +592,6 @@ namespace ZombieCityCleaner.Player
                             _limpa &= (byte)~(1 << p);
                         }
                     }
-                    Curar(40f);
-                    Regenerar(2f, 10f);
                     texto = estancou ? "Kit médico: o sangue parou e o corpo foi tratado" : "Kit médico: o corpo foi tratado";
                     break;
                 }
@@ -592,7 +607,7 @@ namespace ZombieCityCleaner.Player
                 }
                 case Item.Comprimidos:
                 {
-                    _analgesicoFalta = Mathf.Min(12 * 60f, _analgesicoFalta + 6 * 60f);
+                    _analgesicoFalta = Mathf.Min(12 * 60f * farmaceutico, _analgesicoFalta + 6 * 60f * farmaceutico);
                     // a dor passa, mas o braço quebrado ainda treme a mira (o Pedro tremeu sem saber por quê)
                     var depois = EstadoAgora();
                     var treme = PartesDoCorpo.PorQueTreme(depois);
@@ -603,11 +618,12 @@ namespace ZombieCityCleaner.Player
                 case Item.Remedio:
                 {
                     // o xarope (05/11/2026, a pedido: "tira a febre"): os sintomas somem por 4 h; não cura (o antibiótico cura)
-                    _xarope = 4 * 60f;
-                    texto = "O xarope baixou a febre por umas 4 h (só o antibiótico cura a infecção)";
+                    _xarope = 4 * 60f * farmaceutico;
+                    texto = $"O xarope baixou a febre por umas {(farmaceutico > 1f ? 6 : 4)} h (só o antibiótico cura a infecção)";
                     break;
                 }
             }
+            ConferirAVida(null);   // (a vida geral acompanha as partes tratadas)
             GravarCorpo();
             return texto;
         }
@@ -624,15 +640,78 @@ namespace ZombieCityCleaner.Player
             return true;
         }
 
-        void Melhorar(ParteDoCorpo parte, float quanto) => _danoDaParte[(int)parte] = Mathf.Max(0f, _danoDaParte[(int)parte] - quanto);
-
-        void Regenerar(float porSegundo, float segundos)
+        // o tratamento: tira primeiro o machucado que conta para a vida geral, depois o que só a parte sente (a lesão)
+        void Melhorar(ParteDoCorpo parte, float quanto)
         {
-            // dois tratamentos seguidos: fica o mais forte, pelo mais longo
-            if (_regenAte <= Time.time) _regenPorSegundo = porSegundo;
-            else _regenPorSegundo = Mathf.Max(_regenPorSegundo, porSegundo);
-            _regenAte = Mathf.Max(_regenAte, Time.time + segundos);
+            int p = (int)parte;
+            float tira = Mathf.Min(quanto, _danoDaParte[p]);
+            _danoDaParte[p] -= tira;
+            _soNaParte[p] = Mathf.Max(0f, _soNaParte[p] - (quanto - tira));
         }
+
+        // ------------------------------------------------ a vida geral (06/11/2026) ------------------------------------------------
+
+        /// <summary>Quanto o golpe (e o sangue) tira da parte, para cada ponto de dano: o dobro (06/11/2026).</summary>
+        public const float DanoNaParte = 2f;
+
+        /// <summary>
+        /// O peso de cada parte na média da vida geral (06/11/2026): a cabeça 12%, o tronco 30%, cada braço 12% e cada perna
+        /// 17% (na ordem de <see cref="ParteDoCorpo"/>).
+        /// </summary>
+        static readonly float[] PesoNaVida = { 0.12f, 0.30f, 0.12f, 0.12f, 0.17f, 0.17f };
+
+        /// <summary>
+        /// A vida geral que as partes deixam (06/11/2026, a pedido: com os membros a 100%, ela a 100%, e "ainda está um
+        /// pouco bugado a parte da vida": o braço a 77% e a perna a 90% davam 67): a média das partes, com o tronco e a
+        /// cabeça pesando mais, mas nunca acima do tronco nem da cabeça (sem eles, não há vida). Conta a porcentagem que a
+        /// parte mostra (com a lesão, arredondada como na tela). O tronco ou a cabeça a 0, ela a 0: ele cai.
+        /// </summary>
+        float VidaDasPartes()
+        {
+            float media = 0f;
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++) media += PesoNaVida[p] * (100f - Mostrado(p));
+            float tronco = 100f - Mostrado((int)ParteDoCorpo.Tronco), cabeca = 100f - Mostrado((int)ParteDoCorpo.Cabeca);
+            return Mathf.Max(0f, vidaMaxima / 100f * Mathf.Min(media, Mathf.Min(tronco, cabeca)));
+        }
+
+        // o machucado que a parte mostra (o que conta e o da lesão, até 100, arredondado para cima como na tela)
+        float Mostrado(int p) => Mathf.Ceil(Mathf.Min(100f, _danoDaParte[p] + _soNaParte[p]) - 0.01f);
+
+        // os pontos da vida geral em porcentagem de uma parte (com a vida máxima de 100, um para um)
+        float EmPorcento(float v) => v * 100f / Mathf.Max(1f, vidaMaxima);
+
+        // o machucado numa parte (até 100); no membro já perdido, o resto vai para o tronco (06/11/2026: senão o braço
+        // aguentaria golpes sem fim)
+        void PorNaParte(ParteDoCorpo parte, float quanto)
+        {
+            int p = (int)parte;
+            quanto = Mathf.Max(0f, quanto);
+            float cabe = Mathf.Max(0f, 100f - _danoDaParte[p] - _soNaParte[p]);
+            float aqui = PartesDoCorpo.EhMembro(parte) ? Mathf.Min(quanto, cabe) : quanto;
+            _danoDaParte[p] = Mathf.Min(100f, _danoDaParte[p] + aqui);
+            _corpoMudou = true;
+            float resto = quanto - aqui;
+            if (resto > 0.001f) PorNaParte(ParteDoCorpo.Tronco, resto);
+        }
+
+        // devolve vida às partes, a mais machucada primeiro
+        void CurarAsPartes(float quanto)
+        {
+            while (quanto > 0.001f)
+            {
+                int pior = -1;
+                for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+                    if (_danoDaParte[p] > 0.001f && (pior < 0 || _danoDaParte[p] > _danoDaParte[pior])) pior = p;
+                if (pior < 0) break;
+                float tira = Mathf.Min(quanto, _danoDaParte[pior]);
+                _danoDaParte[pior] -= tira;
+                quanto -= tira;
+            }
+            _corpoMudou = true;
+        }
+
+        // quanto a ferida da parte sangra por segundo
+        float SangueDa(int p) => _sangramento[p] > 0f ? _sangramento[p] : Sangramento(TipoDeGolpe.Nenhum);
 
         static string Maiuscula(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s.Substring(1);
 
@@ -674,11 +753,11 @@ namespace ZombieCityCleaner.Player
             GolpeRpc(transform.position, (byte)parte, (byte)TipoDeGolpe.Esmagamento, (byte)nova, abriu);
         }
 
-        /// <summary>No anfitrião (o F1): a parte a 0 (inutilizada).</summary>
+        /// <summary>No anfitrião (o F1): a parte a 0 (inutilizada), sem tirar a vida geral (o que falta fica só na parte).</summary>
         public void InutilizarDeTeste(ParteDoCorpo parte)
         {
             if (!IsServer || Caido.Value || !PartesDoCorpo.Valida(parte)) return;
-            _danoDaParte[(int)parte] = 100f;
+            _soNaParte[(int)parte] = 100f - _danoDaParte[(int)parte];
             GravarCorpo();
         }
 

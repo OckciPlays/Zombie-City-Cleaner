@@ -39,6 +39,7 @@ namespace ZombieCityCleaner.Player
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null || j == _rede || !j.IsSpawned || !j.Criado || j.ossoCabeca == null) continue;
+                if (Alucinacoes.Escondido(j)) continue;   // (06/11/2026: no colapso, ele é visto como zumbi)
                 var topo = j.ossoCabeca.position + Vector3.up * AcimaDaCabeca;
                 float d = Vector3.Distance(olho, topo);
                 if (d > Alcance) continue;
