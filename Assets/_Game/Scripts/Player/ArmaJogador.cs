@@ -101,6 +101,12 @@ namespace ZombieCityCleaner.Player
         public InventarioJogador Inventario { get; private set; }
         /// <summary>As mãos estão ocupadas com um pneu: sem arma, sem soco, sem comer (o E ainda funciona).</summary>
         public bool MaosOcupadas => Inventario != null && Inventario.CarregandoPneu;
+
+        /// <summary>Nadando (07/11/2026): o que estava na mão fica guardado, e os braços nadam.</summary>
+        bool NaAgua => movimento != null && movimento.Nadando;
+
+        /// <summary>Os modelos da mão somem: com o pneu nas mãos e nadando.</summary>
+        bool BracosEscondidos => MaosOcupadas || NaAgua;
         bool _ocupadasAntes;
         /// <summary>O Id da última arma que esteve na mão (a mão volta para ela depois de comer ou de se tratar).</summary>
         public ushort UltimaArma => _ultimaArma;
@@ -229,8 +235,9 @@ namespace ZombieCityCleaner.Player
             NaMao = novo;
             _id = id;
             int m = ModeloDaMao(novo);   // a mão vazia mostra os punhos
-            bool ocupadas = MaosOcupadas;   // com o pneu nas mãos, os braços somem
+            bool ocupadas = BracosEscondidos;   // com o pneu nas mãos (e nadando), os braços somem
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
+            VaraNosBracos(novo == Item.VaraDePesca && !ocupadas, m, true);
             // os do saque vão com a malha deles no lugar da lata ou da garrafa
             if (m >= 0 && m < modelos.Length) ItemNaMaoProprio.Aplicar(modelos[m], novo);
             // a tocha: a chama na ponta (a boca dos braços dela), só as chamas (a luz é a do corpo)
@@ -247,8 +254,177 @@ namespace ZombieCityCleaner.Player
                 _ultimaArma = id;
                 Municao = PenteGuardado(id, novo);
             }
-            if (m >= 0) Acao(SacarId);
+            if (m >= 0 && !ocupadas) Acao(SacarId);
             _proximoTiro = Time.time + 0.4f;
+        }
+
+        // ------------------------------------------------------------------ nadando (07/11/2026)
+
+        bool _nadandoAntes;
+        GameObject _bracosNadando;
+        Animator _animadorNadando;
+        readonly System.Collections.Generic.Dictionary<string, GameObject> _extras = new System.Collections.Generic.Dictionary<string, GameObject>();
+
+        /// <summary>
+        /// Entrando na água funda, a arma (ou o que estava na mão) é guardada sozinha e os braços nadam: o modelo de
+        /// primeira pessoa "BracosNadando" (Resources, montado do Jogador_FP_Nadar.fbx), no ritmo do nado. Saindo, a mão
+        /// volta para o que estava, sacando. Sem o modelo, os braços só somem.
+        /// </summary>
+        void BracosNaAgua()
+        {
+            bool nadando = NaAgua;
+            if (nadando != _nadandoAntes)
+            {
+                _nadandoAntes = nadando;
+                if (nadando)
+                {
+                    if (ComArma && _id != 0) _pentes[_id] = Municao;
+                    StopAllCoroutines();
+                    Recarregando = false;
+                    Usando = false;
+                    _recarga = null;
+                    SairDaLuneta();
+                    foreach (var mo in modelos) mo.SetActive(false);
+                    VaraNosBracos(false, -1, false);
+                    MostrarBracosNadando(true);
+                }
+                else
+                {
+                    MostrarBracosNadando(false);
+                    if (!MaosOcupadas) Trocar(NaMao, _id);
+                }
+            }
+            // (a árvore dos braços nadando vai pela velocidade: boiando, a braçada e, no nado rápido, a braçada rápida)
+            if (nadando && _animadorNadando != null && _animadorNadando.isActiveAndEnabled)
+                _animadorNadando.SetFloat(SpeedId, rede.Velocidade);
+        }
+
+        void MostrarBracosNadando(bool mostrar)
+        {
+            if (mostrar && _bracosNadando == null)
+            {
+                _bracosNadando = ModeloExtra("BracosNadando");
+                if (_bracosNadando != null) _animadorNadando = _bracosNadando.GetComponentInChildren<Animator>(true);
+            }
+            if (_bracosNadando == null) return;
+            if (mostrar) PintarComoOsPunhos(_bracosNadando);
+            _bracosNadando.SetActive(mostrar);
+        }
+
+        /// <summary>
+        /// Os braços de primeira pessoa de fora da mão (07/11/2026: os nadando e os remando, Resources/&lt;recurso&gt;): criados
+        /// uma vez junto dos outros (na camada deles), com a pele e a luva do personagem, desligados. Null sem o prefab.
+        /// </summary>
+        public GameObject ModeloExtra(string recurso)
+        {
+            if (_extras.TryGetValue(recurso, out var feito)) return feito;
+            GameObject go = null;
+            var prefab = Resources.Load<GameObject>(recurso);
+            int punhos = Itens.Punhos;
+            if (prefab != null && modelos != null && punhos < modelos.Length && modelos[punhos] != null)
+            {
+                go = Instantiate(prefab, modelos[punhos].transform.parent, false);
+                go.name = recurso;
+                int camada = modelos[punhos].layer;
+                foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = camada;
+                PintarComoOsPunhos(go);
+                go.SetActive(false);
+            }
+            _extras[recurso] = go;
+            return go;
+        }
+
+        // ------------------------------------------------------------------ a vara de pesca (07/11/2026)
+
+        /// <summary>Os braços de primeira pessoa com a vara nova (Resources, montados do Jogador_FP_Vara.fbx pela MontagemDaVara).</summary>
+        public const string RecursoDosBracosDaVara = "BracosVara";
+        static bool _procurouAVara, _temBracosDaVara;
+        Transform _pontaDosBracos;
+        GameObject _bracosDaPonta;
+
+        /// <summary>O prefab dos braços com a vara nova existe (sem ele, a lata com a vara, como antes).</summary>
+        public static bool TemBracosDaVara
+        {
+            get
+            {
+                if (!_procurouAVara)
+                {
+                    _procurouAVara = true;
+                    _temBracosDaVara = Resources.Load<GameObject>(RecursoDosBracosDaVara) != null;
+                }
+                return _temBracosDaVara;
+            }
+        }
+
+        /// <summary>Os braços com a vara, à mostra agora (null: não estão).</summary>
+        public GameObject BracosDaVara => _extras.TryGetValue(RecursoDosBracosDaVara, out var b) && b != null && b.activeInHierarchy ? b : null;
+
+        /// <summary>A ponta da vara dos braços (o osso "ponta"), com eles à mostra.</summary>
+        public bool PontaDaVaraNosBracos(out Vector3 ponta)
+        {
+            ponta = default;
+            var b = BracosDaVara;
+            if (b == null) return false;
+            if (_bracosDaPonta != b)
+            {
+                _bracosDaPonta = b;
+                _pontaDosBracos = null;
+                foreach (var t in b.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "ponta" || t.name == "Ponta") { _pontaDosBracos = t; break; }
+            }
+            if (_pontaDosBracos == null) return false;
+            ponta = _pontaDosBracos.position;
+            return true;
+        }
+
+        /// <summary>
+        /// A vara de pesca na mão (07/11/2026, a pedido: "deveria segurar a carretilha com a mão esquerda e a base da vara de
+        /// pesca com a mão direita"): os braços dela (<see cref="RecursoDosBracosDaVara"/>) no lugar dos da lata, sacando. O
+        /// que eles fazem (segurar, lançar, recolher, puxar) vem do <see cref="PescaJogador"/>. Sem o prefab, a lata com a
+        /// vara, como antes.
+        /// </summary>
+        void VaraNosBracos(bool comVara, int m, bool sacar)
+        {
+            if (!TemBracosDaVara) return;
+            var b = comVara || _extras.ContainsKey(RecursoDosBracosDaVara) ? ModeloExtra(RecursoDosBracosDaVara) : null;
+            if (b == null) return;
+            if (!comVara)
+            {
+                if (b.activeSelf) b.SetActive(false);
+                return;
+            }
+            if (m >= 0 && m < modelos.Length && modelos[m] != null) modelos[m].SetActive(false);
+            if (!b.activeSelf) b.SetActive(true);   // (ligando, o controlador começa no Sacar)
+            else if (sacar)
+            {
+                var a = b.GetComponentInChildren<Animator>(true);
+                if (a != null && a.isActiveAndEnabled) a.Play(SacarId, 0, 0f);
+            }
+        }
+
+        /// <summary>Os braços da mão (e os de fora dela, como os nadando) somem (07/11/2026: o remo na mão, no caiaque).</summary>
+        public void EsconderAMao()
+        {
+            foreach (var mo in modelos) if (mo != null) mo.SetActive(false);
+            foreach (var extra in _extras.Values) if (extra != null) extra.SetActive(false);
+            _nadandoAntes = false;
+        }
+
+        // os braços novos com a pele e a luva do personagem (o material que o JogadorRede pôs nos punhos)
+        public void PintarComoOsPunhos(GameObject bracos)
+        {
+            int punhos = Itens.Punhos;
+            if (modelos == null || punhos >= modelos.Length || modelos[punhos] == null) return;
+            var modelo = modelos[punhos].GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (modelo == null || modelo.sharedMaterials.Length == 0) return;
+            var material = modelo.sharedMaterials[0];
+            foreach (var r in bracos.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                var mats = r.sharedMaterials;
+                if (mats.Length == 0 || mats[0] == material) continue;
+                mats[0] = material;
+                r.sharedMaterials = mats;
+            }
         }
 
         /// <summary>
@@ -273,9 +449,10 @@ namespace ZombieCityCleaner.Player
         public void MostrarModeloDaMao(bool sacar)
         {
             int m = ModeloDaMao(NaMao);
-            bool ocupadas = MaosOcupadas;
+            bool ocupadas = BracosEscondidos;
             for (int i = 0; i < modelos.Length; i++) modelos[i].SetActive(i == m && !ocupadas);
-            if (sacar && m >= 0) Acao(SacarId);
+            VaraNosBracos(NaMao == Item.VaraDePesca && !ocupadas, m, sacar);
+            if (sacar && m >= 0 && !ocupadas) Acao(SacarId);
         }
 
         /// <summary>O id do que está na mão (o do maço, para o fumo).</summary>
@@ -327,10 +504,13 @@ namespace ZombieCityCleaner.Player
                     Usando = false;
                     _recarga = null;
                     foreach (var mo in modelos) mo.SetActive(false);
+                    VaraNosBracos(false, -1, false);
                 }
                 else Trocar(NaMao, _id);
             }
-            bool comArma = ComArma && !ocupadas;
+            BracosNaAgua();
+            bool nadando = NaAgua;
+            bool comArma = ComArma && !ocupadas && !nadando;
             // o braço quebrado não segura a arma de duas mãos (05/11/2026); fazendo um curativo, as mãos estão nele
             bool semBraco = !bot && SemOsDoisBracos, tratando = !bot && Tratando;
             var dados = Dados;
@@ -356,7 +536,7 @@ namespace ZombieCityCleaner.Player
             movimento.MultiplicadorDoOlhar = luneta && mirar
                 ? Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(fovNormal * 0.5f * Mathf.Deg2Rad) : 1f;
             var animador = Animador;
-            if (animador != null)
+            if (animador != null && animador.isActiveAndEnabled)
             {
                 animador.SetFloat(SpeedId, rede.Velocidade);
                 PesoDasAcoes(animador);
@@ -453,10 +633,10 @@ namespace ZombieCityCleaner.Player
             {
                 if (Tratamento.Local != null) Tratamento.Local.Comecar(_id, PartesDoCorpo.Sortear);
             }
-            // a vara de pesca (06/11/2026): o clique lança, fisga e puxa (PescaJogador)
+            // a vara de pesca (06/11/2026): o botão lança (segurando, a força), fisga e puxa (segurando, recolhe; PescaJogador)
             else if (NaMao == Item.VaraDePesca && !bot)
             {
-                if (_atirar.WasPressedThisFrame() && PescaJogador.Local != null) PescaJogador.Local.Clicar();
+                if (PescaJogador.Local != null) PescaJogador.Local.Botao(_atirar.WasPressedThisFrame(), _atirar.IsPressed(), _atirar.WasReleasedThisFrame());
             }
             else if (Itens.EhConsumivel(NaMao) && !Usando && !bot && Time.time >= _proximoTiro && _atirar.WasPressedThisFrame())
                 StartCoroutine(Usar());
@@ -484,7 +664,7 @@ namespace ZombieCityCleaner.Player
         void Acao(int estado)
         {
             var animador = Animador;
-            if (animador == null) return;
+            if (animador == null || !animador.isActiveAndEnabled) return;
             _pesoDasAcoes = 1f;
             animador.SetLayerWeight(CamadaAcoes, 1f);
             animador.Play(estado, CamadaAcoes, 0f);
@@ -852,28 +1032,24 @@ namespace ZombieCityCleaner.Player
             return deMim.sqrMagnitude > 0.01f && Vector3.Dot(frente.normalized, deMim.normalized) < -0.35f;
         }
 
-        // o machado na árvore (06/11/2026, a pedido: "o machado cortar árvore"): 5 golpes na mesma árvore e o anfitrião
-        // corta (MundoDaPartida.Arvores.cs)
-        public const int GolpesNaArvore = 5;
-        readonly System.Collections.Generic.Dictionary<long, int> _golpesNaArvore = new System.Collections.Generic.Dictionary<long, int>();
-
+        // o machado na árvore (06/11/2026, a pedido: "o machado cortar árvore"; 07/11/2026, os cortes dos lados): cada golpe
+        // vai para o lado do tronco onde pegou, e o anfitrião conta e derruba (MundoDaPartida.Arvores.cs)
         void GolpeNaArvore(Collider c, Vector3 ponto)
         {
             var floresta = World.FlorestaDoMundo.Instancia;
             var mundo = World.MundoDaPartida.Instancia;
-            if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out long chave, out _)) return;
-            _golpesNaArvore.TryGetValue(chave, out int n);
-            n++;
-            if (n >= GolpesNaArvore)
+            if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out long chave, out var pe)) return;
+            // o lado do tronco onde o machado pegou (07/11/2026: os cortes dos lados; um dos 4, de 90 em 90° a partir do
+            // norte); quem confere e conta é o anfitrião (MundoDaPartida.Arvores.cs)
+            Vector3 d = ponto - pe;
+            d.y = 0f;
+            if (d.sqrMagnitude < 1e-4f)
             {
-                _golpesNaArvore.Remove(chave);
-                mundo.PedirCorte(chave);
-                InventarioJogador.AvisoLocal("A árvore caiu: as toras ficaram no pé dela");
-                return;
+                d = transform.position - pe;
+                d.y = 0f;
             }
-            _golpesNaArvore[chave] = n;
-            if (_golpesNaArvore.Count > 32) _golpesNaArvore.Clear();
-            InventarioJogador.AvisoLocal($"Cortando a árvore ({n} de {GolpesNaArvore})");
+            int lado = Mathf.RoundToInt(Mathf.Repeat(Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, 360f) / 90f) & 3;
+            mundo.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
         }
 
         // o Tiro forte (06/11/2026, a árvore de habilidades): +10% no dano da arma de fogo (o dono conta o dano)

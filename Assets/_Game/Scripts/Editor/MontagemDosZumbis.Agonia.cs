@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,6 +20,9 @@ namespace ZombieCityCleaner.EditorTools
     ///    balançando para a frente e para trás.
     /// As poses foram achadas olhando fotos do Oco_Original posado (os sinais: "Arm Front-Back" negativo leva o braço para a
     /// frente; "Arm Down-Up" abre o braço para o lado; "Forearm Stretch" -1 dobra o cotovelo todo).
+    /// Desde 07/11/2026, os braços que daqui saem são trocados, na gravação de cada modelo, pelos alvos medidos nele (as
+    /// palmas no rosto, o antebraço esfregado, os punhos no queixo) e não entram no corpo
+    /// (<see cref="BracosForaDoCorpo"/>); o tronco, a cabeça e o tremor continuam os daqui.
     /// </summary>
     public static partial class MontagemDosZumbis
     {
@@ -54,6 +57,58 @@ namespace ZombieCityCleaner.EditorTools
                 return pose;
             }
             finally { UnityEngine.Object.DestroyImmediate(inst); }
+        }
+
+        /// <summary>
+        /// Só a agonia, sem remontar os zumbis (07/11/2026, com os braços que não entram no corpo,
+        /// <see cref="BracosForaDoCorpo"/>): grava os 3 clipes de novo em cada modelo do jogo (e nos novos da comparação já
+        /// montados), a partir dos clipes Humanoid de Oco/Agonia/ como estão. Os arquivos são os mesmos (Oco/Clipes/&lt;modelo&gt;/),
+        /// então o controlador e as trocas de cada modelo continuam apontando para eles. Leva uns minutos.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Zumbis/Gravar a agonia de novo (sem remontar)")]
+        public static void GravarAAgoniaDeNovo()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de gravar a agonia.");
+                return;
+            }
+            var fontes = new Dictionary<string, AnimationClip>();
+            foreach (var (nome, _) in ClipesDaAgonia)
+            {
+                string caminho = $"{PastaDaAgonia}/{nome}.anim";
+                var c = AssetDatabase.LoadAssetAtPath<AnimationClip>(caminho);
+                if (c == null) throw new FileNotFoundException("Falta o clipe da agonia (monte os zumbis uma vez)", caminho);
+                fontes[nome] = c;
+            }
+            var modelos = TodosOsModelos.ToList();
+            // os novos da comparação fora do jogo: só os já montados (com o avatar Humanoid e o controlador)
+            foreach (var (nome, _) in Novos)
+                if (LugarNoJogo(nome) < 0 && File.Exists($"{Arte}/Zombie_{nome}.overrideController")) modelos.Add(nome);
+            int feitos = 0;
+            try
+            {
+                for (int i = 0; i < modelos.Count; i++)
+                {
+                    string nome = modelos[i], fbx = FbxDe(nome);
+                    var humano = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Avatar>().FirstOrDefault(a => a.isHuman && a.isValid);
+                    if (humano == null)
+                    {
+                        Debug.LogWarning($"{nome}: sem o avatar Humanoid (monte os zumbis uma vez); a agonia dele ficou como estava.");
+                        continue;
+                    }
+                    if (EditorUtility.DisplayCancelableProgressBar("Gravando a agonia", $"{nome} ({i + 1} de {modelos.Count})", (float)i / modelos.Count))
+                    {
+                        Debug.LogWarning($"Agonia: parado no {nome}; os anteriores já foram gravados.");
+                        break;
+                    }
+                    Gravar(nome, fbx, humano, fontes, ClipesDaAgonia);
+                    feitos++;
+                }
+            }
+            finally { EditorUtility.ClearProgressBar(); }
+            AssetDatabase.SaveAssets();
+            Debug.Log($"A agonia foi gravada de novo em {feitos} modelos (de {modelos.Count}), com os braços fora do corpo.");
         }
 
         /// <summary>Os 3 clipes Humanoid da agonia (criados ou refeitos em Oco/Agonia/), pelo nome do estado.</summary>

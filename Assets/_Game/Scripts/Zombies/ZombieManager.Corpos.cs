@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace ZombieCityCleaner.Zombies
@@ -71,8 +71,15 @@ namespace ZombieCityCleaner.Zombies
             }
             // um pouco para cima: o tiro tira o pé do chão, e o corpo não arrasta
             Vector3 empurrao = (direcao.normalized + Vector3.up * 0.15f) * empurraoDoTiro;
+            // o jeito de cair (CorpoDeZumbi.Musculos.cs): o arremesso desliga quase na hora; o tiro na cabeça cai de joelhos
+            // e depois de peito; o que corria mergulha; os outros seguram um pouco e cedem nos joelhos
+            var jeito = z.Desligou ? CorpoDeZumbi.Morte.Desligou
+                : arremessado ? CorpoDeZumbi.Morte.Arremesso
+                : semCabeca || parte == CorpoDeZumbi.ParteCabeca ? CorpoDeZumbi.Morte.Cabeca
+                : new Vector2(velocidade.x, velocidade.z).magnitude > 2.2f ? CorpoDeZumbi.Morte.Correndo
+                : CorpoDeZumbi.Morte.Comum;
             if (arremessado) velocidade = direcao.normalized * arremesso.x + Vector3.up * arremesso.y;
-            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes, z.MaterialDaPele, z.Pedra);
+            livre.Cair(z.raizDoModelo, z.esqueleto, velocidade, semCabeca, parte, empurrao, cortes, z.MaterialDaPele, z.Pedra, false, jeito);
         }
 
         /// <summary>

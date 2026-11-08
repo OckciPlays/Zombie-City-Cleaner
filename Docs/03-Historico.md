@@ -707,6 +707,94 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
 - Conferido em fotos no Play, antes e depois, em 1280 × 720, 1920 × 1080 e 1024 × 768, sem erros. Os cliques ainda não
   foram testados com o mouse.
 
+## O Brutamonte novo no jogo (07/11/2026, a pedido)
+
+- **O pedido:** "implementar o novo brutamonte no jogo (apenas o brutamonte por hora), já com suas novas animações e
+  mecânica". O Pedro escolheu o NovoBrutamonte (o da cena de comparação, feito junto com o Corredor novo) e que ele
+  substitua os três de hoje.
+- **O que mudou:** a lista dos zumbis do jogo tem 19 modelos (eram 21): os 12 Ocos, o NovoBrutamonte, os 3 Longs e os 3
+  Corredores. O número de cada modelo, gravado no prefab, foi acertado (os Longs e os Corredores desceram dois). O
+  NovoCorredor continua fora do jogo.
+- **Conferido no Play** (mundo pequeno, semente 7, de dia): ele brota da terra, procura, trava o olho, avança, faz a fúria
+  com os três golpes no chão e a poeira, cansa e morre com os tiros no olho; sem erros do jogo.
+- **O dano dele:** o avanço (50 de dano) cai quase sempre no tronco e, com a vida de 06/11 (o golpe tirava o dobro da
+  parte), matava na hora. Resolvido com a vida equivalente (abaixo): o avanço tira metade da vida de novo.
+
+## O dano equivalente ao de antes (07/11/2026, a pedido)
+
+- **O pedido:** "vamos ajustar o dano de tudo, para o equivalente que era antes". Na média de 06/11 não dava para ter as
+  duas coisas: o golpe no braço ou na perna quase não baixava a vida, e o golpe no tronco tirava o dobro. O Pedro escolheu
+  que a vida geral perca o mesmo que perdia antes.
+- **A conta nova:** o tronco e a cabeça contam inteiros; o braço e a perna contam metade na vida geral e perdem o dobro na
+  porcentagem. Cada golpe tira da vida o que tirava antes, e a cura devolve o mesmo.
+- **Conferido no Play:** a mordida de 12 tira 12 (no braço, que fica a 76%, ou no tronco); o avanço do Brutamonte tira 50;
+  os golpes da fúria tiram 34, 40 e 54; morrer leva 9 mordidas (5 de 5 vezes); a cura de 30 e a atadura devolvem 30; a
+  fratura não tira da vida.
+
+## A agonia sem os braços dentro do corpo (07/11/2026, a pedido)
+
+- **O pedido:** "eu quero mudar um pouco a animação da agonia dos zumbis (está boa do jeito que está hoje, porém os braços
+  entram dentro do corpo deles)... manter o mesmo sistema que existe, apenas aperfeiçoar a animação e nada mais".
+- **O que era:** as poses foram acertadas nos músculos do Oco_Original, e o Humanoid leva os ângulos (não as posições)
+  para cada modelo. Com o tronco curvado, as "mãos no rosto" ficavam nos ombros, os cotovelos cruzavam na frente do peito
+  e os antebraços atravessavam o queixo e o peito: de 3 a 9 cm dentro no Oco_Original, em quase todos os quadros.
+- **O que mudou:** só a gravação dos 3 clipes em cada modelo. O tronco, a cabeça e o tremor continuam os mesmos; os
+  braços vão a alvos medidos em cada modelo (as palmas no rosto; um antebraço na frente da barriga e a outra mão
+  esfregando ele; os punhos embaixo do queixo), e o que ainda encosta sai para fora. O menu novo "Zumbis > Gravar a
+  agonia de novo (sem remontar)" regrava os 20 modelos.
+- **Medido na prévia:** os Ocos encostam no máximo 0,6 cm; os Longs e os Corredores, até 4 cm no Encolher. Não testado
+  no Play.
+
+## A morte com ossos e a estátua que quebra (07/11/2026, a pedido)
+
+- **O pedido:** os zumbis morriam "muito mole", "parece que não possuem ossos", "caem e despencam igual uma maria
+  mole"; e a estátua, "o totalmente o oposto, eles ficam duros, bonecos estáticos", e "assumem uma postura que não
+  estavam". No tiro na cabeça: "cair de joelhos e depois bater o peito no chão", e alguns andando sem rumo um pouco,
+  podendo bater, até desligar "como se fosse um corte na energia". A espingarda arremessa como antes. Cuidado com o
+  desempenho.
+- **O que era:** as juntas do corpo estavam montadas ao contrário (o joelho dobrava para a frente, o cotovelo no eixo
+  errado) e sem força nenhuma; na morte, as poses do jogo passavam dos limites e o corpo desmontava. A estátua travava as
+  juntas na pose de repouso, de braços abertos.
+- **O que mudou:** as juntas acertadas pelas animações de cada modelo; a pose da morte vira o ponto de partida delas
+  (sem o tranco); os músculos seguram a forma e vão apagando, com um atrito entre as partes; o jeito de cair depende da
+  morte (de joelhos e de peito no tiro na cabeça, o mergulho de quem corria); a estátua cai na postura dela e quebra ao
+  bater no chão (a cabeça, os antebraços, as canelas viram pedaços de pedra), e a espingarda e o carro a despedaçam na
+  hora; e, às vezes, o sem cabeça ainda anda uns segundos antes de desligar.
+- **Conferido na prévia**, com física, em 6 modelos. Não testado no Play (pouca memória livre).
+- **Depois do teste do Pedro:** o sem cabeça ficava de pé muito tempo (5 a 14 s): agora uns 3 s, desnorteado (passos
+  curtos virando para lados diferentes, paradas girando no lugar). E com um tiro a mais ele recuperava a cabeça: o
+  barulho do tiro o fazia ir investigar, ele deixava de ser "sem comando" e o corpo caía com a cabeça. Agora nada de
+  fora muda o estado dele até cair.
+
+## A vara de pesca nova e os veículos depois do teste (07/11/2026, à noite, a pedido)
+
+- **A vara:** "deveria segurar a carretilha com a mão esquerda e a base da vara de pesca com a mão direita". Antes, a
+  vara ia no lugar da lata, com os braços dela. Agora tem modelo próprio (com a carretilha e a manivela), braços de
+  primeira pessoa próprios e animações no corpo: segurar, lançar por cima do ombro (a vara vai para trás enquanto ele
+  carrega a força), recolher e brigar com o peixe, com a mão esquerda girando a manivela. Feita num Blender em segundo
+  plano, com a Unity fechada (a pedido, para sobrar memória), e montada depois na Unity.
+- **O carro:** na primeira pessoa, sem o corpo, como antes ("tira e deixa como estava antes sem nada"). Na terceira, a
+  cabeça passava do teto (no cupê, 1 cm acima até do teto por fora): o tronco encurta na cintura, atrás da porta, até a
+  cabeça caber (no cupê, 7,6 cm; na perua, só atrás, 1,3 cm).
+- **A moto e o caiaque, na primeira pessoa:** na moto aparecia o pescoço e parte da cabeça; no caiaque, olhando para
+  baixo, o peito vinha para cima da câmera. Agora o pescoço some junto, o peito do dono não dobra com o olhar e a
+  câmera fica sempre acima e na frente do pescoço.
+- Conferido na prévia (a vara e o carro); a moto e o caiaque, não (precisam do Play).
+
+## O tornado que pega os veículos e a árvore cortada dos dois lados (07/11/2026, à noite, a pedido)
+
+- **O tornado:** "quando passar perto, ele vai puxar com mais força. Ele vai poder puxar o nosso carro se estivermos mais
+  perto (e girar em torno dele por um breve período), isso funcionará para o caiaque e moto; se eu estiver a pé, a força
+  dele é mais forte ainda". A pé, o puxão vai mais longe (90 m) e é bem mais forte; no miolo, o jogador sobe e roda em
+  volta do tornado por uns 2 s antes de ser jogado longe. O carro e a moto são puxados (e escorregam) e, no miolo, sobem
+  uns 4 m e rodam em volta dele por 2 a 3,5 s antes de serem jogados (e podem cair virados). O caiaque é arrastado pela
+  água e roda em volta dele aos pulos, sem sair da água e sem virar.
+- **A árvore:** "para cortar a árvore, é preciso fazer vários cortes aos lados da tora para poder cair". Antes, 5 golpes
+  em qualquer lugar. Agora cada golpe entra no lado do tronco onde pega; é preciso cortar fundo dois lados opostos (de 2
+  a 4 golpes cada, pelo tamanho), e ela cai para o lado do primeiro corte. Os entalhes aparecem no tronco para todos,
+  crescendo a cada golpe; para eles colarem no tronco, as árvores de cada espécie foram medidas no editor.
+- Conferido na prévia (os entalhes) e na conta (o giro); o resto, não testado no Play.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

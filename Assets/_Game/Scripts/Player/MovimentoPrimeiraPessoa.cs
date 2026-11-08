@@ -43,11 +43,26 @@ namespace ZombieCityCleaner.Player
         /// (VidaJogador.Agua.cs).
         /// </summary>
         public bool Nadando { get; private set; }
+        /// <summary>
+        /// Nadando rápido (07/11/2026, a pedido: "atualizar a parte de nadar"): o correr (Shift) para a frente, com fôlego.
+        /// O anfitrião gasta o fôlego de quem nada rápido (VidaJogador.Agua.cs); acabando, ele volta ao nado normal.
+        /// </summary>
+        public bool NadandoRapido { get; private set; }
+        /// <summary>A braçada (0 a 1, em volta): a câmera sobe e desce com ela; os braços e o som seguem o mesmo ritmo.</summary>
+        public float CicloDaBracada { get; private set; }
         [Header("Nadar")]
         public float velocidadeNadando = 1.9f;
+        [Tooltip("Com o correr (Shift) para a frente, enquanto houver fôlego (07/11/2026).")]
+        public float velocidadeNadandoRapido = 2.8f;
         public float velocidadeMergulho = 1.6f;
         [Tooltip("Boiando, os pés ficam esta altura abaixo da água (os olhos um pouco acima dela).")]
         public float alturaBoiando = 1.42f;
+        [Tooltip("Nadando, a câmera desce isto (m): os olhos ficam rentes à água (07/11/2026).")]
+        public float olhoNaAgua = 0.08f;
+        [Tooltip("O sobe e desce da câmera em cada braçada (m) e o balanço de lado (graus).")]
+        public float balancoDaBracada = 0.045f, rolagemDaBracada = 1.4f;
+        /// <summary>A duração de uma braçada (s): a do clipe dos braços e do corpo (Nadar 1,2 s; rápido, 0,8 s).</summary>
+        public const float BracadaNormal = 1.2f, BracadaRapida = 0.8f, BoiandoParado = 2f;
 
         [Header("Abaixar (C)")]
         [Tooltip("Andando abaixado (m/s): a do Andar_Agachado do corpo.")]
@@ -150,6 +165,10 @@ namespace ZombieCityCleaner.Player
         // o carro e o pulo da janela desligam o movimento e mexem na cabeça (e a põem de volta onde estava): ele sai em pé
         void OnDisable()
         {
+            // (07/11/2026: quem sobe no caiaque nadando deixa de nadar; senão a mão continuava "nadando")
+            Nadando = NadandoRapido = false;
+            _naAgua = 0f;
+            _mexeuNaCabeca = false;
             if (_controle == null || cabeca == null) return;
             if (Agachado) Levantar(true);
             if (_abaixado > 0f)
@@ -315,6 +334,7 @@ namespace ZombieCityCleaner.Player
             float pitchFinal = Mathf.Clamp(_pitch - _coice, -pitchMaximo, pitchMaximo);
             cabeca.localRotation = Quaternion.Euler(pitchFinal, 0f, 0f);
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
+            if (_naAgua > 0.001f) cabeca.localRotation *= Quaternion.Euler(0f, 0f, _rolagemAgua * _naAgua);   // (o balanço da braçada)
             if (_tremor > 0.001f)
             {
                 // o chão tremendo: só na câmera (a mira e o Pitch da rede ficam onde estavam)
@@ -380,7 +400,7 @@ namespace ZombieCityCleaner.Player
             // de frente para uma janela livre, o pulo é por ela (o PuloDaJanela leva o jogador daqui em diante)
             if (pular && _controle.isGrounded && _janela != null && _janela.Tentar()) return;
             // a água funda (06/11/2026): ele nada
-            if (Nadar(mover, pesado, controla, dt)) return;
+            if (Nadar(mover, correr, pesado, controla, dt)) return;
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value && !Agachado;
             float alvo = Agachado ? velocidadeAgachado : rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
             if (pesado) alvo *= Habilidades.Tem(rede, Habilidade.Borracheiro) ? 0.8f : InventarioJogador.LentidaoDoPneu;   // (o Borracheiro)
@@ -405,14 +425,20 @@ namespace ZombieCityCleaner.Player
             }
         }
     
-        // nadando: boia com os olhos um pouco acima da água, anda devagar para onde olha (no plano), o Espaço sobe e o C
-        // mergulha. Entra com a água acima do peito (1,25 m nos pés) e sai abaixo de 1,05 m. Devolve se nadou.
-        bool Nadar(Vector2 mover, bool pesado, bool controla, float dt)
+        // nadando: boia com os olhos rentes à água, anda devagar para onde olha (no plano), o Espaço sobe e o C mergulha;
+        // o correr para a frente nada rápido, com fôlego. Entra com a água acima do peito (1,25 m nos pés) e sai abaixo de
+        // 1,05 m. Devolve se nadou.
+        bool Nadar(Vector2 mover, bool correr, bool pesado, bool controla, float dt)
         {
             bool agua = Agua.Nivel(transform.position, out float nivel);
             float fundo = agua ? nivel - transform.position.y : 0f;
             Nadando = agua && fundo > (Nadando ? 1.05f : 1.25f);
-            if (!Nadando) return false;
+            CameraNaAgua(dt, mover);
+            if (!Nadando)
+            {
+                NadandoRapido = false;
+                return false;
+            }
             if (Agachado) Levantar(true);
             Correndo = false;
             float sobe = 0f;
@@ -422,7 +448,10 @@ namespace ZombieCityCleaner.Player
                 if (teclado.spaceKey.isPressed) sobe += 1f;
                 if (teclado.leftCtrlKey.isPressed || teclado.cKey.isPressed) sobe -= 1f;
             }
-            float vel = velocidadeNadando * (pesado ? 0.5f : 1f);
+            // o nado rápido gasta o fôlego (o anfitrião conta): com pouco, ele não arranca; acabando, volta ao normal
+            int folego = rede != null && rede.Vida != null ? rede.Vida.Folego.Value : 100;
+            NadandoRapido = correr && mover.y > 0.1f && !pesado && folego > (NadandoRapido ? 2 : 15);
+            float vel = (NadandoRapido ? velocidadeNadandoRapido : velocidadeNadando) * (pesado ? 0.5f : 1f) * PesoNaAgua();
             Vector3 quer = (transform.right * mover.x + transform.forward * mover.y) * vel;
             Vector3 horizontal = Vector3.Lerp(new Vector3(_velocidade.x, 0f, _velocidade.z), quer, 1f - Mathf.Exp(-3f * dt));
             float alvoY = nivel - alturaBoiando;
@@ -432,6 +461,50 @@ namespace ZombieCityCleaner.Player
             _velocidade = new Vector3(horizontal.x, Mathf.Lerp(_velocidade.y, vy, 1f - Mathf.Exp(-4f * dt)), horizontal.z);
             _controle.Move((_velocidade + Vento) * dt);
             return true;
+        }
+
+        // a câmera na água (07/11/2026): nadando, desce até os olhos ficarem rentes à água e sobe e desce com a braçada
+        // (e balança um pouco de lado); fora dela, volta. A braçada anda no ritmo do nado (parado, só boiando, devagar)
+        float _naAgua, _rolagemAgua, _cicloBruto;
+        void CameraNaAgua(float dt, Vector2 mover)
+        {
+            _naAgua = Mathf.MoveTowards(_naAgua, Nadando ? 1f : 0f, dt / 0.35f);
+            if (Nadando)
+            {
+                bool nadando = mover.sqrMagnitude > 0.01f;
+                float periodo = !nadando ? BoiandoParado : NadandoRapido ? BracadaRapida : BracadaNormal;
+                _cicloBruto += dt / periodo;
+            }
+            CicloDaBracada = Mathf.Repeat(_cicloBruto, 1f);
+            float forca = Mathf.Clamp01(new Vector2(_velocidade.x, _velocidade.z).magnitude / Mathf.Max(0.1f, velocidadeNadando)) * 0.75f + 0.25f;
+            // a braçada empurra no meio do ciclo: a cabeça sobe um pouco ali e afunda na volta
+            float onda = Mathf.Sin(CicloDaBracada * 2f * Mathf.PI);
+            _rolagemAgua = Mathf.Sin(CicloDaBracada * 2f * Mathf.PI + 1.1f) * rolagemDaBracada * forca;
+            if (_naAgua <= 0.001f && !_mexeuNaCabeca) return;
+            var p = cabeca.localPosition;
+            float base_ = Mathf.Lerp(_olhoEmPe, olhoAgachado, Mathf.SmoothStep(0f, 1f, _abaixado));
+            p.y = base_ + _naAgua * (-olhoNaAgua + onda * balancoDaBracada * forca);
+            cabeca.localPosition = p;
+            _mexeuNaCabeca = _naAgua > 0.001f;
+        }
+        bool _mexeuNaCabeca;
+
+        // a mochila pesa na água (07/11/2026): cheia, a grande deixa o nado 30% mais lento (pelo espaço ocupado, contado de
+        // meio em meio segundo)
+        float _pesoNaAgua = 1f, _proximoPeso;
+        float PesoNaAgua()
+        {
+            if (Time.time < _proximoPeso) return _pesoNaAgua;
+            _proximoPeso = Time.time + 0.5f;
+            if (_inventario == null) _inventario = GetComponent<InventarioJogador>();
+            if (_inventario == null) return _pesoNaAgua = 1f;
+            int ocupadas = 0;
+            foreach (var it in _inventario.Mochila)
+            {
+                var t = it.Tamanho;
+                ocupadas += t.x * t.y;
+            }
+            return _pesoNaAgua = Mathf.Lerp(1f, 0.7f, Mathf.Clamp01(ocupadas / 70f));
         }
 
         static GUIStyle _estiloDoPreso;

@@ -90,6 +90,7 @@ namespace ZombieCityCleaner.Mundo
             ("PeixeGrande", 122, new Vector3(0.502f, 0.061f, 0.175f), ""),
             ("PeixeDourado", 123, new Vector3(0.452f, 0.052f, 0.155f), ""),
             ("Polvora", 124, new Vector3(0.086f, 0.119f, 0.09f), ""),
+            ("PeixeAssado", 125, new Vector3(0.063f, 0.14f, 0.018f), ""),
             ("CaixaDeBolas", 128, new Vector3(0.508f, 0.184f, 0.184f), ""),
             ("CaixaDeBolasVazia", 129, new Vector3(0.508f, 0.184f, 0.184f), ""),
             ("TacoMadeira", 130, new Vector3(1.45f, 0.029f, 0.029f), ""),

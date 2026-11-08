@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -188,6 +188,17 @@ namespace ZombieCityCleaner.EditorTools
             var saida = new Dictionary<string, AnimationClip>();
             MaosNoChao maos = null;   // (05/11/2026: na Furia, as mãos não entram no chão; MontagemDosZumbis.MaosNoChao.cs)
             bool procurouAsMaos = false;
+            // (07/11/2026: na agonia, os braços vão aos alvos medidos no modelo e não entram no corpo;
+            // MontagemDosZumbis.BracosForaDoCorpo.cs)
+            BracosForaDoCorpo bracos = null;
+            bool procurouOsBracos = false;
+            // os dedos não são gravados: no jogo, ficam na pose do modelo. Os braços da agonia são medidos com eles assim
+            var dedos = inst.GetComponentsInChildren<Transform>(true).Where(t => EhDedo(t.name)).ToArray();
+            var dedosDoModelo = dedos.Select(t => t.localRotation).ToArray();
+            void DedosComoNoJogo()
+            {
+                for (int d = 0; d < dedos.Length; d++) dedos[d].localRotation = dedosDoModelo[d];
+            }
             try
             {
                 foreach (var (nome, loop) in lista)
@@ -200,6 +211,13 @@ namespace ZombieCityCleaner.EditorTools
                         maos = MaosNoChao.De(inst, smr, nomeDoModelo);
                         if (maos == null) Debug.LogWarning($"{nomeDoModelo}: sem os ossos ou os vértices das mãos; a {nome} vai sem o ajuste das mãos no chão.");
                     }
+                    bool agonia = EhAgonia(nome);
+                    if (agonia && !procurouOsBracos)
+                    {
+                        procurouOsBracos = true;
+                        bracos = BracosForaDoCorpo.De(inst, smr, nomeDoModelo);
+                        if (bracos == null) Debug.LogWarning($"{nomeDoModelo}: sem os ossos ou a malha do corpo; a agonia vai com os braços dos músculos.");
+                    }
                     animador.Rebind();
                     var gravador = new GameObjectRecorder(inst);
                     foreach (var o in ossos)
@@ -210,11 +228,44 @@ namespace ZombieCityCleaner.EditorTools
                     }
                     float fps = Mathf.Max(24f, fonte.frameRate);
                     int quadros = Mathf.Max(1, Mathf.RoundToInt(fonte.length * fps));
+                    // a agonia: primeiro, o ajuste dos braços de cada quadro, depois suavizado no tempo (sem tremer)
+                    Vector3[][] dosBracos = null;
+                    if (agonia && bracos != null)
+                    {
+                        // (no Encolher, a altura dos punhos que cabe neste modelo: a de embaixo do queixo, ou mais baixo)
+                        bracos.ComecarAEscolher();
+                        for (int i = 0; i <= quadros; i += 3)
+                        {
+                            animador.Play(nome, 0, (float)i / quadros);
+                            animador.Update(0f);
+                            DedosComoNoJogo();
+                            bracos.Guardar();
+                            bracos.Experimentar(nome, fonte.length * i / quadros);
+                        }
+                        bracos.EscolherAAltura();
+                        dosBracos = new Vector3[quadros + 1][];
+                        for (int i = 0; i <= quadros; i++)
+                        {
+                            animador.Play(nome, 0, (float)i / quadros);
+                            animador.Update(0f);
+                            DedosComoNoJogo();
+                            bracos.Guardar();
+                            dosBracos[i] = bracos.Medir(nome, fonte.length * i / quadros);
+                        }
+                        dosBracos = BracosForaDoCorpo.Suavizar(dosBracos, loop);
+                    }
                     for (int i = 0; i <= quadros; i++)
                     {
                         animador.Play(nome, 0, (float)i / quadros);
                         animador.Update(0f);
                         if (maosNoChao) maos?.Aplicar();
+                        if (dosBracos != null)
+                        {
+                            // os braços nos alvos, com o ajuste suavizado (e o pouco que ainda faltar, conferido aqui)
+                            DedosComoNoJogo();
+                            bracos.Guardar();
+                            bracos.Medir(nome, fonte.length * i / quadros, dosBracos[i]);
+                        }
                         gravador.TakeSnapshot(i == 0 ? 0f : fonte.length / quadros);
                     }
                     string arquivo = $"{pasta}/{nome}.anim";

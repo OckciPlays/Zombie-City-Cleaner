@@ -24,7 +24,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 149326338111388159}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.17013766, y: -0.10784616, z: -0.38671133, w: 0.8999316}
+  m_LocalRotation: {x: 0.17013764, y: -0.10784615, z: -0.38671127, w: 0.8999315}
   m_LocalPosition: {x: 0.013453735, y: 0.032000076, z: 0.017578047}
   m_LocalScale: {x: 1, y: 1.0000001, z: 1}
   m_ConstrainProportionsScale: 0
@@ -95,7 +95,7 @@ Transform:
   m_Children:
   - {fileID: 8017535908577178957}
   m_Father: {fileID: 3608951498179818431}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 10.340622, y: 0.5993736, z: 0.16883492}
 --- !u!1 &1095338406976730979
 GameObject:
   m_ObjectHideFlags: 0
@@ -120,7 +120,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1095338406976730979}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.07981742, y: -0.029451374, z: -0.11401056, w: -0.98982996}
+  m_LocalRotation: {x: 0.07981743, y: -0.029451376, z: -0.114010565, w: -0.98983}
   m_LocalPosition: {x: -0.000000016763806, y: 0.03400013, z: -0.00000012805685}
   m_LocalScale: {x: 1, y: 1, z: 0.99999994}
   m_ConstrainProportionsScale: 0
@@ -161,7 +161,7 @@ Transform:
   m_Children:
   - {fileID: 1803390151492858955}
   m_Father: {fileID: 7231817481027296984}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -21.837446, y: 0.67016727, z: -0.41133124}
 --- !u!54 &135090504388597453
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -223,30 +223,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3082769994961331589}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: -0.9995821, y: -0.028838037, z: -0.0019450239}
+  m_Axis: {x: -0.9935197, y: -0.037826262, z: 0.1071808}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: -0.00000013551838, y: -0.067288905, z: 0.99773353}
+  m_SwingAxis: {x: 0.1132577, y: -0.25022507, z: 0.9615405}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -5
+    limit: -120.1789
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 120
+    limit: 6.37114
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 3
+    limit: 33.636963
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 3
+    limit: 36.66882
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -313,7 +313,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1561965266493982751}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.006283486, y: 0.059711307, z: -0.16991171, w: -0.9836285}
+  m_LocalRotation: {x: 0.006283486, y: 0.05971131, z: -0.16991171, w: -0.9836286}
   m_LocalPosition: {x: 0.000000010244547, y: 0.02299997, z: -0.00000008218922}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -355,7 +355,7 @@ Transform:
   - {fileID: 7231817481027296984}
   - {fileID: 6876057453375866236}
   m_Father: {fileID: 636100913572208762}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 87.891594, y: 177.82361, z: 178.83008}
 --- !u!54 &3775669460056337722
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -437,7 +437,7 @@ Transform:
   m_Children:
   - {fileID: 1024577520346726840}
   m_Father: {fileID: 7941893058180742313}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 75.44847, y: 97.29842, z: 108.56579}
 --- !u!1 &2200084955054535088
 GameObject:
   m_ObjectHideFlags: 0
@@ -462,7 +462,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2200084955054535088}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0737925, y: -0.013678187, z: 0.21183866, w: 0.97441876}
+  m_LocalRotation: {x: -0.07379251, y: -0.013678187, z: 0.21183868, w: 0.97441876}
   m_LocalPosition: {x: 0.00000007729978, y: 0.0519997, z: -0.000000084517524}
   m_LocalScale: {x: 1, y: 0.99999994, z: 1}
   m_ConstrainProportionsScale: 0
@@ -590,14 +590,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2527114661995575686}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.08546794, y: -0.110739194, z: 0.7542439, w: 0.64152014}
+  m_LocalRotation: {x: -0.08546794, y: -0.1107392, z: 0.7542439, w: 0.6415202}
   m_LocalPosition: {x: -0.019999983, y: 0.1343212, z: 0.05179544}
   m_LocalScale: {x: 1.0000001, y: 1.0000001, z: 0.99999994}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5223879620065598016}
   m_Father: {fileID: 8017535908577178957}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 2.8968365, y: -14.075447, z: 107.666885}
 --- !u!1 &3006038344680961491
 GameObject:
   m_ObjectHideFlags: 0
@@ -749,7 +749,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3590208557644052254}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.1540638, y: 0.018168187, z: -0.24363096, w: 0.9573809}
+  m_LocalRotation: {x: -0.15406382, y: 0.018168189, z: -0.24363098, w: 0.95738095}
   m_LocalPosition: {x: -0.0059514656, y: 0.093000114, z: -0.026506212}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -791,7 +791,7 @@ Transform:
   m_Children:
   - {fileID: 1743006016252274330}
   m_Father: {fileID: 6876057453375866236}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -35.384373, y: 0.37210232, z: -0.45711595}
 --- !u!54 &2340946256756627322
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -853,30 +853,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3925060795958783004}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: -0.9995821, y: 0.028838037, z: 0.0019450239}
+  m_Axis: {x: -0.9937573, y: 0.042006116, z: -0.10335286}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: 0.00000013551838, y: -0.067288905, z: 0.99773353}
+  m_SwingAxis: {x: -0.11076591, y: -0.2609481, z: 0.9589771}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -5
+    limit: -122.70584
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 120
+    limit: 6.567193
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 3
+    limit: 33.32929
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 3
+    limit: 32.558365
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -912,7 +912,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3724369882142948478}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.07549939, y: -0.053449284, z: 0.28597885, w: 0.9537605}
+  m_LocalRotation: {x: -0.0754994, y: -0.053449284, z: 0.28597888, w: 0.9537605}
   m_LocalPosition: {x: 0.0000000782311, y: 0.04900002, z: -0.000000013038516}
   m_LocalScale: {x: 1, y: 0.9999999, z: 1.0000001}
   m_ConstrainProportionsScale: 0
@@ -976,7 +976,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4030349046415690270}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.093039244, y: 0.03617018, z: -0.2912248, w: 0.9514323}
+  m_LocalRotation: {x: -0.09303925, y: 0.036170185, z: -0.29122484, w: 0.95143235}
   m_LocalPosition: {x: -0.000000022351742, y: 0.05200014, z: -0.00000007357448}
   m_LocalScale: {x: 1, y: 1.0000001, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1020,7 +1020,7 @@ Transform:
   - {fileID: 5714777802069193192}
   - {fileID: 7440503494418363431}
   m_Father: {fileID: 1388085759529235384}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 1.2815152, y: 0, z: 0}
 --- !u!54 &7172343309785957823
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1082,30 +1082,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3775669460056337722}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: 1, y: -4.440892e-15, z: -0.00000006469174}
+  m_Axis: {x: 0.9999843, y: 0.0036736515, z: 0.004228257}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: 0.00000006468599, y: -0.013332132, z: 0.99991107}
+  m_SwingAxis: {x: 0.0017111343, y: -0.9191499, z: 0.39390433}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -20
+    limit: -70.715485
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 40
+    limit: 28.654406
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 15
+    limit: 31.489315
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 15
+    limit: 22.392654
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -1151,7 +1151,7 @@ Transform:
   m_Children:
   - {fileID: 3455770011438262246}
   m_Father: {fileID: 9124543622148214059}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 24.3875, y: -8.595527, z: 0.8418132}
 --- !u!54 &5423573523034059341
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1213,30 +1213,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 1675454724547697284}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: -0.21323429, y: -0.9654607, z: 0.1497233}
+  m_Axis: {x: -0.99943423, y: -0.022933716, z: -0.024602542}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: -0.9770013, y: 0.21071538, z: -0.032677725}
+  m_SwingAxis: {x: -0.03360072, y: 0.71329576, z: 0.70005727}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -130
+    limit: -9.179693
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 5
+    limit: 140.20845
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 5
+    limit: 66.536865
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 5
+    limit: 47.56782
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -1272,7 +1272,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4554291480894444324}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.07687774, y: 0.053440236, z: -0.28900805, w: 0.9527373}
+  m_LocalRotation: {x: -0.07687774, y: 0.05344024, z: -0.28900805, w: 0.95273733}
   m_LocalPosition: {x: -0.00000015087427, y: 0.049000088, z: 0.00000004190952}
   m_LocalScale: {x: 0.9999999, y: 0.9999999, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1307,14 +1307,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4760762344246410776}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.00012465472, y: 0.007311105, z: 0.9998276, w: 0.017065248}
+  m_LocalRotation: {x: 0.00012465473, y: 0.0073111053, z: 0.9998277, w: 0.01706525}
   m_LocalPosition: {x: -0.092, y: -0.045000017, z: 0.009999998}
   m_LocalScale: {x: 1.0000005, y: 1, z: 1.0000001}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6645918608767244842}
   m_Father: {fileID: 4686079992210367111}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -32.688725, y: 4.077973, z: 174.93048}
 --- !u!54 &3082769994961331589
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1376,30 +1376,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3775669460056337722}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: -0.9994174, y: -0.03412279, z: 0.0004987981}
+  m_Axis: {x: -0.98409086, y: -0.1342353, z: 0.11638748}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: -0.000000265165, y: 0.014623944, z: 0.99989307}
+  m_SwingAxis: {x: 0.1608758, y: -0.9512538, z: 0.26312602}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -100
+    limit: -20.642345
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 30
+    limit: 138.68816
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 30
+    limit: 46.70907
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 15
+    limit: 26.964867
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -1678,14 +1678,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5164324176379905786}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.00012465472, y: 0.007311105, z: 0.9998276, w: -0.017065248}
+  m_LocalRotation: {x: -0.00012465473, y: 0.0073111053, z: 0.9998277, w: -0.01706525}
   m_LocalPosition: {x: 0.092, y: -0.045000017, z: 0.009999998}
   m_LocalScale: {x: 1.0000005, y: 1, z: 1.0000001}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7941893058180742313}
   m_Father: {fileID: 4686079992210367111}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -5.8067794, y: 0.65405595, z: -176.69661}
 --- !u!54 &3925060795958783004
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1747,30 +1747,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3775669460056337722}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: -0.9994174, y: 0.03412279, z: -0.0004987981}
+  m_Axis: {x: -0.981235, y: 0.1375609, z: -0.13510998}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: 0.000000265165, y: 0.014623944, z: 0.99989307}
+  m_SwingAxis: {x: -0.16690661, y: -0.95682186, z: 0.23797898}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -100
+    limit: -25.266426
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 30
+    limit: 140.73317
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 30
+    limit: 46.78958
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 15
+    limit: 26.209812
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -1935,14 +1935,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5608637862041453342}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.08764794, y: -0.09362056, z: 0.5332728, w: 0.8361657}
+  m_LocalRotation: {x: 0.087647945, y: -0.09362057, z: 0.53327286, w: 0.8361658}
   m_LocalPosition: {x: 0.00000020302829, y: 0.16020308, z: -0.000000018626453}
   m_LocalScale: {x: 0.9999999, y: 0.99999994, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1034197276723198139}
   m_Father: {fileID: 5714777802069193192}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 41.623684, y: 41.86894, z: 75.36212}
 --- !u!54 &3264528623211665592
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2004,30 +2004,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 7172343309785957823}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: 0.00000016033127, y: -0.06929211, z: 0.9975964}
+  m_Axis: {x: -0.88857096, y: 0.18373056, z: 0.42033884}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: 0.26047194, y: -0.9631606, z: -0.06690031}
+  m_SwingAxis: {x: 0.38255474, y: -0.20889851, z: 0.90000737}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -80
+    limit: -29.974224
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 80
+    limit: 130.23221
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 70
+    limit: 83.99766
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 30
+    limit: 89.18983
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -2190,7 +2190,7 @@ Transform:
   m_Children:
   - {fileID: 1388085759529235384}
   m_Father: {fileID: 4686079992210367111}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 13.114052, y: -0.000016276857, z: -0.0000070272963}
 --- !u!1 &6096340255355277740
 GameObject:
   m_ObjectHideFlags: 0
@@ -2225,7 +2225,7 @@ Transform:
   m_Children:
   - {fileID: 4747175688993220695}
   m_Father: {fileID: 7440503494418363431}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 25.580885, y: 13.462901, z: -67.18995}
 --- !u!54 &1675454724547697284
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2287,30 +2287,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 7172343309785957823}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: 0.0000000032373357, y: -0.06929216, z: 0.9975963}
+  m_Axis: {x: 0.85431784, y: 0.16530377, z: 0.49276328}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: -0.26047134, y: -0.9631611, z: -0.06690032}
+  m_SwingAxis: {x: -0.4504289, y: -0.23758133, z: 0.8606213}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -80
+    limit: -145.49873
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 80
+    limit: 27.860374
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 70
+    limit: 85.38701
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 30
+    limit: 81.07452
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -2353,7 +2353,7 @@ Transform:
   m_Children:
   - {fileID: 1614613254810332876}
   m_Father: {fileID: 8017535908577178957}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 21.42068, y: -0.000007209182, z: -0.0000013635366}
 --- !u!1 &6474965188370129495
 GameObject:
   m_ObjectHideFlags: 0
@@ -2447,7 +2447,7 @@ Transform:
   m_Children:
   - {fileID: 9124543622148214059}
   m_Father: {fileID: 8017535908577178957}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 2.8968344, y: 14.075456, z: -107.66687}
 --- !u!1 &7331382122694426736
 GameObject:
   m_ObjectHideFlags: 0
@@ -2483,7 +2483,7 @@ Transform:
   - {fileID: 1045386126497395551}
   - {fileID: 8115788917776591923}
   m_Father: {fileID: 1034197276723198139}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -4.166756, y: -38.99898, z: 15.296}
 --- !u!1 &7472484809739497290
 GameObject:
   m_ObjectHideFlags: 0
@@ -2514,7 +2514,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1803390151492858955}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 27.407454, y: 18.986916, z: -0.000096172145}
 --- !u!1 &7763796679677785806
 GameObject:
   m_ObjectHideFlags: 0
@@ -2610,7 +2610,7 @@ Transform:
   m_Children:
   - {fileID: 6683548996455699097}
   m_Father: {fileID: 6645918608767244842}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 58.57448, y: -22.904482, z: -33.110165}
 --- !u!1 &7866592970749220413
 GameObject:
   m_ObjectHideFlags: 0
@@ -2645,7 +2645,7 @@ Transform:
   m_Children:
   - {fileID: 6281667446186346139}
   m_Father: {fileID: 5223879620065598016}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 21.770794, y: -25.241507, z: -22.392096}
 --- !u!54 &2981037170535045355
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2707,30 +2707,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 3264528623211665592}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: 0.2132349, y: -0.96546024, z: 0.14972305}
+  m_Axis: {x: 0.9989404, y: -0.002091507, z: -0.045975015}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: -0.97700095, y: -0.21071604, z: 0.032677818}
+  m_SwingAxis: {x: -0.03024157, y: -0.7828525, z: -0.621472}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -5
+    limit: -140.42448
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 130
+    limit: 9.839882
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 5
+    limit: 63.567047
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 5
+    limit: 46.242958
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -2766,7 +2766,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8092586689032825028}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.17013764, y: 0.107846215, z: 0.38671142, w: 0.89993143}
+  m_LocalRotation: {x: 0.17013766, y: 0.10784622, z: 0.38671145, w: 0.8999315}
   m_LocalPosition: {x: -0.013454202, y: 0.03199994, z: 0.017578201}
   m_LocalScale: {x: 0.99999994, y: 0.99999994, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2804,7 +2804,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1743006016252274330}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 27.407452, y: -18.986917, z: 0.000096653006}
 --- !u!1 &8427130994982501666
 GameObject:
   m_ObjectHideFlags: 0
@@ -2838,7 +2838,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8645439997833559351}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 1.8383836, y: -4.8068986, z: -12.084427}
 --- !u!54 &3743097279794178261
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2898,30 +2898,30 @@ CharacterJoint:
   m_ConnectedBody: {fileID: 7172343309785957823}
   m_ConnectedArticulationBody: {fileID: 0}
   m_Anchor: {x: 0, y: 0, z: 0}
-  m_Axis: {x: 1, y: 0, z: -0.00000012013709}
+  m_Axis: {x: 0.9982732, y: -0.01522432, z: -0.05673542}
   m_AutoConfigureConnectedAnchor: 1
   m_ConnectedAnchor: {x: 0, y: 0, z: 0}
-  m_SwingAxis: {x: 0.00000011780412, y: 0.1961162, z: 0.9805806}
+  m_SwingAxis: {x: 0.046696387, y: 0.7916346, z: 0.6092077}
   m_TwistLimitSpring:
     spring: 0
     damper: 0
   m_LowTwistLimit:
-    limit: -30
+    limit: -42.780067
     bounciness: 0
     contactDistance: 0
   m_HighTwistLimit:
-    limit: 40
+    limit: 56.18854
     bounciness: 0
     contactDistance: 0
   m_SwingLimitSpring:
     spring: 0
     damper: 0
   m_Swing1Limit:
-    limit: 25
+    limit: 30.049664
     bounciness: 0
     contactDistance: 0
   m_Swing2Limit:
-    limit: 25
+    limit: 34.243362
     bounciness: 0
     contactDistance: 0
   m_EnableProjection: 1
@@ -2989,7 +2989,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8916945973876500816}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.054589592, y: -0.0055331746, z: -0.18741259, w: 0.9807476}
+  m_LocalRotation: {x: -0.054589596, y: -0.0055331746, z: -0.1874126, w: 0.9807476}
   m_LocalPosition: {x: 0.0022782646, y: 0.10800016, z: 0.006618894}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -3053,7 +3053,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9202520880133959412}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.034320153, y: -0.005796342, z: -0.04827976, w: 0.9982273}
+  m_LocalRotation: {x: -0.03432015, y: -0.005796342, z: -0.04827975, w: 0.9982273}
   m_LocalPosition: {x: 0.00000003911555, y: 0.26101547, z: 0.00000005215407}
   m_LocalScale: {x: 1, y: 1.0000001, z: 1}
   m_ConstrainProportionsScale: 0
@@ -3064,4 +3064,4 @@ Transform:
   - {fileID: 1128346471867495486}
   - {fileID: 3977681955123874686}
   m_Father: {fileID: 4747175688993220695}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -4.5708766, y: -2.5287962, z: -25.11238}

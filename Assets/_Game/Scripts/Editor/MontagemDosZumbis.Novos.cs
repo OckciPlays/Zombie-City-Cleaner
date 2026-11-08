@@ -23,7 +23,9 @@ namespace ZombieCityCleaner.EditorTools
     /// Menu Zombie City Cleaner > Zumbis > Montar os zumbis novos (comparação): cada um passa pelos mesmos passos de um
     /// especial em <see cref="MontarOsEspeciais"/> (Humanoid → os 20 clipes gravados no esqueleto dele e o avatar Generic;
     /// o override do Zombie.controller com esses clipes; o prefab, com o tipo, o olho e a hitbox dele; e o corpo que cai), e
-    /// saem Prefabs/Zumbis/Zumbi_&lt;Nome&gt; e Corpo_&lt;Nome&gt;. Mas eles ficam FORA do jogo: não entram em
+    /// saem Prefabs/Zumbis/Zumbi_&lt;Nome&gt; e Corpo_&lt;Nome&gt;. Desde 07/11/2026 o NovoBrutamonte está no jogo (na lista dos
+    /// <see cref="Especiais"/>, no lugar dos três Brutamontes): ele sai com o número do lugar dele na lista. O NovoCorredor
+    /// continua FORA do jogo, como era com os dois: não entra em
     /// <see cref="TodosOsModelos"/> nem na lista do ZombieManager, e nada aqui abre ou salva a cena Mundo, refaz o
     /// Zombie.controller ou mexe nos outros modelos. As fontes Humanoid dos clipes (as animações do Oco, a agonia, o levantar
     /// e as dos especiais) são só lidas, como estão (a montagem dos especiais reimporta e refaz), e só os assets que esta
@@ -91,7 +93,7 @@ namespace ZombieCityCleaner.EditorTools
             }
             CamadasDosZumbis();
             var primeiro = new Modelo { indice = 0, nome = Modelos[0], fbx = FbxDe(Modelos[0]), clipes = doPrimeiro };
-            int depoisDaLista = TodosOsModelos.Count();   // o índice dos novos: depois da lista do jogo (eles não entram nela)
+            int depoisDaLista = TodosOsModelos.Count();   // o índice dos novos fora do jogo: depois da lista do jogo
             var feitos = new List<string>();
             var sujosAntes = AssetsSujos();   // as mudanças não salvas de antes (de outras mãos) ficam como estão
             _fontesSoLidas = fontes;
@@ -109,7 +111,9 @@ namespace ZombieCityCleaner.EditorTools
                     try
                     {
                         ConferirOFbx(nome, tipo);
-                        var m = ImportarModelo(nome, depoisDaLista + k);   // (EhEspecial: montado como os Ocos e os especiais)
+                        // (EhEspecial: montado como os Ocos e os especiais). O que está no jogo leva o lugar dele na lista
+                        int lugar = LugarNoJogo(nome);
+                        var m = ImportarModelo(nome, lugar >= 0 ? lugar : depoisDaLista + k);
                         var aoc = Sobrepor(ctrl, primeiro, m);
                         var z = MontarPrefab(m, aoc);
                         MontarCorpo(m);
@@ -117,7 +121,7 @@ namespace ZombieCityCleaner.EditorTools
                         feitos.Add(nome);
                         Debug.Log($"Zumbi novo montado: {nome} ({tipo}, {m.altura:F2} m, {m.clipes.Count} clipes) → {Prefabs}/Zumbi_{nome}.prefab e " +
                                   $"Corpo_{nome}.prefab (os clipes em {ClipesDosOcos}/{nome}/, o controlador {Arte}/Zombie_{nome}.overrideController). " +
-                                  "Fora da lista do jogo.");
+                                  (lugar >= 0 ? $"No jogo, o modelo {lugar}." : "Fora da lista do jogo."));
                     }
                     catch (System.Exception e)
                     {

@@ -17,6 +17,11 @@ namespace ZombieCityCleaner.World
     /// prédio de 15 andares, da rua à cobertura, entra inteiro). Os andares dos prédios carregam e saem com os jogadores
     /// perto: quando a colisão de um muda, a área em volta é refeita (<see cref="Mudou"/>, no máximo uma vez por segundo).
     /// Fica no "Mundo" da cena Mundo (posto pela montagem da cena).
+    /// <para>
+    /// A água do lago fica fora (07/11/2026, a pedido: "sem zumbis na água, eles param na beira"): caixas que tiram o chão
+    /// do fundo do lago, onde a água passa de <see cref="AguaQueOsZumbisEntram"/> (<see cref="TirarAAgua"/>). Atrás de quem
+    /// nada, eles vão até a beira e esperam ali; e ninguém nasce dentro dela.
+    /// </para>
     /// </summary>
     public class NavMeshDoMundo : MonoBehaviour
     {
@@ -30,6 +35,10 @@ namespace ZombieCityCleaner.World
         [Min(1)] public int workers = 2;
 
         const int Camadas = (1 << 0) | (1 << 1);
+
+        /// <summary>A água até onde os zumbis entram (m): a beira molhada; mais funda, o lago é deles não.</summary>
+        public const float AguaQueOsZumbisEntram = 0.3f;
+        const int AreaSemPassagem = 1;   // a área "Not Walkable" do NavMesh
 
         sealed class Area
         {
@@ -179,6 +188,7 @@ namespace ZombieCityCleaner.World
             var cena = gameObject.scene;
             for (int i = _fontes.Count - 1; i >= 0; i--)
                 if (_fontes[i].component == null || _fontes[i].component.gameObject.scene != cena) _fontes.RemoveAt(i);
+            TirarAAgua(limites);
             var ajustes = NavMesh.GetSettingsByIndex(0);
             // poucos workers: com todos, os jobs da física (PxScene.simulate) e do GPU Resident Drawer esperavam na fila
             // atrás dos da montagem, e o quadro passava de 30 ms na cidade
@@ -196,5 +206,45 @@ namespace ZombieCityCleaner.World
         }
 
         static float Horizontal(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
+        /// <summary>
+        /// O lago dentro da área sai do NavMesh: nas linhas da grade do mundo (2 m), cada trecho seguido de água mais funda
+        /// que <see cref="AguaQueOsZumbisEntram"/> vira uma caixa que marca o chão como sem passagem (do fundo até acima da
+        /// água). A ilha do meio fica (ela não tem água).
+        /// </summary>
+        void TirarAAgua(Bounds limites)
+        {
+            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            var lago = dados?.Lago;
+            if (lago == null) return;
+            float alcance = lago.Raio * 1.6f;
+            float x0 = Mathf.Max(limites.min.x, lago.Centro.x - alcance), x1 = Mathf.Min(limites.max.x, lago.Centro.x + alcance);
+            float z0 = Mathf.Max(limites.min.z, lago.Centro.y - alcance), z1 = Mathf.Min(limites.max.z, lago.Centro.y + alcance);
+            if (x0 >= x1 || z0 >= z1) return;
+            const float passo = ZombieCityCleaner.Mundo.DadosDoMundo.Celula;
+            float fundo = lago.Nivel - lago.Fundura - 2f, topo = lago.Nivel + 3f;
+            for (float z = z0 + passo * 0.5f; z < z1; z += passo)
+            {
+                float comeco = float.NaN;
+                for (float x = x0 + passo * 0.5f; ; x += passo)
+                {
+                    bool agua = x < x1 && dados.FunduraDaAgua(x, z) > AguaQueOsZumbisEntram;
+                    if (agua && float.IsNaN(comeco)) comeco = x - passo * 0.5f;
+                    else if (!agua && !float.IsNaN(comeco))
+                    {
+                        float fim = x - passo * 0.5f;
+                        _fontes.Add(new NavMeshBuildSource
+                        {
+                            shape = NavMeshBuildSourceShape.ModifierBox,
+                            transform = Matrix4x4.Translate(new Vector3((comeco + fim) * 0.5f, (fundo + topo) * 0.5f, z)),
+                            size = new Vector3(fim - comeco, topo - fundo, passo),
+                            area = AreaSemPassagem,
+                        });
+                        comeco = float.NaN;
+                    }
+                    if (x >= x1) break;
+                }
+            }
+        }
     }
 }

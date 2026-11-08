@@ -11,18 +11,21 @@ modeladas).
 - **O corpo tem 6 partes:** a cabeça, o tronco, os dois braços e as duas pernas. O golpe tira da vida geral (que continua
   de 0 a 100; a 0, o jogador cai) e da parte onde pegou.
 - **A vida geral sai das partes** (06/11/2026, a pedido: "se todos os membros estiverem 100% a minha vida geral também
-  estará 100%"; e, à tarde, "ainda está um pouco bugado a parte da vida": o braço a 77% e a perna a 90% davam 67, a soma do
-  que faltava): é **a média das partes**, com o tronco e a cabeça pesando mais (a cabeça 12%, o tronco 30%, cada braço 12%,
-  cada perna 17%), **mas nunca acima do tronco nem da cabeça**.
-  - O braço a 77% e a perna a 90% dão uns 96. O tronco a 10% dá 10, por melhor que esteja o resto.
-  - **A morte vem do tronco ou da cabeça a 0** (aí a vida geral é 0).
-  - **O golpe tira o dobro da parte** (a mordida do Oco, 12, tira 24% da parte), para a média não deixar o jogador forte
-    demais: morrer leva uns 12 a 14 golpes de Oco (eram 9), e o tiro no tronco, 3 ou 4.
-  - **O membro perdido** (a 0) passa o resto do golpe para o tronco.
-  - O sangramento tira da parte que sangra (também em dobro); a fome, a sede, a infecção, o afogamento e o raio, do tronco.
-  - Tratar uma parte sobe a vida geral pelo peso dela. A lesão (a entorse 15, a fratura 40, a exposta 60) conta na parte e
-    na média, e some quando o osso cola.
-  - Um personagem salvo antes volta com a vida das partes (o tronco e a cabeça com pelo menos 10%).
+  estará 100%"). **Desde 07/11/2026** (a pedido: "ajustar o dano de tudo, para o equivalente que era antes"; com a média de
+  06/11, o avanço do Brutamonte matava de uma vez e a mordida no braço quase não baixava a vida): **cada golpe tira da vida
+  geral o mesmo que tirava antes**.
+  - **O tronco e a cabeça contam inteiros:** a mordida de 12 no tronco deixa o tronco a 88% e a vida a 88.
+  - **O braço e a perna contam metade e perdem o dobro:** a mordida de 12 no braço deixa o braço a 76% e a vida a 88.
+  - Por isso a vida geral nunca fica acima do tronco nem da cabeça. Com só o braço a 77% e a perna a 90%, ela fica em
+    uns 83 (eram 67 na soma da manhã de 06/11, e 96 na média da tarde).
+  - **A morte vem da vida a 0** (o tronco ou a cabeça a 0 também levam a vida a 0). Morrer leva 9 mordidas de Oco, como
+    antes; o avanço do Brutamonte tira 50 (metade da vida), e os golpes da fúria tiram 34, 40 e 54 de perto.
+  - **O membro perdido** (a 0) passa o resto do golpe para o tronco. Um golpe forte no braço ou na perna (o avanço do
+    Brutamonte) já deixa o membro a 0.
+  - O sangramento tira da parte que sangra pela mesma conta; a fome, a sede, a infecção, o afogamento e o raio, do tronco.
+  - Tratar devolve à vida geral o mesmo que antes (a atadura de 30 leva o braço 60% para cima e a vida 30). A lesão (a
+    entorse 15, a fratura 40, a exposta 60) aparece só na parte, não na vida geral, como antes, e some quando o osso cola.
+  - Um personagem salvo volta com a vida das partes (o tronco, a cabeça e a vida geral com pelo menos 10%).
 - **A parte a 0 fica inutilizada:** o braço não segura arma de duas mãos e a mira treme; a perna manca forte e não corre;
   o tronco a 0 não deixa correr; a cabeça a 0 escurece as bordas da tela.
 - **A morte não muda:** quem renasce volta com a vida cheia e o corpo inteiro.

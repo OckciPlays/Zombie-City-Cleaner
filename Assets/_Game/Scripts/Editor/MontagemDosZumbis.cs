@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Unity.AI.Navigation;
@@ -876,6 +876,9 @@ namespace ZombieCityCleaner.EditorTools
             Junta(8, 7, D, F, -5f, 120f, 3f, 3f);
             Junta(9, 0, D, F, -100f, 30f, 30f, 15f);
             Junta(10, 9, D, F, -5f, 120f, 3f, 3f);
+            // (07/11/2026: os eixos e os limites acima são o ponto de partida; os de verdade saem das animações gravadas do
+            // modelo, MontagemDosZumbis.JuntasDosCorpos.cs: os daqui estavam ao contrário e o cotovelo no eixo errado)
+            CalibrarJuntas(raiz, m.nome);
 
             smr.sharedMesh = m.inteira;
             smr.sharedMaterials = new[] { m.material };

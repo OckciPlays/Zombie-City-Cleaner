@@ -48,6 +48,9 @@ namespace ZombieCityCleaner.World
     ///   malha e o material do chão (<see cref="ItensNoMundo.MalhaDe"/>).
     /// - **A tela** é a do inventário (TAB) com a estante no lugar dos detalhes (<c>TelaDoInventario.Estante.cs</c>): E na
     ///   estante abre (<see cref="EstanteNaMira"/>).
+    /// - **O compartimento do caiaque** (07/11/2026, a pedido: "um compartimento pequeno no caiaque") é uma estante a mais,
+    ///   de 2 × 2, com o número <see cref="BaseDosCaiaques"/> + o do caiaque: a mesma lista, a mesma tela e o mesmo save; o
+    ///   "perto" é o da escotilha de trás dele (<see cref="Vehicles.Caiaque.PontoDoCompartimento"/>). Nada aparece por fora.
     /// </summary>
     public class EstantesDoBunker : NetworkBehaviour
     {
@@ -85,17 +88,26 @@ namespace ZombieCityCleaner.World
             ["PrateleiraMadeira150"] = new Forma { nome = "prateleira de madeira", colunas = 10, alturas = TabuasDeMadeira, largura = 1.39f, fundo = 0.37f, vao = 0.52f },
         };
 
+        /// <summary>O número da estante do compartimento do primeiro caiaque (os outros, os seguintes).</summary>
+        public const int BaseDosCaiaques = 60000;
+        const string Compartimento = "CompartimentoDoCaiaque";
+        static readonly Forma FormaDoCompartimento = new Forma { nome = "compartimento do caiaque", colunas = 2, alturas = new[] { 0f }, largura = 0.36f, fundo = 0.36f, vao = 0.3f };
+
+        /// <summary>É o compartimento de um caiaque (e não um móvel do bunker)?</summary>
+        public static bool EhDoCaiaque(int estante) => estante >= BaseDosCaiaques && estante < BaseDosCaiaques + 16;
+
         public static bool EhEstante(string modelo) => modelo != null && Formas.ContainsKey(modelo);
         public static Forma FormaDe(string modelo) => modelo != null && Formas.TryGetValue(modelo, out var f) ? f : null;
 
         /// <summary>O modelo da estante (o móvel do bunker; null se o índice não é de uma estante).</summary>
         public static string ModeloDa(int estante)
         {
+            if (EhDoCaiaque(estante)) return Compartimento;   // (mesmo antes de o caiaque nascer: o save dele carrega)
             var todos = MoveisDoBunker.Todos;
             return estante >= 0 && estante < todos.Length && EhEstante(todos[estante].modelo) ? todos[estante].modelo : null;
         }
 
-        public static Forma FormaDa(int estante) => FormaDe(ModeloDa(estante));
+        public static Forma FormaDa(int estante) => EhDoCaiaque(estante) ? FormaDoCompartimento : FormaDe(ModeloDa(estante));
 
         NetworkList<ItemNaEstante> _itens;
         ushort _proximoId = 1;
@@ -311,6 +323,16 @@ namespace ZombieCityCleaner.World
         /// <summary>O ponto está perto da estante (a do bunker, no chão do andar dela).</summary>
         public static bool Perto(int estante, Vector3 ponto, float distancia)
         {
+            if (EhDoCaiaque(estante))
+            {
+                // o compartimento: a escotilha de trás do caiaque (quem está sentado nele também alcança)
+                var k = Vehicles.Caiaque.DoCompartimento(estante);
+                if (k == null) return false;
+                var dc = ponto - k.PontoDoCompartimento;
+                if (dc.y < -2.5f || dc.y > 2.5f) return false;
+                dc.y = 0f;
+                return dc.magnitude <= distancia;
+            }
             var bunker = BunkerDoMundo.Instancia;
             if (bunker == null || !bunker.PontoDoMovel(estante, out var pe)) return false;
             var d = ponto - pe;

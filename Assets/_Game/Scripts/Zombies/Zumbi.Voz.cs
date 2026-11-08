@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using ZombieCityCleaner.Combat;
 
 namespace ZombieCityCleaner.Zombies
@@ -55,7 +55,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Toca uma fala (um clipe sorteado), se nenhuma mais forte está tocando.</summary>
         bool Falar(AudioClip[] clips, Fala tipo, float volume, float tom = 1f, bool comLimite = true)
         {
-            if (clips == null || clips.Length == 0 || voz == null || _m == null || Morto || Petrificado) return false;
+            if (clips == null || clips.Length == 0 || voz == null || _m == null || Morto || Petrificado || SemCabeca) return false;
             if (Pedra >= 0.95f && tipo != Fala.Agonia) return false;
             if (voz.isPlaying && Time.time < _falaAte && tipo <= _falaAtual) return false;
             if (comLimite ? !_m.PodeGemer(transform.position) : !_m.PodeOuvir(transform.position)) return false;
@@ -94,7 +94,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Ouviu um chamado: responde daqui a pouco; no anfitrião, parado, vira para quem chamou.</summary>
         internal void OuvirChamado(Vector3 de, float quando)
         {
-            if (Morto || Petrificado) return;
+            if (Morto || Petrificado || _semComando) return;
             if (_responderEm < 0f) _responderEm = quando;
             if (!Copia && Atual == Estado.Parado) OlharPara(de);
         }

@@ -910,7 +910,7 @@ cartas".
   - **Conferido (28/10/2026, Mundo, semente 7, no Editor):** 4 Ocos criados perto da casa da família vagaram (0,55 m/s, a animação acompanhando) e perseguiram e golpearam o jogador; o tiro no antebraço e na canela cortou os dois e o zumbi continuou atacando, mancando; o braço inteiro também; o tiro na cabeça derrubou o corpo sem a cabeça, com a tampa do pescoço; o do tronco, o ragdoll inteiro; os corpos assentaram no piso (4 cm acima, sem atravessar) e somem depois de 15 s, como antes; sem erros no Console. A Demo_Cidade ainda tem os prefabs do ZombieGaroto na cena até alguém rodar o Montar zumbis nela.
 - **Os Ocos são fotossensíveis (a pedido em 28/10/2026; o plano inteiro: o sol petrifica, a lanterna, o farol e a tocha só afastam, a horda que cerca, as estátuas e os zumbis embaixo dos carros; a etapa 1 é o sol, a pedra e a noite):**
   - **No sol** (`ZombieManager.NoSol`: um raio do peito, 1,2 m, até o sol, sem nada no caminho; fazem sombra o cenário, as construções e os carros, camadas Default, TransparentFX e Veiculo; dentro do bunker nunca é sol; o sol do jogo fica parado no céu de dia, então a sombra de cada prédio fica no mesmo lugar), a **pedra** (`Zumbi.Pedra`, 0 a 1) sobe dos pés à cabeça em `tempoParaPetrificar` (10 s). Ele entra em desespero (`Estado.Fugindo`: corre para a sombra mais perto, achada em 10 pontos do NavMesh até `raioDaSombra`, e se debate com a reação ao tiro) e fica cada vez mais lento (a velocidade e a animação caem até `lentidaoNaPedra`, 10%). Quem está perseguindo ou atacando (ameaçado) não foge: continua atrás do jogador, virando pedra. Na sombra, a pedra recua em `tempoParaRecuar` (20 s).
-  - **De pedra** (`Estado.Petrificado`): para na última pose (o Animator desliga), sem agente e sem reagir, até a noite. A casca protege: o tiro tira `danoNaPedra` (1/4; uns 24 tiros de pistola, 3 de sniper), a cabeça não explode (a partir de `pedraQueProtegeACabeca`, 0,8) e nenhum membro cai (a partir de 0,5 de pedra); o tiro e o soco soltam faíscas e poeira, sem sangue. O carro (acima de 3 m/s) e a espingarda de perto (o arremesso) a quebram de uma vez; o carro perde 20% da velocidade. Quebrada, cai como estátua (`CorpoDeZumbi.Estatua`: o corpo todo de pedra e as juntas travadas, duro) e solta poeira.
+  - **De pedra** (`Estado.Petrificado`): para na última pose (o Animator desliga), sem agente e sem reagir, até a noite. A casca protege: o tiro tira `danoNaPedra` (1/4; uns 24 tiros de pistola, 3 de sniper), a cabeça não explode (a partir de `pedraQueProtegeACabeca`, 0,8) e nenhum membro cai (a partir de 0,5 de pedra); o tiro e o soco soltam faíscas e poeira, sem sangue. O carro (acima de 3 m/s) e a espingarda de perto (o arremesso) a quebram de uma vez; o carro perde 20% da velocidade. Quebrada, cai como estátua (`CorpoDeZumbi.Estatua`: o corpo todo de pedra e as juntas travadas na pose dela, duro) e solta poeira; desde 07/11/2026 ela se parte ao bater no chão, e a espingarda e o carro a despedaçam (veja "A estátua", em "Morte (ragdoll)").
   - **À noite** (`EDia`: `CicloDoDia.Noite` abaixo de 0,5, do meio do amanhecer ao meio do anoitecer), cada estátua se solta num momento sorteado de 30 a 60 s depois de escurecer (`soltarANoite`): a pedra desce em `tempoDeQuebrar` (1,6 s) e a casca quebra em poeira, só em quem está sendo visto (`renderer.isVisible`, em cada máquina). Longe de todos (o zumbi virtual), ela some na hora.
   - **De dia, na sombra**, o zumbi só vaga em pontos de sombra e só observa quem está no sol (o alerta para em 0,95: olha e não sai); ameaçado (encostou, correu perto, tiro nele ou a menos de 12 m), sai atrás do jogador no sol, virando pedra. Quem chega perto de dia depois de mais de 3 s longe, no sol, já aparece de pedra (ninguém viu subir).
   - **Na tela:** o shader `ZombieCityCleaner/Oco` (o Lit da URP com a pedra por cima: o gesso cinza dos moldes de Pompeia, com o claro e o escuro da textura e um grão, e a frente da pedra como uma faixa escura e irregular subindo), por `MaterialPropertyBlock` (`_Petrificacao` e `_AlturaDosPes`) só enquanto há pedra. A pedra vai pela rede (o 15º byte de cada zumbi); a cópia anda até ela suavemente.
@@ -958,6 +958,37 @@ cartas".
     - `Oco_Voz_01..06` (o som padrão, 2,5 a 3,5 s: o gemido grave e oco, terminando numa inspiração chocalhada); `Oco_Golpe_01..03` (o rosnado do ataque); `Oco_Chamado_01..03` (estalos da garganta que aceleram e um lamento oco que sobe e cai, com o assovio forte) e `Oco_Resposta_01..03` (uns estalos e um lamento curto); `Oco_Agonia_01..04` (o grito esganiçado, com vibrato largo, soluços e a pele chiando); `Oco_Tiro_01..04` (a dor, curta); `Oco_Petrificando` (o laço da crosta estalando, com um ranger grave e rachaduras), `Oco_Petrificou` (a pedra fechando) e `Oco_Soltando` (a casca quebrando à noite).
   - **Quem toca o quê** (`Zombies/Zumbi.Voz.cs`, em todas as máquinas): uma fala por vez na fonte "voz" do zumbi, e a mais forte corta a mais fraca (a agonia, a dor, o golpe, o chamado, a resposta, o gemido). O gemido à toa (`GemidosAoAcaso`) virou a voz do Oco, e em 22% das vezes um chamado; quem começa a perseguir chama (no lugar do gemido de antes); até 2 dos de perto (16 m) respondem de 0,6 a 1,5 s depois, e no anfitrião quem está parado vira para quem chamou (`OuvirChamado`; só som e olhar: ninguém sai atrás por isso). O golpe rosna (`MostrarGolpe`); a reação ao tiro dói (`MostrarReacao` → `SomDaReacao`; pulando da luz, um susto mais agudo); morrendo, o último grito sai solto no lugar. Na sombra que vira pedra (a pedra subindo), a agonia grita de tempos em tempos e a crosta estala numa segunda fonte (em laço, só a até 18 m de quem escuta, prioridade baixa); virando estátua, a pedra fecha (`Oco_Petrificou`); à noite, ao se soltar, a casca quebra (`Oco_Soltando`) e ele ruge. O gemido, o chamado e a agonia respeitam o limite de vozes novas por segundo (`PodeGemer`); o golpe e a dor, só a distância (`PodeOuvir`, 30 m).
   - **A agonia** (`Editor/MontagemDosZumbis.Agonia.cs`): três animações feitas por código nos músculos do esqueleto Humanoid (`AgoniaRosto`, 2,4 s: curvado, as mãos cobrindo o rosto, a cabeça balançando; `AgoniaPele`, 3 s: os braços cruzados, uma mão esfregando o outro braço, depois troca de lado, olhando para ele; `AgoniaEncolher`, 2 s: bem curvado, os ombros encolhidos, os braços apertados no peito, tremendo e se balançando), partindo da pose parada (o Idle no quadro 0), salvas em `Oco/Agonia/` e gravadas em cada Oco pela mesma montagem (`GravarClipes`). As poses foram achadas olhando fotos do Oco posado (os sinais dos músculos estão no comentário do arquivo). No Animator, o inteiro `Agonia` (1, 2, 3; 0 nenhuma) leva do vazio da camada "Ações" (só o tronco: as pernas continuam fugindo) a cada uma, e de volta. Cada zumbi tem a sua (`TipoDeAgonia`, pelo Id e a geração: um em cada quatro fica "como está hoje", só se debatendo com a reação ao tiro). Ela aparece enquanto a pedra sobe (`Agonizar`: no anfitrião e nas cópias, pela pedra que chega); virando estátua, o Animator para e a pose fica (a estátua guarda a agonia, como os moldes de Pompeia); a estátua que já nasce de pedra também ganha uma pose da agonia (`PosarAAgonia`).
+    - **Os braços sem entrar no corpo (07/11/2026, a pedido: "os braços entram dentro do corpo deles", "manter o mesmo
+      sistema que existe, apenas aperfeiçoar a animação"):** os músculos foram acertados no Oco_Original e o Humanoid leva
+      os ângulos para cada modelo; com o tronco curvado, as "mãos no rosto" ficavam nos ombros, os cotovelos cruzavam na
+      frente do peito e os antebraços atravessavam o queixo e o peito (3 a 9 cm dentro no próprio Oco_Original; mais nos
+      outros). O sistema é o mesmo (os 3 clipes Humanoid de `Oco/Agonia/`, os estados, o `TipoDeAgonia`); muda a gravação
+      em cada modelo (`Gravar`, com o `Editor/MontagemDosZumbis.BracosForaDoCorpo.cs`):
+      - o tronco, os ombros e a cabeça continuam os dos músculos (o balanço, o "não", o tremor); os braços vão a alvos
+        medidos no próprio modelo, por um IK de dois ossos (o cotovelo numa dobradiça de verdade: o braço gira no próprio
+        eixo para o antebraço dobrar no plano dele);
+      - **Rosto:** as palmas nas bochechas e nos olhos (a frente da cabeça, achada nos vértices dela), os dedos para cima
+        e um pouco para dentro, esfregando em círculos pequenos; os cotovelos para baixo e para fora. As mãos acompanham a
+        cabeça balançando;
+      - **Pele:** um antebraço deitado na frente da barriga e a palma do outro esfregando por cima dele (na grossura medida
+        do antebraço), do pulso ao cotovelo, 7 vezes no laço; troca de lado no meio, como antes;
+      - **Encolher:** os punhos embaixo do queixo, na frente do peito, tremendo, os cotovelos colados embaixo. A altura é
+        escolhida uma vez por modelo: a mais alta em que os braços cabem (embaixo do queixo; mais baixo, até a frente da
+        barriga);
+      - **se ainda encosta:** o corpo (o tronco, a cabeça e os ombros, com os buracos dos braços e das pernas tampados)
+        vira uma grade de cubos de 1,2 cm em cada quadro (as malhas têm peças sobrepostas e furinhos; a grade aguenta os
+        dois), e a mão sai pelo caminho mais curto, puxada para a frente; se é o cotovelo que entra, ele abre para fora.
+        O ajuste é suavizado no tempo (sem tremer) e conferido de novo antes de gravar. Os dedos são medidos como ficam
+        no jogo (na pose do modelo: eles não são gravados). Os pontos do braço que já encostam no corpo na pose de
+        descanso não contam;
+      - **o menu** "Zombie City Cleaner/Zumbis/Gravar a agonia de novo (sem remontar)" regrava só os 3 clipes nos 20
+        modelos (os 12 Ocos, o NovoBrutamonte, os Longs, os Corredores e o NovoCorredor), nos mesmos arquivos
+        (`Oco/Clipes/<modelo>/Agonia*.anim`): o controlador e as trocas continuam os mesmos. Leva uns 11 minutos. A
+        montagem inteira faz o mesmo;
+      - **medido na prévia, nos clipes gravados:** os Ocos encostam no máximo 0,6 cm (contando a folga da grade); os
+        Longs e os Corredores, até 0,7 cm no Rosto e na Pele e 1 a 4 cm no Encolher (o punho no papo do Long). O
+        NovoBrutamonte, com os braços enormes, ainda entra 8 cm na Pele, mas ele não sente a luz e nunca toca a agonia.
+        Não testado no Play.
   - **Conferido (28/10/2026, Mundo, semente 7):** 6 Ocos no sol na rua (os 4 tipos de agonia): cada um entrou na sua agonia fugindo, gritaram em turnos (os 4 gritos), a crosta estalou em todos, e em 10 s viraram estátuas com as mãos na cabeça, os braços cruzados ou encolhidos (fotos), caladas. À noite, sem a lanterna, uma horda de 4: 4 chamados e 2 respostas, 10 golpes rosnados, a dor no ferido. Antes, com a lanterna, os que pularam da luz deram o susto. Nenhum erro no Console. Os sons foram feitos sem ouvir (pelos números e pelos espectrogramas): o ouvido do Pedro decide o que ajustar no gerador.
   - **Para depois (pedido, ainda não feito):** os túneis (o Gustavo está fazendo) como abrigo; a tocha (feita em 05/11/2026: "O carro ligado, o fogo e a chuva"); a animação de soltar da pedra (hoje ele se debate com a reação ao tiro) e a de agarrar do rastejante; a esquiva também contra os tiros; à noite, mais dificuldade.
 - **Os zumbis leves (24/10/2026, a pedido: os modelos de ~3.100 vértices eram pesados para hordas grandes):** hoje a lista da montagem (`MontagemDosZumbis.Modelos`) tem só o `ZombieGaroto` (1,75 m, 2.195 triângulos, do Tripo, sem rosto, sangue nem sujeira). Ele voltou em 25/10/2026, depois dos em blocos (abaixo). Os 4 modelos de baixo e os em blocos continuam na pasta e voltam se entrarem na lista.
@@ -1838,6 +1869,38 @@ igual. Os itens no jogo são a parte 4 (abaixo).
     - A buzina: duas cornetas em terça maior (412 e 518 Hz, inteiros para o laço de 1 s), com os harmônicos reforçados em ~850 Hz e ~2,4 kHz e saturada. Toca enquanto o motorista segura B (`_buzina`, escrita pelo dono; no dono, sem esperar a rede). Sem motorista, para.
   - **O painel aceso** (`Painel()`): com a ignição (a chave em 60° ou mais), mais fraco enquanto o arranque gira. O ponteiro da velocidade segue a velocidade (suavizado), o da gasolina sobe devagar até `combustivel` (0,68; ainda não gasta) e, sem ignição, os dois caem para o zero. A luz verde do farol acende com os faróis. A luz de teto acende quando um lugar muda (a porta abre) e apaga devagar 2,5 s depois de a porta bater.
 - **`Player/PassageiroDoCarro`** (no prefab do jogador, em todas as cópias; roda depois do `JogadorRede`):
+  - **As mãos nos veículos e a cabeça (07/11/2026, a pedido):**
+    - **O corpo na primeira pessoa** (`JogadorRede.CorpoNoVeiculo`, chamado a cada quadro por quem senta): na moto e no
+      caiaque com o remo, o dono vê o próprio corpo sem a cabeça e sem o pescoço (o osso do pescoço fica com 0,001 de
+      escala depois da animação e do olhar; na terceira pessoa, não). As mãos no guidão e no remo são as do corpo, as
+      mesmas que os outros veem (no caiaque, os `BracosRemando` de primeira pessoa saíram: "em primeira pessoa aparece
+      apenas o remo"; o remo do corpo deixa de ser só sombra, `Caiaque.SoSombra`).
+      - Depois do primeiro teste do Pedro: na moto, "a gente está vendo o pescoço do personagem e uma parte da cabeça"
+        (só a cabeça sumia), e no caiaque o corpo ficava "um pouco bugado quando olho pra baixo" (o peito dobrava com o
+        olhar e vinha para a frente, por cima da câmera). Agora o pescoço some junto, o peito do dono não dobra com o
+        olhar na primeira pessoa (os outros continuam vendo ele dobrar), e o olho fica pelo menos 15 cm acima e 7 cm na
+        frente do pescoço (`JogadorRede.OlhoForaDoCorpo`; o tronco mexe com o remar e com a moto inclinada).
+      - **No carro, não** ("do carro em primeira pessoa, tira e deixa como estava antes sem nada"): na primeira pessoa,
+        só a sombra, como antes. As mãos no volante continuam (os outros e a câmera de trás veem).
+    - **Embaixo do teto** (`CaberNoTeto`, no carro, em todas as máquinas, depois da pose sentada e antes das mãos no
+      volante; a pedido: "agora ele ultrapassa um pouco o teto - tem como a gente cortar um pouco o personagem? encurtar
+      ele dentro do carro talvez?"): se o alto da cabeça passa do teto por dentro (`Carro.TetoPorDentro`: o
+      `tetoPorDentro` do prefab ou, com 0, o alto da carroceria menos 7 cm), o tronco encurta: o peito desce em direção
+      à coluna até a cabeça caber, com 1,5 cm de folga (no máximo 45% do trecho). A cintura, onde encurta, fica atrás da
+      porta; a cabeça, os ombros e os braços ficam do tamanho de sempre. A cabeça é medida sem o olhar (para o tamanho
+      não mudar quando ele olha para cima ou para baixo), e o alto dela sai das malhas do corpo (no repouso, com o
+      cabelo e o que estiver preso na cabeça).
+    - **As mãos no volante** (`MaosNoVolante`, depois da pose sentada, em todas as máquinas): as duas no aro, a 62° do
+      alto de cada lado, acompanhando o volante desenhado só até 55° (`MaosSeguemOVolante`); dali em diante o aro desliza
+      nas mãos e os braços nunca se cruzam ("quando realizarmos uma curva, os braços não se ultrapassem um ao outro"). O
+      meio e o raio do aro saem das malhas do volante (`Carro.MedidasDoVolante`, de 12 a 25 cm); o pulso fica na frente
+      do aro, e o cotovelo dobra para baixo e para fora.
+    - **A moto:** as mãos já iam aos punhos (`PoseDaMoto`); a direita torce o acelerador (28° no fundo; só no dono).
+    - **A cabeça baixa no carro:** o olhar de dentro do carro (e do caiaque) não ia para o corpo (o `Pitch` da rede
+      ficava o do momento de entrar, olhando para a porta), e o peito e a cabeça ficavam dobrados para baixo o tempo
+      todo ("como se o personagem fosse muito grande para o carro"). Agora o dono manda o olhar do banco. A pose
+      sentada em si tem a cabeça só 6° inclinada (medido).
+    - Não testado no Play (pouca memória livre).
   - Entrando: a porta abre; de 0,25 a 0,85 s ele vai até o banco; sentado, o corpo é posto no banco a cada quadro (a raiz fica de forma que o quadril caia no ponto do lugar). Saindo: ele desce até o ponto de saída (do lado da porta; se não couber, pelas outras portas, atrás ou na frente do carro) e volta a andar.
   - **A pose sentada** é feita no código, com o Animator do corpo desligado: o repouso do prefab, o tronco deitado 10° no encosto, as coxas para a frente e as canelas para baixo; o motorista com as mãos no volante, os outros no colo.
   - Sentado, em todas as cópias: a cápsula (CharacterController) desliga (dentro do carro ela empurraria o carro), os passos param, o que está na mão do corpo some (`JogadorRede.EsconderNaMao`) e a velocidade do jogador conta 0 (a fome, os zumbis). Nos outros, a posição recebida pela rede é trocada pela do banco no carro daquela máquina (o carro e o jogador chegam com atrasos diferentes).
@@ -2022,6 +2085,66 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   - o zumbi morto (invisível) fica na lista o mesmo tempo, para a morte chegar aos clientes que passarem perto, e depois volta ao pool. Zumbis mortos não renascem.
   - Cada máquina tem os seus corpos (são só visuais): caem para o mesmo lado em todas, mas podem parar em lugares um pouco diferentes.
   - **Custo medido:** 20 zumbis mortos no mesmo quadro deram um quadro de 19 ms (as 220 partes começando a cair, mais o sangue); os seguintes ficaram em 5 a 8 ms até os corpos assentarem. Uma morte sozinha fica abaixo de 1 ms.
+  - **A morte com ossos (07/11/2026, a pedido: "eles morrem muito mole, parece que não possuem ossos", "caem e despencam
+    igual uma maria mole"; e a estátua, "o totalmente o oposto, eles ficam duros, bonecos estáticos"):** medido na
+    prévia (uma cena com física, sem Play):
+    - **As juntas estavam ao contrário:** os eixos e os limites da montagem (`MontarCorpo`) foram escritos à mão, e a
+      física conta o giro ao contrário do que estava pensado: o joelho dobrava 120° para a frente e só 5° para trás; o
+      quadril, a coluna e o pescoço também; e o cotovelo dobrava no "balanço" (5°). Na morte, as poses do jogo passavam
+      dos limites (o antebraço andando, 50 a 60°; correndo ou atacando, 90 a 166°) e a física puxava tudo de uma vez: os
+      braços abriam, o corpo desmontava e depois dobrava para o lado errado.
+    - **As juntas pelas animações** (`Editor/MontagemDosZumbis.JuntasDosCorpos.cs`, menu "Zumbis > Acertar as juntas
+      dos corpos (sem remontar)", e a montagem chama o mesmo): para cada junta, as poses de todos os clipes gravados
+      do modelo dão o eixo dela (o giro que ela mais faz), o do balanço e os limites (o que as animações usam, sem os 2%
+      de cada ponta, mais uma folga de um quarto do lado, de 5 a 20°). No Oco_Original: o joelho dobra 120° e estica
+      6°; o cotovelo, 140° e 10°; a coluna, 71° para a frente e 29° para trás. Rodado nos 20 corpos.
+    - **Sem o tranco** (`CorpoDeZumbi.LimitesNaPose`): em cada queda, as juntas tomam a pose da morte como o zero
+      delas (soltar e ligar de novo o `connectedBody`), e os limites andam junto (o giro que a pose já tinha sai dos dois
+      lados). O sentido do giro da física é o contrário do eixo da junta (`SinalDoGiro`, -1, medido).
+    - **Os músculos que apagam** (`Zombies/CorpoDeZumbi.Musculos.cs`): cada junta puxa de volta para a pose da morte
+      (uma mola com amortecimento, pela inércia das duas partes), com a força sumindo em ~0,5 a 1 s, e um atrito entre as
+      partes até 3,5 s (os braços não balançam como borracha). Cada corpo segura um pouco diferente. O jeito depende da
+      morte (`CorpoDeZumbi.Morte`, escolhido no `ZombieManager.Cair`):
+      - **Comum** (o tiro no corpo): segura a forma por 0,12 a 0,25 s e solta antes de chegar ao chão;
+      - **Cabeça** (o tiro na cabeça, estourando ou não): cai de joelhos (as coxas retas embaixo do quadril, as canelas
+        para trás, o peito em pé: ~0,4 s) e depois o quadril dobra, o peito gira para a frente e bate no chão;
+      - **Correndo** (acima de 2,2 m/s): segura pouco e mergulha de cara;
+      - **Arremesso** (a espingarda de perto, o carro): como antes, solto em 0,15 s;
+      - **Desligou** (o sem cabeça que andou): mole de uma vez, só com o atrito.
+      O boneco vivo (caindo sem uma perna) só tem o atrito. Só custa nos corpos caindo, nos primeiros 3,5 s.
+    - **O atrito no chão:** as partes têm um material de física com atrito alto e sem quique.
+    - **Conferido na prévia** (6 modelos: Ocos, NovoBrutamonte, Long, Corredor, NovoCorredor; 5 jeitos): nenhuma
+      junta pula na morte (antes, até 166°), nada vira NaN, o arremesso voa até ~12 m/s como antes, e o quadril assenta.
+      Não testado no Play.
+  - **A estátua** (`Zombies/CorpoDeZumbi.Pedra.cs`):
+    - **Na postura certa:** as juntas travadas iam para o zero delas (a pose de repouso, de braços abertos), e a estátua
+      mudava de postura ao cair. Agora elas travam na pose da estátua (reancoradas nela), e voltam ao repouso no pool.
+    - **Quebra no chão:** ela tomba dura e, na primeira batida forte (uma parte que perde mais de 2,4 m/s num passo),
+      se parte: a cabeça quase sempre (85%), cada antebraço às vezes (60%), as canelas menos (30%). Cada parte vira um
+      pedaço de pedra que rola (o pool dos membros cortados, com o `_Petrificacao` 2; a cabeça, os triângulos dela no
+      espaço do osso), o corpo fica com o toco de pedra, e tem poeira e o som da casca.
+    - **A espingarda de perto e o carro** a despedaçam na hora: a cabeça, os braços inteiros e as canelas.
+    - **O custo:** longe da câmera (mais de 60 m), ela só tomba inteira; os pedaços são os 24 do pool dos membros (o mais
+      antigo é reaproveitado). Conferido na prévia (a quebra no chão e a da espingarda); os pedaços soltos só no Play.
+- **O sem cabeça que ainda anda** (07/11/2026, a pedido: no tiro na cabeça, "alguns terem alguns minutos de respostas
+  motoras, como andar sem rumo, até mesmo podendo dar algum hit (com uma possibilidade mais baixa), e desligando por
+  completo como se fosse um corte na energia"; `Zombies/Zumbi.SemComando.cs`):
+  - no anfitrião, o acerto que estoura a cabeça e mataria, em 15% das vezes (`chanceDeAndarSemCabeca`, no cabeçalho
+    "O sem cabeça" dos `AjustesDeZumbi`), deixa ele de pé: `Estado.SemComando` (o 11; o estado vai em 4 bits na rede),
+    sem a cabeça (a malha sem ela, a do corpo do modelo), sem voz, sem a hitbox da cabeça, sem ver nem ouvir;
+  - desnorteado, como quem não sabe para onde ir: passos curtos (0,6 a 1,8 m), cada um virando até 150° para um lado,
+    num ritmo que muda (a cada 0,35 a 0,8 s), e às vezes para e gira no lugar; por uns 3 s (`tempoSemCabeca`, 2,5 a
+    3,5 s: a pedido, depois do primeiro teste, "ficam muito tempo vivos"; eram 5 a 14 s). Quem encostar na frente dele
+    leva um golpe às cegas em 35% das vezes (`chanceDoGolpeSemCabeca`), com o dano normal;
+  - o sem comando fica preso nele (`_semComando`) até cair: o barulho, o chamado e a perseguição não mudam o estado
+    dele (`Investigar`, `ComecarPerseguicao` e `OuvirChamado` o ignoram, e o `Pensar` o devolve ao `SemComando`).
+    Antes, o tiro seguinte fazia ele ir investigar o barulho do próprio tiro, deixava de ser "sem comando", e o corpo
+    caía com a cabeça de volta (no primeiro teste do Pedro);
+  - acabou o tempo (vigiado em todos os vivos, mesmo longe) ou levou mais um acerto: desliga (`Desligar`), e o corpo cai
+    mole (`Morte.Desligou`; o bit 64 da morte na rede). A cabeça não estoura de novo;
+  - o XP de quem o abateu vem no tiro na cabeça (`ZombieManager.Acertar`), e não de novo quando ele desliga;
+  - não andam sem cabeça: o Brutamonte, o Long, quem já está sem uma perna, caído ou de pedra, e o arremesso;
+  - a rede: `VersaoDaRede` 10. Não testado no Play.
 - **Efeitos (`Combat/Sangue`, no "Efeitos"):** tudo vem de pools, criados no começo.
   - respingo de gotas no acerto (as gotas param no chão);
   - explosão da cabeça: muito sangue, pedacinhos e 4 manchas em volta;
@@ -2128,6 +2251,19 @@ O resumo para gente (os números, como testar) está em `Docs/10-Zumbis-Especiai
   - **O ritmo:** `RitmoDoEspecial` acelera o Animator: 1,8× no avanço do Brutamonte e até 1,3× no bote do Corredor (multiplica
     o `animador.speed` do `MostrarPedra`).
 - **Os novos da comparação (NovoBrutamonte e NovoCorredor, do Tripo; 05/11/2026, a pedido):**
+  - **O NovoBrutamonte está no jogo desde 07/11/2026** (a pedido: "implementar o novo brutamonte no jogo, apenas o
+    brutamonte por hora, já com suas novas animações e mecânica"; o Pedro escolheu este, não o `Brutamonte_Novo` de
+    03/11, e que ele substitua os três). Ele é o único Brutamonte em `Especiais` (`MontagemDosZumbis.Especiais.cs`), no
+    lugar do `Brutamonte_V1`, do `_V2` e do `_V3` (os prefabs deles ficam para a cena de comparação), e continua em `Novos`
+    (o material com o avesso, `EhNovo`). A lista do jogo tem 19 modelos: os Ocos 0–11, o NovoBrutamonte 12, os Longs
+    13–15 e os Corredores 16–18.
+    - **O `Zumbi.modelo` do prefab tem de ser o lugar dele na lista** (o pool, o byte da rede e os corpos usam esse
+      número). O menu **Zumbis > Atualizar a lista do jogo (sem remontar)** (`AtualizarAListaDoJogo`) acerta o número de
+      cada prefab e põe a lista na cena Mundo, sem reimportar nem regravar nada. A montagem dos novos dá ao que está no jogo
+      o lugar dele (`LugarNoJogo`), e a gravação das animações dos especiais não grava o NovoBrutamonte duas vezes.
+    - Conferido no Play (07/11/2026, mundo pequeno): o ciclo inteiro, da terra à morte pelo olho, com a fúria nova.
+    - **O dano dele:** com a média de 06/11, o avanço no tronco matava de uma vez (no teste: 100 de vida a 0). Desde a
+      vida equivalente de 07/11/2026 (a seção do corpo), o avanço tira 50 de novo e os golpes da fúria 34, 40 e 54.
   - **O avesso da roupa:** os rasgos da calça (e da camisa) são buracos na malha, sem a pele por baixo, e por eles via-se o
     fundo através da perna ("uma parte que fica transparente dentro da calça"). O shader `ZombieCityCleaner/Oco` ganhou
     `_Cull` (padrão Back: os Ocos ficam iguais) e `_CorDoAvesso`; com `_Cull` em Off, o lado de dentro sai escuro, na cor
@@ -3434,6 +3570,50 @@ falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s
   Espaço sobe, C mergulha; o `ArmaJogador` não age nadando); o fôlego no `VidaJogador.Agua.cs` (o anfitrião, pela posição
   da rede: 30 s, volta em 4 s; sem ele, 8 por segundo do tronco, "Afogou-se."; a `NetworkVariable<byte> Folego`); a tela
   no `AguaNaTela` (a cor embaixo da água e a barra).
+  - **O nado novo (07/11/2026, a pedido: "atualizar a parte de nadar"; o Pedro achava que andava no fundo: o nado ligava,
+    mas a arma ficava na mão e a câmera parada):**
+    - **A mão:** entrando na água funda, o `ArmaJogador` guarda o que estava na mão (`BracosEscondidos`, como o pneu) e
+      mostra os braços nadando (o `Resources/BracosNadando`, montado do `Jogador_FP_Nadar.fbx`; sem ele, os braços só somem);
+      saindo, a mão volta sacando. No corpo, o `NadoNoCorpo` esconde o que está na mão (`JogadorRede.EsconderNaMao`).
+    - **A câmera** (`MovimentoPrimeiraPessoa.CameraNaAgua`): desce `olhoNaAgua` (0,08 m), sobe e desce `balancoDaBracada`
+      (0,045 m) e balança de lado `rolagemDaBracada` (1,4°) no ritmo da braçada (`CicloDaBracada`: 1,2 s; o rápido 0,8 s;
+      parado 2 s, as constantes `BracadaNormal`, `BracadaRapida` e `BoiandoParado`, as mesmas dos clipes).
+    - **O nado rápido:** o correr para a frente (`NadandoRapido`), a `velocidadeNadandoRapido` (2,8), com fôlego (arranca
+      com mais de 15). O anfitrião gasta o fôlego de quem passa de 2,3 m/s na água funda, na tona (`SegundosDeNadoRapido`,
+      45 s, sem voltar enquanto isso). **A mochila pesa:** o espaço ocupado dela (contado a cada 0,5 s) deixa o nado até
+      30% mais lento (70 células, a grande cheia).
+    - **O que todos veem e ouvem** (`Player/NadoNoCorpo`, em todas as máquinas, posto pelo `VidaJogador`; nos outros, a
+      fundura pela posição que chega): o tchibum ao entrar, a braçada no meio de cada ciclo (o som e a onda), a ondinha
+      parado, a água escorrendo ao sair e a puxada de ar de quem sobe depois de 2 s embaixo. As ondas e os respingos são o
+      `Player/AguaNaSuperficie` (um anel deitado e as gotas, com o material das partículas do `Efeitos`). O corpo: o
+      parâmetro "Nadando" do controlador do corpo (e a camada dos braços sem peso), quando o controlador tem.
+    - **Os sons** (provisórios, `Ferramentas/agua_sons.py`): `Audio/Resources/Agua/Agua_Entrar`, `Agua_Bracada_0..3`,
+      `Agua_Respirar` e `Agua_Sair`. **Embaixo da água, tudo abafado:** o `AguaNaTela` põe um passa-baixa no ouvido (de 22
+      kHz a ~650 Hz).
+    - **Os zumbis param na beira** (a pedido: "sem zumbis na água"): o `NavMeshDoMundo.TirarAAgua` tira do NavMesh o fundo
+      do lago onde a água passa de 0,3 m (caixas de "Not Walkable", uma por trecho de cada linha da grade de 2 m).
+    - **As animações** (o `Blender/agua_animacoes.py`, em segundo plano, dos FBX do personagem que estão no projeto; os
+      `.blend` dele ficam com o Gustavo): `Jogador_FP_Nadar.fbx`, `Jogador_FP_Remo.fbx` e
+      `Personagem_PrincipalBloco_Agua.fbx`, montados pelo `Editor/MontagemDaAgua.cs` (menu Zombie City Cleaner > Jogador >
+      Montar o nado e a remada; a montagem dos personagens também põe o nado no controlador do corpo que ela refaz).
+      - **Os braços:** `Resources/BracosNadando` (o `Jogador_FP_Nadar.controller`: o Sacar ao aparecer e a árvore pelo Speed,
+        Idle 0, Walk 1,9, Run 2,8) e `Resources/BracosRemando` (Idle 0, Walk 1,6 e, a 3,2 m/s, 1,4 vez mais rápido; o remo
+        na mesma malha, no osso `remo`, com o material "Paleta" → `Cidade.mat`). A 30 quadros por segundo (os antigos são 24).
+      - **O corpo:** o FBX da água só tem o esqueleto, e a Unity faz dele a raiz do modelo (os caminhos saíam sem o
+        `PrincipalBloco_Rig/`, e o giro dele, no caminho vazio, deitava o personagem). A montagem copia cada clipe para
+        `Personagens/Agua/<clipe>.anim` com o prefixo (`ClipesDoCorpo`); o controlador usa as cópias. Medido na prévia: o
+        Boiar com o quadril a 1,03 m e a cabeça a 1,63; o Nadar deitado, o quadril a 1,21 e a cabeça a 1,45–1,55 (a água
+        a 1,42); o Remar sentado, o quadril a 0,02 da origem (que vai no `Assento_N` do caiaque).
+      - **O remo na mão do corpo (para a etapa do caiaque):** a raiz do `Remo.fbx` filha do `hand.R`, com `localPosition`
+        (0,30; 0,072; −0,03) e `localRotation` (x 0, y 0,60877, z 0,79335, w 0), igual em todos os quadros do Remar e do
+        Remar_Parado (no `weapon.R`: (0,30; 0,0113; 0,0045), o mesmo giro). Se na Unity ele não pegar a mão esquerda,
+        espelhar o X. A pá esquerda fica na água nos quadros 1–13 (0–0,43 s) e a direita nos 25–37 (0,80–1,23 s), na
+        mesma fase da remada de primeira pessoa.
+      - Conferido na prévia da Unity (07/11/2026, uma cena de prévia com a malha assada em cada pose); no Play, ainda não
+        (a memória do PC estava baixa).
+    - Conferido no Play (07/11/2026, mundo pequeno, com o W e o Shift pelo teclado de mentira): a mão guardada e de volta,
+      a câmera de 1,50 a 1,58 m, o nado a 1,88 m/s e o rápido a 2,78 (o fôlego de 100 a 86 em 7 s, e de volta ao parar), e o
+      NavMesh sem o lago a 0,9 m de fundo, com a beira (0,3 m) dentro.
 - **O caiaque** (`Vehicles/Caiaque.cs`, `PortaDoCaiaque.cs`, `Player/PassageiroDoCaiaque.cs`): os 2 lugares do anfitrião
   (`EntrarRpc`/`SairRpc`, o dono é quem rema, o `NetworkTransform` do dono como no carro); cada máquina senta os jogadores
   (o corpo preso no banco, o "Lugar" 2 do Animator, sem a cápsula); no dono, o olhar do banco e o E sai (meio segundo
@@ -3442,14 +3622,114 @@ falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s
   também põe na lista dos prefabs da rede); o `MundoDaPartida.PorOCaiaque` (na beira, do lado do bunker) e o save
   (`MundoSalvo.caiaque`, `caiaques`). O `PassageiroDoCarro.NoCarro` não sabe do caiaque: quem precisar, olhe o
   `PassageiroDoCaiaque.Sentado`.
+  - **Refeito em 07/11/2026** (a pedido: "o certo é pescar quando paramos, mesmo se estivermos sozinho"; a remada com
+    som e rastro; "não pode virar, mas vai ficar balançando"; o compartimento):
+    - **O remo de quem rema** (`Caiaque._remo`, `NetworkVariable<byte>` do dono: 0 no casco, 1 na mão parado, 2 remando;
+      `RemoNaMao`, `Remando`, `PorORemo`). No dono, o `PassageiroDoCaiaque` decide: o W, o S, o A ou o D pegam o remo;
+      parado (`Velocidade` abaixo de 0,35 m/s) por `LargarDepois` (1,2 s), larga, e as mãos ficam livres (o `ArmaJogador`
+      volta, a mão saca: a vara e a arma funcionam), com o aviso uma vez. O `Navegar` só lê o mover com o remo na mão.
+    - **As mãos** (`PassageiroDoCaiaque.Maos`): com o remo, o `ArmaJogador` desliga, a mão some (`EsconderAMao`, também os
+      braços de fora dela) e aparecem os `Resources/BracosRemando` (`ArmaJogador.ModeloExtra`, que também faz os
+      `BracosNadando`), com o Speed pela velocidade (parado, o Idle; remando, a remada); no corpo, o que está na mão some.
+    - **O corpo:** o parâmetro "Remando" do controlador do corpo (`MontagemDaAgua.PorORemarNoControlador`: 1 o
+      Remar_Parado, 2 o Remar; o "Lugar" fica 0). Com ele, o quadril vai ao banco (a raiz 2 cm abaixo do `Banco_N`; os
+      clipes têm o quadril na origem) e a câmera fica a 0,68 m dele; a camada dos braços sai só com o remo na mão (o da
+      frente, e quem largou o remo, seguram o item com as pernas esticadas). Sem o parâmetro, o "Lugar" 2, como antes.
+    - **O remo na mão do corpo** (`Caiaque.LateUpdate`, ordem 120, depois do corpo sentar): a raiz do remo no `hand.R`,
+      com `PegadaNaMao` (0,30; 0,072; −0,03) e `GiroNaMao` (0; 0,60877; 0,79335; 0). Conferido na prévia: a mão esquerda
+      a 60 cm da direita no cabo, à mesma distância dele em todos os quadros. Para quem rema na primeira pessoa, ele só faz
+      sombra (vê o dos braços). Sem remo na mão, ele volta deitado no casco.
+    - **A remada:** `CicloDaRemada` sai do estado "Remar" do corpo de quem rema (em cada máquina); a pá esquerda entra em
+      0,03 da volta e a direita em 0,53 (`Pa`: o som `Agua_Bracada`, o respingo e a onda do lado). A proa vai e vem com a
+      remada (±7°/s, pelo seno da volta). O rastro: ondas na popa e na proa a cada 0,3–0,6 s acima de 0,5 m/s.
+    - **O tempo:** o balanço (a altura, o giro de frente e de lado) vezes `1 + 2 × Tempo.Vento + 1,2 × Tempo.Chuva`, com
+      rajadas (Perlin). Ele nunca vira.
+    - **O compartimento:** a estante `EstantesDoBunker.BaseDosCaiaques` (60000) + o lugar dele em `Caiaque.Todos`, de 2 × 2
+      (`FormaDoCompartimento`), na mesma lista, tela e save das estantes do bunker; o `Perto` é o da escotilha
+      (`PontoDoCompartimento`, 85 cm atrás do banco de quem rema). De fora, E na escotilha (`CompartimentoDoCaiaque`, uma
+      caixa-gatilho posta pelo `Caiaque.PorAEscotilha`); sentado, o TAB abre o inventário com ele ao lado
+      (`TelaDoInventario`). Nada aparece dentro (não há tábua para mostrar).
+    - **A rede:** a versão 9 também tem o remo do caiaque. Quem sobe no caiaque nadando deixa de nadar
+      (`MovimentoPrimeiraPessoa.OnDisable`).
 - **A pesca** (`Player/PescaJogador.cs`, no dono; `InventarioJogador.Pesca.cs`, no anfitrião): a vara vai na mão no lugar da
   lata (`Itens.NaMao`); o clique no `ArmaJogador` (antes do comer); lançar (o olhar até a água funda, 18 m), esperar, a
   mordida (1,2 s) e a puxada (a faixa verde pelo peixe); o anfitrião confere (a vara, a isca, a água perto, 3 s entre
   peixes) e dá o peixe e o XP. Os peixes e a pólvora são os itens 120 a 124 (no fim do `_loot`).
+  - **Refeita em 07/11/2026** (a pedido: "a linha está saindo fora da ponta da vara e não funcionando muito bem"):
+    - **A linha da ponta:** a `PontaDaVara` era um ponto chutado na frente do olho. A vara de primeira pessoa é desenhada
+      pela câmera dos braços, perto da origem e com 55° (`BracosNaOrigem`): o `LinhaDaPesca.PontaNaTela` pega a ponta da
+      malha da vara (o `VaraNaMao`: a origem na pegada, a ponta em +Z, pelo `bounds.max.z`), passa para a tela pela câmera
+      dos braços e volta ao mundo pela câmera do mundo, na mesma profundidade. No corpo (os outros, e o dono na terceira
+      pessoa), a ponta da malha na mão (`PontaNoCorpo`). A linha tem 14 pontos e a barriga da folga (esperando cai;
+      puxando, estica).
+    - **O botão:** o `ArmaJogador` chama `PescaJogador.Botao(apertou, segura, soltou)` a cada quadro com a vara na mão
+      (sem a chamada, conta como solto). Segurar enche a força em 1,1 s; soltar lança de 4 a 18 m (`LanceMinimo` e
+      `AlcanceDoLance`) para onde ele olha; na água com 0,8 m de fundo, fica; fora, "a boia caiu fora da água funda".
+    - **A espera:** de 8 a 22 s (`SortearEspera`: ×0,6 das 5h às 8h30 e das 17h às 20h; ×1,4 de noite, ×0,8 com a Noite de
+      pesca; ×0,8 com chuva, ×0,65 com a Noite de pesca; a Paciência ×0,6), com 0 a 3 beliscadas de 0,4 s (a fase
+      `Beliscando`: clicar nela espanta, e a espera recomeça ×1,5; fora dela, recolhe).
+    - **O peixe pela fundura** (`SortearPeixe`): de 1 a 4 m de fundo, o pequeno de 55% a 25% e o grande de 12% a 37%; o
+      Peixe grande ×1,6 no grande e ×0,7 no pequeno; o Mestre pescador, o dourado de 2% a 8%.
+    - **A puxada pela tensão** (`Puxada`): o peixe alterna arrancos (a força: 0,35, 0,55, 0,8 e 0,95; o fôlego de arranco:
+      4, 7, 11 e 14 s; cansado, 45% da força) e descansos. Segurando, recolhe 2 m/s (menos no arranco) e a tensão vai a
+      0,3 + 0,75 × o puxão; solto, a tensão cai e o peixe leva 2,2 m/s × o puxão. A tensão em 1 arrebenta (o estalo); abaixo
+      de 0,1 por 2,2 s, ele solta; 7 m além do começo, leva a linha; a 1,3 m, pegou. A catraca toca recolhendo.
+    - **Para todos:** a `NetworkVariable<Vector4> InventarioJogador.BoiaNaRede` (o dono escreve: xyz o ponto, w a
+      `PescaJogador.Fase`; puxando, dez vezes por segundo) e o `Player/PescaVista` (em cada máquina, para os outros: o voo
+      da vara à água, a boia, as beliscadas, a mordida e o peixe correndo, com o "plop"). A rede passou para a versão 9.
+    - **A vara nova (07/11/2026, à noite, a pedido:** "hoje ele segura a vara de uma forma bem irregular que não tem
+      lógica, deveria segurar a carretilha com a mão esquerda e a base da vara de pesca com a mão direita"):
+      - **O Blender** (`Blender/vara_animacoes.py`, em segundo plano, importa o `agua_animacoes.py`; etapas `vara`, `fp`,
+        `corpo`, `conferir`, `fotos`, `tudo`, e `folhas <pasta>` fora do Blender):
+        - `Art/Pesca/Vara.fbx`: 1,80 m, cabo de cortiça, carretilha de perfil baixo em cima (+Y), a `Manivela` à
+          esquerda (gira no X dela), a `Ponta` a 1,646 m em +Z; a origem na pegada.
+        - `Jogador_FP_Vara.fbx`: os braços com a vara (os ossos `vara`, `manivela` e `ponta`), clipes Idle, Walk, Sacar,
+          Lancar (0,9 s: para trás até 0,35 s, a soltura em 0,50 s), Recolher (uma volta em 0,5 s) e Puxar (duas voltas
+          em 1,2 s).
+        - `Personagem_PrincipalBloco_Pesca.fbx`: o esqueleto do corpo com os clipes Vara_Segurar, Vara_Lancar,
+          Vara_Recolher e Vara_Puxar (as pernas no repouso) e o osso `vara` no `hand.R`, de onde a Unity tira a pegada.
+      - **A Unity** (menu Zombie City Cleaner > Jogador > Montar a vara de pesca, `Editor/MontagemDaVara.cs`):
+        - os braços viram o `Resources/BracosVara` (o Sacar, o "Movimento" pelo Speed, o Lancar, o Recolher e o Puxar);
+        - a vara do corpo vira o `Resources/VaraDoCorpo` (a raiz é a mão; a vara dentro, na pegada medida no osso `vara`
+          dos clipes: (0; 0,072; −0,03) m no `hand.R`);
+        - os clipes do corpo vão para `Personagens/Pesca` e entram como estados na camada dos braços do controlador do
+          corpo (`PorAVaraNoControlador`; a `MontarControladorDoCorpo` também põe).
+      - **No jogo:** o `ArmaJogador.VaraNosBracos` mostra os `BracosVara` no lugar dos braços da lata; o `PescaJogador`
+        (no dono, `LateUpdate`) toca neles: segurando o botão, o Lancar parado no preparo pela força (a vara vai para
+        trás); soltando, ele segue; puxando o peixe, o Puxar (solto, mais devagar); quando a linha volta, o Recolher. A
+        `VaraNoCorpo` (posta pelo `PescaVista`, em todas as cópias) prende a vara na mão direita do corpo, esconde a lata
+        (`ItemNaMaoProprio.Mostrar(null, nada: true)`) e toca os estados Vara_* na camada dos braços: no dono, pelas fases
+        dele (com o carregar); nos outros, pela boia na rede (o lance entra perto da soltura); a manivela gira junto com
+        a mão (uma volta por laço no Recolher, duas no Puxar). A linha sai do osso `ponta` dos braços
+        (`ArmaJogador.PontaDaVaraNosBracos`) e da `Ponta` da vara do corpo. Sem os prefabs, a vara antiga (no lugar da
+        lata, o `VaraNaMao`).
+      - Conferido na prévia: a vara do corpo bate com a do Blender em até 3 mm (as mãos, a pegada, a manivela, a ponta);
+        na câmera dos braços, a ponta fica no meio da tela, no alto. Não testado no Play.
+    - **O peixe assado:** o item `PeixeAssado` (125, 20 de fome, pilha de 6) e as receitas "perto do fogo"
+      (`Receita.fogo`, o `InventarioJogador.FogoPerto`: uma fogueira acesa a até 3 m): o lambari dá 1, a tilápia 2, o
+      tucunaré e o dourado 3. **O cru faz mal:** comendo um peixe cru (`Itens.EhPeixeCru`), 40% de chance do enjoo
+      (`VidaJogador.Enjoo.cs`: 12 de vida do tronco em 45 s, "Passou mal com o peixe cru.").
 - **As árvores** (`World/FlorestaDoMundo.Corte.cs`, `World/MundoDaPartida.Arvores.cs`): a chave (o bloco e a ordem no
   `Floresta.DoBloco`), a `NetworkList<long>` do mundo (no save), o corte no anfitrião (refaz o `DoBloco` do bloco para
   conferir; as toras no pé; o barulho de 30 m), a cortada vira `TocoA` em cada máquina (o `AplicarCortadas` também quando
-  um bloco fica pronto) e cai perto de quem vê (`ArvoreCaindo`). O golpe: `ArmaJogador.GolpeNaArvore` (5 com o machado).
+  um bloco fica pronto) e cai perto de quem vê (`ArvoreCaindo`). O golpe: `ArmaJogador.GolpeNaArvore`.
+  - **Os cortes dos lados (07/11/2026, à noite, a pedido:** "para cortar a árvore, é preciso fazer vários cortes aos lados
+    da tora para poder cair"; antes eram 5 golpes em qualquer lugar):
+    - o golpe vai para o lado do tronco onde o machado pegou (4 lados, de 90 em 90° a partir do norte, pelo ponto em volta
+      do pé) e o anfitrião conta (`MundoDaPartida.GolpeNaArvoreRpc`): cada lado vai fundo em `GolpesPorLado` golpes (de 2
+      a 4, pelo tamanho; 3 numa árvore média); o lado fundo não aprofunda mais ("corte do lado oposto");
+    - com dois lados opostos fundos (o entalhe e o corte de trás), ela cai para o lado do primeiro: para longe de quem
+      deu o último golpe. Dois jogadores podem cortar juntos, um de cada lado. O meio corte não vai no save;
+    - os avisos para quem bate: "Cortando a árvore: este lado 2 de 3 (corte dois lados opostos para ela cair)", "Um lado
+      cortado: agora corte o lado oposto (ela cai para o lado do primeiro corte)", "A árvore caiu";
+    - **os entalhes** (`FlorestaDoMundo.MarcarEntalhe`, em todas as máquinas, a até 80 m): a boca do corte colada no
+      tronco, madeira clara embaixo (o corte reto) e sombra em cima (o corte inclinado), mais larga a cada golpe; somem
+      quando ela cai. A boca segue a superfície do tronco desenhado: as malhas não são legíveis no jogo, então o editor
+      mede cada espécie (`Editor/MedidaDosTroncos`, menu Zombie City Cleaner > Mundo > Medir os troncos, com a cena do
+      mundo aberta: o raio da superfície em 7 alturas, de 0,3 a 1,5 m, e 48 ângulos, por raios contra os triângulos) e
+      grava `Resources/TroncosDasArvores.bytes`; o jogo lê (`RaioNoTronco`) e gira pelo giro da árvore. Os troncos são
+      de 85% a 90% do raio da colisão (os de antes, com o raio da colisão, ficavam soltos em volta do tronco).
+    - Conferido na prévia (os entalhes em 4 espécies, com a árvore girada); o corte pela rede, não testado no Play.
 - **A oficina:** `Bancada.oficina` (`PertoDaOficina`), `Receita.oficina` e `Receita.habilidade` (o `PodeCriar` confere;
   as receitas da árvore no fim de `Receitas.Todas`); a mesa no lugar da bancada da garagem do bunker
   (`MoveisDoBunker`: "MesaDeOficina"; `BunkerDoMundo.PorAMesaDeOficina`, o `Resources/MesaDeOficina`; sem o prefab, uma
@@ -3487,11 +3767,17 @@ de cada curativo, a bandagem e a tala modeladas) estão no fim desta seção.
 - **A vida geral sai das partes** (06/11/2026, a pedido: "se todos os membros estiverem 100% a minha vida geral também
   estará 100%"; ela ficava em 62 com só um braço a 88%, porque o curativo devolvia mais ao membro que à vida e o sangue, a
   fome e a infecção tiravam só da vida). **Desde a tarde de 06/11/2026** ("ainda está um pouco bugado": a soma dava 67 com
-  o braço a 77% e a perna a 90%): `VidaDasPartes()` = a média das partes pelo `PesoNaVida` (cabeça 0,12, tronco 0,30,
-  braços 0,12, pernas 0,17), limitada pelo tronco e pela cabeça, com a porcentagem que a parte mostra (`Mostrado`: o que
-  conta mais a lesão, arredondado para cima); a morte vem do tronco ou da cabeça a 0. O golpe e o sangue tiram
-  `DanoNaParte` (2) vezes da parte; no membro a 0, o resto vai para o tronco (`PorNaParte`). O texto abaixo, da soma, ficou
-  como histórico: a `Vida` é escrita só pelo `ConferirAVida(causa)` (que também derruba a 0). O golpe vai para a parte pelo `PorNaParte` (o mesmo
+  o braço a 77% e a perna a 90%), a média das partes (pesos 0,12/0,30/0,12/0,17, limitada pelo tronco e pela cabeça, e o
+  golpe tirando o dobro da parte). **Desde 07/11/2026** (a pedido: "ajustar o dano de tudo, para o equivalente que era
+  antes"; com a média, o avanço do Brutamonte no tronco matava de uma vez e a mordida no braço quase não baixava a vida):
+  cada golpe tira da vida geral o que tirava antes. `FatorDaParte(p)` = 1 no tronco e na cabeça, 2 no braço e na perna;
+  `PerdidoNaVida()` = Σ `_danoDaParte[p]` / fator (só o que conta: a lesão fica no `_soNaParte`, fora da vida);
+  `VidaDasPartes()` = `vidaMaxima` × (100 − perdido) / 100. O golpe e o sangue tiram `pontos × fator` da parte; no membro a
+  0, o resto volta a pontos e vai para o tronco (`PorNaParte`); o `Melhorar` e o `CurarAsPartes` recebem pontos da vida e
+  devolvem `pontos × fator` à parte. No save, o extra da lesão que ainda está lá volta para o `_soNaParte`, e a vida volta
+  com pelo menos 10. Conferido no Play (07/11/2026): mordida de 12 no braço e no tronco −12, avanço 50 −50 (no tronco e
+  na perna), fúria −34/−40/−54, Curar(30) e atadura +30, fratura 0, e 9 mordidas para morrer (5 de 5). O texto abaixo, da
+  soma, ficou como histórico: a `Vida` é escrita só pelo `ConferirAVida(causa)` (que também derruba a 0). O golpe vai para a parte pelo `PorNaParte` (o mesmo
   tanto que a vida geral perde, como antes); o sangramento, para cada parte que sangra, pelo sangue dela; o `Perder` (a
   fome, a sede, a infecção, o raio, o Dia 0) vai para o tronco; o `Curar` tira das partes, a mais machucada primeiro. O
   extra da lesão (`DanoNoMembro`: 15, 40, 60) fica no `_soNaParte`: entra na porcentagem do membro (o `EstadoDoCorpo` leva a
@@ -3844,6 +4130,28 @@ depois de cada falha.
   `MovimentoPrimeiraPessoa.Vento`); a menos de 13 m, tira 35 de vida a cada 2,5 s (pode matar; o dano é do
   anfitrião), e a menos de 11 m joga o jogador para o alto (`Arremessar`). A casa protege em parte (o puxão a 35%; o dano
   cai para 22 e só a menos de 8,5 m); o porão e o bunker (mais de 1,2 m abaixo do chão, com teto), inteiro. Os zumbis a 15 m são arrastados e morrem.
+  - **Mais forte, e pega os veículos (07/11/2026, à noite, a pedido:** "quando passar perto, ele vai puxar com mais força.
+    Ele vai poder puxar o nosso carro se estivermos mais perto (e girar em torno dele por um breve período), isso
+    funcionará para o caiaque e moto; se eu estiver a pé, a força dele é mais forte ainda"). As contas ficam no
+    `World/Redemoinho` (o puxão para o meio e para o lado do giro, `(1 − d/raio)^1,4` × a força do tornado; o giro: em
+    volta do tornado, puxado para um círculo, subindo até uma altura, junto com o tornado andando; o arremesso para fora).
+    Cada um na máquina que o move:
+    - **A pé** (`ClimaNaTela.Tornado`, no dono): o puxão vai até 90 m (era 70) e chega a 6,5 m/s perto (era 2,6: a uns
+      20 m, mais que o passo correndo). No miolo (13 m, no aberto), ele pega: o jogador sobe de 4 a 7 m e roda em volta
+      do tornado a 11 m/s, num círculo de uns 4,7 m, por 1,6 a 2,6 s, e é jogado para fora (13 m/s para fora, 7 para
+      cima); por 5 s não pega de novo. Dentro de casa, só o tranco de antes, mais fraco. O dano continua o do anfitrião.
+    - **O carro e a moto** (`Vehicles/Carro.Tornado.cs`, no fim do `FixedUpdate`, com a física ligada: o carro vazio perto
+      de alguém também): o puxão até 45 m (9 m/s² perto; a moto ×1,35) e um pouco para cima (alivia as rodas: o carro
+      escorrega). No miolo (o carro 11 m, a moto 13 m), sobe de 3 a 5 m (a moto 20% mais) e roda em volta dele a 12 m/s
+      (a moto 13), girando em volta de si e balançando, por 2 a 3,5 s; depois é jogado e cai (pode cair virado: o R
+      desvira); por 6 s não pega de novo. Quem está sentado vai junto. Na conta (sem as rodas): o carro sobe 4,5 m em
+      1 s e roda num círculo de 9 m; a moto, 8 m.
+    - **O caiaque** (`Caiaque.NoTornado`, no `Navegar` do dono): arrastado pela água até 55 m (4,5 m/s perto); no miolo
+      (13 m), roda em volta do tornado a 9 m/s por 2 a 3,2 s, aos pulos e com o casco girando, e é jogado para fora,
+      deslizando. Só anda onde há água funda (não sobe na terra) e não vira.
+    - **O teste:** F1, aba do clima, "Tornado em cima de mim": desce a 150 m e passa a 0 a 6 m de um jogador (a dança
+      para os lados é descontada do caminho; `ComecarTornado(150, rente: true)`).
+    - Não testado no Play.
 - **A música:** no chuvisco e na chuva, a trilha de sempre. Na tempestade, a família da tempestade (52 bpm, 27 blocos: o
   grave pesado, o cello batendo como a chuva, os tímpanos como trovão, o coro escuro, as cordas em tremolo). Com o tornado
   perto, a do tornado (66 bpm, 20 blocos: as cordas subindo em espiral, o coração acelerado, o lamento do coro, o metal

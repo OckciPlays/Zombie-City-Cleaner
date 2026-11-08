@@ -21,7 +21,7 @@ namespace ZombieCityCleaner.UI
             ("Sol", 0), ("Chuvisco", 1), ("Chuva", 2), ("Tempestade", 3), ("Com raios", 4), ("Calendário", 5),
             ("Tornado agora", 6), ("Acabar o tornado", 7), ("Raio perto", 8), ("Raio longe", 9), ("Só o clarão", 12), ("Encher as poças", 10),
             ("Próximo evento", 11), ("Fogueira aqui", 13), ("Tocha acesa na mão", 14), ("Horda de 6 caçando", 15),
-            ("Long da fogueira já", 16), ("Brutamonte enterrado", 17),
+            ("Long da fogueira já", 16), ("Brutamonte enterrado", 17), ("Tornado em cima de mim", 30),
         };
 
         bool _abaDoClima;
@@ -90,7 +90,7 @@ namespace ZombieCityCleaner.UI
             {
                 var r = new Rect(k % 2 == 0 ? x : x2, y + (k / 2) * 30 * u, meio, 26 * u);
                 if (!GUI.Button(r, TestesDoClima[k].nome, _botao)) continue;
-                if (TestesDoClima[k].acao >= 13) TesteDoFogoRpc((byte)TestesDoClima[k].acao);
+                if (TestesDoClima[k].acao >= 13 && TestesDoClima[k].acao < 30) TesteDoFogoRpc((byte)TestesDoClima[k].acao);
                 else TesteDoClimaRpc((byte)TestesDoClima[k].acao);
             }
             return area;
@@ -173,6 +173,12 @@ namespace ZombieCityCleaner.UI
                 case 10: ciclo.EncherPocas(); break;
                 case 11: ciclo.ProximoEventoAgora(); break;
                 case 12: ciclo.RaioLonge(true); break;
+                case 30:
+                    // (07/11/2026) o tornado passa por cima de quem pediu (a 0 a 6 m), a 150 m: para testar o giro a pé,
+                    // de carro, de moto e de caiaque
+                    if (ciclo.TempoForcado < (int)NivelDoTempo.Raios) ciclo.ForcarTempo((int)NivelDoTempo.Raios);
+                    ciclo.ComecarTornado(150f, true);
+                    break;
             }
         }
     }

@@ -538,22 +538,33 @@ namespace ZombieCityCleaner.World
 
         /// <summary>
         /// No anfitrião (e pelo F1): o tornado desce longe de alguém (a 'distancia', 650 m no calendário) e passa perto dele
-        /// (de 20 a 80 m para o lado), seguindo reto até sumir 650 m do outro lado, a uns 4 m/s (uns 5 minutos).
+        /// (de 20 a 80 m para o lado; 'rente', o teste do F1: de 0 a 6 m), seguindo reto até sumir 650 m do outro lado, a uns
+        /// 4 m/s (uns 5 minutos).
         /// </summary>
-        public void ComecarTornado(float distancia = 650f)
+        public void ComecarTornado(float distancia = 650f, bool rente = false)
         {
             if (!IsServer || !IsSpawned || _tornado) return;
             var j = AlguemVivo();
             if (j == null) return;
             var dir = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward;
             var lado = Vector3.Cross(Vector3.up, dir) * (Random.value < 0.5f ? -1f : 1f);
-            var perto = j.transform.position + lado * Random.Range(20f, 80f);
+            var perto = j.transform.position + lado * (rente ? Random.Range(0f, 6f) : Random.Range(20f, 80f));
             _tornadoAntes = Mathf.Max(60f, distancia);
             _tornadoDe = perto - dir * _tornadoAntes;
             _tornadoMeio = perto;
             _tornadoAte = perto + dir * 650f;
             _tornadoT = 0f;
             _tornadoVel = Random.Range(3.5f, 4.6f);
+            if (rente)
+            {
+                // a dança para os lados (a do Tornado) chegaria a 24 m: o caminho todo vai para o outro lado na mesma conta,
+                // e ele passa mesmo por cima
+                float chega = _tornadoAntes / _tornadoVel;
+                Vector3 desvio = Vector3.Cross(Vector3.up, dir) * (Mathf.Sin(chega * 0.13f) * 18f + Mathf.Sin(chega * 0.41f) * 6f);
+                _tornadoDe -= desvio;
+                _tornadoMeio -= desvio;
+                _tornadoAte -= desvio;
+            }
             _tornadoDuracao = (_tornadoAntes + 650f) / _tornadoVel;
             _tornadoForca = 0f;
             _tornadoAcabaEm = -1f;

@@ -357,6 +357,7 @@ namespace ZombieCityCleaner.Player
                 falta = $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
             else if (r.oficina && !Bancada.PertoDaOficina(transform.position)) falta = "Precisa da mesa de oficina (no bunker)";
             else if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
+            else if (r.fogo && !FogoPerto(transform.position)) falta = "Precisa de uma fogueira acesa perto";
             else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
             else
                 foreach (var g in r.gasta)
@@ -367,6 +368,17 @@ namespace ZombieCityCleaner.Player
                     }
             return falta == null;
         }
+
+        /// <summary>Uma fogueira acesa a até 3 m (07/11/2026: assar o peixe).</summary>
+        public static bool FogoPerto(Vector3 ponto)
+        {
+            var c = ConstrucoesNoMundo.Instancia;
+            if (c == null) return false;
+            _fogos.Clear();
+            c.FogueirasAcesas(ponto, 3f, _fogos);
+            return _fogos.Count > 0;
+        }
+        static readonly System.Collections.Generic.List<Vector3> _fogos = new System.Collections.Generic.List<Vector3>();
 
         /// <summary>O item da mochila pode ser desmontado agora? Se não, o motivo (a ferramenta que falta).</summary>
         public bool PodeDesmontar(ushort id, out Desmontagem d, out string falta)
@@ -740,6 +752,8 @@ namespace ZombieCityCleaner.Player
             var d = Itens.Consumivel(item);
             GetComponent<FomeESede>().Consumir(d);
             if (d.vida > 0f) GetComponent<VidaJogador>().Curar(d.vida);
+            // o peixe cru (07/11/2026, a pedido: "pode fazer mal"): 40% de chance de cair mal (o enjoo, VidaJogador.Enjoo.cs)
+            if (Itens.EhPeixeCru(item) && Random.value < VidaJogador.ChanceDoPeixeCru) GetComponent<VidaJogador>().EnjoarDoPeixeCru();
         }
 
         [Rpc(SendTo.Server)]

@@ -85,6 +85,8 @@ namespace ZombieCityCleaner.Player
             }
             if (GetComponent<CurativosNoCorpo>() == null) gameObject.AddComponent<CurativosNoCorpo>();
             if (GetComponent<PassageiroDoCaiaque>() == null) gameObject.AddComponent<PassageiroDoCaiaque>();   // (o caiaque, 06/11/2026)
+            if (GetComponent<NadoNoCorpo>() == null) gameObject.AddComponent<NadoNoCorpo>();   // (o nado visto e ouvido, 07/11/2026)
+            if (GetComponent<PescaVista>() == null) gameObject.AddComponent<PescaVista>();   // (a boia e a linha dos outros, 07/11/2026)
             if (GetComponent<PoseDoCurativo>() == null) gameObject.AddComponent<PoseDoCurativo>();   // a fase 3: o corpo enfaixando a parte
         }
 
@@ -259,6 +261,7 @@ namespace ZombieCityCleaner.Player
                 AtualizarDesmaio();
                 AtualizarSono();   // a etapa 3 da mente: dormir, acordar e a noite passando
                 AtualizarFolego(Time.deltaTime);   // a água (06/11/2026): o fôlego e o afogamento
+                AtualizarEnjoo(Time.deltaTime);   // o peixe cru que caiu mal (07/11/2026)
             }
         }
 

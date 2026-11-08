@@ -83,6 +83,7 @@ namespace ZombieCityCleaner.EditorTools
             int novos = 0;
             foreach (var (nome, _) in Novos)
             {
+                if (LugarNoJogo(nome) >= 0) continue;   // (o NovoBrutamonte, no jogo desde 07/11/2026, já foi gravado acima)
                 string fbx = FbxDe(nome), caminho = $"{Arte}/Zombie_{nome}.overrideController";
                 var humano = AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Avatar>().FirstOrDefault(a => a.isHuman && a.isValid);
                 var aoc = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(caminho);

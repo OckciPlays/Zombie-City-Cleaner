@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using ZombieCityCleaner.Combat;
@@ -72,6 +72,10 @@ namespace ZombieCityCleaner.Vehicles
         [Tooltip("Quantos lugares este carro usa: os primeiros (0 o motorista, 1 o do lado, 2 e 3 atrás). A perua usa os 4; o " +
                  "cupê, só os 2 da frente (a pedido em 29/10/2026). Os outros ficam no prefab, mas ninguém entra neles.")]
         [Range(1, Lugares)] public int lugaresUsados = Lugares;
+
+        [Tooltip("A altura do teto por dentro, no espaço do carro (m); 0 = pela carroceria (o alto dela menos 7 cm). Quem senta " +
+                 "com a cabeça acima dele encolhe o tronco (PassageiroDoCarro.CaberNoTeto; 07/11/2026: a cabeça passava do teto).")]
+        public float tetoPorDentro;
 
         [Header("Luzes")]
         public Light[] farois;
@@ -251,6 +255,72 @@ namespace ZombieCityCleaner.Vehicles
         Vector3 _posAntes;
         Vector3 _velocidadeMedida;
         float _giroDasRodas, _volanteVisto;
+        // (07/11/2026) as mãos do motorista no volante (PassageiroDoCarro.MaosNoVolante): o giro desenhado, o repouso e o
+        // aro; o acelerador do dono (a mão no acelerador da moto)
+        internal float VolanteVisto => _volanteVisto;
+        internal Quaternion VolanteRepouso => _volanteRepouso;
+        internal float AceleradorDoDono => _acelerar;
+        bool _medidasDoVolante;
+        Vector3 _centroDoVolante;
+        float _raioDoVolante;
+
+        /// <summary>O meio do volante (no espaço dele) e o raio do aro (m), pelas malhas dele (medidos uma vez).</summary>
+        internal void MedidasDoVolante(out Vector3 centro, out float raio)
+        {
+            if (!_medidasDoVolante && volante != null)
+            {
+                _medidasDoVolante = true;
+                Vector3 min = Vector3.one * float.MaxValue, max = Vector3.one * float.MinValue;
+                bool achou = false;
+                foreach (var mf in volante.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (mf.sharedMesh == null) continue;
+                    var b = mf.sharedMesh.bounds;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        var canto = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                        var p = volante.InverseTransformPoint(mf.transform.TransformPoint(canto));
+                        min = Vector3.Min(min, p);
+                        max = Vector3.Max(max, p);
+                        achou = true;
+                    }
+                }
+                float escala = Mathf.Abs(volante.lossyScale.x);
+                _centroDoVolante = achou ? (min + max) * 0.5f : Vector3.zero;
+                _raioDoVolante = achou ? 0.5f * Mathf.Max(max.x - min.x, max.y - min.y) * 0.9f * escala : 0.18f;
+                _raioDoVolante = Mathf.Clamp(_raioDoVolante, 0.12f, 0.25f);
+            }
+            centro = _centroDoVolante;
+            raio = _raioDoVolante;
+        }
+        bool _tetoMedido;
+        float _teto = float.MaxValue;
+
+        /// <summary>
+        /// O teto por dentro (a altura no espaço do carro): o <see cref="tetoPorDentro"/> ou, sem ele, o alto da carroceria
+        /// menos 7 cm (a chapa e a curva do teto nas beiradas). Sem carroceria (a moto), nenhum (float.MaxValue).
+        /// </summary>
+        internal float TetoPorDentro
+        {
+            get
+            {
+                if (tetoPorDentro > 0f) return tetoPorDentro;
+                if (_tetoMedido) return _teto;
+                _tetoMedido = true;
+                var mf = carroceria != null ? carroceria.GetComponent<MeshFilter>() : null;
+                if (moto || mf == null || mf.sharedMesh == null) return _teto;
+                var b = mf.sharedMesh.bounds;
+                float alto = float.MinValue;
+                for (int i = 0; i < 8; i++)
+                {
+                    var canto = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                    alto = Mathf.Max(alto, transform.InverseTransformPoint(mf.transform.TransformPoint(canto)).y);
+                }
+                _teto = alto - 0.07f;
+                return _teto;
+            }
+        }
+
         readonly float[] _mudouEm = { -99f, -99f, -99f, -99f };
         readonly Dictionary<int, float> _atropelados = new Dictionary<int, float>();
         readonly Dictionary<ulong, float> _pessoasAtropeladas = new Dictionary<ulong, float>();
@@ -845,7 +915,11 @@ namespace ZombieCityCleaner.Vehicles
             // a moto: duas rodas e o corpo sempre em pé (Carro.Moto.cs)
             if (moto)
             {
-                if (Simula) DirigirMoto(Time.fixedDeltaTime);
+                if (Simula)
+                {
+                    DirigirMoto(Time.fixedDeltaTime);
+                    NoTornado();   // (Carro.Tornado.cs)
+                }
                 return;
             }
             if (IsSpawned && IsServer && IsOwner && MacacoNaRoda >= 0 && rodas != null && rodas.Length >= 4)
@@ -925,6 +999,7 @@ namespace ZombieCityCleaner.Vehicles
 
             if (comMotorista) Atropelar(v);
             RodarNoDono(dt);
+            NoTornado();   // o tornado puxa e, no miolo, gira o carro (Carro.Tornado.cs)
         }
 
         // o pneu furado e o cubo sem a roda arrastam no chão: uma força contra o movimento daquele canto (o carro puxa

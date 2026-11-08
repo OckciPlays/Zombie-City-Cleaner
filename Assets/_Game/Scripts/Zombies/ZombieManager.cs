@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.Profiling;
@@ -389,9 +389,11 @@ namespace ZombieCityCleaner.Zombies
             // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
             // o limite (é co-op, mas um número absurdo não passa): o maior acerto é o carro muito rápido (500 a 110 km/h)
+            bool abatido = z.SemComando;
             z.LevarTiro(regiao, membro, Mathf.Clamp(dano, 0f, 1000f), ponto, direcao, arremesso, autor, Time.time, Mathf.Clamp(corte, 0f, 4f));
-            // o XP de quem matou (06/11/2026, a árvore de habilidades; o carro conta: o acerto vem pelo motorista)
-            if (z.Morto && autor is JogadorRede quem) quem.Inventario?.GanharXp(XpDoZumbi(z), NomeNoXp(z));
+            // o XP de quem matou (06/11/2026, a árvore de habilidades; o carro conta: o acerto vem pelo motorista). O sem
+            // cabeça que ainda anda (Zumbi.SemComando.cs) conta no tiro na cabeça, e não de novo quando desliga
+            if (!abatido && (z.Morto || z.SemComando) && autor is JogadorRede quem) quem.Inventario?.GanharXp(XpDoZumbi(z), NomeNoXp(z));
         }
 
         static int XpDoZumbi(Zumbi z) => z.Petrificado ? Habilidades.XpDaEstatua : z.tipo switch

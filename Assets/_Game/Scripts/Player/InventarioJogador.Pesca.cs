@@ -13,6 +13,13 @@ namespace ZombieCityCleaner.Player
     {
         float _ultimaPesca = -99f;
 
+        /// <summary>
+        /// A boia da pesca para todos (07/11/2026): xyz, o ponto dela (puxando, onde o peixe está); w, a fase
+        /// (<see cref="PescaJogador.Fase"/>; 0, sem boia). O dono escreve; os outros desenham a linha da vara do corpo até ela
+        /// (<see cref="PescaVista"/>).
+        /// </summary>
+        public readonly NetworkVariable<Vector4> BoiaNaRede = new(Vector4.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         /// <summary>No dono: o peixe pego (Nada: escapou) e se a isca foi gasta.</summary>
         public void PegouOPeixe(Item peixe, bool gastouAIsca)
         {

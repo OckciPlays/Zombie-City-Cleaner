@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ZombieCityCleaner.Zombies
 {
@@ -145,6 +145,14 @@ namespace ZombieCityCleaner.Zombies
         public float paradoParaOLong = 60f;
         [Tooltip("Depois de um Long da fogueira, a mesma fogueira espera este tempo (s) para chamar outro.")]
         public float recargaDoLongDaFogueira = 180f;
+
+        [Header("O sem cabeça (07/11/2026; Zumbi.SemComando.cs)")]
+        [Tooltip("No tiro que estoura a cabeça e mata, a chance de ele ainda andar um pouco sem ela.")]
+        [Range(0f, 1f)] public float chanceDeAndarSemCabeca = 0.15f;
+        [Tooltip("Quanto tempo (s) ele anda sem rumo antes de desligar (a pedido em 07/11/2026: \"uns 3 segundos apenas\").")]
+        public Vector2 tempoSemCabeca = new Vector2(2.5f, 3.5f);
+        [Tooltip("A chance de ele bater em quem encostar na frente (às cegas), a cada golpe que poderia dar.")]
+        [Range(0f, 1f)] public float chanceDoGolpeSemCabeca = 0.35f;
 
         [Header("Os especiais (01/11/2026; TipoDeZumbi.cs)")]
         public AjustesDoCorredor corredor = new AjustesDoCorredor();

@@ -97,6 +97,10 @@ namespace ZombieCityCleaner.World
         MovimentoPrimeiraPessoa _movimento;
         float _protecao, _proximaProtecao, _proximoArremesso;
         bool _avistado;
+        // a pé, girando no miolo (07/11/2026): até quando, a altura e o chão de onde subiu, e quando pode pegar de novo
+        float _girandoAte = -1f, _alturaDoGiro, _chaoDoGiro, _proximoGiro;
+        /// <summary>A pé: até onde (m) o tornado puxa, a força no meio (m/s), e o miolo, onde ele pega e gira.</summary>
+        const float PuxaAPe = 90f, ForcaAPe = 6.5f, MioloAPe = 13f;
 
         // ------------------------------------------------------------------ as poças
         struct Poca
@@ -939,17 +943,19 @@ namespace ZombieCityCleaner.World
                 }
             }
 
-            // o vento puxando quem joga aqui, e o arremesso no miolo (o dano é do anfitrião)
+            // o vento puxando quem joga aqui, e o giro no miolo (o dano é do anfitrião). Sentado num carro, numa moto ou no
+            // caiaque, quem leva é o veículo (Vehicles/Carro.Tornado.cs, Caiaque)
             if (_movimento == null || local == null) return;
-            bool sentado = local.Passageiro != null && local.Passageiro.Sentado;
+            bool sentado = (local.Passageiro != null && local.Passageiro.Sentado) || PassageiroDoCaiaque.Sentado(local);
             bool vivo = local.Vida == null || local.Vida.Vida.Value > 0f;
             var pes = local.transform.position;
             var d = p - pes;
             d.y = 0f;
             float distPes = d.magnitude;
-            if (sentado || !vivo || distPes > 70f || forca < 0.2f)
+            if (sentado || !vivo || distPes > PuxaAPe || forca < 0.2f)
             {
                 _movimento.Vento = Vector3.zero;
+                _girandoAte = -1f;
                 return;
             }
             if (Time.time >= _proximaProtecao && CicloDoDia.Instancia != null)
@@ -957,12 +963,38 @@ namespace ZombieCityCleaner.World
                 _proximaProtecao = Time.time + 0.25f;
                 _protecao = CicloDoDia.Instancia.ProtecaoContraOTornado(pes);
             }
-            var para = distPes > 0.1f ? d / distPes : Vector3.forward;
-            var gira = Vector3.Cross(Vector3.up, para);
-            float k = Mathf.Pow(1f - distPes / 70f, 1.5f) * forca * (1f - _protecao);
-            _movimento.Vento = (para * 2.6f + gira * 1.6f) * k;
-            if (distPes < 11f && _protecao < 1f && Time.time >= _proximoArremesso && forca > 0.5f)
+            // (07/11/2026, a pedido: "quando passar perto, ele vai puxar com mais força ... se eu estiver a pé, a força dele
+            // é mais forte ainda") girando no miolo: ele sobe e roda em volta do tornado (a velocidade é a do giro) por um ou
+            // dois segundos, e no fim é jogado para fora; depois, por uns segundos, só puxa
+            if (_girandoAte > 0f)
             {
+                if (Time.time < _girandoAte && _protecao < 0.5f && forca > 0.3f)
+                {
+                    _movimento.Vento = Vector3.zero;
+                    _movimento.Arremessar(Redemoinho.Giro(pes, _chaoDoGiro, 4.5f, 11f, _alturaDoGiro));
+                    return;
+                }
+                _girandoAte = -1f;
+                _proximoGiro = Time.time + 5f;
+                _proximoArremesso = Time.time + 2.5f;
+                _movimento.Arremessar(Redemoinho.Arremesso(pes, 13f, 6f, 7f));
+            }
+            // o puxão: até 90 m, e forte perto (a uns 20 m, mais que o passo correndo)
+            _movimento.Vento = Redemoinho.Puxao(pes, PuxaAPe, ForcaAPe) * (1f - _protecao);
+            if (distPes >= MioloAPe || forca <= 0.5f || _protecao >= 1f) return;
+            if (_protecao < 0.5f && Time.time >= _proximoGiro)
+            {
+                // no aberto: pega e gira
+                _girandoAte = Time.time + Random.Range(1.6f, 2.6f);
+                _chaoDoGiro = pes.y;
+                _alturaDoGiro = Random.Range(4f, 7f);
+                _movimento.Arremessar(Vector3.up * 6f);
+            }
+            else if (_protecao >= 0.5f && Time.time >= _proximoArremesso)
+            {
+                // dentro de casa: só o tranco de antes, mais fraco
+                var para = distPes > 0.1f ? d / distPes : Vector3.forward;
+                var gira = Vector3.Cross(Vector3.up, para);
                 _proximoArremesso = Time.time + 2.5f;
                 float leve = 1f - _protecao * 0.6f;
                 _movimento.Arremessar((Vector3.up * Random.Range(11f, 14f) + gira * 11f - para * 5f) * leve);

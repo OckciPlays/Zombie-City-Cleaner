@@ -20,6 +20,10 @@ no jogo, os números, onde está no código, como testar e o que ficou faltando.
 
 Um tanque cego e surdo, que não liga para a luz nem para o sol.
 
+- **O modelo (desde 07/11/2026):** o **NovoBrutamonte**, o da cena de comparação (`Scenes/Exemplos/Comparacao_Zumbis`), no
+  lugar dos três de antes (V1, V2 e V3, que ficaram no projeto só para a comparação). Ele tem as mesmas animações e o mesmo
+  ciclo (o golpe no chão na fúria) e o avesso da roupa pintado. Todo Brutamonte do jogo agora é ele.
+
 - **Vida:** 500.
 - **O casco** tira quase todo o dano: cada tiro vale ×0,3.
 - **O olho nas costas** é o único ponto fraco: ×3 (o mesmo da cabeça dos outros), e só vale aberto. Um tiro de sniper (100)

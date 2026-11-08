@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -140,6 +140,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>Os ossos do corpo do personagem e o repouso deles (do prefab do jogador, a mesma pose do retrato do inventário).</summary>
         void LerOssos()
         {
+            TroncoDeVolta();
+            _alturaDaCabeca = -1f;
             _ossos.Clear();
             _repouso.Clear();
             foreach (var t in _rede.animadorCorpo.GetComponentsInChildren<Transform>(true)) _ossos[t.name] = t;
@@ -221,6 +223,7 @@ namespace ZombieCityCleaner.Player
             _fase = Fase.Fora;
             _segurandoChave = false;
             _carroSaindo = null;
+            TroncoDeVolta();
             _rede.animadorCorpo.enabled = true;
             if (TemLugar(_rede.animadorCorpo))
             {
@@ -241,6 +244,7 @@ namespace ZombieCityCleaner.Player
             _cabeca.localPosition = _cabecaLocal;
             _camera.localPosition = Vector3.zero;
             _camera.localRotation = Quaternion.identity;
+            _rede.CorpoNoVeiculo(false);
             CorpoVisivel(false);
         }
 
@@ -287,7 +291,12 @@ namespace ZombieCityCleaner.Player
             Vector3 alvoP = banco.position - banco.rotation * _quadrilNaRaiz;
             float k = _fase == Fase.Entrando ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(MoverDe, MoverAte, _tempo)) : 1f;
             transform.SetPositionAndRotation(Vector3.Lerp(_deP, alvoP, k), Quaternion.Slerp(_deR, banco.rotation, k));
-            if (_fase == Fase.Dentro || _tempo >= MoverDe) Pose(Carro, Lugar);
+            if (_fase == Fase.Dentro || _tempo >= MoverDe)
+            {
+                Pose(Carro, Lugar);
+                if (!Carro.moto) CaberNoTeto(Carro);
+                if (Lugar == 0 && !Carro.moto) MaosNoVolante(Carro);   // (em todas as máquinas: os outros veem também)
+            }
             if (_fase == Fase.Entrando && _tempo >= MoverAte) _fase = Fase.Dentro;
             if (!dono) return;
             Comandos();
@@ -309,7 +318,11 @@ namespace ZombieCityCleaner.Player
             // o dono desce do banco até o chão; os outros seguem a posição dele pela rede (até ela começar, o banco)
             if (dono) transform.SetPositionAndRotation(Vector3.Lerp(noBanco, _saida, s), Quaternion.Slerp(banco.rotation, Quaternion.Euler(0f, _yawSaida, 0f), s));
             else if (_tempo < SairDe + 0.15f) transform.SetPositionAndRotation(noBanco, banco.rotation);
-            if (_tempo < MoverAte) Pose(c, _lugarSaindo);
+            if (_tempo < MoverAte)
+            {
+                Pose(c, _lugarSaindo);
+                if (!c.moto) CaberNoTeto(c);
+            }
             if (dono)
             {
                 _camera.localPosition = Vector3.zero;
@@ -611,7 +624,17 @@ namespace ZombieCityCleaner.Player
         // primeira pessoa: o olho no banco; o mouse olha em volta (sem virar para trás de vez). k = o quanto já sentou
         void Olhar(float k)
         {
-            CorpoVisivel(false);
+            var c = Carro != null ? Carro : _carroSaindo;
+            // na moto, o corpo sem a cabeça e sem o pescoço (as mãos no guidão: JogadorRede.CorpoNoVeiculo); no carro, só a
+            // sombra, como antes (07/11/2026, a pedido: "do carro em primeira pessoa, tira e deixa como estava antes sem
+            // nada"); descendo, some
+            bool comCorpo = c != null && c.moto && _fase != Fase.Saindo;
+            if (comCorpo) _rede.CorpoNoVeiculo(true);
+            else
+            {
+                _rede.CorpoNoVeiculo(false);
+                CorpoVisivel(false);
+            }
             _camera.localPosition = Vector3.zero;
             _camera.localRotation = Quaternion.identity;
             if (_fase == Fase.Dentro && !_segurandoChave)
@@ -620,8 +643,12 @@ namespace ZombieCityCleaner.Player
                 _yaw = Mathf.Clamp(_yaw + olhar.x, -135f, 135f);
                 _pitch = Mathf.Clamp(_pitch - olhar.y, -60f, 75f);
             }
-            var c = Carro != null ? Carro : _carroSaindo;
+            // o corpo acompanha este olhar (o peito e a cabeça, JogadorRede.LateUpdate): sem isto, ele ficava com o do
+            // momento de entrar (olhando para a porta, para baixo), e os outros viam a cabeça baixa o tempo todo
+            // (07/11/2026, a pedido: "a cabeça do personagem fica olhando para baixo")
+            if (_rede != null && _rede.IsOwner && _fase == Fase.Dentro && Mathf.Abs(_rede.Pitch.Value - _pitch) > 0.5f) _rede.Pitch.Value = _pitch;
             Vector3 olho = _quadrilNaRaiz + OlhoDe(c, Carro != null ? Lugar : _lugarSaindo);
+            if (comCorpo) olho = _rede.OlhoForaDoCorpo(olho);   // (o olho nunca atrás nem abaixo do pescoço)
             _cabeca.localPosition = Vector3.Lerp(_cabecaLocal, olho, k);
             _cabeca.localRotation = Quaternion.Slerp(_cabecaAntes, Quaternion.Euler(_pitch, _yaw, 0f), k);
         }
@@ -629,6 +656,7 @@ namespace ZombieCityCleaner.Player
         // a câmera atrás do carro: o mouse gira em volta dele; andando, ela volta sozinha para trás
         void CameraDeTras(float dt)
         {
+            _rede.CorpoNoVeiculo(false);
             CorpoVisivel(true);
             Vector2 olhar = LerOlhar();
             if (olhar.sqrMagnitude > 0.0001f) _mexeuNaCamera = Time.time;
@@ -814,6 +842,152 @@ namespace ZombieCityCleaner.Player
                     DoisOssos("upper_arm" + l, "forearm" + l, naCoxa, -frente * 0.6f + direita * (lado * 0.6f) - cima * 0.2f);
                 }
             }
+            // a mão direita torce o acelerador (07/11/2026; só no dono: o acelerador dele não vai pela rede)
+            if (piloto && c.IsOwner && _ossos.TryGetValue("hand.R", out var maoDireita))
+                maoDireita.rotation = Quaternion.AngleAxis(-28f * Mathf.Clamp01(c.AceleradorDoDono), direita) * maoDireita.rotation;
+        }
+
+        /// <summary>
+        /// As mãos do motorista no volante (07/11/2026, a pedido: as mãos de primeira pessoa no volante; "quando realizarmos
+        /// uma curva, os braços não se ultrapassem um ao outro"). Depois da pose sentada: as duas mãos no aro, um pouco acima
+        /// do meio (a 62° do alto, de cada lado), acompanhando o volante só até <see cref="MaosSeguemOVolante"/> graus; dali em
+        /// diante o aro desliza nas mãos, e elas nunca se cruzam. O braço dobra o cotovelo para baixo e para fora.
+        /// O meio e o raio do aro saem das malhas do volante (<see cref="Carro.MedidasDoVolante"/>).
+        /// </summary>
+        void MaosNoVolante(Carro c)
+        {
+            var v = c.volante;
+            if (v == null) return;
+            c.MedidasDoVolante(out var centroLocal, out float raio);
+            var repouso = (v.parent != null ? v.parent.rotation : Quaternion.identity) * c.VolanteRepouso;
+            Vector3 X = repouso * Vector3.right, Y = repouso * Vector3.up, Z = repouso * Vector3.forward;
+            Vector3 centro = v.TransformPoint(centroLocal);
+            Vector3 cimaDoCarro = c.transform.up, direitaDoCarro = c.transform.right, frenteDoCarro = c.transform.forward;
+            // o alto e a direita do carro, em ângulos no plano do volante (o giro desenhado soma no mesmo sentido)
+            Vector3 cima = Vector3.ProjectOnPlane(cimaDoCarro, Z), direita = Vector3.ProjectOnPlane(direitaDoCarro, Z);
+            if (cima.sqrMagnitude < 1e-6f || direita.sqrMagnitude < 1e-6f) return;
+            float aCima = Mathf.Atan2(Vector3.Dot(cima, Y), Vector3.Dot(cima, X)) * Mathf.Rad2Deg;
+            float aDireita = Mathf.Atan2(Vector3.Dot(direita, Y), Vector3.Dot(direita, X)) * Mathf.Rad2Deg;
+            float paraADireita = Mathf.Sign(Mathf.DeltaAngle(aCima, aDireita));
+            float seguir = Mathf.Clamp(c.VolanteVisto, -MaosSeguemOVolante, MaosSeguemOVolante);
+            Vector3 paraMim = Vector3.Dot(Z, -frenteDoCarro) >= 0f ? Z : -Z;
+            for (int k = 0; k < 2; k++)
+            {
+                float lado = k == 0 ? 1f : -1f;
+                string l = k == 0 ? ".R" : ".L";
+                float a = (aCima + paraADireita * lado * 62f + seguir) * Mathf.Deg2Rad;
+                Vector3 radial = X * Mathf.Cos(a) + Y * Mathf.Sin(a);
+                Vector3 aro = centro + radial * raio;
+                // o pulso na frente do aro e um pouco para fora (a mão abraça o aro)
+                Vector3 pulso = aro + paraMim * 0.05f + radial * 0.025f;
+                DoisOssos("upper_arm" + l, "forearm" + l, pulso, -cimaDoCarro * 0.8f + direitaDoCarro * (lado * 0.6f) - frenteDoCarro * 0.2f);
+                Mirar("hand" + l, aro - paraMim * 0.01f - pulso);
+            }
+        }
+
+        const float MaosSeguemOVolante = 55f;
+
+        // ------------------------------------------------------------------------------------------ embaixo do teto
+
+        /// <summary>No máximo esta parte do trecho da coluna até o peito encolhe (o resto passaria a parecer um corpo amassado).</summary>
+        const float EncolherNoMaximo = 0.45f;
+        /// <summary>A folga entre o alto da cabeça e o teto por dentro (m).</summary>
+        const float FolgaDoTeto = 0.015f;
+        Transform _peitoEncolhido;
+        Vector3 _peitoNoLugar, _peitoPosto;
+        float _alturaDaCabeca = -1f;
+
+        /// <summary>
+        /// No carro (07/11/2026, a pedido: na terceira pessoa "ele ultrapassa um pouco o teto - tem como a gente cortar um
+        /// pouco o personagem? encurtar ele dentro do carro talvez?"), em todas as máquinas, depois da pose sentada e antes
+        /// das mãos no volante: se o alto da cabeça passa do teto por dentro (<see cref="Carro.TetoPorDentro"/>), o tronco
+        /// encurta: o peito desce em direção à coluna, até a cabeça caber (no máximo <see cref="EncolherNoMaximo"/> do trecho).
+        /// A cintura, onde o tronco encurta, fica atrás da porta; a cabeça, os ombros e os braços ficam do tamanho de
+        /// sempre. A cabeça é medida sem o olhar (o JogadorRede dobra o peito e a cabeça com ele), para o tamanho não mudar
+        /// quando ele olha para cima ou para baixo.
+        /// </summary>
+        void CaberNoTeto(Carro c)
+        {
+            if (!_ossos.TryGetValue("chest", out var peito) || !_ossos.TryGetValue("head", out var cabeca) || peito.parent == null) return;
+            // a posição do peito de agora: a da animação (o Animator escreve a cada quadro) ou, se ele não escreve, a de
+            // antes de encolher
+            Vector3 atual = peito.localPosition;
+            Vector3 noLugar = _peitoEncolhido == peito && atual == _peitoPosto ? _peitoNoLugar : atual;
+            peito.localPosition = noLugar;
+            float teto = c.TetoPorDentro;
+            if (teto >= float.MaxValue * 0.5f)
+            {
+                TroncoDeVolta();
+                return;
+            }
+            // tirar o olhar: o JogadorRede gira o peito (e tudo acima) e, de novo, a cabeça, cada um com metade do olhar;
+            // sem o Animator, a pose parte do repouso e já veio sem ele
+            float olhar = TemLugar(_rede.animadorCorpo) ? _rede.Pitch.Value * 0.5f : 0f;
+            var semOlhar = Quaternion.AngleAxis(-olhar, transform.right);
+            Vector3 aCabeca = peito.position + semOlhar * (cabeca.position - peito.position);
+            Vector3 alto = aCabeca + semOlhar * semOlhar * cabeca.rotation * Vector3.up * AlturaDaCabeca(cabeca);
+            float passa = c.transform.InverseTransformPoint(alto).y + FolgaDoTeto - teto;
+            if (passa <= 0f)
+            {
+                TroncoDeVolta();
+                return;
+            }
+            // o quanto o trecho da coluna até o peito sobe, no carro: encurtar ele desce o peito, os ombros e a cabeça
+            float sobe = Vector3.Dot(peito.parent.TransformVector(noLugar), c.transform.up);
+            if (sobe < 0.03f) return;
+            float s = Mathf.Clamp(passa / sobe, 0f, EncolherNoMaximo);
+            _peitoEncolhido = peito;
+            _peitoNoLugar = noLugar;
+            _peitoPosto = noLugar * (1f - s);
+            peito.localPosition = _peitoPosto;
+        }
+
+        // o tronco no tamanho de sempre (saindo do carro)
+        void TroncoDeVolta()
+        {
+            if (_peitoEncolhido != null) _peitoEncolhido.localPosition = _peitoNoLugar;
+            _peitoEncolhido = null;
+        }
+
+        /// <summary>
+        /// Do osso da cabeça até o alto dela (m), medido uma vez nas malhas do corpo (no repouso: o ponto mais alto ao longo
+        /// do osso, com o cabelo e o que estiver preso nele, como o chapéu).
+        /// </summary>
+        float AlturaDaCabeca(Transform cabeca)
+        {
+            if (_alturaDaCabeca > 0f) return _alturaDaCabeca;
+            float maior = 0f;
+            foreach (var r in _rede.animadorCorpo.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r is SkinnedMeshRenderer smr)
+                {
+                    var m = smr.sharedMesh;
+                    int i = m != null ? System.Array.IndexOf(smr.bones, cabeca) : -1;
+                    if (i < 0 || i >= m.bindposes.Length) continue;
+                    // a cabeça no espaço da malha, no repouso: o eixo Y do osso, e o alto da malha ao longo dele
+                    var osso = m.bindposes[i].inverse;
+                    Vector3 pos = osso.GetColumn(3), eixo = ((Vector3)osso.GetColumn(1)).normalized;
+                    float escala = Mathf.Abs(smr.transform.lossyScale.y);
+                    var b = m.bounds;
+                    for (int k = 0; k < 8; k++)
+                    {
+                        var canto = b.center + Vector3.Scale(b.extents, new Vector3((k & 1) == 0 ? -1f : 1f, (k & 2) == 0 ? -1f : 1f, (k & 4) == 0 ? -1f : 1f));
+                        maior = Mathf.Max(maior, Vector3.Dot(canto - pos, eixo) * escala);
+                    }
+                }
+                else if (r.transform.IsChildOf(cabeca) && r.TryGetComponent<MeshFilter>(out var mf) && mf.sharedMesh != null)
+                {
+                    var b = mf.sharedMesh.bounds;
+                    for (int k = 0; k < 8; k++)
+                    {
+                        var canto = b.center + Vector3.Scale(b.extents, new Vector3((k & 1) == 0 ? -1f : 1f, (k & 2) == 0 ? -1f : 1f, (k & 4) == 0 ? -1f : 1f));
+                        Vector3 w = r.transform.TransformPoint(canto) - cabeca.position;
+                        maior = Mathf.Max(maior, Vector3.Dot(w, cabeca.up));
+                    }
+                }
+            }
+            _alturaDaCabeca = maior > 0.08f && maior < 0.6f ? maior : 0.25f;
+            return _alturaDaCabeca;
         }
 
         /// <summary>Dois ossos (o de cima e o do meio) que levam a ponta até o alvo, dobrando para o lado de <paramref name="dobra"/> (no mundo).</summary>

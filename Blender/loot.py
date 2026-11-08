@@ -1522,6 +1522,118 @@ def _polvora():
     ]
 
 
+# O peixe assado (07/11/2026, a pedido: o peixe do lago, assado): uma posta de filé grelhado (uma porção), dourada, a borda
+# e as pontas mais tostadas, as lascas claras da carne de peixe atravessando, as marcas escuras da grelha na diagonal dos
+# dois lados e a borda um pouco irregular. Uns 14 x 6 x 2 cm, em pé na mão como a barra de chocolate (no espaço da lata, a
+# mão 2 cm abaixo do meio): o comprido em Z (embaixo a ponta larga, do lado da cabeça, cortada quase reta; em cima a do
+# rabo, mais fina e redonda), a largura em X (à direita o lombo, quase reto; à esquerda a barriga, mais curva) e a
+# grossura em Y (as faces largas para a frente e para trás).
+ASSADO_COMP = 0.14
+ASSADO_Z0 = -0.05                                      # a ponta de baixo (o meio fica 2 cm acima da mão)
+# os anéis (em u, de 0 embaixo a 1 em cima) e a borda irregular: o quanto cada anel sai (ou entra) à direita, à esquerda
+# e na grossura (entre os anéis, a média)
+ASSADO_US = (0.035, 0.09, 0.27, 0.5, 0.73, 0.91, 0.965)
+ASSADO_DIREITA = (0.03, -0.03, 0.04, -0.04, 0.05, 0.03, 0.0)
+ASSADO_ESQUERDA = (-0.04, 0.03, -0.03, 0.04, -0.03, -0.02, 0.03)
+ASSADO_GROSSURA = (0.0, 0.04, -0.03, 0.02, -0.02, 0.0, 0.0)
+# as lascas (as faixas claras, curvas, com o meio para cima): onde começa cada uma (em u), a largura (em u) e a curva
+ASSADO_LASCAS = (0.15, 0.37, 0.6, 0.81)
+ASSADO_LARGURA_DAS_LASCAS = 0.02
+ASSADO_CURVA_DAS_LASCAS = 0.035
+# as marcas da grelha: a altura do meio de cada uma (em u), o giro (graus, subindo para a direita) e a largura (m)
+ASSADO_MARCAS = (0.27, 0.5, 0.73)
+ASSADO_GIRO_DAS_MARCAS = 45.0
+ASSADO_LARGURA_DAS_MARCAS = 0.006
+# as cores: a carne, a borda e as pontas tostadas, as marcas e as lascas
+ASSADO_CORES = ("filtro", "ambar", "cola", "creme")
+_ASSADO_LADOS = 10
+
+
+def _medidas_do_assado(u):
+    """Em u: a meia largura à direita (o lombo) e à esquerda (a barriga), a meia grossura e o meio da largura."""
+    e = math.sin(math.pi * u) ** (0.22 + 0.16 * u)         # as pontas: a de baixo cortada, a de cima redonda
+    direita = 0.033 * e * (1.0 - 0.2 * u)
+    esquerda = 0.037 * e * (1.0 - 0.36 * u ** 1.3)
+    grossura = 0.0105 * math.sin(math.pi * u) ** (0.25 + 0.35 * u) * (1.1 - 0.5 * u)
+    meio = 0.002 * math.sin(math.pi * (1.6 * u - 0.3))
+    return direita, esquerda, grossura, meio
+
+
+def _no_meio(us, valores, u):
+    """O valor em u, entre os dos anéis (a média)."""
+    if u <= us[0]:
+        return valores[0]
+    for i in range(len(us) - 1):
+        if u <= us[i + 1]:
+            return valores[i] + (valores[i + 1] - valores[i]) * (u - us[i]) / (us[i + 1] - us[i])
+    return valores[-1]
+
+
+def _peixe_assado_corpo(bm, uv):
+    """O corpo: os anéis (a elipse achatada: as faces largas quase retas, a borda redonda) fechados nas duas pontas, com
+    dois anéis curvos a mais em cada lasca; as marcas da grelha cortadas nele (dois planos por marca, que passam pelos
+    dois lados); e as cores."""
+    n = _ASSADO_LADOS
+    antes = (set(bm.verts), set(bm.edges), set(bm.faces))
+    aneis = sorted([(u, 0.0) for u in ASSADO_US] + [(u + d, ASSADO_CURVA_DAS_LASCAS) for u in ASSADO_LASCAS
+                                                    for d in (0.0, ASSADO_LARGURA_DAS_LASCAS)])
+    vs = []
+    for u, curva in aneis:
+        direita, esquerda, grossura, meio = _medidas_do_assado(u)
+        jd, je, jg = (_no_meio(ASSADO_US, t, u) for t in (ASSADO_DIREITA, ASSADO_ESQUERDA, ASSADO_GROSSURA))
+        anel = []
+        for k in range(n):
+            a = 2 * math.pi * k / n
+            c, s = math.cos(a), math.sin(a)
+            largura = direita * (1 + jd) if c > 0 else esquerda * (1 + je)
+            y = math.copysign(grossura * (1 + jg) * abs(s) ** 0.6, s)
+            anel.append(bm.verts.new((meio + largura * c, y, ASSADO_Z0 + (u + curva * (1 - c * c)) * ASSADO_COMP)))
+        vs.append(anel)
+    baixo = bm.verts.new((_medidas_do_assado(0.0)[3], 0.0, ASSADO_Z0))
+    cima = bm.verts.new((_medidas_do_assado(1.0)[3], 0.0, ASSADO_Z0 + ASSADO_COMP))
+    for k in range(n):
+        j = (k + 1) % n
+        bm.faces.new((baixo, vs[0][j], vs[0][k]))
+        bm.faces.new((cima, vs[-1][k], vs[-1][j]))
+        for i in range(len(vs) - 1):
+            bm.faces.new((vs[i][k], vs[i][j], vs[i + 1][j], vs[i + 1][k]))
+    # as marcas: os cortes
+    giro = math.radians(ASSADO_GIRO_DAS_MARCAS)
+    normal = Vector((-math.sin(giro), 0.0, math.cos(giro)))
+    meia = ASSADO_LARGURA_DAS_MARCAS / 2
+    centros = [Vector((_medidas_do_assado(u)[3], 0.0, ASSADO_Z0 + u * ASSADO_COMP)) for u in ASSADO_MARCAS]
+    for centro in centros:
+        for lado in (-1, 1):
+            geom = ([v for v in bm.verts if v not in antes[0]] + [e for e in bm.edges if e not in antes[1]]
+                    + [f for f in bm.faces if f not in antes[2]])
+            bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=centro + normal * (lado * meia), plane_no=normal)
+    # as cores: as marcas e as lascas nas faces largas; a borda (as faces de lado) e as pontas tostadas; o resto dourado
+    carne, tostado, marca, lasca = ASSADO_CORES
+    z_baixo, z_cima = ASSADO_Z0 + ASSADO_US[1] * ASSADO_COMP, ASSADO_Z0 + ASSADO_US[-2] * ASSADO_COMP
+    for f in bm.faces:
+        if f in antes[2]:
+            continue
+        f.normal_update()
+        c = f.calc_center_median()
+        larga = abs(f.normal.y) > 0.75
+        direita, esquerda, _, meio = _medidas_do_assado(min(0.99, max(0.01, (c.z - ASSADO_Z0) / ASSADO_COMP)))
+        s = max(-1.0, min(1.0, (c.x - meio) / (direita if c.x > meio else esquerda)))   # de -1 (a borda da esquerda) a 1
+        u = (c.z - ASSADO_Z0) / ASSADO_COMP - ASSADO_CURVA_DAS_LASCAS * (1 - s * s)       # u sem a curva das lascas
+        if larga and any(abs((c - centro).dot(normal)) < meia for centro in centros):
+            cor = marca
+        elif not larga or c.z < z_baixo or c.z > z_cima:
+            cor = tostado
+        elif any(u0 < u < u0 + ASSADO_LARGURA_DAS_LASCAS for u0 in ASSADO_LASCAS):
+            cor = lasca
+        else:
+            cor = carne
+        eq._pintar(bm, uv, [f], cor)
+
+
+def _peixe_assado():
+    return [(_peixe_assado_corpo,)]
+
+
 # as peças do prato (sem ícone: as animações e o jogo)
 PECAS_DO_PRATO = {
     "PratoFundo": _prato_fundo, "PratoComida": _comida, "PratoComidaEstragada": _comida_estragada,
@@ -1557,7 +1669,7 @@ MODELOS = {
     "PratoDeComida": _prato_de_comida, "PratoVazio": _prato_vazio, "PratoEstragado": _prato_estragado,
     "Tala": _tala, "BandagemAntisseptica": _bandagem_antisseptica, "Calmante": _calmante,
     "PeixePequeno": _peixe_pequeno, "PeixeMedio": _peixe_medio, "PeixeGrande": _peixe_grande,
-    "PeixeDourado": _peixe_dourado, "Polvora": _polvora,
+    "PeixeDourado": _peixe_dourado, "Polvora": _polvora, "PeixeAssado": _peixe_assado,
 }
 # as construções montadas no mundo e a bancada (sem ícone)
 MONTADAS = {
@@ -1573,8 +1685,11 @@ DEITADOS = {"Madeira", "Toras", "Pano", "Corda", "FitaAdesiva", "Ferramenta", "P
 CELULAS = {"PeDeCabra": (2, 1), "PeixeGrande": (2, 1), "PeixeDourado": (2, 1)}
 # as vistas próprias (a direção da câmera do ícone e a da foto, o giro da câmera do ícone em graus, a escala do ícone e
 # a distância da foto, vezes o tamanho): a vara comprida, vista de lado (o molinete e a manivela para a câmera), na
-# diagonal no ícone e com a foto de trás do cabo; os peixes, deitados de lado, quase de cima (o perfil deles)
-VISTAS = {"VaraDePesca": ((1.0, 0.0, 0.3), (0.9, 1.0, 0.6), 45.0, 0.75, 1.45)}
+# diagonal no ícone e com a foto de trás do cabo; os peixes, deitados de lado, quase de cima (o perfil deles); o peixe
+# assado (em pé, a face larga para a frente), de frente e girado (o giro da foto é o sexto número), como deitado num
+# prato: um pouco inclinado no ícone e deitado na foto, a borda do lombo para a câmera
+VISTAS = {"VaraDePesca": ((1.0, 0.0, 0.3), (0.9, 1.0, 0.6), 45.0, 0.75, 1.45),
+          "PeixeAssado": ((0.45, -1.0, 0.15), (0.55, -1.0, 0.3), 75.0, 1.15, 2.2, 90.0)}
 VISTAS.update({nome: ((0.22, -0.5, 1.0), (0.3, -0.5, 1.0), 0.0, 1.2, 2.2)
                for nome in ("PeixePequeno", "PeixeMedio", "PeixeGrande", "PeixeDourado")})
 
@@ -1658,7 +1773,9 @@ def imagens(so=None):
         r.filepath = os.path.join(eq.ICONES, f"Icone_{nome}.png")
         bpy.ops.render.render(write_still=True)
         r.resolution_x, r.resolution_y = 600, 500
-        eq._camera(cena, False, centro, foto, tam * (vista[4] if vista else 2.4), tam)
+        cam = eq._camera(cena, False, centro, foto, tam * (vista[4] if vista else 2.4), tam)
+        if vista and len(vista) > 5:
+            cam.rotation_euler = (cam.rotation_euler.to_quaternion() @ Quaternion((0, 0, 1), math.radians(vista[5]))).to_euler()
         r.filepath = os.path.join(eq.ICONES, f"Foto_{nome}.png")
         bpy.ops.render.render(write_still=True)
     for o in objs.values():

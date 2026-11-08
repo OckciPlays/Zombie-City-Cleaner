@@ -187,7 +187,13 @@ namespace ZombieCityCleaner.Player
         {
             if (rede == null || !rede.IsSpawned || !rede.IsOwner || MenuOnline.Bot) return;
             var teclado = Keyboard.current;
-            if (teclado != null && teclado.tabKey.wasPressedThisFrame && !MenuOnline.Aberto) Abrir(!Aberta);
+            if (teclado != null && teclado.tabKey.wasPressedThisFrame && !MenuOnline.Aberto)
+            {
+                // sentado no caiaque (07/11/2026), o TAB abre com o compartimento dele ao lado
+                var noCaiaque = GetComponent<PassageiroDoCaiaque>();
+                if (!Aberta && noCaiaque != null && noCaiaque.NoCaiaque) AbrirEstante(noCaiaque.Caiaque.Compartimento);
+                else Abrir(!Aberta);
+            }
             // H: direto na aba Corpo (05/11/2026; não enquanto digita num campo de texto)
             else if (teclado != null && teclado.hKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0) TeclaDoCorpo();
             // K: direto na aba HABILIDADES (06/11/2026)
@@ -1028,6 +1034,7 @@ namespace ZombieCityCleaner.Player
                 if (rec.habilidade >= 0) partes.Insert(0, ("[" + Habilidades.Nome((Habilidade)rec.habilidade) + "]", Habilidades.Tem(rede, (Habilidade)rec.habilidade)));
                 if (rec.oficina) partes.Add(("na mesa de oficina", Bancada.PertoDaOficina(inventario.transform.position)));
                 else if (rec.bancada) partes.Add(("na bancada", Bancada.Perto(inventario.transform.position)));
+                else if (rec.fogo) partes.Add(("perto do fogo", InventarioJogador.FogoPerto(inventario.transform.position)));
                 float reticencias = linha.CalcSize(new GUIContent("...")).x;
                 for (int p = 0; p < partes.Count; p++)
                 {
@@ -1091,7 +1098,7 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(new Rect(x, y, w, linha), $"Ferramenta (não gasta): {Itens.Nome(rec.ferramenta)}", _texto);
                 y += linha;
             }
-            GUI.Label(new Rect(x, y, w, linha), rec.oficina ? "Só na mesa de oficina (no bunker)" : rec.bancada ? "Só perto de uma bancada" : "Em qualquer lugar", _texto);
+            GUI.Label(new Rect(x, y, w, linha), rec.oficina ? "Só na mesa de oficina (no bunker)" : rec.bancada ? "Só perto de uma bancada" : rec.fogo ? "Só perto de uma fogueira acesa" : "Em qualquer lugar", _texto);
             y += linha;
             if (rec.habilidade >= 0)
             {

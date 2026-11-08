@@ -11609,8 +11609,12 @@ MonoBehaviour:
   sensibilidadeControle: 160
   pitchMaximo: 85
   velocidadeNadando: 1.9
+  velocidadeNadandoRapido: 2.8
   velocidadeMergulho: 1.6
   alturaBoiando: 1.42
+  olhoNaAgua: 0.08
+  balancoDaBracada: 0.045
+  rolagemDaBracada: 1.4
   velocidadeAgachado: 1.2
   alturaAgachado: 1.4
   olhoAgachado: 1.27
@@ -11872,6 +11876,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 1bd4e066505ba4f419b1f99d5f373ddb, type: 3}
   - {fileID: 2800000, guid: 9570621bba822c549806a94dffc795c0, type: 3}
   - {fileID: 2800000, guid: 4a3c564feefaf6f4aa78db94440ddfc2, type: 3}
+  - {fileID: 2800000, guid: 940d81918e9831e488793c1a0bd14c3b, type: 3}
   - {fileID: 2800000, guid: e3bb3c9726fe08746a5a003aa798dc02, type: 3}
   fotosDeLoot:
   - {fileID: 2800000, guid: 9b455d59a6e5c9644a25c42e84a47aaf, type: 3}
@@ -11926,6 +11931,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 1a1dfb296cedca942af9e6e481acad89, type: 3}
   - {fileID: 2800000, guid: f4cf4f27aee6f434688e717ec15c8ad0, type: 3}
   - {fileID: 2800000, guid: f3ee995bfd2ad3b47b715afe127e2e06, type: 3}
+  - {fileID: 2800000, guid: c6198e1354ccb1a49a80a0cf3f6311ed, type: 3}
   - {fileID: 2800000, guid: 1b8aa350a100fbc44bd144e2c9ed1309, type: 3}
 --- !u!114 &4620897733806836672
 MonoBehaviour:

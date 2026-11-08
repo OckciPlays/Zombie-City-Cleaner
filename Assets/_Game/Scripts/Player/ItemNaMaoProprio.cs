@@ -34,25 +34,34 @@ namespace ZombieCityCleaner.Player
             var p = modelo != null ? modelo.GetComponent<ItemNaMaoProprio>() : null;
             if (p == null) return;
             var mundo = ItensNoMundo.Instancia;
-            p.Mostrar(Itens.NaMaoComMalhaPropria(item) && mundo != null ? mundo.MalhaDoLoot(item) : null);
-            // a vara de pesca (06/11/2026): no lugar da lata, mas apontando para onde ele olha (a lata fica em pé na mão)
+            // a vara nova (07/11/2026: os braços dela na primeira pessoa, ArmaJogador.VaraNosBracos; no corpo, a VaraNoCorpo):
+            // a lata e o lugar dela ficam vazios
+            bool varaNova = item == Item.VaraDePesca && (p.bracos != null ? ArmaJogador.TemBracosDaVara : VaraNovaNoCorpo(modelo));
+            p.Mostrar(!varaNova && Itens.NaMaoComMalhaPropria(item) && mundo != null ? mundo.MalhaDoLoot(item) : null, varaNova);
+            // a vara de pesca antiga (06/11/2026): no lugar da lata, mas apontando para onde ele olha (a lata fica em pé na mão)
             if (p.lugar != null)
             {
                 var vara = p.lugar.GetComponent<VaraNaMao>();
-                if (item == Item.VaraDePesca && vara == null) vara = p.lugar.AddComponent<VaraNaMao>();
-                if (vara != null) vara.Ligar(item == Item.VaraDePesca);
+                if (item == Item.VaraDePesca && !varaNova && vara == null) vara = p.lugar.AddComponent<VaraNaMao>();
+                if (vara != null) vara.Ligar(item == Item.VaraDePesca && !varaNova);
             }
         }
 
-        /// <summary>A malha do item no lugar da lata (null: a lata de volta).</summary>
-        public void Mostrar(Mesh malha)
+        static bool VaraNovaNoCorpo(GameObject modelo)
         {
-            bool proprio = malha != null;
+            var v = modelo.GetComponentInParent<VaraNoCorpo>();
+            return v != null && v.Ligada;
+        }
+
+        /// <summary>A malha do item no lugar da lata (null: a lata de volta; com 'nada', nem a lata nem o item).</summary>
+        public void Mostrar(Mesh malha, bool nada = false)
+        {
+            bool proprio = malha != null || nada;
             if (lugar != null)
             {
                 var filtro = lugar.GetComponent<MeshFilter>();
                 if (filtro != null) filtro.sharedMesh = malha;
-                lugar.SetActive(proprio);
+                lugar.SetActive(malha != null);
             }
             if (lata != null) lata.sharedMesh = proprio ? null : malhaDaLata;
             if (bracos != null && semLata != null && indiceDaLata >= 0 && proprio != _semLata)

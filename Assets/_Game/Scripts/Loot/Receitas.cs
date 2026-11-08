@@ -27,6 +27,8 @@ namespace ZombieCityCleaner.Loot
         public bool bancada;
         /// <summary>Só na mesa de oficina (06/11/2026: a do bunker; ela também vale como bancada).</summary>
         public bool oficina;
+        /// <summary>Só perto de uma fogueira acesa (07/11/2026: assar o peixe).</summary>
+        public bool fogo;
         /// <summary>A habilidade que destrava a receita (o número do <see cref="Player.Habilidade"/>; -1: nenhuma).</summary>
         public int habilidade = -1;
     }
@@ -57,6 +59,10 @@ namespace ZombieCityCleaner.Loot
         static Receita R(Item resultado, int qtd, bool bancada, Item ferramenta, params Parte[] gasta) =>
             new Receita { resultado = resultado, qtd = qtd, bancada = bancada, ferramenta = ferramenta, gasta = gasta };
 
+        // assar na fogueira acesa (07/11/2026)
+        static Receita Fogo(Item resultado, int qtd, params Parte[] gasta) =>
+            new Receita { resultado = resultado, qtd = qtd, fogo = true, ferramenta = Item.Nada, gasta = gasta };
+
         // a receita da árvore de habilidades (06/11/2026): só com a habilidade, na bancada ou na mesa de oficina
         static Receita H(Player.Habilidade h, Item resultado, int qtd, bool oficina, Item ferramenta, params Parte[] gasta) =>
             new Receita { resultado = resultado, qtd = qtd, bancada = !oficina, oficina = oficina, ferramenta = ferramenta, gasta = gasta, habilidade = (int)h };
@@ -67,6 +73,11 @@ namespace ZombieCityCleaner.Loot
             // em qualquer lugar
             // a bandagem de pano: 2 panos dão 1 (05/11/2026, sem a vida voltando sozinha: eram 2, e as roupas viravam cura sem fim)
             R(Item.Bandagem, 1, false, Item.Nada, P(Item.Pano, 2)),
+            // o peixe assado (07/11/2026, a pedido: "assar na fogueira"; o cru pode fazer mal): cada peixe dá filés pelo tamanho
+            Fogo(Item.PeixeAssado, 1, P(Item.PeixePequeno)),
+            Fogo(Item.PeixeAssado, 2, P(Item.PeixeMedio)),
+            Fogo(Item.PeixeAssado, 3, P(Item.PeixeGrande)),
+            Fogo(Item.PeixeAssado, 3, P(Item.PeixeDourado)),
             R(Item.KitMedico, 1, false, Item.Nada, P(Item.Atadura), P(Item.Gaze, 2), P(Item.Desinfetante), P(Item.Comprimidos)),
             // a bandagem antisséptica (05/11/2026, a etapa 2): 1 álcool (o Desinfetante) e 3 bandagens de pano, ou 3
             // ataduras, dão 3 (o índice da receita vai pela rede: a VersaoDaRede 2 já cobre esta mudança)

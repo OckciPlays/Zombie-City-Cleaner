@@ -24,9 +24,12 @@ namespace ZombieCityCleaner.EditorTools
     {
         const string PastaEspeciais = Arte + "/Especiais";
 
+        // o Brutamonte do jogo é o NovoBrutamonte (07/11/2026, a pedido: "implementar o novo brutamonte no jogo, já com
+        // suas novas animações e mecânica"), no lugar dos três de antes (Brutamonte_V1, V2 e V3, que ficam no projeto para
+        // a cena de comparação). Ele continua em Novos (MontagemDosZumbis.Novos.cs): o material com o avesso da roupa
         static readonly (string nome, TipoDeZumbi tipo)[] Especiais =
         {
-            ("Brutamonte_V1", TipoDeZumbi.Brutamonte), ("Brutamonte_V2", TipoDeZumbi.Brutamonte), ("Brutamonte_V3", TipoDeZumbi.Brutamonte),
+            ("NovoBrutamonte", TipoDeZumbi.Brutamonte),
             ("Long_V1", TipoDeZumbi.Long), ("Long_V2", TipoDeZumbi.Long), ("Long_V3", TipoDeZumbi.Long),
             ("Corredor_V1", TipoDeZumbi.Corredor), ("Corredor_V2", TipoDeZumbi.Corredor), ("Corredor_V3", TipoDeZumbi.Corredor),
         };
@@ -47,6 +50,9 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>Todos os modelos, na ordem da lista do ZombieManager: os Ocos e, depois, os especiais.</summary>
         static IEnumerable<string> TodosOsModelos => Modelos.Concat(Especiais.Select(e => e.nome));
+
+        /// <summary>O lugar do modelo na lista do jogo (o <see cref="Zumbi.modelo"/> do prefab), ou -1 se ele está fora dela.</summary>
+        static int LugarNoJogo(string nome) => TodosOsModelos.ToList().IndexOf(nome);
 
         [MenuItem("Zombie City Cleaner/Zumbis/Montar os zumbis especiais")]
         public static void MontarOsEspeciais()
@@ -70,7 +76,49 @@ namespace ZombieCityCleaner.EditorTools
                 Debug.Log($"Especial montado: {nome} ({m.altura:F2} m)");
             }
             AssetDatabase.SaveAssets();
-            // a lista da cena Mundo: os Ocos e os especiais
+            int n = PorAListaNaCena();
+            Debug.Log($"Zumbis especiais montados: {Especiais.Length}. A cena Mundo tem {n} modelos.");
+        }
+
+        /// <summary>
+        /// A lista do jogo sem remontar nada (07/11/2026, quando o NovoBrutamonte entrou no lugar dos três Brutamontes): o
+        /// número de cada prefab (<see cref="Zumbi.modelo"/>, que tem de ser o lugar dele na lista: o pool, a rede e os
+        /// corpos usam esse número) e a lista do ZombieManager da cena Mundo. Os prefabs que já estão certos ficam como estão.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Zumbis/Atualizar a lista do jogo (sem remontar)")]
+        public static void AtualizarAListaDoJogo()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de atualizar a lista dos zumbis.");
+                return;
+            }
+            int i = 0, renumerados = 0;
+            foreach (var nome in TodosOsModelos)
+            {
+                string caminho = $"{Prefabs}/Zumbi_{nome}.prefab";
+                var z = Carregar<Zumbi>(caminho);
+                if (z.modelo != i)
+                {
+                    var raiz = PrefabUtility.LoadPrefabContents(caminho);
+                    try
+                    {
+                        raiz.GetComponent<Zumbi>().modelo = i;
+                        PrefabUtility.SaveAsPrefabAsset(raiz, caminho);
+                    }
+                    finally { PrefabUtility.UnloadPrefabContents(raiz); }
+                    Debug.Log($"Zumbis: {nome} passou do número {z.modelo} para o {i}.");
+                    renumerados++;
+                }
+                i++;
+            }
+            int n = PorAListaNaCena();
+            Debug.Log($"Lista do jogo atualizada: {n} modelos ({renumerados} renumerados). Brutamonte: {string.Join(", ", Especiais.Where(e => e.tipo == TipoDeZumbi.Brutamonte).Select(e => e.nome))}.");
+        }
+
+        /// <summary>A lista da cena Mundo (os Ocos e os especiais, com os corpos), salva. Devolve quantos modelos ela tem.</summary>
+        static int PorAListaNaCena()
+        {
             var cena = EditorSceneManager.GetActiveScene();
             if (cena.path != MontagemDoMundo.Cena) cena = EditorSceneManager.OpenScene(MontagemDoMundo.Cena);
             var zm = Object.FindAnyObjectByType<ZombieManager>(FindObjectsInactive.Include);
@@ -80,7 +128,7 @@ namespace ZombieCityCleaner.EditorTools
             EditorUtility.SetDirty(zm);
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
-            Debug.Log($"Zumbis especiais montados: {Especiais.Length}. A cena Mundo tem {zm.modelos.Length} modelos.");
+            return zm.modelos.Length;
         }
 
         /// <summary>Os clipes já gravados de um modelo (Oco/Clipes/&lt;modelo&gt;/*.anim), pelo nome.</summary>

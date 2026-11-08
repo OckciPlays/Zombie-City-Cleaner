@@ -847,7 +847,7 @@ MonoBehaviour:
   papo: {fileID: 0}
   hitboxDoOlho: {fileID: 0}
   hitboxDoPapo: {fileID: 0}
-  modelo: 19
+  modelo: 17
   animador: {fileID: 8563479051145586990}
   agente: {fileID: 5096576039377433047}
   capsula: {fileID: 2269091072838486269}

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -69,8 +69,14 @@ namespace ZombieCityCleaner.Zombies
             return livre;
         }
 
-        /// <summary>Um membro cai: o pedaço nasce no osso do corte, com a malha dele, e voa na direção do tiro.</summary>
-        internal void SoltarPedaco(Mesh malha, Material[] materiais, Transform osso, Vector3 direcao, Vector3 velocidade)
+        static readonly int PetrificacaoDoPedacoId = Shader.PropertyToID("_Petrificacao");
+        MaterialPropertyBlock _pedacoDePedra;
+
+        /// <summary>
+        /// Um membro cai: o pedaço nasce no osso do corte, com a malha dele, e voa na direção do tiro. De pedra (a estátua
+        /// que quebra, CorpoDeZumbi.Pedra.cs), todo de pedra no shader do Oco.
+        /// </summary>
+        internal void SoltarPedaco(Mesh malha, Material[] materiais, Transform osso, Vector3 direcao, Vector3 velocidade, bool pedra = false)
         {
             if (malha == null || osso == null) return;
             var p = PegarPedaco();
@@ -89,6 +95,13 @@ namespace ZombieCityCleaner.Zombies
                 materiais = p.materiais;
             }
             p.pele.sharedMaterials = materiais;
+            if (pedra)
+            {
+                _pedacoDePedra ??= new MaterialPropertyBlock();
+                _pedacoDePedra.SetFloat(PetrificacaoDoPedacoId, 2f);
+                p.pele.SetPropertyBlock(_pedacoDePedra);
+            }
+            else p.pele.SetPropertyBlock(null);
             var b = malha.bounds;
             p.caixa.center = b.center;
             p.caixa.size = Vector3.Max(b.size, Vector3.one * 0.05f);

@@ -480,6 +480,8 @@ namespace ZombieCityCleaner.EditorTools
             var recarga = sm.AddAnyStateTransition(recarregar);
             recarga.AddCondition(AnimatorConditionMode.If, 0f, "Reload");
             recarga.canTransitionToSelf = false; recarga.hasExitTime = false; recarga.duration = 0.06f; recarga.hasFixedDuration = true;
+            MontagemDaAgua.PorONadoNoControlador(ctrl);   // o nado (07/11/2026), se o FBX dele já existe
+            MontagemDaVara.PorAVaraNoControlador(ctrl);   // a vara de pesca (07/11/2026), se os clipes dela já existem
             EditorUtility.SetDirty(ctrl);
         }
 

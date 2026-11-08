@@ -188,11 +188,20 @@ namespace ZombieCityCleaner.Player
             _desdeOAmanhecer = e.desdeOAmanhecer;
             // quem entra no meio do dia não sorteia na hora: o próximo amanhecer do mundo é o primeiro
             _amanhecerVisto = CicloDoDia.Amanheceres;
-            // a vida geral sai das partes (06/11/2026): a do save não conta. O tronco e a cabeça voltam com pelo menos 10%
-            // (um save no limite não pode nascer morto)
-            for (int p = 0; p < PartesDoCorpo.Quantas; p++) _soNaParte[p] = 0f;
+            // a vida geral sai das partes (06/11/2026): a do save não conta. O tronco e a cabeça voltam com pelo menos 10%, e
+            // a vida geral também (07/11/2026: um save no limite não pode nascer morto; o machucado de todas as partes encolhe
+            // junto até ela chegar a 10)
+            // (o save guarda o que a parte mostra: o que a lesão que ainda está lá tira a mais volta a ficar só no membro)
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+            {
+                _soNaParte[p] = PartesDoCorpo.EhMembro((ParteDoCorpo)p) ? Mathf.Min(_danoDaParte[p], DanoNoMembro(_lesao[p])) : 0f;
+                _danoDaParte[p] -= _soNaParte[p];
+            }
             _danoDaParte[(int)ParteDoCorpo.Tronco] = Mathf.Min(_danoDaParte[(int)ParteDoCorpo.Tronco], 90f);
             _danoDaParte[(int)ParteDoCorpo.Cabeca] = Mathf.Min(_danoDaParte[(int)ParteDoCorpo.Cabeca], 90f);
+            float perdido = PerdidoNaVida();
+            if (perdido > 90f)
+                for (int p = 0; p < PartesDoCorpo.Quantas; p++) _danoDaParte[p] *= 90f / perdido;
             ConferirAVida(null);
             GravarCorpo();
         }
@@ -261,9 +270,9 @@ namespace ZombieCityCleaner.Player
             if (!PartesDoCorpo.Valida(parte)) parte = PartesDoCorpo.SortearParte(PartesDoCorpo.PesosDo(tipo), transform, de);
             if (!PartesDoCorpo.EhMembro(parte)) lesao = Lesao.Nenhuma;   // a cabeça e o tronco não quebram (por enquanto)
             int p = (int)parte;
-            // o golpe tira o dobro da parte (06/11/2026: a vida geral é a média das partes, e a morte vem do tronco ou da
-            // cabeça); o que a lesão tira a mais fica só no membro
-            PorNaParte(parte, EmPorcento(Mathf.Max(0f, valor)) * DanoNaParte);
+            // o golpe tira da vida geral o que tirava antes (07/11/2026): no tronco e na cabeça, o mesmo tanto da parte; no
+            // braço e na perna, o dobro da parte (que conta metade). O que a lesão tira a mais fica só no membro
+            PorNaParte(parte, EmPorcento(Mathf.Max(0f, valor)) * FatorDaParte(p));
             _soNaParte[p] = Mathf.Min(100f, _soNaParte[p] + DanoNoMembro(lesao));
             // a ferida: a fratura exposta sempre sangra; o resto, pela chance do jeito do golpe
             if (lesao == Lesao.Exposta && _lesao[p] != Lesao.Exposta)
@@ -346,7 +355,7 @@ namespace ZombieCityCleaner.Player
                     float d = Mathf.Floor(_sangue);
                     _sangue -= d;
                     for (int p = 0; p < PartesDoCorpo.Quantas; p++)
-                        if ((_sangra & (1 << p)) != 0) PorNaParte((ParteDoCorpo)p, EmPorcento(d) * DanoNaParte * SangueDa(p) / taxa);
+                        if ((_sangra & (1 << p)) != 0) PorNaParte((ParteDoCorpo)p, EmPorcento(d) * FatorDaParte(p) * SangueDa(p) / taxa);
                     ConferirAVida("Sangrou até morrer.");
                     if (Caido.Value) return;
                 }
@@ -640,10 +649,13 @@ namespace ZombieCityCleaner.Player
             return true;
         }
 
-        // o tratamento: tira primeiro o machucado que conta para a vida geral, depois o que só a parte sente (a lesão)
+        // o tratamento: tira primeiro o machucado que conta para a vida geral, depois o que só a parte sente (a lesão).
+        // 'quanto' são pontos da vida geral (07/11/2026): no braço e na perna, a parte melhora o dobro (a atadura de 30 leva
+        // o braço 60% para cima e a vida geral 30, como antes)
         void Melhorar(ParteDoCorpo parte, float quanto)
         {
             int p = (int)parte;
+            quanto *= FatorDaParte(p);
             float tira = Mathf.Min(quanto, _danoDaParte[p]);
             _danoDaParte[p] -= tira;
             _soNaParte[p] = Mathf.Max(0f, _soNaParte[p] - (quanto - tira));
@@ -651,31 +663,32 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------ a vida geral (06/11/2026) ------------------------------------------------
 
-        /// <summary>Quanto o golpe (e o sangue) tira da parte, para cada ponto de dano: o dobro (06/11/2026).</summary>
-        public const float DanoNaParte = 2f;
+        /// <summary>
+        /// Quanto a parte perde para cada ponto da vida geral (07/11/2026, a pedido: "ajustar o dano de tudo, para o
+        /// equivalente que era antes"): o tronco e a cabeça 1, o braço e a perna 2. Cada golpe tira da vida geral o que tirava
+        /// antes (a mordida 12, o avanço do Brutamonte 50), e o braço e a perna mostram o dobro na porcentagem deles.
+        /// </summary>
+        public static float FatorDaParte(int p) => PartesDoCorpo.EhMembro((ParteDoCorpo)p) ? 2f : 1f;
 
         /// <summary>
-        /// O peso de cada parte na média da vida geral (06/11/2026): a cabeça 12%, o tronco 30%, cada braço 12% e cada perna
-        /// 17% (na ordem de <see cref="ParteDoCorpo"/>).
+        /// Os pontos da vida geral que as partes perderam (07/11/2026): o tronco e a cabeça contam inteiros, o braço e a
+        /// perna contam metade (o fator deles). Só o machucado que conta; a lesão (a entorse, a fratura) fica só no membro,
+        /// como antes, senão a queda que quebra a perna matava.
         /// </summary>
-        static readonly float[] PesoNaVida = { 0.12f, 0.30f, 0.12f, 0.12f, 0.17f, 0.17f };
-
-        /// <summary>
-        /// A vida geral que as partes deixam (06/11/2026, a pedido: com os membros a 100%, ela a 100%, e "ainda está um
-        /// pouco bugado a parte da vida": o braço a 77% e a perna a 90% davam 67): a média das partes, com o tronco e a
-        /// cabeça pesando mais, mas nunca acima do tronco nem da cabeça (sem eles, não há vida). Conta a porcentagem que a
-        /// parte mostra (com a lesão, arredondada como na tela). O tronco ou a cabeça a 0, ela a 0: ele cai.
-        /// </summary>
-        float VidaDasPartes()
+        float PerdidoNaVida()
         {
-            float media = 0f;
-            for (int p = 0; p < PartesDoCorpo.Quantas; p++) media += PesoNaVida[p] * (100f - Mostrado(p));
-            float tronco = 100f - Mostrado((int)ParteDoCorpo.Tronco), cabeca = 100f - Mostrado((int)ParteDoCorpo.Cabeca);
-            return Mathf.Max(0f, vidaMaxima / 100f * Mathf.Min(media, Mathf.Min(tronco, cabeca)));
+            float perdido = 0f;
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++) perdido += _danoDaParte[p] / FatorDaParte(p);
+            return perdido;
         }
 
-        // o machucado que a parte mostra (o que conta e o da lesão, até 100, arredondado para cima como na tela)
-        float Mostrado(int p) => Mathf.Ceil(Mathf.Min(100f, _danoDaParte[p] + _soNaParte[p]) - 0.01f);
+        /// <summary>
+        /// A vida geral que as partes deixam (06/11/2026, a pedido: com as partes a 100%, ela a 100%; e, desde 07/11/2026,
+        /// cada golpe tira dela o que tirava antes): 100 menos o que as partes perderam (<see cref="PerdidoNaVida"/>). Ela
+        /// nunca fica acima do tronco nem da cabeça (eles contam inteiros): o tronco ou a cabeça a 0, ela a 0, e ele cai.
+        /// Com só o braço a 77% e a perna a 90%, ela fica em ~83 (eram 67 na soma, e 96 na média de 06/11).
+        /// </summary>
+        float VidaDasPartes() => Mathf.Max(0f, vidaMaxima / 100f * (100f - PerdidoNaVida()));
 
         // os pontos da vida geral em porcentagem de uma parte (com a vida máxima de 100, um para um)
         float EmPorcento(float v) => v * 100f / Mathf.Max(1f, vidaMaxima);
@@ -690,21 +703,27 @@ namespace ZombieCityCleaner.Player
             float aqui = PartesDoCorpo.EhMembro(parte) ? Mathf.Min(quanto, cabe) : quanto;
             _danoDaParte[p] = Mathf.Min(100f, _danoDaParte[p] + aqui);
             _corpoMudou = true;
-            float resto = quanto - aqui;
+            // (o resto em pontos da vida geral: no tronco, um para um)
+            float resto = (quanto - aqui) / FatorDaParte(p);
             if (resto > 0.001f) PorNaParte(ParteDoCorpo.Tronco, resto);
         }
 
-        // devolve vida às partes, a mais machucada primeiro
+        // devolve 'quanto' pontos da vida geral às partes, a que mais tira dela primeiro (no braço e na perna, a parte
+        // melhora o dobro, 07/11/2026)
         void CurarAsPartes(float quanto)
         {
             while (quanto > 0.001f)
             {
                 int pior = -1;
+                float maior = 0f;
                 for (int p = 0; p < PartesDoCorpo.Quantas; p++)
-                    if (_danoDaParte[p] > 0.001f && (pior < 0 || _danoDaParte[p] > _danoDaParte[pior])) pior = p;
+                {
+                    float naVida = _danoDaParte[p] / FatorDaParte(p);
+                    if (naVida > 0.001f && (pior < 0 || naVida > maior)) { pior = p; maior = naVida; }
+                }
                 if (pior < 0) break;
-                float tira = Mathf.Min(quanto, _danoDaParte[pior]);
-                _danoDaParte[pior] -= tira;
+                float tira = Mathf.Min(quanto, maior);
+                _danoDaParte[pior] = Mathf.Max(0f, _danoDaParte[pior] - tira * FatorDaParte(pior));
                 quanto -= tira;
             }
             _corpoMudou = true;

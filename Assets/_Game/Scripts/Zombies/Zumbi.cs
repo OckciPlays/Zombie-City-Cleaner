@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Rendering;
 using ZombieCityCleaner.Combat;
@@ -29,7 +29,8 @@ namespace ZombieCityCleaner.Zombies
         // Fugindo: no sol, desesperado, procurando sombra; Petrificado: de pedra, parado até a noite; Abrigando: ao
         // amanhecer, indo para um abrigo do sol (Zumbi.Sol.cs); Esquivando: pulando para fora do facho de uma lanterna ou
         // de um farol (Zumbi.Luz.cs). O estado vai pela rede em 4 bits (até 15).
-        public enum Estado : byte { Parado, Vagando, Investigando, Procurando, Perseguindo, Atacando, Morto, Fugindo, Petrificado, Abrigando, Esquivando }
+        // (o estado vai em 4 bits na rede: até 15. SemComando, 07/11/2026: Zumbi.SemComando.cs)
+        public enum Estado : byte { Parado, Vagando, Investigando, Procurando, Perseguindo, Atacando, Morto, Fugindo, Petrificado, Abrigando, Esquivando, SemComando }
         public enum Nivel : byte { Perto, Medio, Longe }
 
         public const int CamadaZumbi = 7;
@@ -86,7 +87,7 @@ namespace ZombieCityCleaner.Zombies
         /// Como ele morreu, num byte (vai pela rede): bit 0 sem cabeça, bits 1 a 4 a parte do corpo que levou o tiro e
         /// bit 5 arremessado (a espingarda de perto). A direção do empurrão vai no lugar da velocidade (morto não anda).
         /// </summary>
-        internal byte InfoDaMorte => (byte)((SemCabeca ? 1 : 0) | (_parteDaMorte << 1) | (_arremessado ? 32 : 0));
+        internal byte InfoDaMorte => (byte)((SemCabeca ? 1 : 0) | (_parteDaMorte << 1) | (_arremessado ? 32 : 0) | (_desligou ? 64 : 0));
         internal float DirecaoDaMorte { get; private set; }
         /// <summary>Perseguindo, atacando ou levou tiro há pouco: nunca cai de nível.</summary>
         public bool Engajado => Atual == Estado.Perseguindo || Atual == Estado.Atacando || (Atual == Estado.Esquivando && _alvo != null) || Time.time < _engajadoAte
@@ -197,7 +198,8 @@ namespace ZombieCityCleaner.Zombies
         void AtualizarColisores()
         {
             bool perto = NivelAtual == Nivel.Perto;
-            foreach (var h in hitboxes) h.colisor.enabled = perto && !Morto && _boneco == null && !Membros.Perdeu(Cortes, h.membro);
+            foreach (var h in hitboxes)
+                h.colisor.enabled = perto && !Morto && _boneco == null && !Membros.Perdeu(Cortes, h.membro) && !(SemCabeca && h.regiao == RegiaoDoCorpo.Cabeca);
             capsula.enabled = NivelAtual != Nivel.Longe && !Morto;
         }
 
@@ -317,8 +319,9 @@ namespace ZombieCityCleaner.Zombies
             }
             if (pele != null)
             {
-                pele.sharedMesh = Membros.Variante(MalhaDoDetalhe, esqueleto, novos);
-                pele.sharedMaterials = novos == 0 ? _soPele : _peleECarne;
+                bool semACabeca = SemCabeca && !Morto && MalhaSemCabecaViva != null;
+                pele.sharedMesh = Membros.Variante(semACabeca ? MalhaSemCabecaViva : MalhaDoDetalhe, esqueleto, novos);
+                pele.sharedMaterials = novos == 0 && !semACabeca ? _soPele : _peleECarne;
             }
             AtualizarColisores();
             // as pernas: sem uma, manca (com o equilíbrio: Zumbi.Equilibrio.cs); sem as duas, cai (com efeito) e depois rasteja
@@ -402,7 +405,7 @@ namespace ZombieCityCleaner.Zombies
                     var sons = Sons;
                     if (sons != null && sons.tiro != null && sons.tiro.Length > 0 && _m.PodeOuvir(transform.position))
                         Efeitos.Som(sons.tiro, transform.position + Vector3.up * 1.4f, 0.9f * sons.volume * ZombieManager.VolumeDosZumbis, true, 30f);
-                    if (SemCabeca) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);
+                    if (SemCabeca && !_desligou) Sangue.Explosao(partes[CorpoDeZumbi.ParteCabeca].position);   // (o sem cabeça já estourou)
                     Sangue.Mancha(transform.position + direcao * 0.6f, 1.1f);
                 }
             }
@@ -437,12 +440,15 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Volta ao estado de fábrica, para o pool: inteiro, vivo, de pé, sem alvo.</summary>
         internal void Zerar()
         {
+            bool estavaSemCabeca = SemCabeca;
+            _desligou = false;
+            _semComando = false;
             _alvo = null; _alerta = 0f; _girando = false; _engajadoAte = 0f; _golpeEm = 0f; _ameacadoAte = 0f; _feridoAte = 0f; _temCerco = false; _noAlcanceDesde = -1f; ZerarLuz();
             CacaQuemRecebe = false;   // a cópia que volta ao pool não caça mais ninguém (04/11/2026)
             _danoNoCorpo = 0f; SemCabeca = false; _parteDaMorte = 0; DirecaoDaMorte = 0f; _arremessado = false;
             for (int i = 0; i < _vidaDosMembros.Length; i++) _vidaDosMembros[i] = _m != null ? VidaDoMembro : 3f;
             ZerarEspecial();
-            if (Cortes != 0)
+            if (Cortes != 0 || estavaSemCabeca)
             {
                 Cortes = 0;
                 var pele = renderers[0] as SkinnedMeshRenderer;
@@ -554,6 +560,12 @@ namespace ZombieCityCleaner.Zombies
         {
             if (Morto || Petrificado || !NoNavMesh) return;
             if (Deitado) return;   // caindo, deitado ou levantando (sem uma perna): o equilíbrio decide (Zumbi.Equilibrio.cs)
+            if (_semComando)
+            {
+                Atual = Estado.SemComando;   // (nada de fora tira ele disso: Zumbi.SemComando.cs)
+                PensarSemComando(agora, _m.ajustes);   // sem a cabeça: desnorteado (Zumbi.SemComando.cs)
+                return;
+            }
             if (tipo == TipoDeZumbi.Brutamonte)
             {
                 PensarBrutamonte(agora);   // cego e surdo: só o olho (Zumbi.Brutamonte.cs)
@@ -722,7 +734,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Foi ver um barulho: anda até lá, olha em volta e passa a vagar ali.</summary>
         internal void Investigar(Vector3 ponto, float agora)
         {
-            if (!NoNavMesh || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte é surdo
+            if (!NoNavMesh || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte || _semComando) return;   // o Brutamonte é surdo; o sem cabeça também
             _alvo = null;
             // o barulho de dentro de um acampamento: vai só até a beira dele (02/11/2026)
             if (ZombieManager.ZonaSeguraEm(ponto, out var zona))
@@ -739,7 +751,7 @@ namespace ZombieCityCleaner.Zombies
 
         internal void ComecarPerseguicao(IAlvoDeZumbi jogador, float agora)
         {
-            if (jogador == null || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte) return;   // o Brutamonte só vê pelo olho
+            if (jogador == null || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte || _semComando) return;   // o Brutamonte só vê pelo olho; o sem cabeça, nada
             if (tipo == TipoDeZumbi.Long)
             {
                 _alvo = jogador;   // o Long não persegue: fica longe e cospe
@@ -941,6 +953,15 @@ namespace ZombieCityCleaner.Zombies
         void Morrer(float agora, bool semCabeca, Vector3 ponto, Vector3 direcao, bool arremesso)
         {
             if (Morto) return;
+            // às vezes, sem a cabeça, ele ainda anda um pouco (Zumbi.SemComando.cs)
+            if (AndarSemCabeca(semCabeca, arremesso))
+            {
+                EntrarSemComando(agora);
+                return;
+            }
+            // o sem cabeça que andava desliga de uma vez (no fim do tempo, ou com mais um acerto)
+            _desligou = _semComando;
+            semCabeca |= _desligou;
             SemCabeca = semCabeca;
             _arremessado = arremesso;
             _parteDaMorte = semCabeca ? CorpoDeZumbi.ParteCabeca : ParteMaisPerto(ponto);
@@ -1028,13 +1049,20 @@ namespace ZombieCityCleaner.Zombies
                 SemCabeca = (morte & 1) != 0;
                 _parteDaMorte = Mathf.Clamp((morte >> 1) & 15, 0, CorpoDeZumbi.Partes.Length - 1);
                 _arremessado = (morte & 32) != 0;
+                _desligou = (morte & 64) != 0;
                 DirecaoDaMorte = velocidade;
             }
             else if (estado != Estado.Morto) Velocidade = velocidade;
             Pedra = pedra / 255f;
             if (primeira) _pedraVista = Pedra;
             bool eraPedra = Petrificado;
+            bool ficouSemComando = estado == Estado.SemComando && !_semComando;
             Atual = estado;
+            if (ficouSemComando)
+            {
+                SemCabeca = true;
+                MostrarSemComando(!primeira);
+            }
             Golpes = golpes;
             Reacoes = reacoes;
             if (eraPedra != Petrificado) MudouAPedra(!primeira, primeira);

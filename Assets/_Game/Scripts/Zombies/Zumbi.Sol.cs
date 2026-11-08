@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 using ZombieCityCleaner.Combat;
 
@@ -168,6 +168,7 @@ namespace ZombieCityCleaner.Zombies
         internal void SolNoServidor(float agora, float dt)
         {
             if (Morto || _m == null || tipo == TipoDeZumbi.Brutamonte) return;   // o casco do Brutamonte não liga para o sol
+            if (VigiarSemComando(agora)) return;   // o sem cabeça: o relógio dele, até desligar (Zumbi.SemComando.cs)
             var a = _m.ajustes;
             if (!_m.EDia)
             {

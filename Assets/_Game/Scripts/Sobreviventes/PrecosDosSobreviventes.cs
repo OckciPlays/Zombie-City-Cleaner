@@ -51,7 +51,7 @@ namespace ZombieCityCleaner.Sobreviventes
             new[] { Item.Comida, Item.Feijao, Item.Milho, Item.Sopa, Item.Carne, Item.Salgadinho, Item.Chocolate, Item.BarraDeEnergia,
                     Item.Agua, Item.CopoDeAgua, Item.Leite, Item.Suco, Item.RefrigeranteLata, Item.RefrigeranteGarrafa, Item.Energetico, Item.GarrafaTermica,
                     // (06/11/2026) no fim: os peixes da pesca
-                    Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado },
+                    Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado, Item.PeixeAssado },
             new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca },
             new[] { Item.Municao9mm, Item.Municao12, Item.Municao556, Item.Municao762 },
             new[] { Item.Remedio, Item.Comprimidos, Item.Antibiotico, Item.KitMedico, Item.Atadura, Item.Bandagem, Item.Gaze, Item.Desinfetante,
@@ -91,7 +91,7 @@ namespace ZombieCityCleaner.Sobreviventes
             [Item.Bastao] = 15, [Item.Lanca] = 25, [Item.Tocha] = 10, [Item.CopoDeAgua] = 1, [Item.Fogueira] = 12, [Item.Cama] = 30,
             [Item.Barricada] = 25,
             // (06/11/2026) os peixes e a pólvora
-            [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14,
+            [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14, [Item.PeixeAssado] = 5,
         };
 
         static Dictionary<Item, int> _base;

@@ -129,6 +129,18 @@ O Chaveiro mudou de ideia: as chaves dos carros não saem no saque (ficam só no
 - **O afogamento:** sem fôlego, a vida cai 8 por segundo (do tronco) até ele subir ou morrer ("Afogou-se.").
 - Embaixo da água, a tela fica verde-azulada e escura (mais escura no fundo).
 - Vale no lago do mundo sorteado e no lago, no rio e no brejo do mapa fixo.
+- **Desde 07/11/2026, parece nado** (a pedido: "atualizar a parte de nadar"):
+  - **A arma vai para as costas sozinha** ao entrar na água funda, e os braços nadam (a braçada de peito, feita no
+    Blender). Saindo, a mão volta para o que estava. Os outros também veem o corpo nadando, sem a arma na mão.
+  - **A câmera fica rente à água** e sobe e desce um pouco a cada braçada.
+  - **Shift (para a frente) nada mais rápido** (2,8 m/s em vez de 1,9), gastando o fôlego: a barra aparece e esvazia em
+    45 s. Acabando, ele volta ao nado normal (sem se afogar, na tona).
+  - **A mochila cheia pesa:** a grande lotada deixa o nado 30% mais lento.
+  - **Os sons e a água:** o tchibum ao entrar, o barulho de cada braçada, as ondinhas e os respingos em volta, a água
+    escorrendo ao sair e a puxada de ar depois de muito tempo embaixo. Embaixo da água, tudo fica abafado. (Os sons são
+    provisórios: para trocar, um `.wav` com o mesmo nome em `Assets/_Game/Audio/Resources/Agua/`.)
+  - **Os zumbis param na beira:** eles não entram na água mais funda que uns 30 cm; atrás de quem nada, ficam esperando
+    na margem.
 
 ## O caiaque de dois lugares
 
@@ -140,6 +152,16 @@ O Chaveiro mudou de ideia: as chaves dos carros não saem no saque (ficam só no
 - Ele boia e balança um pouco; encalha onde a água fica rasa na proa. O remo gira na mão de quem rema (sem ninguém,
   fica deitado no casco).
 - A rede é a do carro: quem rema é o dono (move o caiaque); sem ninguém, o anfitrião.
+- **Desde 07/11/2026:**
+  - **Pescar parado, mesmo sozinho:** quem rema larga o remo no casco quando o caiaque para (uns 1,2 s parado) e fica
+    com as mãos livres: a vara de pesca e a arma funcionam. W ou S pegam o remo de novo (e recolhem a linha).
+  - **A remada de verdade:** os braços remam de um lado e do outro na primeira pessoa; os outros veem o corpo remando, com
+    o remo nas duas mãos. Cada pá faz barulho e respinga ao entrar na água, a proa vai e vem um pouco e fica um rastro de
+    ondinhas atrás.
+  - **No tempo ruim ele balança mais** (o vento e a chuva), mas não vira.
+  - **O compartimento:** uma caixinha de 2 × 2 na escotilha de trás. De fora, E nela abre o inventário com ela ao lado
+    (arraste os itens); sentado no caiaque, o TAB abre o mesmo. Ela vai no save do mundo.
+  - Sentado, a pose é a do caiaque: as pernas esticadas debaixo do convés.
 
 ## A pesca
 
@@ -151,6 +173,20 @@ O Chaveiro mudou de ideia: as chaves dos carros não saem no saque (ficam só no
 - **Os peixes** (comem-se assim mesmo; vendem nos comerciantes): o lambari (15 de fome), a tilápia (30), o tucunaré
   (50; 2 células) e o dourado (45, raro e caro; só com o Mestre pescador).
 - Na margem ou no caiaque (o lugar da frente). A boia e a linha só aparecem para quem pesca.
+- **Refeita em 07/11/2026** (a pedido: "a linha está saindo fora da ponta da vara e não funcionando muito bem"):
+  - **A linha sai da ponta da vara**, na primeira pessoa e no corpo, e cai um pouco quando está frouxa.
+  - **O arremesso pela força:** segure o clique (a barra enche) e solte; a boia vai de 4 a 18 m para onde você olha.
+  - **As beliscadas:** antes da mordida, a boia às vezes treme ("Beliscando..."). Clicar nela espanta o peixe: espere a
+    boia afundar. Clicar sem beliscada recolhe a linha.
+  - **A puxada pela tensão da linha:** segure o clique para recolher; quando o peixe puxar ("O PEIXE ESTÁ PUXANDO"),
+    solte. Tensão demais (o vermelho) arrebenta a linha; frouxa demais por 2 s, o peixe solta; e longe demais, ele leva a
+    linha. O peixe maior puxa mais forte e por mais tempo, e cansa.
+  - **Onde e quando:** os peixes maiores ficam na água mais funda (o meio do lago, de caiaque). Eles mordem mais rápido
+    de manhã cedo, no fim da tarde e com chuva, e mais devagar de noite (a Noite de pesca muda isso).
+  - **Os outros jogadores veem** a boia voando, boiando, afundando e correndo com o peixe, e a linha da sua vara.
+  - **O peixe assado:** perto de uma fogueira acesa, a aba CRIAR assa o peixe em filés (o lambari dá 1, a tilápia 2, o
+    tucunaré e o dourado 3; cada filé mata 20 de fome). **O peixe cru pode fazer mal:** 40% de chance de enjoo, que
+    tira 12 de vida aos poucos.
 
 ## O machado e as árvores
 

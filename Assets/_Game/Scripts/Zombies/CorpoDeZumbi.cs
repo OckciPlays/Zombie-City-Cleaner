@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using ZombieCityCleaner.Combat;
 
 namespace ZombieCityCleaner.Zombies
@@ -9,9 +9,10 @@ namespace ZombieCityCleaner.Zombies
     /// Cada máquina tem os seus corpos (são só visuais); quem decide a morte é o anfitrião.
     /// As juntas guardam o repouso de quando o corpo foi criado (na pose de repouso, braços abertos): por isso o corpo
     /// nunca é desligado no pool, só fica cinemático, sem colisão e invisível.
-    /// O componente só fica ligado nos primeiros passos de física depois da queda (veja FixedUpdate).
+    /// O componente só fica ligado nos primeiros passos de física depois da queda (veja FixedUpdate): a interpolação e os
+    /// músculos que vão apagando (CorpoDeZumbi.Musculos.cs, ~3,5 s).
     /// </summary>
-    public class CorpoDeZumbi : MonoBehaviour
+    public partial class CorpoDeZumbi : MonoBehaviour
     {
         /// <summary>Os corpos só batem no cenário e uns nos outros: o tiro passa, e jogadores e zumbis atravessam.</summary>
         public const int Camada = 8;
@@ -44,6 +45,8 @@ namespace ZombieCityCleaner.Zombies
         {
             emUso = false;
             vivo = false;
+            _vigiando = false;
+            _comMusculos = false;
             foreach (var p in partes)
             {
                 p.isKinematic = true;
@@ -67,20 +70,54 @@ namespace ZombieCityCleaner.Zombies
         MaterialPropertyBlock _blocoDaPedra;
         bool _estatua;
 
+        // a pose de repouso (a da montagem, em que as juntas foram feitas), para devolver as juntas a ela depois da estátua
+        Quaternion[] _repouso;
+        Vector3[] _repousoPos;
+
+        void ConhecerAsJuntas()
+        {
+            if (_juntas != null) return;
+            _juntas = GetComponentsInChildren<CharacterJoint>(true);
+            _limites = new (SoftJointLimit, SoftJointLimit, SoftJointLimit, SoftJointLimit)[_juntas.Length];
+            for (int i = 0; i < _juntas.Length; i++)
+                _limites[i] = (_juntas[i].lowTwistLimit, _juntas[i].highTwistLimit, _juntas[i].swing1Limit, _juntas[i].swing2Limit);
+            // (chamado antes da primeira queda: os ossos ainda estão no repouso do prefab)
+            _repouso = new Quaternion[esqueleto.Length];
+            _repousoPos = new Vector3[esqueleto.Length];
+            for (int i = 0; i < esqueleto.Length; i++) esqueleto[i].GetLocalPositionAndRotation(out _repousoPos[i], out _repouso[i]);
+            ConhecerOsMusculos();
+        }
+
         /// <summary>
-        /// O corpo de pedra: todo de pedra no shader do Oco (_Petrificacao 2) e as juntas travadas (cai duro, como uma
-        /// estátua tombando). De volta, as juntas voltam aos limites da montagem.
+        /// A junta guarda a pose em que foi ligada: soltar e ligar de novo o corpo do pai faz a pose de agora ser a dela (o
+        /// zero dos limites). Na estátua, a pose da estátua; de volta, a de repouso.
+        /// </summary>
+        void Reancorar()
+        {
+            foreach (var j in _juntas)
+            {
+                var pai = j.connectedBody;
+                j.connectedBody = null;
+                j.connectedBody = pai;
+            }
+        }
+
+        /// <summary>
+        /// O corpo de pedra: todo de pedra no shader do Oco (_Petrificacao 2) e as juntas travadas na pose da estátua (cai
+        /// duro, como uma estátua tombando, na postura em que estava: 07/11/2026, antes as juntas travavam no zero delas, a
+        /// pose de repouso de braços abertos, e a estátua mudava de postura ao cair). Chamado com a pose já copiada. De
+        /// volta, as juntas voltam ao repouso e aos limites da montagem.
         /// </summary>
         void Estatua(bool sim)
         {
             if (sim == _estatua) return;
             _estatua = sim;
-            if (_juntas == null)
+            ConhecerAsJuntas();
+            if (sim) Reancorar();
+            else
             {
-                _juntas = GetComponentsInChildren<CharacterJoint>(true);
-                _limites = new (SoftJointLimit, SoftJointLimit, SoftJointLimit, SoftJointLimit)[_juntas.Length];
-                for (int i = 0; i < _juntas.Length; i++)
-                    _limites[i] = (_juntas[i].lowTwistLimit, _juntas[i].highTwistLimit, _juntas[i].swing1Limit, _juntas[i].swing2Limit);
+                for (int i = 0; i < esqueleto.Length; i++) esqueleto[i].SetLocalPositionAndRotation(_repousoPos[i], _repouso[i]);
+                Reancorar();
             }
             for (int i = 0; i < _juntas.Length; i++)
             {
@@ -108,16 +145,34 @@ namespace ZombieCityCleaner.Zombies
         /// de um zumbi caindo sem uma perna, com o rosto que ele tinha).
         /// </summary>
         internal void Cair(Transform modelo, Transform[] pose, Vector3 velocidade, bool semCabeca, int parte, Vector3 empurrao, byte cortes,
-                           Material aparencia = null, float pedra = 0f, bool vivo = false)
+                           Material aparencia = null, float pedra = 0f, bool vivo = false, Morte jeito = Morte.Comum)
         {
-            Estatua(pedra >= 0.5f);
+            ConhecerAsJuntas();
+            if (pedra < 0.5f) Estatua(false);   // (a estátua trava as juntas depois, na pose copiada)
             emUso = true;
             this.vivo = vivo;
+            _cortes = cortes;
+            _cabecaFora = semCabeca;
+            _quebrou = false;
+            _vigiando = false;
             _parado = false;
             caiuEm = Time.time;
             transform.SetPositionAndRotation(modelo.position, modelo.rotation);
             for (int i = 0; i < esqueleto.Length && i < pose.Length; i++)
                 esqueleto[i].SetLocalPositionAndRotation(pose[i].localPosition, pose[i].localRotation);
+            if (pedra >= 0.5f)
+            {
+                _estatua = false;   // (de novo, se já era: as juntas pegam a pose desta estátua)
+                Estatua(true);
+                _comMusculos = false;
+            }
+            else
+            {
+                // as juntas na pose da morte (sem o tranco) e os músculos que vão apagando; o boneco vivo (caindo sem uma
+                // perna) só tem o atrito
+                LimitesNaPose();
+                Musculos(vivo ? Morte.Desligou : jeito);
+            }
             pele.sharedMesh = Membros.Variante(semCabeca ? malhaSemCabeca : malhaInteira, esqueleto, cortes);
             var inteira = materiaisInteira;
             var cortada = materiaisSemCabeca;
@@ -143,6 +198,7 @@ namespace ZombieCityCleaner.Zombies
                 Colidir(baixo, e < 1);
                 Colidir(cima, e < 2);
             }
+            Colidir(ParteCabeca, true);   // (a estátua que perdeu a cabeça a desligou: o corpo pode voltar sem passar pelo pool)
             pele.enabled = true;
             foreach (var p in partes)
             {
@@ -159,7 +215,9 @@ namespace ZombieCityCleaner.Zombies
                 p.angularVelocity = Vector3.zero;
             }
             if (parte >= 0 && parte < partes.Length) partes[parte].AddForce(empurrao, ForceMode.Impulse);
-            if (semCabeca) Sangue.Jorro(pescoco, pescoco.up, 4f);
+            if (semCabeca && pedra < 0.5f) Sangue.Jorro(pescoco, pescoco.up, 4f);
+            // a estátua quebra ao bater no chão; a espingarda de perto e o carro a despedaçam já (CorpoDeZumbi.Pedra.cs)
+            if (_estatua) VigiarAEstatua(jeito == Morte.Arremesso, empurrao.sqrMagnitude > 0.01f ? empurrao : velocidade);
             _passosSemInterpolar = 2;
             enabled = true;
         }
@@ -189,12 +247,14 @@ namespace ZombieCityCleaner.Zombies
         }
 
         // um passo de física já rodou na pose nova: a interpolação volta (o corpo cai liso, mesmo com mais quadros que
-        // passos de física)
+        // passos de física); e os músculos, enquanto durarem
         void FixedUpdate()
         {
-            if (--_passosSemInterpolar > 0) return;
-            foreach (var p in partes) p.interpolation = RigidbodyInterpolation.Interpolate;
-            enabled = false;
+            if (_passosSemInterpolar > 0 && --_passosSemInterpolar == 0)
+                foreach (var p in partes) p.interpolation = RigidbodyInterpolation.Interpolate;
+            PassoDosMusculos();
+            PassoDaEstatua();
+            if (_passosSemInterpolar <= 0 && !_comMusculos && !_vigiando) enabled = false;
         }
 
         /// <summary>Depois de assentar, a física para (o corpo vira cinemático, parado no lugar).</summary>
@@ -202,6 +262,7 @@ namespace ZombieCityCleaner.Zombies
         {
             if (_parado) return;
             _parado = true;
+            _comMusculos = false;
             foreach (var p in partes)
             {
                 p.isKinematic = true;

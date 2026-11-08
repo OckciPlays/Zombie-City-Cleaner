@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -253,6 +253,63 @@ namespace ZombieCityCleaner.Player
         /// Nessa camada a lanterna do dono nem a ilumina nem faz a sombra dela; o sol e a lua continuam (eles iluminam e
         /// fazem sombra de todas as camadas). Só muda o que mudou (a câmera de terceira pessoa chama a cada quadro).
         /// </summary>
+        /// <summary>
+        /// (07/11/2026, a pedido: no caiaque, "em primeira pessoa aparece apenas o remo... seria interessante ter ali a mão
+        /// do personagem"; e as mãos no guidão) Na moto e no caiaque com o remo, na primeira pessoa, o dono vê o próprio
+        /// corpo sem a cabeça e sem o pescoço (o osso do pescoço fica minúsculo, depois da animação; na moto, "a gente está
+        /// vendo o pescoço do personagem e uma parte da cabeça"), e o peito não dobra com o olhar (no caiaque, olhando para
+        /// baixo, o peito vinha para a frente, por cima da câmera: "essa parte do corpo um pouco bugada quando olho pra
+        /// baixo"; os outros continuam vendo ele dobrar). As mãos no remo e no guidão são as do corpo, as mesmas que os
+        /// outros veem. Quem senta chama a cada quadro. No carro, não: na primeira pessoa ele fica como antes, só a sombra
+        /// ("do carro em primeira pessoa, tira e deixa como estava antes sem nada").
+        /// </summary>
+        public bool CorpoSemCabeca { get; private set; }
+        Vector3 _escalaDaCabeca = Vector3.one;
+        Transform _ossoEncolhido;
+        bool _cabecaEncolhida;
+        /// <summary>O olho da primeira pessoa com o corpo à mostra fica pelo menos isto acima e na frente do pescoço (m).</summary>
+        const float OlhoAcimaDoPescoco = 0.15f, OlhoNaFrenteDoPescoco = 0.07f;
+
+        public void CorpoNoVeiculo(bool sim)
+        {
+            if (sim)
+            {
+                CorpoSemCabeca = true;
+                CorpoDoDono(true);
+                return;
+            }
+            if (!CorpoSemCabeca) return;
+            CorpoSemCabeca = false;
+            CabecaDeVolta();
+            CorpoDoDono(EmTerceiraPessoa);
+        }
+
+        void CabecaDeVolta()
+        {
+            if (_cabecaEncolhida && _ossoEncolhido != null) _ossoEncolhido.localScale = _escalaDaCabeca;
+            _cabecaEncolhida = false;
+            _ossoEncolhido = null;
+        }
+
+        /// <summary>O pescoço (o pai da cabeça), se o corpo tiver um; senão, null.</summary>
+        Transform OssoDoPescoco => ossoCabeca != null && ossoCabeca.parent != null && ossoCabeca.parent != ossoPeito ? ossoCabeca.parent : null;
+
+        /// <summary>
+        /// O olho da primeira pessoa com o corpo à mostra (<see cref="CorpoSemCabeca"/>), no espaço da raiz: nunca abaixo nem
+        /// atrás do pescoço. Assim a gola fica embaixo e atrás da câmera, e o olhar para baixo vê o peito e os braços por
+        /// fora, sem entrar no corpo (o tronco mexe com a animação: o remar, a moto inclinada).
+        /// </summary>
+        public Vector3 OlhoForaDoCorpo(Vector3 olhoNaRaiz)
+        {
+            var pescoco = OssoDoPescoco;
+            if (pescoco == null) pescoco = ossoCabeca;
+            if (pescoco == null) return olhoNaRaiz;
+            Vector3 p = transform.InverseTransformPoint(pescoco.position);
+            olhoNaRaiz.y = Mathf.Max(olhoNaRaiz.y, p.y + OlhoAcimaDoPescoco);
+            olhoNaRaiz.z = Mathf.Max(olhoNaRaiz.z, p.z + OlhoNaFrenteDoPescoco);
+            return olhoNaRaiz;
+        }
+
         public void CorpoDoDono(bool visivel)
         {
             if (_corpoDoDonoAplicado && CorpoVisivelNoDono == visivel) return;
@@ -620,8 +677,24 @@ namespace ZombieCityCleaner.Player
             // O corpo acompanha o olhar: metade no peito, metade na cabeça, por cima da animação.
             float pitch = Pitch.Value;
             Vector3 eixo = transform.right;
-            if (ossoPeito != null) ossoPeito.rotation = Quaternion.AngleAxis(pitch * 0.5f, eixo) * ossoPeito.rotation;
+            // na moto e no caiaque, na primeira pessoa: o corpo sem a cabeça e sem o pescoço, e o peito sem dobrar com o
+            // olhar, só no dono (CorpoNoVeiculo)
+            bool semCabeca = CorpoSemCabeca && IsOwner && ossoCabeca != null && !EmTerceiraPessoa;
+            if (ossoPeito != null && !semCabeca) ossoPeito.rotation = Quaternion.AngleAxis(pitch * 0.5f, eixo) * ossoPeito.rotation;
             if (ossoCabeca != null) ossoCabeca.rotation = Quaternion.AngleAxis(pitch * 0.5f, eixo) * ossoCabeca.rotation;
+            if (semCabeca)
+            {
+                var osso = OssoDoPescoco != null ? OssoDoPescoco : ossoCabeca;
+                if (_cabecaEncolhida && _ossoEncolhido != osso) CabecaDeVolta();   // (o corpo mudou)
+                if (!_cabecaEncolhida)
+                {
+                    _ossoEncolhido = osso;
+                    _escalaDaCabeca = osso.localScale;
+                    _cabecaEncolhida = true;
+                }
+                osso.localScale = Vector3.one * 0.001f;
+            }
+            else if (_cabecaEncolhida) CabecaDeVolta();
         }
 
         /// <summary>O que o tiro acertou, para os outros mostrarem o efeito certo.</summary>

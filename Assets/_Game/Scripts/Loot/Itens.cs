@@ -44,6 +44,8 @@ namespace ZombieCityCleaner.Loot
         MacoDeCigarros = 119,
         // a pesca (06/11/2026, a árvore de habilidades): os peixes do lago; e a pólvora, a munição do Armeiro
         PeixePequeno = 120, PeixeMedio, PeixeGrande, PeixeDourado, Polvora,
+        // o peixe assado na fogueira (07/11/2026: o filé; o cru pode fazer mal)
+        PeixeAssado = 125,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
         // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
@@ -300,6 +302,7 @@ namespace ZombieCityCleaner.Loot
             Comer(Item.PeixeMedio, "PeixeMedio", "tilápia", "a tilápia", "tilápias", "Um peixe do lago. Mata bem a fome.", 3, 30f, 3f),
             Comer(Item.PeixeGrande, "PeixeGrande", "tucunaré", "o tucunaré", "tucunarés", "Um peixe grande do lago: a fome de quase um dia.", 2, 50f, 5f),
             Comer(Item.PeixeDourado, "PeixeDourado", "dourado", "o dourado", "dourados", "Raro, do fundo do lago. Os comerciantes pagam bem.", 1, 45f, 5f),
+            Comer(Item.PeixeAssado, "PeixeAssado", "peixe assado", "o peixe assado", "peixes assados", "Assado na fogueira: mata a fome sem fazer mal.", 6, 20f, 0f),
             Material(Item.Polvora, "Polvora", "pólvora", "a pólvora", "latas de pólvora", "Na mesa de oficina, com o Armeiro: vira munição.", 5),
         };
         static int[] _indiceDoLoot;
@@ -548,6 +551,9 @@ namespace ZombieCityCleaner.Loot
         public static bool ModeloBranco(int modelo) => modelo >= Modelo(Item.Faca) && modelo <= Modelo(Item.Tocha);
         /// <summary>Come, bebe ou usa (a comida, a bebida e os remédios).</summary>
         public static bool EhConsumivel(Item i) => Loot(i)?.verbo != null;
+
+        /// <summary>Um peixe do lago, cru (07/11/2026: comido assim, pode fazer mal; assado na fogueira, não).</summary>
+        public static bool EhPeixeCru(Item i) => i >= Item.PeixePequeno && i <= Item.PeixeDourado;
         /// <summary>O que se veste: as 3 mochilas (o coldre saiu do jogo).</summary>
         public static bool EhEquipamento(Item i) => EhMochila(i);
         public static bool EhMochila(Item i) => i >= Item.MochilaPequena && i <= Item.MochilaGrande;

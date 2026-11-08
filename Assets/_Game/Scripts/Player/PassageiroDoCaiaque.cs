@@ -7,10 +7,21 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// O jogador no caiaque (06/11/2026), em todas as máquinas (posto pelo VidaJogador): o caiaque diz o lugar
-    /// (<see cref="Caiaque"/>), e aqui o corpo fica preso no banco, sentado (o "Lugar" do Animator, como no carro), sem a
-    /// cápsula e sem os passos. No dono: o andar para; o mouse olha em volta do banco; o E sai. Quem rema (o lugar 0) fica
-    /// sem as mãos (o remo); quem vai na frente (o lugar 1) fica com elas: a vara de pesca e a arma funcionam. Saindo, ele
-    /// desce do lado: na terra, se houver; senão, na água (nadando).
+    /// (<see cref="Caiaque"/>), e aqui o corpo fica preso no banco, sentado, sem a cápsula e sem os passos. No dono: o andar
+    /// para; o mouse olha em volta do banco; o E sai; o TAB abre o inventário com o compartimento. Quem vai na frente (o
+    /// lugar 1) fica com as mãos livres: a vara de pesca e a arma funcionam. Saindo, ele desce do lado: na terra, se houver;
+    /// senão, na água (nadando).
+    /// <para>
+    /// Quem rema (o lugar 0; 07/11/2026, a pedido: "o certo é pescar quando paramos, mesmo se estivermos sozinho"): com o
+    /// remo na mão, rema (os braços remando de primeira pessoa, o <c>Resources/BracosRemando</c>; o corpo, o Remar); parado
+    /// <see cref="LargarDepois"/> s, larga o remo no casco e fica com as mãos livres, como o da frente; o W, o S, o A ou o D
+    /// pegam o remo de novo. O estado vai pela rede no caiaque (<see cref="Caiaque.RemoNaMao"/>, <see cref="Caiaque.Remando"/>).
+    /// </para>
+    /// <para>
+    /// O corpo: com o parâmetro "Remando" no controlador (o MontagemDaAgua; 1 sentado no caiaque, o Remar_Parado; 2 remando,
+    /// o Remar), as pernas esticadas debaixo do convés e o quadril no banco; a camada dos braços sai com o remo na mão. Sem o
+    /// parâmetro, o "Lugar" 2 (o sentado do carro), como antes.
+    /// </para>
     /// </summary>
     [DefaultExecutionOrder(110)]
     public class PassageiroDoCaiaque : MonoBehaviour
@@ -18,6 +29,9 @@ namespace ZombieCityCleaner.Player
         public Caiaque Caiaque { get; private set; }
         public int Lugar { get; private set; } = -1;
         public bool NoCaiaque => Caiaque != null;
+
+        /// <summary>Parado assim (s), quem rema larga o remo e fica com as mãos livres.</summary>
+        public const float LargarDepois = 1.2f;
 
         /// <summary>O jogador (o componente qualquer dele) está sentado num caiaque?</summary>
         public static bool Sentado(Component c)
@@ -27,7 +41,9 @@ namespace ZombieCityCleaner.Player
         }
 
         static readonly int LugarId = Animator.StringToHash("Lugar");
+        static readonly int RemandoId = Animator.StringToHash("Remando");
         const int MascaraDoChao = ~((1 << 2) | (1 << 4) | (1 << 6) | (1 << 10) | (1 << 11) | (1 << 12));
+        static readonly int SpeedId = Animator.StringToHash("Speed");
 
         JogadorRede _rede;
         CharacterController _cc;
@@ -37,10 +53,13 @@ namespace ZombieCityCleaner.Player
         Transform _cabeca, _camera;
         Vector3 _cabecaLocal;
         Vector3 _quadrilNaRaiz = new Vector3(0f, 0.888f, 0f);
-        InputAction _olhar, _interagir;
-        bool _ccLigado = true, _semMaos;
-        float _yaw, _pitch, _sentouEm;
-        int _temLugar = -1;
+        InputAction _olhar, _interagir, _mover;
+        bool _ccLigado = true, _semMaos, _remoLocal, _avisouDoRemo;
+        float _yaw, _pitch, _sentouEm, _paradoDesde;
+        int _temLugar = -1, _temRemando = -1;
+        Animator _animadorVisto;
+        GameObject _bracosRemando;
+        Animator _animadorRemando;
 
         void Awake()
         {
@@ -52,6 +71,7 @@ namespace ZombieCityCleaner.Player
             var acoes = InputSystem.actions;
             _olhar = acoes.FindAction("Player/Look", true);
             _interagir = acoes.FindAction("Player/Interact", true);
+            _mover = acoes.FindAction("Player/Move", true);
         }
 
         void Start()
@@ -79,18 +99,17 @@ namespace ZombieCityCleaner.Player
             Caiaque = c;
             Lugar = lugar;
             _sentouEm = Time.time;
+            _paradoDesde = Time.time;
             _ccLigado = _cc == null || _cc.enabled;
             if (_cc != null) _cc.enabled = false;
             if (_passos != null) _passos.enabled = false;
-            _semMaos = lugar == 0;
-            if (_semMaos) _rede.EsconderNaMao(true);
+            // quem senta para remar já pega o remo
+            _remoLocal = lugar == 0;
+            _avisouDoRemo = false;
+            _semMaos = false;
+            Maos(lugar == 0);
             if (!_rede.IsOwner) return;
             if (_movimento != null) _movimento.enabled = false;
-            if (_semMaos)
-            {
-                if (_arma != null) _arma.enabled = false;
-                if (_rede.bracos != null) _rede.bracos.SetActive(false);
-            }
             _yaw = 0f;
             _pitch = 8f;
         }
@@ -111,18 +130,49 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        // as mãos de quem está sentado: com o remo (sem a arma, os braços remando) ou livres (a vara, a arma)
+        void Maos(bool comORemo)
+        {
+            if (comORemo == _semMaos) return;
+            _semMaos = comORemo;
+            _rede.EsconderNaMao(comORemo);
+            if (!_rede.IsOwner) return;
+            if (comORemo)
+            {
+                if (_arma != null)
+                {
+                    _arma.enabled = false;
+                    _arma.EsconderAMao();
+                }
+                // (07/11/2026) na primeira pessoa, o próprio corpo sem a cabeça segura o remo (o mesmo que os outros veem:
+                // JogadorRede.CorpoNoVeiculo, a cada quadro no LateUpdate); os braços de primeira pessoa somem
+                if (_rede.bracos != null) _rede.bracos.SetActive(false);
+            }
+            else
+            {
+                if (_bracosRemando != null) _bracosRemando.SetActive(false);
+                _rede.CorpoNoVeiculo(false);
+                if (_rede.bracos != null) _rede.bracos.SetActive(true);
+                if (_arma != null)
+                {
+                    _arma.enabled = true;
+                    _arma.MostrarModeloDaMao(true);
+                }
+            }
+        }
+
         void Restaurar()
         {
             var a = _rede != null ? _rede.animadorCorpo : null;
-            if (a != null && TemLugar(a))
+            if (a != null)
             {
-                a.SetInteger(LugarId, 0);
+                if (TemLugar(a)) a.SetInteger(LugarId, 0);
+                if (TemRemando(a)) a.SetInteger(RemandoId, 0);
                 if (a.layerCount > 1) a.SetLayerWeight(1, 1f);
             }
             if (_cc != null) _cc.enabled = _ccLigado;
             if (_passos != null) _passos.enabled = true;
-            if (_semMaos) _rede.EsconderNaMao(false);
-            _semMaos = false;
+            Maos(false);
             if (!_rede.IsOwner)
             {
                 transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
@@ -137,12 +187,27 @@ namespace ZombieCityCleaner.Player
 
         bool TemLugar(Animator a)
         {
-            if (_temLugar < 0)
-            {
-                _temLugar = 0;
-                foreach (var p in a.parameters) if (p.nameHash == LugarId) _temLugar = 1;
-            }
+            Conferir(a);
             return _temLugar == 1;
+        }
+
+        bool TemRemando(Animator a)
+        {
+            Conferir(a);
+            return _temRemando == 1;
+        }
+
+        // os parâmetros do controlador do corpo (lidos de novo quando o corpo muda)
+        void Conferir(Animator a)
+        {
+            if (a == _animadorVisto && _temLugar >= 0) return;
+            _animadorVisto = a;
+            _temLugar = _temRemando = 0;
+            foreach (var p in a.parameters)
+            {
+                if (p.nameHash == LugarId) _temLugar = 1;
+                if (p.nameHash == RemandoId) _temRemando = 1;
+            }
         }
 
         // desce do lado do lugar: a terra seca mais perto (dos lados, atrás, na frente); sem terra, na água, boiando
@@ -177,15 +242,57 @@ namespace ZombieCityCleaner.Player
                 Restaurar();
                 return;
             }
-            var banco = Caiaque.assentos[Lugar];
-            transform.SetPositionAndRotation(banco.position - banco.rotation * _quadrilNaRaiz, banco.rotation);
-            var a = _rede.animadorCorpo;
-            if (a != null && TemLugar(a))
+            // quem rema: no dono, o remo segue o que ele faz (pega com o W, o S, o A ou o D; parado, larga); nos outros, o
+            // que vem pela rede
+            bool remando = false;
+            if (Lugar == 0)
             {
-                a.SetInteger(LugarId, 2);
-                if (_semMaos && a.layerCount > 1) a.SetLayerWeight(1, 0f);
+                if (_rede.IsOwner)
+                {
+                    Vector2 m = MenuOnline.Controla && _mover != null ? _mover.ReadValue<Vector2>() : Vector2.zero;
+                    remando = m.sqrMagnitude > 0.01f;
+                    if (remando)
+                    {
+                        _remoLocal = true;
+                        _paradoDesde = Time.time;
+                    }
+                    else if (_remoLocal && Mathf.Abs(Caiaque.Velocidade) < 0.35f && Time.time - _paradoDesde > LargarDepois)
+                    {
+                        _remoLocal = false;
+                        if (!_avisouDoRemo) InventarioJogador.AvisoLocal("Largou o remo: as mãos estão livres (W ou S pega o remo de novo)");
+                        _avisouDoRemo = true;
+                    }
+                    if (Mathf.Abs(Caiaque.Velocidade) >= 0.35f) _paradoDesde = Time.time;   // (deslizando, ainda não parou)
+                    Caiaque.PorORemo(_remoLocal, remando);
+                    Maos(_remoLocal);
+                }
+                else
+                {
+                    remando = Caiaque.Remando;
+                    Maos(Caiaque.RemoNaMao);
+                }
+            }
+            var banco = Caiaque.assentos[Lugar];
+            var a = _rede.animadorCorpo;
+            bool poseDoCaiaque = a != null && TemRemando(a);
+            // o quadril: na pose do caiaque, ele fica no banco (a raiz 2 cm abaixo); na do carro, o quadril em pé sobe ao banco
+            Vector3 quadril = poseDoCaiaque ? new Vector3(0f, 0.02f, 0f) : _quadrilNaRaiz;
+            transform.SetPositionAndRotation(banco.position - banco.rotation * quadril, banco.rotation);
+            if (a != null)
+            {
+                if (poseDoCaiaque)
+                {
+                    if (TemLugar(a)) a.SetInteger(LugarId, 0);
+                    a.SetInteger(RemandoId, _semMaos && remando ? 2 : 1);
+                }
+                else if (TemLugar(a)) a.SetInteger(LugarId, 2);
+                if (a.layerCount > 1) a.SetLayerWeight(1, _semMaos ? 0f : 1f);
             }
             if (!_rede.IsOwner) return;
+            // com o remo na mão, na primeira pessoa: o corpo sem a cabeça, com as mãos no remo (JogadorRede.CorpoNoVeiculo)
+            if (_semMaos) _rede.CorpoNoVeiculo(true);
+            if (_animadorRemando != null && _animadorRemando.isActiveAndEnabled)
+                _animadorRemando.SetFloat(SpeedId, remando ? Mathf.Max(1.6f, Mathf.Abs(Caiaque.Velocidade)) : 0f);
             // o E sai (não no mesmo instante em que entrou)
             if (MenuOnline.Controla && Time.time - _sentouEm > 0.5f && _interagir.WasPressedThisFrame())
             {
@@ -201,9 +308,15 @@ namespace ZombieCityCleaner.Player
                 _yaw = Mathf.Clamp(_yaw + o.x, -150f, 150f);
                 _pitch = Mathf.Clamp(_pitch - o.y, -60f, 75f);
             }
+            // o corpo acompanha este olhar (como no carro, 07/11/2026: senão ficava o do momento de entrar)
+            if (_rede != null && _rede.IsOwner && Mathf.Abs(_rede.Pitch.Value - _pitch) > 0.5f) _rede.Pitch.Value = _pitch;
             if (_cabeca != null)
             {
-                _cabeca.localPosition = _quadrilNaRaiz + new Vector3(0f, 0.62f, 0.08f);
+                Vector3 olho = quadril + (poseDoCaiaque ? new Vector3(0f, 0.68f, 0.06f) : new Vector3(0f, 0.62f, 0.08f));
+                // com o corpo à mostra (o remo na mão), o olho nunca atrás nem abaixo do pescoço, que mexe com o remar
+                // (07/11/2026, a pedido: "essa parte do corpo um pouco bugada quando olho pra baixo")
+                if (_semMaos) olho = _rede.OlhoForaDoCorpo(olho);
+                _cabeca.localPosition = olho;
                 _cabeca.localRotation = Quaternion.Euler(_pitch, _yaw, 0f);
             }
         }
