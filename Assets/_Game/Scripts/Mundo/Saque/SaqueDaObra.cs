@@ -203,13 +203,14 @@ namespace ZombieCityCleaner.Mundo
                 for (int k = 0; k < CatalogoDoSaque.TentativasNoPorao; k++)
                     if (rng.Chance(CatalogoDoSaque.ChanceDoPorao)) noPorao++;
             var porSala = new Dictionary<int, int>();
-            for (int k = 0; k < n; k++) Colocar(rng, livres, porSala, false, unidade, chances, saida);
-            for (int k = 0; k < noPorao; k++) Colocar(rng, livres, porSala, true, unidade, chances, saida);
+            ulong sal = Sorteio.Misturar(((ulong)(uint)semente << 24) ^ (ulong)(uint)unidade ^ 0xA2A5EA1500000000UL);
+            for (int k = 0; k < n; k++) Colocar(rng, livres, porSala, false, unidade, chances, saida, sal);
+            for (int k = 0; k < noPorao; k++) Colocar(rng, livres, porSala, true, unidade, chances, saida, sal);
         }
 
         // um item num lugar livre (só no porão, com 'soPorao'): a raridade (pelas chances da unidade), o lugar que aceita um
         // item dela e o item; o lugar usado sai da lista
-        static void Colocar(Sorteio rng, List<Livre> livres, Dictionary<int, int> porSala, bool soPorao, int unidade, float[] chances, List<ItemDoSaque> saida)
+        static void Colocar(Sorteio rng, List<Livre> livres, Dictionary<int, int> porSala, bool soPorao, int unidade, float[] chances, List<ItemDoSaque> saida, ulong sal)
         {
             float x = rng.Fracao();
             int r = 0;
@@ -249,12 +250,32 @@ namespace ZombieCityCleaner.Mundo
                 int k = aceitam[Escolher(rng, aceitam.Count, i => livres[aceitam[i]].peso)];
                 var lugar = livres[k];
                 livres.RemoveAt(k);
-                var it = Item(rng, lugar, lugar.cabem[r]);
+                var it = Item(rng, lugar, lugar.cabem[r], sal);
                 it.unidade = unidade;
                 saida.Add(it);
                 porSala[sala] = porSala.TryGetValue(sala, out int antes) ? antes + 1 : 1;
                 return;
             }
+        }
+
+        // outro item que cabe no lugar, sem as armas e a munição reais: da raridade de baixo (e das outras de baixo), ou, sem
+        // nenhum, da mesma e das de cima. Para baixo, e não na mesma: no lendário, a arma longa virava quase sempre a visão
+        // noturna (o único lendário que não é arma)
+        static bool OutroNoLugar(Sorteio rng, Livre lugar, int raridade, out (CatalogoDoSaque.Item item, bool girado) outro)
+        {
+            outro = default;
+            var bons = new List<(CatalogoDoSaque.Item, bool)>();
+            for (int passo = 0; passo < 5; passo++)
+            {
+                int r = passo < raridade ? raridade - 1 - passo : passo;
+                if (r < 0 || r > 4) continue;
+                bons.Clear();
+                foreach (var c in lugar.cabem[r]) if (CatalogoDoSaque.FatorDe(c.item) >= 1f) bons.Add(c);
+                if (bons.Count == 0) continue;
+                outro = bons[rng.Entre(0, bons.Count)];
+                return true;
+            }
+            return false;
         }
 
         static int Escolher(Sorteio rng, int n, System.Func<int, float> peso)
@@ -271,9 +292,17 @@ namespace ZombieCityCleaner.Mundo
         }
 
         // um dos itens que cabem no lugar (os da raridade), com a pilha e o estado
-        static ItemDoSaque Item(Sorteio rng, Livre lugar, List<(CatalogoDoSaque.Item item, bool girado)> cabem)
+        static ItemDoSaque Item(Sorteio rng, Livre lugar, List<(CatalogoDoSaque.Item item, bool girado)> cabem, ulong sal)
         {
             var (esc, gir) = cabem[rng.Entre(0, cabem.Count)];
+            // as armas de fogo e a munição reais (09/11/2026, a 2ª leva): só ficam com a fração da chance delas; no resto, outro
+            // item do mesmo lugar. O sorteio é à parte (do lugar), e o de sempre continua igual: o resto do saque não muda
+            float fator = CatalogoDoSaque.FatorDe(esc);
+            if (fator < 1f)
+            {
+                var r2 = new Sorteio(Sorteio.Misturar(sal ^ ((ulong)(uint)lugar.ponto << 20) ^ ((ulong)(uint)lugar.peca << 10) ^ (ulong)(uint)lugar.lugar));
+                if (!r2.Chance(fator) && OutroNoLugar(r2, lugar, (int)esc.raridade, out var outro)) (esc, gir) = outro;
+            }
             // no lugar: um pouco fora do meio, onde sobrar espaço, e virado para um lado ou para o outro
             float w = gir ? esc.tamanho.z : esc.tamanho.x, d = gir ? esc.tamanho.x : esc.tamanho.z;
             float sx = Mathf.Max(0f, lugar.tamanho.x - w) / 2f * 0.6f, sz = Mathf.Max(0f, lugar.tamanho.z - d) / 2f * 0.6f;

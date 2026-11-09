@@ -147,9 +147,10 @@ namespace ZombieCityCleaner.Player
         /// <summary>
         /// Uma miniatura (fundo transparente): o corpo vestido com as peças pedidas, a parte dele enquadrada de três quartos.
         /// Na cabeça (o cabelo e a barba), com o corpo; no tronco e nas pernas (a camiseta e a calça), só a peça. Depois, a
-        /// aparência volta (chame <see cref="Vestir"/>).
+        /// aparência volta (chame <see cref="Vestir"/>). Fica numa RenderTexture (09/11/2026; antes, o ReadPixels trazia a
+        /// imagem para a CPU e esperava a placa terminar tudo o que estava na fila: uns 9 ms a cada 4 miniaturas).
         /// </summary>
-        public Texture2D Miniatura(AparenciaDoJogador a, List<CatalogoDasRoupas.PecaVestida> pecas, Parte parte, Texture2D destino)
+        public RenderTexture Miniatura(AparenciaDoJogador a, List<CatalogoDasRoupas.PecaVestida> pecas, Parte parte, RenderTexture destino)
         {
             if (_vestimenta == null) return destino;
             var catalogo = _vestimenta.Catalogo;
@@ -169,15 +170,13 @@ namespace ZombieCityCleaner.Player
             _cameraDasMiniaturas.transform.position = Lugar + de;
             _cameraDasMiniaturas.transform.LookAt(Lugar + alvo);
             _cameraDasMiniaturas.Render();
-            var antes = RenderTexture.active;
-            var meio = RenderTexture.GetTemporary(TamanhoDaMiniatura, TamanhoDaMiniatura, 0, RenderTextureFormat.ARGB32);
-            Graphics.Blit(_miniatura, meio);   // metade do tamanho: sem serrilhado
-            RenderTexture.active = meio;
-            if (destino == null) destino = new Texture2D(TamanhoDaMiniatura, TamanhoDaMiniatura, TextureFormat.RGBA32, false) { name = "Miniatura" };
-            destino.ReadPixels(new Rect(0, 0, TamanhoDaMiniatura, TamanhoDaMiniatura), 0, 0);
-            destino.Apply();
-            RenderTexture.active = antes;
-            RenderTexture.ReleaseTemporary(meio);
+            if (destino == null || !destino.IsCreated())
+            {
+                if (destino != null) Object.Destroy(destino);
+                destino = new RenderTexture(TamanhoDaMiniatura, TamanhoDaMiniatura, 0, RenderTextureFormat.ARGB32) { name = "Miniatura" };
+                destino.Create();
+            }
+            Graphics.Blit(_miniatura, destino);   // metade do tamanho: sem serrilhado
             _modelo.localRotation = giro;
             if (_corpo != null) _corpo.enabled = true;
             return destino;

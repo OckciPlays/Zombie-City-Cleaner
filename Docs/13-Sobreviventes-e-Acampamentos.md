@@ -38,6 +38,14 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   o líder com a pistola (às vezes a submetralhadora); os outros, metade de arma branca (a faca, o bastão com pregos, o
   machado ou a lança), 40% a pistola e 10% a submetralhadora (no máximo uma por grupo). Antes, rifles, a espingarda e até a
   sniper.
+- **As armas de sucata** (09/11/2026, a 2ª leva da sucata; a decisão do Pedro: "só os militares usam as reais"): as de
+  fogo dos civis (os grupos, os acampamentos e o carro quebrado) são as de sucata. A pistola virou a pistola de sucata, a
+  submetralhadora a de sucata, e as armas longas (o rifle e a espingarda) o rifle de precisão de sucata; as brancas
+  continuam. Os sorteios são os de antes: só a arma que sai muda. A caixa da mochila é a da arma dele (a munição de prego
+  ou a de parafuso, no lugar da real), um em cada quatro leva de 1 a 3 sucatas, e quem tem a pistola de sucata (um tiro)
+  ou o rifle (três) ganha uma reserva de 4 a 9 balas para lutar, que não fica no saque (sem ela, fugia depois do primeiro
+  tiro). Quem ajuda no carro quebrado sem arma ganha a caixa de prego (era a de 9 mm). **Os militares e a base militar
+  continuam com as reais.**
 - **A mochila de cada um** (03/11/2026, a pedido: "o loot dos NPC está muito alto"): o pente de 40% a 100% e, em menos da
   metade deles, uma caixa com 3 a 12 balas; de 1 a 3 comidas e de 1 a 2 bebidas, às vezes remédio, materiais, pilhas e uma
   faca; quase sempre uma mochila (pequena, média ou grande) e algum dinheiro. Antes, de 2 a 4 caixas cheias.
@@ -202,11 +210,11 @@ O que o Pedro pediu:
 | A categoria | O que vende (e compra) |
 |---|---|
 | Comida | as latas, as bebidas, os salgadinhos e as barras |
-| Armas | as 5 armas (uma de cada, às vezes nenhuma), a faca, o machado, o bastão e a lança |
-| Munição | as 4 caixas de munição |
+| Armas | as 3 armas de sucata (uma de cada, às vezes nenhuma), a faca, o machado, o bastão e a lança; as 5 reais, só se alguém vender |
+| Munição | as caixas de prego e de parafuso; as 4 reais, às vezes uma caixa no começo, sem reposição |
 | Remédios | os remédios, a lanterna, as pilhas, a tocha e os kits de montar (fogueira, cama, barricada) |
 | Peças | o pneu, a bateria, a vela, o radiador, o macaco, o galão, o kit de reparo e a ferramenta |
-| Materiais | a madeira, as toras, o pano, a corda, a fita, as peças de metal, os fios, os pregos, a isca e a vara |
+| Materiais | a madeira, as toras, o pano, a corda, a fita, as peças de metal, os fios, os pregos, a isca, a vara, a pólvora e a sucata |
 | Roupas | as mochilas, o coldre, a roupa velha e o pano |
 
 **Os preços:**
@@ -216,13 +224,16 @@ O que o Pedro pediu:
   - os materiais, 1,5;
   - as peças, 1,3;
   - as armas, 1,2.
-- Exemplos: a caixa de munição de 9 mm custa $ 50; a lata de comida, $ 6; a madeira, $ 6; a pistola, $ 540.
+- Exemplos: a caixa de munição de 9 mm custa $ 50; a lata de comida, $ 6; a madeira, $ 6; a pistola, $ 540; a pistola de
+  sucata, $ 180; a caixa de prego, $ 30; a sucata, $ 4. Os preços das armas e da munição reais continuam os de antes (a
+  base é o preço da loja de armas do Dia 0, que saiu de lá: agora fica na tabela dos comerciantes).
 - **Vender rende a metade do preço** e menos se o item estiver gasto: a arma pelo desgaste, a caixa pelas balas que
   sobraram, a peça pela carga, o galão pelos litros.
 
 **O estoque:**
 - Cada comerciante tem o dele: de 1 até o máximo de cada produto (as armas, uma ou nenhuma).
-- **Acaba**, e **volta uma parte a cada amanhecer** (às 6 h).
+- **Acaba**, e **volta uma parte a cada amanhecer** (às 6 h). Desde 09/11/2026, as armas e a munição reais não voltam: o
+  comerciante só as tem se alguém vender (a munição real, às vezes uma caixa no começo).
 - O que você vende vai para a banca dele, até o máximo.
 
 **A compra:**

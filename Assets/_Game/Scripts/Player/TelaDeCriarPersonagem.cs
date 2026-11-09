@@ -41,7 +41,8 @@ namespace ZombieCityCleaner.Player
         string _nome = "";
         bool _digitando, _miniaturasSujas, _arrastando;
         int _paginaDoCabelo, _paginaDaBarba;
-        Texture2D[] _cabelos, _barbas, _camisetas, _calcas;
+        // as miniaturas ficam na placa (RenderTexture: sem a leitura para a CPU, 09/11/2026)
+        RenderTexture[] _cabelos, _barbas, _camisetas, _calcas;
         AparenciaDoJogador _dasMiniaturas;
         // a próxima miniatura a fazer (contando os cabelos, as barbas, as camisetas e as calças em fila)
         int _proximaMiniatura;
@@ -167,15 +168,17 @@ namespace ZombieCityCleaner.Player
         {
             var catalogo = _estudio.Catalogo;
             if (catalogo == null) return;
+            // a placa perdeu as imagens (a tela cheia trocada, o driver reiniciado): todas de novo
+            if (!_miniaturasSujas && _cabelos != null && _cabelos[0] != null && !_cabelos[0].IsCreated()) _miniaturasSujas = true;
             if (_miniaturasSujas)
             {
                 _miniaturasSujas = false;
                 _dasMiniaturas = _escolha;
                 _proximaMiniatura = 0;
-                _cabelos ??= new Texture2D[AparenciaDoJogador.Cabelos.Length];
-                _barbas ??= new Texture2D[AparenciaDoJogador.Barbas.Length];
-                _camisetas ??= new Texture2D[AparenciaDoJogador.Camisetas.Length];
-                _calcas ??= new Texture2D[AparenciaDoJogador.Calcas.Length];
+                _cabelos ??= new RenderTexture[AparenciaDoJogador.Cabelos.Length];
+                _barbas ??= new RenderTexture[AparenciaDoJogador.Barbas.Length];
+                _camisetas ??= new RenderTexture[AparenciaDoJogador.Camisetas.Length];
+                _calcas ??= new RenderTexture[AparenciaDoJogador.Calcas.Length];
             }
             if (_cabelos == null) return;
             int total = _cabelos.Length + _barbas.Length + _camisetas.Length + _calcas.Length;
@@ -381,7 +384,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // as opções em fila, 4 por vez, com as setas dos lados (o cabelo e a barba)
-        int Carrossel(Rect p, Texture2D[] miniaturas, int quantas, int escolhida, ref int pagina, float u, string vazia)
+        int Carrossel(Rect p, RenderTexture[] miniaturas, int quantas, int escolhida, ref int pagina, float u, string vazia)
         {
             const int PorVez = 4;
             float lado = 62 * u, vao = 8 * u, seta = 22 * u;
@@ -401,7 +404,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // as opções em grade, 4 por linha (a camiseta e a calça), com o nome da escolhida embaixo
-        int Grade(Rect p, Texture2D[] miniaturas, int quantas, int escolhida, float u, System.Func<int, string> nome)
+        int Grade(Rect p, RenderTexture[] miniaturas, int quantas, int escolhida, float u, System.Func<int, string> nome)
         {
             float lado = 76 * u, vao = (p.width - 4 * lado) / 3f;
             for (int i = 0; i < quantas; i++)
@@ -415,7 +418,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // uma opção: o quadrado escuro, a miniatura (ou o texto) e, na escolhida, a borda vermelha
-        bool Opcao(Rect r, bool escolhida, float u, Texture2D miniatura, string texto)
+        bool Opcao(Rect r, bool escolhida, float u, Texture miniatura, string texto)
         {
             Retangulo(r, escolhida ? new Color(0.17f, 0.11f, 0.1f, 1f) : new Color(0.07f, 0.07f, 0.07f, 1f));
             if (miniatura != null && texto == null) GUI.DrawTexture(new Rect(r.x + 2 * u, r.y + 2 * u, r.width - 4 * u, r.height - 4 * u), miniatura, ScaleMode.ScaleToFit, true);

@@ -67,6 +67,22 @@ namespace ZombieCityCleaner.Mundo
 
         public static readonly string[] NomesDasRaridades = { "normal", "incomum", "raro", "épico", "lendário" };
 
+        /// <summary>
+        /// As armas de fogo reais e a munição real nas casas, nos prédios e nas lojas (09/11/2026, a 2ª leva da etapa 1b; a
+        /// decisão do Pedro: "as armas reais ficam super raras", só com os militares e "raríssimas" no saque): quando o
+        /// sorteio cai numa delas, só fica com esta fração da chance; no resto, vira outro item do mesmo lugar (da raridade de
+        /// baixo; <see cref="SaqueDaObra"/>). Os militares e a base militar não passam por aqui.
+        /// </summary>
+        public static float FatorDasArmasReais = 0.1f, FatorDaMunicaoReal = 0.35f;
+
+        /// <summary>A fração da chance do item (1: como sempre; as armas de fogo e a munição reais, menos).</summary>
+        public static float FatorDe(Item c)
+        {
+            if ((c.especie & (EspecieDoSaque.ArmaCurta | EspecieDoSaque.ArmaLonga)) != 0) return FatorDasArmasReais;
+            if ((c.especie & EspecieDoSaque.Municao) != 0 && c.nome.StartsWith("Municao")) return FatorDaMunicaoReal;
+            return 1f;
+        }
+
         /// <summary>A cor de cada raridade (o cinza, o verde, o azul, o roxo e o dourado; sRGB).</summary>
         public static readonly Color[] Cores =
         {
@@ -145,6 +161,9 @@ namespace ZombieCityCleaner.Mundo
             // escritório e da oficina), o pé de cabra na oficina e no porão
             C("Gazua", I, EspecieDoSaque.Ferramenta | EspecieDoSaque.Escritorio | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Cabeceira, 1, 3),
             C("PeDeCabra", I, EspecieDoSaque.Ferramenta),
+            // a sucata (09/11/2026, a 2ª leva da etapa 1b): às vezes, com as ferramentas (a bancada, as prateleiras e as estantes
+            // do porão, da garagem e do depósito), de 1 a 3. A outra fonte são os painéis de metal da rua e o desmontar
+            C("Sucata", I, EspecieDoSaque.Ferramenta, 1, 3),
             // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço, normal, na cabeceira, na sala (a mesa de
             // centro e o rack), nas gavetas da cozinha e do escritório e na oficina, com 2 a 20 cigarros
             C("MacoDeCigarros", N, EspecieDoSaque.Cabeceira | EspecieDoSaque.Lanche | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Escritorio

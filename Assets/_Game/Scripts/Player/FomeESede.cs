@@ -69,12 +69,13 @@ namespace ZombieCityCleaner.Player
             // no Dia 0 e nos 5 anos depois (o mundo ainda não está pronto), a fome e a sede não descem: a vida é normal
             var mundo = World.MundoDaPartida.Instancia;
             if (mundo != null && !mundo.Pronto) return;
-            // as habilidades (06/11/2026): o Estômago forte e o Cantil (15% mais devagar), o Camelo (30%), o Fôlego (correr
-            // gasta menos)
+            // as habilidades (06/11/2026; os níveis em 09/11/2026): o Estômago forte e o Cantil (5% mais devagar por ponto),
+            // o Camelo (30%), o Fôlego (correr gasta 1,4 vez com 1 ponto e 1,25 com 2, no lugar de 1,6)
             bool camelo = Habilidades.Tem(_rede, Habilidade.Camelo);
-            float kFome = camelo ? 0.7f : Habilidades.Tem(_rede, Habilidade.EstomagoForte) ? 0.85f : 1f;
-            float kSede = camelo ? 0.7f : Habilidades.Tem(_rede, Habilidade.Cantil) ? 0.85f : 1f;
-            float vezesCorrendo = Habilidades.Tem(_rede, Habilidade.Folego) ? Mathf.Min(correndo, 1.25f) : correndo;
+            float kFome = camelo ? 0.7f : 1f - 0.05f * Habilidades.Pontos(_rede, Habilidade.EstomagoForte);
+            float kSede = camelo ? 0.7f : 1f - 0.05f * Habilidades.Pontos(_rede, Habilidade.Cantil);
+            int folego = Habilidades.Pontos(_rede, Habilidade.Folego);
+            float vezesCorrendo = folego > 0 ? Mathf.Min(correndo, folego >= 2 ? 1.25f : 1.4f) : correndo;
             float dt = Time.deltaTime * (_rede.Velocidade > 3f ? vezesCorrendo : 1f);
             _fome = Mathf.Max(0f, _fome - 100f / (minutosDaFome * 60f) * dt * kFome);
             _sede = Mathf.Max(0f, _sede - 100f / (minutosDaSede * 60f) * dt * kSede);
@@ -100,7 +101,7 @@ namespace ZombieCityCleaner.Player
         public void Consumir(DadosDoLoot d)
         {
             if (!IsServer) return;
-            float k = Habilidades.Tem(_rede, Habilidade.BemNutrido) ? 1.25f : 1f;   // (o Bem nutrido, 06/11/2026)
+            float k = 1f + 0.12f * Habilidades.Pontos(_rede, Habilidade.BemNutrido);   // (o Bem nutrido, 06/11/2026: 12% por ponto)
             _fome = Mathf.Clamp(_fome + d.fome * k, 0f, 100f);
             _sede = Mathf.Clamp(_sede + d.sede * k, 0f, 100f);
             Gravar();

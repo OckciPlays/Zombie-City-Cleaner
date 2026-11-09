@@ -174,7 +174,9 @@ namespace ZombieCityCleaner.Player
             _ccLigado = _cc.enabled;
             _cc.enabled = false;   // dentro do carro, a cápsula do jogador empurraria o carro
             _passos.enabled = false;
-            _rede.EsconderNaMao(true);
+            // o que está na mão some, menos com o garupa da moto (08/11/2026: ele atira e usa itens, e os outros veem)
+            _rede.EsconderNaMao(!(carro.moto && lugar == 1));
+            _maosLivres = false;
             if (!_rede.IsOwner) return;
             _movimento.enabled = false;
             _arma.enabled = false;
@@ -223,6 +225,7 @@ namespace ZombieCityCleaner.Player
             _fase = Fase.Fora;
             _segurandoChave = false;
             _carroSaindo = null;
+            _maosLivres = false;
             TroncoDeVolta();
             _rede.animadorCorpo.enabled = true;
             if (TemLugar(_rede.animadorCorpo))
@@ -302,6 +305,39 @@ namespace ZombieCityCleaner.Player
             Comandos();
             if (_fase == Fase.Dentro && _terceira) CameraDeTras(dt);
             else Olhar(k);
+            CuidarDasMaos();
+        }
+
+        // ------------------------------------------------------------------------------------------ as mãos livres (08/11/2026)
+
+        bool _maosLivres;
+
+        /// <summary>
+        /// Sentado com as mãos livres (08/11/2026, a pedido: "poder atirar e usar item de cura na garupa da moto, ou poder usar
+        /// itens dentro do carro"): o garupa da moto e os passageiros do carro. Os braços de primeira pessoa e o
+        /// <see cref="ArmaJogador"/> voltam (o que está na mão, sacando). Na câmera de trás (V), não. O motorista, não: o
+        /// clique dele é da chave (a ignição), e as mãos dele ficam no volante e no guidão.
+        /// </summary>
+        public bool MaosLivres => _maosLivres;
+
+        /// <summary>Com as mãos livres, também atira e golpeia: só o garupa da moto (no carro, só os itens).</summary>
+        public bool PodeAtacar => _maosLivres && Carro != null && Carro.moto && Lugar == 1;
+
+        bool MaosLivresAgora()
+        {
+            if (Carro == null || _fase != Fase.Dentro || _terceira) return false;
+            return Lugar != 0;
+        }
+
+        // no dono, a cada quadro: liga ou desliga as mãos (o ArmaJogador e os braços)
+        void CuidarDasMaos()
+        {
+            bool livres = MaosLivresAgora();
+            if (livres == _maosLivres) return;
+            _maosLivres = livres;
+            _arma.enabled = livres;
+            _rede.bracos.SetActive(livres);
+            if (livres) _arma.MostrarModeloDaMao(true);
         }
 
         void Saindo(bool dono, float dt)
@@ -658,6 +694,11 @@ namespace ZombieCityCleaner.Player
         {
             _rede.CorpoNoVeiculo(false);
             CorpoVisivel(true);
+            // a cabeça reta (08/11/2026, a pedido: "ele continua olhando para baixo ... nos dois carros"): a câmera de trás é a
+            // mesma escolha da terceira pessoa a pé, e nela o olhar do corpo (o Pitch da rede) nunca mudava: ficava o do
+            // momento de entrar (olhando para a porta, para baixo). O olhar da primeira pessoa volta quando ela volta
+            _pitch = 0f;
+            if (_rede.IsOwner && Mathf.Abs(_rede.Pitch.Value) > 0.5f) _rede.Pitch.Value = 0f;
             Vector2 olhar = LerOlhar();
             if (olhar.sqrMagnitude > 0.0001f) _mexeuNaCamera = Time.time;
             _yaw3 += olhar.x;
@@ -835,6 +876,14 @@ namespace ZombieCityCleaner.Player
                 }
                 if (piloto && c.punhos != null && s < c.punhos.Length && c.punhos[s] != null)
                     DoisOssos("upper_arm" + l, "forearm" + l, c.punhos[s].position, -cima * 0.55f + direita * (lado * 0.75f) - frente * 0.3f);
+                else if (!piloto && GarupaComAMao(c, out var alvoDaMao, out var mira))
+                {
+                    // o garupa com algo na mão (08/11/2026: ele atira e usa itens): as duas mãos juntas na frente do peito,
+                    // para onde ele olha (o Pitch da rede), a direita segurando e a esquerda apoiando
+                    Vector3 mao = s == 0 ? alvoDaMao : alvoDaMao - direita * 0.06f - mira * 0.05f;
+                    DoisOssos("upper_arm" + l, "forearm" + l, mao, -cima * 0.7f + direita * (lado * 0.6f));
+                    Mirar("hand" + l, mira);
+                }
                 else if (_ossos.TryGetValue("thigh" + l, out var coxa) && _ossos.TryGetValue("shin" + l, out var joelho))
                 {
                     // o garupa: as mãos nas coxas, perto dos joelhos
@@ -845,6 +894,18 @@ namespace ZombieCityCleaner.Player
             // a mão direita torce o acelerador (07/11/2026; só no dono: o acelerador dele não vai pela rede)
             if (piloto && c.IsOwner && _ossos.TryGetValue("hand.R", out var maoDireita))
                 maoDireita.rotation = Quaternion.AngleAxis(-28f * Mathf.Clamp01(c.AceleradorDoDono), direita) * maoDireita.rotation;
+        }
+
+        // o garupa da moto com algo na mão (em todas as máquinas): onde fica a mão direita (na frente do peito) e para onde ela
+        // aponta (o olhar dele, pelo Pitch da rede; o giro do olhar não vai pela rede, então é para a frente da moto)
+        bool GarupaComAMao(Carro c, out Vector3 mao, out Vector3 mira)
+        {
+            mao = mira = default;
+            var item = _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
+            if (item == Loot.Item.Nada || !_ossos.TryGetValue("chest", out var peito)) return false;
+            mira = Quaternion.AngleAxis(Mathf.Clamp(_rede.Pitch.Value, -50f, 50f), transform.right) * transform.forward;
+            mao = peito.position + mira * 0.42f + transform.up * 0.12f + transform.right * 0.06f;
+            return true;
         }
 
         /// <summary>

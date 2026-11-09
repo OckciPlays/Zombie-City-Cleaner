@@ -51808,6 +51808,9 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 01fe637746b37674a82d1d6a27655df6, type: 2}
   - {fileID: 4300000, guid: dd210d7e721e15d44ab2ccf43afccb79, type: 2}
   - {fileID: 4300000, guid: 398818f4f7f16344a962d5062c06e3bb, type: 2}
+  - {fileID: 4300000, guid: d6501b56e29d6ea4eb88e3f25d29022c, type: 2}
+  - {fileID: 4300000, guid: 6f0c18e547f86f048873ceca3b8f740c, type: 2}
+  - {fileID: 4300000, guid: 880ad27987360424da1f86fa84e337de, type: 2}
   - {fileID: 4300000, guid: f512a64f01cc2a94ba02ddf0c8768b8d, type: 2}
   - {fileID: 4300000, guid: 6a4079f3181fca746a131052dd9667f7, type: 2}
   malhasDeEquipamento:
@@ -51820,6 +51823,8 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 85be4daa9af73674ca07d94c9cdfb8b6, type: 2}
   - {fileID: 4300000, guid: 4dbbf2d1a5485a8419e9c6e06a14051d, type: 2}
   - {fileID: 4300000, guid: 328c3229fe2c92547ae303d2955e1a4e, type: 2}
+  - {fileID: 4300000, guid: 54c7fa77792184d43ab94161c6bccd2c, type: 2}
+  - {fileID: 4300000, guid: 384a5accc5259584d81214d65c7ba491, type: 2}
   malhasDePeca:
   - {fileID: 4300000, guid: e9b7cbdccf38796459daadb64d21bcd6, type: 2}
   - {fileID: 4300000, guid: ef5e475526af25a49a20c7f4c1cdd520, type: 2}

@@ -41,6 +41,12 @@ namespace ZombieCityCleaner.UI
         public const int LetrasDaAnotacao = 40;
         public const int MarcasNoMundo = 200;
         public const float AlcanceDoPing = 300f;
+        /// <summary>
+        /// A marca e a anotação no mundo, como o ping (08/11/2026, a pedido: "deveria aparecer como um ping para se localizar
+        /// mais fácil, sem precisar ficar abrindo o mapa"): aparecem até 3 km, o alfinete 2 m acima do relevo, e o texto
+        /// inteiro só a menos de 150 m (ou na que está na mira). O desenho fica no <see cref="MinimapaDoMundo"/>.
+        /// </summary>
+        public const float AlcanceNoMundo = 3000f, TextoNoMundo = 150f, AcimaDoChao = 2f;
 
         public static readonly Color[] Cores =
         {

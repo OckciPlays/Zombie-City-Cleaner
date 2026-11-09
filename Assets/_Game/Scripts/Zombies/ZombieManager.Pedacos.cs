@@ -148,9 +148,16 @@ namespace ZombieCityCleaner.Zombies
         //  - os cortes só andam com a tela coberta: o carregamento do mundo (vários passos por quadro, até ~120 ms), uma tela
         //    cheia do menu ou o cinema (até ~25 ms, para a tela responder). No Dia 0, na rua, eles esperam;
         //  - o MundoDaPartida segura a tela de carregamento até eles ficarem prontos (CortesProntos);
-        //  - se o mundo ficar pronto antes (um cliente, um tempo esgotado), um passo por quadro, como era.
+        //  - se o mundo ficar pronto antes (um cliente, um tempo esgotado), um passo por quadro, como era;
+        //  - no Dia 0, eles andam na tela preta de carregar a rua, que espera por eles (DiaZeroDaPartida.CarregandoARua), e o
+        //    resto do Dia 0 (a rua, a tela de criar o personagem e a introdução) não aquece nada, nem o começo do pool
+        //    (09/11/2026, a pedido: "um lag que sempre ocorre na aba de criação de personagem"). A tela de criar contava como
+        //    tela cheia do menu, e cada passo passa do orçamento (um corte leva de 3 a 15 ms, num especial até ~340, e solta
+        //    até 30 MB de lixo): ela ficava em 40 a 110 ms por quadro até eles acabarem (uns 6 s na build do Pedro, 8 no
+        //    Editor). O que sobrar (a espera da rua passou de 90 s) fica para a passagem dos 5 anos, com um orçamento menor
+        //    (OrcamentoNaPassagemMs: ela tem o texto aparecendo, e com os 120 ms ficava em ~4 FPS).
 
-        const float OrcamentoNoCarregamentoMs = 120f, OrcamentoNasTelasMs = 25f;
+        const float OrcamentoNoCarregamentoMs = 120f, OrcamentoNaPassagemMs = 40f, OrcamentoNasTelasMs = 25f;
         readonly System.Diagnostics.Stopwatch _relogioDoAquecimento = new System.Diagnostics.Stopwatch();
         int _quadroDoAquecimento = -1, _passosDosCortes, _passosFeitos;
 
@@ -170,18 +177,22 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        static bool NumaTelaCheia => UI.MenuOnline.Aberto || UI.MenuOnline.Cinema;
+        // o menu cheio (a pausa do ESC, a tela da morte) ou o cinema; a tela de criar o personagem, não: ela responde ao mouse
+        static bool NumaTelaCheia => (UI.MenuOnline.Aberto && !Player.TelaDeCriarPersonagem.Aberta) || UI.MenuOnline.Cinema;
 
         /// <summary>
         /// O aquecimento pode trabalhar agora: com a tela coberta, ou com o mundo já pronto (o resto, um passo por quadro).
-        /// Jogando no Dia 0 (a rua, a casa), não: espera a tela de carregamento do mundo.
+        /// No Dia 0, só na tela de carregar a rua; na rua, na casa, na tela de criar e na introdução, não (o que sobrar espera a
+        /// passagem dos 5 anos, o carregamento do mundo).
         /// </summary>
         static bool PodeAquecer
         {
             get
             {
-                if (CarregandoOMundo || NumaTelaCheia) return true;
+                if (CarregandoOMundo || ZombieCityCleaner.DiaZero.DiaZeroDaPartida.CarregandoARua) return true;
                 var m = World.MundoDaPartida.Instancia;
+                if (m != null && m.NoDiaZero) return false;
+                if (NumaTelaCheia) return true;
                 return m == null || !m.IsSpawned || m.Pronto;
             }
         }
@@ -194,7 +205,9 @@ namespace ZombieCityCleaner.Zombies
                 _quadroDoAquecimento = Time.frameCount;
                 _relogioDoAquecimento.Restart();
             }
-            float orcamento = CarregandoOMundo ? OrcamentoNoCarregamentoMs : NumaTelaCheia ? OrcamentoNasTelasMs : 0f;
+            bool coberta = CarregandoOMundo || ZombieCityCleaner.DiaZero.DiaZeroDaPartida.CarregandoARua;
+            float orcamento = coberta ? (ZombieCityCleaner.DiaZero.DiaZeroDaPartida.NaPassagem ? OrcamentoNaPassagemMs : OrcamentoNoCarregamentoMs)
+                            : NumaTelaCheia ? OrcamentoNasTelasMs : 0f;
             return _relogioDoAquecimento.Elapsed.TotalMilliseconds >= orcamento;
         }
 

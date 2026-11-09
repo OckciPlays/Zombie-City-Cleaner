@@ -114,7 +114,8 @@ namespace ZombieCityCleaner.Player
             if (id == _esperaId && Time.time < _esperaAte) return false;   // o anterior ainda não voltou do anfitrião
             string motivo = null;
             bool pode = false;
-            if (_rede != null && _rede.Passageiro != null && _rede.Passageiro.NoCarro) motivo = "No carro, não dá para se tratar";
+            if (_rede != null && _rede.Passageiro != null && _rede.Passageiro.NoCarro && !_rede.Passageiro.MaosLivres)
+                motivo = "Dirigindo, não dá para se tratar";
             else if (_arma != null && _arma.MaosOcupadas) motivo = "Com o pneu nas mãos, não dá para se tratar";
             else if (_arma != null && _arma.Recarregando) motivo = "Recarregando: espere as mãos ficarem livres";
             else if (_pulo != null && _pulo.Pulando) motivo = "Pulando a janela, não dá para se tratar";
@@ -181,7 +182,8 @@ namespace ZombieCityCleaner.Player
                 Cancelar();
                 return;
             }
-            if (_rede != null && _rede.Passageiro != null && _rede.Passageiro.NoCarro)
+            // sentado com as mãos livres (08/11/2026: o garupa da moto, os passageiros do carro), o tratamento continua
+            if (_rede != null && _rede.Passageiro != null && _rede.Passageiro.NoCarro && !_rede.Passageiro.MaosLivres)
             {
                 Cancelar("No carro, o tratamento parou");
                 return;

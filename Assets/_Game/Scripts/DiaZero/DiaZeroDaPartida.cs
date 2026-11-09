@@ -84,6 +84,13 @@ namespace ZombieCityCleaner.DiaZero
         /// <summary>A tela dos 5 anos depois está na frente (a porta fechou e o mundo ainda não apareceu).</summary>
         public static bool NaPassagem => Instancia != null && Instancia._passagem;
 
+        /// <summary>
+        /// A tela preta de carregar a rua está na frente (o Dia 0 nesta máquina, antes de o jogador nascer): os cortes dos
+        /// zumbis andam nela, e ela espera por eles (09/11/2026; veja o <see cref="CarregarARua"/>).
+        /// </summary>
+        public static bool CarregandoARua => Instancia != null && Instancia.IsSpawned && Instancia._mundo != null && Instancia._mundo.NoDiaZero &&
+                                            !Instancia._passagem && (!Instancia._ruaPronta || JogadorRede.Local == null);
+
         NetworkList<CarteiraDoDia> _carteiras;
         NetworkList<CompraDoDia> _compras;
         ushort _proximoId = 1, _proximoLugar;
@@ -92,6 +99,9 @@ namespace ZombieCityCleaner.DiaZero
         // a cena (em cada máquina)
         AsyncOperation _carregando;
         bool _ruaPronta, _pediuOJogador, _estavaNoDia;
+        // a espera pelos cortes dos zumbis na tela de carregar a rua (a etapa escrita nela)
+        float _esperandoOsZumbisDesde = -1f;
+        string _etapaDaRua;
         readonly List<ulong> _esperandoARua = new List<ulong>();
         // a passagem dos 5 anos
         bool _passagem;
@@ -139,6 +149,8 @@ namespace ZombieCityCleaner.DiaZero
             if (_mundo != null) _mundo.FicouPronto += AoFicarProntoOMundo;
             _estavaNoDia = false;
             _ruaPronta = _pediuOJogador = _passagem = false;
+            _esperandoOsZumbisDesde = -1f;
+            _etapaDaRua = null;
             IntroDoDiaZero.JaViu = false;
             _prontoDesde = -1f;
             _temUltimoDentro = false;
@@ -196,6 +208,21 @@ namespace ZombieCityCleaner.DiaZero
             _carregando = null;
             var rua = RuaDoDiaZero.Instancia;
             if (rua == null || !rua.Pronta) return;
+            // os cortes dos zumbis ficam prontos aqui, com a tela preta (09/11/2026, a pedido: "um lag que sempre ocorre na
+            // aba de criação de personagem"): antes, eles andavam na tela de criar, que ficava em 40 a 110 ms por quadro até
+            // eles acabarem (uns 6 s na build). A tela espera (até 90 s, por segurança)
+            var zumbis = ZombieCityCleaner.Zombies.ZombieManager.Instancia;
+            if (zumbis != null && zumbis.IsSpawned && !zumbis.CortesProntos)
+            {
+                if (_esperandoOsZumbisDesde < 0f) _esperandoOsZumbisDesde = Time.realtimeSinceStartup;
+                if (Time.realtimeSinceStartup - _esperandoOsZumbisDesde < 90f)
+                {
+                    _etapaDaRua = $"Preparando os zumbis ({zumbis.ProgressoDosCortes * 100f:0}%)";
+                    return;
+                }
+                Debug.LogWarning("[Dia 0] Os cortes dos zumbis passaram de 90 s: a rua abre sem esperar o resto.");
+            }
+            _etapaDaRua = null;
             _ruaPronta = true;
             PontosDeNascimento.Definir(rua.Nascimentos, rua.GirosDosNascimentos);
             _lugares.Clear();

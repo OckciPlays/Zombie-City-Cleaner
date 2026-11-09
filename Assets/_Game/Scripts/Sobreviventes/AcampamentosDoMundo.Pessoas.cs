@@ -41,9 +41,10 @@ namespace ZombieCityCleaner.Sobreviventes
             for (int i = 0; i < p.Pessoas; i++)
             {
                 var papel = p.PapelDe(i);
-                var arma = papel == PapelDoSobrevivente.Guarda ? (s.Next(100) < 65 ? TipoDeArma.Rifle : TipoDeArma.Espingarda)
+                // (09/11/2026, a sucata, 2ª leva: as de sucata no lugar das reais; os guardas, o rifle de sucata)
+                var arma = SobreviventesDoMundo.ArmaDoCivil(papel == PapelDoSobrevivente.Guarda ? (s.Next(100) < 65 ? TipoDeArma.Rifle : TipoDeArma.Espingarda)
                          : papel == PapelDoSobrevivente.Comerciante ? TipoDeArma.Pistola
-                         : s.Next(100) < 60 ? TipoDeArma.Pistola : TipoDeArma.Espingarda;
+                         : s.Next(100) < 60 ? TipoDeArma.Pistola : TipoDeArma.Espingarda);
                 byte roupa = papel == PapelDoSobrevivente.Guarda ? (byte)(s.Next(2) == 0 ? 1 : 2) : (byte)(s.Next(100) < 55 ? 3 : 0);
                 int sementeDaRoupa = s.Next();
                 if ((e.mortos & (1 << i)) != 0) continue;   // este morreu

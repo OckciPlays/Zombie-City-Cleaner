@@ -4,26 +4,37 @@ using ZombieCityCleaner.UI;
 namespace ZombieCityCleaner.Player
 {
     /// <summary>
-    /// A aba HABILIDADES da mochila (06/11/2026, a árvore de habilidades; a tecla K): em cima, o nível, os pontos livres e
-    /// a barra do XP; as 3 áreas (COMBATE, RESISTÊNCIA, SOBREVIVÊNCIA) em botões; a área escolhida mostra os 3 ramos, cada um
-    /// com as 5 habilidades de cima para baixo (a última é a ponta, com a estrela). O clique escolhe; a coluna da direita
-    /// mostra o que ela faz, o botão APRENDER e de onde vem o XP. As que ainda não têm o efeito no jogo dizem "em breve"
-    /// (dá para aprender: o efeito chega depois, e o caminho até a ponta não trava).
+    /// A aba HABILIDADES da mochila (06/11/2026, a árvore de habilidades; a tecla K), refeita em 09/11/2026 para a árvore
+    /// nova (a maquete aprovada pelo Pedro): ela ocupa o meio e a coluna da direita. Em cima, "Nível N · pontos livres X de
+    /// N" e a barra do XP (o mouse nela mostra como ganhar XP); as 3 áreas em abas, cada uma na cor dela (o Combate laranja,
+    /// a Resistência verde, a Sobrevivência roxa), e uma página por área: os ramos em colunas (o nome em cima, o selo "novo"
+    /// nos ramos novos), os nós em quadrados ligados por linhas aos pré-requisitos (colorida quando os dois têm ponto), o
+    /// "k/máx" no canto, a estrela nas pontas e, à esquerda, os pontos que cada fileira pede. O clique põe um ponto; o botão
+    /// direito tira. Com o mouse num nó, um quadro mostra o nome, o ramo, o nível, o efeito do próximo nível e o que falta.
     /// </summary>
     public partial class TelaDoInventario
     {
         static readonly Rect AbaHabilidades = new Rect(670, 14, 160, 36);
-        static readonly Rect AreaDasHabilidades = new Rect(GradeX, 58, GradeMaxW, 486);
-        static readonly Rect BotaoAprender = new Rect(850, 312, 282, 36);
-        const float BotoesDasAreasY = 132f, RamosY = 172f, NoY = 198f, NoH = 56f, NoPasso = 68f, ColunaVao = 8f;
+        // a árvore: do meio até o fim da coluna da direita (a 720p)
+        static readonly Rect AreaDaArvore = new Rect(GradeX, 58, 1142f - GradeX, 516);
+        static readonly Rect BarraDoXp = new Rect(760, 68, 374, 9);
+        static readonly Rect RodapeDaArvore = new Rect(GradeX + 8, 542, 1142f - GradeX - 16, 26);
+        const float TopoDasAreas = 98f, AltoDasAreas = 28f, TopoDosRamos = 132f, AltoDosRamos = 28f;
+        const float TopoDosNos = 164f, PassoDaFileira = 76f, AltoDoNo = 58f, MargemDasFileiras = 34f;
 
         AreaDaHabilidade _areaEscolhida = AreaDaHabilidade.Combate;
-        int _habilidadeEscolhida = -1;
-        GUIStyle _nomeDoNo, _estadoDoNo, _textoQuebrado;
+        int _noSobMouse = -1, _noNegado = -1;
+        float _negadoAte;
+        bool _sobreOXp, _avisoDaArvore, _pediuVisto;
+        GUIStyle _nomeDoNo, _cantoDoNo, _seloDoNo, _simboloDoNo, _rotuloDaFileira, _cabecalhoDoRamo, _tituloDaDica, _textoDaDica, _pequenoDaDica;
         float _uDasHabilidades;
 
-        static readonly Color Aprendida = new Color(0.2f, 0.42f, 0.22f, 0.92f);
         static readonly Color EmBreve = new Color(0.95f, 0.6f, 0.3f);
+        static readonly Color LinhaApagada = new Color(0.12f, 0.12f, 0.11f, 0.7f);
+
+        /// <summary>A cor da área: o Combate laranja, a Resistência verde, a Sobrevivência roxa.</summary>
+        static Color CorDaArea(AreaDaHabilidade a) => a == AreaDaHabilidade.Combate ? new Color(0.96f, 0.56f, 0.22f)
+            : a == AreaDaHabilidade.Resistencia ? new Color(0.46f, 0.8f, 0.36f) : new Color(0.72f, 0.52f, 0.96f);
 
         // a tecla K: como o H da aba CORPO (fechada abre nela; aberta nela fecha; aberta em outra, troca)
         void TeclaDasHabilidades()
@@ -49,64 +60,103 @@ namespace ZombieCityCleaner.Player
                 _arrastando = false;
             }
             _estante = -1;
-            if (_habilidadeEscolhida < 0) _habilidadeEscolhida = (int)ProximaDoRamo(Habilidades.Primeira((RamoDaHabilidade)((int)_areaEscolhida * 3)));
         }
 
-        // a primeira do ramo ainda não aprendida (ou a ponta, com o ramo cheio)
-        Habilidade ProximaDoRamo(Habilidade primeira)
+        /// <summary>Para os testes: abre a mochila na aba HABILIDADES, na página da área.</summary>
+        public void AbrirNaAbaHabilidades(AreaDaHabilidade area)
         {
-            var p = inventario != null && inventario.IsSpawned ? inventario.Progresso.Value : default;
-            for (int i = 0; i < Habilidades.PorRamo; i++)
-                if (!p.Tem((Habilidade)((int)primeira + i))) return (Habilidade)((int)primeira + i);
-            return (Habilidade)((int)primeira + Habilidades.PorRamo - 1);
+            _areaEscolhida = area;
+            IrParaAbaHabilidades();
+            Abrir(true);
         }
 
-        // as medidas (a 720p): o botão de cada área e o quadrado de cada habilidade da área escolhida
-        static Rect BotaoDaArea(int a)
+        /// <summary>Para os testes (as fotos do quadro do nó): o mouse fingido, em pixels do OnGUI; x negativo, o de verdade.</summary>
+        public Vector2 MouseDeTeste { get; set; } = new Vector2(-1f, -1f);
+
+        /// <summary>Para os testes: o meio do nó na tela (em pixels do OnGUI, depois de um quadro aberta); fora da página, (-1, -1).</summary>
+        public Vector2 PontoDoNo(Habilidade h) => Aberta && Habilidades.AreaDe(h) == _areaEscolhida ? Em(NoNaArvore(h)).center : new Vector2(-1f, -1f);
+
+        // ------------------------------------------------------------------ as medidas (a 720p)
+
+        static float InicioDasColunas => AreaDaArvore.x + 8f + MargemDasFileiras;
+        static float LarguraDaColuna(AreaDaHabilidade a) => (AreaDaArvore.xMax - 8f - InicioDasColunas) / Habilidades.Colunas(a);
+        static float TopoDaFileira(int f) => TopoDosNos + (f - 1) * PassoDaFileira;
+
+        static Rect NoNaArvore(Habilidade h)
         {
-            float w = (AreaDasHabilidades.width - 12f - 2 * ColunaVao) / 3f;
-            return new Rect(AreaDasHabilidades.x + 6f + a * (w + ColunaVao), BotoesDasAreasY, w, 30f);
+            var a = Habilidades.AreaDe(h);
+            float c = LarguraDaColuna(a), w = Mathf.Min(c - 16f, 118f);
+            float cx = InicioDasColunas + (Habilidades.Coluna(h) + 0.5f) * c;
+            return new Rect(cx - w / 2f, TopoDaFileira(Habilidades.Fileira(h)), w, AltoDoNo);
         }
 
-        static Rect ColunaDoRamo(int k)
+        static Rect AbaDaArea(int a)
         {
-            float w = (AreaDasHabilidades.width - 12f - 2 * ColunaVao) / 3f;
-            return new Rect(AreaDasHabilidades.x + 6f + k * (w + ColunaVao), RamosY, w, NoY + Habilidades.PorRamo * NoPasso - RamosY);
+            float x = AreaDaArvore.x + 8f, w = (AreaDaArvore.width - 16f - 2 * 8f) / 3f;
+            return new Rect(x + a * (w + 8f), TopoDasAreas, w, AltoDasAreas);
         }
 
-        static Rect NoDaHabilidade(int k, int ordem)
+        static Rect ColunaDoRamo(RamoDaHabilidade r)
         {
-            var c = ColunaDoRamo(k);
-            return new Rect(c.x + 4f, NoY + ordem * NoPasso, c.width - 8f, NoH);
+            Habilidades.ColunasDoRamo(r, out float de, out float ate);
+            float c = LarguraDaColuna(Habilidades.AreaDe(r));
+            float x1 = InicioDasColunas + de * c + 3f, x2 = InicioDasColunas + (ate + 1f) * c - 3f;
+            return new Rect(x1, TopoDosRamos, x2 - x1, TopoDaFileira(Habilidades.Fileiras) + AltoDoNo + 4f - TopoDosRamos);
         }
 
         void EstilosDasHabilidades(float u)
         {
             if (_nomeDoNo != null && Mathf.Approximately(u, _uDasHabilidades)) return;
             _uDasHabilidades = u;
-            _nomeDoNo = new GUIStyle(_texto) { fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter, wordWrap = true, fontSize = Mathf.RoundToInt(13 * u) };
-            _estadoDoNo = new GUIStyle(_pequeno) { alignment = TextAnchor.LowerCenter, wordWrap = false };
-            _textoQuebrado = new GUIStyle(_texto) { wordWrap = true };
+            GUIStyle De(GUIStyle baseDe, int tamanho, FontStyle fonte, TextAnchor ancora, bool quebra) =>
+                new GUIStyle(baseDe) { fontSize = Mathf.RoundToInt(tamanho * u), fontStyle = fonte, alignment = ancora, wordWrap = quebra, richText = true };
+            _nomeDoNo = De(_texto, 11, FontStyle.Bold, TextAnchor.MiddleCenter, true);
+            _cantoDoNo = De(_texto, 11, FontStyle.Bold, TextAnchor.LowerRight, false);
+            _seloDoNo = De(_texto, 9, FontStyle.Bold, TextAnchor.MiddleLeft, false);
+            _simboloDoNo = De(_texto, 13, FontStyle.Bold, TextAnchor.MiddleCenter, false);
+            _rotuloDaFileira = De(_texto, 12, FontStyle.Bold, TextAnchor.MiddleCenter, false);
+            _cabecalhoDoRamo = De(_texto, 11, FontStyle.Bold, TextAnchor.MiddleCenter, true);
+            _tituloDaDica = De(_texto, 15, FontStyle.Bold, TextAnchor.UpperLeft, true);
+            _textoDaDica = De(_texto, 13, FontStyle.Normal, TextAnchor.UpperLeft, true);
+            _pequenoDaDica = De(_texto, 12, FontStyle.Normal, TextAnchor.UpperLeft, true);
         }
+
+        static string Hex(Color c) => "#" + ColorUtility.ToHtmlStringRGB(c);
 
         // ------------------------------------------------------------------ o desenho
 
-        /// <summary>A aba HABILIDADES, no lugar da grade.</summary>
+        /// <summary>A aba HABILIDADES: a árvore no lugar da grade e da coluna da direita.</summary>
         void AbaDasHabilidades(Vector2 mouse)
         {
+            if (MouseDeTeste.x >= 0f) mouse = MouseDeTeste;
             float u = _u;
             EstilosDasHabilidades(u);
-            Ret(Encolher(Em(AreaDasHabilidades), -4 * u), Painel);
+            _noSobMouse = -1;
+            _sobreOXp = false;
+            Ret(Em(AreaDaArvore), Painel);
             if (inventario == null || !inventario.IsSpawned) return;
             var p = inventario.Progresso.Value;
             int nivel = p.Nivel;
+            var area = _areaEscolhida;
+            var cor = CorDaArea(area);
+            // o aviso da árvore nova (uma vez: o anfitrião apaga assim que ele aparece; aqui fica até o clique ou um ponto)
+            if (!p.avisoDaArvore) _pediuVisto = false;   // (um save velho de novo, pelo F1, mostra outra vez)
+            else if (!_pediuVisto)
+            {
+                _avisoDaArvore = true;
+                _pediuVisto = true;
+                inventario.PedirVistoOAviso();
+            }
 
-            // o nível, os pontos e a barra do XP
-            float x = AreaDasHabilidades.x + 8f, w = AreaDasHabilidades.width - 16f;
-            GUI.Label(Em(new Rect(x, 64, 220, 30)), $"NÍVEL {nivel}", _nome);
-            var pontos = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleRight };
+            // o nível, os pontos livres e a barra do XP
+            float x = AreaDaArvore.x + 8f;
+            var nomeDoNivel = new GUIContent($"NÍVEL {nivel}");
+            var r = Em(new Rect(x, 62, 200, 30));
+            GUI.Label(r, nomeDoNivel, _nome);
+            float larguraDoNivel = _nome.CalcSize(nomeDoNivel).x;
+            var pontos = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleLeft, wordWrap = false };
             PorCor(pontos, p.Pontos > 0 ? Destaque : TextoApagado);
-            GUI.Label(Em(new Rect(x + w - 240, 64, 240, 30)), p.Pontos == 1 ? "1 ponto para gastar" : $"{p.Pontos} pontos para gastar", pontos);
+            GUI.Label(new Rect(r.x + larguraDoNivel + 10 * u, r.y, 330 * u, r.height), $"·  pontos livres {p.Pontos} de {nivel}", pontos);
             float fracao = 1f;
             string textoDoXp = "nível máximo";
             if (nivel < Habilidades.NivelMaximo)
@@ -115,145 +165,244 @@ namespace ZombieCityCleaner.Player
                 fracao = Mathf.Clamp01(feito / (float)precisa);
                 textoDoXp = $"{feito} / {precisa} XP para o nível {nivel + 1}";
             }
-            var barra = Em(new Rect(x, 98, w, 10));
+            var barra = Em(BarraDoXp);
             Ret(barra, new Color(0f, 0f, 0f, 0.45f));
             Ret(new Rect(barra.x, barra.y, barra.width * fracao, barra.height), Destaque);
             var pequeno = new GUIStyle(_pequeno) { alignment = TextAnchor.MiddleRight };
-            GUI.Label(Em(new Rect(x, 108, w, 18)), textoDoXp, pequeno);
+            var textoDaBarra = Em(new Rect(BarraDoXp.x, BarraDoXp.yMax + 2, BarraDoXp.width, 16));
+            GUI.Label(textoDaBarra, textoDoXp + "  ·  como ganhar XP?", pequeno);
+            _sobreOXp = new Rect(barra.x, barra.y - 4 * u, barra.width, textoDaBarra.yMax - barra.y + 4 * u).Contains(mouse);
 
-            // as 3 áreas
+            // as 3 áreas, cada uma na cor dela (com os pontos gastos nela)
             for (int a = 0; a < 3; a++)
             {
-                var r = Em(BotaoDaArea(a));
-                bool ativa = (int)_areaEscolhida == a;
-                Ret(r, ativa ? new Color(0f, 0f, 0f, 0.35f) : r.Contains(mouse) ? new Color(0f, 0f, 0f, 0.2f) : new Color(0f, 0f, 0f, 0.12f));
-                if (ativa) Ret(new Rect(r.x, r.yMax - 3 * u, r.width, 3 * u), Destaque);
+                var aba = Em(AbaDaArea(a));
+                var essa = (AreaDaHabilidade)a;
+                var corDela = CorDaArea(essa);
+                bool ativa = essa == area;
+                Ret(aba, ativa ? new Color(corDela.r * 0.3f, corDela.g * 0.3f, corDela.b * 0.3f, 0.75f) : aba.Contains(mouse) ? new Color(0f, 0f, 0f, 0.3f) : new Color(0f, 0f, 0f, 0.18f));
+                if (ativa) Ret(new Rect(aba.x, aba.yMax - 3 * u, aba.width, 3 * u), corDela);
                 var est = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter, fontSize = Mathf.RoundToInt(13 * u) };
-                PorCor(est, ativa ? Destaque : TextoApagado);
-                GUI.Label(r, Habilidades.Nome((AreaDaHabilidade)a), est);
+                PorCor(est, ativa ? corDela : Color.Lerp(corDela, TextoApagado, 0.5f));
+                int gastos = Habilidades.GastosAcima(p, essa, Habilidades.Fileiras + 1);
+                GUI.Label(aba, gastos > 0 ? $"{Habilidades.Nome(essa)}  ·  {gastos}" : Habilidades.Nome(essa), est);
             }
 
-            // os 3 ramos da área, cada um com as 5 habilidades
-            for (int k = 0; k < 3; k++)
+            // os ramos: a faixa de cada um, o nome em cima e o selo "novo"
+            foreach (var ramo in Habilidades.Ramos(area))
             {
-                var ramo = (RamoDaHabilidade)((int)_areaEscolhida * 3 + k);
-                var coluna = ColunaDoRamo(k);
-                var titulo = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter };
-                GUI.Label(Em(new Rect(coluna.x, RamosY, coluna.width, 22)), Habilidades.Nome(ramo).ToUpperInvariant(), titulo);
-                var primeira = Habilidades.Primeira(ramo);
-                for (int o = 0; o < Habilidades.PorRamo; o++)
+                var faixa = Em(ColunaDoRamo(ramo));
+                Ret(faixa, new Color(0f, 0f, 0f, 0.12f));
+                var cabeca = new Rect(faixa.x + 2 * u, faixa.y, faixa.width - 4 * u, AltoDosRamos * u);
+                PorCor(_cabecalhoDoRamo, CorDoTexto);
+                string nome = Habilidades.Nome(ramo).ToUpperInvariant();
+                if (Habilidades.RamoNovo(ramo)) nome += $"  <color={Hex(cor)}>NOVO</color>";
+                GUI.Label(cabeca, nome, _cabecalhoDoRamo);
+            }
+
+            // as fileiras: os pontos que cada uma pede (acesos quando a fileira já abriu)
+            for (int f = 1; f <= Habilidades.Fileiras; f++)
+            {
+                var rotulo = Em(new Rect(AreaDaArvore.x + 6f, TopoDaFileira(f), MargemDasFileiras, AltoDoNo));
+                bool aberta = Habilidades.FileiraAberta(p, area, f);
+                PorCor(_rotuloDaFileira, aberta ? cor : new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.5f));
+                GUI.Label(rotulo, $"{Habilidades.PontosDaFileira[f]}+", _rotuloDaFileira);
+            }
+
+            // as ligações aos pré-requisitos (as apagadas primeiro; as coloridas por cima, nos trechos que se juntam)
+            for (int vez = 0; vez < 2; vez++)
+                for (int i = 0; i < Habilidades.Quantas; i++)
                 {
-                    var h = (Habilidade)((int)primeira + o);
-                    var no = Em(NoDaHabilidade(k, o));
-                    // a ligação com a de baixo
-                    if (o < Habilidades.PorRamo - 1)
+                    var h = (Habilidade)i;
+                    if (Habilidades.AreaDe(h) != area) continue;
+                    foreach (var q in Habilidades.Pede(h))
                     {
-                        var embaixo = Em(NoDaHabilidade(k, o + 1));
-                        bool as2 = p.Tem(h) && p.Tem((Habilidade)((int)h + 1));
-                        Ret(new Rect(no.center.x - 2 * u, no.yMax, 4 * u, embaixo.y - no.yMax), as2 ? Bom : new Color(0f, 0f, 0f, 0.35f));
+                        if (Habilidades.AreaDe(q) != area) continue;
+                        bool acesa = p.Tem(h) && p.Tem(q);
+                        if (acesa == (vez == 1)) Ligacao(Em(NoNaArvore(q)), Em(NoNaArvore(h)), acesa ? cor : LinhaApagada, u);
                     }
-                    DesenharNo(no, h, p, mouse);
                 }
-            }
-        }
 
-        void DesenharNo(Rect no, Habilidade h, in ProgressoDoPersonagem p, Vector2 mouse)
-        {
-            float u = _u;
-            bool tem = p.Tem(h);
-            bool pode = Habilidades.PodeAprender(p, h, out _);
-            bool anteriorOk = Habilidades.OrdemNoRamo(h) == 0 || p.Tem((Habilidade)((int)h - 1));
-            bool ponta = Habilidades.EhPonta(h);
-            bool escolhida = (int)h == _habilidadeEscolhida;
-            Color fundo = tem ? Aprendida : anteriorOk ? new Color(0f, 0f, 0f, 0.38f) : new Color(0f, 0f, 0f, 0.2f);
-            Ret(no, fundo);
-            if (no.Contains(mouse) && !tem) Ret(no, new Color(1f, 1f, 1f, 0.06f));
-            Color borda = tem ? Bom : pode ? Destaque : ponta ? new Color(0.6f, 0.5f, 0.25f) : BordaClara;
-            Moldura(no, Mathf.Max(1f, Mathf.Round((escolhida ? 3f : ponta ? 2f : 1f) * u)), escolhida ? Color.white : borda);
-            PorCor(_nomeDoNo, tem || anteriorOk ? CorDoTexto : TextoApagado);
-            var dentro = new Rect(no.x + 4 * u, no.y + 5 * u, no.width - 8 * u, no.height - 8 * u);
-            GUI.Label(dentro, (ponta ? "★ " : "") + Habilidades.Nome(h), _nomeDoNo);
-            string estado;
-            Color cor;
-            if (tem) { estado = "aprendida"; cor = Bom; }
-            else if (pode) { estado = "1 ponto: aprender"; cor = Destaque; }
-            else if (!anteriorOk) { estado = "trancada"; cor = TextoApagado; }
-            else { estado = "sem pontos"; cor = TextoApagado; }
-            if (!Habilidades.Pronta(h)) { estado += " · em breve"; if (!tem) cor = EmBreve; }
-            PorCor(_estadoDoNo, cor);
-            GUI.Label(dentro, estado, _estadoDoNo);
-            if (no.Contains(mouse)) _dicaTexto = Habilidades.Descricao(h);
-        }
-
-        /// <summary>A coluna da direita na aba HABILIDADES: a escolhida, o botão de aprender e de onde vem o XP.</summary>
-        void ColunaDasHabilidades(Vector2 mouse)
-        {
-            float u = _u;
-            EstilosDasHabilidades(u);
-            var nome = Em(AreaDoNome);
-            var resto = Em(new Rect(AreaDaFoto.x, AreaDaFoto.y, AreaDaFoto.width, AreaDosDetalhes.yMax - AreaDaFoto.y));
-            Ret(nome, Painel);
-            Ret(resto, Painel);
-            if (inventario == null || !inventario.IsSpawned) return;
-            var p = inventario.Progresso.Value;
-            var faixaDoNome = new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height);
-            float x = resto.x + 12 * u, w = resto.width - 24 * u, y = resto.y + 8 * u;
-            if (_habilidadeEscolhida >= 0 && _habilidadeEscolhida < Habilidades.Quantas)
+            // os nós
+            for (int i = 0; i < Habilidades.Quantas; i++)
             {
-                var h = (Habilidade)_habilidadeEscolhida;
-                var ramo = Habilidades.RamoDe(h);
-                var nomeCurto = new GUIStyle(_nome) { fontSize = Mathf.RoundToInt(17 * u) };
-                GUI.Label(faixaDoNome, Habilidades.Nome(h).ToUpperInvariant(), nomeCurto);
-                if (Habilidades.EhPonta(h))
-                {
-                    var estrela = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleRight };
-                    PorCor(estrela, Destaque);
-                    GUI.Label(faixaDoNome, "★ PONTA", estrela);
-                }
-                Linha($"{Maiuscula(Habilidades.Nome(Habilidades.AreaDe(ramo)).ToLowerInvariant())} · {Habilidades.Nome(ramo)} · {Habilidades.OrdemNoRamo(h) + 1}ª de {Habilidades.PorRamo}", TextoApagado);
-                y += 2 * u;
-                Linha(Habilidades.Descricao(h), CorDoTexto);
-                if (!Habilidades.Pronta(h)) Linha("Em breve: dá para aprender agora, e o efeito chega numa próxima versão.", EmBreve);
-                bool pode = Habilidades.PodeAprender(p, h, out string motivo);
-                if (p.Tem(h)) Linha("Aprendida.", Bom);
-                else if (!pode) Linha(motivo, Ruim);
-                // o botão
-                var botao = Em(BotaoAprender);
-                bool ativo = pode;
-                Ret(botao, ativo ? (botao.Contains(mouse) ? new Color(0.36f, 0.5f, 0.22f, 0.95f) : new Color(0.28f, 0.4f, 0.18f, 0.95f)) : new Color(0f, 0f, 0f, 0.25f));
-                Moldura(botao, Mathf.Max(1f, Mathf.Round(u)), ativo ? Bom : BordaClara);
-                var est = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter };
-                PorCor(est, ativo ? CorDoTexto : TextoApagado);
-                GUI.Label(botao, p.Tem(h) ? "APRENDIDA" : "APRENDER (1 PONTO)", est);
+                var h = (Habilidade)i;
+                if (Habilidades.AreaDe(h) != area) continue;
+                var no = Em(NoNaArvore(h));
+                DesenharNo(no, h, p, cor, no.Contains(mouse));
+                if (no.Contains(mouse)) _noSobMouse = i;
+            }
+
+            // embaixo: o aviso da árvore nova, ou como se usa
+            var rodape = Em(RodapeDaArvore);
+            if (_avisoDaArvore)
+            {
+                Ret(rodape, new Color(0.45f, 0.33f, 0.08f, 0.95f));
+                Moldura(rodape, Mathf.Max(1f, Mathf.Round(u)), Destaque);
+                var est = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
+                PorCor(est, CorDoTexto);
+                GUI.Label(rodape, Habilidades.AvisoDaArvore + "  (clique para fechar)", est);
             }
             else
             {
-                PorCor(_nome, TextoApagado);
-                GUI.Label(faixaDoNome, "ESCOLHA UMA", _nome);
-                PorCor(_nome, CorDoTexto);
+                var est = new GUIStyle(_pequeno) { alignment = TextAnchor.MiddleCenter, wordWrap = false };
+                GUI.Label(rodape, "Clique: +1 ponto  ·  botão direito: tira um ponto  ·  à esquerda, os pontos que a fileira pede (gastos nas de cima desta área)", est);
             }
+        }
 
-            // de onde vem o XP
-            float yXp = Em(new Rect(0, BotaoAprender.yMax + 14f, 0, 0)).y;
-            GUI.Label(new Rect(x, yXp, w, 22 * u), "COMO GANHAR XP", _titulo);
-            yXp += 26 * u;
-            var pequeno = new GUIStyle(_pequeno) { wordWrap = true };
-            foreach (var l in ComoGanhar)
+        // a linha do pré-requisito ao nó: na mesma fileira, de lado a lado; de uma fileira à outra, desce, anda no vão e desce
+        void Ligacao(Rect de, Rect para, Color cor, float u)
+        {
+            float e = Mathf.Max(2f, Mathf.Round(3f * u)), m = e / 2f;
+            if (Mathf.Abs(de.y - para.y) < 1f)
             {
-                var c = new GUIContent(l);
-                float hh = pequeno.CalcHeight(c, w);
-                if (yXp + hh > resto.yMax - 4 * u) break;
-                GUI.Label(new Rect(x, yXp, w, hh), c, pequeno);
-                yXp += hh + 2 * u;
+                float y = de.center.y - m;
+                float x1 = de.center.x < para.center.x ? de.xMax : para.xMax, x2 = de.center.x < para.center.x ? para.x : de.x;
+                Ret(new Rect(x1, y, x2 - x1, e), cor);
+                return;
             }
-
-            void Linha(string texto, Color cor)
+            float xa = de.center.x, xb = para.center.x, ya = de.yMax, yb = para.y;
+            if (Mathf.Abs(xa - xb) < 1f)
             {
-                var c = new GUIContent(texto);
-                float hh = _textoQuebrado.CalcHeight(c, w);
-                PorCor(_textoQuebrado, cor);
-                GUI.Label(new Rect(x, y, w, hh), c, _textoQuebrado);
-                y += hh + 4 * u;
+                Ret(new Rect(xa - m, ya, e, yb - ya), cor);
+                return;
+            }
+            float meio = Mathf.Round(yb - (PassoDaFileira - AltoDoNo) * 0.5f * u);
+            Ret(new Rect(xa - m, ya, e, meio - ya + m), cor);
+            Ret(new Rect(Mathf.Min(xa, xb) - m, meio - m, Mathf.Abs(xb - xa) + e, e), cor);
+            Ret(new Rect(xb - m, meio - m, e, yb - meio + m), cor);
+        }
+
+        void DesenharNo(Rect no, Habilidade h, in ProgressoDoPersonagem p, Color cor, bool sobMouse)
+        {
+            float u = _u;
+            int k = p.PontosEm(h), max = Habilidades.Maximo(h);
+            bool pronta = Habilidades.Pronta(h);
+            bool pode = Habilidades.PodeAprender(p, h, out _);
+            // "dá para aprender" sem contar os pontos livres (a borda fica na cor, mais fraca, até ele subir de nível)
+            bool aberta = pronta && k < max && Habilidades.FileiraAberta(p, Habilidades.AreaDe(h), Habilidades.Fileira(h));
+            if (aberta) foreach (var q in Habilidades.Pede(h)) aberta &= p.Tem(q);
+            bool negado = _noNegado == (int)h && Time.unscaledTime < _negadoAte;
+            Color fundo, borda, texto;
+            float grossura = 1f;
+            if (!pronta)
+            {
+                fundo = new Color(0f, 0f, 0f, 0.22f);
+                borda = new Color(0.36f, 0.36f, 0.34f, 0.9f);
+                texto = new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.6f);
+            }
+            else if (k > 0)
+            {
+                fundo = new Color(cor.r * 0.62f, cor.g * 0.62f, cor.b * 0.62f, 0.96f);
+                borda = k >= max ? Color.Lerp(cor, Color.white, 0.45f) : cor;
+                texto = Color.white;
+                grossura = k >= max ? 2f : 1f;
+            }
+            else if (aberta)
+            {
+                fundo = new Color(0f, 0f, 0f, 0.4f);
+                borda = pode ? cor : new Color(cor.r, cor.g, cor.b, 0.45f);
+                texto = CorDoTexto;
+                grossura = 2f;
+            }
+            else
+            {
+                fundo = new Color(0f, 0f, 0f, 0.2f);
+                borda = new Color(0.3f, 0.3f, 0.28f, 0.85f);
+                texto = new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.55f);
+            }
+            Ret(no, fundo);
+            if (sobMouse) Ret(no, new Color(1f, 1f, 1f, 0.07f));
+            Moldura(no, Mathf.Max(1f, Mathf.Round((negado ? 2f : grossura) * u)), negado ? Ruim : sobMouse ? Color.Lerp(borda, Color.white, 0.4f) : borda);
+
+            // o ícone do ramo (uma letra ou um símbolo), o selo "em breve" ao lado dele, a estrela da ponta, o nome e o "k/máx"
+            var icone = new Rect(no.x + 4 * u, no.y + 4 * u, 18 * u, 18 * u);
+            bool acesa = pronta && (k > 0 || aberta);
+            Ret(icone, acesa ? (k > 0 ? new Color(0f, 0f, 0f, 0.3f) : new Color(cor.r, cor.g, cor.b, 0.85f)) : new Color(0f, 0f, 0f, 0.25f));
+            PorCor(_simboloDoNo, acesa ? (k > 0 ? cor : new Color(0.08f, 0.08f, 0.07f)) : texto);
+            GUI.Label(icone, Habilidades.Simbolo(Habilidades.RamoDe(h)), _simboloDoNo);
+            if (Habilidades.EhPonta(h))
+            {
+                PorCor(_simboloDoNo, pronta ? Destaque : texto);
+                GUI.Label(new Rect(no.xMax - 22 * u, no.y + 4 * u, 18 * u, 18 * u), "★", _simboloDoNo);
+            }
+            PorCor(_nomeDoNo, texto);
+            GUI.Label(new Rect(no.x + 4 * u, no.y + 21 * u, no.width - 8 * u, 24 * u), Habilidades.Nome(h), _nomeDoNo);
+            PorCor(_cantoDoNo, k > 0 ? Color.white : texto);
+            GUI.Label(new Rect(no.xMax - 44 * u, no.yMax - 16 * u, 40 * u, 14 * u), $"{k}/{max}", _cantoDoNo);
+            if (!pronta)
+            {
+                PorCor(_seloDoNo, EmBreve);
+                GUI.Label(new Rect(icone.xMax + 5 * u, icone.y, 64 * u, icone.height), "EM BREVE", _seloDoNo);
+            }
+        }
+
+        /// <summary>
+        /// A aba HABILIDADES no lugar dos detalhes (a árvore cobre a coluna da direita): o quadro do nó debaixo do mouse (o
+        /// nome, o ramo, o nível, o efeito de agora e o do próximo nível, e o que falta), ou de onde vem o XP (o mouse na barra).
+        /// </summary>
+        void ColunaDasHabilidades(Vector2 mouse)
+        {
+            if (inventario == null || !inventario.IsSpawned || MenuAberto) return;
+            if (MouseDeTeste.x >= 0f) mouse = MouseDeTeste;
+            float u = _u;
+            EstilosDasHabilidades(u);
+            var p = inventario.Progresso.Value;
+            float w = 330 * u, x = 12 * u;
+            var linhas = new System.Collections.Generic.List<(string texto, GUIStyle estilo, Color cor)>();
+            Color corDaBorda = Friso;
+            if (_noSobMouse >= 0 && _noSobMouse < Habilidades.Quantas)
+            {
+                var h = (Habilidade)_noSobMouse;
+                var ramo = Habilidades.RamoDe(h);
+                var cor = CorDaArea(Habilidades.AreaDe(h));
+                corDaBorda = cor;
+                int k = p.PontosEm(h), max = Habilidades.Maximo(h), f = Habilidades.Fileira(h);
+                bool pronta = Habilidades.Pronta(h);
+                linhas.Add((Habilidades.Nome(h).ToUpperInvariant() + (Habilidades.EhPonta(h) ? "   ★ PONTA" : ""), _tituloDaDica, cor));
+                linhas.Add(($"{Habilidades.Nome(ramo)} · fileira {f} ({Habilidades.PontosDaFileira[f]}+ pontos nas de cima)", _pequenoDaDica, TextoApagado));
+                linhas.Add(($"Nível {k}/{max}", new GUIStyle(_textoDaDica) { fontStyle = FontStyle.Bold }, CorDoTexto));
+                if (!pronta) linhas.Add((Habilidades.Efeito(h, 1), _textoDaDica, CorDoTexto));
+                else
+                {
+                    if (k > 0) linhas.Add(($"Agora: {Habilidades.Efeito(h, k)}", _textoDaDica, CorDoTexto));
+                    if (k < max) linhas.Add(($"{(k == 0 ? "Com 1 ponto" : $"No nível {k + 1}")}: {Habilidades.Efeito(h, k + 1)}", _textoDaDica, k == 0 ? CorDoTexto : Bom));
+                }
+                if (!pronta) linhas.Add(("Em breve: chega numa próxima etapa (ainda não dá para aprender).", _pequenoDaDica, EmBreve));
+                else if (k < max)
+                {
+                    if (Habilidades.PodeAprender(p, h, out string falta)) linhas.Add(("Clique: +1 ponto.", _pequenoDaDica, Bom));
+                    else linhas.Add((falta, _pequenoDaDica, Ruim));
+                }
+                if (k > 0)
+                {
+                    if (Habilidades.PodeTirar(p, h, out string preso)) linhas.Add(("Botão direito: tira um ponto.", _pequenoDaDica, TextoApagado));
+                    else linhas.Add(($"Não dá para tirar: {preso}", _pequenoDaDica, TextoApagado));
+                }
+            }
+            else if (_sobreOXp)
+            {
+                linhas.Add(("COMO GANHAR XP", _tituloDaDica, Destaque));
+                foreach (var l in ComoGanhar) linhas.Add((l, _pequenoDaDica, CorDoTexto));
+                linhas.Add(($"Cada nível dá 1 ponto (até o nível {Habilidades.NivelMaximo}).", _pequenoDaDica, TextoApagado));
+            }
+            if (linhas.Count == 0) return;
+
+            float alto = 8 * u;
+            foreach (var l in linhas) alto += l.estilo.CalcHeight(new GUIContent(l.texto), w - 2 * x) + 3 * u;
+            var r = new Rect(mouse.x + 18 * u, mouse.y + 16 * u, w, alto + 6 * u);
+            if (r.xMax > Screen.width - 4) r.x = mouse.x - r.width - 10 * u;
+            if (r.yMax > Screen.height - 4) r.y = Mathf.Max(4f, Screen.height - 4 - r.height);
+            Ret(r, new Color(0.07f, 0.07f, 0.065f, 0.96f));
+            Moldura(r, Mathf.Max(1f, Mathf.Round(u)), corDaBorda);
+            float y = r.y + 7 * u;
+            foreach (var l in linhas)
+            {
+                var c = new GUIContent(l.texto);
+                float hh = l.estilo.CalcHeight(c, w - 2 * x);
+                PorCor(l.estilo, l.cor);
+                GUI.Label(new Rect(r.x + x, y, w - 2 * x, hh), c, l.estilo);
+                y += hh + 3 * u;
             }
         }
 
@@ -270,30 +419,53 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ o clique
 
-        /// <summary>O clique na aba HABILIDADES (a área, a habilidade, o botão de aprender). Devolve se pegou.</summary>
+        // o nó da página aberta debaixo do mouse (-1: nenhum)
+        int NoEm(Vector2 m)
+        {
+            for (int i = 0; i < Habilidades.Quantas; i++)
+                if (Habilidades.AreaDe((Habilidade)i) == _areaEscolhida && Em(NoNaArvore((Habilidade)i)).Contains(m)) return i;
+            return -1;
+        }
+
+        void Negar(int no)
+        {
+            _noNegado = no;
+            _negadoAte = Time.unscaledTime + 0.45f;
+        }
+
+        /// <summary>O clique na aba HABILIDADES (a área, o aviso, um nó: +1 ponto). Devolve se pegou.</summary>
         bool CliqueNaAbaHabilidades(Vector2 m)
         {
             for (int a = 0; a < 3; a++)
-                if (Em(BotaoDaArea(a)).Contains(m))
+                if (Em(AbaDaArea(a)).Contains(m))
                 {
                     _areaEscolhida = (AreaDaHabilidade)a;
-                    _habilidadeEscolhida = (int)ProximaDoRamo(Habilidades.Primeira((RamoDaHabilidade)(a * 3)));
                     return true;
                 }
-            for (int k = 0; k < 3; k++)
-                for (int o = 0; o < Habilidades.PorRamo; o++)
-                    if (Em(NoDaHabilidade(k, o)).Contains(m))
-                    {
-                        _habilidadeEscolhida = (int)Habilidades.Primeira((RamoDaHabilidade)((int)_areaEscolhida * 3 + k)) + o;
-                        return true;
-                    }
-            if (Em(BotaoAprender).Contains(m) && _habilidadeEscolhida >= 0 && inventario != null && inventario.IsSpawned)
+            if (_avisoDaArvore && Em(RodapeDaArvore).Contains(m))
             {
-                if (Habilidades.PodeAprender(inventario.Progresso.Value, (Habilidade)_habilidadeEscolhida, out _))
-                    inventario.PedirAprender((Habilidade)_habilidadeEscolhida);
+                _avisoDaArvore = false;
                 return true;
             }
-            return false;
+            int no = NoEm(m);
+            if (no < 0 || inventario == null || !inventario.IsSpawned) return false;
+            if (Habilidades.PodeAprender(inventario.Progresso.Value, (Habilidade)no, out _))
+            {
+                inventario.PedirAprender((Habilidade)no);
+                _avisoDaArvore = false;
+            }
+            else Negar(no);
+            return true;
+        }
+
+        /// <summary>O botão direito na aba HABILIDADES: tira um ponto do nó (se nada depender dele). Devolve se pegou.</summary>
+        bool TirarNaAbaHabilidades(Vector2 m)
+        {
+            int no = NoEm(m);
+            if (no < 0 || inventario == null || !inventario.IsSpawned) return false;
+            if (Habilidades.PodeTirar(inventario.Progresso.Value, (Habilidade)no, out _)) inventario.PedirTirar((Habilidade)no);
+            else Negar(no);
+            return true;
         }
     }
 }

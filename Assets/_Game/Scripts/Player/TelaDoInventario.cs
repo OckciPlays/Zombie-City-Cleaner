@@ -153,6 +153,7 @@ namespace ZombieCityCleaner.Player
             if (abrir == Aberta) return;
             Aberta = abrir;
             if (!abrir) _estante = -1;
+            if (!abrir && inventario != null) inventario.CancelarDesmontar();   // (o desmontar com a barra, 09/11/2026)
             MenuOnline.Tela(this, abrir);
             _apertou = Origem.Nada;
             _arrastando = false;
@@ -371,6 +372,7 @@ namespace ZombieCityCleaner.Player
                         MenuDoItem(doMenu, -1);
                     }
                     else if (_aba == Aba.Corpo && ParteNaAbaCorpo(m, out var parteDoMenu)) MenuDaParte(parteDoMenu);
+                    else if (_aba == Aba.Habilidades && TirarNaAbaHabilidades(m)) { }   // (tira um ponto do nó, 09/11/2026)
                     else if (ItemDaEstanteEm(m, out var daEstanteDoMenu, out _))
                     {
                         // o item da estante: pegar para a mochila (no primeiro lugar livre)
@@ -479,6 +481,16 @@ namespace ZombieCityCleaner.Player
                     break;
                 case EventType.MouseUp when e.button == 0:
                     if (_arrastando) Soltar(m);
+                    // Shift + clique (08/11/2026, a pedido: "poder apertar Shift e transferir rápido um pack para o baú"): com
+                    // uma estante aberta (o armário e a prateleira do bunker, o compartimento do caiaque), a pilha inteira
+                    // passa de um lado para o outro (guardando, completa as pilhas iguais; pegando, vai para a mochila)
+                    else if (e.shift && _estante >= 0 && Estantes != null && _apertou == Origem.Mochila)
+                    {
+                        bool naMaoOcupada = arma != null && arma.Usando && _idApertado == inventario.IdNaMao;
+                        if (!naMaoOcupada) Estantes.Guardar(_estante, inventario, arma, _idApertado, -1, -1, false);
+                    }
+                    else if (e.shift && _estante >= 0 && Estantes != null && _apertou == Origem.Estante)
+                        Estantes.Pegar(_estante, _idApertado, -1, -1, false);
                     else if (_apertou == Origem.Mochila) Escolher(_idApertado);
                     else if (_apertou == Origem.Atalho && inventario[_atalhoApertado] != Item.Nada) Escolher(inventario.Atalho(_atalhoApertado));
                     else if (_apertou == Origem.Equipamento)
@@ -575,10 +587,13 @@ namespace ZombieCityCleaner.Player
             if (Itens.EhLanterna(item) && it.desgaste > 0)
                 Opcao(inventario.PodeTrocarPilhas(id) ? $"Trocar as pilhas ({100 - it.desgaste}% → 100%, gasta 1 par)" : "Trocar as pilhas (precisa de pilhas)",
                       inventario.PodeTrocarPilhas(id) ? () => inventario.TrocarPilhas(id) : (System.Action)null);
+            // (09/11/2026, a sucata: com o Sucateiro, a sucata a mais já no texto; o que dá sucata leva uns segundos, um de
+            // cada vez)
             if (!inventario.PodeDesmontar(id, out var d, out var falta) && d != null)
-                Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(d.vira)} ({falta})", null);
+                Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(ViraComBonus(d))} ({falta})", null);
             else if (d != null)
-                Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(d.vira)}", () => inventario.Desmontar(id));
+                Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(ViraComBonus(d))}" + (inventario.Desmontando ? " (desmontando outro)" : ""),
+                      inventario.Desmontando ? null : () => inventario.Desmontar(id));
             if (Itens.EmPilha(item) && !Itens.EhMunicao(item) && n > 1)
             {
                 Opcao("Largar um", () => inventario.LargarUm(id));
@@ -586,6 +601,9 @@ namespace ZombieCityCleaner.Player
             }
             else Opcao("Largar", () => LargarDoMenu(id));
         }
+
+        // as peças do desmontar com a sucata a mais do Sucateiro
+        Parte[] ViraComBonus(Desmontagem d) => Receitas.SucataDe(d) > 0 ? Receitas.ComBonus(d.vira, inventario.BonusDoSucateiro) : d.vira;
 
         void LargarDoMenu(ushort id)
         {
@@ -715,7 +733,7 @@ namespace ZombieCityCleaner.Player
                 PorCor(_titulo, CorDoTexto);
             }
             bool comEstante = _estante >= 0 && FormaAberta != null;
-            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : _aba == Aba.Habilidades ? "A HABILIDADE" : "DETALHES", _titulo);
+            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : _aba == Aba.Habilidades ? "A ÁRVORE" : "DETALHES", _titulo);
             // o dinheiro do personagem (02/11/2026: o que sobrou do Dia 0; os comerciantes vêm depois); com a estante aberta,
             // o nome dela fica no lugar
             if (!comEstante && inventario != null && inventario.IsSpawned)
@@ -859,6 +877,18 @@ namespace ZombieCityCleaner.Player
             var a = AreaDoRodape;
             GUI.Label(Em(new Rect(a.x + 2, a.y, a.width, 20)), "Botão direito: opções   ·   G: largar   ·   R: girar", _texto);
             GUI.Label(Em(new Rect(a.x + 2, a.y + 24, a.width, 20)), "As armas dos atalhos 1, 2 e 3 ficam penduradas no corpo.", _pequeno);
+            // o desmontar de agora (09/11/2026, a sucata): a barra, como a de segurar o E, no lugar do aviso
+            if (inventario != null && inventario.Desmontando)
+            {
+                var barra = Em(new Rect(a.x + 2, a.y + 74, Mathf.Min(260f, a.width - 4), 7));
+                Ret(barra, new Color(0f, 0f, 0f, 0.55f));
+                Ret(new Rect(barra.x, barra.y, barra.width * inventario.ProgressoDoDesmontar, barra.height), new Color(0.95f, 0.85f, 0.45f, 0.95f));
+                var antes = _texto.normal.textColor;
+                PorCor(_texto, Destaque);
+                GUI.Label(Em(new Rect(a.x + 2, a.y + 50, a.width, 22)), inventario.TextoDoDesmontar + " (fechar a mochila interrompe)", _texto);
+                PorCor(_texto, antes);
+                return;
+            }
             Aviso(new Rect(a.x + 2, a.y + 50, a.width, 22));
         }
 
@@ -1132,7 +1162,7 @@ namespace ZombieCityCleaner.Player
                 ColunaDoCorpo(_ultimoMouse);
                 return;
             }
-            // a aba Habilidades: a escolhida, o botão de aprender e de onde vem o XP (TelaDoInventario.Habilidades.cs)
+            // a aba Habilidades: a árvore cobre a coluna; aqui, o quadro do nó debaixo do mouse (TelaDoInventario.Habilidades.cs)
             if (_aba == Aba.Habilidades)
             {
                 ColunaDasHabilidades(_ultimoMouse);
@@ -1280,7 +1310,7 @@ namespace ZombieCityCleaner.Player
             if (item == Item.Tocha) Linha("Fogo", it.qtd == Itens.TochaApagada ? "apagada pela chuva (reacenda numa fogueira acesa)" : "acesa (só queima na mão)");
             if (Itens.EhGalao(item)) Linha("Gasolina", it.desgaste >= 100 ? "vazio" : $"{InventarioJogador.LitrosDe(it):0.#} de {Itens.LitrosDoGalao:0} L");
             var desmonta = Receitas.DesmontagemDe(item);
-            if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(desmonta.vira));
+            if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(ViraComBonus(desmonta)));
             if (!Itens.EhLoot(item)) Linha("Tamanho", $"{t.x} × {t.y}");
         }
 

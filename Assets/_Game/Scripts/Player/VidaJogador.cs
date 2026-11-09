@@ -251,6 +251,7 @@ namespace ZombieCityCleaner.Player
             // (06/11/2026: o desmaio também deita o corpo)
             bool deitado = Caido.Value || Desmaiado.Value || Dormindo.Value;
             Deitar(deitado);
+            if (IsOwner) CuidarDaCama();   // a cama da mobília: acordando, volta para o lado dela (VidaJogador.Sono.cs)
             // (a luneta, saindo dela, liga os braços de novo: caído, continuam apagados)
             if (deitado && IsOwner && _rede != null && _rede.cameraBracos != null && _rede.cameraBracos.enabled) _rede.cameraBracos.enabled = false;
             // a vida não volta mais sozinha (05/11/2026): o corpo anda (o sangramento, os curativos, as lesões sarando)

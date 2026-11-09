@@ -40,7 +40,7 @@ namespace ZombieCityCleaner.Network
         /// A versão da rede (05/11/2026, o corpo do jogador: o estado e os RPCs do jogador mudaram). Duas cópias do jogo com
         /// versões diferentes não se conectam (o NGO recusa). Suba a cada mudança no que vai pela rede.
         /// </summary>
-        public const ushort VersaoDaRede = 11;   // (11: os cortes dos lados da árvore, 07/11/2026; 2: a infecção; 3: o curativo no amigo e a pose; 4: a mente; 5: o desmaio; 6: o sono e o calmante; 7: a árvore de habilidades; 8: o fôlego, o caiaque, a pesca e as árvores cortadas, 06/11/2026; 9: a boia da pesca para todos e o remo do caiaque, 07/11/2026; 10: o zumbi sem cabeça que ainda anda, 07/11/2026)
+        public const ushort VersaoDaRede = 14;   // (14: os painéis de metal desmontados, 09/11/2026; 13: as armas de sucata, as munições e a sucata, 09/11/2026; 12: a árvore de habilidades nova, com os níveis, 09/11/2026; 11: os cortes dos lados da árvore, 07/11/2026; 2: a infecção; 3: o curativo no amigo e a pose; 4: a mente; 5: o desmaio; 6: o sono e o calmante; 7: a árvore de habilidades; 8: o fôlego, o caiaque, a pesca e as árvores cortadas, 06/11/2026; 9: a boia da pesca para todos e o remo do caiaque, 07/11/2026; 10: o zumbi sem cabeça que ainda anda, 07/11/2026)
 
         void Awake()
         {

@@ -164,6 +164,7 @@ namespace ZombieCityCleaner.Salvar
                 }
 
             m.arvoresCortadas = _mundo.ArvoresCortadas();   // (06/11/2026)
+            m.paineisDesmontados = _mundo.PaineisDesmontados();   // (09/11/2026, a sucata)
             m.mobiliaAberta.Clear();
             if (MobiliaNovaDoMundo.Instancia != null)
                 foreach (var k in MobiliaNovaDoMundo.Instancia.Copia()) m.mobiliaAberta.Add(unchecked((long)k));
@@ -437,6 +438,7 @@ namespace ZombieCityCleaner.Salvar
             PecasDosCarrosDoMundo.Instancia?.Restaurar(mexidos);
 
             _mundo.RestaurarArvores(m.arvoresCortadas);   // as árvores cortadas (06/11/2026)
+            _mundo.RestaurarPaineis(m.paineisDesmontados);   // os painéis de metal desmontados (09/11/2026)
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
             foreach (long k in m.mobiliaAberta) abertas.Add(unchecked((ulong)k));
             MobiliaNovaDoMundo.Instancia?.Restaurar(abertas);

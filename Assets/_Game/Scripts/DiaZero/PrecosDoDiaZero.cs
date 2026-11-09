@@ -41,7 +41,8 @@ namespace ZombieCityCleaner.DiaZero
         {
             LojaDoDia.Mercado => "Mercado",
             LojaDoDia.Farmacia => "Farmácia",
-            LojaDoDia.Armas => "Loja de armas",
+            // (09/11/2026, a sucata, 2ª leva: a loja de armas virou a de caça e ferragens, sem as armas de fogo reais)
+            LojaDoDia.Armas => "Caça e ferragens",
             LojaDoDia.Ferragens => "Ferragens e autopeças",
             LojaDoDia.Roupas => "Loja de roupas",
             _ => "Loja do posto",
@@ -52,7 +53,7 @@ namespace ZombieCityCleaner.DiaZero
         {
             LojaDoDia.Mercado => "MERCADO",
             LojaDoDia.Farmacia => "FARMÁCIA",
-            LojaDoDia.Armas => "ARMAS",
+            LojaDoDia.Armas => "CAÇA E FERRAGENS",
             LojaDoDia.Ferragens => "FERRAGENS",
             LojaDoDia.Roupas => "ROUPAS",
             _ => "CONVENIÊNCIA",
@@ -81,12 +82,14 @@ namespace ZombieCityCleaner.DiaZero
                 // o calmante (06/11/2026, a mente): também no fim
                 new Produto(Item.Calmante, 14),
             },
+            // a de caça e ferragens (09/11/2026, a sucata, 2ª leva; a proposta aceita pelo Pedro): era a loja de armas, e as
+            // armas de fogo reais e a munição delas saíram (as reais só com os militares). As brancas, a pesca, a pólvora, a
+            // sucata (os pregos e os parafusos soltos) e a luz. A "pistola" do expositor virou a faca, o machado e o bastão
             [LojaDoDia.Armas] = new[]
             {
-                new Produto(Item.Pistola, 450), new Produto(Item.Espingarda, 400), new Produto(Item.Submetralhadora, 650),
-                new Produto(Item.Rifle, 850), new Produto(Item.Sniper, 1000),
-                new Produto(Item.Municao9mm, 20), new Produto(Item.Municao12, 25), new Produto(Item.Municao556, 25), new Produto(Item.Municao762, 30),
-                new Produto(Item.Faca, 40), new Produto(Item.Machado, 45), new Produto(Item.Coldre, 35, 0, "coldre da pistola"),
+                new Produto(Item.Faca, 40), new Produto(Item.Machado, 45), new Produto(Item.Bastao, 20),
+                new Produto(Item.VaraDePesca, 35), new Produto(Item.Isca, 5), new Produto(Item.Polvora, 14),
+                new Produto(Item.Sucata, 3, 0, "sucata (pregos e parafusos)"), new Produto(Item.Lanterna, 25), new Produto(Item.Pilhas, 8),
             },
             [LojaDoDia.Ferragens] = new[]
             {
@@ -130,6 +133,9 @@ namespace ZombieCityCleaner.DiaZero
             Item.Desinfetante => 2,
             Item.Antibiotico => 2,
             Item.Calmante => 3,
+            // a pólvora e a sucata da loja de caça (09/11/2026): o bastante para começar o Armeiro de sucata, não um arsenal
+            Item.Polvora => 5,
+            Item.Sucata => 24,
             _ => 0,
         };
 

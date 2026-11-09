@@ -23,7 +23,7 @@ namespace ZombieCityCleaner.Zombies
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer) return;
             float alcance = (correndo ? 18f : 12f) * Mathf.Lerp(1f, Tempo.Ouvido, 0.5f);
-            if (Habilidades.Tem(autor, Habilidade.PassosLeves)) alcance *= 0.5f;   // (os Passos leves, 06/11/2026)
+            alcance *= 1f - 0.25f * Habilidades.Pontos(autor, Habilidade.PassosLeves);   // (os Passos leves, 06/11/2026: 25% por ponto)
             float alcance2 = alcance * alcance;
             _pertoDaPoca.Clear();
             foreach (var z in m._ativos)

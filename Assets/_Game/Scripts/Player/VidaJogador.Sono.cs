@@ -13,8 +13,10 @@ namespace ZombieCityCleaner.Player
     /// h). Dormir (a cama: "[E] Dormir e salvar") deita o corpo e tira o controle; dormindo, o cansaço cai (16 por hora; 20
     /// com todos) e a mente sobe. A pedido: "Se apenas um estiver dormindo, recupera devagar e o tempo não passa, se todos
     /// estiverem dormindo (independente do local do mundo que estejam) vai passar a noite e recuperar boa parte da
-    /// sanidade": sozinho, o tempo anda normal (a mente +2,5 por hora); todos dormindo, o relógio corre
-    /// <see cref="PressaDoSono"/> vezes mais rápido (<see cref="CicloDoDia.Pressa"/>) e a mente +5 por hora.
+    /// sanidade": sozinho, o tempo anda normal (a mente +5 por hora numa cama, +3 apagado no chão); todos dormindo, o relógio
+    /// corre <see cref="PressaDoSono"/> vezes mais rápido (<see cref="CicloDoDia.Pressa"/>) e a mente +7 por hora (08/11/2026;
+    /// eram 2,5 e 5). Dormindo, o escuro, a solidão e a tempestade não pesam na mente. As camas da mobília (as das casas, dos
+    /// prédios e do bunker) servem para dormir (<see cref="Salvar.CamaDeDormir"/>), e o corpo deita nelas.
     /// Quem dormiu de noite acorda às 6h30 (todos dormindo); de dia, quando o cansaço acaba. O golpe acorda, um amigo acorda
     /// (mirar e segurar E), e o E acorda quem dorme (menos o sono do calmante, nas 3 primeiras horas).</para>
     /// <para><b>O calmante</b> (a pedido: "esquema de recuperar automático por hora", sem sorte): +8 por hora por 5 h (até 8
@@ -64,7 +66,10 @@ namespace ZombieCityCleaner.Player
             if (Dormindo.Value)
             {
                 _cansaco = Mathf.Max(0f, _cansaco - (todos ? 20f : 16f) * horas);
-                Acalma(ref taxa, ref motivos, MotivoDaMente.Descanso, todos ? 5f : 2.5f);
+                // (08/11/2026, a pedido: "dormir recuperar sanidade") numa cama, +5 por hora (uma noite: uns +40); apagado no
+                // chão (o cansaço, o calmante), +3; com todos dormindo, +7 (eram 2,5 e 5). E, dormindo, o escuro, a solidão e
+                // a tempestade não pesam (VidaJogador.Mente.cs)
+                Acalma(ref taxa, ref motivos, MotivoDaMente.Descanso, todos ? 7f : _sonoForcado ? 3f : 5f);
             }
             else
             {
@@ -194,6 +199,50 @@ namespace ZombieCityCleaner.Player
             Dormindo.Value = false;
             _sonoForcado = false;
             PublicarOSono();
+        }
+
+        // ------------------------------------------------ deitar na cama da mobília (08/11/2026) ------------------------------------------------
+
+        bool _naCama, _dormiuNaCama;
+        float _esperaOSono, _giroAntesDaCama;
+        Vector3 _ladoDaCama;
+
+        /// <summary>
+        /// No dono (a cama da mobília, <see cref="Salvar.CamaDeDormir"/>): o corpo vai para o colchão (parado ali, sem cair,
+        /// até o sono chegar pela rede); acordando, ele volta para onde estava, do lado da cama. Se o sono não vem (o anfitrião
+        /// recusou), volta logo.
+        /// </summary>
+        public void DeitarNaCama(Vector3 pos, float yaw)
+        {
+            if (!IsOwner || Dormindo.Value || Caido.Value || Desmaiado.Value) return;
+            if (_rede != null && _rede.Passageiro != null && _rede.Passageiro.NoCarro) return;
+            var mov = GetComponent<MovimentoPrimeiraPessoa>();
+            if (mov == null) return;
+            _ladoDaCama = transform.position;
+            _giroAntesDaCama = transform.eulerAngles.y;
+            mov.Teleportar(pos, yaw);
+            mov.Esperando = true;   // (sem cair nem andar: a caixa da cama fica embaixo dele)
+            _naCama = true;
+            _dormiuNaCama = false;
+            _esperaOSono = Time.time + 3f;
+        }
+
+        // no dono, a cada quadro: acordou (ou o sono não veio), volta para o lado da cama
+        void CuidarDaCama()
+        {
+            if (!_naCama) return;
+            if (Dormindo.Value)
+            {
+                _dormiuNaCama = true;
+                return;
+            }
+            if (!_dormiuNaCama && Time.time < _esperaOSono) return;   // (o sono ainda vem pela rede)
+            _naCama = false;
+            var mov = GetComponent<MovimentoPrimeiraPessoa>();
+            if (mov == null) return;
+            mov.Esperando = false;
+            if (Caido.Value) return;   // (caiu dormindo: a queda leva para a cama improvisada ou o nascimento)
+            mov.Teleportar(_ladoDaCama, _giroAntesDaCama);
         }
 
         // ------------------------------------------------ o calmante, o cigarro e a sinuca ------------------------------------------------

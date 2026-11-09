@@ -47,7 +47,16 @@ namespace ZombieCityCleaner.EditorTools
             /// deixando eles meio brilhosos"; o rifle primeiro, para comparar, e depois as outras: "Sim, aplica").
             /// </summary>
             public float lisura = 0f;
+            /// <summary>
+            /// A de sucata (09/11/2026): o modelo da arma real cujos braços e cujo lugar no corpo ela usa (Jogador_FP_&lt;real&gt;,
+            /// as peças P_&lt;real&gt;_* e a arma antiga solta, para medir o encaixe). Ela usa a paleta dos itens (a
+            /// <c>Art/Paleta.png</c>, 16 × 16: o material <c>Materials/Pistola.mat</c>). null: uma arma real.
+            /// </summary>
+            public string equivalente;
         }
+
+        /// <summary>O nome dos braços de primeira pessoa e da arma antiga dela (a da real, nas de sucata).</summary>
+        static string FP(Arma a) => a.equivalente ?? a.modelo;
 
         public static readonly Arma Pistola = new Arma
         {
@@ -126,21 +135,51 @@ namespace ZombieCityCleaner.EditorTools
             pecas = new[] { ("corpo", "gun"), ("ferrolho", "slide"), ("carregador", "mag") },
         };
 
+        // as armas de sucata (09/11/2026, o Armeiro de sucata: o Blender/Armas/sucata.py e o sucata_exportar.py): no espaço da
+        // arma antiga da real equivalente, com os cabos e as peças alinhados às mãos das animações dela
+        public static readonly Arma SucataPistola = new Arma
+        {
+            nome = "Sucata_Pistola", modelo = "Sucata_Pistola", equivalente = "Pistola", fbxAntigo = Jogador + "/Armas.fbx", paleta = true,
+            pecas = new[] { ("corpo", "gun"), ("carregador", "mag") },
+        };
+
+        public static readonly Arma SucataRifle = new Arma
+        {
+            nome = "Sucata_Rifle", modelo = "Sucata_Rifle", equivalente = "Sniper", fbxAntigo = Jogador + "/Armas_Sniper.fbx", paleta = true,
+            pecas = new[] { ("corpo", "gun"), ("ferrolho", "slide") },
+        };
+
+        public static readonly Arma SucataSubmetralhadora = new Arma
+        {
+            nome = "Sucata_Submetralhadora", modelo = "Sucata_Submetralhadora", equivalente = "Submetralhadora", fbxAntigo = Jogador + "/Armas.fbx",
+            paleta = true, pecas = new[] { ("corpo", "gun"), ("ferrolho", "slide"), ("carregador", "mag") },
+        };
+
+        /// <summary>As de sucata (09/11/2026).</summary>
+        public static readonly Arma[] DeSucata = { SucataPistola, SucataRifle, SucataSubmetralhadora };
+
         /// <summary>Todas as versões (as que não estão no jogo ficam no projeto).</summary>
-        public static readonly Arma[] Todas = { Pistola, Rifle, Espingarda, Sniper, Rifle2, Espingarda2, Sniper2, Sniper3, Sniper3Leve, Rifle3, Submetralhadora3 };
-        /// <summary>As que estão no jogo: a pistola (v1, aprovada), o rifle v3 (a M4A1), a espingarda estilizada, a sniper v3 leve e a submetralhadora v3 (a MP5K).</summary>
-        public static readonly Arma[] Ativas = { Pistola, Rifle3, Espingarda2, Sniper3Leve, Submetralhadora3 };
+        public static readonly Arma[] Todas = { Pistola, Rifle, Espingarda, Sniper, Rifle2, Espingarda2, Sniper2, Sniper3, Sniper3Leve, Rifle3, Submetralhadora3,
+                                                SucataPistola, SucataRifle, SucataSubmetralhadora };
+        /// <summary>
+        /// As que estão no jogo: a pistola (v1, aprovada), o rifle v3 (a M4A1), a espingarda estilizada, a sniper v3 leve e a
+        /// submetralhadora v3 (a MP5K); e as de sucata (09/11/2026).
+        /// </summary>
+        public static readonly Arma[] Ativas = { Pistola, Rifle3, Espingarda2, Sniper3Leve, Submetralhadora3, SucataPistola, SucataRifle, SucataSubmetralhadora };
 
         public static string Fbx(Arma a) => $"{Modelos}/{a.nome}.fbx";
         /// <summary>O material do modelo (pelo nome do modelo, que o Itens.MaterialProprio carrega): o da arma ativa.</summary>
-        public static string CaminhoDoMaterial(Arma a) => $"{Materiais}/{a.modelo}.mat";
+        public static string CaminhoDoMaterial(Arma a) => a.equivalente != null ? PaletaDosItens : $"{Materiais}/{a.modelo}.mat";
+        /// <summary>O material dos itens (a paleta 16 × 16), o das armas de sucata.</summary>
+        const string PaletaDosItens = Jogador + "/Materials/Pistola.mat";
 
         // ------------------------------------------------------------------------------------------ importar
         /// <summary>As texturas, o material e a importação do FBX (o material dele trocado pelo nosso).</summary>
         public static Material Preparar(Arma a)
         {
             if (!File.Exists(Fbx(a))) throw new FileNotFoundException("Rode o Blender/Armas/rodar.py antes.", Fbx(a));
-            if (a.paleta)
+            if (a.equivalente != null) { }   // a de sucata: a paleta dos itens, que já existe
+            else if (a.paleta)
             {
                 TexturaDaPaleta($"{Texturas}/Armas_Paleta_Cor.png", true);
                 TexturaDaPaleta($"{Texturas}/Armas_Paleta_MS.png", false);
@@ -201,6 +240,7 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>URP Lit, fluxo metálico: a cor, o MS (R = metal, G = oclusão, A = lisura) e o normal.</summary>
         static Material Material(Arma a)
         {
+            if (a.equivalente != null) return AssetDatabase.LoadAssetAtPath<Material>(PaletaDosItens);
             if (!AssetDatabase.IsValidFolder(Materiais))
             {
                 Directory.CreateDirectory(Materiais);
@@ -294,7 +334,7 @@ namespace ZombieCityCleaner.EditorTools
 
         /// <summary>Os vértices da arma solta antiga (todas as peças &lt;modelo&gt;_* do FBX dela, cada uma no espaço dela).</summary>
         static Vector3[] VerticesAntigos(Arma a) =>
-            AssetDatabase.LoadAllAssetsAtPath(a.fbxAntigo).OfType<Mesh>().Where(m => m.name.StartsWith(a.modelo + "_")).SelectMany(m => m.vertices).ToArray();
+            AssetDatabase.LoadAllAssetsAtPath(a.fbxAntigo).OfType<Mesh>().Where(m => m.name.StartsWith(FP(a) + "_")).SelectMany(m => m.vertices).ToArray();
 
         /// <summary>
         /// O encaixe que leva a arma solta antiga para onde ela está noutro lugar (a mesma forma, girada de 90 em 90 graus
@@ -449,11 +489,11 @@ namespace ZombieCityCleaner.EditorTools
         /// Os braços de primeira pessoa de um modelo: a malha deles (a do FBX) com a arma nova no lugar da antiga, gravada em
         /// <c>Malhas/FP_Bracos_&lt;modelo&gt;</c>, e o material dela no submesh 1. Sem arma nova para o modelo, não mexe.
         /// </summary>
-        public static void NosBracos(string modelo, SkinnedMeshRenderer smr)
+        public static void NosBracos(string modelo, SkinnedMeshRenderer smr, Transform boca = null)
         {
             var a = DoModelo(modelo);
             if (a == null || smr == null) return;
-            var original = MalhaDoObjeto($"{Jogador}/Jogador_FP_{a.modelo}.fbx", $"FP_Bracos_{a.modelo}");
+            var original = MalhaDoObjeto($"{Jogador}/Jogador_FP_{FP(a)}.fbx", $"FP_Bracos_{FP(a)}");
             if (original == null || original.subMeshCount < 2) { Debug.LogWarning($"Arma nova: sem a malha dos braços de {modelo}."); return; }
             string caminho = $"{Jogador}/Malhas/FP_Bracos_{a.modelo}.asset";
             var malha = AssetDatabase.LoadAssetAtPath<Mesh>(caminho);
@@ -469,6 +509,22 @@ namespace ZombieCityCleaner.EditorTools
             var caixa = smr.localBounds;
             caixa.Expand(0.1f);
             smr.localBounds = caixa;
+            // a boca do cano da de sucata (o clarão): a dela, levada da malha solta para o osso da arma (o pai da boca) pelo
+            // mesmo encaixe e pela pose de repouso do osso
+            if (a.equivalente != null && boca != null && boca.parent != null)
+            {
+                int osso = System.Array.FindIndex(smr.bones, b => b == boca.parent);
+                int k = System.Array.IndexOf(Combat.Armas.Modelos, a.modelo);
+                if (osso >= 0 && k >= 0)
+                {
+                    var ossos = smr.bones.Select(b => b != null ? b.name : "").ToList();
+                    var vs = original.vertices;
+                    var pesos = original.boneWeights;
+                    var m = Encaixe(original.GetTriangles(1).Distinct().Where(i => ossos[pesos[i].boneIndex0] != "shell").Select(i => vs[i]).ToArray(),
+                                    VerticesAntigos(a), out _);
+                    boca.localPosition = original.bindposes[osso].MultiplyPoint3x4(m.MultiplyPoint3x4(Combat.Armas.Todas[k].boca));
+                }
+            }
         }
 
         /// <summary>
@@ -478,9 +534,9 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         static Dictionary<string, Vector3[]> AntigaPorOsso(Arma a)
         {
-            string fbxFP = $"{Jogador}/Jogador_FP_{a.modelo}.fbx";
+            string fbxFP = $"{Jogador}/Jogador_FP_{FP(a)}.fbx";
             var raiz = AssetDatabase.LoadAssetAtPath<GameObject>(fbxFP);
-            var smr = raiz.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(s => s.name == $"FP_Bracos_{a.modelo}");
+            var smr = raiz.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(s => s.name == $"FP_Bracos_{FP(a)}");
             var original = smr.sharedMesh;
             var ossos = smr.bones.Select(b => b != null ? b.name : "").ToList();
             var vs = original.vertices;
@@ -513,12 +569,49 @@ namespace ZombieCityCleaner.EditorTools
                     var t = todos.FirstOrDefault(x => x.name == nome);
                     var mf = t != null ? t.GetComponent<MeshFilter>() : null;
                     if (mf == null || !antiga.TryGetValue(a.pecas[k].osso, out var vsAntigos)) continue;
-                    var daPeca = (fbxDoCorpo != null ? MalhaDoObjeto(fbxDoCorpo, nome) : null) ?? mf.sharedMesh;
+                    // (a de sucata é uma cópia da peça da real: a malha antiga é a da real no FBX)
+                    string daReal = a.equivalente != null ? $"P_{a.equivalente}_{a.pecas[k].peca}" : nome;
+                    var daPeca = (fbxDoCorpo != null ? MalhaDoObjeto(fbxDoCorpo, daReal) : null) ?? mf.sharedMesh;
                     var m = Encaixe(daPeca.vertices, vsAntigos, out float erro);
                     if (erro > 0.006f) Debug.LogWarning($"Arma nova ({nome}, corpo): o encaixe da antiga não bateu bem ({erro * 1000f:F1} mm).");
                     mf.sharedMesh = Encaixada(novas[k], m, $"{Jogador}/Malhas/TP_{a.modelo}_{a.pecas[k].peca}.asset");
                     var r = t.GetComponent<MeshRenderer>();
                     if (r != null) r.sharedMaterial = mat;
+                    // a boca do cano da de sucata, pelo mesmo encaixe da peça do corpo da arma
+                    int ka = System.Array.IndexOf(Combat.Armas.Modelos, a.modelo);
+                    var boca = a.equivalente != null && a.pecas[k].peca == "corpo" && ka >= 0 ? todos.FirstOrDefault(x => x.name == "Boca_" + a.modelo) : null;
+                    if (boca != null) boca.position = t.TransformPoint(m.MultiplyPoint3x4(Combat.Armas.Todas[ka].boca));
+                }
+            }
+        }
+
+        /// <summary>
+        /// As armas de sucata no corpo de um personagem (09/11/2026): o FBX dele só tem as reais, presas ao weapon.R com a
+        /// pegada e o tamanho de cada uma. Cada uma de sucata é uma cópia da equivalente, com o nome dela: o Arma_&lt;real&gt;
+        /// (com a boca e a peça do corpo da arma) e as peças P_&lt;real&gt;_* que ela também tem, nos ossos delas. As malhas
+        /// entram depois, no <see cref="NoCorpo"/>, encaixadas onde as da real estavam. Antes de juntar o que vai na mão.
+        /// </summary>
+        public static void CopiasDeSucataNoCorpo(Transform corpo)
+        {
+            if (corpo == null) return;
+            foreach (var a in DeSucata)
+            {
+                if (!File.Exists(Fbx(a))) continue;
+                var todos = corpo.GetComponentsInChildren<Transform>(true);
+                if (todos.Any(t => t.name == "Arma_" + a.modelo)) continue;
+                var real = todos.FirstOrDefault(t => t.name == "Arma_" + a.equivalente);
+                if (real == null) { Debug.LogWarning($"Arma de sucata ({a.modelo}): o corpo não tem o Arma_{a.equivalente}."); continue; }
+                var copia = Object.Instantiate(real.gameObject, real.parent).transform;
+                copia.name = "Arma_" + a.modelo;
+                foreach (var t in copia.GetComponentsInChildren<Transform>(true))
+                    if (t != copia) t.name = t.name.Replace(a.equivalente, a.modelo);
+                // as peças que mexem (o ferrolho, o carregador), só as que a de sucata tem
+                foreach (var (peca, _) in a.pecas)
+                {
+                    if (peca == "corpo") continue;
+                    var p = todos.FirstOrDefault(t => t.name == $"P_{a.equivalente}_{peca}");
+                    if (p == null) { Debug.LogWarning($"Arma de sucata ({a.modelo}): o corpo não tem a P_{a.equivalente}_{peca}."); continue; }
+                    Object.Instantiate(p.gameObject, p.parent).name = $"P_{a.modelo}_{peca}";
                 }
             }
         }
@@ -561,7 +654,13 @@ namespace ZombieCityCleaner.EditorTools
             try
             {
                 foreach (var smr in raiz.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                    if (smr.name.StartsWith("FP_Bracos_")) NosBracos(smr.name.Substring("FP_Bracos_".Length), smr);
+                    if (smr.name.StartsWith("FP_Bracos_"))
+                    {
+                        // o modelo vem do objeto dos braços (Bracos_<modelo>): as de sucata usam os braços da real
+                        var dono = smr.transform;
+                        while (dono != null && !dono.name.StartsWith("Bracos_")) dono = dono.parent;
+                        NosBracos(dono != null ? dono.name.Substring("Bracos_".Length) : smr.name.Substring("FP_Bracos_".Length), smr);
+                    }
                 foreach (Transform filho in raiz.transform)
                     if (filho.name.StartsWith("Corpo_")) NoCorpo(filho);
                 PrefabUtility.SaveAsPrefabAsset(raiz, PrefabDoJogador);
@@ -585,7 +684,7 @@ namespace ZombieCityCleaner.EditorTools
         {
             var mat = antiga ? null : Preparar(a);
             Directory.CreateDirectory(pasta);
-            string fbxFP = $"{Jogador}/Jogador_FP_{a.modelo}.fbx";
+            string fbxFP = $"{Jogador}/Jogador_FP_{FP(a)}.fbx";
             var log = new System.Text.StringBuilder();
             var cena = EditorSceneManager.NewPreviewScene();
             var criados = new List<Object>();
@@ -593,7 +692,7 @@ namespace ZombieCityCleaner.EditorTools
             {
                 var bracos = (GameObject)Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(fbxFP));
                 SceneManager.MoveGameObjectToScene(bracos, cena);
-                var smr = bracos.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(s => s.name == $"FP_Bracos_{a.modelo}");
+                var smr = bracos.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(s => s.name == $"FP_Bracos_{FP(a)}");
                 var pele = AssetDatabase.FindAssets("Personagem_PrincipalBloco t:Material").Select(AssetDatabase.GUIDToAssetPath)
                                         .Select(AssetDatabase.LoadAssetAtPath<Material>).FirstOrDefault(x => x != null && x.name == "Personagem_PrincipalBloco");
                 if (!antiga)

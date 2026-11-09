@@ -12,6 +12,12 @@
 # - Os braços de primeira pessoa: os dos punhos (Jogador_FP_Maos.fbx, com a guarda e os socos) com a arma no punho
 #   direito, presa ao osso hand.R (Jogador_FP_<Modelo>.fbx). O golpe da faca é o soco direito; a cfg pode fazer um clipe
 #   "Golpe" próprio (a função golpe(rig, clipes), como a machadada do machado.py).
+#   A pegada (08/11/2026, a pedido: o cabo passava por entre os dedos, "como se fosse um cigarro grande"): depois dos
+#   clipes feitos do jeito de antes, o pegada.py refaz as mãos em volta do cabo, quadro a quadro (a arma fica onde estava;
+#   o cabo atravessa a palma e os dedos da mão nova fecham em volta dele, com o polegar por cima), e a arma vai na mão com
+#   a pegada nova. Com ARMAS_SEM_BLEND=1 no ambiente, o Bracos_<Modelo>.blend não é gravado de novo.
+#   As de duas mãos com IDLE_FP na cfg (a lança, o machado e o bastão, 08/11/2026) têm o lugar delas na tela e as duas
+#   mãos nas pegadas (duas_maos.py), em vez da arma presa ao punho direito dos braços dos punhos.
 # - O ícone e a foto do inventário (Icone_<Modelo> e Foto_<Modelo>).
 #
 # Como rodar: blender -b --factory-startup --disable-autoexec --python Blender/Armas/faca.py -- tudo
@@ -29,6 +35,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
 import armas  # noqa: E402
 import estilizadas  # noqa: E402
+import pegada  # noqa: E402
 from v3_mp5 import _anel_y  # noqa: E402
 
 NOME = "Faca"
@@ -58,6 +65,15 @@ GIRO_PARA_A_FRENTE = 40.0
 # o lado chato aparece
 GIRO_NO_EIXO = -70.0
 NO_PUNHO = Vector((0.0, 0.016, 0.0))
+# a mão no cabo (o y da arma: o meio da pegada; 08/11/2026): a faca fica onde estava na tela, e a mão pega o cabo um pouco
+# mais para o pomo, para o indicador não entrar na guarda
+PEGADA_Y = 0.006
+# (09/11/2026) o lugar da arma no punho com um ajuste pequeno, buscado pelo custo do braço (duas_maos.py: até 10 graus
+# de inclinação e 3 cm), para o pulso ficar natural com a pegada canônica
+AJUSTE_FP_LIMITE = (10.0, 0.03)
+# (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
+# escolhida fica em diagonais_fp.json)
+DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
 
 
 def avulsa(cfg):
@@ -234,19 +250,31 @@ def bracos(cfg):
     bpy.context.scene.frame_set(int(idle.frame_range[0]))
     bpy.context.view_layer.update()
     P = _no_punho(rig, cfg)
-    # do quadro do Idle para o repouso: o inverso da deformação do hand.R (a malha está no repouso)
-    pb = rig.pose.bones["hand.R"]
-    D = rig.matrix_world @ pb.matrix @ pb.bone.matrix_local.inverted() @ rig.matrix_world.inverted()
-    para_repouso = corpo.matrix_world.inverted() @ D.inverted() @ P
-
+    # a arma no espaço da mão direita (do jeito de antes: o golpe e a mão esquerda seguem a arma assim)
+    no_punho = (rig.matrix_world @ rig.pose.bones["hand.R"].matrix).inverted() @ P
     arma = malha(cfg)
+    # a arma no lugar dela e as mãos nas pegadas (duas_maos.py): as de duas mãos (com IDLE_FP) no lugar novo na tela; a
+    # faca e a tocha onde estavam em cada quadro, só com a mão direita no cabo (no y PEGADA_Y da arma)
+    import duas_maos
+    clipes, peg = duas_maos.refazer(rig, clipes, cfg, arma, no_punho)
+    idle = next(a for a in clipes if a.name.endswith("|Idle"))
+    rig.animation_data_create()
+    _usar(rig, idle)
+    bpy.context.scene.frame_set(int(idle.frame_range[0]))
+    bpy.context.view_layer.update()
+    # a arma na malha dos braços, presa a uma mão (a direita; no machado com a direita escorregando no golpe, a esquerda:
+    # MAO_DA_ARMA), na pegada nova (no repouso: o repouso do osso com a pegada)
+    lado_arma = getattr(cfg, "MAO_DA_ARMA", "R")
+    para_repouso = (corpo.matrix_world.inverted() @ rig.matrix_world @ rig.data.bones["hand." + lado_arma].matrix_local
+                    @ peg[lado_arma]["G"])
+
     nomes = list(cfg.CORES)
     me = corpo.data
     bm = bmesh.new()
     bm.from_mesh(me)
     deform = bm.verts.layers.deform.verify()
     uv = bm.loops.layers.uv.active
-    g = corpo.vertex_groups["hand.R"].index
+    g = corpo.vertex_groups["hand." + lado_arma].index
     slot = next(i for i, m in enumerate(me.materials) if m and m.name.startswith("Pistola"))
     novos = {}
     for v in arma.verts:
@@ -264,11 +292,7 @@ def bracos(cfg):
     arma.free()
     bm.to_mesh(me)
     bm.free()
-    print(f"  {cfg.MODELO} no punho: {n_arma} triângulos; os braços com {len(me.polygons)} faces")
-    if hasattr(cfg, "golpe"):
-        clipes.append(cfg.golpe(rig, idle, prefixo))
-    if hasattr(cfg, "segunda_mao"):
-        cfg.segunda_mao(rig, clipes, P, idle)
+    print(f"  {cfg.MODELO} na mão: {n_arma} triângulos; os braços com {len(me.polygons)} faces")
     if hasattr(cfg, "PONTA"):
         # a boca vai para a ponta da arma (a chama da tocha), presa ao punho direito
         _usar(rig, idle)
@@ -278,7 +302,8 @@ def bracos(cfg):
         boca.parent_type = "BONE"
         boca.parent_bone = "hand.R"
         bpy.context.view_layer.update()
-        boca.matrix_world = P @ Matrix.Translation(cfg.PONTA)
+        # (com o ajuste do lugar da arma no punho, AJUSTE_FP: o mesmo P da arma)
+        boca.matrix_world = P @ peg["R"].get("ajuste", Matrix.Identity(4)) @ Matrix.Translation(cfg.PONTA)
         print(f"  a boca na ponta: {tuple(round(c, 3) for c in boca.matrix_world.translation)}")
     return rig, corpo, boca, clipes
 
@@ -350,7 +375,8 @@ def exportar_bracos(rig, corpo, boca, clipes, cfg):
                              apply_scale_options="FBX_SCALE_ALL", add_leaf_bones=False, bake_anim=True,
                              bake_anim_use_nla_strips=True, bake_anim_use_all_actions=False,
                              bake_anim_force_startend_keying=True, bake_anim_simplify_factor=0.0, mesh_smooth_type="FACE")
-    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(AQUI, f"Bracos_{cfg.MODELO}.blend"))
+    if not os.environ.get("ARMAS_SEM_BLEND"):
+        bpy.ops.wm.save_as_mainfile(filepath=os.path.join(AQUI, f"Bracos_{cfg.MODELO}.blend"))
     print("  exportado:", fp(cfg))
 
 

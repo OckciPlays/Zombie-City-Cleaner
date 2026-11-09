@@ -300,7 +300,7 @@ namespace ZombieCityCleaner.Zombies
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
-                passos = Habilidades.Tem(j, Habilidade.PassosLeves) ? 0.5f : 1f,
+                passos = 1f - 0.25f * Habilidades.Pontos(j, Habilidade.PassosLeves),   // (os Passos leves: 25% por ponto)
                 visao = Graficos.Metros(j.Visao.Value),
                 nascer = Graficos.NascerAPartirDe(j.Visao.Value),
             };
@@ -751,7 +751,9 @@ namespace ZombieCityCleaner.Zombies
         }
 
         // os primeiros do pool (aquecerPorModelo), um por quadro, enquanto o mundo é gerado (com a tela coberta, vários por
-        // quadro: ZombieManager.Pedacos.cs, EsperarOProximoQuadro); os que já estão no pool (de uma partida anterior) contam
+        // quadro: ZombieManager.Pedacos.cs, EsperarOProximoQuadro); os que já estão no pool (de uma partida anterior) contam.
+        // No Dia 0, só na tela de carregar a rua, como os cortes (PodeAquecer; 09/11/2026: na tela de criar, eram vários por
+        // quadro); o que sobrar, na passagem dos 5 anos
         IEnumerator PreaquecerOPool()
         {
             for (int m = 0; m < modelos.Length; m++)
@@ -759,6 +761,7 @@ namespace ZombieCityCleaner.Zombies
                 if (modelos[m] == null) continue;
                 for (int k = Pool(m).Count; k < aquecerPorModelo; k++)
                 {
+                    while (!PodeAquecer) yield return null;
                     GuardarNoPool(Instantiate(modelos[m], _vivos));
                     if (EsperarOProximoQuadro()) yield return null;
                 }

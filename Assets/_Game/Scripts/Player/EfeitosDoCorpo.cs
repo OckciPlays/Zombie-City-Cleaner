@@ -171,9 +171,9 @@ namespace ZombieCityCleaner.Player
             bool mirando = _rede != null && _rede.Mirando.Value;
             // (06/11/2026, a mente: a mão da mente abalada e da crise de pânico também treme; vale o maior)
             float tremor = Mathf.Max(PartesDoCorpo.TremorDaMira(e), CriseDePanico.TremorAgora);
-            // as habilidades (06/11/2026): a Mira de aço não treme; a Mão firme treme menos
+            // as habilidades (06/11/2026): a Mira de aço não treme; a Mão firme treme 12% menos por ponto
             if (Habilidades.Tem(Habilidade.MiraDeAco)) tremor = 0f;
-            else if (Habilidades.Tem(Habilidade.MaoFirme)) tremor *= 0.75f;
+            else tremor *= 1f - 0.12f * Habilidades.Pontos(Habilidade.MaoFirme);
             if (mirando) tremor *= 0.5f;
             _tremor = Mathf.MoveTowards(_tremor, tremor, dt * 2f);
 

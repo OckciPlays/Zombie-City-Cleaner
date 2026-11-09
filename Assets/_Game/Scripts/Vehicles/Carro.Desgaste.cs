@@ -507,8 +507,8 @@ namespace ZombieCityCleaner.Vehicles
             if (ligado && _litros > 0f)
             {
                 float giro = _ocupantes.Value[0] == 0 ? MarchaLenta : _rotacao.Value / 255f;
-                // o Econômico de quem dirige (06/11/2026): a gasolina dura 25% mais
-                float economia = _ocupantes.Value[0] != 0 && Habilidades.Tem(Ocupante(0), Habilidade.Economico) ? 0.8f : 1f;
+                // o Econômico de quem dirige (06/11/2026): a gasolina dura 12% mais por ponto
+                float economia = _ocupantes.Value[0] != 0 ? 1f / (1f + 0.12f * Habilidades.Pontos(Ocupante(0), Habilidade.Economico)) : 1f;
                 _litros = Mathf.Max(0f, _litros - Mathf.Lerp(a.gastoParado, a.gastoNoMaximo, Mathf.Pow(giro, 1.5f)) * dt / 60f * economia);
             }
             if (Mathf.Abs(_litros - _gasolina.Value) >= 0.02f || (_litros <= 0f && _gasolina.Value > 0f)) _gasolina.Value = _litros;

@@ -8,7 +8,8 @@ namespace ZombieCityCleaner.Player
     // a estante do bunker na tela do inventário (World/EstantesDoBunker; 01/11/2026, a pedido): E numa estante abre a tela
     // com ela na coluna da direita, no lugar dos detalhes: uma faixa por tábua (de cima para baixo), cada uma com a linha
     // de trás e a da frente. Arrastar da mochila para a estante guarda; da estante para a mochila, pega; dentro da
-    // estante, move. R gira o que está seguro; o botão direito pega para a mochila (ou guarda, num item da mochila).
+    // estante, move. R gira o que está seguro; o botão direito pega para a mochila (ou guarda, num item da mochila); o Shift +
+    // clique passa a pilha inteira de um lado para o outro (08/11/2026).
     // Longe da estante (ou fechando a tela), ela sai.
     public partial class TelaDoInventario
     {
@@ -222,7 +223,7 @@ namespace ZombieCityCleaner.Player
                     _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)" : "");
             }
             float rodape = o.y + f.Tabuas * AlturaDaFaixa(c) - VaoEntreTabuas + 10f;
-            GUI.Label(Em(new Rect(AreaDaEstante.x, rodape, AreaDaEstante.width, 20)), "Arraste da mochila para guardar", _pequeno);
+            GUI.Label(Em(new Rect(AreaDaEstante.x, rodape, AreaDaEstante.width, 20)), "Arraste da mochila para guardar (Shift + clique: a pilha toda)", _pequeno);
             GUI.Label(Em(new Rect(AreaDaEstante.x, rodape + 18, AreaDaEstante.width, 20)), "e daqui para a mochila para pegar", _pequeno);
         }
 

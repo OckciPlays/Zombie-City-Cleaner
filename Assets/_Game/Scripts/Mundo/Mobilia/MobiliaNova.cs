@@ -12,7 +12,8 @@ namespace ZombieCityCleaner.Mundo
     /// (<see cref="MedidasDaMobilia.Escala"/>), sem esticar.
     ///  - <see cref="Pecas"/>: os modelos de um ponto no lugar (no espaço da obra), com a variação de cada um (sorteada pela
     ///    semente: a mesma em todas as máquinas; os módulos e os eletrodomésticos de uma cozinha com a mesma);
-    ///  - <see cref="Caixas"/>: a colisão (uma caixa por móvel que fica no chão, como a mobília antiga, com o recuo dela);
+    ///  - <see cref="Caixas"/>: a colisão (uma caixa por móvel que fica no chão, como a mobília antiga, com o recuo dela; as
+    ///    camas, duas: o colchão baixo, com a marca, e a cabeceira, <see cref="Caixa"/>);
     ///  - <see cref="Desenho"/>: os de longe de todos os pontos numa malha (<see cref="MalhaDaMobilia"/>), depois de
     ///    <see cref="Registrar"/> (na thread principal, no começo).
     /// Tudo aqui é seguro em várias threads (as obras são montadas em várias).
@@ -181,8 +182,9 @@ namespace ZombieCityCleaner.Mundo
         [System.ThreadStatic] static List<Peca> _pecas;
 
         /// <summary>
-        /// A colisão dos pontos novos (nas coordenadas deles): uma caixa por móvel no chão, com o recuo da mobília
-        /// (<see cref="Mobilia.Recuo"/>: o vão entre dois móveis fica largo para o zumbi no NavMesh). A mais alta que o
+        /// A colisão dos pontos novos (nas coordenadas deles): uma caixa por móvel no chão (as camas, duas,
+        /// <see cref="Caixa"/>), com o recuo da mobília (<see cref="Mobilia.Recuo"/>: o vão entre dois móveis fica largo
+        /// para o zumbi no NavMesh). A mais alta que o
         /// zumbi vai em camadas (<see cref="Camadas"/>): o NavMesh vê a caixa oca, e dentro da do beliche (2,15 m de alto e
         /// 1 m de largo) ficava um chão sem caminho.
         /// </summary>
@@ -196,19 +198,98 @@ namespace ZombieCityCleaner.Mundo
                 _pecas.Clear();
                 Pecas(p, 0, _pecas);
                 foreach (var q in _pecas)
-                {
-                    if (!q.caixa) continue;
-                    int n = Camadas(q.tamanho.y);
-                    float h = q.tamanho.y / n;
-                    var tam = new Vector3(Mathf.Max(0.1f, q.tamanho.x - 2 * Mobilia.Recuo), h, Mathf.Max(0.1f, q.tamanho.z - 2 * Mobilia.Recuo));
-                    for (int c = 0; c < n; c++)
-                        colisao.Caixa(Matrix4x4.TRS(q.meio + Vector3.up * (h * (c + 0.5f)), Quaternion.Euler(0f, q.giro, 0f), Vector3.one), tam, "Concreto");
-                }
+                    if (q.caixa) Caixa(colisao, q.modelo, q.meio, q.giro, q.tamanho);
             }
+        }
+
+        /// <summary>
+        /// A colisão de um móvel no chão ('meio': o meio da caixa dele, embaixo; 'giro': o giro em y, em graus; 'tamanho': o
+        /// da caixa, no jogo): uma caixa com o recuo (<see cref="Mobilia.Recuo"/>), em camadas se for mais alta que o zumbi
+        /// (<see cref="Camadas"/>).
+        /// <para>
+        /// As camas (<see cref="Cama"/>) em duas (08/11/2026, a pedido: "Pular a cama (com animação igual da janela)"): com
+        /// uma caixa só, da altura da cabeceira, o lado da cama era um muro (1,43 m na de casal), e o pulo por cima dela
+        /// (o PuloDaJanela) pararia em cima da caixa.
+        /// Agora, a faixa da cabeceira (no fundo, o −z do modelo, que fica na parede) na altura de antes e o resto na altura
+        /// do colchão, com a marca (<see cref="CorDoColchao"/>: por cima dele se pula). O contorno é o de antes (o NavMesh
+        /// vê o mesmo chão em volta da cama); em cima do colchão o NavMesh pode ver um pedaço solto, como em cima da mesa.
+        /// </para>
+        /// Pública para as outras colisões de móveis novos (as do bunker, <see cref="MoveisDoBunker.Caixas"/>, também usam esta).
+        /// </summary>
+        public static void Caixa(MalhaDeObra colisao, string modelo, Vector3 meio, float giro, Vector3 tamanho)
+        {
+            var g = Quaternion.Euler(0f, giro, 0f);
+            float x = Mathf.Max(0.1f, tamanho.x - 2 * Mobilia.Recuo), z = Mathf.Max(0.1f, tamanho.z - 2 * Mobilia.Recuo);
+            if (Cama(modelo, out float colchao, out float cabeceira) && MedidasDaMobilia.Tem(modelo) && z > 0.6f)
+            {
+                float e = tamanho.y / MedidasDaMobilia.Real(modelo).y;   // a escala dela (×1,30 no mundo)
+                // a cabeceira: do fundo da caixa até o fim da faixa dela (sem o recuo do fundo), na altura toda
+                float fc = Mathf.Clamp(cabeceira * e - Mobilia.Recuo, 0.1f, z - 0.4f);
+                EmCamadas(colisao, meio + g * new Vector3(0f, 0f, (fc - z) / 2f), g, new Vector3(x, tamanho.y, fc), "Concreto");
+                // o colchão: dali até o pé, na altura dele
+                float hc = Mathf.Min(colchao * e, tamanho.y), zc = z - fc;
+                colisao.Caixa(Matrix4x4.TRS(meio + g * new Vector3(0f, hc / 2f, fc / 2f), g, Vector3.one), new Vector3(x, hc, zc), CorDoColchao);
+                return;
+            }
+            EmCamadas(colisao, meio, g, new Vector3(x, tamanho.y, z), "Concreto");
+        }
+
+        // uma caixa de 'tam' com o meio de baixo em 'baixo', em camadas se for mais alta que o zumbi (veja Camadas)
+        static void EmCamadas(MalhaDeObra colisao, Vector3 baixo, Quaternion g, Vector3 tam, string cor)
+        {
+            int n = Camadas(tam.y);
+            float h = tam.y / n;
+            for (int c = 0; c < n; c++)
+                colisao.Caixa(Matrix4x4.TRS(baixo + Vector3.up * (h * (c + 0.5f)), g, Vector3.one), new Vector3(tam.x, h, tam.z), cor);
         }
 
         /// <summary>Em quantas caixas, uma em cima da outra, vai a colisão de um móvel desta altura (cada uma mais baixa que o zumbi, 1,8 m).</summary>
         public static int Camadas(float altura) => altura > 1.7f ? Mathf.CeilToInt(altura / 0.85f) : 1;
+
+        /// <summary>Quantas caixas a peça põe na colisão (<see cref="Caixa"/>: as camadas; nas camas, a cabeceira e o colchão).</summary>
+        public static int CaixasDe(Peca q)
+        {
+            if (!q.caixa) return 0;
+            bool cama = Cama(q.modelo, out _, out _) && MedidasDaMobilia.Tem(q.modelo) && q.tamanho.z - 2 * Mobilia.Recuo > 0.6f;
+            return Camadas(q.tamanho.y) + (cama ? 1 : 0);
+        }
+
+        /// <summary>
+        /// As camas com o colchão separado na colisão (08/11/2026; o beliche não: o de cima é outra cama): a altura do
+        /// colchão, com a coberta (onde o saque fica, <see cref="LugaresDoSaque"/>: 0,585), e a fundura da faixa da cabeceira,
+        /// do fundo da caixa do modelo, no tamanho real (×1,30 no mundo: o colchão a 0,76 m e a cabeceira a 1,43 m na de
+        /// casal e a 1,24 m na de solteiro). Medidas nas malhas. Na de hospital, o "colchão" vai até as grades de cima
+        /// (0,912: a mão pega nelas, e o corpo passa por cima delas), e a faixa da cabeceira leva o encosto levantado e o
+        /// suporte do soro (até 0,76 do fundo, na altura toda).
+        /// </summary>
+        public static bool Cama(string modelo, out float colchao, out float cabeceira)
+        {
+            switch (modelo)
+            {
+                case "CamaCasal": colchao = 0.585f; cabeceira = 0.30f; return true;
+                case "CamaSolteiro": colchao = 0.585f; cabeceira = 0.30f; return true;
+                case "CamaHospital": colchao = 0.912f; cabeceira = 0.76f; return true;
+                default: colchao = cabeceira = 0f; return false;
+            }
+        }
+
+        /// <summary>
+        /// A marca da caixa do colchão das camas na colisão (08/11/2026): a cor das faces dela. A colisão não é desenhada e
+        /// nenhuma outra usa esta cor da Paleta (as das obras são "Concreto"); o raio a acha pelo UV do ponto
+        /// (<see cref="NoColchao"/>).
+        /// </summary>
+        public const string CorDoColchao = "Cortina";
+
+        /// <summary>
+        /// O raio bateu na caixa do colchão de uma cama (a marca, <see cref="CorDoColchao"/>): só num MeshCollider de malha
+        /// legível (as colisões das obras: o UV do ponto, RaycastHit.textureCoord). Na thread principal.
+        /// </summary>
+        public static bool NoColchao(in RaycastHit h)
+        {
+            if (!(h.collider is MeshCollider mc) || mc.sharedMesh == null || !mc.sharedMesh.isReadable) return false;
+            Vector2 uv = h.textureCoord, m = Paleta.UV(CorDoColchao);
+            return Mathf.Abs(uv.x - m.x) < 0.5f / 16f && Mathf.Abs(uv.y - m.y) < 0.5f / 16f;
+        }
 
         // ------------------------------------------------------------ os de longe
 

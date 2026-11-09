@@ -1082,6 +1082,7 @@ cartas".
     - `Roupas.fbx`: o `PrincipalBloco_Rig` (o mesmo do `Personagem_PrincipalBloco.fbx`: os clipes dele servem pelo caminho dos ossos), o `NPC_Corpo` (o corpo, as mãos e o rosto numa malha) e as peças `Roupa_<nome>`, cada uma um `SkinnedMeshRenderer` nos mesmos ossos. O UV1 de cada vértice guarda o número da face (x) e a camada da textura da peça (y; −1 no corpo). **O corpo da mulher é a blend shape "Mulher"**, no corpo e em cada peça (a mesma malha e as mesmas juntas: qualquer peça serve nos dois corpos, com as mesmas animações).
     - `T_Roupas_Cor.png` e `T_Roupas_Mascara.png`: as Texture2DArray, uma camada por peça (512 px; a cor em sRGB, a máscara linear), de uma grade de 8 por linha (`colunas_da_tira` no catálogo; a montagem lê da esquerda para a direita e de cima para baixo, e as que sobram na última linha ficam pretas). Numa coluna só, com 65 peças, a imagem passava de 32.768 px de altura, e a Unity não a lia ("File could not be read"). `T_Corpo_Cor.png` e `T_Corpo_Mascara.png`: as do corpo (1024 px, tiradas da textura do principal; R a pele, G a cueca e B as sobrancelhas).
     - `Roupas_Itens.fbx` (o `roupas_itens.py`, o lote 6): as roupas como itens, os objetos `Item_<peça>` (73: sem os cabelos, as barbas, os cílios e as versões de baixo do chapéu), parados, com a base na origem e o UV1 com a camada da textura da peça (as roupas deitadas de frente para cima, as luvas juntas, o resto como fica no corpo).
+    - `MaoNova/` (09/11/2026, a `Editor/MontagemDaMaoNova`; veja "A mão nova e as armas brancas", nos ajustes da segunda partida com os amigos): o `NPC_Corpo` com o antebraço e a mão novos e as duas luvas refeitas (`Roupa_Luva_Tatica` e `Roupa_Luva_Sem_Dedos`), que entram no lugar das do `Roupas.fbx` (`MontagemDaMaoNova.Malha`). Vêm do `Maos_Novas_Corpo.fbx` (`Art/Characters/Personagens`) e do `Luvas_Novas.fbx` (aqui), do `Blender/maos_novas.py`. A célula 7 da fileira de baixo do `T_Corpo_Cor.png` (cinza 206), do `T_Corpo_Mascara.png` (191, 0, 0: a pele mais fraca) e da `Personagem_PrincipalBloco.png` (225, 167, 142) é a ponta das unhas (mais clara que a pele em qualquer tom); a borda usa a célula 1.
     - `Roupas.json`: o catálogo (cada peça: o lugar, a camada, a camada da textura, se é pelo, se cobre o cabelo (`cobre_cabelo`, os chapéus), a versão de baixo do chapéu (`sob_chapeu`, nos cabelos grandes) e de que cabelo ela é (`de`), as três cores do começo e as faces que ela esconde de cada um dos outros), os NPCs prontos (o tipo, o corpo, a pele, as peças e as cores; os 20 das referências primeiro), os tipos do sorteio (a etapa 4: veja o `SorteioDosNPCs`), os tons de pele, as formas, a cor da cueca e a das sobrancelhas sem pelos.
   - **O shader** `Shaders/Roupas.shader` ("ZombieCityCleaner/Roupas"): a PBR da URP, como o da mobília. A cor é a base × ((1 − (R + G + B)) + 2 × (`_Cor1` × R + `_Cor2` × G + `_Cor3` × B)), com R, G e B da máscara (a mesma conta do Blender). Um material só, `M_Roupas.mat`, para todas as peças e o corpo (na camada −1, ele lê as texturas do corpo, `_CorpoCor` e `_CorpoMascara`, com a mesma conta: as cores dele são a pele, a cueca e a dos pelos); as cores vão por peça, no `MaterialPropertyBlock`. **Os vidros** (o lote 6: a lente dos óculos de proteção e a viseira): o alfa da textura de cor (a Texture2DArray importa o alfa) diz o quanto eles cobrem, desenhado em pontilhado (a matriz de Bayer 4 × 4 na tela, `Pontilhado`, a mesma nos passes da cor, da profundidade e das normais); na sombra, o vidro (alfa abaixo de 0,5) não entra. **O retrato** (`_Retrato` = 1, a cópia do material feita pelo `RetratoDoJogador`, com `_Ambiente`, `_Luz` e `_DirecaoDaLuz` do `Retrato.mat`): a luz fixa do shader do retrato, sem as luzes da cena, a neblina e o ambiente.
   - **`Roupas/Vestimenta`** (na raiz do modelo): `Vestir(npc)` ou `Vestir(peças)`.
@@ -1097,8 +1098,9 @@ cartas".
   - **`Editor/MontagemDasRoupas`** (menu Zombie City Cleaner > Roupas e NPCs > Montar):
     - a importação do FBX: Generic, o avatar dele, sem "Bake Axis Conversion", com as blend shapes (as normais delas calculadas, com o ângulo 0: o sombreado plano), sem animação nem materiais;
     - as duas Texture2DArray, as texturas do corpo e o material;
+    - a mão nova (`MontagemDaMaoNova.Montar`, também no menu Zombie City Cleaner > Roupas e NPCs > Montar a mão nova): as malhas da pasta `MaoNova`;
     - o controlador do mostruário (`NPC_Mostruario.controller`: Parado, Andar, Correr, Agachado, Andar_Agachado, Sentado_Motorista e Pular_Janela, que repete, do `Personagem_PrincipalBloco.fbx`; e, na camada "Braços", com a máscara do tronco do principal, a guarda);
-    - o prefab `Prefabs/Roupas/NPC.prefab`: o modelo, o material das roupas no `NPC_Corpo` e nas peças, o Animator e a `Vestimenta`;
+    - o prefab `Prefabs/Roupas/NPC.prefab`: o modelo, o material das roupas no `NPC_Corpo` e nas peças, o Animator e a `Vestimenta`; o `NPC_Corpo` e as duas luvas com as malhas da mão nova (`MontagemDaMaoNova.Malha`, o ponto único da troca);
     - os itens (`MontarItens`, o lote 6): do `Roupas_Itens.fbx` (sem animação, as normais calculadas com o ângulo 0), um prefab por peça em `Prefabs/Roupas/Itens/Item_<peça>.prefab`: a malha, o `M_Roupas`, a caixa de colisão e o `Roupas/RoupaComoItem` (a peça, o lugar e as cores do catálogo, pintadas pelo `MaterialPropertyBlock`, também fora do Play); os de peças que saíram são apagados. O jogo ainda não os pega (por enquanto, só nas mesas da cena das variações).
   - **A cena do mostruário** (`Scenes/Exemplos/Roupas.unity`, menu Zombie City Cleaner > Exemplos > Roupas e NPCs, que refaz a cena):
     - o chão escuro, o sol e a luz de trás, e os NPCs do catálogo em fila (o primeiro sem roupa), a 1,6 m um do outro (fora do Play, as mulheres já com a forma), e no fim os sorteados de cada tipo (`SorteadosPorTipo`, 2: as sementes 1 e 2; a `Vestimenta` deles tem o `tipo` e a `semente`, sem o `npc`);
@@ -1252,8 +1254,8 @@ cartas".
       - **O estúdio** (`Player/EstudioDoPersonagem`): uma cópia do corpo do prefab, 600 m embaixo do mundo, na camada do retrato, sem nada na mão, com o controlador do mostruário das roupas (o parado; `controladorDoEstudio`, posto pela montagem) e as roupas na luz fixa do retrato (`_Retrato`); a câmera desenha numa RenderTexture de fundo transparente (o dobro da área). As miniaturas são fotos de outra câmera (128 px, de 256 reduzidas): o cabelo e a barba na cabeça, com a pele e a cor dos pelos escolhidas (refeitas quando elas ou o sexo mudam, no `Update`, 4 por quadro), a camiseta e a calça sem o corpo.
       - **Antes de criar** (`JogadorRede.Criado`, a `Aparencia` com `definida` 0): o filho "Roupas" do corpo fica desligado e o que está na mão escondido (`EsconderNaMao`), para todos; os zumbis não o veem (`ZombieManager.AtualizarJogadores` pula quem não criou).
     - **O nome em cima da cabeça** (`Player/NomesDosJogadores`, a parte 3 do `Plano_Personagem.md`, 31/10/2026; posto no dono pelo `JogadorRede`): OnGUI (`GUI.depth` 20, por baixo do HUD), o nome da `Aparencia` de cada outro jogador já criado, em cima do osso da cabeça (+0,42 m), até 30 m da câmera do mundo e só com a vista livre até a cabeça (`Physics.Linecast` sem os jogadores, os zumbis, os braços, o retrato, os carros e o Ignore Raycast); de 17 a 11 px (a 720p) com a distância, a sombra e o sumiço nos últimos 6 m. Some com o `MenuOnline` aberto, a tela de criar e o modo vídeo.
-    - **As roupas nos braços** (`Player/RoupasNosBracos`, a parte 5, 31/10/2026; no dono): os braços de primeira pessoa são os do corpo vestido. Para o modelo de primeira pessoa ligado (o de `ArmaJogador.modelos`) e a cada troca da `Vestimenta` (`Vestimenta.Versao`), cada malha vestida do corpo (o `NPC_Corpo` e as `Roupa_*` ligadas, já sem as faces cobertas) vira uma cópia só com os braços (os vértices com metade do peso ou mais nos 26 ossos do braço, da mão e dos dedos; os pesos só neles, somando 1; as poses de ligação deles), num `SkinnedMeshRenderer` filho do modelo, na camada 6, com os materiais, o `MaterialPropertyBlock` (as cores) e as formas (a "Mulher") da original. Os ossos são os do braço de primeira pessoa pelo nome; no `upper_arm` e no `forearm`, um filho de ajuda (" (esticado)") com a escala em Y (o eixo do osso) igual à razão dos comprimentos (lá, 12% mais compridos: 0,319 contra 0,285 m e 0,277 contra 0,248). A pele antiga (o material 0 do `FP_Bracos_*`) vira o `ZombieCityCleaner/Invisivel` (`Shaders/Invisivel.shader`: o vértice cai fora da tela; vai pelo `ItensDasRoupas`), porque a malha dos braços da lata e da garrafa não é legível e não deixa tirar a submalha; a troca da lata pelo item do saque (`ItemNaMaoProprio`) mantém o material 0.
-    - **O corpo vestido** (a parte 1 do `Plano_Personagem.md`, 31/10/2026): o `Jogador_Corpo` do FBX fica desligado; num filho "Roupas" do corpo ficam o `NPC_Corpo` e as 90 peças do `Roupas.fbx` (`MontagemDaRede.Vestir`: cada uma um `SkinnedMeshRenderer` novo com a malha dela e o `M_Roupas`, presa aos ossos deste corpo pelo nome: o esqueleto é o mesmo), e a `Vestimenta` (`CorpoDoPersonagem.vestimenta`). Os renderers do corpo são as roupas (todas, ligadas ou não) e as armas. Precisa da montagem das roupas antes (o FBX legível e o material).
+    - **As roupas nos braços** (`Player/RoupasNosBracos`, a parte 5, 31/10/2026; no dono): os braços de primeira pessoa são os do corpo vestido. Para o modelo de primeira pessoa ligado (o de `ArmaJogador.modelos`) e a cada troca da `Vestimenta` (`Vestimenta.Versao`), cada malha vestida do corpo (o `NPC_Corpo` e as `Roupa_*` ligadas, já sem as faces cobertas) vira uma cópia só com os braços (os vértices com metade do peso ou mais nos 26 ossos do braço, da mão e dos dedos; os pesos só neles, somando 1; as poses de ligação deles), num `SkinnedMeshRenderer` filho do modelo, na camada 6, com os materiais, o `MaterialPropertyBlock` (as cores) e as formas (a "Mulher") da original. Os ossos são os do braço de primeira pessoa pelo nome; no `upper_arm` e no `forearm`, um filho de ajuda (" (esticado)") com a escala em Y (o eixo do osso) igual à razão dos comprimentos (lá, 12% mais compridos: 0,319 contra 0,285 m e 0,277 contra 0,248). A pele antiga (o material 0 do `FP_Bracos_*`) vira o `ZombieCityCleaner/Invisivel` (`Shaders/Invisivel.shader`: o vértice cai fora da tela; vai pelo `ItensDasRoupas`), porque a malha dos braços da lata e da garrafa não é legível e não deixa tirar a submalha; a troca da lata pelo item do saque (`ItemNaMaoProprio`) mantém o material 0. Com a mão nova (09/11/2026), as cópias levam o antebraço e a mão novos e as luvas refeitas sem mudar nada aqui (todos os vértices das peças novas pesam nos ossos do braço: as 2.648 faces delas entram, contra as 1.828 de antes; a mulher, pela "Mulher", sem os pelos).
+    - **O corpo vestido** (a parte 1 do `Plano_Personagem.md`, 31/10/2026): o `Jogador_Corpo` do FBX fica desligado; num filho "Roupas" do corpo ficam o `NPC_Corpo` e as 90 peças do `Roupas.fbx` (`MontagemDaRede.Vestir`: cada uma um `SkinnedMeshRenderer` novo com a malha dela e o `M_Roupas`, presa aos ossos deste corpo pelo nome: o esqueleto é o mesmo; o `NPC_Corpo` e as duas luvas, com as malhas da mão nova, pela `MontagemDaMaoNova.Malha`), e a `Vestimenta` (`CorpoDoPersonagem.vestimenta`). Os renderers do corpo são as roupas (todas, ligadas ou não) e as armas. Precisa da montagem das roupas antes (o FBX legível e o material).
     - Quem copia o corpo em repouso do prefab (o retrato do TAB, o boneco do F1 e a pose sentada no carro, `PassageiroDoCarro.LerOssos`) procura o do mesmo personagem pelo nome do corpo (`animadorCorpo.name`). O `EquipamentoNoCorpo` usa as medidas do `CorpoDoPersonagem` (as costas do gordo ficam mais para trás).
   - **"Cabeca" (1,62 m) > "Camera"** (a do mundo, que não desenha a camada 6) **> "CameraBracos"** (sobreposição, FOV 55, só a camada 6) e **"Bracos"** (os braços de primeira pessoa de cada arma, na camada 6 "ArmasPrimeiraPessoa"). A câmera dos braços está na pilha da câmera do mundo, então os braços nunca atravessam paredes.
   - **"Lanterna"** fica no peito, abaixo e à frente dos olhos. Assim ela não estoura a arma de luz. O facho aponta do peito para o ponto da mira (veja "Lanterna" em "Clima e ciclo do dia").
@@ -1320,8 +1322,8 @@ cartas".
 > mudaram: veja "O saque, a fabricação e as construções", logo depois desta seção. O resto vale.
 
 - **Os itens (`Loot/Itens`):** `Item` (um byte na rede): `Nada`, as 5 armas (o `TipoDeArma` + 1), `Faca` (8) e `Machado` (9), as armas brancas, `Comida` (a lata) e `Agua` (a garrafa). `Itens.Modelos` é a ordem de tudo o que vai na mão (os braços de primeira pessoa, as malhas avulsas, os ícones e as fotos): as 5 armas, a lata, a garrafa, a faca e o machado (`Itens.Modelo(item)` dá o índice; `EhBranca(item)` e `ModeloBranco(modelo)`, as armas brancas; `Itens.Branca(item)`, os números de cada uma: `DadosDaBranca`).
-  - **A faca (a primeira arma branca; 31/10/2026, a pedido: "um sistema básico de atacar e segurar, vou arrumar posteriormente")**: uma baioneta M9 (a imagem de referência), feita pelo `Blender/Armas/faca.py` (722 triângulos, nas cores da `Paleta.png` dos itens): a malha avulsa no `Itens_Faca.fbx` (a montagem junta em `Malhas/Item_Faca`; `MontagemDasArmas.FbxAvulsaDoItem`, para os itens que não estão no `Itens.fbx`), os braços de primeira pessoa no `Jogador_FP_Faca.fbx` (os dos punhos, `Jogador_FP_Maos.fbx`, com a faca no punho direito, presa ao `hand.R`; o golpe é o soco direito: o override dela põe o `SocoDireito` no `Fire`), o ícone e a foto. No corpo, ela não vem no FBX do personagem: a montagem do prefab cria a `Arma_Faca` no `weapon.R`, no encaixe da lata (`MontagemDaRede.ArmaBrancaNoCorpo`), e o corpo usa a guarda e o soco direito dos punhos (o override `Personagem_<modelo>_Faca`). No `ArmaJogador`, segurando o clique, `GolpearComBranca`: o clipe de golpe, o vento, e quando o golpe pega (`DadosDaBranca.impacto`) a esfera do soco (`Golpear`) com o alcance, a grossura e o dano da arma (a faca: 1,35 m, 15 de dano, como a pistola: 7 golpes no corpo, 3 na cabeça; o soco tira 6; veja "O dano das armas brancas"), mais sangue e, na parede, faíscas; os outros veem o soco no corpo. Na morte, ela cai no chão (deitada, como as armas); no F1 (o menu do desenvolvedor) ela aparece na lista. Conferido no jogo: na mão (primeira e terceira pessoa), o golpe e um zumbi morto em 3 golpes. Ainda não tem: som próprio (usa os do soco), animações próprias, lugar no corpo quando não está na mão e lugar no loot do mundo.
-  - **O machado (a segunda arma branca; 31/10/2026, a pedido: "vamos criar o machado agora" e "o machado pode fazer a pegada em 2 mãos")**: um machado de cabo comprido (a imagem de referência), feito pelo `Blender/Armas/machado.py` (310 triângulos; as funções do `faca.py`, que recebem a cfg): a cabeça preta com o fio de aço e o cabo de madeira curvo com o gancho. A cabeça foi refeita a pedido no mesmo dia (o olho envolve a ponta do cabo, a lâmina em trapézio afina até o fio curvo; `_cunha`), e a pegada também (a pedido, com a imagem de referência): em pé à direita da tela, o fio para a esquerda, a mão direita 18 cm acima no cabo e a esquerda embaixo dela; o golpe gira para a esquerda (veja `Docs/Armas/README.md`). No corpo, o mesmo (`GiroNoCorpo` (115, -135, 150) e `PegadaNoCorpo` 0,18). Os braços (`Jogador_FP_Machado.fbx`) são os dos punhos com o machado no punho direito, deitado na diagonal atravessando a tela (`GIRO_DE_LADO`; apontando para a frente, ele ficava encurtado na câmera), a mão esquerda no cabo, 22 cm acima da direita (`segunda_mao`: IK por quadro em Idle, Walk, Run, Sacar e Golpe) e o clipe próprio `Golpe` (`golpe`: a machadada na diagonal, de cima à direita para baixo à esquerda, a mão direita por IK nas `CHAVES_DO_GOLPE`; pega no quadro 8). A montagem põe o `Golpe` no `Fire` dos braços que têm esse clipe. No corpo, o machado fica no encaixe da lata, deitado 80° (`MontagemDaRede.GiroNoCorpo`), com a guarda e o soco dos punhos. Os números: 25 de dano (como o rifle), 1,6 m, um golpe a cada 0,9 s, e ele acerta a parte do corpo onde pega (`porRegiao`) e corta em dobro (`corte` 2: um braço ou uma perna sai num golpe, a pedido em 31/10/2026: "seria legal ele decepar com um hit"); 4 golpes no tronco, 2 na cabeça. Conferido no jogo: na mão, a machadada e um zumbi decapitado num golpe. Só na primeira pessoa vem mais um, os punhos (`Itens.Punhos`, o índice logo depois do último; `QuantosModelosFP`, `ModeloFP` dá o nome "Maos" e `ModeloNaMao` dá o modelo da mão, com os punhos para `Nada`). `Itens.Tamanho(item)` são as células da mochila (abaixo) e `Itens.Resumo(item)`, a linha curta dos detalhes. `Itens.Consumivel(item)` tem quanto cada um enche e o tempo do clipe `Usar`:
+  - **A faca (a primeira arma branca; 31/10/2026, a pedido: "um sistema básico de atacar e segurar, vou arrumar posteriormente")**: uma baioneta M9 (a imagem de referência), feita pelo `Blender/Armas/faca.py` (722 triângulos, nas cores da `Paleta.png` dos itens): a malha avulsa no `Itens_Faca.fbx` (a montagem junta em `Malhas/Item_Faca`; `MontagemDasArmas.FbxAvulsaDoItem`, para os itens que não estão no `Itens.fbx`), os braços de primeira pessoa no `Jogador_FP_Faca.fbx` (os dos punhos, `Jogador_FP_Maos.fbx`, com a faca no punho direito, presa ao `hand.R`; o golpe é o soco direito: o override dela põe o `SocoDireito` no `Fire`), o ícone e a foto. No corpo, ela não vem no FBX do personagem: a montagem do prefab cria a `Arma_Faca` no `weapon.R`, no encaixe da lata (`MontagemDaRede.ArmaBrancaNoCorpo`), e o corpo usa a guarda e o soco direito dos punhos (o override `Personagem_<modelo>_Faca`; desde 09/11/2026, a faca presa ao `hand.R` e o segurar e o golpe dela no corpo: veja "A mão nova e as armas brancas"). No `ArmaJogador`, segurando o clique, `GolpearComBranca`: o clipe de golpe, o vento, e quando o golpe pega (`DadosDaBranca.impacto`) a esfera do soco (`Golpear`) com o alcance, a grossura e o dano da arma (a faca: 1,35 m, 15 de dano, como a pistola: 7 golpes no corpo, 3 na cabeça; o soco tira 6; veja "O dano das armas brancas"), mais sangue e, na parede, faíscas; os outros veem o soco no corpo. Na morte, ela cai no chão (deitada, como as armas); no F1 (o menu do desenvolvedor) ela aparece na lista. Conferido no jogo: na mão (primeira e terceira pessoa), o golpe e um zumbi morto em 3 golpes. Ainda não tem: som próprio (usa os do soco), animações próprias, lugar no corpo quando não está na mão e lugar no loot do mundo.
+  - **O machado (a segunda arma branca; 31/10/2026, a pedido: "vamos criar o machado agora" e "o machado pode fazer a pegada em 2 mãos")**: um machado de cabo comprido (a imagem de referência), feito pelo `Blender/Armas/machado.py` (310 triângulos; as funções do `faca.py`, que recebem a cfg): a cabeça preta com o fio de aço e o cabo de madeira curvo com o gancho. A cabeça foi refeita a pedido no mesmo dia (o olho envolve a ponta do cabo, a lâmina em trapézio afina até o fio curvo; `_cunha`), e a pegada também (a pedido, com a imagem de referência): em pé à direita da tela, o fio para a esquerda, a mão direita 18 cm acima no cabo e a esquerda embaixo dela; o golpe gira para a esquerda (veja `Docs/Armas/README.md`). No corpo, o mesmo (`GiroNoCorpo` (115, -135, 150) e `PegadaNoCorpo` 0,18; desde 09/11/2026, a `PegadaNaMao`, no `hand.R`). Os braços (`Jogador_FP_Machado.fbx`) são os dos punhos com o machado no punho direito, deitado na diagonal atravessando a tela (`GIRO_DE_LADO`; apontando para a frente, ele ficava encurtado na câmera), a mão esquerda no cabo, 22 cm acima da direita (`segunda_mao`: IK por quadro em Idle, Walk, Run, Sacar e Golpe) e o clipe próprio `Golpe` (`golpe`: a machadada na diagonal, de cima à direita para baixo à esquerda, a mão direita por IK nas `CHAVES_DO_GOLPE`; pega no quadro 8). A montagem põe o `Golpe` no `Fire` dos braços que têm esse clipe. No corpo, o machado fica no encaixe da lata, deitado 80° (`MontagemDaRede.GiroNoCorpo`), com a guarda e o soco dos punhos (até 09/11/2026: agora apoiado no ombro, no `Machado_Segurar`, e descendo com as duas mãos, no `Machado_Golpe`; veja "A mão nova e as armas brancas"). Os números: 25 de dano (como o rifle), 1,6 m, um golpe a cada 0,9 s, e ele acerta a parte do corpo onde pega (`porRegiao`) e corta em dobro (`corte` 2: um braço ou uma perna sai num golpe, a pedido em 31/10/2026: "seria legal ele decepar com um hit"); 4 golpes no tronco, 2 na cabeça. Conferido no jogo: na mão, a machadada e um zumbi decapitado num golpe. Só na primeira pessoa vem mais um, os punhos (`Itens.Punhos`, o índice logo depois do último; `QuantosModelosFP`, `ModeloFP` dá o nome "Maos" e `ModeloNaMao` dá o modelo da mão, com os punhos para `Nada`). `Itens.Tamanho(item)` são as células da mochila (abaixo) e `Itens.Resumo(item)`, a linha curta dos detalhes. `Itens.Consumivel(item)` tem quanto cada um enche e o tempo do clipe `Usar`:
 
   | Item | Fome | Sede | Usar |
   |---|---|---|---|
@@ -1613,7 +1615,7 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
   com pregos (nas duas mãos e o golpe do machado; 20 de dano, no tronco ou na cabeça; a pedido, em 31/10/2026, "pegado da mesma maneira
   do lado direito ... a pega dele bem embaixo": em pé à direita da tela como o machado, a mão direita 5 cm acima da ponta
   de baixo e a esquerda embaixo dela, junto do pomo; no corpo, o giro do machado e a mão 5 cm acima; a animação do corpo
-  fica para o Gustavo), a lança (nas duas mãos, a estocada, 2,1 m de
+  fica para o Gustavo; feita em 09/11/2026, com a lança e a tocha: veja "A mão nova e as armas brancas"), a lança (nas duas mãos, a estocada, 2,1 m de
   alcance, 20 de dano, na parte onde pega) e a tocha (na mão direita, o soco direito, 8 de dano; a chama e a luz na ponta: nos braços,
   um ponto novo achado pela cor queimada da ponta, `MontagemDoItemNaMao.BocaNaPonta`, porque os clipes animam a boca do FBX;
   no corpo, na ponta da malha; o dono vê a luz dos braços, os outros a do corpo). A tocha queima: 1 de desgaste a cada 6 s na
@@ -2614,9 +2616,9 @@ pula o Dia 0. A decisão da morte (a mochila fica onde a gente caiu) entrou na e
 - **A cama:**
   - `Construcao.dono` é a chave do personagem (antes, o clientId). `CamaDe(chave)` está no `VidaJogador.CaiuRpc`.
   - Na própria cama: E dorme e salva, o clique recolhe (`ConstrucaoNaMira.UsaClique`).
-  - As camas da mobília (CamaCasal, CamaSolteiro, Beliche) ganham a `CamaDeDormir` em cada colisor
-    (`MobiliaNovaDoMundo.Novo`). Na casa da família (a menos de 13 m do meio dela, `TracadoDaCidade.MatrizDaCasa`), E dorme e
-    salva.
+  - As camas da mobília (CamaCasal, CamaSolteiro, CamaHospital, Beliche) ganham um gatilho "Dormir" com a `CamaDeDormir`
+    (`MobiliaNovaDoMundo.PorOGatilhoDaCama`): em qualquer uma (das casas, dos prédios e do bunker), E dorme e salva, e o corpo
+    deita no colchão (08/11/2026; antes, só na casa da família, e nem lá funcionava: veja "Os ajustes da segunda partida").
 - **O dia do mundo:** `CicloDoDia.Dia` (mais um a cada meia-noite, no anfitrião; `DiaRede` para os outros) e
   `CicloDoDia.Definir(hora, dia)`.
 - **O menu** (`UI/MenuOnline`):
@@ -3040,7 +3042,8 @@ cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo
     (`ServerTime`), o evento `MarcaNova` (o bipe), `CopiaDasMarcas`/`RestaurarMarcas` (o save, sem os pings);
   - `Player/JogadorRede.Marcas.cs`: `NomeNoMapa`, `PedirPing`, `PedirMarca`, `PedirApagarMarca`, `PedirEditarMarca` (os
     RPCs conferem o dono e o ponto dentro do mapa);
-  - `UI/MinimapaDoMundo.cs`: no canto de cima à direita (30 u do alto), 170 ou 270 u, 250 ou 400 m
+  - `UI/MinimapaDoMundo.cs`: no canto de cima à direita (30 u do alto; 44 u com o FPS ligado), 190 ou 290 u, 600 ou 1200 m
+    (08/11/2026; eram 170/270 u e 250/400 m); fora do mapa, escuro; as marcas e as anotações também no mundo
     (`GUI.DrawTextureWithTexCoords` com a imagem do `MapaDoMundo`), N muda (`minimapa.tamanho` nos PlayerPrefs); o botão do
     meio do mouse (o raio, ou o relevo andando pelo raio); os losangos dos pings por cima de tudo; some com
     `MenuOnline.Aberto`/`ComTela`/`Cinema`, o mapa aberto e a tela de morte;
@@ -3116,6 +3119,178 @@ cenas: as peças novas no "Mundo" são postas por código (`SobreviventesDoMundo
   de 30% a 60% de um pente; a barra, o feijão 30%, a água 60%, o remédio 30%, o colete 8%, o capacete 6%, as pilhas 15%. No
   `LargarAMochila`, a arma do militar cai com o desgaste de 50 a 85 (a partir de `Itens.DesgasteQueEmperra`, 70, engasga).
   Conferido: 6 mortos, 6 armas (5 que engasgam), 119 balas nos pentes e 55 em caixas.
+
+## Os ajustes da segunda partida com os amigos (08/11/2026, a pedido)
+
+O Pedro jogou com os amigos em 07/11 e trouxe a lista. Não testado no Play (compila, os testes da mobília, do bunker e dos
+moradores passam; as camas conferidas na prévia).
+- **Entrar no caiaque nadando** ("eu estava na canoa remando e meu colega nadando, não conseguiu entrar"): a dica do E
+  aparecia, mas o `ArmaJogador` saía do quadro nadando antes do E. Agora, nadando, só o E passa (`ArmaJogador.Update`).
+- **Dormir nas camas dos prédios e do bunker:** o molde da cama perde o colisor de malha da raiz (no `Awake` da
+  `MobiliaNovaDoMundo`), e a colisão de verdade é a caixa da obra, sem o E: a `CamaDeDormir` nunca entrava. Agora cada cama
+  (a de casal, a de solteiro, a de hospital e o beliche) ganha um gatilho "Dormir" 5 cm maior que ela, na camada 2 (a mira
+  acha), em qualquer lugar (a regra da casa da família saiu). O corpo deita no colchão (`VidaJogador.DeitarNaCama`: a raiz no
+  pé da cama, olhando para o pé; o corpo deitado vai de costas para trás dela, a cabeça no travesseiro; parado com o
+  `Esperando`); acordando, ele volta para onde estava. As alturas do colchão no `CamaDeDormir.Medidas` (o tamanho do modelo,
+  ×1,30 no mundo; a cabeceira no −Z). O saque em cima da cama ganha do gatilho (`SaqueNaMira.GanhaDe`). O lugar de voltar
+  quando cai continua a cama improvisada.
+- **Dormir recupera a sanidade:** dormindo, o escuro, a solidão e a tempestade não pesam (`VidaJogador.Mente`; os zumbis
+  caçando, o corpo, a fome e a sede, sim). Numa cama, +5 por hora (o Pedro preferiu ficar em 5); apagado no chão (o
+  cansaço, o calmante), +3; com todos dormindo, +7 (eram 2,5 e 5; dormindo sozinho de noite fora do bunker, a mente caía).
+  Acordado, tudo pesa como antes. Para comparar: um cigarro, +15 (6 tragadas de 2,5).
+- **Pular a cama** (com o pulo da janela): a colisão das camas (casal, solteiro, hospital; o beliche não) virou duas caixas
+  (`MobiliaNova.Caixa`, também no bunker, `MoveisDoBunker.Caixas`): a faixa da cabeceira, na altura de antes, e o colchão (a
+  0,76 m no mundo; na de hospital, até as grades, 1,19 m), marcado com a cor "Cortina" (`MobiliaNova.NoColchao`: o pulo lê a
+  cor no ponto do raio; nenhuma outra colisão usa). O `PuloDaJanela.AcharCama`: de frente para o lado ou o pé, o colchão
+  entre 0,45 e 1,25 m, a beira de lá até 2,3 m, a cabeça livre, ninguém deitado em cima; o mesmo estado "Pular_Janela" e o
+  mesmo `JanelaRpc`, com a raiz indo de beira a beira (`MoverRaiz`). O teste da mobília conta as caixas por
+  `MobiliaNova.CaixasDe`.
+- **Shift + clique** ("poder apertar Shift e transferir rápido um pack para o baú"): com uma estante aberta (o armário e a
+  prateleira do bunker, o compartimento do caiaque), a pilha inteira passa de um lado para o outro (`TelaDoInventario`,
+  o `MouseUp` sem arrastar). Os baús e armários das casas não guardam nada (o saque se pega item a item).
+- **O garupa da moto e os passageiros do carro com as mãos livres** (`PassageiroDoCarro.MaosLivres`/`PodeAtacar`,
+  `CuidarDasMaos`): os braços de primeira pessoa e o `ArmaJogador` voltam; o garupa atira, golpeia e usa itens (os outros o
+  veem com as duas mãos na frente do peito, pelo Pitch: `GarupaComAMao`; o tiro e o golpe pulam a própria moto,
+  `MeuVeiculo`); no carro, os passageiros só usam itens (comer, beber, os curativos: o `Tratamento` deixa com as mãos
+  livres). O motorista não (o clique é da chave). Na câmera de trás (V), não. Sentado, o E é só de sair (o `ProcurarAlvo`
+  não procura nada).
+- **O minimapa** ("zoom muito próximo e um pouco bugado"): 600 m (o pequeno) e 1200 m (o grande), fora do mapa escuro (a
+  imagem não estica mais na beira), embaixo do FPS quando ele está ligado, e fora das gravações (`SemHud`).
+- **As marcas do mapa no mundo** ("deveria aparecer como um ping para se localizar mais fácil"): as marcas e as anotações
+  aparecem no mundo como os pings, sem sumir (`MinimapaDoMundo.AlfinetesNoMundo`): até 3 km, só na frente da câmera (sem
+  grudar na borda), menores e mais transparentes de longe; a distância sempre; o texto a menos de 150 m ou na mais perto da
+  mira.
+- **As armas brancas no corpo** (o machado, o bastão e a lança numa mão só, na guarda dos punhos; o golpe é o soco direito):
+  ficou para uma etapa só com o Blender, com os prints do Pedro. Feito em 09/11/2026 (veja "A mão nova e as armas
+  brancas", o corpo).
+- **Visto e não mexido:** o E de outro jogador na cama improvisada recolhe a cama dele (o `UsarRpc` não confere o dono).
+- **A cabeça baixa no carro, de novo** (com as fotos: "ele continua olhando para baixo ... nos dois carros"): a câmera de
+  trás (V) é a mesma escolha da terceira pessoa a pé (`CameraTerceiraPessoa.Ligada`), e nela o olhar do corpo (o `Pitch` da
+  rede) nunca mudava: ficava o do momento de entrar, olhando para a porta. Agora o `CameraDeTras` põe a cabeça reta
+  (`Pitch` 0); o tronco encurtado continua (a cabeça dentro do carro).
+- **A mão nova e as armas brancas** (decidido em 08/11, para a etapa do Blender): a mão mais redonda, ainda em low-poly e na
+  estética do personagem, com as unhas e alguns pelos, na primeira e na terceira pessoa; as pegadas com os dedos fechados
+  no cabo (sem o cabo passar entre os dedos) em todas as armas brancas; no corpo, o machado apoiado no ombro (uma mão no
+  cabo; no golpe, desce com as duas).
+  - **A mão no corpo (09/11/2026; o Pedro aprovou a mão e a versão da mulher sem pelos):** a mão e o antebraço do
+    `Blender/maos_novas.py` (uma malha lisa por lado, 1.324 triângulos: o antebraço que afina até o pulso, a mão redonda,
+    as unhas em placas e 26 pelos por lado, que na forma "Mulher" se recolhem para dentro da pele; a forma "SemPelos" faz
+    só isso) e as duas luvas refeitas em volta dela. O `Editor/MontagemDaMaoNova` (menu Zombie City Cleaner > Roupas e NPCs
+    > Montar a mão nova; a montagem das roupas roda junto) lê o `Roupas.fbx`, o `Maos_Novas_Corpo.fbx` e o
+    `Luvas_Novas.fbx` (nenhum é gravado de novo) e grava em `Art/Characters/Roupas/MaoNova/`:
+    - o `NPC_Corpo`: o de hoje sem as faces com algum vértice com mais da metade do peso no forearm ou nos ossos da mão e
+      dos dedos (505 faces e 914 triângulos por lado: a mão, o antebraço e a emenda do cotovelo), mais as duas peças, que
+      começam no anel aberto do fim do braço de cima (os 8 cantos de cada lado a menos de 0,07 mm: a emenda fecha); 8.810
+      vértices e 4.768 triângulos (eram 8.088 e 3.948). Os pesos vão pelos nomes dos ossos; as formas: a "Mulher" (a do
+      corpo nos vértices de hoje, a da peça nos novos) e a "SemPelos" (zero no resto). O UV1.x das peças é o número da face
+      velha mais perto, do mesmo osso: as mangas continuam escondendo o que escondiam;
+    - as luvas: as do `Luvas_Novas.fbx` nos ossos e nas poses de ligação das de hoje (a tática com 1.984 triângulos, eram
+      2.204; a sem dedos com 1.040, eram 1.380); o "esconde" delas no `Roupas.json` foi trocado pelo do braço novo (o
+      `luvas_esconde.json` do script), com os triângulos.
+    - **As poses de ligação:** as malhas novas ficam no espaço do `NPC_Corpo` e com as poses dele. Nos dois FBX novos a do
+      hand.L sai do Blender girada (2,4° na mão, 1,7° nas luvas; a do hand.R e os nós do esqueleto batem, e as malhas são
+      simétricas): com elas, a mão esquerda ficaria torta em relação ao antebraço e às luvas. A montagem avisa se alguma
+      passar de 3° ou 1 mm.
+    - **A troca, num ponto só:** `MontagemDaMaoNova.Malha(renderer)` devolve a malha nova do mesmo nome, se houver; a usam
+      a `MontagemDasRoupas` (o `NPC.prefab`: os moradores do bunker, o Dia 0, o mostruário) e a `MontagemDaRede.Vestir` (o
+      corpo do jogador; o retrato do TAB, o boneco do F1 e o estúdio de criar são cópias dele). O `Sobrevivente.prefab` (uma
+      cópia do corpo do jogador, de antes do fumo) teve só as três malhas trocadas: a montagem dos sobreviventes refeita
+      traria junto as peças do fumo e dos moradores do corpo de hoje, e isso fica para quando ela for refeita de propósito
+      (refeita em 09/11/2026, com as armas brancas no corpo: veja abaixo).
+      Os braços de primeira pessoa (`RoupasNosBracos`) copiam o corpo vestido e pegam a mão nova sozinhos. O
+      `Maos_Novas_FP.fbx` (as peças para o rig dos braços de primeira pessoa) ainda não é usado: a pele dos `FP_Bracos_*` é
+      invisível.
+    - **As unhas:** a ponta usa a célula 7 da fileira de baixo das texturas (nenhuma outra malha da textura do personagem
+      ou do corpo usa) e a borda, a célula 1; a 7 foi pintada no `T_Corpo_Cor.png` (cinza 206), no `T_Corpo_Mascara.png`
+      (191, 0, 0) e na `Personagem_PrincipalBloco.png` (225, 167, 142): pela conta do shader das roupas, a unha fica
+      0,155 + 0,93 × a pele, mais clara em qualquer tom.
+    - **Conferido (09/11/2026):** compila sem avisos; os testes dos moradores e do saque passam; fotos sem Play (o
+      `NPC.prefab` vestido, homem e mulher, no repouso e na guarda; as duas luvas; a jaqueta de couro e a camiseta): a emenda
+      do cotovelo fechada, a mulher sem pelos, as luvas sem a pele furando. Não testado no Play (os braços de primeira
+      pessoa com uma arma branca).
+  - **As armas brancas no corpo (09/11/2026):** o segurar e o golpe de cada uma, no lugar da guarda dos punhos e do soco
+    direito, com as poses aprovadas (a faca numa mão, golpe para a frente; o machado apoiado no ombro direito com uma mão,
+    descendo na diagonal com as duas; o bastão nas duas mãos por cima do ombro, como um taco, golpe de lado; a lança nas
+    duas mãos, baixa, e a estocada; a tocha erguida numa mão, golpe de cima).
+    - **Os clipes:** o `Personagem_PrincipalBloco_Brancas.fbx` (`Art/Characters/Personagens`, do `Blender/brancas_corpo.py`:
+      só o esqueleto do corpo, com o osso "arma" a mais, filho do `hand.R`) tem o `<Arma>_Segurar` (2 s, em laço) e o
+      `<Arma>_Golpe` (0,5 / 0,9 / 0,8 / 0,833 / 0,5 s, o `intervalo` do `Itens._brancas`; o acerto no `impacto`), a 30
+      quadros por segundo. A `MontagemDasArmas.CopiarAsBrancasDoCorpo` os copia para `Art/Characters/Personagens/Brancas/`
+      (como os da vara: o caminho a partir do `PrincipalBloco_Rig`, sem as curvas do osso "arma"). A camada dos braços só
+      pega do `chest` para cima, e o Blender gira também o `spine` (até 25° nos golpes do machado e do bastão, 15° na
+      lança): na cópia, esse giro passa para o `chest`, quadro a quadro, e o `spine` fica no repouso; o peito, os braços e a
+      arma ficam onde o Blender pôs (a cintura vem da locomoção).
+    - **Os override:** o `Personagem_PrincipalBloco_<Arma>` (o do item, o `controladoresDosItens` do corpo) põe o
+      `<Arma>_Segurar` no segurar, no mirar e na recarga e o `<Arma>_Golpe` no tiro (o "Fire"): a
+      `MontagemDasArmas.MontarOverrideDaBranca`; sem os clipes, a guarda e o soco de antes. O jogador, os outros jogadores e
+      os sobreviventes de arma branca usam os mesmos override.
+    - **A arma presa à mão:** o corpo do jogo e o `Roupas.fbx` não têm o osso "arma". A `MontagemDaRede.ArmaBrancaNoCorpo`
+      cria a `Arma_<Arma>` filha do `hand.R`, fixa, na `MontagemDaRede.PegadaNaMao` (o lugar e o giro em quatérnio: em
+      ângulos, o Y fica em 90° e degenera), com a peça `P_<Arma>_corpo` (a malha avulsa) sem giro; o encaixe da lata, o
+      `GiroNoCorpo` e o `PegadaNoCorpo` saíram. **Conferido na Unity:** o osso "arma" fica parado no espaço da mão em todos
+      os clipes, e o lugar dele no `hand.R` é o da tabela, igual; o giro da tabela é o dele vezes meia volta em torno de
+      (0, 1, 1): a malha avulsa (`Itens_<Arma>.fbx`) tem a cabeça em +Z e o alto em +Y, e o osso, o Y para a cabeça e o Z
+      para o alto (o X ao contrário). Fora isso, nenhuma troca de eixo (o Z para cima do Blender já chega convertido). A arma
+      no corpo e o osso do FBX, nos mesmos tempos: até 0,01 mm no segurar e até 3,3 mm e 0,5° no golpe (a cópia do chest,
+      quadro a quadro).
+    - **A montagem:** menu Zombie City Cleaner > Jogador > Montar as armas brancas no corpo
+      (`MontagemDasArmas.MontarAsBrancasNoCorpo`: importa o FBX, copia os clipes, refaz os 5 override, o prefab do jogador e
+      o dos sobreviventes, sem refazer o controlador do corpo nem mexer na cena). A montagem dos personagens
+      (`PrepararPersonagens`) faz o mesmo antes dos override.
+    - **O sobrevivente** (`MontagemDosSobreviventes.MontarPrefab`, sem o `PorNaCena`): refeito, agora com o corpo de hoje (os
+      vazios do fumo e dos moradores); as peças do fumo vêm ligadas no corpo do jogador (só o `FumoJogador` as esconde) e
+      no sobrevivente ficam desligadas (`renderersDoFumo`).
+    - **A primeira pessoa, refeita no Blender nesta noite:** os 5 `Jogador_FP_<Arma>.fbx` já estavam importados, com os
+      mesmos clipes e quadros (o importador bate com os takes). Os override dos braços já tocam os clipes novos (o `Golpe`
+      no machado, no bastão e na lança; o `SocoDireito` na faca e na tocha), e os braços do prefab são o FBX aninhado: a
+      montagem das armas não precisou rodar. Nada no código depende de a arma estar no `hand.R`: o `Boca_FP_<Arma>` (no
+      osso `gun`) só serve às armas de fogo, e a ponta da tocha (`MontagemDoItemNaMao.BocaNaPonta`, refeita com o prefab)
+      sai da malha. O machado no `hand.L` não muda nada no código.
+    - **Conferido (09/11/2026):** compila sem erros nem avisos (a montagem do prefab repete os avisos de antes do encaixe
+      da espingarda e da sniper); nenhum teste de modo editor toca nisso; fotos sem Play, no scratchpad
+      (`unity_brancas/`): o corpo de cada arma no segurar e no acerto, de frente e de lado, ao lado das folhas do Blender
+      (as poses batem, a mão fecha no cabo, nada atravessa o corpo), e os braços de primeira pessoa no Idle e no acerto
+      (com a pele dos braços do FBX, não o braço vestido). Não testado no Play.
+
+## O lag da tela de criar e da entrada do bunker (09/11/2026, a pedido)
+
+O pedido: "um lag que sempre ocorre na aba de criação de personagem, e quando entro no bunker, os primeiros segundos o fps
+cai para 7". Medido no Editor, pelo Profiler (o `ProfilerDriver` e a `HierarchyFrameDataView` no RunCommand) e pelo tempo
+de cada quadro, com a semente 7: o jogo novo inteiro (o Dia 0, a tela de criar, as compras, a passagem e o bunker; no médio
+e no grande, com 77 compras), o mundo direto, o Continuar com o save do Pedro (grande) e a entrada no bunker de fora (80 m)
+e andar por andar.
+
+- **A causa da tela de criar:** no jogo novo, ela abre no Dia 0, antes de os cortes do começo dos zumbis ficarem prontos
+  (`ZombieManager.PreaquecerCortes`, 456 passos), e contava como "tela cheia do menu" (o `MenuOnline.Aberto` inclui as
+  telas obrigatórias): os cortes andavam nela com 25 ms por quadro, e cada passo passa disso (de 3 a 15 ms, num especial
+  até ~340, com até 30 MB de lixo por quadro). O começo do pool (`PreaquecerOPool`) também criava vários zumbis por quadro
+  ali. Antes, com ela aberta: 52 quadros em 3,7 s (média 71 ms, uns 14 FPS; p95 146, pior 252; todos acima de 33 ms), 49
+  ms por quadro só dos cortes, mais 5 de coleta do lixo; nas trocas de roupa, 31 quadros acima de 33 ms (pior 110), até
+  os cortes acabarem (8 s no Editor; 5,8 s na build do Pedro, pelo `Player.log`). No mundo direto, ela já era leve (média
+  11 ms): os cortes acabam na tela de carregamento.
+  - **O conserto:** no Dia 0, os cortes e o começo do pool andam só na tela preta de carregar a rua ("UM DIA NORMAL", com
+    "Preparando os zumbis (N%)"), que espera por eles (`DiaZeroDaPartida.CarregandoARua` e `CarregarARua`, até 90 s); na
+    rua, na tela de criar e na introdução, nada (`ZombieManager.PodeAquecer`); a tela de criar não conta mais como tela
+    cheia (`NumaTelaCheia`). Se sobrar algum (os 90 s passaram), ele fica para a passagem dos 5 anos, com 40 ms por
+    quadro (`OrcamentoNaPassagemMs`: com os 120 do carregamento, o texto dela aparecia a ~4 FPS).
+  - **As miniaturas** (`EstudioDoPersonagem.Miniatura`): numa `RenderTexture`, sem o `ReadPixels` (que esperava a placa
+    terminar tudo o que estava na fila: ~9 ms a cada 4 miniaturas); perdida pela placa, é refeita.
+  - **Depois:** com a tela aberta, média de 11 a 11,7 ms (p95 14) e 3 quadros acima de 33 ms; nas trocas, de 9 a 13 ms,
+    nenhum acima de 33 (pior 27). A tela de carregar a rua ficou ~7 s mais longa no Editor (o pequeno: 7,3 s; na build,
+    uns 5 s); a passagem e o bunker, iguais.
+  - A mão nova não pesava: a cópia das malhas vestidas (`CopyChannels`) dava ~0,7 ms por quadro na tela.
+- **O bunker não travou no Editor** em nenhum caminho, antes ou depois: do fim da passagem (ou da tela de carregamento) em
+  diante, médias de 8,5 a 9,5 ms e nenhum quadro acima de 33 ms nos primeiros 3 s (o pior, 62 ms, um asset lido do disco,
+  só no Editor); entrando de fora e por andar, de 8,8 a 11,2 ms. O que só a build tem: o driver compila cada variante de
+  shader na primeira vez que ela aparece (o `Unity/ShaderVariantAnalytics` da pasta do save, da build do Pedro de
+  08/11/2026: 458 ms ao todo, até 204 ms numa só), e a passagem tem a geração do mundo (no grande, ~10 s).
+  - **Tentado e desfeito:** aquecer os shaders (uma `ShaderVariantCollection` gravada no Editor, aquecida aos poucos no
+    carregamento). O Editor só anota uma variante na primeira vez que a carrega na sessão (com ele aberto havia horas,
+    pegou 29 de 7 shaders), e o `WarmUp` no Editor compila na hora: 25 s para essas 29, e o erro "A non-multisampled
+    texture being bound to a multisampled sampler". Para tentar de novo: anotar com o Editor recém-aberto (Graphics
+    Settings > Shader Loading) e aquecer só na build, depois de medir nela (o FPS do bunker com o Profiler ligado nela).
+- **Para lembrar:** com o Editor em ~10 GB e o Windows perto do limite (37 de 39 GB comprometidos), o compilador de
+  shaders ficou sem memória uma vez (`ZombieCityCleaner/Chao`, ShadowCaster com INSTANCING_ON, no dx12, só no Editor).
 
 ## O carro que sumia do bunker (04/11/2026, a pedido)
 
@@ -3529,6 +3704,21 @@ falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s
 
 ## A árvore de habilidades, o lago e a oficina (06/11/2026, a pedido; `Docs/18-Habilidades.md`)
 
+- **A árvore nova (09/11/2026, a etapa 1a; aprovada pelo Pedro numa maquete; Docs/18, "A árvore nova"):** vale por cima
+  do que está abaixo sobre a árvore. 74 nós em 13 ramos (o Combate: Guerreiro, Armeiro de sucata, Assassino, Ladrão; a
+  Resistência: Fogo, Saúde, Fome e sede, Recursos, Proteção de sucata; a Sobrevivência: Craft, Armadilhas e defesas,
+  Sortudo, Pesca), cada nó com 1 a 3 níveis (o efeito cresce com os pontos), as fileiras 1 a 5 (pedem 0, 3, 7, 12 e 18
+  pontos gastos nas de cima da mesma área), os pré-requisitos (alguns de outro ramo), tirar ponto pelo botão direito (se
+  nada depender dele) e 40 níveis (a curva igual até o 11, depois +5 por nível: o 40 com 7.330 de XP, ~16 h). Os ramos
+  novos e o Sucateiro são "em breve" (não dá para aprender); o Faz-tudo ainda não pede o Sucateiro (entra na 1b); o
+  Aproveitador virou o 2º ponto das Mãos hábeis. Um save da árvore velha recebe os pontos de volta e o aviso (embaixo da
+  mira e na aba K). Os arquivos: `Player/Habilidades.cs` (o catálogo `Nos`, o `ProgressoDoPersonagem` com 2 bits por nó
+  em `niveis0..2` e o `aprendidas` só para a migração, `PodeAprender`/`PodeTirar`/`Migrar`, `Habilidades.Pontos`),
+  `InventarioJogador.Habilidades.cs` (`PedirAprender`, `PedirTirar`, `PedirVistoOAviso`, o `DefinirProgresso` com a
+  migração), `TelaDoInventario.Habilidades.cs` (a árvore no meio e na coluna da direita, uma página por área; o botão
+  direito pelo `Processar`), `XpNaTela` (o aviso), `UI/MenuDoDesenvolvedor.Habilidades.cs` (o F1: Aprender um, Tirar
+  um, +5 níveis, Nível 40, Save velho) e os efeitos lendo `Habilidades.Pontos` onde já liam o `Tem`. `VersaoDaRede` 12.
+
 - **O que é:** o XP das ações num total só; cada nível dá 1 ponto livre (o nível 1 já dá o primeiro); 45 habilidades
   (3 áreas × 3 ramos × 5, a última a ponta) e 30 níveis (o 30 com 5.510 de XP, umas 12 h de jogo; do 1 para o 2, 50, e
   10 a mais a cada nível). Morrer não tira nada; no Dia 0 não se ganha XP. As decisões do Pedro e as tabelas estão no Docs/18.
@@ -3738,6 +3928,162 @@ falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s
 - **O outono:** `Mancha.Outono` (o lago com Q de 1,45 a 2,4: bordos, bétulas, pinheiros).
 - **Os testes:** o F1, aba "Habil." (os níveis; Ir ao caiaque, Vara + 10 iscas, Machado, Pólvora + metal).
   `VersaoDaRede` 8.
+
+## As armas de sucata, 1ª leva (09/11/2026)
+
+A 1ª leva da etapa 1b do Armeiro de sucata (as decisões do Pedro estão em `Docs/18-Habilidades.md`): as três armas de
+sucata, as duas munições delas e a sucata como item, com as receitas destravadas pelos três primeiros nós do ramo. O saque,
+o comerciante, as armas reais raras e as melhorias ficam para a 2ª leva e as etapas seguintes.
+
+- **As armas são tipos novos** (`Combat/Armas.cs`): `TipoDeArma.PistolaSucata`, `RifleSucata` e `SubmetralhadoraSucata`
+  (5, 6 e 7, depois das reais; `Armas.Quantas` = 8). Os itens: `Item.PistolaSucata` (6), `RifleSucata` (7) e
+  `SubmetralhadoraSucata` (13: o 8 já era a faca; o `Itens.Arma`/`DaArma` cuidam dele). Os modelos entram em
+  `Itens.Modelos` logo depois da sniper (`Sucata_Pistola`, `Sucata_Rifle`, `Sucata_Submetralhadora`), e a lata, a garrafa e
+  as brancas andaram 3 (os arrays do prefab, do sobrevivente e do "Itens no mundo" das cenas foram refeitos). A rede foi
+  para a versão 13.
+- **Os números saem da real equivalente** (`Armas.ComAsDeSucata`; as constantes no topo, para o Pedro ajustar):
+
+  | Arma de sucata | Real | Munição | Pente | Dano | Dispersão (parado / andando +) | Emperrar | Desgaste | Barulho |
+  |---|---|---|---|---|---|---|---|---|
+  | Pistola (um tiro) | pistola | prego | 1 | 11,25 | 0,39° / 1,56° | 2× | 1,5× | 1,25× |
+  | Submetralhadora (automática) | submetralhadora (a MP5K) | prego | 20 | 13,5 | 1,17° / 2,08° | 2× | 1,5× | 1,25× |
+  | Rifle de precisão (ferrolho, sem luneta) | sniper (a Mosin) | parafuso | 3 | 37,5 | mirando 0,3°, sem mirar 4,6° / 2,875° | 2× | 1,5× | 1,25× |
+
+  - O dano é 75% (`DanoDaSucata`); o emperrar 2× (`DadosDaArma.emperra`, na chance da arma gasta, de 70% em diante); o
+    desgaste 1,5× (`DadosDaArma.desgaste`, no `Itens.DesgastePorUso`); o barulho +25% (`DadosDaArma.barulho`, no raio do
+    `JogadorRede.RaioDoMeuTiro`); a dispersão +30% (o rifle +15%). A cadência, o coice, a recarga, o alcance e o som são os
+    da real. O rifle não tem luneta: a sniper espalha 0 na luneta, e 15% de nada é nada, então mirando (a mira de ferro)
+    ele espalha `MiraDeFerroDoRifle` (0,3°) e, sem mirar, o da sniper sem a luneta mais 15% (`ArmaJogador.Atirar`).
+  - **Medido no Play** (um tiro na barriga de um Oco, ~6 m, o menor de três): pistola 14,8 × de sucata 11,1 (0,748),
+    submetralhadora 17,7 × 13,3 (0,749), sniper 46,6 × 35,0 (0,749). Um tiro que passa pelo braço e pega o tronco soma
+    1,5×, como nas reais.
+- **As munições** (`Calibre.Prego` e `Calibre.Parafuso`; `Item.MunicaoPrego` 52 e `MunicaoParafuso` 53): a de prego serve na
+  pistola e na submetralhadora de sucata, a de parafuso no rifle; a real não serve nelas, nem a delas nas reais (a recarga
+  procura a caixa do calibre). Os nomes são "munição de prego" e "munição de parafuso" (`DadosDaMunicao.nome`); o aviso
+  diz "SEM MUNIÇÃO DE PREGO". O `InventarioJogador._gastoPendente` passou a ter um lugar por calibre (era 4 fixo: a recarga
+  com prego dava erro).
+- **A sucata** (`Item.Sucata`, 126; um material do saque, pilha de 20): "Metal velho. Na bancada e na mesa de oficina, vira
+  arma e munição de sucata." Os preços do comerciante (para quando ela e as armas aparecerem): pistola 150, rifle e
+  submetralhadora 300, munição de prego 12, de parafuso 18 e a sucata 3.
+- **As receitas** (`Loot/Receitas.cs`, no fim da lista; sem ferramenta, as Mãos hábeis valem como nas outras): na bancada,
+  a pistola (6 sucatas, 1 madeira, 1 fita), a munição de prego × 10 (1 pólvora, 1 sucata) e a de parafuso × 5 (1 pólvora,
+  2 sucatas); na mesa de oficina, a submetralhadora (12 sucatas, 1 madeira, 2 fitas) e o rifle (10 sucatas, 2 madeiras, 1
+  fita). O `a1` (Pistola de sucata) destrava a pistola e a munição de prego; o `a2`, o rifle e a de parafuso; o `a3`, a
+  submetralhadora. Os três deixaram de ser "em breve"; do `a4` ao `a10` continuam (as melhorias). No mundo pequeno da
+  semente 7 só há a mesa de oficina do bunker, que também vale como bancada.
+- **Os modelos** (prontos, do `Blender/Armas/sucata.py` e `sucata_exportar.py`): `Art/Armas/Modelos/Sucata_*.fbx`, no espaço
+  da arma antiga da real, com a paleta dos itens (`Art/Paleta.png`, 16 × 16; o material `Materials/Pistola.mat`, não a
+  `Armas_Paleta_Cor`). As `ArmasNovas.SucataPistola`, `SucataRifle` e `SucataSubmetralhadora` têm o `equivalente` (o modelo
+  da real): os braços de primeira pessoa são uma instância do `Jogador_FP_<real>.fbx` com a malha `Malhas/FP_Bracos_Sucata_*`
+  (as peças presas aos ossos `gun`, `slide` e `mag`, pelo mesmo encaixe da real) e o controlador da real; a boca do cano
+  vai para a da sucata. No corpo, o FBX do personagem só tem as reais: a `ArmasNovas.CopiasDeSucataNoCorpo` copia o
+  `Arma_<real>` (com a boca e a peça do corpo) e as peças que mexem, com o nome da de sucata, e o `NoCorpo` põe as malhas
+  `Malhas/TP_Sucata_*`. A malha solta é `Malhas/Arma_Sucata_*` (o chão, as costas, o cós). A sucata e as munições vêm do
+  `Art/Characters/Jogador/Loot_Sucata.fbx` (`Item_<modelo>_corpo`): `Malhas/Loot_Sucata`, `Mun_MunicaoPrego` e
+  `Mun_MunicaoParafuso` (os `Painel_*` desse FBX são da 2ª leva).
+- **Os ícones e as fotos** (`Art/UI/Icones/Icone_` e `Foto_` de `Sucata_Pistola`, `Sucata_Rifle`, `Sucata_Submetralhadora`,
+  `MunicaoPrego`, `MunicaoParafuso` e `Sucata`) saem da Unity, não do Blender: a `MontagemDaSucata.FazerIcones` fotografa
+  a malha numa cena de prévia, no fundo preto e no branco (a diferença dá a transparência), com o contorno claro dos de lá
+  (as armas de lado no ícone, a 128 px por célula; as fotos de três quartos, 600 × 500).
+- **A montagem** (menu Zombie City Cleaner > Armas > Montar as armas de sucata; `Editor/Armas/MontagemDaSucata.cs`): a
+  importação, as malhas, os ícones, o prefab do jogador (`MontagemDaRede.MontarPrefab`), o dos sobreviventes e as malhas
+  do "Itens no mundo" da cena Mundo (sem refazer os lugares). Nas cenas `MapaFixo`, `Demo_Cidade` e `Video`, as três malhas
+  e as duas munições foram postas à mão na lista (o resto delas já estava velho). A "Montar armas" também sabe delas: os
+  controladores da real (`ControladorFPDa`, `ControladorTPDa`, `ControladorTPDoPersonagem`) e o `Loot_Sucata.fbx` no
+  `JuntarLoot` e nas munições.
+- **No jogo:** as duas mãos (o rifle e a submetralhadora), o cós (a pistola), o som de tiro (o da real), o nome no HUD (o
+  rótulo ficou mais largo: "RIFLE DE PRECISÃO DE SUCATA · PARAFUSO" quebrava a linha).
+- **O F1:** na lista "Armas", as três e as duas munições; em "Materiais", a pólvora e a sucata; na aba "Habil.", Pistola
+  sucata, Rifle sucata, Submet. sucata, 20+20 munições, 20 sucatas e Materiais sucata (20 sucatas, 3 madeiras, 3 fitas e 3
+  pólvoras).
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7): os três nós (o `a2` pede a fileira 2), as cinco receitas na
+  mesa de oficina (longe dela, "Precisa de uma bancada perto"; sem o nó, "Precisa da habilidade"), cada arma na mão, o tiro
+  e a recarga gastando a munição certa (a 9mm intacta), a 9mm não servindo na de sucata e o prego não servindo na pistola
+  real, o dano acima e as três no chão. As fotos (a primeira pessoa parada, atirando e recarregando, e o corpo com a arma na
+  mão) ficaram no scratchpad da sessão. Falta o Pedro jogar e o teste com dois jogadores (o corpo dos outros e o som).
+
+## A sucata e as armas reais raras, 2ª leva (09/11/2026)
+
+A 2ª leva da etapa 1b (as decisões do Pedro: a sucata "encontrada em alguns itens de metais no chão, como alguns painéis de
+metal, ou desconstruindo algum material que possui metal"; as armas reais "super raras", só com os militares e "raríssimas"
+no saque; os civis com as de sucata; a loja de armas do Dia 0 virando a de caça e ferragens). Nenhuma cena mudou: os
+painéis são postos no Play, pelo código.
+
+- **Os painéis de metal** (`Mundo/Gerador/PaineisDeSucata.cs`, no assembly do Mundo): a chapa ondulada, a porta de carro
+  solta e a placa caída (`Painel_Chapa_corpo`, `Painel_Porta_corpo` e `Painel_Placa_corpo` do `Loot_Sucata.fbx`), sorteados
+  pela semente com um sorteio só deles (`"paineis-de-sucata"`), depois da beira das estradas: o resto do gerador e o
+  `Resumo` não mudam. `PaineisDeSucata.Do(dados)` faz a lista uma vez (na thread principal); o número de cada um é o índice
+  em `Todos`. Onde (as constantes no topo, para ajustar): `PorTrechoMin` e `PorTrechoMax` (1 a 2 por trecho de rua entre
+  duas esquinas, na beira do asfalto ou na calçada: uns 2 a 4 por quarteirão), `ChanceDoCarro` (0,12: ao lado do carro
+  abandonado), `ChanceDaGaragem` (0,25: atrás do carro da casa, na boca da garagem), `NoPosto` (1 a 3, dos lados do pátio),
+  `ChanceDaBarreira` (0,3: perto da barreira, do cavalete e dos sacos), `ChanceDoEstacionamento` (0,6) e `ChanceDoBaldio`
+  (0,35; o mapa não tem área industrial). Nada cai a menos do raio de um carro, poste, árvore da rua, placa, barreira ou
+  outro painel (`Livre`, numa grade de 8 m). **No Pequeno 7, 641** (323 no asfalto, 188 na calçada, 109 nas garagens, 21 na
+  terra; 274 chapas, 195 portas e 172 placas), em 14 ms; **no Médio 7, 1.961**, em 20 ms.
+- **Na cena** (`World/PaineisDoMundo.cs`, posto pelo `MundoDaPartida` no objeto dele, no Awake): os de até 90 m do jogador
+  local (revistos a cada 0,5 s; saem a 105 m), cada um com a malha, o material, uma caixa de pelo menos 12 cm de altura (a
+  mira) e o `PainelDeSucata` (o `Interagivel`). A altura é a do mapa (`AlturaDoChao`: a terra, o asfalto, a calçada ou a
+  garagem) e, assim que a colisão de baixo existe, um raio para baixo acerta o chão de verdade e deita o painel na
+  inclinação (até 30°). Os modelos vêm do `Resources/PaineisDeSucata.prefab` (as três malhas com o `Materials/Pistola.mat`,
+  a paleta dos itens), feito pelo menu **Zombie City Cleaner > Armas > Montar os painéis de sucata**
+  (`MontagemDaSucata.MontarPaineis`).
+- **Desmontar o painel** (`World/MundoDaPartida.Sucata.cs`): segurar o E por `SegundosDoPainel` (3 s, a barra embaixo da
+  mira, "Desmontando a chapa de metal"; as pancadas no metal repetem enquanto segura). O anfitrião confere (o painel existe,
+  não foi desmontado e quem pede está a até 4 m), dá de `SucataDoPainelMin` a `SucataDoPainelMax` (2 a 4) sucatas, mais 1
+  por ponto do Sucateiro (o que não cabe fica no chão), 1 de XP (`Habilidades.XpDoPainel`) e o barulho que chama os zumbis
+  até `RaioDoBarulhoDoPainel` (25 m, como o pé de cabra), e escreve "[Sucata] O painel N virou X sucatas" no log. Todos
+  ouvem o metal soltando e veem o painel sumir. A lista `_paineisDesmontados` (`NetworkList<int>`) vai no save do mundo
+  (`MundoSalvo.paineisDesmontados`; o `Salvamento` grava e restaura, como as árvores cortadas). Os do F1 ficam numa segunda
+  lista (`_paineisDeTeste`, `NetworkList<Vector4>`: o lugar, o giro e o modelo), de número `PrimeiroPainelDeTeste` (2^24)
+  em diante, e não vão no save. A `VersaoDaRede` foi para 14.
+- **Os sons** (`Combat/SomDaSucata.cs`, gerados como os das portas): `Batendo` (duas pancadas de chapa e o raspado),
+  `Soltando` (o fim: a pancada e os pedaços quicando) e `Desmontando` (a catraca dos parafusos, na mochila).
+- **Desmontar itens** (`Loot/Receitas.Desmontagens`; a tabela inteira está no `Docs/18-Habilidades.md`): a garrafa
+  térmica, a ferramenta, as peças de metal e o pé de cabra dão 2 sucatas; a faca, a lança e a vela, 1; o machado, 2 e uma
+  madeira; a bateria 2, o radiador e o macaco 3; as armas reais, de 3 a 5 e as peças de metal de antes (menos); as de
+  sucata, 4, 8 e 7. A munição, as pilhas, a lanterna, a gazua, os pregos e a comida não se desmontam; não existe lata vazia
+  nem panela como item. O que dá sucata leva `Receitas.SegundosDoMetal` (2 s) ou `SegundosDoMetalGrande` (3,5 s: as armas
+  e as de 3 sucatas ou mais), com a barra no rodapé da mochila (`InventarioJogador.Sucata.cs`: `Desmontando`,
+  `ProgressoDoDesmontar`; só no dono; fechar a mochila, largar ou perder o item interrompe); o resto (desfiar a roupa, rachar
+  a tora) continua na hora. O Sucateiro entra no anfitrião (`Receitas.ComBonus`, no `DesmontarRpc`) e no texto do menu e
+  dos detalhes.
+- **O Sucateiro** (`k1`) deixou de ser "em breve": +1 sucata por ponto nos painéis e nos itens. O Faz-tudo (`k2`) pede o
+  Sucateiro; um save com o Faz-tudo e sem o Sucateiro continua com ele (o `DefinirProgresso` não confere os pedidos), e o
+  ponto pode sair (`PodeTirar`).
+- **O saque** (`Mundo/Saque/CatalogoDoSaque.cs`, `SaqueDaObra.cs`): a sucata entrou incomum, com as ferramentas (a bancada,
+  as prateleiras e as estantes do porão e do depósito), de 1 a 3 (o `ItensDoSaque.cs` ganhou a sucata e as duas munições
+  pelo "Itens > Escrever os itens do saque"). As armas de fogo reais (a espécie ArmaCurta ou ArmaLonga) e a munição real
+  ficam com `FatorDasArmasReais` (0,1) e `FatorDaMunicaoReal` (0,35) da chance: quando o sorteio cai numa delas, um sorteio
+  à parte (pelo lugar, e não o de sempre: o resto do saque não muda) decide se fica; senão, vira outro item que cabe no
+  lugar, da raridade de baixo (na mesma, a arma lendária virava quase sempre a visão noturna). **No Médio 7** (3.265 casas,
+  lojas e andares de prédio, 50,6 mil itens): as armas reais foram de 2.084 (4,12%) para 222 (0,44%) e, só nas gavetas (6,4
+  mil itens), de 683 para 80; a munição real, de 1.286 para 457; a sucata, 35. O Sortudo continua sem as armas. Os
+  militares e a base militar (que não usa o saque das obras) continuam como estavam.
+- **Os civis** (`SobreviventesDoMundo.ArmaDoCivil`, no `SortearArma`, no `AcampamentosDoMundo.Pessoas` e no
+  `CarrosQuebradosDoMundo`): a pistola vira a de sucata, a submetralhadora a de sucata e as longas (o rifle e a espingarda)
+  o rifle de sucata; os sorteios são os de antes. No `Encher` dos civis, a caixa é a do calibre (prego ou parafuso), 25%
+  levam de 1 a 3 sucatas (`ChanceDeSucataDoCivil`) e, com o pente curto (a pistola de um tiro, o rifle de três), uma
+  reserva de 4 a 9 (`ReservaDoCivilMin` e `Max`; não fica no saque). Quem ajuda no carro quebrado sem arma ganha a caixa de
+  prego. **Os comerciantes** (`PrecosDosSobreviventes`): as de sucata, as duas munições e a sucata entraram no fim das listas
+  (o save guarda o estoque pelo índice; o `CompletarOEstoque` dá a linha nova aos saves de antes). As reais ficam na lista (o
+  comerciante ainda compra), mas `SoCompra`: nenhuma no começo (a munição real, uma caixa em 25%) e sem reposição. Os preços
+  das reais, que vinham da loja de armas do Dia 0, foram para o `_semPrecoNoDia` (a pistola continua $ 540).
+- **A loja do Dia 0** (`DiaZero/PrecosDoDiaZero.cs`): a `LojaDoDia.Armas` virou "Caça e ferragens" (a placa "CAÇA E
+  FERRAGENS"; o prédio é o da loja de armas, e o atendente um civil): a faca 40, o machado 45, o bastão 20, a vara 35, a isca
+  5, a pólvora 14 (no máximo 5), a sucata "pregos e parafusos" 3 (no máximo 24), a lanterna 25 e as pilhas 8.
+- **O HUD** (`DadosDaArma.nomeNoHud`): o rifle de precisão de sucata aparece como "RIFLE DE SUCATA · PARAFUSO" no canto; o
+  nome inteiro fica no inventário.
+- **O F1** (a aba "Habil."): "Painel na frente" (um de teste a 1,3 m, um modelo de cada vez), "Itens desmontar" e "Ir a um
+  painel" (o do mapa mais perto).
+- **Testado** no Editor: os testes do saque, das lojas e dos moradores passam. No Play pelo MCP (o Pequeno, semente 7): o
+  painel da calçada no chão, o E segurado com a barra, 4 sucatas, o barulho, o painel sumindo e a lista; o Faz-tudo pedindo o
+  Sucateiro, o Sucateiro com 3 pontos (o painel do F1 deu 7) e o save de antes com o Faz-tudo; a garrafa térmica (5 com o
+  Sucateiro), o radiador (6) e a pistola quebrada (6 e uma peça de metal) com a barra, e fechar a mochila interrompendo; 4
+  grupos de civis (24: 12 pistolas e 4 submetralhadoras de sucata, 8 brancas, nenhuma real e nenhuma munição real); os
+  comerciantes sem arma real; o HUD do rifle; o save com o painel e, numa segunda partida com o mundo salvo, o painel
+  continuando desmontado (e o do F1 não voltando); a loja do Dia 0 (os 9 produtos nas prateleiras, a placa, uma compra de
+  $ 65 e as compras nas estantes do bunker). Falta o Pedro jogar e o teste com dois jogadores (o painel sumindo na outra
+  máquina).
 
 ## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
 

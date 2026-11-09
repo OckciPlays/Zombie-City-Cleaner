@@ -12,7 +12,9 @@ namespace ZombieCityCleaner.UI
     ///    (o alfinete com um texto de até 40 letras: escrever antes de escolher a cor);
     ///  - o clique numa marca (sem arrastar) abre a dela: mudar o texto e a cor, ou apagar;
     ///  - passando o mouse numa anotação, o texto aparece.
-    /// As marcas são de todos (na rede) e vão no save do mundo; os pings, com o nome de quem marcou.
+    /// As marcas são de todos (na rede) e vão no save do mundo; os pings, com o nome de quem marcou. A marca e a anotação
+    /// também aparecem no mundo, como o ping, mas sem sumir (08/11/2026, a pedido: "deveria aparecer como um ping para se
+    /// localizar mais fácil, sem precisar ficar abrindo o mapa"; o desenho fica no <see cref="MinimapaDoMundo"/>).
     /// </summary>
     public partial class MapaDoMundo
     {

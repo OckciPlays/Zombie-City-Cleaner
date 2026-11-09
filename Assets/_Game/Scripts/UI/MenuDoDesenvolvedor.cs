@@ -43,6 +43,8 @@ namespace ZombieCityCleaner.UI
             {
                 Item.Pistola, Item.Rifle, Item.Submetralhadora, Item.Espingarda, Item.Sniper, Item.Faca, Item.Machado,
                 Item.Bastao, Item.Lanca, Item.Tocha, Item.Municao9mm, Item.Municao556, Item.Municao12, Item.Municao762,
+                // as de sucata (09/11/2026)
+                Item.PistolaSucata, Item.RifleSucata, Item.SubmetralhadoraSucata, Item.MunicaoPrego, Item.MunicaoParafuso,
             }),
             ("Comida", new[]
             {
@@ -58,6 +60,7 @@ namespace ZombieCityCleaner.UI
             {
                 Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
                 Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas, Item.Galao,
+                Item.Polvora, Item.Sucata,
             }),
             ("Outros", new[]
             {

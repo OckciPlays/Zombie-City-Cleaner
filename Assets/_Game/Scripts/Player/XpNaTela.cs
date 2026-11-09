@@ -26,6 +26,7 @@ namespace ZombieCityCleaner.Player
         float _nivelAte;
         string _aprendeu;
         float _aprendeuAte;
+        bool _avisouAArvore;
         GUIStyle _estilo, _grande;
         float _u;
 
@@ -61,9 +62,9 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        void AoAprender(Habilidade h)
+        void AoAprender(Habilidade h, int pontos)
         {
-            _aprendeu = $"Aprendeu: {Habilidades.Nome(h)}";
+            _aprendeu = $"Aprendeu: {Habilidades.Nome(h)} ({pontos}/{Habilidades.Maximo(h)})";
             _aprendeuAte = Time.unscaledTime + 2.5f;
         }
 
@@ -73,6 +74,14 @@ namespace ZombieCityCleaner.Player
             if (MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
             float agora = Time.unscaledTime;
             _linhas.RemoveAll(l => l.ate <= agora);
+            // a árvore nova (09/11/2026): num save da velha, os pontos voltaram; avisa uma vez ao entrar (e a aba K também)
+            var local = JogadorRede.Local != null ? JogadorRede.Local.Inventario : null;
+            if (!_avisouAArvore && local != null && local.IsSpawned && local.Progresso.Value.avisoDaArvore)
+            {
+                _avisouAArvore = true;
+                _aprendeu = Habilidades.AvisoDaArvore + " (K)";
+                _aprendeuAte = agora + 7f;
+            }
             bool algo = _linhas.Count > 0 || _nivelAte > agora || _aprendeuAte > agora;
             if (!algo) return;
             float u = Screen.height / 720f;
@@ -94,7 +103,7 @@ namespace ZombieCityCleaner.Player
             if (_aprendeuAte > agora)
             {
                 float a = Mathf.Clamp01((_aprendeuAte - agora) / Some);
-                Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u), _aprendeu, _estilo, new Color(0.55f, 0.9f, 0.55f, a));
+                Texto(new Rect(cx - 450 * u, y, 900 * u, 24 * u), _aprendeu, _estilo, new Color(0.55f, 0.9f, 0.55f, a));
                 y += 24 * u;
             }
             foreach (var l in _linhas)

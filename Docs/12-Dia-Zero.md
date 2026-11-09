@@ -33,8 +33,8 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   depois da porta (antes, ela entrava uns segundos depois de nascer, bem no começo do jornal).
 - **A rua é liberada** quando todos acabaram de ver (ou pularam) o jornal. Depois disso, E na TV mostra o jornal de novo,
   só para quem apertou. O F1 tem "Liberar a rua (sem a TV)".
-- **A rua:** 10 casas (a nossa é a segunda do lado norte), o mercado, a farmácia, a loja de armas, a de ferragens e
-  autopeças, a de roupas e o posto no fim. As pontas estão fechadas pela obra (o jogador não sai da rua; os carros passam).
+- **A rua:** 10 casas (a nossa é a segunda do lado norte), o mercado, a farmácia, a de caça e ferragens (era a loja de
+  armas até 09/11/2026), a de ferragens e autopeças, a de roupas e o posto no fim. As pontas estão fechadas pela obra (o jogador não sai da rua; os carros passam).
 - **O dia** fica parado às 10h30, com sol e cores vivas (o mundo do apocalipse continua com a neblina pesada). A fome e a
   sede não descem no Dia 0. Ninguém começa com a pistola: só o que for comprado.
 
@@ -50,8 +50,14 @@ Os detalhes técnicos estão no [`CLAUDE.md`](../CLAUDE.md) da raiz, na seção 
   ($ 100) em dois andares (E põe no carrinho).
 - **No canto da tela:** o dinheiro, quantas compras já estão em casa e o carrinho da loja.
 - **Os preços** (em dólares) estão em `Scripts/DiaZero/PrecosDoDiaZero.cs`. Exemplos: lata de comida 3, água 2, kit
-  médico 45, pistola 450, espingarda 400, submetralhadora 650 (mais barata que o rifle: ela é pior), rifle 850, sniper
-  1.000, caixa de munição 20 a 30, pneu 90, galão com gasolina 32, colete tático 180, máscara de gás 120.
+  médico 45, pneu 90, galão com gasolina 32, colete tático 180, máscara de gás 120.
+- **A loja de caça e ferragens** (09/11/2026, a 2ª leva da sucata; a proposta aceita pelo Pedro): era a loja de armas. As
+  armas de fogo reais ficaram super raras no mundo (só com os militares e, raríssimas, no saque), então ela não vende mais
+  a pistola, a espingarda, a submetralhadora, o rifle, a sniper, as caixas de munição nem o coldre. Vende a faca ($ 40), o
+  machado ($ 45), o bastão com pregos ($ 20), a vara de pesca ($ 35), a isca ($ 5), a pólvora ($ 14, no máximo 5 por
+  jogador), a sucata ("pregos e parafusos", $ 3 cada, no máximo 24), a lanterna ($ 25) e o par de pilhas ($ 8). A placa
+  diz "CAÇA E FERRAGENS"; o prédio continua o da loja de armas (as grades e o depósito atrás da porta de aço) e o atendente
+  é um civil, e não mais um policial. A pólvora e a sucata são para o Armeiro de sucata (as armas de sucata).
 - **O dinheiro que sobra** fica guardado (para os acampamentos, mais para a frente); por enquanto não aparece depois.
 
 ## A porta do abrigo

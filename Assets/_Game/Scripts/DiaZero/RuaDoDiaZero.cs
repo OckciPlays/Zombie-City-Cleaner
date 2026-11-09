@@ -34,8 +34,8 @@ namespace ZombieCityCleaner.DiaZero
     /// por cima da cena do mundo quando um jogo novo começa (<see cref="DiaZeroDaPartida"/>):
     ///  - do lado norte, as casas dos vizinhos e a nossa casa (a casa da família, a mesma do mundo de 5 anos depois:
     ///    <see cref="PlantasDeCasa.DaFamilia(Medidas)"/>), e a porta do abrigo dentro dela (no fim do corredor);
-    ///  - do lado sul, mais casas; depois, o comércio: o mercado e a farmácia (norte), a loja de armas, a de ferragens e a de
-    ///    roupas (sul) e o posto no fim;
+    ///  - do lado sul, mais casas; depois, o comércio: o mercado e a farmácia (norte), a de caça e ferragens (a loja de armas
+    ///    até 09/11/2026: o prédio é o dela), a de ferragens e a de roupas (sul) e o posto no fim;
     ///  - tudo novo: sem o abandono (o material da cidade), sem as tábuas nas janelas e sem as manchas (<see cref="Obra.nova"/>);
     ///  - as pontas fechadas (a obra na rua, as cercas atrás dos quintais e as paredes invisíveis).
     /// Os produtos, os caixas e os atendentes de cada loja ficam na <see cref="LojaDoDiaZero"/>; os NPCs, no
@@ -750,7 +750,7 @@ namespace ZombieCityCleaner.DiaZero
                 for (int i = 0; i < loja.Atendentes.Count; i++)
                 {
                     var (p, g) = loja.Atendentes[i];
-                    var l = Lugar(Rotina.Atendente, p, g, loja.Tipo == LojaDoDia.Farmacia ? "Médico" : loja.Tipo == LojaDoDia.Armas ? "Policial" : "Civil");
+                    var l = Lugar(Rotina.Atendente, p, g, loja.Tipo == LojaDoDia.Farmacia ? "Médico" : "Civil");   // (a de caça e ferragens, desde 09/11/2026: o civil, e não mais o policial)
                     l.loja = loja;
                 }
                 if (loja.Tipo == LojaDoDia.Mercado && loja.Corredor.Length > 1)

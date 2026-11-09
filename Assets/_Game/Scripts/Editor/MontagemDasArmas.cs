@@ -38,6 +38,11 @@ namespace ZombieCityCleaner.EditorTools
         const string FbxSinuca = Arte + "/Sinuca.fbx";
         /// <summary>O saque (31/10/2026): a comida, a bebida, os remédios, os materiais e os kits (Blender/loot.py).</summary>
         internal const string FbxLoot = Arte + "/Loot.fbx";
+        /// <summary>
+        /// A sucata e as munições de sucata (09/11/2026, o Blender/sucata_itens.py): Item_&lt;modelo&gt;_corpo, no formato do
+        /// Loot.fbx (os Painel_* são da 2ª leva).
+        /// </summary>
+        internal const string FbxLootSucata = Arte + "/Loot_Sucata.fbx";
         const string PastaIcones = "Assets/_Game/Art/UI/Icones";
         internal const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
@@ -65,8 +70,17 @@ namespace ZombieCityCleaner.EditorTools
         public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ArquivoFP(modelo)}.fbx";
         /// <summary>A malha avulsa de um modelo: Arma_&lt;nome&gt; ou Item_&lt;nome&gt; (origem onde a mão segura, topo em +Y).</summary>
         public static string MalhaDo(int modelo) => $"{Malhas}/{(modelo < Armas.Quantas ? "Arma" : "Item")}_{Itens.Modelos[modelo]}.asset";
-        public static string ControladorFPDa(int modelo) => modelo == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.overrideController";
-        public static string ControladorTPDa(int arma) => arma == 0 ? ControladorTP : $"{Arte}/Jogador_TP_{Armas.Modelos[arma]}.overrideController";
+        // (as armas de sucata, 09/11/2026, usam os controladores da real)
+        public static string ControladorFPDa(int modelo)
+        {
+            if (modelo >= 0 && modelo < Armas.Quantas) modelo = (int)Armas.Real((TipoDeArma)modelo);
+            return modelo == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.overrideController";
+        }
+        public static string ControladorTPDa(int arma)
+        {
+            arma = (int)Armas.Real((TipoDeArma)arma);
+            return arma == 0 ? ControladorTP : $"{Arte}/Jogador_TP_{Armas.Modelos[arma]}.overrideController";
+        }
         /// <summary>O corpo com a mão vazia (a guarda e o soco) ou com comida e água na mão.</summary>
         public static string ControladorTPDasMaos => $"{Arte}/Jogador_TP_Maos.overrideController";
         /// <summary>O ícone do inventário, colorido, na proporção das células do item (renderizado no Blender pelo itens.py).</summary>
@@ -102,10 +116,32 @@ namespace ZombieCityCleaner.EditorTools
             var nomes = AssetDatabase.LoadAllAssetsAtPath(FbxLoot).OfType<Mesh>().Select(m => m.name).ToList();
             for (int k = 0; k < Itens.QuantosLoots; k++)
                 if (nomes.Any(n => n.StartsWith(Itens.ModeloDoLoot(k) + "_"))) Juntar(FbxLoot, Itens.ModeloDoLoot(k) + "_", MalhaDoLoot(k));
-                else Debug.LogWarning($"O {Itens.ModeloDoLoot(k)} não está no Loot.fbx (rode o Blender/loot.py).");
+                else if (!JuntarDaSucata(Itens.ModeloDoLoot(k), MalhaDoLoot(k)))
+                    Debug.LogWarning($"O {Itens.ModeloDoLoot(k)} não está no Loot.fbx (rode o Blender/loot.py).");
             MontagemDoSaque.JuntarMontadas();
             MontagemDoFumo.JuntarBituca();
         }
+        /// <summary>
+        /// O item da sucata (09/11/2026) do <see cref="FbxLootSucata"/> (Item_&lt;modelo&gt;_*) numa malha só; false se ele
+        /// não está lá.
+        /// </summary>
+        internal static bool JuntarDaSucata(string modelo, string caminho)
+        {
+            if (!File.Exists(FbxLootSucata)) return false;
+            string prefixo = $"Item_{modelo}_";
+            if (!AssetDatabase.LoadAllAssetsAtPath(FbxLootSucata).OfType<Mesh>().Any(m => m.name.StartsWith(prefixo))) return false;
+            Juntar(FbxLootSucata, prefixo, caminho);
+            return true;
+        }
+
+        /// <summary>A caixa de munição: do Municao.fbx, ou a de sucata (a lata e a caixinha) do Loot_Sucata.fbx.</summary>
+        internal static void JuntarMunicao(int k)
+        {
+            string prefixo = Itens.ModeloDaMunicao(k) + "_";
+            if (AssetDatabase.LoadAllAssetsAtPath(FbxMunicao).OfType<Mesh>().Any(m => m.name.StartsWith(prefixo))) Juntar(FbxMunicao, prefixo, MalhaDaMunicao(k));
+            else if (!JuntarDaSucata(Itens.ModeloDaMunicao(k), MalhaDaMunicao(k))) Debug.LogWarning($"A {Itens.ModeloDaMunicao(k)} não tem modelo.");
+        }
+
         /// <summary>As armas novas trazem as peças avulsas num FBX próprio (Armas_Sniper.fbx), fora do Armas.fbx.</summary>
         static string FbxAvulsaDa(int arma) => $"{Arte}/Armas_{Armas.Modelos[arma]}.fbx";
         /// <summary>Os itens novos também (Itens_Faca.fbx, do Blender/Armas/faca.py), fora do Itens.fbx.</summary>
@@ -128,7 +164,8 @@ namespace ZombieCityCleaner.EditorTools
         /// <summary>A máscara da camada de cima: o peito e tudo o que sai dele (o pescoço, a cabeça, os braços e a arma).</summary>
         static string MascaraDoTronco(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Tronco.mask";
         /// <summary>O controlador do corpo do personagem com a arma (o override do controlador do corpo).</summary>
-        public static string ControladorTPDoPersonagem(int p, int arma) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Armas.Modelos[arma]}.overrideController";
+        public static string ControladorTPDoPersonagem(int p, int arma) =>
+            $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_{Armas.Modelos[(int)Armas.Real((TipoDeArma)arma)]}.overrideController";
         /// <summary>O corpo do personagem com a mão vazia (a guarda e o soco).</summary>
         public static string ControladorTPDasMaosDoPersonagem(int p) => $"{ArtePersonagens}/Personagem_{Personagens.Modelos[p]}_Maos.overrideController";
         /// <summary>O corpo do personagem com a lata ou a garrafa na mão (segurar e, no lugar do tiro, comer ou beber).</summary>
@@ -151,6 +188,13 @@ namespace ZombieCityCleaner.EditorTools
                                                                "Conversa", "Chorar" };
         /// <summary>Os clipes da camada de cima no controlador do corpo (os da pistola); os override trocam cada um.</summary>
         static readonly string[] CamadaDeCima = { "Pistola_Segurar", "Pistola_Mirar", "Pistola_Atirar", "Pistola_Recarregar" };
+        /// <summary>
+        /// As armas brancas no corpo (09/11/2026): o FBX do Blender/brancas_corpo.py (só o esqueleto do corpo, com o osso
+        /// "arma" a mais, e os clipes &lt;Arma&gt;_Segurar e &lt;Arma&gt;_Golpe) e a pasta das cópias dos clipes, que os
+        /// override usam (<see cref="CopiarAsBrancasDoCorpo"/>).
+        /// </summary>
+        public const string FbxDasBrancas = ArtePersonagens + "/Personagem_PrincipalBloco_Brancas.fbx";
+        const string PastaDasBrancas = ArtePersonagens + "/Brancas";
 
         [MenuItem("Zombie City Cleaner/Montar armas")]
         public static void Montar()
@@ -253,7 +297,7 @@ namespace ZombieCityCleaner.EditorTools
             ImportarArmas();
             for (int i = 0; i < Itens.QuantosModelos; i++) MontarMalha(i);
             for (int k = 0; k < Itens.QuantosEquipamentos; k++) Juntar(FbxEquipamentos, Itens.ModeloDoEquipamento(k) + "_", MalhaDoEquipamento(k));
-            for (int k = 0; k < Itens.QuantasMunicoes; k++) Juntar(FbxMunicao, Itens.ModeloDaMunicao(k) + "_", MalhaDaMunicao(k));
+            for (int k = 0; k < Itens.QuantasMunicoes; k++) JuntarMunicao(k);
             for (int k = 0; k < Itens.QuantasPecas; k++) Juntar(FbxPecas, Itens.ModeloDaPeca(k) + "_", MalhaDaPeca(k));
             for (int k = 0; k < Itens.QuantosDaSinuca; k++) Juntar(FbxSinuca, Itens.ModeloDaSinuca(k) + "_", MalhaDaSinuca(k));
             JuntarLoot();
@@ -276,6 +320,8 @@ namespace ZombieCityCleaner.EditorTools
             PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
             {
+                // as de sucata (09/11/2026) usam os controladores da real (ControladorFPDa e ControladorTPDa)
+                if (i < Armas.Quantas && Armas.DeSucata((TipoDeArma)i)) continue;
                 if (Itens.ModeloBranco(i))
                 {
                     // as armas brancas (31/10/2026, o básico): os braços dos punhos com ela na mão; no lugar do tiro, o golpe
@@ -313,11 +359,13 @@ namespace ZombieCityCleaner.EditorTools
         /// Os personagens: a importação (os clipes com os nomes das faixas de NLA do Blender), o material com a textura, o
         /// controlador do corpo (<see cref="MontarControladorDoCorpo"/>) e os override dele: cada arma (segurar, mirar e
         /// atirar, a da sniper com o ferrolho), os punhos (a guarda e o soco direito), os itens (segurar e, no lugar do
-        /// tiro, comer ou beber) e o taco de sinuca (só segurar).
+        /// tiro, comer ou beber; as armas brancas, segurar e golpear: <see cref="MontarOverrideDaBranca"/>) e o taco de
+        /// sinuca (só segurar).
         /// </summary>
         public static void PrepararPersonagens()
         {
             Directory.CreateDirectory(ArtePersonagens + "/Materials");
+            PrepararAsBrancasDoCorpo();
             for (int p = 0; p < Personagens.Quantos; p++)
             {
                 ImportarPersonagem(p, MaterialDoCorpo(p));
@@ -327,6 +375,7 @@ namespace ZombieCityCleaner.EditorTools
                 string Qual(string c) => c.Substring("Pistola_".Length);
                 for (int i = 0; i < Armas.Quantas; i++)
                 {
+                    if (Armas.DeSucata((TipoDeArma)i)) continue;   // (a de sucata usa o da real: ControladorTPDoPersonagem)
                     string arma = Armas.Modelos[i];
                     MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => $"{arma}_{Qual(c)}", ControladorTPDoPersonagem(p, i));
                 }
@@ -334,9 +383,9 @@ namespace ZombieCityCleaner.EditorTools
                 for (int i = Armas.Quantas; i < Itens.QuantosModelos; i++)
                 {
                     string item = Itens.Modelos[i];
-                    // a faca: a guarda dos punhos e o soco direito (o corpo não tem clipes dela)
+                    // as armas brancas: o segurar e o golpe delas (09/11/2026; antes, a guarda dos punhos e o soco direito)
                     if (Itens.ModeloBranco(i))
-                        MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? "Maos_SocoDireito" : "Maos_Guarda", ControladorTPDoItemDoPersonagem(p, i));
+                        MontarOverrideDaBranca(p, i);
                     else
                         MontarOverride(corpo, fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? $"{item}_Usar" : $"{item}_Segurar", ControladorTPDoItemDoPersonagem(p, i));
                 }
@@ -347,6 +396,162 @@ namespace ZombieCityCleaner.EditorTools
                                c => Qual(c) == "Atirar" ? "Cigarro_Tragar" : Qual(c) == "Recarregar" ? "Cigarro_Peteleco" : "Cigarro_Segurar", ControladorTPDoCigarroDoPersonagem(p));
             }
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// As armas brancas no corpo (09/11/2026, pode rodar de novo): a importação e a cópia dos clipes do
+        /// <see cref="FbxDasBrancas"/>, os override do corpo com elas e o prefab do jogador e o dos sobreviventes (a arma presa
+        /// na mão: <see cref="MontagemDaRede.PegadaNaMao"/>), sem refazer o controlador do corpo. Menu: Zombie City Cleaner >
+        /// Jogador > Montar as armas brancas no corpo.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Jogador/Montar as armas brancas no corpo")]
+        public static void MontarAsBrancasNoCorpo()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de montar as armas brancas no corpo.");
+                return;
+            }
+            if (!PrepararAsBrancasDoCorpo()) return;
+            for (int p = 0; p < Personagens.Quantos; p++)
+                for (int i = Armas.Quantas; i < Itens.QuantosModelos; i++)
+                    if (Itens.ModeloBranco(i)) MontarOverrideDaBranca(p, i);
+            AssetDatabase.SaveAssets();
+            MontagemDaRede.MontarPrefab();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset("Assets/_Game/Prefabs/Jogador.prefab", ImportAssetOptions.ForceUpdate);
+            MontagemDosSobreviventes.MontarPrefab();
+            AssetDatabase.SaveAssets();
+            Debug.Log("As armas brancas no corpo montadas: os clipes, os override e os prefabs do jogador e dos sobreviventes.");
+        }
+
+        /// <summary>A importação e a cópia dos clipes das armas brancas do corpo, se o FBX delas já existe.</summary>
+        static bool PrepararAsBrancasDoCorpo()
+        {
+            if (!File.Exists(FbxDasBrancas))
+            {
+                Debug.LogWarning($"Falta {FbxDasBrancas} (rode o Blender/brancas_corpo.py): as armas brancas ficam na guarda dos punhos.");
+                return false;
+            }
+            var imp = Importador(FbxDasBrancas);
+            imp.animationType = ModelImporterAnimationType.Generic;
+            imp.avatarSetup = ModelImporterAvatarSetup.NoAvatar;
+            imp.bakeAxisConversion = false;
+            imp.importAnimation = true;
+            imp.materialImportMode = ModelImporterMaterialImportMode.None;
+            ErroPequeno(imp);
+            imp.SaveAndReimport();
+            imp.clipAnimations = Clipes(imp, t => t, n => n.EndsWith("_Segurar"));
+            imp.SaveAndReimport();
+            CopiarAsBrancasDoCorpo();
+            return true;
+        }
+
+        /// <summary>
+        /// Os clipes das armas brancas, copiados para a pasta Brancas com os caminhos a partir da raiz do personagem (como os da
+        /// vara: o FBX só tem o esqueleto, e a Unity faz dele a raiz). As curvas do osso "arma" (que o corpo não tem) ficam de
+        /// fora: a arma vai fixa no hand.R (<see cref="MontagemDaRede.PegadaNaMao"/>). A camada dos braços só pega do chest para
+        /// cima, e o Blender gira também o spine (até 25° nos golpes do machado e do bastão): esse giro passa para o chest,
+        /// quadro a quadro, e o spine fica no repouso, para o peito, os braços e a arma ficarem onde o Blender pôs.
+        /// </summary>
+        static void CopiarAsBrancasDoCorpo()
+        {
+            const string Rig = "PrincipalBloco_Rig";
+            if (!AssetDatabase.IsValidFolder(PastaDasBrancas)) AssetDatabase.CreateFolder(ArtePersonagens, "Brancas");
+            var repouso = AssetDatabase.LoadAssetAtPath<GameObject>(FbxDoPersonagem(0)).GetComponentsInChildren<Transform>(true).First(t => t.name == "spine");
+            Vector3 pS0 = repouso.localPosition;
+            Quaternion qS0 = repouso.localRotation;
+            string[] eixosP = { "x", "y", "z" }, eixosQ = { "x", "y", "z", "w" };
+            foreach (var fonte in AssetDatabase.LoadAllAssetsAtPath(FbxDasBrancas).OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview__")))
+            {
+                string caminho = $"{PastaDasBrancas}/{fonte.name}.anim";
+                var copia = AssetDatabase.LoadAssetAtPath<AnimationClip>(caminho);
+                bool nova = copia == null;
+                if (nova) copia = new AnimationClip { name = fonte.name };
+                else copia.ClearCurves();
+                copia.frameRate = fonte.frameRate;
+                var ligacoes = AnimationUtility.GetCurveBindings(fonte);
+                string spine = ligacoes.Select(b => b.path).First(c => c == "root/hips/spine" || c.EndsWith("/spine"));
+                string chest = spine + "/chest";
+                AnimationCurve Curva(string osso, string propriedade) =>
+                    AnimationUtility.GetEditorCurve(fonte, EditorCurveBinding.FloatCurve(osso, typeof(Transform), propriedade));
+                bool Trocada(EditorCurveBinding b) =>
+                    (b.path == spine && b.propertyName.StartsWith("m_LocalRotation")) ||
+                    (b.path == chest && (b.propertyName.StartsWith("m_LocalRotation") || b.propertyName.StartsWith("m_LocalPosition")));
+                foreach (var b in ligacoes)
+                {
+                    if (b.path == "arma" || b.path.EndsWith("/arma") || b.path.Contains("/arma/") || Trocada(b)) continue;
+                    var novo = b;
+                    novo.path = string.IsNullOrEmpty(b.path) ? Rig : Rig + "/" + b.path;
+                    AnimationUtility.SetEditorCurve(copia, novo, AnimationUtility.GetEditorCurve(fonte, b));
+                }
+                // o chest com o giro do spine (S0⁻¹·S·C, com o spine parado no lugar), e o spine no repouso
+                var qS = eixosQ.Select(e => Curva(spine, "m_LocalRotation." + e)).ToArray();
+                var pS = eixosP.Select(e => Curva(spine, "m_LocalPosition." + e)).ToArray();
+                var qC = eixosQ.Select(e => Curva(chest, "m_LocalRotation." + e)).ToArray();
+                var pC = eixosP.Select(e => Curva(chest, "m_LocalPosition." + e)).ToArray();
+                int quadros = Mathf.RoundToInt(fonte.length * fonte.frameRate);
+                var chaveQ = eixosQ.Select(_ => new Keyframe[quadros + 1]).ToArray();
+                var chaveP = eixosP.Select(_ => new Keyframe[quadros + 1]).ToArray();
+                Quaternion antes = Quaternion.identity;
+                for (int k = 0; k <= quadros; k++)
+                {
+                    float t = Mathf.Min(fonte.length, k / fonte.frameRate);
+                    var s = new Quaternion(qS[0].Evaluate(t), qS[1].Evaluate(t), qS[2].Evaluate(t), qS[3].Evaluate(t));
+                    var c = new Quaternion(qC[0].Evaluate(t), qC[1].Evaluate(t), qC[2].Evaluate(t), qC[3].Evaluate(t));
+                    var ps = new Vector3(pS[0].Evaluate(t), pS[1].Evaluate(t), pS[2].Evaluate(t));
+                    var pc = new Vector3(pC[0].Evaluate(t), pC[1].Evaluate(t), pC[2].Evaluate(t));
+                    var q = Quaternion.Normalize(Quaternion.Inverse(qS0) * Quaternion.Normalize(s) * Quaternion.Normalize(c));
+                    if (k > 0 && Quaternion.Dot(q, antes) < 0f) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+                    antes = q;
+                    var p = Quaternion.Inverse(qS0) * (Quaternion.Normalize(s) * pc + ps - pS0);
+                    for (int e = 0; e < 4; e++) chaveQ[e][k] = new Keyframe(t, q[e]);
+                    for (int e = 0; e < 3; e++) chaveP[e][k] = new Keyframe(t, p[e]);
+                }
+                AnimationCurve Suave(Keyframe[] chaves)
+                {
+                    var curva = new AnimationCurve(chaves);
+                    for (int i = 0; i < chaves.Length; i++)
+                    {
+                        AnimationUtility.SetKeyLeftTangentMode(curva, i, AnimationUtility.TangentMode.ClampedAuto);
+                        AnimationUtility.SetKeyRightTangentMode(curva, i, AnimationUtility.TangentMode.ClampedAuto);
+                    }
+                    return curva;
+                }
+                for (int e = 0; e < 4; e++)
+                {
+                    AnimationUtility.SetEditorCurve(copia, EditorCurveBinding.FloatCurve($"{Rig}/{chest}", typeof(Transform), "m_LocalRotation." + eixosQ[e]), Suave(chaveQ[e]));
+                    AnimationUtility.SetEditorCurve(copia, EditorCurveBinding.FloatCurve($"{Rig}/{spine}", typeof(Transform), "m_LocalRotation." + eixosQ[e]),
+                                                    AnimationCurve.Constant(0f, fonte.length, qS0[e]));
+                }
+                for (int e = 0; e < 3; e++)
+                    AnimationUtility.SetEditorCurve(copia, EditorCurveBinding.FloatCurve($"{Rig}/{chest}", typeof(Transform), "m_LocalPosition." + eixosP[e]), Suave(chaveP[e]));
+                var ajustes = AnimationUtility.GetAnimationClipSettings(copia);
+                ajustes.loopTime = fonte.name.EndsWith("_Segurar");
+                AnimationUtility.SetAnimationClipSettings(copia, ajustes);
+                if (nova) AssetDatabase.CreateAsset(copia, caminho);
+                else EditorUtility.SetDirty(copia);
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// O controlador do corpo com uma arma branca: o &lt;Arma&gt;_Segurar no segurar, no mirar e na recarga, e o
+        /// &lt;Arma&gt;_Golpe no tiro (o "Fire"), os clipes da pasta Brancas. Sem eles, a guarda dos punhos e o soco direito.
+        /// </summary>
+        static void MontarOverrideDaBranca(int p, int modelo)
+        {
+            string fbx = FbxDoPersonagem(p), item = Itens.Modelos[modelo];
+            string Qual(string c) => c.Substring("Pistola_".Length);
+            var segurar = AssetDatabase.LoadAssetAtPath<AnimationClip>($"{PastaDasBrancas}/{item}_Segurar.anim");
+            var golpe = AssetDatabase.LoadAssetAtPath<AnimationClip>($"{PastaDasBrancas}/{item}_Golpe.anim");
+            if (segurar != null && golpe != null)
+                MontarOverride(ControladorDoCorpo(p), fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? golpe : segurar, ControladorTPDoItemDoPersonagem(p, modelo));
+            else
+            {
+                Debug.LogWarning($"Os clipes de {item} no corpo não estão em {PastaDasBrancas}: a guarda dos punhos e o soco direito.");
+                MontarOverride(ControladorDoCorpo(p), fbx, fbx, CamadaDeCima, c => Qual(c) == "Atirar" ? "Maos_SocoDireito" : "Maos_Guarda", ControladorTPDoItemDoPersonagem(p, modelo));
+            }
         }
 
         /// <summary>
@@ -564,7 +769,7 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Os ícones e as fotos: transparentes, sem mipmap e sem compressão (vão direto para a tela).</summary>
-        static void ImportarIcones()
+        internal static void ImportarIcones()
         {
             foreach (var caminho in Enumerable.Range(0, Itens.QuantosModelos).SelectMany(i => new[] { IconeDo(i), FotoDo(i) })
                          .Concat(Enumerable.Range(0, Itens.QuantosEquipamentos).SelectMany(k => new[] { IconeDoEquipamento(k), FotoDoEquipamento(k) }))
@@ -652,11 +857,12 @@ namespace ZombieCityCleaner.EditorTools
             ImportarAvulsas(FbxPecas);
             ImportarAvulsas(FbxSinuca);
             if (File.Exists(FbxLoot)) ImportarAvulsas(FbxLoot);
+            if (File.Exists(FbxLootSucata)) ImportarAvulsas(FbxLootSucata);
             for (int i = 0; i < Armas.Quantas; i++)
                 if (File.Exists(FbxAvulsaDa(i))) ImportarAvulsas(FbxAvulsaDa(i));
         }
 
-        static void ImportarAvulsas(string fbx)
+        internal static void ImportarAvulsas(string fbx)
         {
             var imp = Importador(fbx);
             imp.animationType = ModelImporterAnimationType.None;
@@ -748,7 +954,11 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Um override do controlador: cada clipe da base trocado pelo da arma (de outro FBX, ou com outro nome).</summary>
-        static void MontarOverride(string controlador, string fbxBase, string fbxArma, string[] clipes, System.Func<string, string> nome, string caminho)
+        static void MontarOverride(string controlador, string fbxBase, string fbxArma, string[] clipes, System.Func<string, string> nome, string caminho) =>
+            MontarOverride(controlador, fbxBase, clipes, c => Clipe(fbxArma, nome(c)), caminho);
+
+        /// <summary>Um override do controlador com o clipe dado para cada um da base (de um FBX ou de um .anim).</summary>
+        static void MontarOverride(string controlador, string fbxBase, string[] clipes, System.Func<string, AnimationClip> clipe, string caminho)
         {
             var ov = AssetDatabase.LoadAssetAtPath<AnimatorOverrideController>(caminho);
             if (ov == null)
@@ -757,7 +967,7 @@ namespace ZombieCityCleaner.EditorTools
                 AssetDatabase.CreateAsset(ov, caminho);
             }
             ov.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controlador);
-            var trocas = clipes.Select(c => new System.Collections.Generic.KeyValuePair<AnimationClip, AnimationClip>(Clipe(fbxBase, c), Clipe(fbxArma, nome(c)))).ToList();
+            var trocas = clipes.Select(c => new System.Collections.Generic.KeyValuePair<AnimationClip, AnimationClip>(Clipe(fbxBase, c), clipe(c))).ToList();
             ov.ApplyOverrides(trocas);
             EditorUtility.SetDirty(ov);
         }

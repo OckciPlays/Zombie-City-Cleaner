@@ -345,11 +345,8 @@ namespace ZombieCityCleaner.Mundo
                 float baixo = MedidasDaMobilia.Baixo(m.modelo) * m.escala;
                 var giro = Quaternion.Euler(0f, m.giro, 0f);
                 Vector3 c = m.lugar + giro * new Vector3(meio.x, 0f, meio.y);
-                var tam = new Vector3(Mathf.Max(0.1f, t.x - 2f * Mobilia.Recuo), t.y, Mathf.Max(0.1f, t.z - 2f * Mobilia.Recuo));
-                int camadas = t.y > 1.7f ? Mathf.CeilToInt(t.y / 0.85f) : 1;
-                float h = t.y / camadas;
-                for (int k = 0; k < camadas; k++)
-                    colisao.Caixa(Matrix4x4.TRS(c + Vector3.up * (baixo + h * (k + 0.5f)), giro, Vector3.one), new Vector3(tam.x, h, tam.z), "Concreto");
+                // a mesma caixa das casas (em camadas; nas camas, a cabeceira e o colchão, para o pulo da cama, 08/11/2026)
+                MobiliaNova.Caixa(colisao, m.modelo, c + Vector3.up * baixo, m.giro, t);
             }
         }
 

@@ -28,11 +28,11 @@ namespace ZombieCityCleaner.World
             inv == null ? Item.Nada : inv.Quantos(Item.Gazua) > 0 ? Item.Gazua : inv.Quantos(Item.PeDeCabra) > 0 ? Item.PeDeCabra
             : Habilidades.Tem(DonoDe(inv), Habilidade.Chaveiro) ? Grampo : Item.Nada;
 
-        // (as Mãos leves, 06/11/2026: 30% mais rápido)
+        // (as Mãos leves, 06/11/2026: 15% mais rápido por ponto)
         static float TempoDa(Item ferramenta, InventarioJogador inv = null)
         {
             float t = ferramenta == Item.Gazua ? TempoDaGazua : ferramenta == Item.PeDeCabra ? TempoDoPeDeCabra : ferramenta == Grampo ? TempoDoGrampo : 0f;
-            if (Habilidades.Tem(DonoDe(inv), Habilidade.MaosLeves)) t *= 0.7f;
+            t *= 1f - 0.15f * Habilidades.Pontos(DonoDe(inv), Habilidade.MaosLeves);
             return t;
         }
 
@@ -95,7 +95,7 @@ namespace ZombieCityCleaner.World
             var jogador = cliente.PlayerObject.GetComponent<JogadorRede>();
             if (inv == null || (f != Item.Gazua && f != Item.PeDeCabra && f != Grampo)) return;
             if (f == Grampo ? !Habilidades.Tem(jogador, Habilidade.Chaveiro) : inv.Quantos(f) <= 0) return;
-            bool maosLeves = Habilidades.Tem(jogador, Habilidade.MaosLeves);
+            bool maosLeves = Habilidades.Pontos(jogador, Habilidade.MaosLeves) >= 2;   // (o 2º ponto: o pé de cabra quieto e a gazua que não quebra)
             var meio = janela ? MeioDaJanela(r.c, r.i) : MeioDa(r.c, r.i);
             if ((meio - (pes + Vector3.up)).sqrMagnitude > distanciaMaxima * distanciaMaxima) return;
             if (janela ? JanelaAbertaAgora(r.c, r.i) || !JanelaTrancadaAgora(r.c, r.i) : AbertaAgora(r.c, r.i) || !TrancadaAgora(r.c, r.i)) return;

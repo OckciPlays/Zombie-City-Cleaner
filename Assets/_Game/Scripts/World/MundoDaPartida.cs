@@ -97,6 +97,7 @@ namespace ZombieCityCleaner.World
             Instancia = this;
             IniciarAsMarcas();   // (a lista da rede antes do spawn: MundoDaPartida.Marcas.cs)
             IniciarAsArvores();   // (as árvores cortadas, 06/11/2026: MundoDaPartida.Arvores.cs)
+            IniciarOsPaineis();   // (os painéis de metal desmontados, 09/11/2026: MundoDaPartida.Sucata.cs)
             // sem o personagem na conexão: ele nasce quando o mundo estiver pronto na máquina do jogador
             _rede = FindAnyObjectByType<NetworkManager>();
             if (_rede != null) _rede.ConnectionApprovalCallback = Aprovar;
@@ -134,6 +135,7 @@ namespace ZombieCityCleaner.World
             }
             VeioDoDiaZero = _diaZero.Value;
             FlorestaDoMundo.DefinirCortadas(Copia(_arvoresCortadas));   // (quem entra recebe as cortadas)
+            PaineisNoSpawn();   // (e os painéis desmontados: MundoDaPartida.Sucata.cs)
             _diaZero.OnValueChanged += AoMudarODiaZero;
             if (_diaZero.Value) Etapa = "No Dia 0";
             else if (_semente.Value != 0) Comecar();

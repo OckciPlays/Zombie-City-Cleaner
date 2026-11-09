@@ -24,6 +24,14 @@ namespace ZombieCityCleaner.Player
     /// cabeça do corpo; os braços de primeira pessoa e o que está na mão somem. Os outros jogadores recebem o pulo pela
     /// rede (<see cref="JanelaRpc"/>) e tocam a mesma animação; a posição vem pelo NetworkTransform.
     /// </para>
+    /// <para>
+    /// Pular a cama (08/11/2026, a pedido: "Pular a cama (com animação igual da janela)"): sem janela na frente, de frente
+    /// para o lado (ou o pé) de uma cama, o Espaço pula por cima dela com o mesmo pulo (<see cref="AcharCama"/>). Na
+    /// colisão, o colchão é uma caixa baixa com a marca dele (<see cref="Mundo.MobiliaNova.Caixa"/>: só as camas de casal,
+    /// de solteiro e de hospital; o beliche, a cama montada no chão e os outros móveis baixos não têm a marca e não se
+    /// pulam), e a cabeceira, outra, na altura de antes. A mão vai na beira de cá do colchão, a raiz atravessa a largura da
+    /// cama enquanto o corpo passa por cima e, da beira de lá, o pouso é o da janela.
+    /// </para>
     /// </summary>
     [DefaultExecutionOrder(50)]   // depois do Animator e do JogadorRede, antes da câmera de terceira pessoa
     public class PuloDaJanela : NetworkBehaviour
@@ -41,6 +49,9 @@ namespace ZombieCityCleaner.Player
         const float AnguloMaximo = 50f;       // de lado para a janela, no máximo
         const float DistanciaMaxima = 0.85f;  // da parede, no máximo (o peito encostado nela fica a 0,34)
         const float AlturaMinima = 1.10f;     // da abertura, do peitoril para cima (a cabeça passa a 1,03 dele)
+        // a cama (08/11/2026): o colchão de 0,45 a 1,25 m do chão (o de casal e o de solteiro ficam a 0,76; o "colchão" da
+        // de hospital, nas grades, a 1,19) e a beira de lá até 2,3 m adiante (a caixa da de casal tem 1,78 de largura)
+        const float ColchaoMinimo = 0.45f, ColchaoMaximo = 1.25f, LarguraMaxima = 2.3f;
 
         // o cenário: sem os jogadores, os braços, o retrato, os zumbis e os pedaços deles; a janela, também sem os carros
         // (a do carro não é janela), que só bloqueiam a passagem e o pouso
@@ -50,11 +61,13 @@ namespace ZombieCityCleaner.Player
         static readonly int JanelaId = Animator.StringToHash("Janela");
 
         /// <summary>Uma janela achada: a direção (para dentro dela), a distância e a grossura da parede, e as alturas do
-        /// peitoril e do chão do outro lado (desde os pés).</summary>
+        /// peitoril e do chão do outro lado (desde os pés). Na cama (<see cref="cama"/>, 08/11/2026), a parede é a largura
+        /// dela até a beira de lá e o peitoril é o colchão.</summary>
         public struct Janela
         {
             public Vector3 dir;
             public float distancia, parede, peitoril, desnivel;
+            public bool cama;
         }
 
         JogadorRede _rede;
@@ -69,7 +82,7 @@ namespace ZombieCityCleaner.Player
         Vector3 _inicio, _cabecaLocal, _olhoNaCabeca;
         Quaternion _giro0, _giro1;
 
-        /// <summary>Pulando a janela agora (nesta máquina: o dono ou a cópia de outro jogador).</summary>
+        /// <summary>Pulando a janela (ou a cama) agora (nesta máquina: o dono ou a cópia de outro jogador).</summary>
         public bool Pulando => _pulando;
 
         void Awake()
@@ -83,16 +96,19 @@ namespace ZombieCityCleaner.Player
 
         static float Suave(float t) => Mathf.SmoothStep(0f, 1f, t);
 
-        /// <summary>O dono apertou o pulo, no chão: pula a janela da frente, se tiver uma livre (e devolve true).</summary>
+        /// <summary>O dono apertou o pulo, no chão: pula a janela da frente (ou a cama), se tiver uma livre (e devolve true).</summary>
         public bool Tentar()
         {
             if (!IsSpawned || !IsOwner || _pulando) return false;
             if (_rede.Passageiro != null && _rede.Passageiro.NoCarro) return false;
-            if (!AcharJanela(out var j)) return false;
+            // dormindo, não pula (08/11/2026: o sono já tira o controle; aqui, por garantia, agora que a cama se pula)
+            if (_vida != null && _vida.Dormindo.Value) return false;
+            // a janela da frente ou, sem ela, a cama (08/11/2026)
+            if (!AcharJanela(out var j) && !AcharCama(out j)) return false;
             // a perna quebrada, exposta ou inutilizada não deixa pular a janela (05/11/2026, o sistema de vida por membro)
             if (_vida != null && PernaNaoDeixa(_vida.Corpo.Value))
             {
-                InventarioJogador.AvisoLocal("Com a perna assim, não dá para pular a janela");
+                InventarioJogador.AvisoLocal(j.cama ? "Com a perna assim, não dá para pular a cama" : "Com a perna assim, não dá para pular a janela");
                 return false;
             }
             if (DiaZero.DiaZeroDaPartida.PuloBloqueado(transform.position, transform.position + j.dir * (j.distancia + j.parede + Depois)))
@@ -163,6 +179,77 @@ namespace ZombieCityCleaner.Player
             return true;
         }
 
+        /// <summary>
+        /// A cama na frente do jogador, livre para pular por cima dela (08/11/2026; veja a classe): o lado (ou o pé) dela na
+        /// altura do joelho, como a parede da janela (até 50° de lado e até 0,85 m); o colchão logo depois da beira, de 0,45 a
+        /// 1,25 m do chão; a beira de lá até 2,3 m adiante, andando por cima dele (os três com a marca do colchão,
+        /// <see cref="Mundo.MobiliaNova.NoColchao"/>); a passagem livre para o corpo encolhido, com a cabeça, por cima do
+        /// colchão (perto da cabeceira ela bloqueia; o que estiver em cima da cama ou pendurado acima dela, também), sem
+        /// ninguém deitado nela no caminho (quem dorme na cama fica em cima do colchão); e o chão do outro lado como na
+        /// janela, sem ninguém no lugar. Sem o alto da abertura: no quarto não tem.
+        /// </summary>
+        public bool AcharCama(out Janela j)
+        {
+            j = default;
+            const QueryTriggerInteraction semGatilhos = QueryTriggerInteraction.Ignore;
+            Vector3 p = transform.position;
+            Vector3 frente = transform.forward;
+            frente.y = 0f;
+            if (frente.sqrMagnitude < 1e-4f) return false;
+            frente.Normalize();
+            // o lado da cama na altura do joelho (a caixa do colchão); depois, de novo, reto para ele
+            if (!Physics.Raycast(p + Vector3.up * 0.45f, frente, out var lado, DistanciaMaxima + 0.1f, MascaraDaJanela, semGatilhos)) return false;
+            if (!Mundo.MobiliaNova.NoColchao(lado)) return false;
+            Vector3 n = lado.normal;
+            n.y = 0f;
+            if (n.sqrMagnitude < 0.5f) return false;
+            Vector3 dir = -n.normalized;
+            if (Vector3.Angle(dir, frente) > AnguloMaximo) return false;
+            if (!Physics.Raycast(p + Vector3.up * 0.45f, dir, out lado, DistanciaMaxima + 0.1f, MascaraDaJanela, semGatilhos)) return false;
+            float d0 = lado.distance;
+            if (d0 < 0.25f || d0 > DistanciaMaxima || !Mundo.MobiliaNova.NoColchao(lado)) return false;
+            // o colchão, de cima, logo depois da beira
+            if (!Physics.Raycast(p + dir * (d0 + 0.05f) + Vector3.up * 1.7f, Vector3.down, out var colchao, 1.5f, MascaraDaJanela, semGatilhos)) return false;
+            float altura = colchao.point.y - p.y;
+            if (colchao.normal.y < 0.7f || altura < ColchaoMinimo || altura > ColchaoMaximo || !Mundo.MobiliaNova.NoColchao(colchao)) return false;
+            // a beira de lá: andando por cima do colchão, de 10 em 10 cm, até sair dele; e a face dela, por um raio de volta
+            // logo abaixo do colchão (começando dentro de outro móvel, o raio não vê as faces dele e chega na cama)
+            float largura = 0f;
+            int passos = Mathf.RoundToInt(LarguraMaxima * 10f);
+            for (int i = 3; i <= passos; i++)
+            {
+                Vector3 q = p + dir * (d0 + i * 0.1f);
+                if (Physics.Raycast(q + Vector3.up * (altura + 0.3f), Vector3.down, out var emCima, 0.6f, MascaraDaJanela, semGatilhos)
+                    && Mundo.MobiliaNova.NoColchao(emCima)) continue;
+                if (!Physics.Raycast(q + Vector3.up * (altura - 0.15f), -dir, out var la, 0.3f, MascaraDaJanela, semGatilhos)
+                    || !Mundo.MobiliaNova.NoColchao(la)) return false;
+                largura = i * 0.1f - la.distance;
+                break;
+            }
+            if (largura < 0.5f) return false;
+            // a parede da animação vai até a beira de verdade (a cama passa 15 cm da caixa dela): dali, o pouso da janela
+            float parede = largura + Mundo.Mobilia.Recuo;
+            // a passagem: o corpo encolhido (48 cm de largo) e a cabeça (até 1,10 m acima do colchão), do jogador até
+            // depois da beira de lá
+            var meio = new Vector3(0.24f, AlturaMinima / 2f - 0.04f, 0.05f);
+            Vector3 de = p + Vector3.up * (altura + 0.08f + meio.y);
+            if (Physics.BoxCast(de, meio, dir, Quaternion.LookRotation(dir), d0 + parede + 0.6f, Mascara, semGatilhos)) return false;
+            // ninguém no caminho (quem dorme na cama fica deitado em cima do colchão): o mesmo corpo, parado, por cima dela
+            // até o pouso, só com os jogadores (começando depois da beira de cá, sem pegar o próprio)
+            float caminho = parede + Depois;
+            if (Physics.CheckBox(p + dir * (d0 + 0.05f + caminho / 2f) + Vector3.up * (altura + 0.5f), new Vector3(0.24f, 0.6f, caminho / 2f),
+                                 Quaternion.LookRotation(dir), 1 << JogadorRede.CamadaJogador, semGatilhos)) return false;
+            // o chão do outro lado, com lugar para a cápsula e sem ninguém nele
+            Vector3 pouso = p + dir * (d0 + parede + Depois);
+            if (!Physics.Raycast(pouso + Vector3.up * (altura + 0.5f), Vector3.down, out var chao, altura + 1.6f, Mascara, semGatilhos)) return false;
+            float desnivel = chao.point.y - p.y;
+            if (chao.normal.y < 0.7f || desnivel < -1f || desnivel > 0.45f) return false;
+            Vector3 pe = new Vector3(pouso.x, chao.point.y, pouso.z);
+            if (Physics.CheckCapsule(pe + Vector3.up * 0.4f, pe + Vector3.up * 1.5f, 0.28f, Mascara | (1 << JogadorRede.CamadaJogador), semGatilhos)) return false;
+            j = new Janela { dir = dir, distancia = d0, parede = parede, peitoril = altura, desnivel = desnivel, cama = true };
+            return true;
+        }
+
         void Comecar(Janela j)
         {
             _j = j;
@@ -227,6 +314,14 @@ namespace ZombieCityCleaner.Player
             float a = n <= FrenteNasMaos ? n * nasMaos / FrenteNasMaos
                 : n <= meioNominal ? Mathf.Lerp(nasMaos, meio, (n - FrenteNasMaos) / (meioNominal - FrenteNasMaos))
                 : Mathf.Lerp(meio, fim, (n - meioNominal) / (Frente - meioNominal));
+            // a cama (08/11/2026): das mãos na beira de cá à beira de lá enquanto a da animação passa a parede toda (o corpo
+            // por cima do colchão; esticando só até o meio, como na janela, ele descia ainda em cima da cama) e, dali, o
+            // resto da animação sem esticar (o pouso igual ao da janela)
+            if (_j.cama && n > FrenteNasMaos)
+            {
+                float laNominal = Distancia + Parede, la = _j.distancia + _j.parede;
+                a = n <= laNominal ? Mathf.Lerp(nasMaos, la, (n - FrenteNasMaos) / (laNominal - FrenteNasMaos)) : la + (n - laNominal);
+            }
             // em cima do peitoril, a diferença dele para o da animação; do outro lado, o chão de lá
             float noPeitoril = Mathf.Min(Suave((f - 2f) / 4f), 1f - Suave((f - 15f) / 6f));
             float sobe = Mathf.Clamp(_j.peitoril - Peitoril, -0.3f, 0.35f) * noPeitoril + _j.desnivel * Suave((f - 13f) / 8f);

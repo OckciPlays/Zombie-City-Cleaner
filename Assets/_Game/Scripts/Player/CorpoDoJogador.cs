@@ -417,6 +417,7 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>As armas que pedem as duas mãos (um braço quebrado ou inutilizado não deixa mirar nem atirar com elas).</summary>
         public static bool DuasMaos(Item i) => i == Item.Rifle || i == Item.Submetralhadora || i == Item.Espingarda || i == Item.Sniper
+                                               || i == Item.RifleSucata || i == Item.SubmetralhadoraSucata
                                                || i == Item.Machado || i == Item.Bastao || i == Item.Lanca;
 
         // ---------------- os tratamentos ----------------

@@ -100,7 +100,7 @@ namespace ZombieCityCleaner.Player
                 if (_infeccao == 0)
                 {
                     float risco = RiscoDeInfeccao(dia, _sujas[p], _lesao[p] == Lesao.Exposta);
-                    if (Habilidades.Tem(_rede, Habilidade.Imunidade)) risco *= 0.6f;   // (a Imunidade, 06/11/2026)
+                    risco *= 1f - 0.2f * Habilidades.Pontos(_rede, Habilidade.Imunidade);   // (a Imunidade, 06/11/2026: 20% por ponto)
                     float r = Sorteio.FracaoDoHash(Sorteio.Hash((int)_semente, _amanheceres, p, dia));
                     if (r < risco) ComecarInfeccao((ParteDoCorpo)p);
                 }

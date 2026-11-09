@@ -299,7 +299,7 @@ namespace ZombieCityCleaner.Player
 
         void Escapou(string aviso, bool arrebentou = false)
         {
-            bool fina = Habilidades.Tem(_rede, Habilidade.IscaFina) && Random.value < 0.4f;
+            bool fina = Random.value < 0.2f * Habilidades.Pontos(_rede, Habilidade.IscaFina);   // (a Isca fina: 20% por ponto)
             _inventario.PegouOPeixe(Item.Nada, !fina);
             InventarioJogador.AvisoLocal(aviso + (fina ? " (a isca ficou no anzol)" : ""));
             if (arrebentou)
@@ -312,7 +312,7 @@ namespace ZombieCityCleaner.Player
 
         void Pegou_()
         {
-            bool fina = Habilidades.Tem(_rede, Habilidade.IscaFina) && Random.value < 0.4f;
+            bool fina = Random.value < 0.2f * Habilidades.Pontos(_rede, Habilidade.IscaFina);   // (a Isca fina: 20% por ponto)
             _inventario.PegouOPeixe(_peixe, !fina);
             AguaNaSuperficie.Respingo(_boiaAgora, 14, 0.8f);
             Plop(_boiaAgora, 0.9f);
@@ -329,10 +329,11 @@ namespace ZombieCityCleaner.Player
         Item SortearPeixe()
         {
             float fundo = Mathf.Clamp01((Agua.Fundura(_pontoDaBoia) - 1f) / 3f);
-            bool grande = Habilidades.Tem(_rede, Habilidade.PeixeGrande);
+            int grande = Habilidades.Pontos(_rede, Habilidade.PeixeGrande);
             if (Habilidades.Tem(_rede, Habilidade.MestrePescador) && Random.value < Mathf.Lerp(0.02f, 0.08f, fundo)) return Item.PeixeDourado;
             float p = 0.55f - 0.30f * fundo, g = 0.12f + 0.25f * fundo;
-            if (grande) { p *= 0.7f; g *= 1.6f; }
+            p *= 1f - 0.15f * grande;   // (o Peixe grande: com 2 pontos, 0,7 e 1,6)
+            g *= 1f + 0.3f * grande;
             float m = Mathf.Max(0.1f, 1f - p - g);
             float r = Random.value * (p + m + g);
             return r < p ? Item.PeixePequeno : r < p + m ? Item.PeixeMedio : Item.PeixeGrande;
@@ -341,7 +342,7 @@ namespace ZombieCityCleaner.Player
         /// <summary>
         /// Quanto o peixe demora (s): de 8 a 22; de manhã cedo (das 5h às 8h30) e no fim da tarde (das 17h às 20h), 40% mais
         /// rápido; de noite, 40% mais devagar (com a Noite de pesca, 20% mais rápido); com chuva, 20% mais rápido (com a Noite
-        /// de pesca, 35%); a Paciência, 40% mais rápido.
+        /// de pesca, 35%); a Paciência, 20% mais rápido por ponto.
         /// </summary>
         float SortearEspera()
         {
@@ -351,7 +352,7 @@ namespace ZombieCityCleaner.Player
             if ((h >= 5f && h < 8.5f) || (h >= 17f && h < 20f)) t *= 0.6f;
             else if (CicloDoDia.Noite > 0.5f) t *= noitePesca ? 0.8f : 1.4f;
             if (Tempo.Chuva > 0.3f) t *= noitePesca ? 0.65f : 0.8f;
-            if (Habilidades.Tem(_rede, Habilidade.Paciencia)) t *= 0.6f;
+            t *= 1f - 0.2f * Habilidades.Pontos(_rede, Habilidade.Paciencia);
             return t;
         }
 

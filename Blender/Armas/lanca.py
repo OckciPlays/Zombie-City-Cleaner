@@ -34,8 +34,34 @@ GIRO_PARA_A_FRENTE = 112.0
 GIRO_NO_EIXO = 0.0
 NO_PUNHO = Vector((0.0, 0.0, 0.0))
 ORTHO_CONFERIR = 1.6
-QUADROS_DO_GOLPE = (1, 4, 7, 10)
+QUADROS_DO_GOLPE = (1, 4, 7, 10, 13)
 SEGUNDA_MAO = 0.24
+# o lugar novo na tela (08/11/2026, a pedido do Pedro, com as referências dele: a "Segura Inferior" e o guerreiro de
+# lança): a lança deitada para a frente, apontando para onde se mira (a ponta perto do meio da tela, um pouco abaixo), a
+# mão direita atrás, perto da ponta de baixo, e a esquerda bem à frente, as duas por cima do cabo (duas_maos.py)
+MAO_DIREITA = 0.14        # o y da arma: a 17 cm da ponta de baixo
+MAO_ESQUERDA = -0.13      # 27 cm à frente da direita (três mãos de folga entre os punhos)
+# (09/11/2026, a pedido: "a ponta dela não condiz com a mira do jogador") a lança aponta para a mira: o cabo vai reto
+# para a frente, na direção de um ponto do meio da tela a uns 3 m (a reta do cabo, prolongada, passa pelo meio da tela), e
+# a ponta fica logo abaixo da cruz (uns 6% da altura da tela), sem cobri-la; a mão direita mais embaixo e mais perto do
+# meio que antes (antes: a mão em (0,72; -0,80) e a ponta em (-0,20; -0,30), cruzando para a esquerda)
+IDLE_FP = {"ponto": (0.14, 0.45, -1.0, 0.34), "mira": (-1.13, 0.05, -0.11), "alto": (0.0, 0.0, 1.0)}
+# (08/11/2026, a pedido: "os braços longe da câmera") a mão direita a 40 cm da câmera (antes, 25), e a esquerda mais perto
+# dela no cabo, para o braço esquerdo alcançar
+COSTAS = {}
+LIMITE_ULNAR_GOLPE = 25.0
+# (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
+# escolhida fica em diagonais_fp.json)
+DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
+# a estocada: recua (a preparação), empurra ao longo do cabo com as duas mãos (o acerto no quadro 7, 6/24 s) e volta
+# (09/11/2026) no acerto, a ponta passa pela mira: as mãos vão uns 16 cm para a frente e a ponta sobe até o meio da tela
+GOLPE_FP = [
+    (1, {}),
+    (4, {"avanco": -0.06, "desloca": (0.0, 0.0, 0.010)}),
+    (7, {"avanco": 0.18, "desloca": (0.064, 0.0, 0.080)}),
+    (10, {"avanco": 0.12}),
+    (15, {}),
+]
 # a estocada: recolhe, empurra para a frente e volta
 CHAVES_DO_GOLPE = [
     (1, (0.0, 0.0, 0.0), 0.0, 0.0),

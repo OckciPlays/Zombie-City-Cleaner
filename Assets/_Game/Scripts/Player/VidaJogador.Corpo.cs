@@ -540,12 +540,12 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public string Tratar(Item item, ParteDoCorpo parte, JogadorRede quemTrata = null)
         {
-            // as habilidades de quem trata (06/11/2026): o Curativo bem feito (+10%), o Médico de campo (a bandagem comum
-            // protege) e o Farmacêutico (o analgésico e o xarope 50% mais tempo)
+            // as habilidades de quem trata (06/11/2026; os níveis em 09/11/2026): o Curativo bem feito (+5% por ponto), o
+            // Médico de campo (a bandagem comum protege) e o Farmacêutico (o analgésico e o xarope 25% mais tempo por ponto)
             if (quemTrata == null) quemTrata = _rede;
-            bool bemFeito = Habilidades.Tem(quemTrata, Habilidade.CurativoBemFeito);
+            int bemFeito = Habilidades.Pontos(quemTrata, Habilidade.CurativoBemFeito);
             bool medico = Habilidades.Tem(quemTrata, Habilidade.MedicoDeCampo);
-            float farmaceutico = Habilidades.Tem(quemTrata, Habilidade.Farmaceutico) ? 1.5f : 1f;
+            float farmaceutico = 1f + 0.25f * Habilidades.Pontos(quemTrata, Habilidade.Farmaceutico);
             if (!IsServer || Caido.Value) return null;
             string texto = null;
             switch (item)
@@ -564,7 +564,7 @@ namespace ZombieCityCleaner.Player
                     if (ferida) _faixa |= (byte)b;
                     if (protege) _protegida |= (byte)b;
                     _limpa &= (byte)~b;
-                    Melhorar(parte, (atadura ? 30f : antisseptica ? 25f : 20f) + (bemFeito ? 10f : 0f));
+                    Melhorar(parte, (atadura ? 30f : antisseptica ? 25f : 20f) + 5f * bemFeito);
                     var nome = PartesDoCorpo.NomeComArtigo(parte);
                     string fim = nome[0] == 'a' ? "a" : "o";
                     texto = $"{Maiuscula(nome)} enfaixad{fim}" + (estancou ? ": parou de sangrar" : "")
@@ -628,7 +628,7 @@ namespace ZombieCityCleaner.Player
                 {
                     // o xarope (05/11/2026, a pedido: "tira a febre"): os sintomas somem por 4 h; não cura (o antibiótico cura)
                     _xarope = 4 * 60f * farmaceutico;
-                    texto = $"O xarope baixou a febre por umas {(farmaceutico > 1f ? 6 : 4)} h (só o antibiótico cura a infecção)";
+                    texto = $"O xarope baixou a febre por umas {Mathf.RoundToInt(4 * farmaceutico)} h (só o antibiótico cura a infecção)";
                     break;
                 }
             }

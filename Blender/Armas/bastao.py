@@ -39,8 +39,40 @@ GIRO_PARA_A_FRENTE = 72.0
 GIRO_NO_EIXO = -50.0
 NO_PUNHO = Vector((0.0, 0.05, 0.0))
 ORTHO_CONFERIR = 1.2
-QUADROS_DO_GOLPE = (1, 4, 7, 8, 9, 11)
 SEGUNDA_MAO = -0.045
+# o lugar novo na tela (08/11/2026, a pedido do Pedro, com a foto do taco de beisebol): a posição de rebater, as duas mãos
+# juntas na ponta do cabo (a esquerda embaixo, encostada no pomo, e a direita logo acima, encostando nela), embaixo à
+# direita da tela (uns 70% da largura), e o bastão subindo inclinado para trás e para a direita, saindo pelo canto de cima
+# à direita (os pregos ficam fora da tela) (duas_maos.py)
+MAO_ESQUERDA = 0.012       # (o mínimo longe do pomo)
+MAO_DIREITA = -0.110       # (12 cm acima da esquerda: as mãos encostadas sem uma entrar na outra)
+# (09/11/2026, a pedido) a mira menos para trás (antes, (1,6; 3,5)): a parte grossa, com os pregos, aparece em cima à direita
+IDLE_FP = {"ponto": (0.012, 0.42, -0.78, 0.42), "mira": (-0.70, 1.0, 1.25), "alto": (0.0, 1.0, 0.0)}
+# o golpe: carrega mais para trás e para a direita (a preparação), bate na horizontal, da direita para a esquerda, na
+# altura da mira, com os braços esticados e o bastão atravessando o meio da tela (o acerto no quadro 8, 7/24 s), acompanha
+# até a esquerda e volta à posição de rebater. O bastão gira em volta do cabo o que deixar os pulsos melhores (redondo,
+# não aparece: ROLAR_GOLPE)
+GOLPE_FP = [
+    (1, {}),
+    (4, {"ponto": (0.012, 0.55, -0.74, 0.40), "mira": (-0.70, 2.5, 4.0), "alto": (0.0, 1.0, 0.0)}),
+    (6, {"ponto": (0.012, 0.48, -0.60, 0.42), "mira": (-0.70, 2.2, 0.5), "alto": (0.0, 0.0, 1.0)}),
+    # (09/11/2026) no quadro 7 a ponta sobe (antes, a mira em (0,25; 0,0) deixava o bastão de ponta para a câmera, e a
+    # torção dos antebraços saltava uns 150 graus de um quadro para o outro; com a ponta baixa, ainda mais): o bastão
+    # passa por cima, de pé, e os antebraços giram nos dois quadros (o 6 -> 8 é um giro de 143 graus em dois quadros)
+    (7, {"ponto": (0.012, 0.30, -0.55, 0.45), "mira": (-0.70, 0.5, 1.0), "alto": (0.0, 0.0, 1.0)}),
+    (8, {"ponto": (0.012, 0.12, -0.55, 0.45), "mira": (-0.70, -0.95, 0.05), "alto": (0.0, 0.0, 1.0)}),
+    # (09/11/2026) o acompanhamento: o bastão continua varrendo para a esquerda, a ponta na borda esquerda e perto da tela
+    # (antes, a mira em -3,0 deixava o bastão de ponta, como um toco)
+    (10, {"ponto": (0.012, -0.12, -0.60, 0.44), "mira": (-0.70, -1.3, 0.15), "alto": (0.0, 0.0, 1.0)}),
+    (11, {"ponto": (0.012, -0.32, -0.68, 0.42), "mira": (-0.70, -1.6, 0.3), "alto": (0.0, 0.0, 1.0), "perto": False}),
+    (15, {}),
+]
+ROLAR_GOLPE = True
+LIMITE_ULNAR_GOLPE = 25.0
+# (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
+# escolhida fica em diagonais_fp.json)
+DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
+QUADROS_DO_GOLPE = (1, 4, 6, 8, 11, 13)
 
 
 def modelo(m):

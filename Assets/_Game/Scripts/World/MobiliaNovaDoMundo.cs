@@ -226,16 +226,31 @@ namespace ZombieCityCleaner.World
         /// </summary>
         public static bool Guarda(Mesh m) => _guardadas.Contains(m);
 
+        // o gatilho do E da cama (08/11/2026): a caixa do móvel (as medidas), 5 cm maior em volta
+        static void PorOGatilhoDaCama(GameObject cama, string modelo)
+        {
+            if (!MedidasDaMobilia.Tem(modelo)) return;
+            var g = new GameObject("Dormir") { layer = CamadaDasPartes };
+            g.transform.SetParent(cama.transform, false);
+            var caixa = g.AddComponent<BoxCollider>();
+            Vector3 t = MedidasDaMobilia.Real(modelo);
+            Vector2 meio = MedidasDaMobilia.Meio(modelo);
+            caixa.isTrigger = true;
+            caixa.center = new Vector3(meio.x, t.y * 0.5f, meio.y);
+            caixa.size = t + Vector3.one * 0.1f;
+            g.AddComponent<Salvar.CamaDeDormir>().modelo = modelo;
+        }
+
         /// <summary>Um móvel de perto do modelo, na variação, filho de 'pai' (null sem o prefab).</summary>
         internal GameObject Novo(string modelo, int variacao, Transform pai)
         {
             if (!_moldes.TryGetValue(modelo, out var molde)) return null;
             var go = Instantiate(molde.objeto, pai, false);
             go.name = modelo;
-            // as camas: na casa da família, E dorme e salva (02/11/2026, o save)
-            if (modelo == "CamaCasal" || modelo == "CamaSolteiro" || modelo == "Beliche")
-                foreach (var c in go.GetComponentsInChildren<Collider>(true))
-                    if (c.GetComponent<Interagivel>() == null) c.gameObject.AddComponent<Salvar.CamaDeDormir>();
+            // as camas: E dorme e salva (02/11/2026, o save; 08/11/2026, a pedido: "dormir nas camas dos prédios/bunker", em
+            // qualquer uma). O molde perde o colisor de malha da raiz (no Awake), e a colisão de verdade é a caixa da obra (sem
+            // o E): a cama ganha um gatilho um pouco maior que ela, na camada das partes, que a mira acha antes da caixa
+            if (Salvar.CamaDeDormir.EhCama(modelo)) PorOGatilhoDaCama(go, modelo);
             // as bancadas (06/11/2026): a do bunker novo e as das casas eram só o desenho (o Bancada só estava na cena antiga)
             if (modelo == "Bancada")
                 foreach (var c in go.GetComponentsInChildren<Collider>(true))

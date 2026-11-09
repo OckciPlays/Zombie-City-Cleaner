@@ -173,7 +173,7 @@ namespace ZombieCityCleaner.EditorTools
                 // o fumo: as peças nos vazios dos ossos do fumo, com os materiais (a paleta; a brasa e a chama acesas)
                 if (i == Itens.MacoFP || i == Itens.CigarroFP) MontagemDoFumo.NasPecas(fp.transform, "Fumo_FP_");
                 // as armas novas (Blender/Armas) no lugar das antigas, nos mesmos ossos
-                ArmasNovas.NosBracos(modelo, smrBracos[i]);
+                ArmasNovas.NosBracos(modelo, smrBracos[i], bocasFP[i]);
                 // a lata e a garrafa levam também os itens do saque, com a malha deles no lugar
                 if (i < n && MontagemDoItemNaMao.Leva(i)) MontagemDoItemNaMao.NosBracos(fp, i, smrBracos[i]);
                 // a tocha: a boca (onde a chama nasce) na ponta queimada (a célula (3, 2) da paleta), presa ao osso dela
@@ -274,10 +274,12 @@ namespace ZombieCityCleaner.EditorTools
             anim.runtimeAnimatorController = Carregar<RuntimeAnimatorController>(MontagemDasArmas.ControladorTPDoPersonagem(p, 0));
             anim.applyRootMotion = false;
             anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            // as armas de sucata (09/11/2026): cópias das reais no weapon.R e nos ossos das peças (as malhas, no NoCorpo)
+            ArmasNovas.CopiasDeSucataNoCorpo(corpo.transform);
 
             // o que está na mão, no corpo: as armas e os itens do FBX (Arma_<modelo>, presos ao weapon.R com a pegada e o
-            // tamanho de cada um), só o da mão ligado, com as peças que mexem (P_<modelo>_*, nos ossos delas, ligadas junto
-            // pelo PecasDaArma) e a boca do cano (Boca_<modelo>)
+            // tamanho de cada um; as armas brancas, que não estão no FBX, presas ao hand.R), só o da mão ligado, com as peças
+            // que mexem (P_<modelo>_*, nos ossos delas, ligadas junto pelo PecasDaArma) e a boca do cano (Boca_<modelo>)
             int n = Itens.QuantosModelos;
             var naMao = new GameObject[n];
             var bocas = new Transform[Armas.Quantas];
@@ -336,7 +338,8 @@ namespace ZombieCityCleaner.EditorTools
         /// As roupas no corpo do jogador: o corpo das roupas (NPC_Corpo) e todas as peças (Roupa_&lt;nome&gt;) do Roupas.fbx,
         /// num filho "Roupas" do corpo, cada uma presa aos ossos dele pelo nome (o esqueleto é o mesmo: o do personagem
         /// principal), com o material das roupas, e a <see cref="Vestimenta"/>, que liga as vestidas (a aparência que chega
-        /// pela rede; no prefab, só o corpo). Precisa da montagem das roupas (o material e o FBX legível).
+        /// pela rede; no prefab, só o corpo). O corpo e as duas luvas são os da mão nova, quando há
+        /// (<see cref="MontagemDaMaoNova.Malha"/>). Precisa da montagem das roupas (o material e o FBX legível).
         /// </summary>
         static Vestimenta Vestir(GameObject corpo, out Renderer[] renderers)
         {
@@ -353,8 +356,9 @@ namespace ZombieCityCleaner.EditorTools
                 var go = new GameObject(smr.name);
                 go.transform.SetParent(pasta, false);
                 var r = go.AddComponent<SkinnedMeshRenderer>();
-                r.sharedMesh = smr.sharedMesh;
-                r.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, smr.sharedMesh.subMeshCount)).ToArray();
+                // a mão nova: o corpo e as duas luvas com as malhas da pasta MaoNova (os mesmos ossos, na mesma ordem)
+                r.sharedMesh = MontagemDaMaoNova.Malha(smr);
+                r.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, r.sharedMesh.subMeshCount)).ToArray();
                 var semOsso = smr.bones.Where(b => b != null && !ossos.ContainsKey(b.name)).Select(b => b.name).ToArray();
                 if (semOsso.Length > 0) throw new System.Exception($"{smr.name}: o corpo do jogador não tem os ossos {string.Join(", ", semOsso)}");
                 r.bones = smr.bones.Select(b => b != null ? ossos[b.name] : null).ToArray();
@@ -372,43 +376,48 @@ namespace ZombieCityCleaner.EditorTools
             return v;
         }
 
-        /// A faca no corpo (31/10/2026): ela não vem no FBX do personagem. Uma peça nova no weapon.R, no encaixe da lata
-        /// (o punho fecha em volta dela do mesmo jeito: o eixo da lata, o Z da peça, atravessa a mão), com a malha avulsa
-        /// (Item_Faca, a lâmina em +Z) e o material dos itens. Na guarda dos punhos, a lâmina sai por cima do punho.
+        /// A arma branca no corpo (31/10/2026): ela não vem no FBX do personagem. Uma peça nova, com a malha avulsa
+        /// (Itens_&lt;Arma&gt;.fbx: a origem onde a mão segura, a cabeça em +Z e o alto em +Y) e o material dos itens. Desde
+        /// 09/11/2026, com as animações dela no corpo (o Blender/brancas_corpo.py), presa ao hand.R, fixa, na pegada delas
+        /// (<see cref="PegadaNaMao"/>); antes, no encaixe da lata, no weapon.R, com a guarda dos punhos.
         /// </summary>
         static Transform ArmaBrancaNoCorpo(Transform corpo, int modelo)
         {
             if (!Itens.ModeloBranco(modelo)) throw new System.Exception($"Arma_{Itens.Modelos[modelo]} não está no corpo.");
-            var lata = Buscar(corpo, "Arma_" + Itens.Modelos[Itens.Modelo(Item.Comida)]);
             var a = new GameObject("Arma_" + Itens.Modelos[modelo]).transform;
-            a.SetParent(lata.parent, false);
-            a.localPosition = lata.localPosition;
-            a.localRotation = lata.localRotation;
-            a.localScale = lata.localScale;
+            a.SetParent(Buscar(corpo, "hand.R"), false);
+            var (lugar, giro) = PegadaNaMao(modelo);
+            a.localPosition = lugar;
+            a.localRotation = giro;
+            a.localScale = Vector3.one;
             var peca = new GameObject($"P_{Itens.Modelos[modelo]}_corpo");
             peca.transform.SetParent(a, false);
-            peca.transform.localRotation = Quaternion.Euler(GiroNoCorpo(modelo));
-            // a mão mais alta no cabo (o machado: 18 cm, como nos braços de primeira pessoa; a malha tem a cabeça em +Z)
-            peca.transform.localPosition = -(peca.transform.localRotation * new Vector3(0f, 0f, PegadaNoCorpo(modelo)));
             peca.AddComponent<MeshFilter>().sharedMesh = Carregar<Mesh>(MontagemDasArmas.MalhaDo(modelo));
             peca.AddComponent<MeshRenderer>().sharedMaterial = Carregar<Material>(MontagemDasArmas.MaterialArma);
             return a;
         }
 
         /// <summary>
-        /// O giro da arma branca dentro do encaixe da lata (graus): a faca, a lâmina para cima do punho; o machado, deitado
-        /// 80° (achado no jogo: em pé, a cabeça dele ficava atrás da cabeça do personagem, na guarda dos punhos).
+        /// A pegada da arma branca na mão direita do corpo (09/11/2026): o lugar (m) e o giro da malha avulsa no espaço do
+        /// hand.R, os mesmos em todos os clipes da arma (o segurar e o golpe). Vêm do osso "arma" do
+        /// Personagem_PrincipalBloco_Brancas.fbx (filho do hand.R, parado no espaço da mão; o Y dele para a cabeça da arma e
+        /// o Z para o alto dela), conferidos na Unity: o lugar é o do osso, e o giro é o dele vezes meia volta em torno de
+        /// (0, 1, 1) (o +Z da malha no Y do osso, o +Y no Z e o X ao contrário). O corpo do jogo e o Roupas.fbx não têm o osso
+        /// "arma"; o giro em quatérnio, porque em ângulos o Y fica em 90° e degenera.
         /// </summary>
-        public static Vector3 GiroNoCorpo(int modelo) =>
-            // o machado (31/10/2026, a pedido, com a imagem de referência): em pé na mão direita, a cabeça para cima e um
-            // pouco para a frente e o fio para a esquerda, como nos braços de primeira pessoa (achado no jogo, pela
-            // direção da cabeça e do fio no corpo, na guarda dos punhos); o bastão, do mesmo jeito (a pedido: "pegado da mesma
-            // maneira")
-            modelo == Itens.Modelo(Item.Machado) || modelo == Itens.Modelo(Item.Bastao) ? new Vector3(115f, -135f, 150f)
-            : modelo == Itens.Modelo(Item.Lanca) ? new Vector3(80f, 0f, 0f) : Vector3.zero;
-
-        /// <summary>Quanto a mão sobe no cabo da arma branca, no corpo (m, da ponta de baixo para a cabeça).</summary>
-        public static float PegadaNoCorpo(int modelo) => modelo == Itens.Modelo(Item.Machado) ? 0.18f : modelo == Itens.Modelo(Item.Bastao) ? 0.05f : 0f;
+        public static (Vector3 lugar, Quaternion giro) PegadaNaMao(int modelo)
+        {
+            if (modelo == Itens.Modelo(Item.Machado))
+                return (new Vector3(-0.17109f, 0.02407f, -0.02816f), Quaternion.Normalize(new Quaternion(0.63004f, 0.32102f, 0.6984f, 0.11062f)));
+            if (modelo == Itens.Modelo(Item.Bastao))
+                return (new Vector3(-0.04755f, 0.06455f, -0.03304f), Quaternion.Normalize(new Quaternion(0.66446f, 0.24185f, 0.70668f, 0.02468f)));
+            if (modelo == Itens.Modelo(Item.Lanca))
+                return (new Vector3(0f, 0.08f, -0.03225f), Quaternion.Normalize(new Quaternion(-0.5f, 0.5f, -0.32102f, 0.63004f)));
+            if (modelo == Itens.Modelo(Item.Tocha))
+                return (new Vector3(-0.02853f, 0.07073f, -0.032f), Quaternion.Normalize(new Quaternion(-0.6861f, 0.17106f, -0.59966f, 0.37471f)));
+            // a faca
+            return (new Vector3(-0.01522f, 0.07506f, -0.03115f), Quaternion.Normalize(new Quaternion(0.50865f, 0.4912f, 0.63554f, 0.30998f)));
+        }
 
         static Material MaterialParticula(string nome, bool aditivo, Texture2D textura)
         {

@@ -24,7 +24,8 @@ namespace ZombieCityCleaner.EditorTools
     ///  - o controlador do mostruário (<c>NPC_Mostruario.controller</c>: o corpo todo de cada animação e, na camada dos
     ///    braços, a guarda);
     ///  - o prefab do NPC (<c>Prefabs/Roupas/NPC.prefab</c>: o modelo, o material das roupas no corpo e nas peças, o
-    ///    Animator e a <see cref="Vestimenta"/>).
+    ///    Animator e a <see cref="Vestimenta"/>), com o corpo e as duas luvas da mão nova (a <see cref="MontagemDaMaoNova"/>,
+    ///    que roda antes).
     /// Menu: Zombie City Cleaner > Roupas e NPCs > Montar; a cena do mostruário: Zombie City Cleaner > Exemplos > Roupas e NPCs.
     /// </summary>
     public static class MontagemDasRoupas
@@ -52,6 +53,8 @@ namespace ZombieCityCleaner.EditorTools
             if (json == null) throw new FileNotFoundException("Falta o catálogo das roupas (o roupas_exportar.py da pasta de arte)", Json);
             var catalogo = CatalogoDasRoupas.Ler(json);
             Importar();
+            // a mão nova e as luvas refeitas (as malhas da pasta MaoNova, que o prefab pega pela MontagemDaMaoNova.Malha)
+            MontagemDaMaoNova.Montar();
             int colunas = Mathf.Max(1, catalogo.colunas_da_tira);
             var cores = Array(TiraDasCores, catalogo.pecas.Length, colunas, true);
             var mascaras = Array(TiraDasMascaras, catalogo.pecas.Length, colunas, false);
@@ -316,6 +319,8 @@ namespace ZombieCityCleaner.EditorTools
                 go.name = "NPC";
                 foreach (var r in go.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 {
+                    // a mão nova: o corpo e as duas luvas com as malhas da pasta MaoNova (o resto, as do FBX)
+                    r.sharedMesh = MontagemDaMaoNova.Malha(r);
                     r.sharedMaterial = material;
                     r.updateWhenOffscreen = false;
                 }

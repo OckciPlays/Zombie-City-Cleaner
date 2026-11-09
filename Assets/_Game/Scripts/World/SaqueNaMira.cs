@@ -47,11 +47,11 @@ namespace ZombieCityCleaner.World
 
         public override void Usar(ArmaJogador quem) => MobiliaNovaDoMundo.Instancia?.PedirPegar(this, quem.Inventario);
 
-        // a caixa de colisão do móvel (na obra) e a parte aberta dele não tapam o item
+        // a caixa de colisão do móvel (na obra), a parte aberta dele e o gatilho de dormir da cama (08/11/2026) não tapam o item
         public override bool GanhaDe(Vector3 ponto, Interagivel antes)
         {
             if (movel == null) return false;
-            if (antes != null) return antes is ParteDoMovel && antes.transform.IsChildOf(movel);
+            if (antes != null) return (antes is ParteDoMovel || antes is Salvar.CamaDeDormir) && antes.transform.IsChildOf(movel);
             var b = caixaDoMovel;
             b.Expand(0.06f);
             return b.Contains(movel.InverseTransformPoint(ponto));

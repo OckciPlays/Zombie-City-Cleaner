@@ -269,7 +269,8 @@ namespace ZombieCityCleaner.UI
             Estilos();
             float u = Screen.height / 720f;
             Menu(u);
-            // o contador de FPS por cima do menu (o OnGUI do jogador não usa o canto de cima, à direita)
+            // o contador de FPS por cima do menu (no canto de cima, à direita; o minimapa desce para baixo dele quando ele está
+            // ligado: UI/MinimapaDoMundo, 08/11/2026)
             if (Event.current.type == EventType.Repaint && !GravacaoNoMundo.SemHud) Opcoes.Contador(u);
         }
 

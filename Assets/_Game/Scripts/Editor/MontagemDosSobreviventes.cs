@@ -19,7 +19,7 @@ namespace ZombieCityCleaner.EditorTools
     ///  - a raiz: NetworkObject, NetworkTransform do anfitrião (a posição e o giro em Y), NavMeshAgent, a cápsula (camada 2,
     ///    a do "Ignore Raycast": o jogador esbarra, o tiro não pega) e o <see cref="Sobrevivente"/>;
     ///  - o "Corpo": a cópia do corpo do jogador (Corpo_PrincipalBloco do Jogador.prefab: as roupas, as armas na mão, as
-    ///    bocas e o controlador de cada arma);
+    ///    bocas e o controlador de cada arma; as peças do fumo, desligadas);
     ///  - as partes que levam tiro (<see cref="ParteDoSobrevivente"/>), presas aos ossos, na camada 12 ("Sobrevivente"):
     ///    a cabeça (uma esfera), o tronco (duas cápsulas), os braços e as pernas;
     ///  - a lanterna no peito (desligada); a queda é com física (Sobrevivente.Queda.cs: o corpo não tem animação de morte);
@@ -103,6 +103,12 @@ namespace ZombieCityCleaner.EditorTools
             corpo.animador.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             corpo.animador.applyRootMotion = false;
             foreach (var r in corpoGo.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = ShadowCastingMode.On;
+            // as peças do fumo (o maço, o isqueiro e o cigarro, de 03/11/2026) vêm com o corpo do jogador, onde só o
+            // FumoJogador as mostra, com o maço na mão; o sobrevivente não fuma: ficam desligadas (09/11/2026, na primeira
+            // montagem com elas no corpo)
+            if (corpo.renderersDoFumo != null)
+                foreach (var r in corpo.renderersDoFumo)
+                    if (r != null) r.enabled = false;
 
             // as partes que levam tiro
             var ossos = corpoGo.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());

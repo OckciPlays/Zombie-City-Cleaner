@@ -307,7 +307,8 @@ namespace ZombieCityCleaner.Sobreviventes
             for (int i = 0; i < 2; i++)
             {
                 bool mecanico = i == 0;
-                var arma = mecanico ? TipoDeArma.Pistola : s.Next(100) < 70 ? TipoDeArma.Rifle : TipoDeArma.Espingarda;
+                // (09/11/2026, a sucata, 2ª leva: as de sucata no lugar das reais)
+                var arma = SobreviventesDoMundo.ArmaDoCivil(mecanico ? TipoDeArma.Pistola : s.Next(100) < 70 ? TipoDeArma.Rifle : TipoDeArma.Espingarda);
                 byte roupa = (byte)(s.Next(100) < 55 ? 3 : 0);
                 int sementeDaRoupa = s.Next();
                 if ((cena.mortos & (1 << i)) != 0) continue;   // este morreu
@@ -761,7 +762,8 @@ namespace ZombieCityCleaner.Sobreviventes
                         arma = it.item;
                         break;
                     }
-            var caixa = arma != Item.Nada ? Itens.CaixaDe(Itens.CalibreDaArma(arma)) : Item.Municao9mm;
+            // (sem arma, a de prego desde 09/11/2026: os civis não têm mais a 9mm)
+            var caixa = arma != Item.Nada ? Itens.CaixaDe(Itens.CalibreDaArma(arma)) : Item.MunicaoPrego;
             int balas = arma != Item.Nada ? Mathf.Clamp(Armas.Dados(Itens.Arma(arma)).capacidade * 2, 6, Itens.MaxPorCaixa) : 24;
             if (!inv.Receber(caixa, balas))
                 ItensNoMundo.Instancia?.Criar(caixa, NoChao(e.trabalho + (quem.transform.position - e.trabalho).normalized * 1.5f), 0f, balas);

@@ -50,7 +50,7 @@ namespace ZombieCityCleaner.DiaZero
                 GUI.depth = -21;
                 Preto(1f);
                 GUI.Label(new Rect(0, Screen.height * 0.42f, Screen.width, 50 * u), "UM DIA NORMAL", _titulo);
-                GUI.Label(new Rect(0, Screen.height * 0.42f + 54 * u, Screen.width, 30 * u), "Carregando a rua…", _texto);
+                GUI.Label(new Rect(0, Screen.height * 0.42f + 54 * u, Screen.width, 30 * u), (_etapaDaRua ?? "Carregando a rua") + "…", _texto);
                 return;
             }
             if (MenuOnline.Aberto || ModoVideo.Ligado || MenuOnline.Cinema) return;

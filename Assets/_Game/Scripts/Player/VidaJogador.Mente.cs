@@ -112,7 +112,11 @@ namespace ZombieCityCleaner.Player
             bool fogueira = FogueiraAcesaPerto(pes, 8f);
             bool luzPropria = LanternaAcesa() || (_rede != null && (_rede.TochaAcesa || (_rede.Passageiro != null && _rede.Passageiro.NoCarro)));
             bool escuro = !luzPropria && !fogueira && (noBunker ? !bunkerAceso : noite);
-            if (escuro) Abala(ref taxa, ref motivos, MotivoDaMente.Escuro, 4f);
+            // dormindo (08/11/2026, a pedido: "dormir recuperar sanidade"), o escuro, a solidão e a tempestade não pesam: só o
+            // que é de verdade (os zumbis caçando, o corpo, a fome e a sede). Antes, dormindo sozinho de noite fora do bunker,
+            // a mente até caía (o escuro e a solidão passavam do descanso)
+            bool dormindo = Dormindo.Value;
+            if (escuro && !dormindo) Abala(ref taxa, ref motivos, MotivoDaMente.Escuro, 4f);
 
             // os zumbis: caçando perto, ou só investigando; o susto é quem começa a caçar colado
             var zm = ZombieManager.Instancia;
@@ -141,9 +145,9 @@ namespace ZombieCityCleaner.Player
             }
 
             // sozinho à noite (só com mais alguém na partida)
-            if (noite && JogadorRede.Todos.Count > 1 && Amigos(pes, 20f) == 0) Abala(ref taxa, ref motivos, MotivoDaMente.Sozinho, 2f);
+            if (noite && !dormindo && JogadorRede.Todos.Count > 1 && Amigos(pes, 20f) == 0) Abala(ref taxa, ref motivos, MotivoDaMente.Sozinho, 2f);
             // a tempestade, fora do teto
-            if (Tempo.Nivel >= NivelDoTempo.Tempestade && !Tempo.SobTeto(pes)) Abala(ref taxa, ref motivos, MotivoDaMente.Tempestade, 2f);
+            if (!dormindo && Tempo.Nivel >= NivelDoTempo.Tempestade && !Tempo.SobTeto(pes)) Abala(ref taxa, ref motivos, MotivoDaMente.Tempestade, 2f);
 
             // o corpo
             var e = Corpo.Value;
@@ -183,7 +187,7 @@ namespace ZombieCityCleaner.Player
         void Abala(ref float taxa, ref uint motivos, MotivoDaMente m, float porHora)
         {
             if (_abrigado) return;
-            taxa -= porHora * RitmoDasPerdas * (Habilidades.Tem(_rede, Habilidade.NervosDeAco) ? 0.7f : 1f);   // (os Nervos de aço, 06/11/2026)
+            taxa -= porHora * RitmoDasPerdas * (1f - 0.1f * Habilidades.Pontos(_rede, Habilidade.NervosDeAco));   // (os Nervos de aço, 06/11/2026: 10% por ponto)
             motivos |= Bit(m);
         }
 
@@ -248,7 +252,7 @@ namespace ZombieCityCleaner.Player
             if (!IsServer || !IsSpawned || Caido.Value || !CorpoAnda || quanto <= 0f) return;
             if (Abrigado()) return;   // (no bunker, nada abala: nem o susto, nem o golpe)
             quanto *= RitmoDosSustos;
-            if (Habilidades.Tem(_rede, Habilidade.NervosDeAco)) quanto *= 0.7f;   // (os Nervos de aço, 06/11/2026)
+            quanto *= 1f - 0.1f * Habilidades.Pontos(_rede, Habilidade.NervosDeAco);   // (os Nervos de aço, 06/11/2026: 10% por ponto)
             DefinirMenteNoServidor(_mente - quanto);
             _motivoAte[(int)motivo] = Time.time + MotivoDeEventoDura;
         }

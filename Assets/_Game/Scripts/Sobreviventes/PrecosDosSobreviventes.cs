@@ -52,8 +52,13 @@ namespace ZombieCityCleaner.Sobreviventes
                     Item.Agua, Item.CopoDeAgua, Item.Leite, Item.Suco, Item.RefrigeranteLata, Item.RefrigeranteGarrafa, Item.Energetico, Item.GarrafaTermica,
                     // (06/11/2026) no fim: os peixes da pesca
                     Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado, Item.PeixeAssado },
-            new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca },
-            new[] { Item.Municao9mm, Item.Municao12, Item.Municao556, Item.Municao762 },
+            // (09/11/2026, a sucata, 2ª leva) no fim (o save guarda o estoque pelo índice): as de sucata. As reais ficam na lista
+            // (o comerciante ainda compra), mas não vêm no estoque nem são repostas (SoCompra)
+            new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca,
+                    Item.PistolaSucata, Item.SubmetralhadoraSucata, Item.RifleSucata },
+            new[] { Item.Municao9mm, Item.Municao12, Item.Municao556, Item.Municao762,
+                    // (09/11/2026) as de sucata
+                    Item.MunicaoPrego, Item.MunicaoParafuso },
             new[] { Item.Remedio, Item.Comprimidos, Item.Antibiotico, Item.KitMedico, Item.Atadura, Item.Bandagem, Item.Gaze, Item.Desinfetante,
                     Item.SprayAntisseptico, Item.Lanterna, Item.Pilhas, Item.Tocha, Item.Fogueira, Item.Cama, Item.Barricada,
                     // (05/11/2026) no fim: o save guarda o estoque pelo índice do produto (a tala; a bandagem antisséptica,
@@ -64,7 +69,9 @@ namespace ZombieCityCleaner.Sobreviventes
             new[] { Item.Pneu, Item.Bateria, Item.Vela, Item.Radiador, Item.Macaco, Item.Galao, Item.KitDeReparo, Item.Ferramenta },
             new[] { Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos, Item.Isca, Item.VaraDePesca,
                     // (06/11/2026) no fim: a pólvora do Armeiro
-                    Item.Polvora },
+                    Item.Polvora,
+                    // (09/11/2026) a sucata
+                    Item.Sucata },
             new[] { Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande, Item.Coldre, Item.Roupa, Item.Pano },
         };
 
@@ -81,6 +88,18 @@ namespace ZombieCityCleaner.Sobreviventes
             return l;
         }
 
+        /// <summary>
+        /// O que o comerciante compra, mas não tem para vender (09/11/2026, a sucata, 2ª leva: as armas reais só com os
+        /// militares): as armas de fogo e a munição reais. Não vêm no estoque do começo (a munição, às vezes uma caixa:
+        /// <see cref="ChanceDaMunicaoReal"/>) e não são repostas ao amanhecer; a que um jogador vende fica na banca.
+        /// </summary>
+        public static bool SoCompra(Item item) => item == Item.Pistola || item == Item.Espingarda || item == Item.Submetralhadora
+            || item == Item.Rifle || item == Item.Sniper || item == Item.Municao9mm || item == Item.Municao12 || item == Item.Municao556
+            || item == Item.Municao762;
+
+        /// <summary>A chance de a banca começar com uma caixa de uma munição real.</summary>
+        public const double ChanceDaMunicaoReal = 0.25;
+
         /// <summary>O comerciante da categoria compra este item.</summary>
         public static bool Compra(CategoriaDoComercio c, Item item) => System.Array.IndexOf(Itens(c), item) >= 0;
 
@@ -92,6 +111,13 @@ namespace ZombieCityCleaner.Sobreviventes
             [Item.Barricada] = 25,
             // (06/11/2026) os peixes e a pólvora
             [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14, [Item.PeixeAssado] = 5,
+            // (09/11/2026) as armas de sucata, as munições delas e a sucata
+            [Item.PistolaSucata] = 150, [Item.RifleSucata] = 300, [Item.SubmetralhadoraSucata] = 300, [Item.MunicaoPrego] = 12,
+            [Item.MunicaoParafuso] = 18, [Item.Sucata] = 3,
+            // (09/11/2026, a sucata, 2ª leva) as armas e a munição reais saíram da loja do Dia 0: os preços de lá ficam aqui
+            // (sem eles, o comerciante pagaria $ 12 por uma pistola)
+            [Item.Pistola] = 450, [Item.Espingarda] = 400, [Item.Submetralhadora] = 650, [Item.Rifle] = 850, [Item.Sniper] = 1000,
+            [Item.Municao9mm] = 20, [Item.Municao12] = 25, [Item.Municao556] = 25, [Item.Municao762] = 30, [Item.Coldre] = 35,
         };
 
         static Dictionary<Item, int> _base;

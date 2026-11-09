@@ -57,11 +57,14 @@ namespace ZombieCityCleaner.Sobreviventes
             }
         }
 
-        // quanto o comerciante tem do produto no começo (a semente: as armas, uma ou nenhuma; o resto, de 1 ao máximo)
+        // quanto o comerciante tem do produto no começo (a semente: as armas, uma ou nenhuma; o resto, de 1 ao máximo). Desde
+        // 09/11/2026 (a sucata), as armas reais nenhuma e a munição real às vezes uma caixa; o rifle de sucata como a sniper
         static int QtdInicial(Item item, System.Random r)
         {
             int max = PrecosDosSobreviventes.Maximo(item);
-            return Itens.EhArma(item) ? (r.NextDouble() < (item == Item.Sniper ? 0.3 : 0.6) ? 1 : 0) : 1 + r.Next(max);
+            int qtd = Itens.EhArma(item) ? (r.NextDouble() < (item == Item.Sniper || item == Item.RifleSucata ? 0.3 : 0.6) ? 1 : 0) : 1 + r.Next(max);
+            if (!PrecosDosSobreviventes.SoCompra(item)) return qtd;
+            return Itens.EhArma(item) ? 0 : r.NextDouble() < PrecosDosSobreviventes.ChanceDaMunicaoReal ? 1 : 0;
         }
 
         /// <summary>
@@ -109,6 +112,7 @@ namespace ZombieCityCleaner.Sobreviventes
                     var itens = PrecosDosSobreviventes.Itens(p.Bancas[x.banca].categoria);
                     if (x.produto >= itens.Length) continue;
                     int max = PrecosDosSobreviventes.Maximo(itens[x.produto]);
+                    if (PrecosDosSobreviventes.SoCompra(itens[x.produto])) continue;   // (as armas e a munição reais não voltam, 09/11/2026)
                     if (x.qtd >= max || Random.value > 0.75f) continue;
                     x.qtd = (byte)Mathf.Min(max, x.qtd + Mathf.Max(1, Mathf.CeilToInt(max / 2f)));
                     _estoque[k] = x;

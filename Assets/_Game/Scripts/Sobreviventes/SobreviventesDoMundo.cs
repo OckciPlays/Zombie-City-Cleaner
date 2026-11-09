@@ -267,7 +267,8 @@ namespace ZombieCityCleaner.Sobreviventes
         // as armas dos civis (03/11/2026, a pedido: "armas brancas, tacos, facas, pistolas, raramente uma submetralhadora";
         // antes, rifles, a espingarda e até a sniper): o líder com a pistola (às vezes a submetralhadora); os outros, ~45%
         // uma branca (a faca, o bastão com pregos, o machado ou a lança), ~45% a pistola e ~10% a submetralhadora, no
-        // máximo uma por grupo (os outros: 50% branca, 40% pistola e 10% a submetralhadora; com o líder, ~45% de brancas)
+        // máximo uma por grupo (os outros: 50% branca, 40% pistola e 10% a submetralhadora; com o líder, ~45% de brancas).
+        // Desde 09/11/2026 (a sucata, 2ª leva: "só os militares usam as reais"), as de fogo são as de sucata (ArmaDoCivil)
         static (TipoDeArma arma, Item branca) SortearArma(System.Random s, int i, ref bool temSub)
         {
             int r = s.Next(100);
@@ -276,20 +277,39 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (r < 25 && !temSub)
                 {
                     temSub = true;
-                    return (TipoDeArma.Submetralhadora, Item.Nada);
+                    return (ArmaDoCivil(TipoDeArma.Submetralhadora), Item.Nada);
                 }
-                return (TipoDeArma.Pistola, Item.Nada);
+                return (ArmaDoCivil(TipoDeArma.Pistola), Item.Nada);
             }
             if (r < 10 && !temSub)
             {
                 temSub = true;
-                return (TipoDeArma.Submetralhadora, Item.Nada);
+                return (ArmaDoCivil(TipoDeArma.Submetralhadora), Item.Nada);
             }
-            if (r < 50) return (TipoDeArma.Pistola, Item.Nada);
+            if (r < 50) return (ArmaDoCivil(TipoDeArma.Pistola), Item.Nada);
             int b = s.Next(100);
             var branca = b < 30 ? Item.Faca : b < 60 ? Item.Bastao : b < 85 ? Item.Machado : Item.Lanca;
-            return (TipoDeArma.Pistola, Itens.NoJogo(branca) ? branca : Item.Faca);
+            return (ArmaDoCivil(TipoDeArma.Pistola), Itens.NoJogo(branca) ? branca : Item.Faca);
         }
+
+        /// <summary>
+        /// A arma de fogo de um civil (09/11/2026, a sucata, 2ª leva: as armas reais só com os militares): a de sucata no
+        /// lugar da real (a pistola, a submetralhadora; as armas longas, o rifle de precisão de sucata). Os sorteios de cada
+        /// lugar continuam os de antes: só a arma que sai muda.
+        /// </summary>
+        public static TipoDeArma ArmaDoCivil(TipoDeArma real) => real switch
+        {
+            TipoDeArma.Pistola => TipoDeArma.PistolaSucata,
+            TipoDeArma.Submetralhadora => TipoDeArma.SubmetralhadoraSucata,
+            TipoDeArma.Rifle or TipoDeArma.Espingarda or TipoDeArma.Sniper => TipoDeArma.RifleSucata,
+            _ => real,
+        };
+
+        /// <summary>
+        /// A reserva do civil com uma arma de sucata de pente curto (a pistola, de um tiro, e o rifle, de três): de tanto a
+        /// tanto (não fica no saque, como a dos militares). Sem ela, ele fugia depois do primeiro tiro.
+        /// </summary>
+        public const int ReservaDoCivilMin = 4, ReservaDoCivilMax = 9;
 
         // o que ele leva: o pente cheio, de 2 a 4 caixas de munição da arma dele (de um a dois pentes cada), comida, água, às vezes remédio e materiais,
         // uma mochila (quase sempre) e algum dinheiro
@@ -318,7 +338,9 @@ namespace ZombieCityCleaner.Sobreviventes
             else
             {
                 sob.pente = Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.4f, 1f)));
+                // (a caixa é a do calibre dela: a de prego ou a de parafuso, com as armas de sucata, desde 09/11/2026)
                 if (Random.value < 0.45f) Por(sob, Itens.CaixaDe(d.calibre), Random.Range(3, 13));
+                if (d.capacidade < 6) sob.reserva = Random.Range(ReservaDoCivilMin, ReservaDoCivilMax + 1);
             }
             Item[] comidas = { Item.Comida, Item.Feijao, Item.Carne, Item.Milho, Item.Sopa, Item.Salgadinho, Item.BarraDeEnergia };
             Item[] bebidas = { Item.Agua, Item.RefrigeranteLata, Item.Energetico, Item.Suco };
@@ -346,11 +368,15 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (Random.value < 0.4f) Por(sob, materiais[Random.Range(0, materiais.Length)], Random.Range(1, 3));
                 if (Random.value < 0.2f) Por(sob, Item.Pilhas, 2);
                 if (!deBranca && Random.value < 0.1f) Por(sob, Item.Faca, 1);
+                if (Random.value < ChanceDeSucataDoCivil) Por(sob, Item.Sucata, Random.Range(1, 4));   // (a sucata, 09/11/2026)
             }
             float r = Random.value;
             sob.mochilaVestida = r < 0.45f ? Item.MochilaPequena : r < 0.75f ? Item.MochilaMedia : r < 0.85f ? Item.MochilaGrande : Item.Nada;
             sob.dinheiro = Random.value < 0.6f ? Random.Range(5, 80) : 0;
         }
+
+        /// <summary>A chance de o civil levar de 1 a 3 sucatas na mochila (09/11/2026, a 2ª leva).</summary>
+        public const float ChanceDeSucataDoCivil = 0.25f;
 
         // o remédio que o morto deixa, por peso (05/11/2026, o sistema de vida por membro): o civil, mais a atadura e os
         // comprimidos (o kit em 7 de cada 100 remédios); o militar, o kit de campanha e a tala
@@ -476,15 +502,16 @@ namespace ZombieCityCleaner.Sobreviventes
             Item.MacoDeCigarros,
         };
 
-        static void DoAbutre(Sobrevivente s, List<ItemNaMochila> itens)
+        // (o Abutre: com 1 ponto, uma ou duas coisas; com 2, duas ou três e a munição da arma dele)
+        static void DoAbutre(Sobrevivente s, List<ItemNaMochila> itens, int pontos)
         {
-            int n = Random.Range(2, 4);
+            int n = pontos >= 2 ? Random.Range(2, 4) : Random.Range(1, 3);
             for (int i = 0; i < n; i++)
             {
                 var it = CoisasDoAbutre[Random.Range(0, CoisasDoAbutre.Length)];
                 itens.Add(new ItemNaMochila { item = it, qtd = (ushort)Mathf.Max(1, Itens.QuantidadePadrao(it)) });
             }
-            if (!s.ComBranca && Itens.EhArma(s.ItemDaArma))
+            if (pontos >= 2 && !s.ComBranca && Itens.EhArma(s.ItemDaArma))
                 itens.Add(new ItemNaMochila { item = Itens.CaixaDe(Itens.CalibreDaArma(s.ItemDaArma)), qtd = (ushort)Random.Range(6, 15) });
         }
 
@@ -496,7 +523,8 @@ namespace ZombieCityCleaner.Sobreviventes
             itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)(s.ComBranca ? 1 : Mathf.Max(0, s.pente)),
                                                 desgaste = (byte)(militar ? Random.Range(50, 86) : Random.Range(15, 60)) });
             if (extras != null) itens.AddRange(extras);
-            if (Habilidades.Tem(s.matador, Player.Habilidade.Abutre)) DoAbutre(s, itens);   // (o Abutre, 06/11/2026)
+            int abutre = Habilidades.Pontos(s.matador, Player.Habilidade.Abutre);   // (o Abutre, 06/11/2026)
+            if (abutre > 0) DoAbutre(s, itens, abutre);
             var lugar = s.transform.position + s.transform.right * 0.6f;
             MochilasNoChao.Instancia?.Criar(lugar, s.transform.eulerAngles.y, s.nome, s.mochilaVestida, itens, s.dinheiro);
         }

@@ -175,7 +175,7 @@ namespace ZombieCityCleaner.Testes
                         novos++;
                         pecas.Clear();
                         MobiliaNova.Pecas(p, 0, pecas);
-                        caixas += pecas.Where(q => q.caixa).Sum(q => MobiliaNova.Camadas(q.tamanho.y));
+                        caixas += pecas.Sum(q => MobiliaNova.CaixasDe(q));   // (as camas: a cabeceira e o colchão, 08/11/2026)
                     }
                     Assert.AreEqual(sem.Casas[i].Colisao.Triangulos + caixas * 12, com.Casas[i].Colisao.Triangulos, $"{com.Casas[i].Nome}: as caixas dos móveis novos");
                     Assert.IsNull(sem.Casas[i].MobiliaNova);

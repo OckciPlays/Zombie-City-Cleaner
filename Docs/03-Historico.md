@@ -795,6 +795,44 @@ O Pedro jogou com os amigos e pediu os ajustes; feitos de uma vez, a pedido, par
   crescendo a cada golpe; para eles colarem no tronco, as árvores de cada espécie foram medidas no editor.
 - Conferido na prévia (os entalhes) e na conta (o giro); o resto, não testado no Play.
 
+## A segunda partida com os amigos (08/11/2026, a pedido)
+
+- **O que o Pedro trouxe:** dormir nas camas dos prédios e do bunker; entrar no caiaque nadando; as armas brancas na mão
+  com a pose errada; dormir recuperar a sanidade; pular a cama como a janela; o Shift para passar a pilha para o armário;
+  atirar e se tratar na garupa da moto e usar itens no carro; o minimapa (o zoom perto demais) e as marcas do mapa
+  aparecendo no mundo como os pings.
+- **O que mudou:** as camas dos móveis voltaram a ter o E (o molde perdia o colisor) e valem em qualquer lugar, com o corpo
+  deitado no colchão; nadando, o E funciona; dormindo, o escuro, a solidão e a tempestade não pesam e a mente sobe (5 por
+  hora numa cama); a cama tem o colchão separado na colisão, e o Espaço pula por cima dela; o Shift + clique; o garupa da
+  moto com as mãos livres (atira e usa itens) e os passageiros do carro usando itens; o minimapa com 600 e 1200 m; as
+  marcas no mundo.
+- **Para depois, numa etapa só com o Blender:** as animações das armas brancas no corpo (com os prints do Pedro).
+- **A mão nova (09/11/2026):** a mão redonda, com unhas e alguns pelos (a mulher sem eles), e o antebraço que afina até o
+  pulso, no corpo do jogador e dos NPCs, com as duas luvas refeitas em volta dela (`Editor/MontagemDaMaoNova`); conferida em
+  fotos sem Play.
+- **As armas brancas no corpo (09/11/2026):** o segurar e o golpe de cada uma (a faca, o machado no ombro, o bastão como um
+  taco, a lança baixa e a tocha erguida), no lugar da guarda e do soco, com a arma presa à mão direita; os sobreviventes de
+  arma branca também. Conferidas em fotos sem Play, ao lado das do Blender; não testadas no Play.
+- **O lag da tela de criar (09/11/2026):** no Dia 0, os cortes dos zumbis andavam na tela de criar (média de 71 ms por
+  quadro até eles acabarem); agora eles ficam prontos na tela preta de carregar a rua, que espera (~5 s a mais na build), e
+  as miniaturas não leem mais a imagem da placa (a tela fica em ~11 ms). O bunker não travou no Editor; o aquecimento dos
+  shaders, para a build, foi tentado e desfeito (veja o `CLAUDE.md`).
+- Compila; os testes da mobília e do bunker passam; as camas conferidas na prévia; o resto, não testado no Play.
+- **A árvore de habilidades nova, a etapa 1a (09/11/2026, a maquete aprovada):** 74 nós em 13 ramos, com 1 a 3 níveis,
+  as fileiras (0, 3, 7, 12, 18), os pré-requisitos, tirar ponto pelo botão direito, 40 níveis (~16 h), os ramos novos
+  "em breve", a aba K refeita (uma página por área), o F1 e a migração dos saves (os pontos voltam, com o aviso).
+  Compila; testada no Play pelo MCP (aprender e tirar nas três páginas, salvar, sair e voltar, e o save do Pedro
+  migrando), sem o Pedro jogar ainda. Detalhes no `Docs/18-Habilidades.md`.
+- **As armas de sucata, a 1ª leva da etapa 1b (09/11/2026):** a pistola (um tiro), o rifle de precisão (sem luneta) e a
+  submetralhadora de sucata, a munição de prego e a de parafuso e a sucata, fabricadas na bancada e na mesa de oficina e
+  destravadas pelos três primeiros nós do Armeiro de sucata (75% do dano das reais, emperram e gastam mais, fazem mais
+  barulho); testadas no Play pelo MCP, sem o Pedro jogar ainda (detalhes no `CLAUDE.md`).
+- **A sucata e as armas reais raras, a 2ª leva da etapa 1b (09/11/2026):** os painéis de metal pelo mundo (a chapa, a
+  porta de carro e a placa caída; segurar o E desmonta em sucata, com barulho, e o save guarda), o desmontar dos itens com
+  metal na mochila (com a barra), o Sucateiro valendo (e o Faz-tudo pedindo ele), a sucata no saque das oficinas, as armas
+  reais raríssimas no saque das casas (~10% de antes; a munição real ~35%), os civis com as armas de sucata, o comerciante
+  com elas e a loja de armas do Dia 0 virando a de caça e ferragens; testadas no Play pelo MCP, sem o Pedro jogar ainda.
+
 ## Mudanças de rumo, em resumo
 
 | Quando | O que mudou |

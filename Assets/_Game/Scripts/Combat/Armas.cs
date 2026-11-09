@@ -2,14 +2,19 @@ using UnityEngine;
 
 namespace ZombieCityCleaner.Combat
 {
-    /// <summary>As armas do jogo, na ordem dos modelos (o número vai pela rede).</summary>
-    public enum TipoDeArma : byte { Pistola, Rifle, Submetralhadora, Espingarda, Sniper }
+    /// <summary>
+    /// As armas do jogo, na ordem dos modelos (o número vai pela rede). As de sucata (09/11/2026, o Armeiro de sucata) vêm
+    /// depois das reais: a pistola (um tiro), o rifle de precisão (de ferrolho, sem luneta) e a submetralhadora.
+    /// </summary>
+    public enum TipoDeArma : byte { Pistola, Rifle, Submetralhadora, Espingarda, Sniper, PistolaSucata, RifleSucata, SubmetralhadoraSucata }
 
     /// <summary>
     /// A munição de cada arma: a pistola e a submetralhadora usam 9mm, o rifle 5,56, a espingarda calibre 12 e a sniper
-    /// 7,62. As balas vêm em caixas (<see cref="ZombieCityCleaner.Loot.Itens.MaxPorCaixa"/>), que a recarga gasta.
+    /// 7,62. As balas vêm em caixas (<see cref="ZombieCityCleaner.Loot.Itens.MaxPorCaixa"/>), que a recarga gasta. As de
+    /// sucata (09/11/2026) têm a munição só delas: a de prego (a pistola e a submetralhadora) e a de parafuso (o rifle); a
+    /// munição real não serve nelas, nem a delas nas reais.
     /// </summary>
-    public enum Calibre : byte { Nove, Cinco56, Doze, Sete62 }
+    public enum Calibre : byte { Nove, Cinco56, Doze, Sete62, Prego, Parafuso }
 
     /// <summary>
     /// O dano de uma arma até uma distância (a espingarda). A parte do corpo multiplica no zumbi (AjustesDeZumbi): a
@@ -29,6 +34,8 @@ namespace ZombieCityCleaner.Combat
     public class DadosDaArma
     {
         public string nome, nomeComArtigo;
+        /// <summary>O nome curto do canto do HUD (null: o nome; o rifle de precisão de sucata, "rifle de sucata", 09/11/2026: o inteiro ficava cortado).</summary>
+        public string nomeNoHud;
         public int capacidade;
         /// <summary>A munição que ela usa (a recarga tira as balas das caixas desse calibre).</summary>
         public Calibre calibre;
@@ -73,13 +80,27 @@ namespace ZombieCityCleaner.Combat
         public SomDeTiro.Perfil som;
         /// <summary>A boca do cano na malha da arma avulsa (origem no cabo, cano em +Z).</summary>
         public Vector3 boca;
+        /// <summary>
+        /// A arma real de que esta é a de sucata (09/11/2026): os braços de primeira pessoa, as animações e o lugar no corpo
+        /// são os dela, com a malha da de sucata no lugar. null: uma arma real.
+        /// </summary>
+        public TipoDeArma? equivalente;
+        /// <summary>O raio do barulho do tiro (o que chama os zumbis), vezes o do jogo.</summary>
+        public float barulho = 1f;
+        /// <summary>A chance de emperrar (a arma gasta, de <see cref="ZombieCityCleaner.Loot.Itens.DesgasteQueEmperra"/> em diante), vezes a do jogo.</summary>
+        public float emperra = 1f;
+        /// <summary>O desgaste de cada tiro, vezes o do jogo.</summary>
+        public float desgaste = 1f;
+
+        /// <summary>Uma cópia dos números (a de sucata parte da real).</summary>
+        public DadosDaArma Copia() => (DadosDaArma)MemberwiseClone();
     }
 
     public static class Armas
     {
-        public const int Quantas = 5;
+        public const int Quantas = 8;
 
-        public static readonly DadosDaArma[] Todas =
+        public static readonly DadosDaArma[] Todas = ComAsDeSucata(new[]
         {
             new DadosDaArma
             {
@@ -121,12 +142,86 @@ namespace ZombieCityCleaner.Combat
                 fovLuneta = 12f, ferrolho = true, corpoComo = TipoDeArma.Rifle,
                 som = SomDeTiro.Sniper, boca = new Vector3(0f, 0.115f, 0.905f),
             },
-        };
+        });
 
-        /// <summary>Os nomes dos modelos (Jogador_FP_&lt;nome&gt;.fbx, Arma_&lt;nome&gt;, TP_&lt;clipe&gt;_&lt;nome&gt;).</summary>
-        public static readonly string[] Modelos = { "Pistola", "Rifle", "Submetralhadora", "Espingarda", "Sniper" };
+        /// <summary>
+        /// Os nomes dos modelos (Jogador_FP_&lt;nome&gt;.fbx, Arma_&lt;nome&gt;, TP_&lt;clipe&gt;_&lt;nome&gt;). As de sucata usam
+        /// os braços e as animações da real (<see cref="Real"/>); o nome delas é o do FBX (Art/Armas/Modelos/Sucata_*.fbx).
+        /// </summary>
+        public static readonly string[] Modelos = { "Pistola", "Rifle", "Submetralhadora", "Espingarda", "Sniper", "Sucata_Pistola", "Sucata_Rifle", "Sucata_Submetralhadora" };
 
         public static DadosDaArma Dados(TipoDeArma t) => Todas[Mathf.Clamp((int)t, 0, Quantas - 1)];
+
+        /// <summary>A arma real de uma de sucata (os braços, as animações e o corpo); as reais, ela mesma.</summary>
+        public static TipoDeArma Real(TipoDeArma t) => Dados(t).equivalente ?? t;
+        /// <summary>Uma arma de sucata (09/11/2026).</summary>
+        public static bool DeSucata(TipoDeArma t) => Dados(t).equivalente != null;
+
+        // ------------------------------------------------------------------ as armas de sucata (09/11/2026)
+
+        // Os números das de sucata a partir da real equivalente (a pedido: o dano ~75%, as primeiras do jogo, fabricadas):
+        // mude aqui. O resto (a cadência, o coice, a recarga, o alcance e o som) é o da real.
+        /// <summary>O dano, vezes o da real.</summary>
+        public const float DanoDaSucata = 0.75f;
+        /// <summary>A chance de emperrar, vezes a da real.</summary>
+        public const float EmperraDaSucata = 2f;
+        /// <summary>O desgaste de cada tiro, vezes o da real.</summary>
+        public const float DesgasteDaSucata = 1.5f;
+        /// <summary>O raio do barulho do tiro, vezes o da real.</summary>
+        public const float BarulhoDaSucata = 1.25f;
+        /// <summary>O espalhamento do tiro, vezes o da real (a pistola e a submetralhadora).</summary>
+        public const float EspalhaDaSucata = 1.3f;
+        /// <summary>O espalhamento do rifle de precisão, vezes o da sniper sem a luneta.</summary>
+        public const float EspalhaDoRifleDeSucata = 1.15f;
+        /// <summary>
+        /// O rifle de sucata não tem luneta: mirando pela mira de ferro, espalha isto (graus; a sniper, na luneta, espalha 0,
+        /// e 15% de nada é nada); sem mirar, o da sniper sem a luneta mais 15%.
+        /// </summary>
+        public const float MiraDeFerroDoRifle = 0.3f;
+        /// <summary>Quantas balas cabem: a pistola de um tiro (recarrega a cada tiro), a submetralhadora e o rifle.</summary>
+        public const int PenteDaPistolaDeSucata = 1, PenteDaSubmetralhadoraDeSucata = 20, PenteDoRifleDeSucata = 3;
+
+        // as reais, e depois as de sucata (na ordem de TipoDeArma), feitas a partir delas
+        static DadosDaArma[] ComAsDeSucata(DadosDaArma[] reais)
+        {
+            DadosDaArma Copia(TipoDeArma real, string nome, string artigo, Calibre calibre, int capacidade, Vector3 boca)
+            {
+                var r = reais[(int)real];
+                var d = r.Copia();
+                d.nome = nome;
+                d.nomeComArtigo = artigo;
+                d.calibre = calibre;
+                d.capacidade = capacidade;
+                d.dano = r.dano * DanoDaSucata;
+                d.dispersao = r.dispersao * EspalhaDaSucata;
+                d.dispersaoAndando = r.dispersaoAndando * EspalhaDaSucata;
+                d.emperra = r.emperra * EmperraDaSucata;
+                d.desgaste = r.desgaste * DesgasteDaSucata;
+                d.barulho = r.barulho * BarulhoDaSucata;
+                d.boca = boca;
+                d.equivalente = real;
+                d.corpoComo = r.corpoComo ?? real;
+                return d;
+            }
+            var pistola = Copia(TipoDeArma.Pistola, "pistola de sucata", "a pistola de sucata", Calibre.Prego, PenteDaPistolaDeSucata,
+                                new Vector3(0f, 0.088f, 0.197f));
+            // o rifle de precisão: o de ferrolho, como a sniper, mas sem a luneta (a mira de ferro)
+            var rifle = Copia(TipoDeArma.Sniper, "rifle de precisão de sucata", "o rifle de precisão de sucata", Calibre.Parafuso,
+                              PenteDoRifleDeSucata, new Vector3(0f, 0.105f, 0.913f));
+            rifle.fovLuneta = 0f;
+            rifle.nomeNoHud = "rifle de sucata";   // (no HUD; o inteiro fica no inventário)
+            rifle.dispersao = MiraDeFerroDoRifle;
+            rifle.dispersaoSemLuneta = reais[(int)TipoDeArma.Sniper].dispersaoSemLuneta * EspalhaDoRifleDeSucata;
+            rifle.dispersaoAndando = reais[(int)TipoDeArma.Sniper].dispersaoAndando * EspalhaDoRifleDeSucata;
+            var submetralhadora = Copia(TipoDeArma.Submetralhadora, "submetralhadora de sucata", "a submetralhadora de sucata", Calibre.Prego,
+                                        PenteDaSubmetralhadoraDeSucata, new Vector3(0f, 0.100f, 0.285f));
+            var todas = new DadosDaArma[reais.Length + 3];
+            reais.CopyTo(todas, 0);
+            todas[(int)TipoDeArma.PistolaSucata] = pistola;
+            todas[(int)TipoDeArma.RifleSucata] = rifle;
+            todas[(int)TipoDeArma.SubmetralhadoraSucata] = submetralhadora;
+            return todas;
+        }
 
         /// <summary>O dano desta arma a esta distância (antes do multiplicador da parte do corpo).</summary>
         public static float Dano(DadosDaArma d, float distancia)

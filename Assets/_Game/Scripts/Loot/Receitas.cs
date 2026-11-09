@@ -111,6 +111,12 @@ namespace ZombieCityCleaner.Loot
             H(Player.Habilidade.Armeiro, Item.Municao12, 8, true, Item.Ferramenta, P(Item.Polvora), P(Item.PecasDeMetal), P(Item.Pano)),
             H(Player.Habilidade.Armeiro, Item.Municao556, 12, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal)),
             H(Player.Habilidade.Armeiro, Item.Municao762, 10, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal, 2)),
+            // o Armeiro de sucata (09/11/2026): a pistola e as munições na bancada; a submetralhadora e o rifle na mesa de oficina
+            H(Player.Habilidade.PistolaDeSucata, Item.PistolaSucata, 1, false, Item.Nada, P(Item.Sucata, 6), P(Item.Madeira), P(Item.FitaAdesiva)),
+            H(Player.Habilidade.PistolaDeSucata, Item.MunicaoPrego, 10, false, Item.Nada, P(Item.Polvora), P(Item.Sucata)),
+            H(Player.Habilidade.RifleDeSucata, Item.MunicaoParafuso, 5, false, Item.Nada, P(Item.Polvora), P(Item.Sucata, 2)),
+            H(Player.Habilidade.SubmetralhadoraDeSucata, Item.SubmetralhadoraSucata, 1, true, Item.Nada, P(Item.Sucata, 12), P(Item.Madeira), P(Item.FitaAdesiva, 2)),
+            H(Player.Habilidade.RifleDeSucata, Item.RifleSucata, 1, true, Item.Nada, P(Item.Sucata, 10), P(Item.Madeira, 2), P(Item.FitaAdesiva)),
         };
 
         static Desmontagem D(Item item, string verbo, Item ferramenta, params Parte[] vira) =>
@@ -126,22 +132,75 @@ namespace ZombieCityCleaner.Loot
             D(Item.Tala, "desfazer", Item.Nada, P(Item.Madeira)),
             D(Item.Corda, "desfazer", Item.Nada, P(Item.Pano, 2)),
             D(Item.VaraDePesca, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Fios, 2)),
-            D(Item.GarrafaTermica, "desmontar", Item.Nada, P(Item.PecasDeMetal)),
+            // (09/11/2026, a sucata, 2ª leva: a garrafa térmica vira sucata, como o resumo dela já dizia)
+            D(Item.GarrafaTermica, "desmontar", Item.Nada, P(Item.Sucata, 2)),
             D(Item.KitDeReparo, "desmontar", Item.Nada, P(Item.PecasDeMetal, 2), P(Item.FitaAdesiva)),
             D(Item.Fogueira, "desmontar", Item.Nada, P(Item.Madeira, 3)),
             D(Item.Cama, "desmontar", Item.Nada, P(Item.Pano, 3), P(Item.Madeira, 2)),
             D(Item.Barricada, "desmontar", Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 4)),
-            // as armas viram sucata (a matéria do kit de reparo)
-            D(Item.Pistola, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 2)),
-            D(Item.Submetralhadora, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 3)),
-            D(Item.Rifle, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 4)),
-            D(Item.Espingarda, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 3), P(Item.Madeira)),
-            D(Item.Sniper, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 4), P(Item.Madeira)),
-            D(Item.Faca, "desmontar", Item.Nada, P(Item.PecasDeMetal)),
-            D(Item.Machado, "desmontar", Item.Nada, P(Item.PecasDeMetal), P(Item.Madeira)),
+            // as armas viram peças de metal (a matéria do kit de reparo) e, desde 09/11/2026, sucata (a 2ª leva: "desconstruindo
+            // algum material que possui metal em sua composição"); a quebrada também (a de fogo fica, esperando o kit)
+            D(Item.Pistola, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 3)),
+            D(Item.Submetralhadora, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 5)),
+            D(Item.Rifle, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5)),
+            D(Item.Espingarda, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 4), P(Item.Madeira)),
+            D(Item.Sniper, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5), P(Item.Madeira)),
+            D(Item.Faca, "desmontar", Item.Nada, P(Item.Sucata)),
+            D(Item.Machado, "desmontar", Item.Nada, P(Item.Sucata, 2), P(Item.Madeira)),
             D(Item.Bastao, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Pregos, 3)),
-            D(Item.Lanca, "desmontar", Item.Nada, P(Item.Madeira), P(Item.PecasDeMetal)),
+            D(Item.Lanca, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Sucata)),
+            // (09/11/2026, a sucata, 2ª leva) as armas de sucata voltam a ser sucata (menos que a receita: perde-se um pouco)
+            D(Item.PistolaSucata, "desmontar", Item.Nada, P(Item.Sucata, 4)),
+            D(Item.SubmetralhadoraSucata, "desmontar", Item.Ferramenta, P(Item.Sucata, 8)),
+            D(Item.RifleSucata, "desmontar", Item.Ferramenta, P(Item.Sucata, 7), P(Item.Madeira)),
+            // as ferramentas e o metal solto: o martelo e a chave, as peças de metal e o pé de cabra
+            D(Item.Ferramenta, "desmontar", Item.Nada, P(Item.Sucata, 2)),
+            D(Item.PecasDeMetal, "desmontar", Item.Nada, P(Item.Sucata, 2)),
+            D(Item.PeDeCabra, "desmontar", Item.Nada, P(Item.Sucata, 2)),
+            // as peças de carro (a vela, a bateria, o radiador e o macaco; o pneu não: é borracha)
+            D(Item.Vela, "desmontar", Item.Nada, P(Item.Sucata)),
+            D(Item.Bateria, "desmontar", Item.Ferramenta, P(Item.Sucata, 2)),
+            D(Item.Radiador, "desmontar", Item.Ferramenta, P(Item.Sucata, 3)),
+            D(Item.Macaco, "desmontar", Item.Nada, P(Item.Sucata, 3)),
         };
+
+        /// <summary>
+        /// O desmontar que dá sucata (09/11/2026, a 2ª leva) leva uns segundos, com a barra na mochila (fechar a mochila
+        /// interrompe): <see cref="SegundosDoMetal"/> nas coisas pequenas, <see cref="SegundosDoMetalGrande"/> nas armas e nas
+        /// peças grandes (3 sucatas ou mais). Os outros (desfiar a roupa, rachar a tora) continuam na hora.
+        /// </summary>
+        public const float SegundosDoMetal = 2f, SegundosDoMetalGrande = 3.5f;
+
+        /// <summary>Quantas sucatas o desmontar dá (sem o Sucateiro).</summary>
+        public static int SucataDe(Desmontagem d)
+        {
+            int n = 0;
+            if (d?.vira != null) foreach (var p in d.vira) if (p.item == Item.Sucata) n += p.qtd;
+            return n;
+        }
+
+        /// <summary>As peças com 'bonus' sucatas a mais (o Sucateiro), na sucata que já sai (sem sucata, as mesmas).</summary>
+        public static Parte[] ComBonus(Parte[] vira, int bonus)
+        {
+            if (vira == null || bonus <= 0) return vira;
+            var c = new Parte[vira.Length];
+            bool deu = false;
+            for (int i = 0; i < vira.Length; i++)
+            {
+                bool esta = !deu && vira[i].item == Item.Sucata;
+                c[i] = esta ? new Parte(Item.Sucata, vira[i].qtd + bonus) : vira[i];
+                deu |= esta;
+            }
+            return c;
+        }
+
+        /// <summary>Quanto tempo o desmontar leva (0: na hora).</summary>
+        public static float SegundosPara(Desmontagem d)
+        {
+            int n = SucataDe(d);
+            if (n <= 0) return 0f;
+            return n >= 3 || Itens.EhArma(d.item) ? SegundosDoMetalGrande : SegundosDoMetal;
+        }
 
         /// <summary>Como o item se desmonta (null: não se desmonta).</summary>
         public static Desmontagem DesmontagemDe(Item item)

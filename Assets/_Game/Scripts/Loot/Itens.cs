@@ -12,13 +12,18 @@ namespace ZombieCityCleaner.Loot
     public enum Item : byte
     {
         Nada = 0, Pistola, Rifle, Submetralhadora, Espingarda, Sniper,
+        // as armas de sucata (09/11/2026, o Armeiro de sucata; a submetralhadora não coube antes da faca: veja Itens.Arma)
+        PistolaSucata = 6, RifleSucata = 7,
         // as armas brancas (o bastão, a lança e a tocha saem da fabricação)
         Faca = 8, Machado, Bastao, Lanca, Tocha,
+        SubmetralhadoraSucata = 13,
         // o que se come e se bebe (a lata e a garrafa de água são as primeiras; as outras, do saque de 31/10/2026)
         Comida = 16, Agua, Feijao, Carne, Milho, Sopa, Salgadinho, Chocolate, BarraDeEnergia,
         RefrigeranteGarrafa, RefrigeranteLata, Energetico, CopoDeAgua, Leite, Suco, GarrafaTermica,
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
         Municao9mm = 48, Municao556, Municao12, Municao762,
+        // a munição das armas de sucata (09/11/2026): a de prego e a de parafuso
+        MunicaoPrego = 52, MunicaoParafuso = 53,
         Vela = 64, Bateria, Radiador, Pneu, Macaco, ChaveDaPerua, ChaveDoCupe,
         // as chaves das motos (06/11/2026, a pedido: cada moto com a sua chave)
         ChaveDaFatBoy = 71, ChaveDaCross = 72,
@@ -46,6 +51,8 @@ namespace ZombieCityCleaner.Loot
         PeixePequeno = 120, PeixeMedio, PeixeGrande, PeixeDourado, Polvora,
         // o peixe assado na fogueira (07/11/2026: o filé; o cru pode fazer mal)
         PeixeAssado = 125,
+        // a sucata (09/11/2026, o Armeiro de sucata): o material das armas e da munição de sucata
+        Sucata = 126,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
         // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
@@ -77,6 +84,8 @@ namespace ZombieCityCleaner.Loot
     public class DadosDaMunicao
     {
         public string modelo, calibre, resumo;
+        /// <summary>O nome do item, quando não é "caixa de &lt;calibre&gt;" (a munição de sucata, que vem numa lata ou numa caixinha).</summary>
+        public string nome, nomeComArtigo;
         /// <summary>Quantas balas uma caixa achada costuma ter (o anfitrião sorteia entre os dois).</summary>
         public int achadaMin, achadaMax;
     }
@@ -137,7 +146,8 @@ namespace ZombieCityCleaner.Loot
         /// armas brancas, a faca e o machado (Jogador_FP_&lt;nome&gt;.fbx, Item_&lt;nome&gt;, Icone_&lt;nome&gt;; as
         /// brancas, de 31/10/2026, saem do Blender/Armas/faca.py e machado.py, com a malha avulsa no Itens_&lt;nome&gt;.fbx).
         /// </summary>
-        public static readonly string[] Modelos = { "Pistola", "Rifle", "Submetralhadora", "Espingarda", "Sniper", "Lata", "Garrafa", "Faca", "Machado", "Bastao", "Lanca", "Tocha" };
+        public static readonly string[] Modelos = { "Pistola", "Rifle", "Submetralhadora", "Espingarda", "Sniper", "Sucata_Pistola", "Sucata_Rifle",
+                                                    "Sucata_Submetralhadora", "Lata", "Garrafa", "Faca", "Machado", "Bastao", "Lanca", "Tocha" };
         public const int QuantosModelos = Armas.Quantas + 7;
 
         /// <summary>
@@ -178,8 +188,12 @@ namespace ZombieCityCleaner.Loot
         public const int QuantosModelosFP = QuantosModelos + 4;
         public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : modelo == MacoFP ? "Maco"
             : modelo == CigarroFP ? "Cigarro" : Modelos[modelo];
-        /// <summary>O nome do FBX dos braços (Jogador_FP_&lt;nome&gt;.fbx) e dos objetos dentro dele: o do modelo, ou "Cigarro" no fumo.</summary>
-        public static string ArquivoFP(int modelo) => modelo == MacoFP || modelo == CigarroFP ? "Cigarro" : ModeloFP(modelo);
+        /// <summary>
+        /// O nome do FBX dos braços (Jogador_FP_&lt;nome&gt;.fbx) e dos objetos dentro dele: o do modelo, ou "Cigarro" no fumo. As
+        /// armas de sucata usam os braços da real (com a malha delas no lugar da arma).
+        /// </summary>
+        public static string ArquivoFP(int modelo) => modelo == MacoFP || modelo == CigarroFP ? "Cigarro"
+            : modelo >= 0 && modelo < Armas.Quantas ? Armas.Modelos[(int)Armas.Real((TipoDeArma)modelo)] : ModeloFP(modelo);
         /// <summary>
         /// O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia; a mão com o taco; com o maço, a mão
         /// com ele: o cigarro aceso troca para o <see cref="CigarroFP"/>, no FumoJogador).
@@ -304,6 +318,9 @@ namespace ZombieCityCleaner.Loot
             Comer(Item.PeixeDourado, "PeixeDourado", "dourado", "o dourado", "dourados", "Raro, do fundo do lago. Os comerciantes pagam bem.", 1, 45f, 5f),
             Comer(Item.PeixeAssado, "PeixeAssado", "peixe assado", "o peixe assado", "peixes assados", "Assado na fogueira: mata a fome sem fazer mal.", 6, 20f, 0f),
             Material(Item.Polvora, "Polvora", "pólvora", "a pólvora", "latas de pólvora", "Na mesa de oficina, com o Armeiro: vira munição.", 5),
+            // a sucata (09/11/2026, o Armeiro de sucata: o modelo é o Item_Sucata do Loot_Sucata.fbx, o Blender/sucata_itens.py)
+            Material(Item.Sucata, "Sucata", "sucata", "a sucata", "pedaços de sucata",
+                     "Metal velho. Na bancada e na mesa de oficina, vira arma e munição de sucata.", 20),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -397,6 +414,11 @@ namespace ZombieCityCleaner.Loot
             new DadosDaMunicao { modelo = "Municao556", calibre = "5,56", resumo = "Para o rifle.", achadaMin = 10, achadaMax = 30 },
             new DadosDaMunicao { modelo = "Municao12", calibre = "calibre 12", resumo = "Cartuchos para a espingarda.", achadaMin = 6, achadaMax = 18 },
             new DadosDaMunicao { modelo = "Municao762", calibre = "7,62", resumo = "Para a sniper.", achadaMin = 4, achadaMax = 12 },
+            // a das armas de sucata (09/11/2026; os modelos são os do Loot_Sucata.fbx: a lata e a caixinha)
+            new DadosDaMunicao { modelo = "MunicaoPrego", calibre = "prego", nome = "munição de prego", nomeComArtigo = "a munição de prego",
+                                 resumo = "Pregos com pólvora numa lata. Para a pistola e a submetralhadora de sucata.", achadaMin = 6, achadaMax = 20 },
+            new DadosDaMunicao { modelo = "MunicaoParafuso", calibre = "parafuso", nome = "munição de parafuso", nomeComArtigo = "a munição de parafuso",
+                                 resumo = "Parafusos com pólvora. Para o rifle de precisão de sucata.", achadaMin = 3, achadaMax = 10 },
         };
         public static int QuantasMunicoes => _municoes.Length;
 
@@ -468,7 +490,7 @@ namespace ZombieCityCleaner.Loot
         /// também não.
         /// </summary>
         public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0 || EhFumo(i));
-        public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.Municao762;
+        public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.MunicaoParafuso;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;
         public static Calibre CalibreDa(Item caixa) => (Calibre)IndiceDaMunicao(caixa);
@@ -477,6 +499,8 @@ namespace ZombieCityCleaner.Loot
         public static string ModeloDaMunicao(int k) => _municoes[k].modelo;
         /// <summary>O nome do calibre ("9mm", "5,56", "calibre 12", "7,62").</summary>
         public static string NomeDoCalibre(Calibre c) => _municoes[(int)c].calibre;
+        /// <summary>O nome da munição ("9mm", "munição de prego"), para o aviso de sem munição.</summary>
+        public static string NomeDaMunicao(Calibre c) => _municoes[(int)c].nome ?? _municoes[(int)c].calibre;
         /// <summary>O calibre de uma arma.</summary>
         public static Calibre CalibreDaArma(Item arma) => Armas.Dados(Arma(arma)).calibre;
         /// <summary>
@@ -496,7 +520,9 @@ namespace ZombieCityCleaner.Loot
         /// <summary>O maior espaço (a mochila grande), para a tela reservar o lugar.</summary>
         public static readonly UnityEngine.Vector2Int MaiorEspaco = new(10, 7);
 
-        public static bool EhArma(Item i) => i >= Item.Pistola && i <= Item.Sniper;
+        public static bool EhArma(Item i) => (i >= Item.Pistola && i <= Item.RifleSucata) || i == Item.SubmetralhadoraSucata;
+        /// <summary>Uma arma de sucata (09/11/2026).</summary>
+        public static bool DeSucata(Item i) => EhArma(i) && Armas.DeSucata(Arma(i));
         /// <summary>
         /// O que gasta com o uso (31/10/2026, com o kit de reparo): as armas de fogo, a cada tiro, e as brancas, a cada golpe
         /// que pega. O desgaste vai de 0 (nova) a 100: a de fogo quebrada não atira (o kit conserta); a branca quebra e some.
@@ -522,7 +548,7 @@ namespace ZombieCityCleaner.Loot
         public static int UsosQueSobram(int desgaste) =>
             UnityEngine.Mathf.Clamp((100 - desgaste + DesgastePorUsoDoSpray - 1) / DesgastePorUsoDoSpray, 0, UsosDoSpray);
         /// <summary>Quanto um uso gasta: um tiro (as de fogo: 1% a cada <see cref="TirosPorPorcento"/>) ou um golpe que pega (as brancas).</summary>
-        public static float DesgastePorUso(Item i) => EhArma(i) ? 1f / TirosPorPorcento(i) : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
+        public static float DesgastePorUso(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).desgaste / TirosPorPorcento(i) : i == Item.Faca ? 0.8f : i == Item.Machado ? 0.6f
             : i == Item.Bastao ? 1.5f : i == Item.Lanca ? 1.2f : i == Item.Tocha ? 0f : 1f;
         /// <summary>
         /// Quantos tiros gastam 1% da arma de fogo (05/11/2026, a pedido: "precisamos aumentar, principalmente das armas
@@ -532,7 +558,9 @@ namespace ZombieCityCleaner.Loot
         /// </summary>
         public static int TirosPorPorcento(Item i) => i switch
         {
-            Item.Pistola => 12, Item.Submetralhadora => 25, Item.Rifle => 30, Item.Espingarda => 8, Item.Sniper => 10, _ => 4,
+            Item.Pistola => 12, Item.Submetralhadora => 25, Item.Rifle => 30, Item.Espingarda => 8, Item.Sniper => 10,
+            // as de sucata: os da real (o desgaste a mais vem do DadosDaArma.desgaste)
+            Item.PistolaSucata => 12, Item.SubmetralhadoraSucata => 25, Item.RifleSucata => 10, _ => 4,
         };
         /// <summary>A tocha acesa na mão queima: o desgaste sobe 1 a cada tantos segundos (100: ela se apaga e some).</summary>
         public const float SegundosDaTochaPorDesgaste = 6f;
@@ -563,7 +591,7 @@ namespace ZombieCityCleaner.Loot
         /// O que, num atalho e fora da mão, vai preso no cós da calça, atrás (a pistola e a faca); as outras armas vão nas
         /// costas (o EquipamentoNoCorpo).
         /// </summary>
-        public static bool VaiNoCos(Item i) => i == Item.Pistola || i == Item.Faca;
+        public static bool VaiNoCos(Item i) => i == Item.Pistola || i == Item.PistolaSucata || i == Item.Faca;
         /// <summary>O índice do equipamento (0 a 2, na ordem de _equipamentos), ou -1.</summary>
         public static int Equipamento(Item i) => EhEquipamento(i) ? i - Item.MochilaPequena : -1;
         public static Item DoEquipamento(int k) => (Item)((int)Item.MochilaPequena + k);
@@ -571,8 +599,9 @@ namespace ZombieCityCleaner.Loot
         public static string ModeloDoEquipamento(int k) => _equipamentos[k].modelo;
         /// <summary>O espaço da grade com esta mochila (Nada: os bolsos).</summary>
         public static UnityEngine.Vector2Int EspacoDa(Item mochila) => EhMochila(mochila) ? _equipamentos[Equipamento(mochila)].espaco : Bolsos;
-        public static TipoDeArma Arma(Item i) => (TipoDeArma)((int)i - 1);
-        public static Item DaArma(TipoDeArma t) => (Item)((int)t + 1);
+        // (a submetralhadora de sucata é o item 13: o 8 já era a faca)
+        public static TipoDeArma Arma(Item i) => i == Item.SubmetralhadoraSucata ? TipoDeArma.SubmetralhadoraSucata : (TipoDeArma)((int)i - 1);
+        public static Item DaArma(TipoDeArma t) => t == TipoDeArma.SubmetralhadoraSucata ? Item.SubmetralhadoraSucata : (Item)((int)t + 1);
         public static DadosDoLoot Consumivel(Item i) => Loot(i);
 
         /// <summary>
@@ -618,6 +647,7 @@ namespace ZombieCityCleaner.Loot
         static readonly UnityEngine.Vector2Int[] _tamanhos =
         {
             new(2, 1), new(5, 2), new(3, 2), new(6, 1), new(7, 2),   // pistola, rifle, submetralhadora, espingarda, sniper
+            new(2, 1), new(7, 2), new(3, 2),                         // as de sucata: a pistola, o rifle e a submetralhadora
             new(1, 1), new(1, 2),                                   // lata, garrafa
             new(2, 1), new(4, 1), new(4, 1), new(6, 1), new(3, 1),  // faca, machado, bastão, lança, tocha
         };
@@ -640,7 +670,10 @@ namespace ZombieCityCleaner.Loot
         static readonly string[] _resumos =
         {
             "Semiautomática. Leve e precisa.", "Automático. Bom de longe.", "Automática. Rápida, de perto.",
-            "De bomba. Arrasa de perto.", "De ferrolho, com luneta.", "Conserva. Mata a fome.", "Água. Mata a sede.",
+            "De bomba. Arrasa de perto.", "De ferrolho, com luneta.",
+            "Feita de sucata. Um tiro, e recarrega.", "De ferrolho, feito de sucata. Sem luneta, três tiros.",
+            "Automática, feita de sucata. Emperra mais que a de fábrica.",
+            "Conserva. Mata a fome.", "Água. Mata a sede.",
             "Baioneta. De perto e sem barulho.", "De lenha, nas duas mãos. Lento, mas arranca um braço.",
             "Madeira e pregos. Nas duas mãos, pancada forte.", "Lâmina na ponta de um cabo. Alcança mais longe.",
             "Ilumina em volta. Queima uns 10 minutos.",
@@ -659,8 +692,8 @@ namespace ZombieCityCleaner.Loot
         }
 
         public static string Nome(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nome : EhBranca(i) ? Branca(i).nome : EhLoot(i) ? Loot(i).nome : EhEquipamento(i) ? DadosDe(i).nome
-            : EhMunicao(i) ? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nome : EhRoupa(i) ? Roupa(i).nome : "";
+            : EhMunicao(i) ? _municoes[IndiceDaMunicao(i)].nome ?? "caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nome : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nome : EhRoupa(i) ? Roupa(i).nome : "";
         public static string NomeComArtigo(Item i) => EhArma(i) ? Armas.Dados(Arma(i)).nomeComArtigo : EhBranca(i) ? Branca(i).nomeComArtigo : EhLoot(i) ? Loot(i).nomeComArtigo : EhEquipamento(i) ? DadosDe(i).nomeComArtigo
-            : EhMunicao(i) ? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nomeComArtigo : EhRoupa(i) ? Roupa(i).nomeComArtigo : "";
+            : EhMunicao(i) ? _municoes[IndiceDaMunicao(i)].nomeComArtigo ?? "a caixa de " + NomeDoCalibre(CalibreDa(i)) : EhPeca(i) ? _pecas[IndiceDaPeca(i)].nomeComArtigo : EhSinuca(i) ? _sinuca[IndiceDaSinuca(i)].nomeComArtigo : EhRoupa(i) ? Roupa(i).nomeComArtigo : "";
     }
 }

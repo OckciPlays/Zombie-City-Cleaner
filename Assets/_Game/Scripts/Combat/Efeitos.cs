@@ -38,7 +38,10 @@ namespace ZombieCityCleaner.Combat
         {
             _instancia = this;
             Tiros = new AudioClip[Armas.Quantas][];
-            for (int i = 0; i < Armas.Quantas; i++) Tiros[i] = SomDeTiro.Gerar("Tiro d" + Armas.Todas[i].nomeComArtigo, Armas.Todas[i].som);
+            // (as de sucata, 09/11/2026, usam o som da real: elas vêm depois dela)
+            for (int i = 0; i < Armas.Quantas; i++)
+                Tiros[i] = Armas.DeSucata((TipoDeArma)i) ? Tiros[(int)Armas.Real((TipoDeArma)i)]
+                    : SomDeTiro.Gerar("Tiro d" + Armas.Todas[i].nomeComArtigo, Armas.Todas[i].som);
             Clique = Gerar("Clique", 0.06f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 160f) * 0.7f);
             Recarga = Gerar("Recarga", 0.5f, (t, r) => (float)(r.NextDouble() * 2 - 1) * (Mathf.Exp(-t * 120f) + Mathf.Exp(-Mathf.Max(0, t - 0.28f) * 140f) * (t > 0.28f ? 1 : 0)) * 0.6f);
             Lanterna = Gerar("Lanterna", 0.04f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 220f) * 0.5f);

@@ -240,12 +240,12 @@ namespace ZombieCityCleaner.Sobreviventes
                 float alcance = DaBase ? Mathf.Lerp(Arma == TipoDeArma.Sniper ? 150f : 90f, 20f, noite) : Mathf.Lerp(50f, 15f, noite);
                 if (j.Lanterna != null && j.Lanterna.Ligada.Value) alcance = Mathf.Max(alcance, 35f);
                 if (noite > 0.5f && PosteDeLuz.Ilumina(j.transform.position)) alcance = Mathf.Max(alcance, 25f);
-                bool discreto = Habilidades.Tem(j, Habilidade.Discreto);   // (o Discreto, 06/11/2026)
-                if (discreto) alcance *= 0.7f;
+                int discreto = Habilidades.Pontos(j, Habilidade.Discreto);   // (o Discreto, 06/11/2026: 15% e 25% por ponto)
+                alcance *= 1f - 0.15f * discreto;
                 if (d < 3f) alcance = 99f;   // encostado
                 // os passos: perto, ele ouve de qualquer lado, até atrás de uma parede (correndo, mais longe), e sabe mais ou
                 // menos onde (o grupo vai procurar)
-                float ouvido = (j.Velocidade > 3f ? 20f : j.Velocidade > 0.5f ? 9f : 3f) * (discreto ? 0.5f : 1f);
+                float ouvido = (j.Velocidade > 3f ? 20f : j.Velocidade > 0.5f ? 9f : 3f) * (1f - 0.25f * discreto);
                 if (d <= ouvido && grupo.estado != EstadoDoGrupo.Combate)
                 {
                     grupo.Ver(j, j.transform.position + new Vector3(Random.Range(-3f, 3f), 0f, Random.Range(-3f, 3f)), this);

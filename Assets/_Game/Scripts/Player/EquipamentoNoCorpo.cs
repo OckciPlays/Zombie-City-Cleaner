@@ -181,7 +181,7 @@ namespace ZombieCityCleaner.Player
             if (malha == null) return;
             var rot = Quaternion.LookRotation(Vector3.down, lado > 0f ? Vector3.left : Vector3.right);
             var b = malha.bounds;
-            float y = arma == Item.Pistola ? Cinto - 0.02f : Cinto + 0.08f - b.extents.z;
+            float y = arma == Item.Pistola || arma == Item.PistolaSucata ? Cinto - 0.02f : Cinto + 0.08f - b.extents.z;
             var centro = new Vector3(lado * 0.06f, y, Costas + 0.005f - b.extents.x);
             Por(referencia, quadril, nome, malha, DaArma(mundo, arma), centro - rot * b.center, rot);
         }

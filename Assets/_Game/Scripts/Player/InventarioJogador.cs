@@ -133,7 +133,7 @@ namespace ZombieCityCleaner.Player
         float _pegouAte, _nomeAte;
         ushort _proximoId = 1, _consumindo, _voltarPara;
         // as balas que o dono já gastou e o anfitrião ainda não tirou das caixas (até a mochila mudar, ou 1,5 s)
-        readonly int[] _gastoPendente = new int[4];
+        readonly int[] _gastoPendente = new int[System.Enum.GetValues(typeof(Calibre)).Length];   // (um por calibre: 6 desde a munição de sucata, 09/11/2026)
         float _pendenteAte;
 
         void Awake() => Mochila = new NetworkList<ItemNaMochila>();
@@ -791,7 +791,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // o Reparador (06/11/2026): 30% de chance de o kit de reparo não ser gasto
-        bool PoupouOKit() => Habilidades.Tem(_rede, Habilidade.Reparador) && Random.value < 0.3f;
+        bool PoupouOKit() => Random.value < 0.15f * Habilidades.Pontos(_rede, Habilidade.Reparador);   // (o Reparador: 15% por ponto)
 
         void SemOBorracheiro()
         {
@@ -825,14 +825,15 @@ namespace ZombieCityCleaner.Player
             foreach (var g in r.gasta) TirarQuantos(g.item, g.qtd);
             Entregar(r.resultado, r.qtd);
             CriouRpc(k);
-            // a árvore de habilidades (06/11/2026): o XP de criar, e o Aproveitador às vezes devolve um material
+            // a árvore de habilidades (06/11/2026): o XP de criar; as Mãos hábeis às vezes dão em dobro e, no 2º ponto (o
+            // Aproveitador de antes, 09/11/2026), às vezes devolvem um material
             GanharXp(Habilidades.XpDaReceita(r), "criar");
             if (Habilidades.Tem(_rede, Habilidade.MaosHabeis) && Random.value < 0.25f)   // (as Mãos hábeis)
             {
                 Entregar(r.resultado, r.qtd);
                 AvisoRpc("Mãos hábeis: saiu em dobro");
             }
-            if (r.gasta.Length > 0 && Habilidades.Tem(_rede, Habilidade.Aproveitador) && Random.value < 0.2f)
+            if (r.gasta.Length > 0 && Habilidades.Pontos(_rede, Habilidade.MaosHabeis) >= 2 && Random.value < 0.2f)
             {
                 var sobra = r.gasta[Random.Range(0, r.gasta.Length)];
                 Entregar(sobra.item, 1);
@@ -851,15 +852,18 @@ namespace ZombieCityCleaner.Player
             // a arma desmontada devolve as balas do pente numa caixa
             if (Itens.EhArma(it.item) && it.qtd > 0) Entregar(Itens.CaixaDe(Itens.CalibreDaArma(it.item)), it.qtd);
             TirarUm(id);
-            foreach (var v in d.vira) Entregar(v.item, v.qtd);
-            DesmontouRpc(d.vira.Length > 0 ? (byte)d.item : (byte)0);
+            // o Sucateiro (09/11/2026, a sucata, 2ª leva): +1 sucata por ponto, no que já dá sucata
+            int bonus = Receitas.SucataDe(d) > 0 ? BonusDoSucateiro : 0;
+            foreach (var v in Receitas.ComBonus(d.vira, bonus)) Entregar(v.item, v.qtd);
+            DesmontouRpc(d.vira.Length > 0 ? (byte)d.item : (byte)0, (byte)Mathf.Clamp(bonus, 0, 255));
         }
 
         [Rpc(SendTo.Owner)]
-        void DesmontouRpc(byte item)
+        void DesmontouRpc(byte item, byte bonus)
         {
             var d = Receitas.DesmontagemDe((Item)item);
-            if (d != null) Feito?.Invoke($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(d.item))} virou {Receitas.Lista(d.vira)}");
+            if (d != null) Feito?.Invoke($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(d.item))} virou {Receitas.Lista(Receitas.ComBonus(d.vira, bonus))}"
+                                         + (bonus > 0 ? $" (o Sucateiro: +{bonus})" : ""));
         }
 
         [Rpc(SendTo.Server)]
@@ -1006,7 +1010,7 @@ namespace ZombieCityCleaner.Player
         public void Desgastar(ushort id, float quanto)
         {
             if (id == 0 || quanto <= 0f || !Itens.ComDesgaste(Do(id))) return;
-            if (Habilidades.Tem(_rede, Habilidade.Cuidadoso)) quanto *= 0.8f;   // (o Cuidadoso, 06/11/2026)
+            quanto *= 1f - 0.1f * Habilidades.Pontos(_rede, Habilidade.Cuidadoso);   // (o Cuidadoso, 06/11/2026: 10% por ponto)
             _desgastePendente.TryGetValue(id, out float p);
             p += quanto;
             // (a folga: 1/30 somado 30 vezes dá 0,99999, e o 1% sairia um tiro depois)
@@ -1071,8 +1075,17 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.6f, false);
         }
 
-        /// <summary>Desmonta um item da mochila (um da pilha; o anfitrião confere a ferramenta).</summary>
+        /// <summary>
+        /// Desmonta um item da mochila (um da pilha; o anfitrião confere a ferramenta). O que dá sucata leva uns segundos
+        /// (09/11/2026: a barra, InventarioJogador.Sucata.cs); o resto, na hora.
+        /// </summary>
         public void Desmontar(ushort id)
+        {
+            if (!PodeDesmontar(id, out var d, out _) || (_arma.Usando && id == IdNaMao) || Desmontando) return;
+            if (!ComecarADesmontar(id, d)) DesmontarAgora(id);
+        }
+
+        void DesmontarAgora(ushort id)
         {
             if (!PodeDesmontar(id, out _, out _) || (_arma.Usando && id == IdNaMao)) return;
             if (Itens.EhArma(Do(id))) GuardarPente(id, _arma.MunicaoDe(id, Do(id)));   // as balas do pente voltam numa caixa
@@ -1300,7 +1313,7 @@ namespace ZombieCityCleaner.Player
         {
             var lanterna = _rede != null ? _rede.Lanterna : null;
             if (lanterna == null || !lanterna.Ligada.Value) return;
-            _gastoDaLanterna += dt * 100f / DuracaoDasPilhas * (Habilidades.Tem(_rede, Habilidade.Economico) ? 0.8f : 1f);   // (o Econômico)
+            _gastoDaLanterna += dt * 100f / DuracaoDasPilhas / (1f + 0.12f * Habilidades.Pontos(_rede, Habilidade.Economico));   // (o Econômico: 12% mais por ponto)
             if (_gastoDaLanterna < 1f) return;
             int n = Mathf.FloorToInt(_gastoDaLanterna);
             _gastoDaLanterna -= n;
@@ -1424,6 +1437,7 @@ namespace ZombieCityCleaner.Player
             }
             if (IsSpawned && IsOwner && _pedirComeco) EnviarPersonagem();   // o personagem (InventarioJogador.Personagem.cs)
             if (IsSpawned) PneuQueSeVe();
+            if (IsSpawned && IsOwner) AtualizarDesmontar();   // (a barra do desmontar, 09/11/2026: InventarioJogador.Sucata.cs)
             if (!IsSpawned || !IsOwner || MenuOnline.Bot || !MenuOnline.Controla) return;
             if (_arma.Usando || _arma.Montando || Tratando) return;   // comendo, bebendo, montando ou tratando: nem troca nem larga
             var teclado = Keyboard.current;

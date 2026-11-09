@@ -165,9 +165,9 @@ namespace ZombieCityCleaner.World
         static void Sorte(InventarioJogador inventario, Vector3 pes, float giro)
         {
             var j = inventario.GetComponent<JogadorRede>();
-            if (Habilidades.Tem(j, Player.Habilidade.PeDeCoelho) && Random.value < 0.04f && AchouMais(inventario, Raridade.Raro, pes, giro)) return;
-            if (Habilidades.Tem(j, Player.Habilidade.Garimpeiro) && Random.value < 0.08f && AchouMais(inventario, Raridade.Incomum, pes, giro)) return;
-            if (Habilidades.Tem(j, Player.Habilidade.OlhoBom) && Random.value < 0.10f) AchouMais(inventario, Raridade.Normal, pes, giro);
+            if (Random.value < 0.02f * Habilidades.Pontos(j, Player.Habilidade.PeDeCoelho) && AchouMais(inventario, Raridade.Raro, pes, giro)) return;
+            if (Random.value < 0.04f * Habilidades.Pontos(j, Player.Habilidade.Garimpeiro) && AchouMais(inventario, Raridade.Incomum, pes, giro)) return;
+            if (Random.value < 0.05f * Habilidades.Pontos(j, Player.Habilidade.OlhoBom)) AchouMais(inventario, Raridade.Normal, pes, giro);
         }
 
         static bool AchouMais(InventarioJogador inventario, Raridade r, Vector3 pes, float giro)
@@ -206,7 +206,8 @@ namespace ZombieCityCleaner.World
             {
                 int n = Itens.Quantos(item, it.qtd);
                 // o Olho bom (06/11/2026): a pilha vem com 25% a mais (pelo menos um)
-                if (Habilidades.Tem(inventario.GetComponent<JogadorRede>(), Player.Habilidade.OlhoBom)) n += Mathf.Max(1, Mathf.CeilToInt(n * 0.25f));
+                int olho = Habilidades.Pontos(inventario.GetComponent<JogadorRede>(), Player.Habilidade.OlhoBom);   // (12,5% por ponto)
+                if (olho > 0) n += Mathf.Max(1, Mathf.CeilToInt(n * 0.125f * olho));
                 int sobra = inventario.ReceberEmPilha(item, n);
                 pegou = sobra < n;
                 if (pegou && sobra > 0) ItensNoMundo.Instancia?.Criar(item, pes, cliente.PlayerObject.transform.eulerAngles.y + 40f, sobra);
