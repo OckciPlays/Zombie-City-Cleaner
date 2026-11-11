@@ -60,6 +60,7 @@ MAO_MIN = 0.35            # o meio da palma longe do olho
 COBRE_MAX = 0.30          # a fração da tela coberta pelos braços
 GIROS_DO_COTOVELO = list(range(-180, 180, 10))
 ROLAR_TUDO = 0.0          # (cfg.ROLAR_FP: graus em volta do cabo em todas as chaves de pose)
+SALTO_NA_TORCAO = 0.0     # (cfg.SALTO_NA_TORCAO: o peso do salto da torção dos antebraços na escolha do cotovelo)
 PASSO_MAX = 30.0          # o quanto o cotovelo e a torção dos antebraços podem mudar de um quadro para o outro (graus)
 
 
@@ -406,29 +407,39 @@ def escolher_giro(esq, lado, amostras, grips, polo0, costas=None):
     return phi, c
 
 
-def _cotovelos(esq, quadros, lado, Hs, polo0, th_ponta=None, laco=False):
+def _cotovelos(esq, quadros, lado, Hs, polo0, th_ponta=None, laco=False, forcar=False):
     """O lado do cotovelo (graus em volta da linha do ombro ao pulso) quadro a quadro, sem saltos: a menor soma do custo
     de cada quadro e da mudança de um quadro para o outro (Viterbi). quadros: [(f, M_antes)]; Hs: {f: H}; th_ponta: o
     lado do Idle, puxado no primeiro e no último quadro. Devolve {f: graus}."""
     ths = GIROS_DO_COTOVELO
-    tabela = []
+    tabela, tors = [], []
     for f, M_antes in quadros:
-        linha = []
+        linha, lt = [], []
         for th in ths:
             M = dict(M_antes)
             av = braco_no_lugar(esq, M, M_antes, lado, Hs[f], _polo_girado(M_antes, lado, Hs[f], polo0, th))
-            linha.append(custo_do_braco(esq, M, lado, av, th)[0])
+            c, info = custo_do_braco(esq, M, lado, av, th)
+            linha.append(c)
+            lt.append(info[2])
         tabela.append(linha)
+        tors.append(lt)
+    # (11/11/2026) SALTO_NA_TORCAO (cfg): a torção do antebraço que muda mais de PASSO_MAX graus de um quadro para o
+    # outro também custa (o lado do cotovelo muda a torção; no golpe do bastão, ela saltava 76 graus na volta)
+    def salto(i, k, j):
+        return SALTO_NA_TORCAO * max(0.0, _volta(tors[i - 1][k], tors[i][j]) - PASSO_MAX) if SALTO_NA_TORCAO else 0.0
     if th_ponta is not None:
         for k in (0, -1):
-            tabela[k] = [c + 2.0 * _volta(th, th_ponta) for c, th in zip(tabela[k], ths)]
+            # (11/11/2026) forcar: o primeiro e o último quadro com o cotovelo do Idle (o golpe começa e acaba no Idle:
+            # no machado, o golpe acabava com o pulso direito torcido 60 graus a mais que o do Idle)
+            tabela[k] = [c + 2.0 * _volta(th, th_ponta) + (1e5 if forcar and _volta(th, th_ponta) > 0.5 else 0.0)
+                         for c, th in zip(tabela[k], ths)]
     acum = list(tabela[0])
     volta = []
-    for linha in tabela[1:]:
+    for i, linha in enumerate(tabela[1:], start=1):
         novo, de = [], []
         for j, th in enumerate(ths):
-            k = min(range(len(ths)), key=lambda k: acum[k] + _passo(th, ths[k]))
-            novo.append(acum[k] + _passo(th, ths[k]) + linha[j])
+            k = min(range(len(ths)), key=lambda k: acum[k] + _passo(th, ths[k]) + salto(i, k, j))
+            novo.append(acum[k] + _passo(th, ths[k]) + salto(i, k, j) + linha[j])
             de.append(k)
         acum = novo
         volta.append(de)
@@ -480,7 +491,7 @@ def _mapa(esq, lados, amostra, grips, cfg, ys, diagonal, diagonal_antes):
                     av = braco_no_lugar(esq, M, M_antes, lado, H, _polo_girado(M_antes, lado, H, _polo(cfg, lado), th))
                     d, dv, t = pulso(esq, M, lado)
                     E = M["forearm." + lado].translation
-                    if abs(d) <= 60 and abs(t) <= 120 and cotovelo_na_tela(E) < 0 and perto(capsulas(M, lado)) > 0.27:
+                    if abs(d) <= 60 and abs(t) <= float(os.environ.get("DM_MAPA_T", "120")) and cotovelo_na_tela(E) < 0 and perto(capsulas(M, lado)) > 0.27:
                         boas.append((abs(dv) + abs(d) * 0.5 + abs(t) * 0.5, dg, phi, th, d, dv, t, cotovelo_na_tela(E), av))
         boas.sort()
         print(f"  [mapa {lado}] {len(boas)} boas; " + " | ".join(
@@ -665,10 +676,14 @@ def refazer(rig, clipes, cfg, malha, no_punho):
     idle = next(a for a in clipes if a.name.endswith("|Idle"))
     f_idle = int(idle.frame_range[0])
     M_idle = _avaliar(rig, idle, f_idle)
-    global LIMITE_TORCAO, ULNAR_AGORA, ROLAR_TUDO
+    global LIMITE_TORCAO, LIMITE_DESVIO, ULNAR_AGORA, ROLAR_TUDO, SALTO_NA_TORCAO
+    SALTO_NA_TORCAO = float(os.environ.get("DM_SALTO", getattr(cfg, "SALTO_NA_TORCAO", 0.0)))
     ROLAR_TUDO = getattr(cfg, "ROLAR_FP", 0.0)
-    torcao_antes = LIMITE_TORCAO
-    LIMITE_TORCAO = getattr(cfg, "LIMITE_TORCAO", LIMITE_TORCAO)
+    torcao_antes, desvio_antes = LIMITE_TORCAO, LIMITE_DESVIO
+    LIMITE_TORCAO = float(os.environ.get("DM_TORCAO", getattr(cfg, "LIMITE_TORCAO", LIMITE_TORCAO)))
+    # (11/11/2026) o desvio do pulso que a cfg aceita (o Pedro: até uns 25 graus), para a escolha não trocar um desvio
+    # pequeno por uma torção grande
+    LIMITE_DESVIO = float(os.environ.get("DM_DESVIO", getattr(cfg, "LIMITE_DESVIO", LIMITE_DESVIO)))
     duas = hasattr(cfg, "IDLE_FP")
     lados = ("R", "L") if duas else ("R",)
     ys = {"R": cfg.MAO_DIREITA, "L": cfg.MAO_ESQUERDA} if duas else {"R": getattr(cfg, "PEGADA_Y", -cfg.NO_PUNHO.y)}
@@ -683,7 +698,8 @@ def refazer(rig, clipes, cfg, malha, no_punho):
     def cabo(y):
         k = round(y, 4)
         if k not in cabos:
-            cabos[k] = pegada.cabo(malha, y)
+            # (10/11/2026) CABO_FP na cfg: o raio e o meio do cabo dados (o lampião: o corte pegaria o lampião pendurado)
+            cabos[k] = getattr(cfg, "CABO_FP", None) or pegada.cabo(malha, y)
         return cabos[k]
 
     diagonal = {}
@@ -725,13 +741,16 @@ def refazer(rig, clipes, cfg, malha, no_punho):
             if duas:
                 Hf = M_antes["hand.R"]
                 giro = (Hf.to_3x3() @ H0.to_3x3().inverted()).to_4x4()
-                escala = getattr(cfg, "GIRO_DOS_PUNHOS", 1.0)
+                escala = float(os.environ.get("DM_GIRO_PUNHOS", getattr(cfg, "GIRO_DOS_PUNHOS", 1.0)))
                 if escala != 1.0:
                     giro = Quaternion().slerp(giro.to_quaternion(), escala).to_matrix().to_4x4()
                 p = W_idle @ pivo_R
                 W = Matrix.Translation(p + (Hf.translation - H0.translation)) @ giro @ Matrix.Translation(-p) @ W_idle
             else:
                 W = M_antes["hand.R"] @ no_punho          # a faca e a tocha: onde estavam
+                if hasattr(cfg, "arma_fp"):
+                    # (10/11/2026) a arma posta pela cfg em cada quadro (o lampião pendurado, o arremesso do molotov)
+                    W = cfg.arma_fp(nome, acao, f, W, M_antes, rig)
             qs.append((f, M_antes, W, ys["R"]))
         clipe_poses.append((nome, acao, qs))
     # (09/11/2026) GIRAR_DIREITA_NO_GOLPE: a arma não rola em volta do cabo (o "alto" das chaves fica), mas a mão direita,
@@ -796,7 +815,11 @@ def refazer(rig, clipes, cfg, malha, no_punho):
         # pegada canônica, pegada.DIAGONAL) e o giro da mão no cabo; na faca e na tocha, com cada diagonal, também o
         # ajuste do lugar da arma no punho (buscado, se a cfg não traz o AJUSTE_FP)
         melhor = None
-        for dg in getattr(cfg, "DIAGONAIS", {}).get(lado, (diagonal_antes,)):
+        dgs = getattr(cfg, "DIAGONAIS", {}).get(lado, (diagonal_antes,))
+        for parte in os.environ.get("DM_DIAGONAIS", "").split(";"):         # (para testar: "R:35,45;L:20")
+            if parte.startswith(lado + ":"):
+                dgs = tuple(float(x) for x in parte[2:].split(","))
+        for dg in dgs:
             diagonal[lado] = dg
             print(f"    {lado}: a diagonal {dg}°")
             aj = ajuste_v
@@ -881,20 +904,25 @@ def refazer(rig, clipes, cfg, malha, no_punho):
                     estados.append((custo + cR, rg, phi, torL, torR))
             camadas.append((f, estados))
 
-        def ligacao(a, b):
+        def ligacao(a, b, df=2):
             # de uma chave para a outra: o cabo sem girar demais, a mão direita sem girar demais no cabo, e as torções
-            # dos antebraços sem dar a volta (mais de 60 graus de uma chave para a outra custa caro)
-            return (0.1 * _volta(a[1], b[1]) + 0.3 * _volta(a[2], b[2]) + 4.0 * max(0.0, _volta(a[3], b[3]) - 60.0)
-                    + 4.0 * max(0.0, _volta(a[4], b[4]) - 60.0))
+            # dos antebraços sem dar a volta (mais de 60 graus de uma chave para a outra custa caro; 11/11/2026: nas
+            # chaves a um quadro uma da outra, mais de PASSO_MAX: no golpe do bastão, a torção direita saltava 105
+            # graus do quadro 7 para o 8)
+            folga = min(60.0, PASSO_MAX * df)
+            return (0.1 * _volta(a[1], b[1]) + 0.3 * _volta(a[2], b[2]) + PESO_DO_SALTO * max(0.0, _volta(a[3], b[3]) - folga)
+                    + PESO_DO_SALTO * max(0.0, _volta(a[4], b[4]) - folga))
+        PESO_DO_SALTO = float(os.environ.get("DM_PESO_SALTO", getattr(cfg, "PESO_DO_SALTO", 4.0)))
 
         acum = [e[0] for e in camadas[0][1]]
         voltas = []
         for k in range(1, len(camadas)):
             ant, cur = camadas[k - 1][1], camadas[k][1]
+            df = camadas[k][0] - camadas[k - 1][0]
             novo_acum, de = [], []
             for e in cur:
-                i_m = min(range(len(ant)), key=lambda i: acum[i] + ligacao(ant[i], e))
-                novo_acum.append(acum[i_m] + ligacao(ant[i_m], e) + e[0])
+                i_m = min(range(len(ant)), key=lambda i: acum[i] + ligacao(ant[i], e, df))
+                novo_acum.append(acum[i_m] + ligacao(ant[i_m], e, df) + e[0])
                 de.append(i_m)
             acum, voltas = novo_acum, voltas + [de]
         j_m = min(range(len(acum)), key=lambda j: acum[j])
@@ -951,7 +979,7 @@ def refazer(rig, clipes, cfg, malha, no_punho):
             ta, tb = torcoes[i - 1][k], torcoes[i][j]
             for lado in ta:
                 if lado in tb:
-                    c += 4.0 * max(0.0, _volta(ta[lado], tb[lado]) - PASSO_MAX)
+                    c += PESO_DO_SALTO * max(0.0, _volta(ta[lado], tb[lado]) - PASSO_MAX)
             return c
 
         acum, volta = list(tabela[0]), []
@@ -1008,7 +1036,7 @@ def refazer(rig, clipes, cfg, malha, no_punho):
         ths = {}
         for lado in lados:
             ths[lado] = _cotovelos(esq, [(f, Ma) for f, Ma, _, _ in qs], lado, Hs[lado], peg[lado]["polo"],
-                                   th_ponta=th_idle.get(lado))
+                                   th_ponta=th_idle.get(lado), forcar=(nome == "Golpe"))
             if nome == "Idle":
                 th_idle[lado] = ths[lado][qs[0][0]]
         if os.environ.get("DM_DEPURAR") and nome in os.environ["DM_DEPURAR"].split(","):
@@ -1029,11 +1057,11 @@ def refazer(rig, clipes, cfg, malha, no_punho):
         else:
             velho = golpe_prefixo + "|Golpe"
         novos.append(pegada._gravar(rig, esq, velho, quadros))
-        _relatorio(velho, qs[0][0], qs[-1][0], pior, avanco, por_quadro, todos=(nome == "Golpe"))
+        _relatorio(velho, qs[0][0], qs[-1][0], pior, avanco, por_quadro, todos=(nome == "Golpe" or nome in os.environ.get("DM_TODOS", "").split(",")))
         print("    cotovelo (graus): " + "; ".join(
             f"{lado} " + " ".join(str(ths[lado][f]) for f, _, _, _ in qs[::max(1, len(qs) // 8)]) for lado in lados))
     for a in clipes:
         bpy.data.actions.remove(a)
     pegada.DIAGONAL = diagonal_antes
-    LIMITE_TORCAO = torcao_antes
+    LIMITE_TORCAO, LIMITE_DESVIO, SALTO_NA_TORCAO = torcao_antes, desvio_antes, 0.0
     return novos, peg

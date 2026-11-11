@@ -484,9 +484,18 @@ namespace ZombieCityCleaner.DiaZero
             if (p.tipo == TipoDeLoja.Farmacia) a += 1.2f;
             int cor = p.placa == "PlacaBranca" || p.placa == "PlacaAmarela" ? ModelosDaEstrada.LetraEscura : ModelosDaEstrada.LetraClara;
             float altura = Mathf.Min(0.55f, (b - a) / Mathf.Max(4, p.nome.Length) * 1.25f);
+            // com o Ç (o "CAÇA E FERRAGENS", 10/11/2026), a cedilha maior (Letreiro.CedilhaMaior) desce abaixo da linha de
+            // base: a letra fica um pouco menor e o texto sobe, para o meio da placa ficar entre o alto das maiúsculas e o
+            // fundo da cedilha, com 5 cm de folga em cima e embaixo
+            float v = 0f;
+            if (Letreiro.TemCedilha(p.nome))
+            {
+                altura = Mathf.Min(altura, (y1 - y0 - 0.1f) / (1f + Letreiro.FundoDaCedilha));
+                v = altura * Letreiro.FundoDaCedilha * 0.5f;
+            }
             var textos = new List<ModelosDaEstrada.Texto>
             {
-                new ModelosDaEstrada.Texto { Conteudo = p.nome, U = 0f, V = 0f, Z = 0f, Altura = altura, Alinhamento = 0, Cor = cor },
+                new ModelosDaEstrada.Texto { Conteudo = p.nome, U = 0f, V = v, Z = 0f, Altura = altura, Alinhamento = 0, Cor = cor },
             };
             var go = new GameObject("Letreiro") { hideFlags = HideFlags.DontSave };
             go.transform.SetParent(loja, false);

@@ -51,27 +51,33 @@ IDLE_FP = {"ponto": (0.012, 0.42, -0.78, 0.42), "mira": (-0.70, 1.0, 1.25), "alt
 # o golpe: carrega mais para trás e para a direita (a preparação), bate na horizontal, da direita para a esquerda, na
 # altura da mira, com os braços esticados e o bastão atravessando o meio da tela (o acerto no quadro 8, 7/24 s), acompanha
 # até a esquerda e volta à posição de rebater. O bastão gira em volta do cabo o que deixar os pulsos melhores (redondo,
-# não aparece: ROLAR_GOLPE)
+# não aparece: ROLAR_GOLPE). (11/11/2026) A descida vem em arco por cima (ver as DIAGONAIS).
 GOLPE_FP = [
     (1, {}),
     (4, {"ponto": (0.012, 0.55, -0.74, 0.40), "mira": (-0.70, 2.5, 4.0), "alto": (0.0, 1.0, 0.0)}),
-    (6, {"ponto": (0.012, 0.48, -0.60, 0.42), "mira": (-0.70, 2.2, 0.5), "alto": (0.0, 0.0, 1.0)}),
+    (6, {"ponto": (0.012, 0.48, -0.60, 0.42), "mira": (-0.70, -0.244, 2.105), "alto": (0.0, 0.0, 1.0)}),
     # (09/11/2026) no quadro 7 a ponta sobe (antes, a mira em (0,25; 0,0) deixava o bastão de ponta para a câmera, e a
     # torção dos antebraços saltava uns 150 graus de um quadro para o outro; com a ponta baixa, ainda mais): o bastão
     # passa por cima, de pé, e os antebraços giram nos dois quadros (o 6 -> 8 é um giro de 143 graus em dois quadros)
-    (7, {"ponto": (0.012, 0.30, -0.55, 0.45), "mira": (-0.70, 0.5, 1.0), "alto": (0.0, 0.0, 1.0)}),
+    (7, {"ponto": (0.012, 0.30, -0.55, 0.45), "mira": (-0.70, -0.718, 0.993), "alto": (0.0, 0.0, 1.0)}),
     (8, {"ponto": (0.012, 0.12, -0.55, 0.45), "mira": (-0.70, -0.95, 0.05), "alto": (0.0, 0.0, 1.0)}),
     # (09/11/2026) o acompanhamento: o bastão continua varrendo para a esquerda, a ponta na borda esquerda e perto da tela
     # (antes, a mira em -3,0 deixava o bastão de ponta, como um toco)
     (10, {"ponto": (0.012, -0.12, -0.60, 0.44), "mira": (-0.70, -1.3, 0.15), "alto": (0.0, 0.0, 1.0)}),
     (11, {"ponto": (0.012, -0.32, -0.68, 0.42), "mira": (-0.70, -1.6, 0.3), "alto": (0.0, 0.0, 1.0), "perto": False}),
+    (13, {"ponto": (0.012, 0.05, -0.73, 0.42), "mira": (-0.70, -0.322, 1.394), "alto": (0.0, 0.0, 1.0)}),
     (15, {}),
 ]
 ROLAR_GOLPE = True
 LIMITE_ULNAR_GOLPE = 25.0
 # (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
 # escolhida fica em diagonais_fp.json)
-DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
+DIAGONAIS = {"R": (35, 45), "L": (35, 45)}
+SALTO_NA_TORCAO = 4.0      # (11/11/2026) o salto da torção dos antebraços pesa na escolha do cotovelo
+# (11/11/2026, o Pedro: "punho torto e irregular") o cabo mais na diagonal das palmas (45 graus: a esquerda sai do
+# desvio de 30 no Idle), e no golpe a descida em arco, de cima à direita até o acerto, sem o mergulho para a direita no
+# quadro 6 (as chaves 6 e 7 no meio do caminho entre a 4 e a 8, e uma chave 13 na volta): o bastão gira na tela no
+# máximo uns 30 graus por quadro, e a torção dos antebraços deixa de saltar 105 graus do quadro 7 para o 8
 QUADROS_DO_GOLPE = (1, 4, 6, 8, 11, 13)
 
 

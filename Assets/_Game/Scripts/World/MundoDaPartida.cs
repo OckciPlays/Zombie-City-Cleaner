@@ -211,6 +211,9 @@ namespace ZombieCityCleaner.World
 
         void Update()
         {
+            // os shaders da gravação aquecem na tela de carregamento, junto com a geração e o chão (10/11/2026; veja o
+            // AquecimentoDosShaders: o travamento da entrada do bunker no executável)
+            bool graficosProntos = Pronto || (_geracao == null && !_esperandoOChao) || AquecimentoDosShaders.Andar();
             if (_geracao != null)
             {
                 Progresso = _progressoDaThread * 0.8f;
@@ -247,6 +250,12 @@ namespace ZombieCityCleaner.World
                     Debug.LogWarning("[Mundo] Os cortes dos zumbis passaram de 90 s: o jogo começa sem esperar o resto.");
                 }
                 _esperandoOsZumbisDesde = -1f;
+                // e espera por eles (até 60 s, por segurança, no AquecimentoDosShaders)
+                if (!graficosProntos)
+                {
+                    Etapa = $"Preparando os gráficos ({AquecimentoDosShaders.Progresso * 100f:0}%)";
+                    return;
+                }
                 _esperandoOChao = false;
                 FicarPronto();
             }

@@ -261,6 +261,7 @@ namespace ZombieCityCleaner.Loot
                 if (roupas.Peca(l) != Item.Nada) itens.Add(new ItemNaMochila { item = roupas.Peca(l), qtd = 1, cores = roupas.Cores(l) });
             }
             inventario.Roupas.Value = default;
+            inventario.TirarAProtecao(itens);   // (e a proteção de sucata, 11/11/2026)
             var rede = inventario.GetComponent<JogadorRede>();
             string nome = rede != null && rede.Criado ? $"a mochila de {rede.Aparencia.Value.nome}" : "a sua mochila";
             Criar(inventario.transform.position, inventario.transform.eulerAngles.y, nome, mochila, itens, 0);

@@ -300,11 +300,13 @@ namespace ZombieCityCleaner.Zombies
                 correndo = j.Velocidade > 3f,
                 iluminado = noite && PosteDeLuz.Ilumina(pes),
                 aumento = 1f,
-                passos = 1f - 0.25f * Habilidades.Pontos(j, Habilidade.PassosLeves),   // (os Passos leves: 25% por ponto)
+                // (os Passos leves: 25% por ponto; o colete e as caneleiras de sucata, 11/11/2026: mais longe)
+                passos = (1f - 0.25f * Habilidades.Pontos(j, Habilidade.PassosLeves)) * Protecao.FatorDosPassos(j),
                 visao = Graficos.Metros(j.Visao.Value),
                 nascer = Graficos.NascerAPartirDe(j.Visao.Value),
             };
-            var dados = Armas.Dados(j.ArmaNaMao);
+            // (a luneta de cano no rifle de sucata, 10/11/2026: as melhorias da arma da mão)
+            var dados = Melhorias.Dados(j.ArmaNaMao, j.Inventario != null ? j.Inventario.MelhoriasDaMao : 0UL);
             if (j.Luneta.Value && dados.fovLuneta > 0f)
             {
                 a.aumento = Mathf.Tan(FovNormal * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(dados.fovLuneta * 0.5f * Mathf.Deg2Rad);

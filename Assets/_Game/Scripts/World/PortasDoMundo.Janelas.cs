@@ -39,6 +39,7 @@ namespace ZombieCityCleaner.World
         internal float TempoDeArrombar(JanelaDaCasa j, ArmaJogador quem)
         {
             if (j.Aberta || !Trancada(j) || !SabidaTrancada(j.chave) || j.DoLadoDeDentro(quem.transform.position)) return 0f;
+            if (Barricada(j.chave)) return 0f;   // (a barricada de tábuas, 11/11/2026)
             return TempoDa(FerramentaDe(quem.Inventario), quem.Inventario);
         }
 
@@ -72,6 +73,13 @@ namespace ZombieCityCleaner.World
         {
             if (c == null) return;
             ulong chave = c.chavesDasJanelas[i];
+            // a barricada de tábuas (11/11/2026, a etapa 5b): não abre, dos dois lados (as folhas tremem)
+            if (Barricada(chave))
+            {
+                if (naRede) TremerRpc(chave);
+                else Tremeu(chave);
+                return;
+            }
             if (JanelaAbertaAgora(c, i)) EscreverChave(chave, false, false);
             else if (!JanelaTrancadaAgora(c, i)) EscreverChave(chave, true, false);
             else if (DoLadoDeDentroDaJanela(c, i, quem)) EscreverChave(chave, true, true);
@@ -97,6 +105,7 @@ namespace ZombieCityCleaner.World
             if (j == null) return;
             bool antes = j.Aberta;
             bool aberta = _estado.TryGetValue(j.chave, out byte bits) ? (bits & BitAberta) != 0 : JanelaAbertaNoComeco(j.construcao.semente, j.indice);
+            if (aberta && Barricada(j.chave)) aberta = false;   // (a barricada de tábuas, 11/11/2026)
             j.Definir(aberta, ja);
             if (!ja && j.Aberta != antes) Efeitos.Som(j.Aberta ? SomDasPortas.Abrir : SomDasPortas.Fechar, j.Meio, 0.55f, true, 20f);
         }
@@ -118,6 +127,7 @@ namespace ZombieCityCleaner.World
             j.chave = c.chavesDasJanelas[i];
             j.dados = d;
             bool aberta = _estado.TryGetValue(j.chave, out byte bits) ? (bits & BitAberta) != 0 : JanelaAbertaNoComeco(c.semente, i);
+            if (Barricada(j.chave)) aberta = false;   // (a barricada de tábuas, 11/11/2026)
             j.Preparar(FolhaDeJanela(d.largura / 2 - 0.02f, d.altura - 0.02f), Material, aberta);
             _janelasVivas[j.chave] = j;
         }

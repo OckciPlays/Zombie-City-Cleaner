@@ -99,6 +99,13 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>Para onde a cabeça aponta na vertical, em graus (positivo = olhando para baixo).</summary>
         public readonly NetworkVariable<float> Pitch = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>
+        /// Sentado num veículo (10/11/2026): para onde a cabeça gira para os lados, em graus a partir da frente do banco
+        /// (positivo = para a direita). Vai pela rede como o <see cref="Pitch"/>, só quando muda mais de 1 grau
+        /// (<see cref="PassageiroDoCarro"/>): os outros veem a arma do garupa e dos passageiros, e a cabeça de quem está
+        /// sentado, virando para onde ele olha. Fora do veículo e na câmera de trás (V), 0.
+        /// </summary>
+        public readonly NetworkVariable<float> GiroSentado = new(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         public readonly NetworkVariable<bool> Mirando = new(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         /// <summary>
         /// Olhando pela luneta (a sniper). O anfitrião usa para os zumbis na linha da luneta: de longe eles contam como
@@ -367,6 +374,7 @@ namespace ZombieCityCleaner.Player
             GetComponent<ArmaJogador>().enabled = dono;
             Inventario.Mudou += AplicarNaMao;
             Inventario.RoupasMudaram += AplicarAparencia;
+            Inventario.ProtecaoMudou += AoMudarProtecao;   // (o capacete de panela troca o cabelo, 11/11/2026)
             if (GetComponent<TacoNaMao>() == null) gameObject.AddComponent<TacoNaMao>();
             if (dono)
             {
@@ -410,6 +418,7 @@ namespace ZombieCityCleaner.Player
             Aparencia.OnValueChanged -= AoMudarAparencia;
             Inventario.Mudou -= AplicarNaMao;
             Inventario.RoupasMudaram -= AplicarAparencia;
+            Inventario.ProtecaoMudou -= AoMudarProtecao;
             if (Local == this)
             {
                 Local = null;
@@ -447,8 +456,17 @@ namespace ZombieCityCleaner.Player
             var catalogo = Vestimenta.Catalogo;
             Vestimenta.corpo = a.Corpo;
             Vestimenta.pele = a.Pele(catalogo);
+            Vestimenta.capacete = ComCapacete;
             Vestimenta.Vestir(a.Pecas(catalogo, Inventario != null && Inventario.IsSpawned ? Inventario.Roupas.Value : default));
             if (IsOwner) PintarBracos(Vestimenta.pele);
+        }
+
+        // o capacete de panela na cabeça (a proteção de sucata, 11/11/2026): o cabelo vai para a versão de baixo do chapéu
+        bool ComCapacete => Inventario != null && Inventario.IsSpawned && Inventario.Protecao.Value.capacete != Loot.Item.Nada;
+
+        void AoMudarProtecao()
+        {
+            if (Vestimenta != null && Vestimenta.capacete != ComCapacete) AplicarAparencia();
         }
 
         /// <summary>A cor da pele do corpo do personagem principal (a da textura dele, que os braços de primeira pessoa usam).</summary>
@@ -555,11 +573,34 @@ namespace ZombieCityCleaner.Player
             if (fogo.gameObject.activeSelf != acesa) fogo.gameObject.SetActive(acesa);
         }
 
+        // as melhorias da arma de sucata da mão (10/11/2026; em qualquer máquina: a mochila vai pela rede); a arma é a da mão
+        // (o tiro que chega tarde, de outra arma, fica sem elas)
+        ulong MelhoriasDaArma(TipoDeArma arma) =>
+            Inventario != null && Itens.EhArma(Inventario.NaMao) && Itens.Arma(Inventario.NaMao) == arma ? Inventario.MelhoriasDaMao : 0UL;
+
+        int _melhoriasNoCorpo = -1, _armaComMelhorias = -1;
+
+        // as peças das melhorias na arma do corpo (o que os outros veem e a sombra do dono), quando mudam
+        void MelhoriasNoCorpo()
+        {
+            var item = Inventario.NaMao;
+            int k = Itens.DeSucata(item) ? Melhorias.IndiceDa(Itens.Arma(item)) : -1;
+            ulong b = k >= 0 ? Inventario.MelhoriasDaMao : 0UL;
+            if (k == _armaComMelhorias && Melhorias.Pecas(b) == _melhoriasNoCorpo) return;
+            _armaComMelhorias = k;
+            _melhoriasNoCorpo = Melhorias.Pecas(b);
+            if (k < 0) return;
+            int m = Itens.MaoDe(item);
+            if (m >= 0 && m < naMaoCorpo.Length) PecasDasMelhorias.NoCorpo(k, naMaoCorpo[m], b, bocasCorpo[(int)Itens.Arma(item)]);
+        }
+
         void AplicarNaMao()
         {
             var item = Inventario.NaMao;
             ushort id = Inventario.IdNaMao;
             FogoDaTochaNoCorpo();   // a tocha apagada pela chuva (ou reacesa) muda o item sem mudar o que está na mão
+            FogoNoCorpo();   // o lampião e o molotov no lugar da tocha (11/11/2026, a etapa 4: JogadorRede.Fogo.cs)
+            if (naMaoCorpo != null) MelhoriasNoCorpo();
             if (item == _naMaoAplicado && (id == _idAplicado || !IsOwner)) return;
             _naMaoAplicado = item;
             _idAplicado = id;
@@ -614,6 +655,7 @@ namespace ZombieCityCleaner.Player
         void Update()
         {
             if (!IsSpawned) return;
+            FogoNoCorpoAgora();   // (11/11/2026, a etapa 4: a chama do lampião no corpo)
             if (IsOwner && Visao.Value != Graficos.Visao) Visao.Value = (byte)Graficos.Visao;   // a escolha dos Gráficos, para o anfitrião
             if (IsOwner && Time.time >= _proximoTeto)
             {
@@ -716,9 +758,10 @@ namespace ZombieCityCleaner.Player
 
         // o Tiro abafado (06/11/2026, o Assassino): o barulho do tiro chega 15% menos longe por ponto (-1: o normal)
         // o raio do barulho do meu tiro (-1: o do jogo): o Tiro abafado diminui; as armas de sucata (09/11/2026) fazem mais
-        float RaioDoMeuTiro(TipoDeArma arma)
+        // (o silenciador da arma de sucata, 10/11/2026: o anfitrião vê o que está posto na arma da mão)
+        public float RaioDoMeuTiro(TipoDeArma arma)
         {
-            float vezes = Armas.Dados(arma).barulho;
+            float vezes = Melhorias.Dados(arma, MelhoriasDaArma(arma)).barulho;
             bool abafado = Habilidades.Tem(this, Habilidade.TiroAbafado);
             if ((!abafado && vezes == 1f) || ZombieManager.Instancia == null) return -1f;
             return ZombieManager.Instancia.ajustes.barulhoDoTiro * vezes * (abafado ? 1f - 0.15f * Habilidades.Pontos(this, Habilidade.TiroAbafado) : 1f);
@@ -733,6 +776,7 @@ namespace ZombieCityCleaner.Player
                 ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this, RaioDoMeuTiro(arma));
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);   // o tiro num carro com alarme dispara
                 Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);   // o grupo de sobreviventes perto ouve
+                if (Inventario != null) Inventario.TiroDaMaoNoAnfitriao();   // (o silenciador conta o tiro, 10/11/2026)
             }
             TiroRpc((byte)arma, impactos);
         }
@@ -793,16 +837,19 @@ namespace ZombieCityCleaner.Player
             TirosRecebidos++;
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele (e dispara o alarme do carro em que pegou)
             var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);
+            // (o silenciador da arma de sucata, 10/11/2026: o tiro se ouve mais baixo e mais perto; o anfitrião conta o tiro)
+            float volume = Melhorias.VolumeDoTiro(MelhoriasDaArma(arma));
             if (IsServer)
             {
                 ZombieManager.Barulho(transform.position + Vector3.up * 1.4f, this, RaioDoMeuTiro(arma));
                 Vehicles.PecasDosCarrosDoMundo.Instancia?.TiroNosCarros(impactos);
                 Sobreviventes.SobreviventesDoMundo.OuvirTiro(transform.position, this);
+                if (Inventario != null) Inventario.TiroDaMaoNoAnfitriao();
             }
             animadorCorpo.SetTrigger(FireId);
             var boca = bocasCorpo[(int)arma];
             Efeitos.Clarao(boca, 0);
-            Efeitos.Som(Efeitos.Tiros[(int)arma], boca.position, 1f, true, 150f);   // tiro se ouve longe
+            Efeitos.Som(Efeitos.Tiros[(int)arma], boca.position, volume, true, 150f * volume);   // tiro se ouve longe
             if (arma == TipoDeArma.Espingarda) StartCoroutine(SomDepois(boca, Efeitos.Bomba, 0.33f, 0.8f));
             if (Armas.Dados(arma).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
             foreach (var i in impactos)

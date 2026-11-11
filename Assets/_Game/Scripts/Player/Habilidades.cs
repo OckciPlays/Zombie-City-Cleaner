@@ -11,7 +11,7 @@ namespace ZombieCityCleaner.Player
     /// Os 13 ramos da árvore nova (09/11/2026), na ordem das páginas: o Combate (Guerreiro, Armeiro de sucata, Assassino,
     /// Ladrão), a Resistência (Fogo, Saúde, Fome e sede, Recursos, Proteção de sucata) e a Sobrevivência (Craft,
     /// Armadilhas e defesas, Sortudo, Pesca). Os ramos novos (<see cref="Habilidades.RamoNovo"/>) ainda são "em breve", menos
-    /// os três primeiros nós do Armeiro de sucata (as armas de sucata, 09/11/2026, a etapa 1b).
+    /// o Armeiro de sucata (as armas, 09/11/2026, e as melhorias, 10/11/2026) e a Proteção de sucata (11/11/2026, a etapa 3).
     /// </summary>
     public enum RamoDaHabilidade : byte
     {
@@ -35,7 +35,7 @@ namespace ZombieCityCleaner.Player
         PassosLeves, PelasCostas, Discreto, TiroAbafado, SangueFrio,
         // Combate: o Ladrão
         Borracheiro, MaosLeves, Chaveiro, AlarmeMudo, LigacaoDireta,
-        // Resistência: o Fogo (em breve)
+        // Resistência: o Fogo (desde 11/11/2026, a etapa 4)
         TochaDuradoura, Lampiao, CoquetelMolotov, FogueiraPortatil, FogoQuePega, CalorDoFogo, MuralhaDeFogo,
         // Resistência: a Saúde
         MaosDeEnfermeiro, CurativoBemFeito, Imunidade, NervosDeAco, MedicoDeCampo,
@@ -43,11 +43,11 @@ namespace ZombieCityCleaner.Player
         EstomagoForte, Cantil, Folego, BemNutrido, Camelo,
         // Resistência: os Recursos
         Cuidadoso, Economico, Farmaceutico, Reparador, Remendao,
-        // Resistência: a Proteção de sucata (em breve)
+        // Resistência: a Proteção de sucata (desde 11/11/2026, a etapa 3)
         CapaceteDePanela, BracadeirasECaneleiras, ColeteDeChapa, RemendoDeChapa, Couraca,
         // Sobrevivência: o Craft (o Sucateiro vale desde 09/11/2026, a sucata da 2ª leva)
         Sucateiro, FazTudo, Artesao, MaosHabeis, Armeiro,
-        // Sobrevivência: as Armadilhas e defesas (em breve)
+        // Sobrevivência: as Armadilhas e defesas (desde 11/11/2026, a etapa 5a; a Barricada de tábuas e a Fortaleza, na 5b)
         AlarmeDeLatas, BarricadaDeTabuas, TapeteDePregos, Estacas, Armadilheiro, CercaDeFogo, Fortaleza,
         // Sobrevivência: o Sortudo
         OlhoBom, Garimpeiro, Abutre, PeDeCoelho, Faro,
@@ -133,7 +133,7 @@ namespace ZombieCityCleaner.Player
     /// a 3 níveis (cada ponto é um passo, e o efeito cresce com ele), as áreas têm 5 fileiras (a fileira R pede
     /// <see cref="PontosDaFileira"/> pontos gastos nas de cima da mesma área; a 5 são as pontas), e cada nó pede os
     /// pré-requisitos dele com pelo menos 1 ponto. Os nós dos ramos novos ainda são "em breve" (não dá para aprender), menos
-    /// as três armas do Armeiro de sucata (09/11/2026). São
+    /// o Armeiro de sucata (09 e 10/11/2026) e a Proteção de sucata (11/11/2026). São
     /// 40 níveis: não dá para pegar tudo. Morrer não tira nada (por enquanto). Quem conta é o anfitrião
     /// (<see cref="InventarioJogador"/>.Habilidades.cs).
     /// </summary>
@@ -205,7 +205,7 @@ namespace ZombieCityCleaner.Player
         static readonly RamoDaHabilidade[] RamosDaResistencia = { RamoDaHabilidade.Fogo, RamoDaHabilidade.Saude, RamoDaHabilidade.FomeESede, RamoDaHabilidade.Recursos, RamoDaHabilidade.ProtecaoDeSucata };
         static readonly RamoDaHabilidade[] RamosDaSobrevivencia = { RamoDaHabilidade.Craft, RamoDaHabilidade.Armadilhas, RamoDaHabilidade.Sortudo, RamoDaHabilidade.Pesca };
 
-        /// <summary>Os ramos novos da árvore de 09/11/2026 (o selo "novo"; os nós deles ainda são "em breve", menos as armas de sucata).</summary>
+        /// <summary>Os ramos novos da árvore de 09/11/2026 (o selo "novo"; as Armadilhas inteiras desde 11/11/2026, a etapa 5b).</summary>
         public static bool RamoNovo(RamoDaHabilidade r) => r == RamoDaHabilidade.ArmeiroDeSucata || r == RamoDaHabilidade.Fogo
                                                          || r == RamoDaHabilidade.ProtecaoDeSucata || r == RamoDaHabilidade.Armadilhas;
 
@@ -262,8 +262,10 @@ namespace ZombieCityCleaner.Player
             if (gastos < precisa)
                 falta = $"A fileira {fileira} pede {precisa} pontos nas de cima ({Nome(area).ToLowerInvariant()}: {gastos} de {precisa}).";
             string pede = null;
+            // (um pedido "em breve" não segura, 11/11/2026: as Estacas pedem a Barricada de tábuas, que só vem na etapa 5b; o
+            // pedido volta a valer quando ela ficar pronta)
             foreach (var q in Pede(h))
-                if (!p.Tem(q)) pede = pede == null ? Nome(q) : $"{pede}, {Nome(q)}";
+                if (!p.Tem(q) && Pronta(q)) pede = pede == null ? Nome(q) : $"{pede}, {Nome(q)}";
             if (pede != null) falta = (falta == null ? "" : falta + "\n") + $"Primeiro: {pede}.";
             if (p.Pontos <= 0) falta = (falta == null ? "" : falta + "\n") + "Sem pontos livres: suba de nível.";
             motivo = falta;
@@ -380,17 +382,22 @@ namespace ZombieCityCleaner.Player
             E(Gue, 0, 3, 3, "Braço forte", k => $"+{5 * k}% de dano com arma branca.", Habilidade.RecargaRapida),
             E(Gue, 0, 4, 2, "Mão firme", k => $"{12 * k}% menos coice e menos tremor na mira.", Habilidade.BracoForte),
             E(Gue, 0, 5, 1, "Mira de aço", _ => "A mira não treme (nem com dor, pânico, abstinência ou braço machucado).", Habilidade.MaoFirme),
-            // o Armeiro de sucata: as três armas (09/11/2026, as receitas no Loot/Receitas.cs); as melhorias, em breve
-            E(Arm, 2, 1, 2, "Pistola de sucata", _ => "Destrava a pistola de sucata (um tiro) e a munição de prego."),
+            // o Armeiro de sucata: as três armas (09/11/2026, as receitas no Loot/Receitas.cs) e, desde 10/11/2026 (a etapa 2), as
+            // melhorias (os números no Combat/Melhorias.cs; postas na bancada, no painel MELHORIAS da aba Criar)
+            // (um nível só desde 10/11/2026: o segundo não fazia nada; o ponto de quem tinha dois volta, no DefinirProgresso)
+            E(Arm, 2, 1, 1, "Pistola de sucata", _ => "Destrava a pistola de sucata (um tiro) e a munição de prego."),
             E(Arm, 1, 2, 1, "Rifle de precisão de sucata", _ => "Destrava o rifle de sucata e a munição de parafuso.", Habilidade.PistolaDeSucata),
             E(Arm, 3, 2, 1, "Submetralhadora de sucata", _ => "Destrava a submetralhadora de sucata.", Habilidade.PistolaDeSucata),
-            B(Arm, 1, 3, 3, "Cano reforçado", "O cano reforçado I, II e III: +8% de dano por nível.", Habilidade.RifleDeSucata),
-            B(Arm, 2, 3, 2, "Miras caseiras", "1: a mira de ferro ajustada; 2: a mira de ponto caseira.", Habilidade.PistolaDeSucata),
-            B(Arm, 3, 3, 1, "Carregador estendido", "O carregador estendido da pistola e da submetralhadora.", Habilidade.SubmetralhadoraDeSucata),
-            B(Arm, 1, 4, 1, "Luneta de cano", "A luneta no rifle de sucata.", Habilidade.CanoReforcado, Habilidade.MaoFirme),
-            B(Arm, 2, 4, 2, "Mola nova", "As armas de sucata emperram 25% menos por nível.", Habilidade.MirasCaseiras),
-            B(Arm, 3, 4, 2, "Silenciador caseiro", "1: o de garrafa PET; 2: o de filtro de óleo.", Habilidade.CarregadorEstendido, Habilidade.TiroAbafado),
-            B(Arm, 2, 5, 1, "Mestre armeiro", "As armas de sucata batem como as reais, e fabricar gasta 25% menos sucata.", Habilidade.MolaNova),
+            E(Arm, 1, 3, 3, "Cano reforçado", k => k == 1 ? "O cano reforçado I (na bancada): +8% de dano, e a arma gasta 10% mais."
+                : $"O cano reforçado {(k == 2 ? "II" : "III")} (na mesa de oficina): +{8 * k}% de dano, e a arma gasta {10 * k}% mais.", Habilidade.RifleDeSucata),
+            E(Arm, 2, 3, 2, "Miras caseiras", k => k == 1 ? "A mira de ferro ajustada (na bancada): o tiro espalha 15% menos."
+                : "E a mira de ponto caseira (na mesa de oficina): mirando, o olho vai no pontinho vermelho e o tiro espalha 30% menos.", Habilidade.PistolaDeSucata),
+            E(Arm, 3, 3, 1, "Carregador estendido", _ => "O carregador estendido (na bancada): a pistola de sucata leva 3 tiros, e a submetralhadora, 32.", Habilidade.SubmetralhadoraDeSucata),
+            E(Arm, 1, 4, 1, "Luneta de cano", _ => "A luneta de cano, só no rifle de sucata (na mesa de oficina): mirando, aproxima 2,5 vezes e o tiro espalha 60% menos.", Habilidade.CanoReforcado, Habilidade.MaoFirme),
+            E(Arm, 2, 4, 2, "Mola nova", k => $"As armas de sucata emperram {25 * k}% menos.", Habilidade.MirasCaseiras),
+            E(Arm, 3, 4, 2, "Silenciador caseiro", k => k == 1 ? "O silenciador de garrafa PET (na bancada): o tiro chega 60% menos longe e tira 5% menos; dura 15 tiros."
+                : "E o de filtro de óleo (na mesa de oficina): o tiro chega 50% menos longe e tira 5% menos; dura 80 tiros.", Habilidade.CarregadorEstendido, Habilidade.TiroAbafado),
+            E(Arm, 2, 5, 1, "Mestre armeiro", _ => "As armas de sucata batem como as reais, e as receitas do Armeiro de sucata gastam 25% menos sucata.", Habilidade.MolaNova),
             // o Assassino
             E(Ass, 4, 1, 2, "Passos leves", k => $"Os zumbis ouvem os seus passos (correndo e nas poças) {25 * k}% menos longe."),
             E(Ass, 4, 2, 1, "Pelas costas", _ => "O golpe de arma branca pelas costas mata o Oco na hora (se ele não estiver caçando você).", Habilidade.PassosLeves),
@@ -404,14 +411,14 @@ namespace ZombieCityCleaner.Player
             E(Lad, 5, 3, 1, "Chaveiro", _ => "Abre as portas e as janelas trancadas com um grampo (sem ferramenta e sem barulho), em 6 s.", Habilidade.MaosLeves),
             E(Lad, 5, 4, 2, "Alarme mudo", k => $"Abrir o capô e mexer nos pneus disparam o alarme do carro {40 * k}% menos (o tiro ainda dispara).", Habilidade.Chaveiro),
             E(Lad, 5, 5, 1, "Ligação direta", _ => "Liga os carros sem a chave (o mini-game dos fios). Sem ela, o carro só liga com a chave.", Habilidade.AlarmeMudo),
-            // o Fogo (em breve)
-            B(Fog, 0.5f, 1, 2, "Tocha duradoura", "A tocha dura 50% mais por ponto."),
-            B(Fog, 0, 2, 1, "Lampião", "Destrava o lampião.", Habilidade.TochaDuradoura),
-            B(Fog, 1, 2, 1, "Coquetel molotov", "Destrava o coquetel molotov.", Habilidade.TochaDuradoura),
-            B(Fog, 0, 3, 1, "Fogueira portátil", "Destrava a fogueira portátil.", Habilidade.Lampiao),
-            B(Fog, 1, 3, 2, "Fogo que pega", DepoisVem, Habilidade.CoquetelMolotov),
-            B(Fog, 0, 4, 2, "Calor do fogo", "Perto do fogo, a mente sobe.", Habilidade.FogueiraPortatil, Habilidade.NervosDeAco),
-            B(Fog, 0.5f, 5, 1, "Muralha de fogo", DepoisVem, Habilidade.CalorDoFogo),
+            // o Fogo (11/11/2026, a etapa 4: as receitas no Loot/Receitas.cs, os números no Player/FogoDoJogador.cs)
+            E(Fog, 0.5f, 1, 2, "Tocha duradoura", k => $"A tocha dura {FogoDoJogador.TochaDuradouraPorNivel * 100f * k:0}% mais."),
+            E(Fog, 0, 2, 1, "Lampião", _ => $"Destrava o lampião (na mesa de oficina): luz quente na mão, os zumbis ficam longe e a chuva não apaga. Gasta combustível ({FogoDoJogador.MinutosDoLampiao:0} min por carga).", Habilidade.TochaDuradoura),
+            E(Fog, 1, 2, 1, "Coquetel molotov", _ => $"Destrava o coquetel molotov (na bancada): arremessado, acende o chão por {FogoDoJogador.SegundosDoMolotov:0} s e queima quem estiver ali.", Habilidade.TochaDuradoura),
+            E(Fog, 0, 3, 1, "Fogueira portátil", _ => $"Destrava o kit da fogueira portátil (na bancada): queima {FogoDoJogador.MinutosDaFogueiraPortatil:0} min, os zumbis ficam longe, e o E recolhe.", Habilidade.Lampiao),
+            E(Fog, 1, 3, 2, "Fogo que pega", k => $"O molotov e a tocha queimam {FogoDoJogador.FogoQuePegaPorNivel * 100f * k:0}% mais tempo, e o fogo do molotov se espalha {FogoDoJogador.AreaQuePegaPorNivel * 100f * k:0}% mais.", Habilidade.CoquetelMolotov),
+            E(Fog, 0, 4, 2, "Calor do fogo", k => $"A menos de {FogoDoJogador.DistanciaDoCalor:0} m de um fogo aceso, a mente sobe {FogoDoJogador.CalorPorNivel * k:0} por hora.", Habilidade.FogueiraPortatil, Habilidade.NervosDeAco),
+            E(Fog, 0.5f, 5, 1, "Muralha de fogo", _ => $"O seu fogo segura os zumbis {(FogoDoJogador.FatorDaMuralha - 1f) * 100f:0}% mais longe, e eles fogem em pânico.", Habilidade.CalorDoFogo),
             // a Saúde
             E(Sau, 2, 1, 2, "Mãos de enfermeiro", k => $"Os curativos levam {12 * k}% menos tempo."),
             E(Sau, 2, 2, 2, "Curativo bem feito", k => $"A bandagem e a atadura devolvem +{5 * k}% à parte.", Habilidade.MaosDeEnfermeiro),
@@ -430,12 +437,13 @@ namespace ZombieCityCleaner.Player
             E(Rec, 4, 3, 2, "Farmacêutico", k => $"O analgésico e o xarope agem {25 * k}% mais tempo.", Habilidade.Economico),
             E(Rec, 4, 4, 2, "Reparador", k => $"{15 * k}% de chance de o kit de reparo não ser gasto (no conserto da arma e no remendo do pneu).", Habilidade.Farmaceutico),
             E(Rec, 4, 5, 1, "Remendão", _ => "As suas armas nunca emperram (só param quando quebram).", Habilidade.Reparador),
-            // a Proteção de sucata (em breve)
-            B(Pro, 5, 1, 1, "Capacete de panela", "Destrava o capacete de panela."),
-            B(Pro, 5, 2, 1, "Braçadeiras e caneleiras", "Destrava as braçadeiras e as caneleiras.", Habilidade.CapaceteDePanela),
-            B(Pro, 5, 3, 1, "Colete de chapa", "Destrava o colete de chapa.", Habilidade.BracadeirasECaneleiras),
-            B(Pro, 5, 4, 2, "Remendo de chapa", DepoisVem, Habilidade.ColeteDeChapa, Habilidade.Reparador),
-            B(Pro, 5, 5, 1, "Couraça", "A mordida no metal não infecciona.", Habilidade.RemendoDeChapa),
+            // a Proteção de sucata (11/11/2026, a etapa 3: as receitas no Loot/Receitas.cs, os números no Player/Protecao.cs; as
+            // peças se vestem no grupo PROTEÇÃO da tela)
+            E(Pro, 5, 1, 1, "Capacete de panela", _ => $"Destrava o capacete de panela (na bancada): corta {Protecao.CorteDoCapacete * 100f:0}% do golpe na cabeça."),
+            E(Pro, 5, 2, 1, "Braçadeiras e caneleiras", _ => $"Destrava as braçadeiras e as caneleiras (na bancada): cortam {Protecao.CorteDasBracadeiras * 100f:0}% do golpe nos braços e nas pernas.", Habilidade.CapaceteDePanela),
+            E(Pro, 5, 3, 1, "Colete de chapa", _ => $"Destrava o colete de chapa (na mesa de oficina, com um pneu): corta {Protecao.CorteDoColete * 100f:0}% no tronco, mas pesa e faz barulho.", Habilidade.BracadeirasECaneleiras),
+            E(Pro, 5, 4, 2, "Remendo de chapa", k => $"As peças da proteção se gastam {Protecao.RemendoPorNivel * 100f * k:0}% menos (e o kit de reparo conserta).", Habilidade.ColeteDeChapa, Habilidade.Reparador),
+            E(Pro, 5, 5, 1, "Couraça", _ => "A mordida numa parte coberta pela proteção não infecciona.", Habilidade.RemendoDeChapa),
             // o Craft (09/11/2026, a sucata da 2ª leva: o Sucateiro vale, e o Faz-tudo pede ele, como na árvore aprovada; um
             // save com o Faz-tudo sem o Sucateiro continua valendo: o pedido só conta para aprender)
             E(Cra, 0, 1, 3, "Sucateiro", k => $"Desmontar (os painéis de metal e os itens) rende +{k} sucata{(k > 1 ? "s" : "")}."),
@@ -444,14 +452,20 @@ namespace ZombieCityCleaner.Player
             E(Cra, 0, 4, 2, "Mãos hábeis", k => k == 1 ? "Ao criar, 25% de chance de sair em dobro."
                 : "Ao criar, 25% de chance de sair em dobro e 20% de devolver um material.", Habilidade.Artesao),
             E(Cra, 0, 5, 1, "Armeiro", _ => "Na mesa de oficina: munição de todos os calibres, com a pólvora.", Habilidade.MaosHabeis),
-            // as Armadilhas e defesas (em breve)
-            B(Arma, 1.5f, 1, 1, "Alarme de latas", "Destrava o alarme de latas."),
-            B(Arma, 1, 2, 2, "Barricada de tábuas", "Destrava a barricada de tábuas.", Habilidade.AlarmeDeLatas),
-            B(Arma, 2, 2, 1, "Tapete de pregos", "Destrava o tapete de pregos.", Habilidade.AlarmeDeLatas),
-            B(Arma, 1, 3, 1, "Estacas", "Destrava as estacas.", Habilidade.BarricadaDeTabuas, Habilidade.Artesao),
-            B(Arma, 2, 3, 2, "Armadilheiro", DepoisVem, Habilidade.TapeteDePregos),
-            B(Arma, 1.5f, 4, 1, "Cerca de fogo", "Destrava a cerca de fogo.", Habilidade.Estacas),
-            B(Arma, 1.5f, 5, 1, "Fortaleza", DepoisVem, Habilidade.CercaDeFogo),
+            // as Armadilhas e defesas (11/11/2026, a etapa 5a: as receitas no Loot/Receitas.cs, os números no
+            // Player/ArmadilhasDoJogador.cs; montadas no chão como a barricada). A Barricada de tábuas e a Fortaleza vieram na
+            // etapa 5b (11/11/2026: pregada nas portas e nas janelas das casas, Loot/ConstrucoesNoMundo.Barricadas.cs; desde
+            // então, as Estacas voltam a pedir a Barricada de tábuas)
+            E(Arma, 1.5f, 1, 1, "Alarme de latas", _ => $"Destrava o alarme de latas (na bancada): quem passa em pé pelo barbante faz as latas tocarem; os zumbis a {ArmadilhasDoJogador.BarulhoDoAlarme:0} m vêm ver, e você recebe o aviso a até {ArmadilhasDoJogador.AvisoDoAlarme:0} m. {ArmadilhasDoJogador.ToquesDoAlarme} toques."),
+            E(Arma, 1, 2, 2, "Barricada de tábuas", k => k == 1
+                ? $"Destrava as tábuas para barricada (na bancada, com a ferramenta: 3 madeiras e 6 pregos). Mirando uma porta ou uma janela de casa, segure E: a barricada fica pregada do seu lado, e ela não abre (dos dois lados). Vida: a porta {ArmadilhasDoJogador.VidaNaPorta:0}, a janela {ArmadilhasDoJogador.VidaNaJanela:0}; os zumbis encostados e o Brutamonte a quebram. Do lado dela, a ferramenta desmonta."
+                : $"A barricada de tábuas com {ArmadilhasDoJogador.ReforcoDoNivel2 * 100f:0}% mais vida (a porta {ArmadilhasDoJogador.VidaNaPorta * (1f + ArmadilhasDoJogador.ReforcoDoNivel2):0}, a janela {ArmadilhasDoJogador.VidaNaJanela * (1f + ArmadilhasDoJogador.ReforcoDoNivel2):0}), e o conserto: do lado dela, segure o clique com {ArmadilhasDoJogador.MadeiraDoConserto} madeira, {ArmadilhasDoJogador.PregosDoConserto} pregos e a ferramenta (+{ArmadilhasDoJogador.Conserto * 100f:0}% da vida).", Habilidade.AlarmeDeLatas),
+            E(Arma, 2, 2, 1, "Tapete de pregos", _ => $"Destrava o tapete de pregos (na bancada, com a ferramenta): o zumbi que pisa leva {ArmadilhasDoJogador.DanoDoTapete:0} e anda {ArmadilhasDoJogador.LentidaoDosPregos * 100f:0}% mais devagar por {ArmadilhasDoJogador.SegundosLento:0} s; quem pisa sem estar agachado leva {ArmadilhasDoJogador.DanoDoTapeteNoJogador:0} na perna; e o pneu do carro fura. {ArmadilhasDoJogador.UsosDoTapete} usos.", Habilidade.AlarmeDeLatas),
+            E(Arma, 1, 3, 1, "Estacas", _ => $"Destrava as estacas (na bancada, com a ferramenta): seguram os zumbis como a barricada, e quem encosta na frente leva {ArmadilhasDoJogador.DanoDasEstacas:0} por segundo. O Brutamonte as quebra, mas leva {ArmadilhasDoJogador.DanoNoBrutamonte:0}.", Habilidade.BarricadaDeTabuas, Habilidade.Artesao),
+            E(Arma, 2, 3, 2, "Armadilheiro", k => $"As suas armadilhas têm {ArmadilhasDoJogador.UsosPorNivel * 100f * k:0}% mais usos (e vida) e {ArmadilhasDoJogador.DanoPorNivel * 100f * k:0}% mais dano."
+                + (k >= 2 ? " O seu tapete de pregos não fere os jogadores." : ""), Habilidade.TapeteDePregos),
+            E(Arma, 1.5f, 4, 1, "Cerca de fogo", _ => $"Destrava a cerca de fogo (na bancada, com 2 combustíveis): um rastro de {ArmadilhasDoJogador.ComprimentoDaCerca:0} m que, aceso (a tocha, o lampião ou outro fogo), queima {ArmadilhasDoJogador.SegundosDaCerca:0} s; os zumbis não atravessam, e quem atravessa queima.", Habilidade.Estacas),
+            E(Arma, 1.5f, 5, 1, "Fortaleza", _ => $"As suas defesas (as barricadas e as estacas) aguentam o dobro e se consertam sozinhas: {ArmadilhasDoJogador.ConsertoPorHora * 100f:0}% da vida por hora do jogo, com você a até {ArmadilhasDoJogador.DonoPerto:0} m e nenhum zumbi batendo nelas. O seu alarme de latas avisa de qualquer distância.", Habilidade.CercaDeFogo),
             // o Sortudo
             E(Sor, 3, 1, 2, "Olho bom", k => $"Às vezes ({5 * k}%) acha mais um item comum nas casas, e as pilhas achadas vêm com {(k == 1 ? 12 : 25)}% a mais."),
             E(Sor, 3, 2, 2, "Garimpeiro", k => $"Pegando um item das casas, às vezes ({4 * k}%) acha também um incomum.", Habilidade.OlhoBom),

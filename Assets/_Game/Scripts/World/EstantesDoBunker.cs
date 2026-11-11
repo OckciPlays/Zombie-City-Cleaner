@@ -600,6 +600,8 @@ namespace ZombieCityCleaner.World
             r.shadowCastingMode = UI.Graficos.SombraDosMoveis ? ShadowCastingMode.On : ShadowCastingMode.Off;
             var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
             if (roupas != null) roupas.Pintar(r, it.item, it.cores);
+            // a arma de sucata com as melhorias postas (10/11/2026): as peças por cima, como no chão
+            else if (Itens.DeSucata(it.item)) Combat.PecasDasMelhorias.NoChao(go.transform, go.GetComponent<MeshFilter>(), it.item, it.cores, malha, r.sharedMaterial);
         }
 
         // o tamanho da malha girada (em x, y e z), o ponto mais baixo e o meio dela

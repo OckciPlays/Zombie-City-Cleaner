@@ -8,9 +8,14 @@ namespace ZombieCityCleaner.Player
     /// nova (a maquete aprovada pelo Pedro): ela ocupa o meio e a coluna da direita. Em cima, "Nível N · pontos livres X de
     /// N" e a barra do XP (o mouse nela mostra como ganhar XP); as 3 áreas em abas, cada uma na cor dela (o Combate laranja,
     /// a Resistência verde, a Sobrevivência roxa), e uma página por área: os ramos em colunas (o nome em cima, o selo "novo"
-    /// nos ramos novos), os nós em quadrados ligados por linhas aos pré-requisitos (colorida quando os dois têm ponto), o
-    /// "k/máx" no canto, a estrela nas pontas e, à esquerda, os pontos que cada fileira pede. O clique põe um ponto; o botão
-    /// direito tira. Com o mouse num nó, um quadro mostra o nome, o ramo, o nível, o efeito do próximo nível e o que falta.
+    /// nos ramos novos), os nós e, à esquerda, os pontos que cada fileira pede. O clique põe um ponto; o botão direito tira.
+    /// Com o mouse num nó, um quadro mostra o ícone, o nome, o ramo, o nível, o efeito do próximo nível e o que falta.
+    /// Desde 10/11/2026 (a referência do Pedro, o "Dungeons &amp; Developers"), cada nó é o ícone dele num quadrado (um PNG
+    /// pintado no Blender, pelo Resources: <see cref="IconeDaHabilidade"/>), com o nome embaixo: o aprendido tem a moldura
+    /// dourada e grossa, com um brilho em volta; o que dá para aprender, a moldura na cor da área; o trancado e o "em
+    /// breve" ficam cinza e escuros (o "em breve" com o selo por cima); o "k/máx" no canto de baixo e a estrela das pontas
+    /// no de cima. As ligações são grossas, com a seta no nó que pede: apagadas, e douradas quando os dois lados estão
+    /// aprendidos (também as de um ramo para outro).
     /// </summary>
     public partial class TelaDoInventario
     {
@@ -18,19 +23,23 @@ namespace ZombieCityCleaner.Player
         // a árvore: do meio até o fim da coluna da direita (a 720p)
         static readonly Rect AreaDaArvore = new Rect(GradeX, 58, 1142f - GradeX, 516);
         static readonly Rect BarraDoXp = new Rect(760, 68, 374, 9);
-        static readonly Rect RodapeDaArvore = new Rect(GradeX + 8, 542, 1142f - GradeX - 16, 26);
-        const float TopoDasAreas = 98f, AltoDasAreas = 28f, TopoDosRamos = 132f, AltoDosRamos = 28f;
-        const float TopoDosNos = 164f, PassoDaFileira = 76f, AltoDoNo = 58f, MargemDasFileiras = 34f;
+        static readonly Rect RodapeDaArvore = new Rect(GradeX + 8, 551, 1142f - GradeX - 16, 18);
+        const float TopoDasAreas = 98f, AltoDasAreas = 28f, TopoDosRamos = 130f, AltoDosRamos = 26f;
+        // os nós (10/11/2026, os ícones): o quadrado do ícone, o nome embaixo (uma linha) e, no vão de 16, as setas
+        const float TopoDosNos = 158f, PassoDaFileira = 81f, LadoDoNo = 50f, AltoDoNome = 13f, MargemDasFileiras = 34f;
 
         AreaDaHabilidade _areaEscolhida = AreaDaHabilidade.Combate;
         int _noSobMouse = -1, _noNegado = -1;
         float _negadoAte;
         bool _sobreOXp, _avisoDaArvore, _pediuVisto;
-        GUIStyle _nomeDoNo, _cantoDoNo, _seloDoNo, _simboloDoNo, _rotuloDaFileira, _cabecalhoDoRamo, _tituloDaDica, _textoDaDica, _pequenoDaDica;
+        GUIStyle _nomeDoNo, _cantoDoNo, _seloDoNo, _simboloDoNo, _estrelaDoNo, _rotuloDaFileira, _cabecalhoDoRamo, _tituloDaDica, _textoDaDica, _pequenoDaDica;
+        GUIStyle[] _nomesDoNo;   // o nome do nó em 10, 9 e 8 (o longo diminui até caber numa linha)
         float _uDasHabilidades;
 
         static readonly Color EmBreve = new Color(0.95f, 0.6f, 0.3f);
-        static readonly Color LinhaApagada = new Color(0.12f, 0.12f, 0.11f, 0.7f);
+        static readonly Color LinhaApagada = new Color(0.16f, 0.155f, 0.13f, 1f);
+        static readonly Color Ouro = new Color(1f, 0.8f, 0.3f), OuroClaro = new Color(1f, 0.93f, 0.66f);
+        static readonly Color MolduraApagada = new Color(0.3f, 0.3f, 0.28f, 0.95f);
 
         /// <summary>A cor da área: o Combate laranja, a Resistência verde, a Sobrevivência roxa.</summary>
         static Color CorDaArea(AreaDaHabilidade a) => a == AreaDaHabilidade.Combate ? new Color(0.96f, 0.56f, 0.22f)
@@ -82,12 +91,26 @@ namespace ZombieCityCleaner.Player
         static float LarguraDaColuna(AreaDaHabilidade a) => (AreaDaArvore.xMax - 8f - InicioDasColunas) / Habilidades.Colunas(a);
         static float TopoDaFileira(int f) => TopoDosNos + (f - 1) * PassoDaFileira;
 
+        // o quadrado do ícone do nó (o nome fica embaixo, em NomeNaArvore)
         static Rect NoNaArvore(Habilidade h)
         {
-            var a = Habilidades.AreaDe(h);
-            float c = LarguraDaColuna(a), w = Mathf.Min(c - 16f, 118f);
-            float cx = InicioDasColunas + (Habilidades.Coluna(h) + 0.5f) * c;
-            return new Rect(cx - w / 2f, TopoDaFileira(Habilidades.Fileira(h)), w, AltoDoNo);
+            float cx = InicioDasColunas + (Habilidades.Coluna(h) + 0.5f) * LarguraDaColuna(Habilidades.AreaDe(h));
+            return new Rect(cx - LadoDoNo / 2f, TopoDaFileira(Habilidades.Fileira(h)), LadoDoNo, LadoDoNo);
+        }
+
+        // a linha do nome, embaixo do ícone, da largura da coluna
+        static Rect NomeNaArvore(Habilidade h)
+        {
+            var no = NoNaArvore(h);
+            float w = LarguraDaColuna(Habilidades.AreaDe(h)) - 4f;
+            return new Rect(no.center.x - w / 2f, no.yMax + 2f, w, AltoDoNome);
+        }
+
+        // onde o mouse pega o nó: o quadrado e o nome embaixo
+        static Rect AlvoDoNo(Habilidade h)
+        {
+            var no = NoNaArvore(h);
+            return new Rect(no.x - 12f, no.y - 3f, no.width + 24f, LadoDoNo + 2f + AltoDoNome + 4f);
         }
 
         static Rect AbaDaArea(int a)
@@ -101,7 +124,7 @@ namespace ZombieCityCleaner.Player
             Habilidades.ColunasDoRamo(r, out float de, out float ate);
             float c = LarguraDaColuna(Habilidades.AreaDe(r));
             float x1 = InicioDasColunas + de * c + 3f, x2 = InicioDasColunas + (ate + 1f) * c - 3f;
-            return new Rect(x1, TopoDosRamos, x2 - x1, TopoDaFileira(Habilidades.Fileiras) + AltoDoNo + 4f - TopoDosRamos);
+            return new Rect(x1, TopoDosRamos, x2 - x1, TopoDaFileira(Habilidades.Fileiras) + LadoDoNo + 2f + AltoDoNome + 2f - TopoDosRamos);
         }
 
         void EstilosDasHabilidades(float u)
@@ -110,10 +133,13 @@ namespace ZombieCityCleaner.Player
             _uDasHabilidades = u;
             GUIStyle De(GUIStyle baseDe, int tamanho, FontStyle fonte, TextAnchor ancora, bool quebra) =>
                 new GUIStyle(baseDe) { fontSize = Mathf.RoundToInt(tamanho * u), fontStyle = fonte, alignment = ancora, wordWrap = quebra, richText = true };
-            _nomeDoNo = De(_texto, 11, FontStyle.Bold, TextAnchor.MiddleCenter, true);
-            _cantoDoNo = De(_texto, 11, FontStyle.Bold, TextAnchor.LowerRight, false);
-            _seloDoNo = De(_texto, 9, FontStyle.Bold, TextAnchor.MiddleLeft, false);
+            _nomeDoNo = De(_texto, 10, FontStyle.Bold, TextAnchor.MiddleCenter, false);
+            _nomesDoNo = new[] { _nomeDoNo, De(_texto, 9, FontStyle.Bold, TextAnchor.MiddleCenter, false), De(_texto, 8, FontStyle.Bold, TextAnchor.MiddleCenter, false) };
+            foreach (var e in _nomesDoNo) e.clipping = TextClipping.Overflow;
+            _cantoDoNo = De(_texto, 9, FontStyle.Bold, TextAnchor.MiddleCenter, false);
+            _seloDoNo = De(_texto, 8, FontStyle.Bold, TextAnchor.MiddleCenter, false);
             _simboloDoNo = De(_texto, 13, FontStyle.Bold, TextAnchor.MiddleCenter, false);
+            _estrelaDoNo = De(_texto, 11, FontStyle.Bold, TextAnchor.MiddleCenter, false);
             _rotuloDaFileira = De(_texto, 12, FontStyle.Bold, TextAnchor.MiddleCenter, false);
             _cabecalhoDoRamo = De(_texto, 11, FontStyle.Bold, TextAnchor.MiddleCenter, true);
             _tituloDaDica = De(_texto, 15, FontStyle.Bold, TextAnchor.UpperLeft, true);
@@ -203,14 +229,15 @@ namespace ZombieCityCleaner.Player
             // as fileiras: os pontos que cada uma pede (acesos quando a fileira já abriu)
             for (int f = 1; f <= Habilidades.Fileiras; f++)
             {
-                var rotulo = Em(new Rect(AreaDaArvore.x + 6f, TopoDaFileira(f), MargemDasFileiras, AltoDoNo));
+                var rotulo = Em(new Rect(AreaDaArvore.x + 6f, TopoDaFileira(f), MargemDasFileiras, LadoDoNo));
                 bool aberta = Habilidades.FileiraAberta(p, area, f);
                 PorCor(_rotuloDaFileira, aberta ? cor : new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.5f));
                 GUI.Label(rotulo, $"{Habilidades.PontosDaFileira[f]}+", _rotuloDaFileira);
             }
 
-            // as ligações aos pré-requisitos (as apagadas primeiro; as coloridas por cima, nos trechos que se juntam)
-            for (int vez = 0; vez < 2; vez++)
+            // as ligações aos pré-requisitos (também as de um ramo para outro): as apagadas primeiro; as douradas por cima
+            // (o brilho de todas, depois as linhas), nos trechos que se juntam
+            for (int vez = 0; vez < 3; vez++)
                 for (int i = 0; i < Habilidades.Quantas; i++)
                 {
                     var h = (Habilidade)i;
@@ -219,18 +246,20 @@ namespace ZombieCityCleaner.Player
                     {
                         if (Habilidades.AreaDe(q) != area) continue;
                         bool acesa = p.Tem(h) && p.Tem(q);
-                        if (acesa == (vez == 1)) Ligacao(Em(NoNaArvore(q)), Em(NoNaArvore(h)), acesa ? cor : LinhaApagada, u);
+                        if (acesa != (vez > 0)) continue;
+                        if (vez == 1) Ligacao(Em(NoNaArvore(q)), Em(NoNaArvore(h)), new Color(Ouro.r, Ouro.g, Ouro.b, 0.22f), u, 2f * u);
+                        else Ligacao(Em(NoNaArvore(q)), Em(NoNaArvore(h)), acesa ? Ouro : LinhaApagada, u, 0f);
                     }
                 }
 
-            // os nós
+            // os nós: o ícone, a moldura, os selos e o nome embaixo
             for (int i = 0; i < Habilidades.Quantas; i++)
             {
                 var h = (Habilidade)i;
                 if (Habilidades.AreaDe(h) != area) continue;
-                var no = Em(NoNaArvore(h));
-                DesenharNo(no, h, p, cor, no.Contains(mouse));
-                if (no.Contains(mouse)) _noSobMouse = i;
+                bool sob = Em(AlvoDoNo(h)).Contains(mouse);
+                DesenharNo(Em(NoNaArvore(h)), Em(NomeNaArvore(h)), h, p, cor, sob);
+                if (sob) _noSobMouse = i;
             }
 
             // embaixo: o aviso da árvore nova, ou como se usa
@@ -250,91 +279,257 @@ namespace ZombieCityCleaner.Player
             }
         }
 
-        // a linha do pré-requisito ao nó: na mesma fileira, de lado a lado; de uma fileira à outra, desce, anda no vão e desce
-        void Ligacao(Rect de, Rect para, Color cor, float u)
+        // ------------------------------------------------------------------ as ligações e os nós (10/11/2026: os ícones)
+
+        // a ligação do pré-requisito (de) ao nó que o pede (para), entre os quadrados dos ícones: na mesma fileira, de lado a
+        // lado; de uma fileira para outra, sai debaixo do nome, desce, anda no vão de cima do nó e desce até ele. A seta
+        // aponta para o nó que pede. alem: a mais de cada lado (o brilho das douradas, sem a seta)
+        void Ligacao(Rect de, Rect para, Color cor, float u, float alem)
         {
-            float e = Mathf.Max(2f, Mathf.Round(3f * u)), m = e / 2f;
+            float e = Mathf.Max(2f, Mathf.Round(4f * u)) + 2f * alem;
+            float ponta = Mathf.Round(6.5f * u), boca = Mathf.Round(12f * u), folga = Mathf.Max(1f, Mathf.Round(u));
+            bool seta = alem <= 0f;
             if (Mathf.Abs(de.y - para.y) < 1f)
             {
-                float y = de.center.y - m;
-                float x1 = de.center.x < para.center.x ? de.xMax : para.xMax, x2 = de.center.x < para.center.x ? para.x : de.x;
-                Ret(new Rect(x1, y, x2 - x1, e), cor);
+                float y = Mathf.Round(de.center.y);
+                bool direita = de.center.x < para.center.x;
+                float x1 = direita ? de.xMax : de.x, xp = direita ? para.x - folga : para.xMax + folga;   // xp: onde a seta encosta
+                float xb = direita ? xp - ponta : xp + ponta;
+                Trecho(x1, y, seta ? xb : xp, y, e, cor);
+                if (seta) Triangulo(new Rect(direita ? xb : xp, y - boca / 2f, ponta, boca), direita ? 1 : 2, cor);
                 return;
             }
-            float xa = de.center.x, xb = para.center.x, ya = de.yMax, yb = para.y;
-            if (Mathf.Abs(xa - xb) < 1f)
+            float xa = Mathf.Round(de.center.x), xc = Mathf.Round(para.center.x);
+            float ya = de.yMax + (2f + AltoDoNome) * u;     // debaixo do nome
+            float yp = para.y - folga, yb = yp - ponta;      // a ponta e a base da seta
+            if (Mathf.Abs(xa - xc) < 1f) Trecho(xa, ya + e / 2f, xa, seta ? yb : yp, e, cor);
+            else
             {
-                Ret(new Rect(xa - m, ya, e, yb - ya), cor);
-                return;
+                float meio = Mathf.Round(yb - 4.5f * u);
+                Trecho(xa, ya + e / 2f, xa, meio, e, cor);
+                Trecho(xa, meio, xc, meio, e, cor);
+                Trecho(xc, meio, xc, seta ? yb : yp, e, cor);
             }
-            float meio = Mathf.Round(yb - (PassoDaFileira - AltoDoNo) * 0.5f * u);
-            Ret(new Rect(xa - m, ya, e, meio - ya + m), cor);
-            Ret(new Rect(Mathf.Min(xa, xb) - m, meio - m, Mathf.Abs(xb - xa) + e, e), cor);
-            Ret(new Rect(xb - m, meio - m, e, yb - meio + m), cor);
+            if (seta) Triangulo(new Rect(xc - boca / 2f, yb, boca, ponta), 0, cor);
         }
 
-        void DesenharNo(Rect no, Habilidade h, in ProgressoDoPersonagem p, Color cor, bool sobMouse)
+        // um trecho reto da ligação, com meia grossura além de cada ponta (as dobras fecham)
+        static void Trecho(float x1, float y1, float x2, float y2, float e, Color cor)
         {
-            float u = _u;
-            int k = p.PontosEm(h), max = Habilidades.Maximo(h);
-            bool pronta = Habilidades.Pronta(h);
-            bool pode = Habilidades.PodeAprender(p, h, out _);
-            // "dá para aprender" sem contar os pontos livres (a borda fica na cor, mais fraca, até ele subir de nível)
-            bool aberta = pronta && k < max && Habilidades.FileiraAberta(p, Habilidades.AreaDe(h), Habilidades.Fileira(h));
-            if (aberta) foreach (var q in Habilidades.Pede(h)) aberta &= p.Tem(q);
-            bool negado = _noNegado == (int)h && Time.unscaledTime < _negadoAte;
-            Color fundo, borda, texto;
-            float grossura = 1f;
-            if (!pronta)
+            float m = e / 2f;
+            Ret(Rect.MinMaxRect(Mathf.Round(Mathf.Min(x1, x2) - m), Mathf.Round(Mathf.Min(y1, y2) - m),
+                Mathf.Round(Mathf.Max(x1, x2) + m), Mathf.Round(Mathf.Max(y1, y2) + m)), cor);
+        }
+
+        static void Triangulo(Rect r, int lado, Color cor)
+        {
+            var antes = GUI.color;
+            GUI.color = cor;
+            GUI.DrawTexture(r, Seta(lado));
+            GUI.color = antes;
+        }
+
+        static Texture2D[] _setas;
+
+        // a ponta da seta (0 para baixo, 1 para a direita, 2 para a esquerda): um triângulo branco, com a borda suave
+        static Texture2D Seta(int lado)
+        {
+            _setas ??= new Texture2D[3];
+            if (_setas[lado] != null) return _setas[lado];
+            const int n = 32, s = 4;
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Seta", wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    int dentro = 0;
+                    for (int sy = 0; sy < s; sy++)
+                        for (int sx = 0; sx < s; sx++)
+                        {
+                            // px da esquerda, py de cima (a linha 0 da textura é a de baixo na tela)
+                            float px = (x + (sx + 0.5f) / s) / n, py = 1f - (y + (sy + 0.5f) / s) / n;
+                            float ao = lado == 0 ? py : lado == 1 ? px : 1f - px, at = lado == 0 ? px : py;   // ao longo e através
+                            if (Mathf.Abs(at - 0.5f) <= 0.5f * (1f - ao)) dentro++;
+                        }
+                    t.SetPixel(x, y, new Color(1f, 1f, 1f, dentro / (float)(s * s)));
+                }
+            t.Apply();
+            return _setas[lado] = t;
+        }
+
+        const float BrilhoEmVolta = 0.2f;   // o brilho do aprendido passa do quadrado (a fração do lado, em cada lado)
+        static Texture2D _brilho;
+
+        // o brilho em volta do aprendido: o quadrado no meio e o alfa caindo até a borda (esticado sobre o nó)
+        static Texture2D Brilho()
+        {
+            if (_brilho != null) return _brilho;
+            const int n = 64;
+            float m = n * BrilhoEmVolta / (1f + 2f * BrilhoEmVolta);
+            _brilho = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Brilho do nó", wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = Mathf.Max(0f, Mathf.Max(m - (x + 0.5f), x + 0.5f - (n - m)));
+                    float dy = Mathf.Max(0f, Mathf.Max(m - (y + 0.5f), y + 0.5f - (n - m)));
+                    float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy) / m);
+                    _brilho.SetPixel(x, y, new Color(1f, 1f, 1f, a * a));
+                }
+            _brilho.Apply();
+            return _brilho;
+        }
+
+        // os estados do nó: aprendido (a moldura dourada e o brilho), dá para aprender (a moldura na cor da área),
+        // trancado (o ícone cinza e escuro, a moldura apagada) e em breve (como o trancado, com o selo)
+        enum EstadoDoNo : byte { Aprendido, Aberto, Trancado, EmBreve }
+
+        static EstadoDoNo EstadoDe(Habilidade h, in ProgressoDoPersonagem p)
+        {
+            if (!Habilidades.Pronta(h)) return EstadoDoNo.EmBreve;
+            if (p.PontosEm(h) > 0) return EstadoDoNo.Aprendido;
+            // "dá para aprender" sem contar os pontos livres (a moldura fica na cor, mais fraca, até ele subir de nível)
+            if (!Habilidades.FileiraAberta(p, Habilidades.AreaDe(h), Habilidades.Fileira(h))) return EstadoDoNo.Trancado;
+            foreach (var q in Habilidades.Pede(h))
+                if (!p.Tem(q)) return EstadoDoNo.Trancado;
+            return EstadoDoNo.Aberto;
+        }
+
+        // o aprendido com todos os pontos brilha mais; o que dá para aprender, com ponto livre, tem a moldura cheia
+        static bool Forte(Habilidade h, in ProgressoDoPersonagem p, EstadoDoNo estado) =>
+            estado == EstadoDoNo.Aprendido ? p.PontosEm(h) >= Habilidades.Maximo(h) : Habilidades.PodeAprender(p, h, out _);
+
+        static Texture2D[] _icones, _iconesCinza;
+
+        /// <summary>
+        /// O ícone do nó (10/11/2026): <c>Art/UI/Habilidades/Resources/Hab_&lt;Habilidade&gt;.png</c>, pelo Resources, como
+        /// as roupas (nenhuma cena muda); cinza: a cópia sem cor, <c>Hab_&lt;Habilidade&gt;_Cinza.png</c>, a dos trancados.
+        /// Pintados pelo Blender/icones_habilidades.py e trazidos pelo Editor/MontagemDosIconesDasHabilidades. null: falta
+        /// (o nó mostra a letra do ramo).
+        /// </summary>
+        internal static Texture2D IconeDaHabilidade(Habilidade h, bool cinza = false)
+        {
+            if (_icones == null)
             {
-                fundo = new Color(0f, 0f, 0f, 0.22f);
-                borda = new Color(0.36f, 0.36f, 0.34f, 0.9f);
-                texto = new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.6f);
+                _icones = new Texture2D[Habilidades.Quantas];
+                _iconesCinza = new Texture2D[Habilidades.Quantas];
+                for (int i = 0; i < Habilidades.Quantas; i++)
+                {
+                    _icones[i] = Resources.Load<Texture2D>($"Hab_{(Habilidade)i}");
+                    _iconesCinza[i] = Resources.Load<Texture2D>($"Hab_{(Habilidade)i}_Cinza");
+                }
             }
-            else if (k > 0)
+            int k = (int)h;
+            if (k < 0 || k >= Habilidades.Quantas) return null;
+            return cinza && _iconesCinza[k] != null ? _iconesCinza[k] : _icones[k];
+        }
+
+        // o ícone no quadrado, com a moldura do estado (e, no aprendido, o brilho em volta): o nó e o quadro do mouse usam
+        void IconeNoQuadrado(Rect r, Habilidade h, EstadoDoNo estado, Color cor, bool forte, bool brilho, bool sobMouse, bool negado, float u)
+        {
+            float px = Mathf.Max(1f, Mathf.Round(u));
+            bool apagado = estado >= EstadoDoNo.Trancado;
+            var antes = GUI.color;
+            if (brilho && estado == EstadoDoNo.Aprendido)
             {
-                fundo = new Color(cor.r * 0.62f, cor.g * 0.62f, cor.b * 0.62f, 0.96f);
-                borda = k >= max ? Color.Lerp(cor, Color.white, 0.45f) : cor;
-                texto = Color.white;
-                grossura = k >= max ? 2f : 1f;
+                GUI.color = new Color(Ouro.r, Ouro.g, Ouro.b, forte ? 0.8f : 0.6f);
+                GUI.DrawTexture(Encolher(r, -r.width * BrilhoEmVolta), Brilho());
             }
-            else if (aberta)
+            GUI.color = antes;
+            Ret(Encolher(r, -px), new Color(0f, 0f, 0f, 0.7f));   // o contorno escuro, por fora da moldura
+            var icone = IconeDaHabilidade(h, apagado);
+            if (icone != null)
             {
-                fundo = new Color(0f, 0f, 0f, 0.4f);
-                borda = pode ? cor : new Color(cor.r, cor.g, cor.b, 0.45f);
-                texto = CorDoTexto;
-                grossura = 2f;
+                float luz = estado == EstadoDoNo.EmBreve ? 0.45f : estado == EstadoDoNo.Trancado ? 0.6f : 1f;
+                GUI.color = new Color(luz, luz, luz, 1f);
+                GUI.DrawTexture(r, icone, ScaleMode.StretchToFill);
+                GUI.color = antes;
             }
             else
             {
-                fundo = new Color(0f, 0f, 0f, 0.2f);
-                borda = new Color(0.3f, 0.3f, 0.28f, 0.85f);
-                texto = new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.55f);
+                Ret(r, new Color(0.06f, 0.06f, 0.055f));
+                PorCor(_simboloDoNo, apagado ? TextoApagado : cor);
+                GUI.Label(r, Habilidades.Simbolo(Habilidades.RamoDe(h)), _simboloDoNo);
             }
-            Ret(no, fundo);
-            if (sobMouse) Ret(no, new Color(1f, 1f, 1f, 0.07f));
-            Moldura(no, Mathf.Max(1f, Mathf.Round((negado ? 2f : grossura) * u)), negado ? Ruim : sobMouse ? Color.Lerp(borda, Color.white, 0.4f) : borda);
+            if (sobMouse) Ret(r, new Color(1f, 1f, 1f, 0.08f));
+            Color borda;
+            float grossura;
+            if (estado == EstadoDoNo.Aprendido)
+            {
+                borda = Ouro;
+                grossura = 3f;
+            }
+            else if (estado == EstadoDoNo.Aberto)
+            {
+                borda = forte ? cor : new Color(cor.r, cor.g, cor.b, 0.5f);
+                grossura = 2.5f;
+            }
+            else
+            {
+                borda = MolduraApagada;
+                grossura = 2f;
+            }
+            if (negado)
+            {
+                borda = Ruim;
+                grossura = 3f;
+            }
+            else if (sobMouse) borda = Color.Lerp(borda, Color.white, 0.35f);
+            float g = Mathf.Max(1f, Mathf.Round(grossura * u));
+            Moldura(r, g, borda);
+            if (estado == EstadoDoNo.Aprendido && !negado) Moldura(Encolher(r, g), px, new Color(OuroClaro.r, OuroClaro.g, OuroClaro.b, 0.5f));
+        }
 
-            // o ícone do ramo (uma letra ou um símbolo), o selo "em breve" ao lado dele, a estrela da ponta, o nome e o "k/máx"
-            var icone = new Rect(no.x + 4 * u, no.y + 4 * u, 18 * u, 18 * u);
-            bool acesa = pronta && (k > 0 || aberta);
-            Ret(icone, acesa ? (k > 0 ? new Color(0f, 0f, 0f, 0.3f) : new Color(cor.r, cor.g, cor.b, 0.85f)) : new Color(0f, 0f, 0f, 0.25f));
-            PorCor(_simboloDoNo, acesa ? (k > 0 ? cor : new Color(0.08f, 0.08f, 0.07f)) : texto);
-            GUI.Label(icone, Habilidades.Simbolo(Habilidades.RamoDe(h)), _simboloDoNo);
+        void DesenharNo(Rect no, Rect nome, Habilidade h, in ProgressoDoPersonagem p, Color cor, bool sobMouse)
+        {
+            float u = _u, px = Mathf.Max(1f, Mathf.Round(u));
+            int k = p.PontosEm(h), max = Habilidades.Maximo(h);
+            var estado = EstadoDe(h, p);
+            bool negado = _noNegado == (int)h && Time.unscaledTime < _negadoAte;
+            IconeNoQuadrado(no, h, estado, cor, Forte(h, p, estado), true, sobMouse, negado, u);
+            var antes = GUI.color;
+
+            // o selo "em breve", numa faixa no meio do ícone
+            if (estado == EstadoDoNo.EmBreve)
+            {
+                var faixa = new Rect(no.x + 3 * px, Mathf.Round(no.center.y - 7 * u), no.width - 6 * px, Mathf.Round(14 * u));
+                Ret(faixa, new Color(0.05f, 0.04f, 0.03f, 0.88f));
+                var linha = new Color(EmBreve.r, EmBreve.g, EmBreve.b, 0.75f);
+                Ret(new Rect(faixa.x, faixa.y, faixa.width, px), linha);
+                Ret(new Rect(faixa.x, faixa.yMax - px, faixa.width, px), linha);
+                PorCor(_seloDoNo, EmBreve);
+                GUI.Label(faixa, "EM BREVE", _seloDoNo);
+            }
+
+            // a estrela das pontas, no canto de cima
             if (Habilidades.EhPonta(h))
             {
-                PorCor(_simboloDoNo, pronta ? Destaque : texto);
-                GUI.Label(new Rect(no.xMax - 22 * u, no.y + 4 * u, 18 * u, 18 * u), "★", _simboloDoNo);
+                var canto = new Rect(Mathf.Round(no.xMax - 8 * u), Mathf.Round(no.y - 6 * u), Mathf.Round(14 * u), Mathf.Round(14 * u));
+                GUI.color = new Color(0.05f, 0.05f, 0.045f, 0.95f);
+                GUI.DrawTexture(canto, Circulo());
+                GUI.color = antes;
+                PorCor(_estrelaDoNo, estado == EstadoDoNo.Aprendido ? Ouro : estado == EstadoDoNo.Aberto ? Destaque : TextoApagado);
+                GUI.Label(canto, "★", _estrelaDoNo);
             }
-            PorCor(_nomeDoNo, texto);
-            GUI.Label(new Rect(no.x + 4 * u, no.y + 21 * u, no.width - 8 * u, 24 * u), Habilidades.Nome(h), _nomeDoNo);
-            PorCor(_cantoDoNo, k > 0 ? Color.white : texto);
-            GUI.Label(new Rect(no.xMax - 44 * u, no.yMax - 16 * u, 40 * u, 14 * u), $"{k}/{max}", _cantoDoNo);
-            if (!pronta)
+
+            // o "k/máx", numa placa no canto de baixo
+            var texto = new GUIContent($"{k}/{max}");
+            float lw = Mathf.Round(_cantoDoNo.CalcSize(texto).x + 6 * u), lh = Mathf.Round(12 * u);
+            var placa = new Rect(Mathf.Round(no.xMax - lw + 3 * u), Mathf.Round(no.yMax - lh + 2 * u), lw, lh);
+            Ret(placa, new Color(0.04f, 0.04f, 0.035f, 0.95f));
+            Moldura(placa, px, estado == EstadoDoNo.Aprendido ? Ouro : estado == EstadoDoNo.Aberto ? new Color(cor.r, cor.g, cor.b, 0.8f) : MolduraApagada);
+            PorCor(_cantoDoNo, estado == EstadoDoNo.Aprendido ? Color.white : estado == EstadoDoNo.Aberto ? CorDoTexto : TextoApagado);
+            GUI.Label(placa, texto, _cantoDoNo);
+
+            // o nome, embaixo (a letra diminui até caber numa linha)
+            var conteudo = new GUIContent(Habilidades.Nome(h));
+            GUIStyle est = _nomeDoNo;
+            foreach (var e in _nomesDoNo)
             {
-                PorCor(_seloDoNo, EmBreve);
-                GUI.Label(new Rect(icone.xMax + 5 * u, icone.y, 64 * u, icone.height), "EM BREVE", _seloDoNo);
+                est = e;
+                if (e.CalcSize(conteudo).x <= nome.width) break;
             }
+            PorCor(est, estado == EstadoDoNo.Aprendido ? OuroClaro : estado == EstadoDoNo.Aberto ? CorDoTexto
+                : new Color(TextoApagado.r, TextoApagado.g, TextoApagado.b, 0.6f));
+            GUI.Label(nome, conteudo, est);
         }
 
         /// <summary>
@@ -388,21 +583,41 @@ namespace ZombieCityCleaner.Player
             }
             if (linhas.Count == 0) return;
 
-            float alto = 8 * u;
-            foreach (var l in linhas) alto += l.estilo.CalcHeight(new GUIContent(l.texto), w - 2 * x) + 3 * u;
+            // o ícone do nó (10/11/2026) à esquerda das duas primeiras linhas (o nome e o ramo)
+            bool comIcone = _noSobMouse >= 0 && _noSobMouse < Habilidades.Quantas;
+            float lado = comIcone ? 46 * u : 0f, recuo = comIcone ? lado + 10 * u : 0f;
+            float topo = 0f, alto = 8 * u;
+            for (int i = 0; i < linhas.Count; i++)
+            {
+                float hh = linhas[i].estilo.CalcHeight(new GUIContent(linhas[i].texto), w - 2 * x - (i < 2 ? recuo : 0f)) + 3 * u;
+                if (i < 2) topo += hh;
+                else alto += hh;
+            }
+            topo = Mathf.Max(topo, comIcone ? lado + 6 * u : 0f);
+            alto += topo;
             var r = new Rect(mouse.x + 18 * u, mouse.y + 16 * u, w, alto + 6 * u);
             if (r.xMax > Screen.width - 4) r.x = mouse.x - r.width - 10 * u;
             if (r.yMax > Screen.height - 4) r.y = Mathf.Max(4f, Screen.height - 4 - r.height);
             Ret(r, new Color(0.07f, 0.07f, 0.065f, 0.96f));
             Moldura(r, Mathf.Max(1f, Mathf.Round(u)), corDaBorda);
             float y = r.y + 7 * u;
-            foreach (var l in linhas)
+            if (comIcone)
             {
+                var h = (Habilidade)_noSobMouse;
+                var estado = EstadoDe(h, p);
+                IconeNoQuadrado(new Rect(Mathf.Round(r.x + x), Mathf.Round(y + 1 * u), Mathf.Round(lado), Mathf.Round(lado)), h, estado,
+                    CorDaArea(Habilidades.AreaDe(h)), Forte(h, p, estado), false, false, false, u);
+            }
+            for (int i = 0; i < linhas.Count; i++)
+            {
+                var l = linhas[i];
+                float rec = i < 2 ? recuo : 0f;
                 var c = new GUIContent(l.texto);
-                float hh = l.estilo.CalcHeight(c, w - 2 * x);
+                float hh = l.estilo.CalcHeight(c, w - 2 * x - rec);
                 PorCor(l.estilo, l.cor);
-                GUI.Label(new Rect(r.x + x, y, w - 2 * x, hh), c, l.estilo);
+                GUI.Label(new Rect(r.x + x + rec, y, w - 2 * x - rec, hh), c, l.estilo);
                 y += hh + 3 * u;
+                if (i == 1) y = r.y + 7 * u + topo;
             }
         }
 
@@ -423,7 +638,7 @@ namespace ZombieCityCleaner.Player
         int NoEm(Vector2 m)
         {
             for (int i = 0; i < Habilidades.Quantas; i++)
-                if (Habilidades.AreaDe((Habilidade)i) == _areaEscolhida && Em(NoNaArvore((Habilidade)i)).Contains(m)) return i;
+                if (Habilidades.AreaDe((Habilidade)i) == _areaEscolhida && Em(AlvoDoNo((Habilidade)i)).Contains(m)) return i;
             return -1;
         }
 

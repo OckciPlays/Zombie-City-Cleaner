@@ -35,6 +35,11 @@ namespace ZombieCityCleaner.Zombies
             public int chave;
             /// <summary>Quem segura a tocha (na fogueira, ninguém).</summary>
             public IAlvoDeZumbi dono;
+            /// <summary>
+            /// O fogo de quem tem a Muralha de fogo (11/11/2026, a etapa 4: o raio já vem 50% maior): quem está dentro foge em
+            /// pânico, mais longe, e larga quem caçava (o Zumbi.Queimar.cs).
+            /// </summary>
+            public bool panico;
         }
 
         internal readonly List<Fogo> Fogos = new List<Fogo>(8);
@@ -113,16 +118,26 @@ namespace ZombieCityCleaner.Zombies
             for (int k = 0; k < QuantosJogadores; k++)
             {
                 ref readonly var p = ref Jogadores[k];
-                if (p.jogador == null || !p.jogador.TochaAcesa) continue;
-                Fogos.Add(new Fogo { centro = p.pes, raio = a.raioDaTocha, chave = ChaveDaTocha + (int)p.jogador.OwnerClientId, dono = p.jogador });
+                // (11/11/2026, a etapa 4: o lampião aceso na mão, como a tocha; a Muralha de fogo, 50% mais longe e o pânico)
+                if (p.jogador == null) continue;
+                bool tocha = p.jogador.TochaAcesa;
+                if (!tocha && !p.jogador.LampiaoAceso) continue;
+                float muralha = FogoDoJogador.MuralhaDe(p.jogador);
+                Fogos.Add(new Fogo { centro = p.pes, raio = (tocha ? a.raioDaTocha : a.raioDoLampiao) * muralha, chave = ChaveDaTocha + (int)p.jogador.OwnerClientId,
+                                     dono = p.jogador, panico = muralha > 1f });
             }
             var construcoes = ConstrucoesNoMundo.Instancia;
             if (construcoes != null)
             {
                 _fogueiras.Clear();
                 construcoes.FogueirasAcesas(_fogueiras);
-                foreach (var (id, pos) in _fogueiras) Fogos.Add(new Fogo { centro = pos, raio = a.raioDaFogueira, chave = id });
+                foreach (var (id, pos) in _fogueiras)
+                {
+                    float muralha = FogoDoJogador.MuralhaDaChave(construcoes.DonoDe(id));
+                    Fogos.Add(new Fogo { centro = pos, raio = a.raioDaFogueira * muralha, chave = id, panico = muralha > 1f });
+                }
             }
+            FogosDaEtapa4(a);   // o molotov e o lampião no chão (ZombieManager.Fogo.cs)
             // no vagar também (Zumbi.cs: ele nunca escolhe um ponto dentro da luz): um facho redondo, sem dono (o Long não o
             // toma pela lanterna, que o petrifica de perto)
             foreach (var f in Fogos)

@@ -1,17 +1,23 @@
 {
  "Bastao": {
-  "L": 35,
-  "R": 35
+  "L": 45,
+  "R": 45
  },
  "Faca": {
   "R": 35
  },
+ "Lampiao": {
+  "R": 16
+ },
  "Lanca": {
+  "L": 45,
+  "R": 45
+ },
+ "Machado": {
   "L": 35,
   "R": 35
  },
- "Machado": {
-  "L": 20,
+ "Molotov": {
   "R": 35
  },
  "Tocha": {

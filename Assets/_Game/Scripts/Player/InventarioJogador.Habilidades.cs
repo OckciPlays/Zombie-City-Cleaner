@@ -129,7 +129,12 @@ namespace ZombieCityCleaner.Player
             for (int i = 0; i < Habilidades.Quantas; i++)
             {
                 var h = (Habilidade)i;
-                if (Habilidades.Pronta(h)) limpo.PorPontos(h, Mathf.Min(p.PontosEm(h), Habilidades.Maximo(h)));
+                if (!Habilidades.Pronta(h)) continue;
+                // um nó que perdeu níveis (o a1, a Pistola de sucata, de 2 para 1 em 10/11/2026): o que passa do máximo volta
+                // como ponto livre, e o resto da árvore fica como estava
+                if (p.PontosEm(h) > Habilidades.Maximo(h))
+                    Debug.Log($"[Habilidades] {Habilidades.Nome(h)} tem {Habilidades.Maximo(h)} nível(is) agora: {p.PontosEm(h) - Habilidades.Maximo(h)} ponto(s) de {_rede?.Aparencia.Value.nome} voltaram.");
+                limpo.PorPontos(h, Mathf.Min(p.PontosEm(h), Habilidades.Maximo(h)));
             }
             if (limpo.Gastos > limpo.Nivel) limpo.Esquecer();
             Progresso.Value = limpo;

@@ -145,6 +145,8 @@ namespace ZombieCityCleaner.Zombies
             // dentro do fogo: recua até a beira (o susto só na primeira vez; quem já rodeava só recua)
             if (d < fogo.raio - 0.2f)
             {
+                // o fogo de quem tem a Muralha de fogo (11/11/2026, a etapa 4): ele foge em pânico (Zumbi.Queimar.cs)
+                if (fogo.panico && FugirEmPanico(agora, a, fogo, deFora, d)) return true;
                 if (!RecuarDoFogo(agora, a, fogo, deFora, d, agora >= _naBeiraAte, out bool preso)) return false;
                 // preso entre o sol e o fogo, ele larga quem caçava (não fica engajado o dia todo sem poder ir atrás)
                 if (preso && caca)

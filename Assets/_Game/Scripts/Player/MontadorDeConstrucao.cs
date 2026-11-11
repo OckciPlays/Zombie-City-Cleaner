@@ -26,6 +26,7 @@ namespace ZombieCityCleaner.Player
         GameObject _sombra;
         Material _verde, _vermelho;
         MeshRenderer _render;
+        MeshRenderer[] _renders;   // a sombra e as partes dela (o rastro da cerca de fogo, 11/11/2026)
 
         public bool Montando => _kit != 0;
 
@@ -48,11 +49,13 @@ namespace ZombieCityCleaner.Player
             Parar();
             _kit = kit;
             _tipo = tipo;
-            _giro = transform.eulerAngles.y + 180f;   // virada para o jogador
+            _giro = transform.eulerAngles.y + ConstrucoesNoMundo.GiroDaSombra(tipo);   // virada para o jogador (as estacas e a cerca de fogo, não: 11/11/2026)
             _sombra = new GameObject("Montando: " + Itens.Nome(tipo));
             _sombra.AddComponent<MeshFilter>().sharedMesh = mundo.MalhaDe(tipo);
             _render = _sombra.AddComponent<MeshRenderer>();
             _render.shadowCastingMode = ShadowCastingMode.Off;
+            ConstrucoesNoMundo.ExtrasDoFantasma(tipo, _sombra.transform);   // a cerca de fogo: o rastro de 4 m (11/11/2026)
+            _renders = _sombra.GetComponentsInChildren<MeshRenderer>();
             if (_verde == null)
             {
                 _verde = Transparente(new Color(0.35f, 0.95f, 0.4f, 0.45f));
@@ -111,7 +114,7 @@ namespace ZombieCityCleaner.Player
             _cabe = _noChao && mundo.Cabe(_tipo, _ponto, _giro);
             _sombra.SetActive(_noChao);
             _sombra.transform.SetPositionAndRotation(_ponto + Vector3.up * 0.01f, Quaternion.Euler(0f, _giro, 0f));
-            _render.sharedMaterial = _cabe ? _verde : _vermelho;
+            foreach (var r in _renders) r.sharedMaterial = _cabe ? _verde : _vermelho;
             if (_cabe && mouse != null && mouse.leftButton.wasPressedThisFrame)
             {
                 mundo.PedirMontar(_kit, _ponto, _giro);

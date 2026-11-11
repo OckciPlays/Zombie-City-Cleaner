@@ -131,6 +131,7 @@ namespace ZombieCityCleaner.World
             bool antes = p.Aberta;
             bool mudou = _estado.TryGetValue(p.chave, out byte bits);
             bool aberta = mudou ? (bits & BitAberta) != 0 : p.dados.giro > 1f;
+            if (aberta && Barricada(p.chave)) aberta = false;   // (a barricada de tábuas, 11/11/2026: fechada, em qualquer cópia)
             p.Definir(aberta, !mudou, ja);
             if (!ja && p.Aberta != antes) Efeitos.Som(p.Aberta ? SomDasPortas.Abrir : SomDasPortas.Fechar, p.Meio, 0.8f, true, 25f);
         }
@@ -217,6 +218,13 @@ namespace ZombieCityCleaner.World
         {
             if (c == null) return;
             var d = c.portas[i];
+            // a barricada de tábuas (11/11/2026, a etapa 5b): não abre, dos dois lados (a folha treme)
+            if (Barricada(c.chaves[i]))
+            {
+                if (naRede) TremerRpc(c.chaves[i]);
+                else Tremeu(c.chaves[i]);
+                return;
+            }
             if (AbertaAgora(c, i)) Escrever(c, i, false, false);
             else if (!TrancadaAgora(c, i)) Escrever(c, i, true, false);
             else if (d.DeFora && DoLadoQueAbre(c, d, quem)) Escrever(c, i, true, true);
@@ -345,6 +353,7 @@ namespace ZombieCityCleaner.World
             p.dados = d;
             bool mudou = _estado.TryGetValue(p.chave, out byte bits);
             float giro = mudou ? ((bits & BitAberta) != 0 ? Mathf.Min(d.maximo, 90f) : 0f) : d.giro;
+            if (Barricada(p.chave)) giro = 0f;   // (a barricada de tábuas, 11/11/2026: a folha nasce fechada)
             // o obstáculo do NavMesh só no anfitrião (a IA dos zumbis roda lá)
             p.Preparar(giro, IsSpawned && IsServer);
             _vivas[p.chave] = p;

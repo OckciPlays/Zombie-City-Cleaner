@@ -52,6 +52,7 @@ namespace ZombieCityCleaner.World
         internal float TempoDeArrombar(PortaDaCasa p, ArmaJogador quem)
         {
             if (p.Aberta || !Trancada(p) || !SabidaTrancada(p.chave)) return 0f;
+            if (Barricada(p.chave)) return 0f;   // (a barricada de tábuas, 11/11/2026: nem do outro lado)
             if (p.dados.DeFora && p.DoLadoQueAbre(quem.transform.position)) return 0f;   // por dentro, destranca sem ferramenta
             return TempoDa(FerramentaDe(quem.Inventario), quem.Inventario);
         }
@@ -99,6 +100,7 @@ namespace ZombieCityCleaner.World
             var meio = janela ? MeioDaJanela(r.c, r.i) : MeioDa(r.c, r.i);
             if ((meio - (pes + Vector3.up)).sqrMagnitude > distanciaMaxima * distanciaMaxima) return;
             if (janela ? JanelaAbertaAgora(r.c, r.i) || !JanelaTrancadaAgora(r.c, r.i) : AbertaAgora(r.c, r.i) || !TrancadaAgora(r.c, r.i)) return;
+            if (Barricada(chave)) return;   // (a barricada de tábuas, 11/11/2026, a etapa 5b: não se arromba)
             bool quebrou = f == Item.Gazua && !maosLeves && Random.value < ChanceDeQuebrarAGazua;
             if (quebrou)
             {
@@ -142,8 +144,10 @@ namespace ZombieCityCleaner.World
                 _arrombando = alvo;
                 _proximoSom = 0f;
             }
-            if (Time.time < _proximoSom || f == Item.Nada) return;
             Vector3 onde = alvo is PortaDaCasa p ? p.Meio : ((JanelaDaCasa)alvo).Meio;
+            // (pregando a barricada de tábuas, 11/11/2026, a etapa 5b: o martelo, PortasDoMundo.Barricadas.cs)
+            if (SomDoMartelo(alvo, arma, onde)) return;
+            if (Time.time < _proximoSom || f == Item.Nada) return;
             // a gazua: os cliques dos pinos; o pé de cabra: a madeira forçando (o estalo do fim vem do anfitrião)
             bool silencio = f != Item.PeDeCabra;
             Efeitos.Som(silencio ? SomDasPortas.Gazua : SomDasPortas.Forcando, onde, silencio ? 0.7f : 0.8f, true, silencio ? 10f : 25f);

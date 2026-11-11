@@ -31,6 +31,8 @@ namespace ZombieCityCleaner.Player
         public bool viciado;
         /// <summary>O XP e as habilidades (06/11/2026, a árvore de habilidades).</summary>
         public ProgressoDoPersonagem progresso;
+        /// <summary>A proteção de sucata vestida (11/11/2026; vazia num save de antes dela).</summary>
+        public ProtecaoVestida protecao;
 
         public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter
         {
@@ -56,6 +58,7 @@ namespace ZombieCityCleaner.Player
             s.SerializeValue(ref nicotina);
             s.SerializeValue(ref viciado);
             s.SerializeValue(ref progresso);
+            s.SerializeValue(ref protecao);
         }
 
         public static PacoteDoPersonagem De(PersonagemSalvo p)
@@ -100,6 +103,13 @@ namespace ZombieCityCleaner.Player
                     long cores = p.coresDasRoupas != null && k < p.coresDasRoupas.Length ? p.coresDasRoupas[k] : 0;
                     roupas.Por((LugarDaRoupa)k, (Item)p.roupas[k], unchecked((ulong)cores));
                 }
+            var protecao = new ProtecaoVestida();
+            if (p.protecao != null)
+                for (int k = 0; k < Protecao.Quantos && k < p.protecao.Length; k++)
+                {
+                    int gasto = p.desgasteDaProtecao != null && k < p.desgasteDaProtecao.Length ? p.desgasteDaProtecao[k] : 0;
+                    protecao.Por((LugarDaProtecao)k, (Item)Mathf.Clamp(p.protecao[k], 0, 255), gasto);
+                }
             sbyte A(int k) => (sbyte)(p.atalhos != null && k < p.atalhos.Length ? Mathf.Clamp(p.atalhos[k], -1, 127) : -1);
             return new PacoteDoPersonagem
             {
@@ -108,7 +118,7 @@ namespace ZombieCityCleaner.Player
                 roupas = roupas, comRoupas = comRoupas, corpo = p.corpo.Conferido(),
                 abaloDaMente = Mathf.Clamp(p.abaloDaMente, 0f, VidaJogador.MenteMaxima),
                 cansaco = Mathf.Clamp(p.cansaco, 0f, 100f), nicotina = Mathf.Clamp(p.nicotina, 0f, 100f), viciado = p.viciado,
-                progresso = p.progresso,
+                progresso = p.progresso, protecao = protecao,
             };
         }
     }
@@ -213,7 +223,7 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsServer) return Itens.Quantos(it.item, it.qtd);
             if (Itens.EmPilha(it.item)) return ReceberEmPilha(it.item, Itens.Quantos(it.item, it.qtd));
-            return Receber(it.item, it.qtd, it.desgaste) ? 0 : 1;
+            return Receber(it.item, it.qtd, it.desgaste, it.cores) ? 0 : 1;   // (as cores da roupa e as melhorias da arma de sucata, 10/11/2026)
         }
 
         /// <summary>No anfitrião: as balas no pente da arma (a cópia do anfitrião).</summary>
@@ -317,6 +327,7 @@ namespace ZombieCityCleaner.Player
             GetComponent<FomeESede>()?.Definir(p.fome, p.sede);
             DefinirProgresso(p.progresso);   // o XP e as habilidades (06/11/2026)
             if (p.comRoupas) VestirAsSalvas(p.roupas);
+            VestirAProtecaoSalva(p.protecao);   // (a proteção de sucata, 11/11/2026)
             // (um save antigo pode ter no atalho um item que não vai mais na mão: a gaze e o desinfetante, 05/11/2026)
             ushort A(int k) => k >= 0 && k < n && Itens.VaiNaMao(p.itens[k].item) ? ids[k] : (ushort)0;
             CarregadoRpc(A(p.a0), A(p.a1), A(p.a2), p.escolhido);
@@ -371,6 +382,14 @@ namespace ZombieCityCleaner.Player
             {
                 p.roupas[k] = (int)vestidas.Peca((LugarDaRoupa)k);
                 p.coresDasRoupas[k] = unchecked((long)vestidas.Cores((LugarDaRoupa)k));
+            }
+            var protecao = Protecao.Value;   // (a proteção de sucata, 11/11/2026)
+            p.protecao = new int[Player.Protecao.Quantos];
+            p.desgasteDaProtecao = new int[Player.Protecao.Quantos];
+            for (int k = 0; k < Player.Protecao.Quantos; k++)
+            {
+                p.protecao[k] = (int)protecao.Peca((LugarDaProtecao)k);
+                p.desgasteDaProtecao[k] = protecao.Desgaste((LugarDaProtecao)k);
             }
             if (_rede != null)
             {

@@ -19,6 +19,8 @@ namespace ZombieCityCleaner.Player
         Dia = 16, Amigos, Fogueira, Bunker, Cigarro,
         // a etapa 3: o calmante, a sinuca e o descanso (dormindo)
         Calmante, Sinuca, Descanso,
+        // a etapa 4 do ramo Fogo (11/11/2026): o Calor do fogo
+        CalorDoFogo,
     }
 
     /// <summary>
@@ -110,7 +112,7 @@ namespace ZombieCityCleaner.Player
             // nada tira da mente: o Abala e o AbalarAgora não contam lá dentro
             _abrigado = noBunker;
             bool fogueira = FogueiraAcesaPerto(pes, 8f);
-            bool luzPropria = LanternaAcesa() || (_rede != null && (_rede.TochaAcesa || (_rede.Passageiro != null && _rede.Passageiro.NoCarro)));
+            bool luzPropria = LanternaAcesa() || (_rede != null && (_rede.TochaAcesa || _rede.LampiaoAceso || (_rede.Passageiro != null && _rede.Passageiro.NoCarro)));
             bool escuro = !luzPropria && !fogueira && (noBunker ? !bunkerAceso : noite);
             // dormindo (08/11/2026, a pedido: "dormir recuperar sanidade"), o escuro, a solidão e a tempestade não pesam: só o
             // que é de verdade (os zumbis caçando, o corpo, a fome e a sede). Antes, dormindo sozinho de noite fora do bunker,
@@ -167,6 +169,9 @@ namespace ZombieCityCleaner.Player
             int perto = Amigos(pes, 8f);
             if (perto > 0) Acalma(ref taxa, ref motivos, MotivoDaMente.Amigos, 3f * Mathf.Min(2, perto));
             if (fogueira && !ameaca) Acalma(ref taxa, ref motivos, MotivoDaMente.Fogueira, 4f);
+            // o Calor do fogo (11/11/2026, a etapa 4): perto de um fogo aceso (a fogueira, a tocha, o lampião, o molotov)
+            int calor = Habilidades.Pontos(_rede, Habilidade.CalorDoFogo);
+            if (calor > 0 && FogoDoJogador.FogoAcesoPerto(pes)) Acalma(ref taxa, ref motivos, MotivoDaMente.CalorDoFogo, FogoDoJogador.CalorPorNivel * calor);
             if (bunkerAceso) Acalma(ref taxa, ref motivos, MotivoDaMente.Bunker, bunkerFechado ? 5f : 2.5f);
 
             // a etapa 3: o sono, o calmante e o vício (VidaJogador.Sono.cs)

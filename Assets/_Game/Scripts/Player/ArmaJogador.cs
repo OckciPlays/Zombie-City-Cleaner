@@ -33,7 +33,7 @@ namespace ZombieCityCleaner.Player
     /// vida. O tiro atravessa até dois braços ou mãos e segue para o que estiver atrás. No cenário, faíscas e a marca do
     /// tiro.
     /// </summary>
-    public class ArmaJogador : MonoBehaviour
+    public partial class ArmaJogador : MonoBehaviour
     {
         public JogadorRede rede;
         public MovimentoPrimeiraPessoa movimento;
@@ -65,7 +65,8 @@ namespace ZombieCityCleaner.Player
         public bool Recarregando { get; private set; }
         /// <summary>A última arma que esteve na mão (a da mão, com arma).</summary>
         public TipoDeArma Atual { get; private set; }
-        public DadosDaArma Dados => Armas.Dados(Atual);
+        /// <summary>Os números da arma da mão, com as melhorias postas nela (as de sucata, 10/11/2026: ArmaJogador.Melhorias.cs).</summary>
+        public DadosDaArma Dados => DadosCom(Atual, MelhoriasNaMao);
         public Item NaMao { get; private set; }
 
         /// <summary>
@@ -227,6 +228,7 @@ namespace ZombieCityCleaner.Player
             }
             // o cigarro aceso que sai da mão vai para o chão (o peteleco), e o acender pela metade para
             if (_fumo != null) _fumo.AoTrocar(novo, id);
+            BracosDoFogo();   // o lampião e o molotov (11/11/2026, a etapa 4: ArmaJogador.Fogo.cs), na primeira vez
             StopAllCoroutines();
             Recarregando = false;
             Usando = false;
@@ -248,6 +250,8 @@ namespace ZombieCityCleaner.Player
                 fogo.GetComponent<Light>().intensity = 2.1f;
             }
             FogoDaTocha();
+            ChamaDoFogoNosBracos(novo, m);   // a chama do lampião e o pano aceso do molotov (11/11/2026)
+            _molotovNaMao = true;
             if (ComArma)
             {
                 Atual = Itens.Arma(novo);
@@ -470,7 +474,8 @@ namespace ZombieCityCleaner.Player
         // o pente de uma arma que não está na mão: o que esta máquina guardou, ou a cópia do anfitrião
         int PenteGuardado(ushort id, Item arma)
         {
-            int cap = Armas.Dados(Itens.Arma(arma)).capacidade;
+            // (com o carregador estendido da arma de sucata, 10/11/2026, cabe mais)
+            int cap = DadosCom(Itens.Arma(arma), Inventario != null ? Inventario.MelhoriasDe(id) : 0UL).capacidade;
             if (_pentes.TryGetValue(id, out int pente)) return Mathf.Min(pente, cap);
             return Inventario != null && Inventario.Achar(id, out var it) ? Mathf.Min(it.qtd, cap) : cap;
         }
@@ -511,7 +516,7 @@ namespace ZombieCityCleaner.Player
             BracosNaAgua();
             bool nadando = NaAgua;
             // sentado num veículo com as mãos livres (08/11/2026; PassageiroDoCarro.MaosLivres): o garupa da moto atira e
-            // golpeia; no carro, só os itens (comer, beber, os curativos, o cigarro)
+            // golpeia, e, desde 10/11/2026, os passageiros do carro também (o motorista, não: PassageiroDoCarro.PodeAtacar)
             var passageiro = rede != null ? rede.Passageiro : null;
             bool noVeiculo = passageiro != null && passageiro.NoCarro;
             bool semAtaque = noVeiculo && !passageiro.PodeAtacar;
@@ -522,7 +527,7 @@ namespace ZombieCityCleaner.Player
             bool luneta = comArma && dados.fovLuneta > 0f;
             // recarregando, a sniper sai da luneta (a mão está no carregador). O robô de teste, com a sniper, fica na luneta
             // (testa o nível de detalhe dos zumbis pela luneta, na rede)
-            bool mirar = comArma && controla && (bot ? luneta : _mirar.IsPressed()) && !(luneta && Recarregando) && !semBraco && !tratando;
+            bool mirar = comArma && controla && (bot ? luneta : _mirar.IsPressed() || MirarNoTeste) && !(luneta && Recarregando) && !semBraco && !tratando;
             if (rede.Mirando.Value != mirar) rede.Mirando.Value = mirar;
             var cam = rede.cameraMundo;
             float fovAlvo = mirar ? (luneta ? dados.fovLuneta : fovMirando) : fovNormal;
@@ -547,10 +552,20 @@ namespace ZombieCityCleaner.Player
                 PesoDasAcoes(animador);
             }
             ProcurarAlvo(rede.Olho);
-            // segurando o E (arrombar): cancela se o E soltou ou a mira saiu; no tempo, faz
+            // segurando o E (arrombar, pregar e desmontar a barricada de tábuas) ou o clique (consertá-la): cancela se soltou
+            // ou a mira saiu; no tempo, faz. Soltar o E logo (um toque, 11/11/2026, a etapa 5b) usa a coisa, se ela deixa (a
+            // porta com as tábuas na mochila: o toque abre, segurar prega)
             if (_segurando != null)
             {
-                if (bot || !controla || _alvo != _segurando || !_interagir.IsPressed()) _segurando = null;
+                bool apertado = _segurarPeloClique ? _atirar.IsPressed() : _interagir.IsPressed();
+                if (!bot && controla && _alvo == _segurando && !apertado && !_segurarPeloClique
+                    && Time.time - _segurarDesde < ToqueCurto && _segurando.ToqueUsa(this))
+                {
+                    var s = _segurando;
+                    _segurando = null;
+                    s.Usar(this);
+                }
+                else if (bot || !controla || _alvo != _segurando || !apertado) _segurando = null;
                 else if (Time.time - _segurarDesde >= _segurarTempo)
                 {
                     var s = _segurando;
@@ -560,8 +575,10 @@ namespace ZombieCityCleaner.Player
             }
             // a tocha acesa na mão queima: o desgaste sobe com o tempo (100: ela se apaga e some); a apagada pela chuva, não
             FogoDaTocha();
+            FogoNaMaoAgora();
+            // (11/11/2026, a etapa 4: a Tocha duradoura e o Fogo que pega a fazem durar mais)
             if (NaMao == Item.Tocha && !bot && Inventario != null && !Inventario.TochaDaMaoApagada)
-                Inventario.Desgastar(_id, Time.deltaTime / Itens.SegundosDaTochaPorDesgaste);
+                Inventario.Desgastar(_id, Time.deltaTime / FogoDoJogador.SegundosDaTochaPorDesgaste(rede));
             if (!controla || Montando) return;
             // nadando (06/11/2026): as mãos nadam, nada de atirar nem golpear; o E continua (08/11/2026, a pedido: "não dá pra
             // entrar na canoa nadando": a dica do caiaque aparecia, mas o E era ignorado)
@@ -592,9 +609,9 @@ namespace ZombieCityCleaner.Player
             if (comArma)
             {
                 var d = Dados;
-                bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame();
+                bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame() || CliqueDoTeste();
                 bool atirar = apertou || (!bot && d.automatica && _atirar.IsPressed());
-                bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame();
+                bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame() || RecargaDoTeste();
                 if (recarregar && !Recarregando && Municao < d.capacidade)
                 {
                     if (Reserva > 0) _recarga = StartCoroutine(Recarregar());
@@ -630,7 +647,8 @@ namespace ZombieCityCleaner.Player
                     else if (Municao > 0)
                     {
                         Atirar();
-                        if (!bot) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
+                        // (o cano reforçado, 10/11/2026: a arma gasta mais)
+                        if (!bot) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao) * Melhorias.FatorDoDesgaste(MelhoriasNaMao));
                     }
                     else if (apertou)
                     {
@@ -661,6 +679,11 @@ namespace ZombieCityCleaner.Player
             // a mão vazia soca (segurando o botão, um soco atrás do outro)
             else if (NaMao == Item.Nada && !bot && !semAtaque && Time.time >= _proximoTiro && _atirar.IsPressed())
                 StartCoroutine(Socar());
+            // o lampião e o molotov (11/11/2026, a etapa 4: ArmaJogador.Fogo.cs): o clique balança o lampião ou arremessa a garrafa
+            else if (Itens.EhFogoDeMao(NaMao))
+            {
+                if (!bot && !semAtaque && !semBraco) CliqueDoFogo(_atirar.WasPressedThisFrame() || CliqueDoTeste());
+            }
             // a arma branca de duas mãos, com o braço quebrado, não golpeia
             else if (Itens.EhBranca(NaMao) && semBraco)
             {
@@ -746,7 +769,7 @@ namespace ZombieCityCleaner.Player
             {
                 var hit = _acertos[i];
                 if (hit.collider == _corpo) continue;
-                if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa: a própria moto)
+                if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa e os passageiros: o próprio veículo)
                 // uma esfera que já começa encostada não tem ponto: o mais perto do olho, no colisor
                 Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(cam.position) : hit.point;
                 var hitbox = hit.collider.GetComponent<Hitbox>();
@@ -811,6 +834,9 @@ namespace ZombieCityCleaner.Player
                 }
                 Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
                 if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
+                // a arma branca numa barricada de tábuas (11/11/2026, a etapa 5b: as tábuas, ou a porta e a janela barricadas do
+                // outro lado): o anfitrião tira metade do dano da arma da vida dela
+                if (faca) Loot.ConstrucoesNoMundo.Instancia?.GolpeNaBarricada(hit.collider, ponto, dano);
                 rede.AnunciarPancada(ponto, false);
                 if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
                 if (NaMao == Item.Machado) GolpeNaArvore(hit.collider, ponto);   // (o machado corta a árvore, 06/11/2026)
@@ -857,7 +883,7 @@ namespace ZombieCityCleaner.Player
                 Efeitos.Clarao(Boca, JogadorRede.CamadaBracos, rede.cameraBracos);
                 Efeitos.LuzDoClarao(rede.NoMundo(Boca.position));
             }
-            Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, 1f, false);
+            Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, Melhorias.VolumeDoTiro(MelhoriasNaMao), false);   // (o silenciador, 10/11/2026)
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
             movimento.Coice(d.coiceGraus * (Corpo.AlgumBracoRuim ? 1.35f : 1f)   // (o braço quebrado segura mal o coice)
@@ -868,10 +894,9 @@ namespace ZombieCityCleaner.Player
             _marcaNaCabeca = false;
             // correndo (só acima de 3 m/s: a perna quebrada que "corre" mancando não conta), e o braço machucado ou quebrado
             // (05/11/2026: a mira treme)
-            // (o rifle de sucata, 09/11/2026, não tem luneta: mirando pela mira de ferro, a dispersão; sem mirar, a de sem luneta)
-            bool semAMira = d.fovLuneta > 0f ? !NaLuneta : d.dispersaoSemLuneta > 0f && !rede.Mirando.Value;
-            float abertura = (semAMira ? d.dispersaoSemLuneta : d.dispersao) + (rede.Velocidade > 3f ? d.dispersaoAndando * 2f : 0f)
-                             + PartesDoCorpo.DispersaoExtra(Corpo);
+            // (o rifle de sucata, 09/11/2026, não tem luneta: mirando pela mira de ferro, a dispersão; sem mirar, a de sem luneta;
+            // as miras postas nas de sucata, 10/11/2026, espalham menos: o Abertura, no ArmaJogador.Melhorias.cs)
+            float abertura = Abertura();
             // as hitboxes andam com a animação: sincroniza a física antes do raio, para acertar onde o zumbi está agora
             Physics.SyncTransforms();
             var impactos = new JogadorRede.Impacto[d.chumbos];
@@ -1113,7 +1138,7 @@ namespace ZombieCityCleaner.Player
             for (int i = 0; i < n; i++)
             {
                 var hit = _acertos[i];
-                if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa: a própria moto)
+                if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa e os passageiros: o próprio veículo)
                 // a roda antes do que o raio pegou (ou logo atrás da lataria do mesmo carro: a caixa de colisão de baixo
                 // passa um pouco da roda)
                 if (carroDaRoda != null && (naRoda < hit.distance
@@ -1337,7 +1362,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // o E na coisa da mira: aperta (Usar) ou começa a segurar (Segurar mais que 0: arrombar a porta trancada)
-        /// <summary>O veículo em que ele está sentado (o tiro e o golpe do garupa não pegam nele), ou null.</summary>
+        /// <summary>O veículo em que ele está sentado (o tiro e o golpe do garupa e dos passageiros não pegam nele), ou null.</summary>
         Transform MeuVeiculo => rede != null && rede.Passageiro != null && rede.Passageiro.Carro != null ? rede.Passageiro.Carro.transform : null;
 
         void ApertouE()
@@ -1351,13 +1376,32 @@ namespace ZombieCityCleaner.Player
             _segurando = _alvo;
             _segurarDesde = Time.time;
             _segurarTempo = t;
+            _segurarPeloClique = false;
+        }
+
+        /// <summary>
+        /// Segurar o clique na coisa da mira (11/11/2026, a etapa 5b: consertar a barricada de tábuas), como o E: a barra
+        /// embaixo da mira; soltar o clique ou tirar a mira cancela; no tempo, o <see cref="Interagivel.Segurado"/>.
+        /// </summary>
+        public void SegurarOClique(Interagivel coisa, float tempo)
+        {
+            if (coisa == null || tempo <= 0f) return;
+            _segurando = coisa;
+            _segurarDesde = Time.time;
+            _segurarTempo = tempo;
+            _segurarPeloClique = true;
         }
 
         Interagivel _segurando;
         float _segurarDesde, _segurarTempo;
+        bool _segurarPeloClique;
+        // um toque no E (soltar antes disto, em s) usa a coisa que deixa (Interagivel.ToqueUsa)
+        const float ToqueCurto = 0.3f;
 
-        /// <summary>A coisa em que o jogador está segurando o E agora (null: nenhuma).</summary>
+        /// <summary>A coisa em que o jogador está segurando o E (ou o clique) agora (null: nenhuma).</summary>
         public Interagivel SegurandoAgora => _segurando;
+        /// <summary>O que se segura agora é o clique (o conserto da barricada de tábuas), não o E.</summary>
+        public bool SegurandoPeloClique => _segurando != null && _segurarPeloClique;
 
         // uma coisa mais adiante no raio que ganha da do acerto i (o saque dentro do móvel: veja Interagivel.GanhaDe)
         bool DeDentro(int i, int n, Vector3 ponto, Interagivel antes)

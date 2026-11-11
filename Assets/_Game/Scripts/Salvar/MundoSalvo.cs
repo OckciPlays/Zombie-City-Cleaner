@@ -240,10 +240,23 @@ namespace ZombieCityCleaner.Salvar
         public int tipo;
         public Vector3 pos;
         public float giro;
-        /// <summary>A barricada: a vida (%). A fogueira: os segundos de fogo que faltavam.</summary>
+        /// <summary>
+        /// A barricada: a vida (até 100 sem o Armadilheiro e a Fortaleza; a de tábuas, até a máxima dela). A fogueira: os segundos de fogo que faltavam. As armadilhas (11/11/2026): o alarme, os
+        /// toques; o tapete, os usos; as estacas, a vida; a cerca de fogo, 0 (a acesa não vai).
+        /// </summary>
         public float valor;
         /// <summary>A chave do personagem que montou (a cama dele).</summary>
         public long dono;
+        /// <summary>As armadilhas (11/11/2026): o Armadilheiro do dono quando montou (um save de antes: 0). Desde a 5b, também nas barricadas.</summary>
+        public int nivel;
+        /// <summary>
+        /// A barricada de tábuas (11/11/2026, a etapa 5b): a chave da porta ou da janela da casa (a mesma ao recarregar: as casas
+        /// vêm da semente), o vão (m) e os bits (a janela, o nível 2 de quem pregou e a Fortaleza do dono; na barricada solta e
+        /// nas estacas, só a Fortaleza). Um save de antes: 0.
+        /// </summary>
+        public long vao;
+        public float largura, altura;
+        public int extra;
     }
 
     /// <summary>Um caiaque do mundo (06/11/2026): onde ficou.</summary>

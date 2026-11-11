@@ -174,6 +174,7 @@ namespace ZombieCityCleaner.Sobreviventes
             _querAjoelhar = false;
             if (_fugindo) Fugir(agora);
             else if (Escondido) Esconder(agora);
+            else if (SairDoFogo(agora)) { }   // o fogo do molotov (11/11/2026, a etapa 4: Sobrevivente.Fogo.cs)
             else if (_zumbi != null && ZumbiAmeaca(_zumbi)) LutarComZumbi(agora);
             else if (combate) Combater(agora);
             else if (NaEstrada) FicarNaEstrada(agora);
@@ -245,7 +246,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (d < 3f) alcance = 99f;   // encostado
                 // os passos: perto, ele ouve de qualquer lado, até atrás de uma parede (correndo, mais longe), e sabe mais ou
                 // menos onde (o grupo vai procurar)
-                float ouvido = (j.Velocidade > 3f ? 20f : j.Velocidade > 0.5f ? 9f : 3f) * (1f - 0.25f * discreto);
+                float ouvido = (j.Velocidade > 3f ? 20f : j.Velocidade > 0.5f ? 9f : 3f) * (1f - 0.25f * discreto) * Protecao.FatorDosPassos(j);
                 if (d <= ouvido && grupo.estado != EstadoDoGrupo.Combate)
                 {
                     grupo.Ver(j, j.transform.position + new Vector3(Random.Range(-3f, 3f), 0f, Random.Range(-3f, 3f)), this);

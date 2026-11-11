@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2262020899200122977
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8138811621222309998}
+  - component: {fileID: 7322702411016467857}
+  m_Layer: 0
+  m_Name: ProtecaoDeSucata
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8138811621222309998
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2262020899200122977}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7322702411016467857
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2262020899200122977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3aa8d599dfcbf5843bc83a96e8367a1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Player.PecasDaProtecao
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  pecas:
+  - {fileID: -7185193200103107727, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  - {fileID: -2481727279873865482, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  - {fileID: -3925683052300936259, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  - {fileID: 2973989996429649606, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  - {fileID: 3521985521777253730, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  - {fileID: 3178332711422717376, guid: 46e3207e33630024394fb4fa6a9851c2, type: 3}
+  giro: {x: 0.70710677, y: 0, z: 0, w: 0.70710677}
+  malhasDosItens:
+  - {fileID: 4300000, guid: 56bd2a8cf951d504e8cee262b862c282, type: 2}
+  - {fileID: 4300000, guid: df9a454ad8e49254f98e43309f950e5e, type: 2}
+  - {fileID: 4300000, guid: 0be04041c11e74145b01a77fbcb63ed5, type: 2}
+  - {fileID: 4300000, guid: 8a017278ffab2cd41afa586f0551a274, type: 2}
+  icones:
+  - {fileID: 2800000, guid: 98555921f5dfcbd4885cb1a875cb0094, type: 3}
+  - {fileID: 2800000, guid: 0f3e27cbff9f4e64499911b03ca084b9, type: 3}
+  - {fileID: 2800000, guid: cd5ab4a893645354c90b0c5772da9808, type: 3}
+  - {fileID: 2800000, guid: e1c10e0578b74ad44a2ad59d3da533cd, type: 3}
+  fotos:
+  - {fileID: 2800000, guid: b1409e40ac661374d9295d24bef020e8, type: 3}
+  - {fileID: 2800000, guid: 1245ea14c818ed34fbbbac617383d6ba, type: 3}
+  - {fileID: 2800000, guid: 92d80df074493844da06fb4de4e73d41, type: 3}
+  - {fileID: 2800000, guid: d412df0dd4482954286a6f0523b96d42, type: 3}

@@ -174,8 +174,9 @@ namespace ZombieCityCleaner.Player
             _ccLigado = _cc.enabled;
             _cc.enabled = false;   // dentro do carro, a cápsula do jogador empurraria o carro
             _passos.enabled = false;
-            // o que está na mão some, menos com o garupa da moto (08/11/2026: ele atira e usa itens, e os outros veem)
-            _rede.EsconderNaMao(!(carro.moto && lugar == 1));
+            // o que está na mão some só com quem dirige (08/11/2026: o garupa da moto atira e usa itens, e os outros veem;
+            // 10/11/2026: os passageiros do carro também)
+            _rede.EsconderNaMao(lugar == 0);
             _maosLivres = false;
             if (!_rede.IsOwner) return;
             _movimento.enabled = false;
@@ -186,6 +187,7 @@ namespace ZombieCityCleaner.Player
             _yaw = 0f;
             _pitch = 6f;
             _yaw3 = 0f;
+            ZerarOGiro();
         }
 
         /// <summary>Sai do carro (chamado pelo carro quando o lugar fica vazio). Animado = acabou de sair.</summary>
@@ -249,6 +251,13 @@ namespace ZombieCityCleaner.Player
             _camera.localRotation = Quaternion.identity;
             _rede.CorpoNoVeiculo(false);
             CorpoVisivel(false);
+            ZerarOGiro();
+        }
+
+        // no dono: o giro do olhar sentado (pela rede) volta para a frente
+        void ZerarOGiro()
+        {
+            if (_rede.IsSpawned && _rede.IsOwner && _rede.GiroSentado.Value != 0f) _rede.GiroSentado.Value = 0f;
         }
 
         // onde o jogador desce: do lado da porta dele, no chão e sem nada no caminho; senão, pelas outras portas, atrás
@@ -299,6 +308,11 @@ namespace ZombieCityCleaner.Player
                 Pose(Carro, Lugar);
                 if (!Carro.moto) CaberNoTeto(Carro);
                 if (Lugar == 0 && !Carro.moto) MaosNoVolante(Carro);   // (em todas as máquinas: os outros veem também)
+                // o passageiro do carro com algo na mão (10/11/2026: ele atira e golpeia, como o garupa da moto): as duas
+                // mãos na frente do peito, por cima da animação de sentado
+                else if (!Carro.moto && GarupaComAMao(Carro, out var alvoDaMao, out var mira))
+                    for (int s = 0; s < 2; s++) MaoNaFrente(s, alvoDaMao, mira);
+                CabecaVirada();
             }
             if (_fase == Fase.Entrando && _tempo >= MoverAte) _fase = Fase.Dentro;
             if (!dono) return;
@@ -314,14 +328,19 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// Sentado com as mãos livres (08/11/2026, a pedido: "poder atirar e usar item de cura na garupa da moto, ou poder usar
-        /// itens dentro do carro"): o garupa da moto e os passageiros do carro. Os braços de primeira pessoa e o
+        /// itens dentro do carro"; 10/11/2026: os passageiros do carro também atiram e golpeiam): o garupa da moto e os
+        /// passageiros do carro. Os braços de primeira pessoa e o
         /// <see cref="ArmaJogador"/> voltam (o que está na mão, sacando). Na câmera de trás (V), não. O motorista, não: o
         /// clique dele é da chave (a ignição), e as mãos dele ficam no volante e no guidão.
         /// </summary>
         public bool MaosLivres => _maosLivres;
 
-        /// <summary>Com as mãos livres, também atira e golpeia: só o garupa da moto (no carro, só os itens).</summary>
-        public bool PodeAtacar => _maosLivres && Carro != null && Carro.moto && Lugar == 1;
+        /// <summary>
+        /// Com as mãos livres, também atira e golpeia: o garupa da moto e, desde 10/11/2026, os passageiros do carro (a pedido:
+        /// atirar de dentro do carro). O tiro e o golpe pulam o próprio veículo (<see cref="ArmaJogador"/>, o MeuVeiculo), e os
+        /// outros o veem com a arma na frente do peito, para onde ele olha (<see cref="GarupaComAMao"/>). O motorista, não.
+        /// </summary>
+        public bool PodeAtacar => _maosLivres && Carro != null && Lugar != 0;
 
         bool MaosLivresAgora()
         {
@@ -683,6 +702,9 @@ namespace ZombieCityCleaner.Player
             // momento de entrar (olhando para a porta, para baixo), e os outros viam a cabeça baixa o tempo todo
             // (07/11/2026, a pedido: "a cabeça do personagem fica olhando para baixo")
             if (_rede != null && _rede.IsOwner && _fase == Fase.Dentro && Mathf.Abs(_rede.Pitch.Value - _pitch) > 0.5f) _rede.Pitch.Value = _pitch;
+            // e para os lados (10/11/2026): o giro vai pela rede como o Pitch, só quando muda mais de 1 grau; os outros veem a
+            // arma do garupa e dos passageiros (e a cabeça de quem está sentado) virando para onde ele olha
+            if (_rede != null && _rede.IsOwner && _fase == Fase.Dentro && Mathf.Abs(_rede.GiroSentado.Value - _yaw) > 1f) _rede.GiroSentado.Value = _yaw;
             Vector3 olho = _quadrilNaRaiz + OlhoDe(c, Carro != null ? Lugar : _lugarSaindo);
             if (comCorpo) olho = _rede.OlhoForaDoCorpo(olho);   // (o olho nunca atrás nem abaixo do pescoço)
             _cabeca.localPosition = Vector3.Lerp(_cabecaLocal, olho, k);
@@ -699,6 +721,7 @@ namespace ZombieCityCleaner.Player
             // momento de entrar (olhando para a porta, para baixo). O olhar da primeira pessoa volta quando ela volta
             _pitch = 0f;
             if (_rede.IsOwner && Mathf.Abs(_rede.Pitch.Value) > 0.5f) _rede.Pitch.Value = 0f;
+            ZerarOGiro();
             Vector2 olhar = LerOlhar();
             if (olhar.sqrMagnitude > 0.0001f) _mexeuNaCamera = Time.time;
             _yaw3 += olhar.x;
@@ -861,6 +884,8 @@ namespace ZombieCityCleaner.Player
             Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
             if (_ossos.TryGetValue("spine", out var coluna))
                 coluna.rotation = Quaternion.AngleAxis(piloto ? c.troncoDoPiloto : 5f, direita) * coluna.rotation;
+            Vector3 alvoDaMao = default, mira = default;
+            bool comAMao = !piloto && GarupaComAMao(c, out alvoDaMao, out mira);
             for (int s = 0; s < 2; s++)   // 0 o lado direito, 1 o esquerdo
             {
                 string l = s == 0 ? ".R" : ".L";
@@ -876,14 +901,8 @@ namespace ZombieCityCleaner.Player
                 }
                 if (piloto && c.punhos != null && s < c.punhos.Length && c.punhos[s] != null)
                     DoisOssos("upper_arm" + l, "forearm" + l, c.punhos[s].position, -cima * 0.55f + direita * (lado * 0.75f) - frente * 0.3f);
-                else if (!piloto && GarupaComAMao(c, out var alvoDaMao, out var mira))
-                {
-                    // o garupa com algo na mão (08/11/2026: ele atira e usa itens): as duas mãos juntas na frente do peito,
-                    // para onde ele olha (o Pitch da rede), a direita segurando e a esquerda apoiando
-                    Vector3 mao = s == 0 ? alvoDaMao : alvoDaMao - direita * 0.06f - mira * 0.05f;
-                    DoisOssos("upper_arm" + l, "forearm" + l, mao, -cima * 0.7f + direita * (lado * 0.6f));
-                    Mirar("hand" + l, mira);
-                }
+                else if (comAMao)
+                    MaoNaFrente(s, alvoDaMao, mira);   // o garupa com algo na mão (08/11/2026: ele atira e usa itens)
                 else if (_ossos.TryGetValue("thigh" + l, out var coxa) && _ossos.TryGetValue("shin" + l, out var joelho))
                 {
                     // o garupa: as mãos nas coxas, perto dos joelhos
@@ -896,16 +915,49 @@ namespace ZombieCityCleaner.Player
                 maoDireita.rotation = Quaternion.AngleAxis(-28f * Mathf.Clamp01(c.AceleradorDoDono), direita) * maoDireita.rotation;
         }
 
-        // o garupa da moto com algo na mão (em todas as máquinas): onde fica a mão direita (na frente do peito) e para onde ela
-        // aponta (o olhar dele, pelo Pitch da rede; o giro do olhar não vai pela rede, então é para a frente da moto)
+        /// <summary>Até onde os braços com a arma acompanham o giro do olhar sentado, para cada lado (graus; o olhar vai a 135).</summary>
+        const float GiroDosBracos = 100f;
+        /// <summary>Até onde a cabeça de quem está sentado acompanha o giro do olhar, para cada lado (graus).</summary>
+        const float GiroDaCabeca = 70f;
+
+        /// <summary>
+        /// O garupa da moto e os passageiros do carro com algo na mão (em todas as máquinas): onde fica a mão direita (na frente
+        /// do peito) e para onde ela aponta: o olhar dele, pelo Pitch e, desde 10/11/2026, pelo giro para os lados
+        /// (<see cref="JogadorRede.GiroSentado"/>; antes os outros viam a arma sempre para a frente do veículo).
+        /// </summary>
         bool GarupaComAMao(Carro c, out Vector3 mao, out Vector3 mira)
         {
             mao = mira = default;
             var item = _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
             if (item == Loot.Item.Nada || !_ossos.TryGetValue("chest", out var peito)) return false;
-            mira = Quaternion.AngleAxis(Mathf.Clamp(_rede.Pitch.Value, -50f, 50f), transform.right) * transform.forward;
-            mao = peito.position + mira * 0.42f + transform.up * 0.12f + transform.right * 0.06f;
+            float giro = Mathf.Clamp(_rede.GiroSentado.Value, -GiroDosBracos, GiroDosBracos);
+            mira = transform.rotation * (Quaternion.Euler(Mathf.Clamp(_rede.Pitch.Value, -50f, 50f), giro, 0f) * Vector3.forward);
+            Vector3 direitaDaMira = transform.rotation * (Quaternion.Euler(0f, giro, 0f) * Vector3.right);
+            mao = peito.position + mira * 0.42f + transform.up * 0.12f + direitaDaMira * 0.06f;
             return true;
+        }
+
+        // um braço (s: 0 o direito, 1 o esquerdo) com a mão na frente do peito, para onde ele olha: a direita segurando e a
+        // esquerda apoiando; o cotovelo para baixo e para fora (o lado de quem mira)
+        void MaoNaFrente(int s, Vector3 alvoDaMao, Vector3 mira)
+        {
+            string l = s == 0 ? ".R" : ".L";
+            float lado = s == 0 ? 1f : -1f;
+            Vector3 cima = transform.up;
+            Vector3 direita = Vector3.Cross(cima, mira);
+            direita = direita.sqrMagnitude > 1e-4f ? direita.normalized : transform.right;
+            Vector3 mao = s == 0 ? alvoDaMao : alvoDaMao - direita * 0.06f - mira * 0.05f;
+            DoisOssos("upper_arm" + l, "forearm" + l, mao, -cima * 0.7f + direita * (lado * 0.6f));
+            Mirar("hand" + l, mira);
+        }
+
+        // a cabeça de quem está sentado vira para os lados com o olhar dele (10/11/2026, o giro da rede; o Pitch o JogadorRede
+        // já põe), até GiroDaCabeca. No dono, na primeira pessoa, a cabeça não aparece (no carro, nem o corpo)
+        void CabecaVirada()
+        {
+            float giro = Mathf.Clamp(_rede.GiroSentado.Value, -GiroDaCabeca, GiroDaCabeca);
+            if (Mathf.Abs(giro) < 0.5f || !_ossos.TryGetValue("head", out var cabeca)) return;
+            cabeca.rotation = Quaternion.AngleAxis(giro, transform.up) * cabeca.rotation;
         }
 
         /// <summary>

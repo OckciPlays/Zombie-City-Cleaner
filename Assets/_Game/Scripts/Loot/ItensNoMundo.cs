@@ -35,7 +35,7 @@ namespace ZombieCityCleaner.Loot
     /// Os lugares do começo vêm da montagem da cidade (os tampos das mesas, balcões, cômodas e criados-mudos, e o chão),
     /// cada um já com o item dele.
     /// </summary>
-    public class ItensNoMundo : NetworkBehaviour
+    public partial class ItensNoMundo : NetworkBehaviour
     {
         [Tooltip("A malha de cada modelo, na ordem de Itens.Modelos (origem onde a mão segura; topo em +Y).")]
         public Mesh[] malhas;
@@ -134,6 +134,7 @@ namespace ZombieCityCleaner.Loot
             if (qtd < 0) qtd = Itens.QuantidadePadrao(item);
             if (Itens.EhMunicao(item) && qtd <= 0) return;   // a caixa vazia não fica no chão
             if (Itens.EmPilha(item)) qtd = Mathf.Max(1, qtd);
+            UltimoCriado = _proximoId;   // (11/11/2026: o lampião aceso largado guarda o dono, ItensNoMundo.Lampiao.cs)
             _itens.Add(new ItemNoChao { id = _proximoId++, item = item, apoio = apoio, giro = giro, qtd = (ushort)qtd, desgaste = (byte)Mathf.Clamp(desgaste, 0, 100), cores = cores });
         }
 
@@ -167,7 +168,7 @@ namespace ZombieCityCleaner.Loot
                 return;
             }
             // sem espaço na mochila, ele fica no chão (a dica avisa)
-            if (inventario.Receber(it.item, it.qtd, it.desgaste, it.cores)) _itens.RemoveAt(k);
+            if (inventario.Receber(it.item, it.item == Item.Lampiao ? 0 : it.qtd, it.desgaste, it.cores)) _itens.RemoveAt(k);   // (o lampião aceso apaga na mochila)
         }
 
         int Indice(ushort id)
@@ -207,6 +208,7 @@ namespace ZombieCityCleaner.Loot
                     _objetos[it.id] = o;
                 }
                 if (o.item != it.item) Montar(o, it);
+                if (it.item == Item.Lampiao || o.transform.childCount > 0) FogoNoChao(o, it);   // o lampião aceso (11/11/2026)
             }
             _sobrando.Clear();
             foreach (var id in _objetos.Keys)
@@ -246,7 +248,12 @@ namespace ZombieCityCleaner.Loot
         public Mesh MalhaDoLoot(Item item)
         {
             int k = Itens.IndiceDoLoot(item);
-            return malhasDeLoot != null && k >= 0 && k < malhasDeLoot.Length ? malhasDeLoot[k] : null;
+            var m = malhasDeLoot != null && k >= 0 && k < malhasDeLoot.Length ? malhasDeLoot[k] : null;
+            // as melhorias das armas de sucata (10/11/2026) vêm do Resources/MelhoriasDaSucata (as cenas ainda não têm)
+            // (e a proteção de sucata, 11/11/2026: do Resources/ProtecaoDeSucata)
+            // (e o fogo, 11/11/2026: do Resources/ItensDoFogo; e as armadilhas, do Resources/ItensDasArmadilhas)
+            return m != null ? m : Combat.PecasDasMelhorias.MalhaDoItem(item) ?? Player.PecasDaProtecao.MalhaDoItem(item) ?? Player.ItensDoFogo.MalhaDoItem(item)
+                ?? ItensDasArmadilhas.MalhaDoItem(item);
         }
 
         /// <summary>A malha do item como ele fica no chão (null: sem modelo).</summary>
@@ -290,6 +297,8 @@ namespace ZombieCityCleaner.Loot
             if (roupas != null) roupas.Pintar(render, it.item, it.cores);
             else render.SetPropertyBlock(null);
             o.name = $"Item {it.id} ({Itens.Nome(it.item)})";
+            // a arma de sucata com as melhorias postas (10/11/2026): as peças por cima (e tira as de quem estava aqui antes)
+            Combat.PecasDasMelhorias.NoChao(o.transform, o.GetComponent<MeshFilter>(), it.item, it.cores, malha, render.sharedMaterial);
             if (malha == null) return;
             var b = malha.bounds;
             var rot = Quaternion.Euler(0f, it.giro, 0f) * (Itens.EhArma(it.item) || Itens.EhBranca(it.item) ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.identity);

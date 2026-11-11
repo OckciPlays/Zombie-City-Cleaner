@@ -84,6 +84,7 @@ namespace ZombieCityCleaner.Player
                 if (GetComponent<PescaJogador>() == null) gameObject.AddComponent<PescaJogador>();   // (a pesca)
             }
             if (GetComponent<CurativosNoCorpo>() == null) gameObject.AddComponent<CurativosNoCorpo>();
+            if (GetComponent<ProtecaoNoCorpo>() == null) gameObject.AddComponent<ProtecaoNoCorpo>();   // (a proteção de sucata, 11/11/2026)
             if (GetComponent<PassageiroDoCaiaque>() == null) gameObject.AddComponent<PassageiroDoCaiaque>();   // (o caiaque, 06/11/2026)
             if (GetComponent<NadoNoCorpo>() == null) gameObject.AddComponent<NadoNoCorpo>();   // (o nado visto e ouvido, 07/11/2026)
             if (GetComponent<PescaVista>() == null) gameObject.AddComponent<PescaVista>();   // (a boia e a linha dos outros, 07/11/2026)

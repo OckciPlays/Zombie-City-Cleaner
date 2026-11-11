@@ -130,21 +130,29 @@ namespace ZombieCityCleaner.World
         {
             var mundo = PortasDoMundo.Instancia;
             if (mundo == null) return null;
-            if (Aberta) return "[E] Fechar a janela";
+            // a barricada de tábuas (11/11/2026, a etapa 5b): não abre, dos dois lados (do lado dela, a mira acha as tábuas)
+            string barricada = PortasDoMundo.DicaDaBarricada(chave, quem, true);
+            if (barricada != null) return barricada;
+            string pregar = PortasDoMundo.DicaDePregar(chave, quem);
+            if (Aberta) return "[E] Fechar a janela" + pregar;
             if (mundo.Trancada(this))
             {
-                if (DoLadoDeDentro(quem.transform.position)) return "[E] Destrancar e abrir a janela";
-                if (mundo.SabidaTrancada(chave)) return mundo.DicaDaTrancada(this, quem);
+                if (DoLadoDeDentro(quem.transform.position)) return "[E] Destrancar e abrir a janela" + pregar;
+                if (mundo.SabidaTrancada(chave)) return mundo.DicaDaTrancada(this, quem) + (mundo.TempoDeArrombar(this, quem) > 0f ? "" : pregar);
             }
-            return "[E] Abrir a janela";
+            return "[E] Abrir a janela" + pregar;
         }
 
         public override void Usar(ArmaJogador quem) => PortasDoMundo.Instancia?.PedirJanela(this);
 
-        public override float Segurar(ArmaJogador quem) => PortasDoMundo.Instancia != null ? PortasDoMundo.Instancia.TempoDeArrombar(this, quem) : 0f;
+        // segurar o E: arrombar (a trancada sabida, com a ferramenta) ou pregar a barricada de tábuas (11/11/2026, a etapa 5b;
+        // aí o toque no E continua abrindo e fechando)
+        public override float Segurar(ArmaJogador quem) => PortasDoMundo.Instancia != null ? PortasDoMundo.Instancia.TempoDoSegurar(this, quem) : 0f;
 
-        public override void Segurado(ArmaJogador quem) => PortasDoMundo.Instancia?.PedirArrombar(this, quem);
+        public override void Segurado(ArmaJogador quem) => PortasDoMundo.Instancia?.Segurado(this, quem);
 
-        public override string Segurando(ArmaJogador quem) => PortasDoMundo.Instancia?.TextoDoArrombar(this, quem);
+        public override string Segurando(ArmaJogador quem) => PortasDoMundo.Instancia?.TextoDoSegurar(this, quem);
+
+        public override bool ToqueUsa(ArmaJogador quem) => PortasDoMundo.Instancia != null && PortasDoMundo.Instancia.ToqueUsa(this, quem);
     }
 }

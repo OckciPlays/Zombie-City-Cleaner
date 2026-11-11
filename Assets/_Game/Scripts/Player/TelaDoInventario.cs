@@ -52,17 +52,18 @@ namespace ZombieCityCleaner.Player
         // a lista das receitas (a aba Criar), no lugar da grade
         static readonly Rect AreaDasReceitas = new Rect(GradeX, 58, GradeMaxW, 486);
         const float LinhaDaReceita = 48f;
-        static readonly Rect AreaDoRetrato = new Rect(18, 58, 300, 392);
+        // (11/11/2026: 392 de altura até a proteção de sucata; o grupo PROTEÇÃO ficou embaixo dele, TelaDoInventario.Protecao.cs)
+        static readonly Rect AreaDoRetrato = new Rect(18, 58, 300, 338);
         static readonly Rect AreaDoNome = new Rect(840, 58, 302, 40);
         static readonly Rect AreaDaFoto = new Rect(840, 106, 302, 250);
         static readonly Rect AreaDosDetalhes = new Rect(840, 364, 302, 208);
         // (06/11/2026: as 4 abas, com a HABILIDADES, cabem até a coluna da direita)
         static readonly Rect AbaMochila = new Rect(336, 14, 112, 36), AbaCriar = new Rect(454, 14, 100, 36);
         static readonly Rect BotaoFechar = new Rect(W - 52, 12, 36, 36);
-        const float AtalhoY = 478f, AtalhoW = 92f, AtalhoH = 60f, AtalhoVao = 12f;
+        const float AtalhoY = 506f, AtalhoW = 92f, AtalhoH = 60f, AtalhoVao = 12f;   // (era 478 até o grupo PROTEÇÃO, 11/11/2026)
         // o que se veste e já existe: a mochila (o coldre saiu em 31/10/2026), embaixo das roupas da direita (os lugares das
         // roupas: TelaDoInventario.Roupas.cs)
-        static readonly Rect LugarDaMochila = new Rect(ColunaDaDireita, LinhaDasRoupas + 4 * PassoDasRoupas, 54, 54);
+        static readonly Rect LugarDaMochila = new Rect(ColunaDaDireita, LinhaDasRoupas + 4 * PassoDasRoupas, LadoDaRoupa, LadoDaRoupa);
 
         // as cores: o concreto do chão do bunker (Concreto, #6A6A64), a borda escura e o amarelo das paredes de lá (na
         // borda da dica)
@@ -94,7 +95,7 @@ namespace ZombieCityCleaner.Player
         // a aba Corpo (05/11/2026, o sistema de vida por membro): TelaDoInventario.Corpo.cs; a aba Habilidades (06/11/2026,
         // a árvore de habilidades): TelaDoInventario.Habilidades.cs
         enum Aba { Mochila, Criar, Corpo, Habilidades }
-        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa, Estante }
+        enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa, Estante, Protecao }
 
         Aba _aba;
         RetratoDoJogador _retrato;
@@ -228,6 +229,11 @@ namespace ZombieCityCleaner.Player
                 {
                     inventario.LargarRoupa(lugarEscolhido);
                     _roupaEscolhida = -1;
+                }
+                else if (ProtecaoEscolhida(out var protecaoEscolhida))
+                {
+                    inventario.LargarProtecao(protecaoEscolhida);
+                    _protecaoEscolhida = -1;
                 }
                 else if (inventario.Do(_escolhido) != Item.Nada) inventario.Largar(_escolhido);
             }
@@ -390,9 +396,11 @@ namespace ZombieCityCleaner.Player
                         _equipEscolhido = vestidoDoMenu;
                         _escolhido = 0;
                         _roupaEscolhida = -1;
+                        _protecaoEscolhida = -1;
                         Opcao("Tirar e largar no chão", () => inventario.TirarEquipamento(vestidoDoMenu));
                     }
                     else if (RoupaEm(m, out var lugarDoMenu) && inventario.Roupas.Value.Peca(lugarDoMenu) != Item.Nada) MenuDaRoupa(lugarDoMenu);
+                    else if (ProtecaoEm(m, out var protecaoDoMenu) && inventario.Protecao.Value.Peca(protecaoDoMenu) != Item.Nada) MenuDaProtecao(protecaoDoMenu);
                     _menuEm = m;
                     e.Use();
                     break;
@@ -430,6 +438,7 @@ namespace ZombieCityCleaner.Player
                     else if (_aba == Aba.Corpo && CliqueNaAbaCorpo(m)) { }
                     else if (Em(AbaHabilidades).Contains(m)) IrParaAbaHabilidades();
                     else if (_aba == Aba.Habilidades && CliqueNaAbaHabilidades(m)) { }
+                    else if (_aba == Aba.Criar && CliqueNaCriar(m)) { }   // (a barra e o painel das melhorias, 10/11/2026)
                     else if (_aba == Aba.Criar && ReceitaEm(m, out int receita, out bool noBotao))
                     {
                         _receita = receita;
@@ -465,6 +474,12 @@ namespace ZombieCityCleaner.Player
                         _lugarApertado = lugarApertado;
                         _pega = Vector2.one * (27f * _u);
                     }
+                    else if (ProtecaoEm(m, out var protecaoApertada) && inventario.Protecao.Value.Peca(protecaoApertada) != Item.Nada)
+                    {
+                        _apertou = Origem.Protecao;
+                        _protecaoApertada = protecaoApertada;
+                        _pega = Vector2.one * (22f * _u);
+                    }
                     else if (AtalhoEm(m, out int k))
                     {
                         _apertou = Origem.Atalho;
@@ -498,10 +513,19 @@ namespace ZombieCityCleaner.Player
                         _equipEscolhido = _equipApertado;
                         _escolhido = 0;
                         _roupaEscolhida = -1;
+                        _protecaoEscolhida = -1;
                     }
                     else if (_apertou == Origem.Roupa)
                     {
                         _roupaEscolhida = (int)_lugarApertado;
+                        _protecaoEscolhida = -1;
+                        _escolhido = 0;
+                        _equipEscolhido = Item.Nada;
+                    }
+                    else if (_apertou == Origem.Protecao)
+                    {
+                        _protecaoEscolhida = (int)_protecaoApertada;
+                        _roupaEscolhida = -1;
                         _escolhido = 0;
                         _equipEscolhido = Item.Nada;
                     }
@@ -517,6 +541,7 @@ namespace ZombieCityCleaner.Player
             _escolhido = id;
             _equipEscolhido = Item.Nada;
             _roupaEscolhida = -1;
+            _protecaoEscolhida = -1;
             _receita = -1;
         }
 
@@ -554,6 +579,7 @@ namespace ZombieCityCleaner.Player
                 Opcao("Guardar na estante" + (naMao ? " (ocupado)" : ""), naMao ? null : () => Estantes?.Guardar(estante, inventario, arma, id, -1, -1, false));
             }
             if (Itens.EhRoupa(item)) OpcaoDeVestir(it);
+            if (Protecao.EhPeca(item)) OpcaoDeVestirProtecao(it);   // (a proteção de sucata, 11/11/2026)
             // os curativos (05/11/2026): uma opção por parte que ele trata, pela barra de tempo (TelaDoInventario.Corpo.cs)
             if (PartesDoCorpo.EhTratamento(item)) OpcoesDoTratamento(item, id, ocupado);
             else if (Itens.EhConsumivel(item))
@@ -584,6 +610,7 @@ namespace ZombieCityCleaner.Player
                 else Opcao(inventario.PodeRemendar(id) ? $"Remendar o pneu ({it.qtd}% → {Vehicles.PneusDoCarro.Remendo}%, gasta 1 kit de reparo)" : "Remendar o pneu (precisa de um kit de reparo)",
                            inventario.PodeRemendar(id) ? () => inventario.Remendar(id) : (System.Action)null);
             }
+            OpcoesDoFogo(it);   // o lampião: Reabastecer (11/11/2026, TelaDoInventario.Fogo.cs)
             if (Itens.EhLanterna(item) && it.desgaste > 0)
                 Opcao(inventario.PodeTrocarPilhas(id) ? $"Trocar as pilhas ({100 - it.desgaste}% → 100%, gasta 1 par)" : "Trocar as pilhas (precisa de pilhas)",
                       inventario.PodeTrocarPilhas(id) ? () => inventario.TrocarPilhas(id) : (System.Action)null);
@@ -649,6 +676,7 @@ namespace ZombieCityCleaner.Player
                 if (!inventario.Achar(_idApertado, out var it)) return;
                 // a roupa solta no lugar dela (ou no retrato): veste
                 if (Itens.EhRoupa(it.item) && SoltarRoupaNoCorpo(m, it)) return;
+                if (Protecao.EhPeca(it.item) && SoltarProtecaoNoCorpo(m, it)) return;   // (e a proteção de sucata, 11/11/2026)
                 if (AtalhoEm(m, out int k)) inventario.PorNoAtalho(k, it.id);
                 // uma pilha solta em cima de outra do mesmo item (a caixa de munição, do mesmo calibre): passa para ela
                 else if (_aba == Aba.Mochila && Itens.EmPilha(it.item) && ItemEm(m, out var outra, out _) && outra.id != it.id && outra.item == it.item)
@@ -683,6 +711,7 @@ namespace ZombieCityCleaner.Player
                 else inventario.TirarDoAtalho(_atalhoApertado);
             }
             else if (_apertou == Origem.Roupa) SoltarRoupaVestida(m);
+            else if (_apertou == Origem.Protecao) SoltarProtecaoVestida(m);
         }
 
         // ------------------------------------------------------------------ o desenho
@@ -765,8 +794,9 @@ namespace ZombieCityCleaner.Player
                 GUI.color = antes;
                 GUI.DrawTexture(area, _retrato.Imagem, ScaleMode.StretchToFill, true);
             }
-            // as roupas vestidas, em volta do retrato
+            // as roupas vestidas, em volta do retrato, e a proteção de sucata embaixo dele (11/11/2026)
             DesenharRoupas(mouse);
+            DesenharProtecao(mouse);
             // a mochila: o ícone da vestida (arrastar para fora tira e larga no chão)
             foreach (var (r, nome, vestido) in new[] { (LugarDaMochila, "Mochila", inventario.MochilaVestida.Value) })
             {
@@ -826,6 +856,7 @@ namespace ZombieCityCleaner.Player
             // onde o item arrastado cairia: verde se cabe, vermelho se não (a arma que sai da alça também precisa de
             // lugar no corpo)
             if (_arrastando && _apertou == Origem.Roupa) CelulaDaRoupaArrastada(mouse);
+            else if (_arrastando && _apertou == Origem.Protecao) CelulaDaProtecaoArrastada(mouse);
             else if (_arrastando && _apertou == Origem.Mochila && inventario.Achar(_idApertado, out var caixa) && Itens.EmPilha(caixa.item)
                 && ItemEm(mouse, out var outra, out var ro) && outra.id != caixa.id && outra.item == caixa.item)
             {
@@ -983,7 +1014,7 @@ namespace ZombieCityCleaner.Player
             }
             // o estado da arma gasta: a barra fina em cima (verde, amarela, vermelha)
             // (o spray, 05/11/2026: os usos que sobram, 3 de 5 = 60%)
-            if ((Itens.ComDesgaste(it.item) || Itens.EhLanterna(it.item) || Itens.EhGalao(it.item) || Itens.ComUsos(it.item)) && it.desgaste > 0)
+            if ((Itens.ComDesgaste(it.item) || Itens.EhLanterna(it.item) || Itens.EhGalao(it.item) || Itens.ComUsos(it.item) || it.item == Item.Lampiao || it.item == Item.KitFogueira || Itens.EhArmadilha(it.item)) && it.desgaste > 0)
             {
                 float f = Itens.ComUsos(it.item) ? Itens.UsosQueSobram(it.desgaste) / (float)Itens.UsosDoSpray : (100 - it.desgaste) / 100f;
                 Ret(new Rect(r.x + 3 * u, r.y + 3 * u, (r.width - 24 * u), 4 * u), new Color(0f, 0f, 0f, 0.5f));
@@ -1007,9 +1038,10 @@ namespace ZombieCityCleaner.Player
                 : l.tipo == TipoDeLoot.Construcao ? FundoDeConstrucao : FundoDeMaterial;
         }
 
-        int ReceitasNaTela => Mathf.FloorToInt(AreaDasReceitas.height / LinhaDaReceita);
+        // (embaixo da barra RECEITAS | MELHORIAS, 10/11/2026: TelaDoInventario.Melhorias.cs)
+        int ReceitasNaTela => _melhorias ? 0 : Mathf.FloorToInt((AreaDasReceitas.height - BarraDaCriar) / LinhaDaReceita);
 
-        Rect LinhaDaReceitaNaTela(int i) => Em(new Rect(AreaDasReceitas.x, AreaDasReceitas.y + i * LinhaDaReceita, AreaDasReceitas.width, LinhaDaReceita - 4));
+        Rect LinhaDaReceitaNaTela(int i) => Em(new Rect(AreaDasReceitas.x, AreaDasReceitas.y + BarraDaCriar + i * LinhaDaReceita, AreaDasReceitas.width, LinhaDaReceita - 4));
 
         Rect BotaoDeCriar(Rect linha) => new Rect(linha.xMax - 84 * _u, linha.y + (linha.height - 30 * _u) / 2f, 76 * _u, 30 * _u);
 
@@ -1037,6 +1069,13 @@ namespace ZombieCityCleaner.Player
         {
             float u = _u;
             Ret(Encolher(Em(AreaDasReceitas), -4 * u), Painel);
+            // a barra RECEITAS | MELHORIAS (10/11/2026) e, nas melhorias, o painel delas
+            BarraDasReceitas(mouse);
+            if (_melhorias)
+            {
+                PainelDasMelhorias(mouse);
+                return;
+            }
             var todas = Receitas.Todas;
             _rolagem = Mathf.Clamp(_rolagem, 0, Mathf.Max(0, todas.Length - ReceitasNaTela));
             var linha = new GUIStyle(_pequeno) { wordWrap = false };
@@ -1059,9 +1098,11 @@ namespace ZombieCityCleaner.Player
                 var b = BotaoDeCriar(l);
                 float y = l.y + 23 * u, limite = b.x - 8 * u;
                 var partes = new List<(string texto, bool ok)>();
-                foreach (var g in rec.gasta) partes.Add((Itens.ComNumero(g.item, g.qtd), inventario.Quantos(g.item) >= g.qtd));
+                foreach (var g in inventario.GastaDe(rec)) partes.Add((Itens.ComNumero(g.item, g.qtd), inventario.Quantos(g.item) >= g.qtd));
+                if (rec.combustivel > 0) partes.Add(($"{rec.combustivel} combustíve{(rec.combustivel > 1 ? "is" : "l")}", inventario.CargasDeCombustivel >= rec.combustivel));   // (o fogo, 11/11/2026)
                 if (rec.ferramenta != Item.Nada) partes.Add(("+ " + Itens.Nome(rec.ferramenta), inventario.Quantos(rec.ferramenta) > 0));
-                if (rec.habilidade >= 0) partes.Insert(0, ("[" + Habilidades.Nome((Habilidade)rec.habilidade) + "]", Habilidades.Tem(rede, (Habilidade)rec.habilidade)));
+                if (rec.habilidade >= 0) partes.Insert(0, ("[" + Habilidades.Nome((Habilidade)rec.habilidade) + (rec.nivel > 1 ? $" {rec.nivel}" : "") + "]",
+                                                           Habilidades.Pontos(rede, (Habilidade)rec.habilidade) >= rec.nivel));
                 if (rec.oficina) partes.Add(("na mesa de oficina", Bancada.PertoDaOficina(inventario.transform.position)));
                 else if (rec.bancada) partes.Add(("na bancada", Bancada.Perto(inventario.transform.position)));
                 else if (rec.fogo) partes.Add(("perto do fogo", InventarioJogador.FogoPerto(inventario.transform.position)));
@@ -1114,13 +1155,23 @@ namespace ZombieCityCleaner.Player
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;
             GUI.Label(new Rect(x, y, w, 20 * u), Itens.Resumo(rec.resultado), _texto);
             y += 30 * u;
-            foreach (var g in rec.gasta)
+            foreach (var g in inventario.GastaDe(rec))
             {
                 int tem = inventario.Quantos(g.item);
                 GUI.Label(new Rect(x, y, w, linha), $"Gasta {Itens.ComNumero(g.item, g.qtd)}", _texto);
                 var v = new GUIStyle(_texto) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold };
                 PorCor(v, tem >= g.qtd ? Bom : Ruim);
                 GUI.Label(new Rect(x, y, w, linha), $"tem {tem}", v);
+                y += linha;
+            }
+            if (rec.combustivel > 0)
+            {
+                // o fogo (11/11/2026): 1 álcool ou meio litro de gasolina de um galão
+                GUI.Label(new Rect(x, y, w, linha), "Gasta " + InventarioJogador.NomeDosCombustiveis(rec.combustivel), _texto);
+                var v = new GUIStyle(_texto) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold };
+                int cargas = inventario.CargasDeCombustivel;
+                PorCor(v, cargas >= rec.combustivel ? Bom : Ruim);
+                GUI.Label(new Rect(x, y, w, linha), cargas >= rec.combustivel ? (rec.combustivel > 1 ? $"tem {cargas}" : "tem") : (rec.combustivel > 1 ? $"tem {cargas}" : "falta"), v);
                 y += linha;
             }
             if (rec.ferramenta != Item.Nada)
@@ -1132,7 +1183,7 @@ namespace ZombieCityCleaner.Player
             y += linha;
             if (rec.habilidade >= 0)
             {
-                GUI.Label(new Rect(x, y, w, linha), $"Habilidade: {Habilidades.Nome((Habilidade)rec.habilidade)} ({Habilidades.Nome(Habilidades.RamoDe((Habilidade)rec.habilidade))})", _texto);
+                GUI.Label(new Rect(x, y, w, linha), $"Habilidade: {Habilidades.Nome((Habilidade)rec.habilidade)}{(rec.nivel > 1 ? $" (nível {rec.nivel})" : "")} ({Habilidades.Nome(Habilidades.RamoDe((Habilidade)rec.habilidade))})", _texto);
                 y += linha;
             }
             y += 4 * u;
@@ -1142,6 +1193,19 @@ namespace ZombieCityCleaner.Player
                 PorCor(f, Ruim);
                 GUI.Label(new Rect(x, y, w, 40 * u), falta, f);
             }
+        }
+
+        // as melhorias postas numa arma ("silenciador de garrafa PET (12 tiros) · mira de ferro ajustada"; a legenda da foto)
+        static string NomesDasMelhorias(ulong b)
+        {
+            var nomes = new List<string>();
+            foreach (var p in Melhorias.Postas(b))
+            {
+                string n = Itens.Nome(Melhorias.ItemDa(p));
+                if (Melhorias.Duracao(p) > 0) n += $" ({Melhorias.Duracao(p) - Melhorias.TirosDoSilenciador(b)} tiros)";
+                nomes.Add(n);
+            }
+            return string.Join("  ·  ", nomes);
         }
 
         // as receitas que gastam o item ("bandagem, corda e cama"; vazio: nenhuma)
@@ -1185,6 +1249,11 @@ namespace ZombieCityCleaner.Player
                 DetalhesDaRoupaVestida(lugarEscolhido, nome, foto, det);
                 return;
             }
+            if (ProtecaoEscolhida(out var protecaoEscolhida))
+            {
+                DetalhesDaProtecaoVestida(protecaoEscolhida, nome, foto, det);
+                return;
+            }
             if (_aba == Aba.Criar && _receita >= 0 && _receita < Receitas.Todas.Length)
             {
                 DetalhesDaReceita(Receitas.Todas[_receita], nome, foto, det);
@@ -1210,7 +1279,15 @@ namespace ZombieCityCleaner.Player
             else GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
             var imagem = inventario.FotoDe(it);
             if (imagem == null) imagem = inventario.IconeDe(it);
-            if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
+            // a arma de sucata com as melhorias (10/11/2026): a foto com as peças postas por cima
+            var semLegenda = Encolher(foto, 10 * u);
+            semLegenda.height -= 30 * u;
+            if (PecasDasMelhorias.DesenharFoto(semLegenda, item, inventario.MelhoriasDe(it.id)))
+            {
+                var legenda = new GUIStyle(_pequeno) { alignment = TextAnchor.LowerCenter, wordWrap = true };
+                GUI.Label(Encolher(foto, 6 * u), NomesDasMelhorias(inventario.MelhoriasDe(it.id)), legenda);
+            }
+            else if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
 
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;
             GUI.Label(new Rect(x, y, w, 20 * u), Itens.Resumo(item), _texto);
@@ -1235,12 +1312,34 @@ namespace ZombieCityCleaner.Player
             var t = Itens.Tamanho(item);
             if (Itens.EhArma(item))
             {
-                var d = Armas.Dados(Itens.Arma(item));
+                // (com as melhorias postas na de sucata, 10/11/2026: o pente, o dano e a lista delas)
+                ulong postas = inventario.MelhoriasDe(it.id);
+                var d = arma.DadosCom(Itens.Arma(item), postas);
                 Linha("Pente", $"{arma.MunicaoDe(it.id, item)} / {d.capacidade}");
                 Linha("Munição", $"{Itens.NomeDoCalibre(d.calibre)}  ·  {inventario.BalasDe(d.calibre)} nas caixas");
                 Linha("Dano", d.faixas != null && d.faixas.Length > 0 ? $"{Numero(d.faixas[0].dano)} de perto" : Numero(d.dano));
                 Linha("Tiros por minuto", Mathf.RoundToInt(60f / d.intervalo).ToString());
                 Linha("Recarga", d.cartuchoACartucho ? $"{Numero(d.tempoRecarga)} s por cartucho" : $"{Numero(d.tempoRecarga)} s");
+            }
+            else if (Melhorias.EhPeca(item))
+            {
+                // uma melhoria das armas de sucata (10/11/2026): onde vai, o que faz e, no silenciador, quantos tiros ainda dá
+                var p = Melhorias.PecaDo(item);
+                Linha("Vai n" + (p == PecaDaMelhoria.Luneta ? "o rifle de sucata" : p == PecaDaMelhoria.CarregadorLongo ? "a pistola e na submetralhadora de sucata" : "as armas de sucata"), "");
+                Linha("Faz", Melhorias.Efeito(p));
+                if (Melhorias.Duracao(p) > 0)
+                    Linha("Ainda dá", $"{Melhorias.Duracao(p) - Melhorias.TirosDoDesgaste(p, it.desgaste)} tiros");
+                Linha("Pôr", "na bancada: Criar > Melhorias");
+            }
+            else if (Protecao.EhPeca(item))
+            {
+                // a proteção de sucata (11/11/2026): o que ela cobre, quanto corta, o peso e o barulho, e onde vestir
+                var lp = Protecao.LugarDe(item);
+                Linha("Cobre", $"{Protecao.QueCobre(lp)}: −{Protecao.Corte(lp) * 100f:0}% do golpe");
+                if (item == Item.Colete) Linha("Pesa", $"anda {Protecao.LentidaoDoColete * 100f:0}% mais devagar");
+                if (item == Item.Colete || item == Item.Caneleiras)
+                    Linha("Barulho", $"passos {(item == Item.Colete ? Protecao.PassosDoColete : Protecao.PassosDasCaneleiras) * 100f:0}% mais altos");
+                Linha("Vestir", "no grupo PROTEÇÃO");
             }
             else if (Itens.EhMunicao(item))
             {
@@ -1303,11 +1402,14 @@ namespace ZombieCityCleaner.Player
                 string serve = ServePara(item);
                 if (serve.Length > 0) Linha("Serve para", serve);
             }
-            if (Itens.ComDesgaste(item))
+            if (Protecao.EhPeca(item)) Linha("Estado", Protecao.Estado(item, it.desgaste));
+            else if (Itens.ComDesgaste(item))
                 Linha("Estado", $"{100 - it.desgaste}%" + (it.desgaste >= 100 ? " (quebrada)" : it.desgaste >= Itens.DesgasteQueEmperra && Itens.EhArma(item) ? " (emperra)" : ""));
             if (Itens.EhLanterna(item)) Linha("Pilhas", it.desgaste >= 100 ? "acabaram (troque)" : $"{100 - it.desgaste}%");
             if (Itens.ComUsos(item)) Linha("Usos", $"{Mathf.Max(0, Itens.UsosQueSobram(it.desgaste))} de {Itens.UsosDoSpray}");
             if (item == Item.Tocha) Linha("Fogo", it.qtd == Itens.TochaApagada ? "apagada pela chuva (reacenda numa fogueira acesa)" : "acesa (só queima na mão)");
+            LinhasDoFogo(it, Linha);   // o combustível do lampião e a lenha do kit (11/11/2026)
+            LinhasDasArmadilhas(it, Linha);   // os usos e o que fazem (11/11/2026, a etapa 5a: TelaDoInventario.Armadilhas.cs)
             if (Itens.EhGalao(item)) Linha("Gasolina", it.desgaste >= 100 ? "vazio" : $"{InventarioJogador.LitrosDe(it):0.#} de {Itens.LitrosDoGalao:0} L");
             var desmonta = Receitas.DesmontagemDe(item);
             if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(ViraComBonus(desmonta)));
@@ -1359,6 +1461,7 @@ namespace ZombieCityCleaner.Player
                     Janela.Contains(mouse) ? "solte fora da janela para tirar" : "soltar: tirar e largar no chão", _dica);
             }
             else if (_apertou == Origem.Roupa) ArrastoDaRoupa(mouse);
+            else if (_apertou == Origem.Protecao) ArrastoDaProtecao(mouse);
             else if (_apertou == Origem.Estante) ArrastoDaEstante(mouse);
             else if (_apertou == Origem.Atalho)
             {

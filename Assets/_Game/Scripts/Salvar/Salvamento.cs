@@ -139,7 +139,7 @@ namespace ZombieCityCleaner.Salvar
             m.construcoes.Clear();
             if (ConstrucoesNoMundo.Instancia != null)
                 foreach (var c in ConstrucoesNoMundo.Instancia.Copia())
-                    m.construcoes.Add(new ConstrucaoSalva { tipo = (int)c.tipo, pos = c.pos, giro = c.giro, valor = c.valor, dono = unchecked((long)c.dono) });
+                    m.construcoes.Add(new ConstrucaoSalva { tipo = (int)c.tipo, pos = c.pos, giro = c.giro, valor = c.valor, dono = unchecked((long)c.dono), nivel = c.nivel, vao = unchecked((long)c.vao), largura = c.largura, altura = c.altura, extra = c.extra });
 
             // os caiaques (06/11/2026)
             m.caiaques.Clear();
@@ -424,7 +424,8 @@ namespace ZombieCityCleaner.Salvar
 
             var construcoes = new List<Construcao>(m.construcoes.Count);
             foreach (var c in m.construcoes)
-                construcoes.Add(new Construcao { tipo = (Item)c.tipo, pos = c.pos, giro = c.giro, valor = c.valor, dono = unchecked((ulong)c.dono) });
+                construcoes.Add(new Construcao { tipo = (Item)c.tipo, pos = c.pos, giro = c.giro, valor = c.valor, dono = unchecked((ulong)c.dono), nivel = (byte)Mathf.Clamp(c.nivel, 0, 2),
+                                                    vao = unchecked((ulong)c.vao), largura = c.largura, altura = c.altura, extra = (byte)Mathf.Clamp(c.extra, 0, 255) });
             ConstrucoesNoMundo.Instancia?.Restaurar(construcoes);
 
             var mexidos = new List<CarroMexido>(m.carrosDoMundo.Count);

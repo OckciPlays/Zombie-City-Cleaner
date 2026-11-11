@@ -42,5 +42,12 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>O texto da barra de segurar ("Arrombando com a gazua").</summary>
         public virtual string Segurando(ArmaJogador quem) => null;
+
+        /// <summary>
+        /// Um toque no E (soltar logo depois de apertar), com o segurar começado, usa a coisa (<see cref="Usar"/>; 11/11/2026, a
+        /// etapa 5b): a porta com as tábuas na mochila abre no toque e é pregada segurando. Falso na maioria (o toque não faz
+        /// nada: arrombar).
+        /// </summary>
+        public virtual bool ToqueUsa(ArmaJogador quem) => false;
     }
 }

@@ -76,12 +76,18 @@ AJUSTE_FP_LIMITE = (10.0, 0.03)
 DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
 
 
+def _saida():
+    """A pasta dos FBX gravados: a do jogador, ou a de ARMAS_SAIDA no ambiente (10/11/2026: para gravar fora do Assets
+    com a Unity aberta)."""
+    return os.environ.get("ARMAS_SAIDA") or armas.JOGADOR
+
+
 def avulsa(cfg):
-    return os.path.join(armas.JOGADOR, f"Itens_{cfg.MODELO}.fbx")
+    return os.path.join(_saida(), f"Itens_{cfg.MODELO}.fbx")
 
 
 def fp(cfg):
-    return os.path.join(armas.JOGADOR, f"Jogador_FP_{cfg.MODELO}.fbx")
+    return os.path.join(_saida(), f"Jogador_FP_{cfg.MODELO}.fbx")
 
 
 def _cor(cfg, nome):
@@ -289,6 +295,7 @@ def bracos(cfg):
         for l in nf.loops:
             l[uv].uv = (u, vv)
     n_arma = len(arma.faces)
+    n_verts_arma = len(arma.verts)
     arma.free()
     bm.to_mesh(me)
     bm.free()
@@ -304,7 +311,14 @@ def bracos(cfg):
         bpy.context.view_layer.update()
         # (com o ajuste do lugar da arma no punho, AJUSTE_FP: o mesmo P da arma)
         boca.matrix_world = P @ peg["R"].get("ajuste", Matrix.Identity(4)) @ Matrix.Translation(cfg.PONTA)
+        if hasattr(cfg, "arma_fp"):
+            # (10/11/2026) a arma posta quadro a quadro pela cfg (o lampião, o molotov): a ponta na arma da mão de agora
+            boca.matrix_world = (rig.matrix_world @ rig.pose.bones["hand.R"].matrix @ peg["R"]["G"]
+                                 @ Matrix.Translation(cfg.PONTA))
         print(f"  a boca na ponta: {tuple(round(c, 3) for c in boca.matrix_world.translation)}")
+    if hasattr(cfg, "depois_dos_bracos"):
+        # (10/11/2026) o que a cfg faz depois (o molotov: a garrafa num osso próprio, que some no arremesso)
+        cfg.depois_dos_bracos(rig, corpo, boca, clipes, n_verts_arma)
     return rig, corpo, boca, clipes
 
 
@@ -317,6 +331,20 @@ def conferir(rig, clipes, cfg):
     s.light = "STUDIO"
     s.color_type = "MATERIAL"
     s.show_cavity = True
+    if os.environ.get("ARMAS_FOTOS_PALETA"):
+        # (10/11/2026) as cores da paleta nas fotos: a Paleta.png do projeto no lugar da que vem no FBX
+        for img in bpy.data.images:
+            if img.name.startswith("Paleta"):
+                img.filepath = PALETA_ITENS
+                img.reload()
+                img.alpha_mode = "NONE"    # o alfa da paleta é o brilho, não transparência
+        for m in bpy.data.materials:
+            if m.node_tree and not m.name.startswith("Pistola"):
+                for nd in list(m.node_tree.nodes):
+                    if nd.type == "TEX_IMAGE" and (nd.image is None or not os.path.exists(bpy.path.abspath(nd.image.filepath))):
+                        m.node_tree.nodes.remove(nd)
+                m.diffuse_color = (0.80, 0.62, 0.50, 1.0)
+        s.color_type = "TEXTURE"
     r.resolution_x, r.resolution_y = 1280, 720
     cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
     cena.collection.objects.link(cam)
@@ -326,7 +354,7 @@ def conferir(rig, clipes, cfg):
     cam.data.clip_start = 0.01
     cam.location = (0, 0, 0)
     cam.rotation_euler = (math.radians(90), 0, math.radians(180))
-    pasta = os.path.join(armas.REPO, "Docs", "Armas", "rascunho")
+    pasta = os.environ.get("ARMAS_FOTOS") or os.path.join(armas.REPO, "Docs", "Armas", "rascunho")
     os.makedirs(pasta, exist_ok=True)
     nome_golpe = "Golpe" if any(a.name.endswith("|Golpe") for a in clipes) else "SocoDireito"
     quadros_golpe = getattr(cfg, "QUADROS_DO_GOLPE", (1, 3, 5))

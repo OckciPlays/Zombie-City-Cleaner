@@ -84,6 +84,7 @@ namespace ZombieCityCleaner.Player
             if (Efeitos.Passos == null) return;
             Vector3 pe = transform.position;
             if (!Physics.Raycast(pe + Vector3.up * 0.3f, Vector3.down, out var chao, 0.6f, MascaraDoChao, QueryTriggerInteraction.Ignore)) return;
+            forca *= Protecao.FatorDosPassos(rede);   // (o colete e as caneleiras de sucata fazem barulho, 11/11/2026)
             // numa poça da chuva forte (World/ClimaNaTela): o respingo no lugar do passo; no anfitrião, o barulho chama os
             // zumbis mais perto
             if (ClimaNaTela.NaPoca(chao.point))

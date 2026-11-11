@@ -38,7 +38,7 @@ namespace ZombieCityCleaner.Player
         };
         static readonly MotivoDaMente[] OrdemDoQueAcalma =
         {
-            MotivoDaMente.Descanso, MotivoDaMente.Calmante, MotivoDaMente.Bunker, MotivoDaMente.Fogueira, MotivoDaMente.Amigos,
+            MotivoDaMente.Descanso, MotivoDaMente.Calmante, MotivoDaMente.Bunker, MotivoDaMente.Fogueira, MotivoDaMente.CalorDoFogo, MotivoDaMente.Amigos,
             MotivoDaMente.Sinuca, MotivoDaMente.Cigarro, MotivoDaMente.Dia,
         };
 
@@ -52,7 +52,7 @@ namespace ZombieCityCleaner.Player
             MotivoDaMente.Dia => "O DIA", MotivoDaMente.Amigos => "AMIGOS PERTO", MotivoDaMente.Fogueira => "FOGUEIRA",
             MotivoDaMente.Bunker => "O BUNKER", MotivoDaMente.Cigarro => "CIGARRO",
             MotivoDaMente.Sono => "SONO", MotivoDaMente.Abstinencia => "ABSTINÊNCIA", MotivoDaMente.Calmante => "CALMANTE",
-            MotivoDaMente.Sinuca => "SINUCA", MotivoDaMente.Descanso => "DORMINDO", _ => m.ToString().ToUpperInvariant(),
+            MotivoDaMente.Sinuca => "SINUCA", MotivoDaMente.Descanso => "DORMINDO", MotivoDaMente.CalorDoFogo => "CALOR DO FOGO", _ => m.ToString().ToUpperInvariant(),
         };
 
         /// <summary>A faixa da mente: 0 calmo (70+), 1 abalado, 2 apavorado (abaixo de 40), 3 em colapso (abaixo de 15).</summary>

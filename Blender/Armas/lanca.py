@@ -52,7 +52,13 @@ COSTAS = {}
 LIMITE_ULNAR_GOLPE = 25.0
 # (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
 # escolhida fica em diagonais_fp.json)
-DIAGONAIS = {"R": (16, 20, 25, 30, 35), "L": (16, 20, 25, 30, 35)}
+DIAGONAIS = {"R": (35, 40, 45), "L": (35, 40, 45)}
+# (11/11/2026, o Pedro: "punho torto e irregular") os pulsos nos limites (a dobra até uns 60 graus, o desvio até 25, a
+# torção até 90): o ombro direito 10 cm mais baixo e 4 cm à frente (fora da tela: o antebraço chega à pegada de baixo, e
+# o pulso direito deixa de torcer 100 graus), o cabo mais na diagonal das palmas (as duas a 45 graus: a esquerda sai do
+# desvio de 33) e a torção pesando mais cedo na escolha do giro e do cotovelo
+OMBRO_FP = {"R": (-0.03, -0.04, -0.10)}
+LIMITE_TORCAO = 80.0
 # a estocada: recua (a preparação), empurra ao longo do cabo com as duas mãos (o acerto no quadro 7, 6/24 s) e volta
 # (09/11/2026) no acerto, a ponta passa pela mira: as mãos vão uns 16 cm para a frente e a ponta sobe até o meio da tela
 GOLPE_FP = [

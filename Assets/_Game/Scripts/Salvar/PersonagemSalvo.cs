@@ -63,6 +63,11 @@ namespace ZombieCityCleaner.Salvar
         /// </summary>
         public int[] roupas;
         public long[] coresDasRoupas;
+        /// <summary>
+        /// A proteção de sucata vestida (11/11/2026, a etapa 3), uma peça por lugar (na ordem do
+        /// <see cref="Player.LugarDaProtecao"/>; 0, vazio) e o desgaste de cada uma. Num save de antes dela, vazias.
+        /// </summary>
+        public int[] protecao, desgasteDaProtecao;
         /// <summary>Já entrou num mundo (tem mochila e dinheiro): pula o Dia 0. Falso só no personagem que acabou de ser criado.</summary>
         public bool jogou;
         public string criadoEm, salvoEm;

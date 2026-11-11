@@ -85,7 +85,7 @@ namespace ZombieCityCleaner.Loot
             for (int k = 0; k < _lista.Count; k++)
             {
                 var c = _lista[k];
-                if (c.tipo != Item.Fogueira) continue;
+                if (!Itens.EhFogueira(c.tipo)) continue;
                 if (!Acesa(c))
                 {
                     _molhadas.Remove(c.id);
@@ -98,7 +98,7 @@ namespace ZombieCityCleaner.Loot
                     c.valor = Agora;   // apagou: a lenha que sobrava se perde (como na gosma); E acende de novo, sem chuva
                     _lista[k] = c;
                     _molhadas.Remove(c.id);
-                    AvisarPerto(c.pos, "A chuva apagou a fogueira");
+                    AvisarPerto(c.pos, c.tipo == Item.KitFogueira ? "A chuva apagou a fogueira portátil" : "A chuva apagou a fogueira");
                     continue;
                 }
                 _molhadas[c.id] = m;
@@ -142,7 +142,7 @@ namespace ZombieCityCleaner.Loot
             Vector3 pe = local.transform.position;
             foreach (var c in _lista)
             {
-                if (c.tipo != Item.Fogueira || _tetosInformados.Contains(c.id) || (c.pos - pe).sqrMagnitude > InformarAte * InformarAte) continue;
+                if (!Itens.EhFogueira(c.tipo) || _tetosInformados.Contains(c.id) || (c.pos - pe).sqrMagnitude > InformarAte * InformarAte) continue;
                 if (!Tempo.SobTeto(c.pos)) continue;
                 _tetosInformados.Add(c.id);
                 TetoDaFogueiraRpc(c.id);
@@ -190,7 +190,7 @@ namespace ZombieCityCleaner.Loot
             bool achou = false;
             foreach (var c in _lista)
             {
-                if (c.tipo != Item.Fogueira) continue;
+                if (!Itens.EhFogueira(c.tipo)) continue;
                 float d = (c.pos - ponto).sqrMagnitude;
                 if (d >= menor) continue;
                 menor = d;

@@ -110,7 +110,7 @@ namespace ZombieCityCleaner.EditorTools
         /// Uma foto da malha: numa cena de prévia, com a luz de estúdio, duas vezes (no fundo preto e no branco: a diferença
         /// dá a transparência das bordas), com o contorno claro em volta.
         /// </summary>
-        static void Fotografar(Mesh malha, Material material, string caminho, int largura, int altura, bool arma, bool icone)
+        internal static void Fotografar(Mesh malha, Material material, string caminho, int largura, int altura, bool arma, bool icone)
         {
             var cena = EditorSceneManager.NewPreviewScene();
             var rt = new RenderTexture(largura, altura, 24, RenderTextureFormat.ARGB32) { antiAliasing = 8 };
@@ -197,7 +197,7 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         // o contorno claro (o dos ícones do Blender): a silhueta engordada uns pixels, por baixo da arma
-        static Color[] Contorno(Color[] px, int l, int a, int raio)
+        internal static Color[] Contorno(Color[] px, int l, int a, int raio)
         {
             var cor = new Color(0.78f, 0.78f, 0.76f, 1f);
             var saida = new Color[px.Length];

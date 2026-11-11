@@ -60,7 +60,8 @@ namespace ZombieCityCleaner.UI
             {
                 Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
                 Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas, Item.Galao,
-                Item.Polvora, Item.Sucata,
+                Item.Polvora, Item.Sucata, Item.Lampiao, Item.Molotov, Item.KitFogueira,
+                Item.AlarmeLatas, Item.TapetePregos, Item.Estacas, Item.CercaFogo, Item.TabuasBarricada,   // (as armadilhas, 11/11/2026; as tábuas, a 5b)
             }),
             ("Outros", new[]
             {

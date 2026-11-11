@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.EditorTools
     {
         const string Arte = "Assets/_Game/Art/Characters/Jogador";
         const string Malhas = Arte + "/Malhas";
-        const string ControladorFP = Arte + "/Jogador_FP.controller";
+        internal const string ControladorFP = Arte + "/Jogador_FP.controller";
         const string ControladorTP = Arte + "/Jogador_TP.controller";
         const string FbxArmas = Arte + "/Armas.fbx";
         const string FbxItens = Arte + "/Itens.fbx";
@@ -47,7 +47,7 @@ namespace ZombieCityCleaner.EditorTools
         internal const string MaterialArma = Arte + "/Materials/Pistola.mat";
         const string MaterialPersonagem = Arte + "/Materials/Jogador_Variacao0.mat";
 
-        static readonly string[] ClipesFP = { "Idle", "Walk", "Run", "Fire", "DryFire", "Reload", "Sacar" };
+        internal static readonly string[] ClipesFP = { "Idle", "Walk", "Run", "Fire", "DryFire", "Reload", "Sacar" };
         static readonly string[] ClipesTP = { "Idle", "Walk", "Run", "Aim", "Fire" };
         static readonly string[] EmLaco = { "Idle", "Walk", "Run", "Aim" };
         /// <summary>
@@ -127,11 +127,15 @@ namespace ZombieCityCleaner.EditorTools
         /// </summary>
         internal static bool JuntarDaSucata(string modelo, string caminho)
         {
-            if (!File.Exists(FbxLootSucata)) return false;
             string prefixo = $"Item_{modelo}_";
-            if (!AssetDatabase.LoadAllAssetsAtPath(FbxLootSucata).OfType<Mesh>().Any(m => m.name.StartsWith(prefixo))) return false;
-            Juntar(FbxLootSucata, prefixo, caminho);
-            return true;
+            // (e as melhorias das armas de sucata, 10/11/2026: o Loot_Acessorios.fbx, do Blender/Armas/sucata_acessorios.py)
+            foreach (var fbx in new[] { FbxLootSucata, MontagemDasMelhorias.FbxItens })
+            {
+                if (!File.Exists(fbx) || !AssetDatabase.LoadAllAssetsAtPath(fbx).OfType<Mesh>().Any(m => m.name.StartsWith(prefixo))) continue;
+                Juntar(fbx, prefixo, caminho);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>A caixa de munição: do Municao.fbx, ou a de sucata (a lata e a caixinha) do Loot_Sucata.fbx.</summary>
@@ -817,7 +821,7 @@ namespace ZombieCityCleaner.EditorTools
             }).ToArray();
         }
 
-        static void ImportarFP(string caminho)
+        internal static void ImportarFP(string caminho)
         {
             var imp = Importador(caminho);
             imp.animationType = ModelImporterAnimationType.Generic;
@@ -954,7 +958,7 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Um override do controlador: cada clipe da base trocado pelo da arma (de outro FBX, ou com outro nome).</summary>
-        static void MontarOverride(string controlador, string fbxBase, string fbxArma, string[] clipes, System.Func<string, string> nome, string caminho) =>
+        internal static void MontarOverride(string controlador, string fbxBase, string fbxArma, string[] clipes, System.Func<string, string> nome, string caminho) =>
             MontarOverride(controlador, fbxBase, clipes, c => Clipe(fbxArma, nome(c)), caminho);
 
         /// <summary>Um override do controlador com o clipe dado para cada um da base (de um FBX ou de um .anim).</summary>

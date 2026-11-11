@@ -30,7 +30,9 @@ namespace ZombieCityCleaner.Zombies
         public float Pedra { get; private set; }
         public bool Petrificado => Atual == Estado.Petrificado;
         /// <summary>A lentidão da pedra (a velocidade e a animação).</summary>
-        float FatorDaPedra => _m != null ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, Pedra) : 1f;
+        // (e os pregos, 11/11/2026, a etapa 5a: quem pisou no tapete anda mais devagar uns segundos, Zumbi.Armadilhas.cs; todas
+        // as contas da velocidade passam por aqui)
+        float FatorDaPedra => (_m != null ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, Pedra) : 1f) * FatorDosPregos;
 
         float _pedraVista, _proximoSol, _soltarEm = -1f, _quebrandoAte, _proximaSombra, _proximaAgonia, _longeDesde, _soltouEm = -100f;
         bool _noSol, _comPedra;

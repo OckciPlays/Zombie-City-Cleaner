@@ -88,6 +88,12 @@ namespace ZombieCityCleaner.Roupas
 
         /// <summary>As peças vestidas agora (o nome e as cores).</summary>
         public List<CatalogoDasRoupas.PecaVestida> Vestidas { get; } = new List<CatalogoDasRoupas.PecaVestida>();
+
+        /// <summary>
+        /// O capacete de panela na cabeça (11/11/2026, a proteção de sucata: ele não é uma peça do catálogo): os cabelos
+        /// grandes se desenham na versão de baixo do chapéu, como com um chapéu. Vale no próximo <see cref="Vestir(IEnumerable{CatalogoDasRoupas.PecaVestida})"/>.
+        /// </summary>
+        [System.NonSerialized] public bool capacete;
         /// <summary>Muda a cada troca (as peças, as cores, o corpo, a pele): quem copia (o retrato do inventário, as roupas nos braços de primeira pessoa) sabe quando refazer.</summary>
         public int Versao { get; private set; }
 
@@ -136,6 +142,7 @@ namespace ZombieCityCleaner.Roupas
                 if (outra._renderers.TryGetValue(par.Key, out var dela)) _originais[par.Value] = outra._originais[dela];
             corpo = outra.corpo;
             pele = outra.pele;
+            capacete = outra.capacete;
             Vestir(outra.Vestidas.ToList());
         }
 
@@ -240,7 +247,7 @@ namespace ZombieCityCleaner.Roupas
             var dados = Catalogo.DaPeca(peca);
             if (dados != null && dados.lugar == LugarDoCabelo && Vestidas.Any(v => Catalogo.DaPeca(v.nome)?.esconde_cabelo == true)) return null;
             if (dados == null || string.IsNullOrEmpty(dados.sob_chapeu)) return peca;
-            if (!Vestidas.Any(v => Catalogo.DaPeca(v.nome)?.cobre_cabelo == true)) return peca;
+            if (!capacete && !Vestidas.Any(v => Catalogo.DaPeca(v.nome)?.cobre_cabelo == true)) return peca;
             return Catalogo.DaPeca(dados.sob_chapeu) != null && _renderers.ContainsKey(PrefixoDasPecas + dados.sob_chapeu)
                 ? dados.sob_chapeu : peca;
         }

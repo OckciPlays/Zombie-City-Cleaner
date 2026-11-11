@@ -41,6 +41,9 @@ namespace ZombieCityCleaner.Loot
         Gazua = 109, PeDeCabra,
         // o que se monta no mundo (os kits: na mochila, um item; montados, a construção)
         Fogueira = 112, Cama, Barricada,
+        // a fogueira portátil (11/11/2026, a etapa 4 do ramo Fogo: o kit do nó Fogueira portátil; montada, ela é uma construção
+        // deste tipo, que queima uma hora e o E recolhe)
+        KitFogueira = 115,
         // a luz (01/11/2026, a pedido: a lanterna só funciona achada, e gasta as pilhas)
         Lanterna = 116, Pilhas,
         // a gasolina (01/11/2026, a pedido: o galão é o saque que repõe o tanque do carro)
@@ -53,8 +56,19 @@ namespace ZombieCityCleaner.Loot
         PeixeAssado = 125,
         // a sucata (09/11/2026, o Armeiro de sucata): o material das armas e da munição de sucata
         Sucata = 126,
+        // as tábuas para barricada (11/11/2026, a etapa 5b: a Barricada de tábuas, pregada numa porta ou numa janela das casas)
+        TabuasBarricada = 127,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
+        // as melhorias das armas de sucata (10/11/2026, a etapa 2 do Armeiro de sucata; a ordem do Combat.PecaDaMelhoria)
+        SilenciadorPET = 140, SilenciadorFiltro, MiraDeFerro, MiraDePonto, Luneta, CarregadorLongo, CanoReforcado1, CanoReforcado2, CanoReforcado3,
+        // a proteção de sucata (11/11/2026, a etapa 3 da Resistência; a ordem do Player.LugarDaProtecao): vestem-se no grupo PROTEÇÃO
+        Capacete = 150, Colete, Bracadeiras, Caneleiras,
+        // o fogo (11/11/2026, a etapa 4 do ramo Fogo da Resistência): o lampião e o coquetel molotov vão na mão
+        Lampiao = 154, Molotov = 155,
+        // as armadilhas (11/11/2026, a etapa 5a do ramo Armadilhas e defesas da Sobrevivência): montam-se no chão, como a
+        // barricada (Itens.EhArmadilha; os números no Player/ArmadilhasDoJogador.cs)
+        AlarmeLatas = 156, TapetePregos = 157, Estacas = 158, CercaFogo = 159,
         // as roupas (31/10/2026, a parte 4 do Plano_Personagem.md da pasta de arte): uma por peça do catálogo das roupas,
         // daqui em diante (Itens.Roupa; 73 hoje: até o 232)
         PrimeiraRoupa = 160,
@@ -186,6 +200,11 @@ namespace ZombieCityCleaner.Loot
         public const int MacoFP = QuantosModelos + 2;
         public const int CigarroFP = QuantosModelos + 3;
         public const int QuantosModelosFP = QuantosModelos + 4;
+        /// <summary>
+        /// O lampião e o molotov (11/11/2026, a etapa 4): dois modelos de primeira pessoa depois dos do prefab do jogador,
+        /// postos no Play pelo <see cref="Player.ArmaJogador"/> (do Resources/ItensDoFogo: o prefab não muda).
+        /// </summary>
+        public const int LampiaoFP = QuantosModelosFP, MolotovFP = QuantosModelosFP + 1;
         public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : modelo == MacoFP ? "Maco"
             : modelo == CigarroFP ? "Cigarro" : Modelos[modelo];
         /// <summary>
@@ -198,7 +217,8 @@ namespace ZombieCityCleaner.Loot
         /// O modelo de primeira pessoa do que está na mão (os punhos, com a mão vazia; a mão com o taco; com o maço, a mão
         /// com ele: o cigarro aceso troca para o <see cref="CigarroFP"/>, no FumoJogador).
         /// </summary>
-        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : EhTaco(i) ? TacoFP : EhFumo(i) ? MacoFP : MaoDe(i);
+        public static int ModeloNaMao(Item i) => i == Item.Nada ? Punhos : EhTaco(i) ? TacoFP : EhFumo(i) ? MacoFP
+            : i == Item.Lampiao ? LampiaoFP : i == Item.Molotov ? MolotovFP : MaoDe(i);
         /// <summary>O maço de cigarros (03/11/2026): vai na mão, e o clique acende um cigarro.</summary>
         public static bool EhFumo(Item i) => i == Item.MacoDeCigarros;
 
@@ -321,6 +341,61 @@ namespace ZombieCityCleaner.Loot
             // a sucata (09/11/2026, o Armeiro de sucata: o modelo é o Item_Sucata do Loot_Sucata.fbx, o Blender/sucata_itens.py)
             Material(Item.Sucata, "Sucata", "sucata", "a sucata", "pedaços de sucata",
                      "Metal velho. Na bancada e na mesa de oficina, vira arma e munição de sucata.", 20),
+            // as melhorias das armas de sucata (10/11/2026, a etapa 2: os modelos são os Item_<modelo>_corpo do
+            // Loot_Acessorios.fbx, o Blender/Armas/sucata_acessorios.py); põem-se na bancada, no painel MELHORIAS da aba Criar
+            Material(Item.SilenciadorPET, "SilenciadorPET", "silenciador de garrafa PET", "o silenciador de garrafa PET", "silenciadores de garrafa PET",
+                     "Garrafa e fita na boca do cano. Abafa o tiro, mas dura 15 tiros.", 1),
+            Material(Item.SilenciadorFiltro, "SilenciadorFiltro", "silenciador de filtro de óleo", "o silenciador de filtro de óleo", "silenciadores de filtro de óleo",
+                     "Um filtro de carro na boca do cano. Abafa o tiro por 80 tiros.", 1),
+            Material(Item.MiraDeFerro, "MiraFerro", "mira de ferro ajustada", "a mira de ferro ajustada", "miras de ferro ajustadas",
+                     "Alça e massa acertadas na lima. O tiro espalha menos.", 1),
+            Material(Item.MiraDePonto, "MiraPonto", "mira de ponto caseira", "a mira de ponto caseira", "miras de ponto caseiras",
+                     "Um tubinho com o ponto vermelho. Mirando, o tiro vai no ponto.", 1),
+            Material(Item.Luneta, "Luneta", "luneta de cano", "a luneta de cano", "lunetas de cano",
+                     "Só no rifle de sucata. Mirando, aproxima duas vezes e meia.", 1),
+            Material(Item.CarregadorLongo, "CarregadorLongo", "carregador estendido", "o carregador estendido", "carregadores estendidos",
+                     "A pistola de sucata leva 3 tiros; a submetralhadora, 32.", 1),
+            Material(Item.CanoReforcado1, "CanoReforcado1", "cano reforçado I", "o cano reforçado I", "canos reforçados I",
+                     "Luva de cano e braçadeiras: +8% de dano, e a arma gasta 10% mais.", 1),
+            Material(Item.CanoReforcado2, "CanoReforcado2", "cano reforçado II", "o cano reforçado II", "canos reforçados II",
+                     "Mais braçadeiras e a tala: +16% de dano, e a arma gasta 20% mais.", 1),
+            Material(Item.CanoReforcado3, "CanoReforcado3", "cano reforçado III", "o cano reforçado III", "canos reforçados III",
+                     "Com o fio de cobre: +24% de dano, e a arma gasta 30% mais.", 1),
+            // a proteção de sucata (11/11/2026, a etapa 3: os modelos são os Item_<modelo>_corpo do Loot_Etapa34.fbx; no corpo,
+            // o Protecao_Sucata.fbx); veste-se no grupo PROTEÇÃO da tela (os números no Player/Protecao.cs: os detalhes da tela
+            // mostram o que cada uma cobre e corta)
+            Material(Item.Capacete, "Capacete", "capacete de panela", "o capacete de panela", "capacetes de panela",
+                     "Uma panela forrada, presa no queixo.", 1),
+            Material(Item.Colete, "Colete", "colete de chapa", "o colete de chapa", "coletes de chapa",
+                     "Chapas sobre a borracha de um pneu.", 1),
+            Material(Item.Bracadeiras, "Bracadeiras", "braçadeiras de sucata", "as braçadeiras de sucata", "pares de braçadeiras de sucata",
+                     "Latas e fita em volta dos antebraços.", 1),
+            Material(Item.Caneleiras, "Caneleiras", "caneleiras de sucata", "as caneleiras de sucata", "pares de caneleiras de sucata",
+                     "Chapas de lata presas nas canelas.", 1),
+            // o fogo (11/11/2026, a etapa 4: os modelos são os Item_<modelo>_corpo do Loot_Etapa34.fbx; na mão, os braços do
+            // Jogador_FP_Lampiao e do _Molotov, e no corpo as malhas do Fogo.fbx, todos do Resources/ItensDoFogo; os números
+            // no Player/FogoDoJogador.cs)
+            Material(Item.Lampiao, "Lampiao", "lampião", "o lampião", "lampiões",
+                     "Combustível e pavio dentro do vidro. Na mão, luz quente, e os zumbis ficam longe; a chuva não apaga.", 1),
+            Material(Item.Molotov, "Molotov", "coquetel molotov", "o coquetel molotov", "coquetéis molotov",
+                     "Garrafa com combustível e um pano no gargalo. Na mão, o clique arremessa: o fogo pega onde ela quebra.", 1),
+            Material(Item.KitFogueira, "KitFogueira", "kit da fogueira portátil", "o kit da fogueira portátil", "kits da fogueira portátil",
+                     "Lenha amarrada e combustível. Monte no chão: queima uma hora, e E recolhe.", 1, TipoDeLoot.Construcao),
+            // as armadilhas (11/11/2026, a etapa 5a: os modelos são os Item_<modelo>_corpo do Art/Armadilhas/Loot_Armadilhas.fbx,
+            // e as montadas, as do Armadilhas.fbx, todas do Resources/ItensDasArmadilhas; o desgaste guarda os usos que já foram)
+            Material(Item.AlarmeLatas, "AlarmeLatas", "alarme de latas", "o alarme de latas", "alarmes de latas",
+                     "Latas num barbante entre duas estacas. Monte no chão: quem passa em pé faz barulho, e você fica sabendo.", 1, TipoDeLoot.Construcao),
+            Material(Item.TapetePregos, "TapetePregos", "tapete de pregos", "o tapete de pregos", "tapetes de pregos",
+                     "Uma tábua cheia de pregos virados para cima. Monte no chão: fere quem pisa e fura pneu.", 1, TipoDeLoot.Construcao),
+            Material(Item.Estacas, "Estacas", "estacas", "as estacas", "feixes de estacas",
+                     "Estacas pontudas amarradas numa tora. Monte no chão, com as pontas para fora: seguram e ferem os zumbis.", 1, TipoDeLoot.Construcao),
+            Material(Item.CercaFogo, "CercaFogo", "cerca de fogo", "a cerca de fogo", "cercas de fogo",
+                     "Um galão com pavio e combustível para um rastro de 4 m. Monte no chão e acenda: uma linha de fogo que os zumbis não atravessam.", 1, TipoDeLoot.Construcao),
+            // as tábuas para barricada (11/11/2026, a etapa 5b: o modelo é o Item_Tabuas_corpo do Loot_Armadilhas.fbx, e as
+            // pregadas, as BarricadaPorta e BarricadaJanela do Armadilhas.fbx, todas do Resources/ItensDasArmadilhas; no fim da
+            // lista, para os índices dos outros não mudarem)
+            Material(Item.TabuasBarricada, "Tabuas", "tábuas para barricada", "as tábuas para barricada", "feixes de tábuas para barricada",
+                     "Tábuas cortadas na medida e um punhado de pregos. Mire uma porta ou uma janela de casa e segure E: pregadas, ela não abre.", 1, TipoDeLoot.Construcao),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -371,7 +446,13 @@ namespace ZombieCityCleaner.Loot
             get { foreach (var l in _loot) yield return l.item; }
         }
         /// <summary>Um kit de montar no mundo (a fogueira, a cama, a barricada).</summary>
-        public static bool EhConstrucao(Item i) => i >= Item.Fogueira && i <= Item.Barricada;
+        public static bool EhConstrucao(Item i) => (i >= Item.Fogueira && i <= Item.Barricada) || i == Item.KitFogueira || EhArmadilha(i);
+        /// <summary>Uma armadilha (11/11/2026, a etapa 5a): o alarme de latas, o tapete de pregos, as estacas e a cerca de fogo.</summary>
+        public static bool EhArmadilha(Item i) => i >= Item.AlarmeLatas && i <= Item.CercaFogo;
+        /// <summary>Uma fogueira (a de lenha e a portátil, 11/11/2026): acende, apaga na chuva e segura os zumbis.</summary>
+        public static bool EhFogueira(Item i) => i == Item.Fogueira || i == Item.KitFogueira;
+        /// <summary>O fogo que vai na mão (11/11/2026, a etapa 4): o lampião e o coquetel molotov (os braços deles, do Resources/ItensDoFogo).</summary>
+        public static bool EhFogoDeMao(Item i) => i == Item.Lampiao || i == Item.Molotov;
         /// <summary>Um remédio (da espécie: o fundo na mochila e o preço; a gaze e o álcool também, mesmo sem uso sozinhos).</summary>
         public static bool EhRemedio(Item i) => Loot(i)?.tipo == TipoDeLoot.Remedio;
 
@@ -381,12 +462,26 @@ namespace ZombieCityCleaner.Loot
         public static bool EmPilha(Item i) => Pilha(i) > 1;
         /// <summary>Quantos há na pilha (o qtd; uma pilha sem número é de 1).</summary>
         public static int Quantos(Item i, int qtd) => !EmPilha(i) ? 1 : EhMunicao(i) ? qtd : System.Math.Max(1, qtd);
-        /// <summary>O nome com o número ("3 panos", "1 pano").</summary>
+        /// <summary>O nome com o número ("3 panos", "1 pano"; "1 peça de metal", não "1 peças de metal").</summary>
         public static string ComNumero(Item i, int n)
         {
             var l = Loot(i);
-            return n == 1 || l == null ? $"{n} {Nome(i)}" : $"{n} {l.plural}";
+            return n == 1 || l == null ? $"{n} {Um(i)}" : $"{n} {l.plural}";
         }
+
+        /// <summary>
+        /// O nome de uma unidade, para contar (10/11/2026): as peças de metal, os fios e os pregos têm o nome no plural (o
+        /// item é um punhado, e é assim que ele aparece na mochila, no chão e no comerciante), mas um só se conta no singular.
+        /// O resto, o nome.
+        /// </summary>
+        static string Um(Item i) => i switch
+        {
+            Item.PecasDeMetal => "peça de metal",
+            Item.Fios => "fio",
+            Item.Pregos => "prego",
+            Item.Estacas => "feixe de estacas",   // (as armadilhas, 11/11/2026: "1 feixe de estacas")
+            _ => Nome(i),
+        };
 
         /// <summary>
         /// Os equipamentos, na ordem do enum (de MochilaPequena em diante): Equipamentos.fbx (&lt;modelo&gt;_*),
@@ -489,7 +584,7 @@ namespace ZombieCityCleaner.Loot
         /// Vai para a mão e para os atalhos? As caixas de munição e as peças, não (só ficam na mochila); o que se veste
         /// também não.
         /// </summary>
-        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0 || EhFumo(i));
+        public static bool VaiNaMao(Item i) => i != Item.Nada && !EhRoupa(i) && !EhMunicao(i) && !EhPeca(i) && !EhEquipamento(i) && !EhCaixaDeBolas(i) && NoJogo(i) && (!EhLoot(i) || Loot(i).mao >= 0 || EhFumo(i) || EhFogoDeMao(i));
         public static bool EhMunicao(Item i) => i >= Item.Municao9mm && i <= Item.MunicaoParafuso;
         /// <summary>O índice da caixa (0 a 3, a ordem de <see cref="Calibre"/>), ou -1.</summary>
         public static int IndiceDaMunicao(Item i) => EhMunicao(i) ? i - Item.Municao9mm : -1;
@@ -527,7 +622,7 @@ namespace ZombieCityCleaner.Loot
         /// O que gasta com o uso (31/10/2026, com o kit de reparo): as armas de fogo, a cada tiro, e as brancas, a cada golpe
         /// que pega. O desgaste vai de 0 (nova) a 100: a de fogo quebrada não atira (o kit conserta); a branca quebra e some.
         /// </summary>
-        public static bool ComDesgaste(Item i) => EhArma(i) || EhBranca(i);
+        public static bool ComDesgaste(Item i) => EhArma(i) || EhBranca(i) || Player.Protecao.EhPeca(i);   // (e a proteção de sucata, 11/11/2026)
         /// <summary>A lanterna gasta as pilhas: o desgaste dela é a carga que já foi (0, pilhas novas; 100, acabaram).</summary>
         public static bool EhLanterna(Item i) => i == Item.Lanterna;
         /// <summary>O galão de gasolina: a gasolina vai no desgaste (0, cheio; 100, vazio), como a carga da lanterna.</summary>
@@ -612,11 +707,13 @@ namespace ZombieCityCleaner.Loot
         {
             int m = Modelo(i);
             if (m >= 0) return m;
+            // o lampião e o molotov (11/11/2026): no corpo, o lugar da tocha (as poses dela; a malha é trocada no JogadorRede.Fogo)
+            if (EhFogoDeMao(i)) return Modelo(Item.Tocha);
             var l = Loot(i);
             return l != null ? l.mao : -1;
         }
         /// <summary>O item vai na mão com a malha dele no lugar da lata ou da garrafa (os do loot.py).</summary>
-        public static bool NaMaoComMalhaPropria(Item i) => Modelo(i) < 0 && MaoDe(i) >= 0 && IndiceDoLoot(i) >= 0;
+        public static bool NaMaoComMalhaPropria(Item i) => Modelo(i) < 0 && !EhFogoDeMao(i) && MaoDe(i) >= 0 && IndiceDoLoot(i) >= 0;
 
         /// <summary>O índice do modelo do item (na mão, no chão e no ícone), ou -1 (nada).</summary>
         public static int Modelo(Item i) => EhArma(i) ? (int)Arma(i) : i == Item.Comida ? Armas.Quantas : i == Item.Agua ? Armas.Quantas + 1
@@ -660,6 +757,14 @@ namespace ZombieCityCleaner.Loot
             if (i == Item.Galao) return new UnityEngine.Vector2Int(2, 2);   // o galão: maior que o resto do saque
             if (i == Item.PeDeCabra) return new UnityEngine.Vector2Int(2, 1);   // o pé de cabra: comprido
             if (i == Item.PeixeGrande || i == Item.PeixeDourado) return new UnityEngine.Vector2Int(2, 1);   // os peixes grandes
+            if (Player.Protecao.EhPeca(i)) return Player.Protecao.Tamanho(i);   // a proteção de sucata (11/11/2026)
+            if (i == Item.Lampiao || i == Item.KitFogueira) return new UnityEngine.Vector2Int(2, 2);   // o fogo (11/11/2026)
+            if (i == Item.Molotov) return new UnityEngine.Vector2Int(1, 2);
+            // as armadilhas (11/11/2026, a etapa 5a)
+            if (i == Item.AlarmeLatas || i == Item.CercaFogo) return new UnityEngine.Vector2Int(2, 2);
+            if (i == Item.TapetePregos) return new UnityEngine.Vector2Int(3, 1);
+            if (i == Item.Estacas) return new UnityEngine.Vector2Int(4, 1);
+            if (i == Item.TabuasBarricada) return new UnityEngine.Vector2Int(3, 1);   // as tábuas (11/11/2026, a etapa 5b)
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2745717120951427523
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2882929941832034649}
+  - component: {fileID: 300698072190810290}
+  m_Layer: 0
+  m_Name: ItensDasArmadilhas
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2882929941832034649
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2745717120951427523}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &300698072190810290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2745717120951427523}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3978b00d186843945806854b8dfde060, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Loot.ItensDasArmadilhas
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  materialDoRastro: {fileID: 2100000, guid: 5d415748ffc2c7d41a2e387db1eb6af4, type: 2}
+  malhasDosItens:
+  - {fileID: 4300000, guid: a064ca134630c8b4e8fdd9f938c3905b, type: 2}
+  - {fileID: 4300000, guid: 0fd1c1e62abee884f96c99d8aa574f5c, type: 2}
+  - {fileID: 4300000, guid: bc35c982d4b40b3428d4f02e1ed4450b, type: 2}
+  - {fileID: 4300000, guid: 20631b8c6111b864ea8be1fc21293b7e, type: 2}
+  icones:
+  - {fileID: 2800000, guid: 500f5c5c621bf3f4eae3f597dcbfff13, type: 3}
+  - {fileID: 2800000, guid: 596d2a070d2b429419dbb30f881b5a75, type: 3}
+  - {fileID: 2800000, guid: 74a04a55630af884382454cc8071ae41, type: 3}
+  - {fileID: 2800000, guid: 612dea8d7d886e44280b4193b94c936f, type: 3}
+  fotos:
+  - {fileID: 2800000, guid: fceabc59ca6d038448d63798ddb3941e, type: 3}
+  - {fileID: 2800000, guid: 7c25438f72f9b86478371203141c5031, type: 3}
+  - {fileID: 2800000, guid: 3427df37cb3ca2a4eb23af8b0c4504e9, type: 3}
+  - {fileID: 2800000, guid: 2f6142fc8c500f24182e9a3cd9f4c549, type: 3}
+  alarme: {fileID: -1543630486322487655, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  alarmeSemLatas: {fileID: 4300000, guid: 97e3a064f692f8140970a05abc97ece8, type: 2}
+  latas: {fileID: 4300000, guid: eb564571666d143458e0a59986a9e07d, type: 2}
+  tapete: {fileID: -6976269367243343265, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  estacas: {fileID: -2916683238692929314, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  cerca: {fileID: 8117052810098962848, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  vazioDasLatas: {x: -0, y: 0.52537113, z: 0}
+  pontaDasEstacas: {x: -0, y: 0.8923384, z: 0.8369989}
+  pavioDaCerca: {x: -0.020000458, y: 0.008, z: 0.465}
+  barricadaPorta: {fileID: -7076819910364149599, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  barricadaPortaDanificada: {fileID: 4676169777316698673, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  barricadaJanela: {fileID: -9044434333319899625, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  barricadaJanelaDanificada: {fileID: -5817643234637856453, guid: 5cd5711600433024687a42217d0a951a, type: 3}
+  tabuasDoItem: {fileID: 4300000, guid: 958ff27ff4e97c34f9b4178f5fc14b5e, type: 2}
+  iconeDasTabuas: {fileID: 2800000, guid: 4334282a470faa449aa0c24be1f9d91f, type: 3}
+  fotoDasTabuas: {fileID: 2800000, guid: b239349fdf8388745b32c0ac26eed92b, type: 3}

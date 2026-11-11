@@ -192,19 +192,23 @@ JUNTAS = MAO_ESQUERDA - 0.105     # a direita encostada na esquerda (sem uma ent
 # da tela, a uns 0,9 m, com o fio para a frente e para baixo (rolado 10 graus para o meio, para a lâmina aparecer de lado);
 # na volta, o machado vai direto ao Idle, sem subir de novo pela mira. (Antes, a descida ia de cima à direita para baixo à
 # esquerda, com a cabeça de perfil.)
+# (11/11/2026, o Pedro: "dá para ver a lâmina no acerto") no acerto, a cabeça a uns 0,7 m da câmera (antes, 0,97: pequena
+# e quase de costas): as mãos mais baixas e mais perto (a 42 cm, abaixo da tela), o cabo mais em pé, e o machado girado
+# 20 graus em volta do cabo ("rolar"), com o fio de três quartos (o plano da lâmina a uns 43 graus da visada; antes, 28);
+# a descida continua para a frente, no mesmo plano, e as chaves da preparação e da volta vêm menos para trás
 PLANO_DO_GOLPE = (0.926, 0.377, 0.0)
-ACERTO_FP = {"ponto": (-0.018, 0.22, -1.15, 0.62), "mira": (-0.536, 0.0, 0.05), "alto": (-0.444, 0.631, 0.636)}
+ACERTO_FP = {"ponto": (-0.018, 0.23, -2.0, 0.42), "mira": (-0.536, 0.0, 0.05), "alto": (-0.444, 0.631, 0.636), "rolar": -20.0}
 GOLPE_FP = [
     (1, {}),
-    (4, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -38.0), "pivo_y": -0.018, "desloca": (0.001, 0.17, 0.23)}),
-    (6, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -22.0), "pivo_y": -0.018, "desloca": (0.0, 0.09, 0.13),
+    (4, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -38.0), "pivo_y": -0.018, "desloca": (0.001, 0.06, 0.23)}),
+    (6, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -22.0), "pivo_y": -0.018, "desloca": (0.0, 0.04, 0.13),
          "direita": -0.24}),
     (8, dict(ACERTO_FP, direita=JUNTAS)),
-    (10, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 18.0), "pivo_y": -0.018, "desloca": (0.0, 0.02, -0.08),
+    (10, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 18.0), "pivo_y": -0.018, "desloca": (0.0, -0.04, -0.06),
           "direita": JUNTAS}),
     # a volta: o machado sai de baixo da mira para a direita, e a direita escorrega de volta para perto da cabeça;
     # depois, o Idle
-    (12, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 12.0), "pivo_y": -0.018, "desloca": (-0.18, 0.04, 0.08),
+    (12, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 12.0), "pivo_y": -0.018, "desloca": (-0.10, -0.04, 0.06),
           "direita": -0.20}),
     (15, {}),
 ]
@@ -216,10 +220,13 @@ LIMITE_ULNAR_GOLPE = 25.0
 DEDOS_RAIO_A_MAIS = 0.004
 # (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
 # escolhida fica em diagonais_fp.json)
-DIAGONAIS = {"R": (35,), "L": (20,)}
-# (09/11/2026) o Idle como estava: a diagonal e o giro da mão esquerda no cabo fixos nos de antes (o golpe novo, que
+DIAGONAIS = {"R": (35,), "L": (20, 35)}
+# (09/11/2026; até 11/11/2026) o Idle como estava: a diagonal e o giro da mão esquerda no cabo fixos nos de antes (o golpe novo, que
 # entra na escolha da esquerda, não muda o Idle)
-GIRO_NO_CABO = {"L": 228}
+GIRO_NO_CABO = {}
+# (11/11/2026) o giro e a diagonal da esquerda escolhidos também pelo golpe (com o machado girado no acerto, os de antes,
+# 228 e 20 graus, torciam o pulso esquerdo 100 graus), e o salto da torção pesando na escolha do cotovelo
+SALTO_NA_TORCAO = 4.0
 # a mão direita, que escorrega pelo cabo no golpe, pode girar nele (o machado não rola: duas_maos.py)
 GIRAR_DIREITA_NO_GOLPE = True
 if not ESCORREGA_NO_GOLPE:

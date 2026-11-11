@@ -3153,7 +3153,8 @@ moradores passam; as camas conferidas na prévia).
   veem com as duas mãos na frente do peito, pelo Pitch: `GarupaComAMao`; o tiro e o golpe pulam a própria moto,
   `MeuVeiculo`); no carro, os passageiros só usam itens (comer, beber, os curativos: o `Tratamento` deixa com as mãos
   livres). O motorista não (o clique é da chave). Na câmera de trás (V), não. Sentado, o E é só de sair (o `ProcurarAlvo`
-  não procura nada).
+  não procura nada). Desde 10/11/2026, os passageiros do carro também atiram e golpeiam, e o giro do olhar vai pela rede
+  (veja "As pendências da fase").
 - **O minimapa** ("zoom muito próximo e um pouco bugado"): 600 m (o pequeno) e 1200 m (o grande), fora do mapa escuro (a
   imagem não estica mais na beira), embaixo do FPS quando ele está ligado, e fora das gravações (`SemHud`).
 - **As marcas do mapa no mundo** ("deveria aparecer como um ping para se localizar mais fácil"): as marcas e as anotações
@@ -3164,6 +3165,7 @@ moradores passam; as camas conferidas na prévia).
   ficou para uma etapa só com o Blender, com os prints do Pedro. Feito em 09/11/2026 (veja "A mão nova e as armas
   brancas", o corpo).
 - **Visto e não mexido:** o E de outro jogador na cama improvisada recolhe a cama dele (o `UsarRpc` não confere o dono).
+  Resolvido em 10/11/2026 (veja "As pendências da fase").
 - **A cabeça baixa no carro, de novo** (com as fotos: "ele continua olhando para baixo ... nos dois carros"): a câmera de
   trás (V) é a mesma escolha da terceira pessoa a pé (`CameraTerceiraPessoa.Ligada`), e nela o olhar do corpo (o `Pitch` da
   rede) nunca mudava: ficava o do momento de entrar, olhando para a porta. Agora o `CameraDeTras` põe a cabeça reta
@@ -3289,8 +3291,74 @@ e andar por andar.
     pegou 29 de 7 shaders), e o `WarmUp` no Editor compila na hora: 25 s para essas 29, e o erro "A non-multisampled
     texture being bound to a multisampled sampler". Para tentar de novo: anotar com o Editor recém-aberto (Graphics
     Settings > Shader Loading) e aquecer só na build, depois de medir nela (o FPS do bunker com o Profiler ligado nela).
+- **A gravação no executável e o aquecimento (10/11/2026, a pedido; `World/AquecimentoDosShaders.cs`):** pela
+  `GraphicsStateCollection` da Unity (`UnityEngine.Rendering`), que grava no próprio executável o que ele desenhou, no
+  lugar da `ShaderVariantCollection` anotada no Editor.
+  - **Gravar:** com `-gravarshaders` na linha de comando (o `Gravar_Shaders.bat` da pasta da build), o executável anota
+    desde o começo (o `BeginTrace`, no `BeforeSceneLoad`) cada shader e cada estado gráfico que desenhou; ao sair (o ESC >
+    Sair ou o fechar da janela, pelo `Application.quitting`), grava `gravacao_shaders.graphicsstate` ao lado do `.exe` (não
+    na pasta dos saves) e escreve no `Player.log` onde gravou ("[Shaders] A gravação foi salva em ...", com as variantes,
+    os estados, a API e a qualidade). Gravando, ele não aquece nada. Sem o argumento, nada muda.
+  - **Aquecer:** com uma gravação em `Assets/StreamingAssets/` (a pasta especial da Unity, na raiz do `Assets`, que vai
+    inteira para a build; a `Assets/_Game/StreamingAssets/` não iria; ainda não existe) ou ao lado do `.exe` (a gravada
+    naquele computador; as duas, juntas pelo `Append`), o jogo monta esses shaders na tela de carregamento do mundo (o
+    `MundoDaPartida`, junto com a geração e o chão) e na tela preta de carregar a rua do Dia 0 (junto com os cortes dos
+    zumbis), uma leva por quadro (o `WarmUpProgressively`), e a tela espera por ele com "Preparando os gráficos (N%)",
+    até 60 s. Uma vez por execução (no mundo seguinte, nada). A gravação de outra API gráfica fica de fora. No Editor e
+    sem placa (o `-nographics` dos testes), nada.
+  - **O Direct3D 11:** a build usa o Direct3D 11 (o primeiro da lista do Player Settings, com o 12 depois; o `Player.log`
+    do Pedro de 08/11 diz "Direct3D 11.0", numa AMD RX 6750 XT), que não monta os estados em paralelo
+    (`SystemInfo.supportsParallelPSOCreation`): a Unity aquece pelo caminho antigo (o do `ShaderVariantCollection.WarmUp`),
+    uma variante de cada vez, nesta hora; a leva cresce ou diminui para o quadro ficar perto de 30 ms. No 12 e no
+    Vulkan, os estados vão para os jobs.
+  - **O passo a passo** (o `LEIA-ME.txt` da build): abrir pelo `Gravar_Shaders.bat`; entrar num mundo (o Continuar ou um
+    novo); ir até o bunker e entrar; andar pelos andares; abrir a mochila e a aba K; sair pelo menu (ESC > Sair).
+    Depois, copiar o `gravacao_shaders.graphicsstate` para `Assets/StreamingAssets/` e fazer a build de novo; para medir
+    antes disso, abrir o `.exe` sem o `.bat` (ele aquece com a gravação ao lado). O `Player.log` diz quanto levou
+    ("[Shaders] Aquecimento pronto: N de N ... em X ms"). A build de teste fica em `D:\Zombiegame\Builds\Teste_Bunker\`
+    (fora do repositório), com a configuração de sempre (Windows 64 bits, sem Development, as cenas Mundo e DiaZero).
 - **Para lembrar:** com o Editor em ~10 GB e o Windows perto do limite (37 de 39 GB comprometidos), o compilador de
   shaders ficou sem memória uma vez (`ZombieCityCleaner/Chao`, ShadowCaster com INSTANCING_ON, no dx12, só no Editor).
+
+## As pendências da fase (10/11/2026)
+
+As pendências pequenas da fase (a lista juntada em 08/11), resolvidas sem o Pedro. Compila sem erros e sem avisos novos;
+testadas no Play pelo MCP (Mundo, semente 7, mapa pequeno, hospedando local). Nenhuma cena mudou.
+- **O clima de verdade** (`World/CicloDoDia.Tempo.cs`): o `ritmoDeTeste` ficou desligado e fora das cenas
+  (`[NonSerialized]`: o "ligado" gravado na Mundo e na Demo_Cidade não vale mais; um teste no Play ainda pode ligar), e a
+  chance do tornado mudou de nome, `chanceDoTornadoNoJogo` = 10% das frentes fortes (o 0,6 gravado nas cenas ficou de
+  fora). O número de "bem raro" não estava escrito em lugar nenhum: com 10%, um tornado a cada uns dez ciclos (cada ciclo
+  tem de 8 a 15 dias do jogo, de 3 a 6 horas de partida); se ficar raro demais ou de menos, é esse número. Um save do teste
+  com os amigos traz o calendário que já estava sorteado (no ritmo curto); o que vem depois sai no ritmo de verdade.
+  Conferido: o primeiro evento no dia 4 (78,7 h; no ritmo de teste, vinha em 7 a 11 h).
+- **Os passageiros do carro atiram e golpeiam** (`PassageiroDoCarro.PodeAtacar`: todo lugar menos o volante e o guidão),
+  como o garupa da moto: o tiro e o golpe pulam o próprio carro (`ArmaJogador.MeuVeiculo`); o que está na mão aparece no
+  corpo (só quem dirige guarda); e o corpo, para os outros, segura a arma na frente do peito por cima da animação de
+  sentado (`MaoNaFrente`, a mesma do garupa). Na câmera de trás (V), não. Conferido: do banco do carona, o tiro passou
+  pelo para-brisa e pegou as pernas de um zumbi a 7 m (a vida de 1 a 0,70 em quatro tiros, sem nada no carro); com o
+  bastão, quatro golpes pela porta num zumbi a 1,9 m (de 1 a 0,20); na V, sem ataque.
+- **O giro da mira pela rede** (`JogadorRede.GiroSentado`, do dono, mandado só quando muda mais de 1 grau, como o
+  `Pitch`; volta a 0 na V, ao sentar e ao sair): o `GarupaComAMao` aponta as mãos para o giro e para o Pitch (até 100
+  graus para cada lado), e a cabeça de quem está sentado vira junto (até 70 graus; `CabecaVirada`, também no motorista e
+  no piloto). `SessaoOnline.VersaoDaRede` 15. Conferido: o giro chegando na variável (22, 78 e −29 no carro; −58 e −70 na
+  moto), a mão direita indo para o lado e a cabeça girando com ele; fotos do garupa mirando para a esquerda.
+- **A cama improvisada só do dono** (`ConstrucoesNoMundo.PodeRecolher`, conferido no `UsarRpc`; `ConstrucaoNaMira`): para
+  os outros, a dica é "A cama de <nome>" (o personagem dono, se ele estiver na partida; senão, "outro jogador"), e o E não
+  faz nada (dormir nela continua só do dono, como antes). Conferido trocando a chave do personagem por um instante: o E e o
+  pedido direto ao anfitrião não recolhem; com a chave de volta, o clique recolhe e o kit volta.
+- **"1 peça de metal"** (`Itens.ComNumero`): as peças de metal, os fios e os pregos têm o nome no plural (o título do item
+  na mochila, no chão e no comerciante continua igual); contados, um só sai no singular ("Desmontar: 1 peça de metal e 3
+  pedaços de sucata", "1 fio", "1 prego").
+- **A cedilha das placas** (`World/Letreiro.cs`, `RuaDoDiaZero.Placa`): o Ç maiúsculo sai como o C, com a cedilha da fonte
+  em negrito por baixo, 1,45 vez maior (o traço fino da Arial sumia de longe no recorte do alfa); o ç minúsculo continua o
+  da fonte. Na placa da loja, com o Ç, a letra fica um pouco menor (0,53 m) e o texto sobe, para a cedilha caber no quadro
+  de 0,9 m. Vale para todo letreiro com Ç (também a faixa da TV do Dia 0). Conferido em fotos da placa de antes e da nova,
+  lado a lado, nas distâncias de uns 15, 25 e 40 m na tela do Pedro.
+- **O `a1` (Pistola de sucata) com 1 nível** (`Habilidades`): o segundo não fazia nada. Um progresso com 2 pontos nele
+  fica com 1, e o outro volta livre (o `DefinirProgresso` já cortava no máximo; agora escreve no log); o resto da árvore
+  fica como estava. Conferido: nível 5 com 2 pontos no a1 e 1 no Tiro forte ficou com 1 no a1 e 3 pontos livres.
+- **Falta:** testar com dois jogadores (o giro e a pose vistos da outra máquina) e o Pedro dizer se os 10% do tornado
+  servem. Os testes de modo editor só cobrem o gerador (a assembly `ZombieCityCleaner.Mundo`), e nada daqui passa por lá.
 
 ## O carro que sumia do bunker (04/11/2026, a pedido)
 
@@ -3718,6 +3786,22 @@ falsos, o colapso: os amigos como zumbis, os zumbis-fantasma, a fuga de até 6 s
   migração), `TelaDoInventario.Habilidades.cs` (a árvore no meio e na coluna da direita, uma página por área; o botão
   direito pelo `Processar`), `XpNaTela` (o aviso), `UI/MenuDoDesenvolvedor.Habilidades.cs` (o F1: Aprender um, Tirar
   um, +5 níveis, Nível 40, Save velho) e os efeitos lendo `Habilidades.Pontos` onde já liam o `Tem`. `VersaoDaRede` 12.
+- **Os ícones dos nós (10/11/2026, a referência do Pedro: o "Dungeons & Developers"; Docs/18, "A aba HABILIDADES"):** cada
+  nó é um quadrado de 50 (a 720p: 100 px a 1440p, 75 px a 1080p) com o ícone pintado no Blender e o nome embaixo, numa
+  linha (o longo diminui a letra de 10 até 8). Os PNG: `Art/UI/Habilidades/Resources/Hab_<Habilidade>.png` (o nome do
+  enum) e a cópia sem cor `Hab_<Habilidade>_Cinza.png` (a dos trancados: o OnGUI não tira a cor), carregados pelo
+  `Resources` no `TelaDoInventario.IconeDaHabilidade(h, cinza)` (nenhuma cena nem prefab muda). Vêm do
+  `Blender/icones_habilidades.py` (`Hab_<id>.png`, o id da lista NOS) pelo `Editor/MontagemDosIconesDasHabilidades`
+  (menu Zombie City Cleaner/Habilidades/Importar os ícones: copia com o nome do enum, faz os cinza e ajusta a importação:
+  256 com mipmap Kaiser e viés -0,5, sem o limite de mipmap, BC7 no PC). **Sem AssetPostprocessor de propósito:** um
+  novo (com `OnPreprocessTexture`) reimporta todas as texturas do projeto. Os estados (`EstadoDoNo`): aprendido (a
+  moldura dourada grossa, a linha clara por dentro e o brilho em volta, mais forte com todos os pontos), dá para aprender
+  (a moldura na cor da área; mais fraca sem ponto livre), trancado (o ícone cinza a 60%, a moldura apagada) e em breve
+  (cinza a 45%, com a faixa "EM BREVE" no meio); o "k/máx" numa placa no canto de baixo, a estrela das pontas num
+  círculo no de cima. As ligações (`Ligacao`): 4 de grossura, saem debaixo do nome, andam no vão (16) e terminam numa
+  seta no nó que pede; apagadas, e douradas (com um brilho) quando os dois lados têm ponto, também as de um ramo para
+  outro. As medidas: os nós em 158, a fileira a cada 81, os ramos em 130, o rodapé em 551 (18 de alto). O quadro do
+  mouse mostra o ícone (46) ao lado do nome e do ramo. Testado no Play pelo MCP, a 2560 x 1440 e a 1920 x 1080.
 
 - **O que é:** o XP das ações num total só; cada nível dá 1 ponto livre (o nível 1 já dá o primeiro); 45 habilidades
   (3 áreas × 3 ramos × 5, a última a ponta) e 30 níveis (o 30 com 5.510 de XP, umas 12 h de jogo; do 1 para o 2, 50, e
@@ -3969,7 +4053,7 @@ o comerciante, as armas reais raras e as melhorias ficam para a 2ª leva e as et
   a pistola (6 sucatas, 1 madeira, 1 fita), a munição de prego × 10 (1 pólvora, 1 sucata) e a de parafuso × 5 (1 pólvora,
   2 sucatas); na mesa de oficina, a submetralhadora (12 sucatas, 1 madeira, 2 fitas) e o rifle (10 sucatas, 2 madeiras, 1
   fita). O `a1` (Pistola de sucata) destrava a pistola e a munição de prego; o `a2`, o rifle e a de parafuso; o `a3`, a
-  submetralhadora. Os três deixaram de ser "em breve"; do `a4` ao `a10` continuam (as melhorias). No mundo pequeno da
+  submetralhadora. Os três deixaram de ser "em breve"; do `a4` ao `a10`, desde 10/11/2026 (as melhorias, a etapa 2). No mundo pequeno da
   semente 7 só há a mesa de oficina do bunker, que também vale como bancada.
 - **Os modelos** (prontos, do `Blender/Armas/sucata.py` e `sucata_exportar.py`): `Art/Armas/Modelos/Sucata_*.fbx`, no espaço
   da arma antiga da real, com a paleta dos itens (`Art/Paleta.png`, 16 × 16; o material `Materials/Pistola.mat`, não a
@@ -4084,6 +4168,504 @@ painéis são postos no Play, pelo código.
   continuando desmontado (e o do F1 não voltando); a loja do Dia 0 (os 9 produtos nas prateleiras, a placa, uma compra de
   $ 65 e as compras nas estantes do bunker). Falta o Pedro jogar e o teste com dois jogadores (o painel sumindo na outra
   máquina).
+
+## As melhorias das armas de sucata, etapa 2 (10/11/2026)
+
+A etapa 2 do Armeiro de sucata (o plano aprovado pelo Pedro): os nós `a4` a `a10` deixaram de ser "em breve". Nove peças
+fabricadas (os silenciadores, as miras, o carregador e os canos reforçados), postas e tiradas na bancada, que ficam na
+própria arma; e os dois nós passivos (a Mola nova e o Mestre armeiro). Nenhuma cena nem o prefab do jogador mudaram: as
+peças são postas no Play, do `Resources/MelhoriasDaSucata.prefab`.
+
+- **Os números** (`Combat/Melhorias.cs`, as constantes no topo, para o Pedro ajustar):
+
+  | Peça (item) | Onde | Receita | Nó | Efeito |
+  |---|---|---|---|---|
+  | Silenciador de garrafa PET (`SilenciadorPET`, 140) | bancada | 1 garrafa de refrigerante, 1 fita | `a9` nível 1 | barulho −60%, dano −5%; 15 tiros, e se desfaz (com o aviso) |
+  | Silenciador de filtro de óleo (141) | oficina | 4 sucatas, 1 fita | `a9` nível 2 | barulho −50%, dano −5%; 80 tiros |
+  | Mira de ferro ajustada (`MiraDeFerro`, 142) | bancada | 2 sucatas | `a5` nível 1 | espalha −15% (sempre) |
+  | Mira de ponto caseira (143) | oficina | 3 sucatas, 1 fita, 1 par de pilhas | `a5` nível 2 | mirando: espalha −30%, e a câmera vai para o tubinho, com o pontinho vermelho |
+  | Luneta de cano (144) | oficina | 5 sucatas, 2 fitas | `a7` | só no rifle; mirando: 2,5× (o FOV 31,3°) e espalha −60%, com a tela da luneta da sniper |
+  | Carregador estendido (145) | bancada | 4 sucatas, 1 fita | `a6` | a pistola de 1 para 3 tiros; a submetralhadora de 20 para 32 |
+  | Cano reforçado I, II, III (146 a 148) | I na bancada; II e III na oficina | 4 sucatas + 1 fita / 6 + 2 fitas / 8 sucatas + 2 peças de metal | `a4` níveis 1, 2 e 3 | dano +8/+16/+24%; desgaste +10/+20/+30% |
+
+  - Não existe garrafa vazia como item: a PET é a garrafa de refrigerante (dois litros); nem filtro de óleo nas peças do
+    carro: ele sai da sucata. A pilha entrou na mira de ponto (o pontinho acende).
+  - A receita pede o nível do nó (`Receita.nivel`: "Precisa de Silenciador caseiro no nível 2 (K)"; na aba Criar, "[Miras
+    caseiras 2]").
+  - **A Mola nova** (`a8`): as de sucata emperram 25% menos por nível (o `DadosDaArma.emperra`). **O Mestre armeiro**
+    (`a10`): elas batem como as reais (o 75% sai: a pistola de sucata tira 15) e as receitas do Armeiro de sucata (as
+    armas, as munições e as melhorias) gastam 25% menos sucata, para cima (`Receitas.Gasta`, `InventarioJogador.GastaDe`:
+    a pistola 5 em vez de 6, a submetralhadora 9, o rifle 8; a munição continua igual).
+  - O espalhamento das miras entra no tiro (`ArmaJogador.Abertura`, `Melhorias.FatorDaMira`): a de ferro sempre; mirando,
+    a melhor entre ela, a de ponto e a luneta; o rifle de quadril (sem mirar) não melhora.
+- **O que está posto fica na arma**: os bits do `cores` do item (o mesmo campo das cores da roupa: nas armas ele estava
+  vazio), que o chão, a estante, a mochila no chão, o personagem salvo e o mundo salvo já levavam. Os bits: 0–1 o
+  silenciador, 2 a mira de ferro, 3–4 a mira de cima (a de ponto ou a luneta), 5 o carregador, 6–7 o cano reforçado e
+  8–15 os tiros do silenciador. O `ReceberIgual` (a mochila do chão) passou a levar o campo também.
+- **Pôr e tirar** (`InventarioJogador.Melhorias.cs`): o anfitrião confere a bancada perto (a oficina vale), a arma de
+  sucata e se a peça serve (a luneta só no rifle; o carregador não vai no rifle; as reais não aceitam nenhuma); pôr gasta
+  a peça, e a que estava no mesmo lugar volta para a mochila (o outro silenciador, a mira de ponto e a luneta, o outro
+  cano); tirar devolve. O silenciador solto guarda os tiros que já deu no desgaste do item ("Ainda dá: 12 tiros"), para
+  não voltar novo. Tirar o carregador estendido com o pente cheio devolve as balas a mais numa caixa (e o pente guardado no
+  anfitrião passou a caber o estendido: o `GuardarPenteRpc` cortava em 1). Desmontar a arma devolve as peças.
+- **O silenciador conta os tiros no anfitrião** (`TiroDaMaoNoAnfitriao`, chamado onde o tiro já chamava os zumbis: o do
+  anfitrião e o `TiroRpc` dos outros). O barulho é o raio do `JogadorRede.RaioDoMeuTiro` (agora público), com o que está
+  posto na arma da mão; o som do tiro sai mais baixo (45% e 50%) e chega menos longe, para todos.
+- **O painel** (`TelaDoInventario.Melhorias.cs`): a aba Criar ganhou a barra RECEITAS | MELHORIAS DAS ARMAS. Nas
+  melhorias, as armas de sucata da mochila (a da mão primeiro) e, da escolhida, o Cano, a Mira, o Carregador e o
+  Reforço: à esquerda o que está posto (o clique tira), à direita as peças da mochila que servem (o clique põe; "troca a
+  posta"). Longe da bancada, só dá para ver. Os detalhes, à direita, mostram a arma escolhida com a foto das peças postas
+  e a lista embaixo da foto. O detalhe das peças soltas diz onde vão, o que fazem e, no silenciador, os tiros que ainda dá.
+- **Os modelos** (do `Blender/Armas/sucata_acessorios.py`): `Art/Armas/Modelos/Sucata_Acessorios.fbx` (as peças no
+  espaço de cada arma) e `Art/Characters/Jogador/Loot_Acessorios.fbx` (os 9 itens; as malhas `Malhas/Loot_<Peça>`). O
+  menu **Zombie City Cleaner > Armas > Montar as melhorias de sucata** (`Editor/Armas/MontagemDasMelhorias.cs`) importa
+  os dois, mede os encaixes (o espaço da arma no osso `gun` e no `mag` dos braços, o bindpose vezes o encaixe medido na
+  `FP_Bracos_Sucata_*`, e nas peças `TP_Sucata_*` do corpo, todos com menos de 0,2 mm de erro), faz os braços e a arma
+  solta sem o carregador curto (`Malhas/FP_Bracos_Sucata_*_SemCarregador`, `Arma_Sucata_*_SemCarregador`: o estendido vai
+  no lugar dele, que senão brigava na mesma superfície), os ícones e as fotos dos 9 itens (`Art/UI/Icones`), a foto de cada
+  arma com espaço para as peças e uma foto de cada peça por cima, no mesmo enquadramento (`Art/Armas/Melhorias`), o
+  material do pontinho (sem luz) e o `Resources/MelhoriasDaSucata.prefab` (o `PecasDasMelhorias`). As fotos saem com a
+  qualidade Mobile: na PC, o fundo da câmera de prévia saía de uma cor só e a transparência se perdia (a qualidade volta
+  sozinha). O `JuntarDaSucata` também procura no `Loot_Acessorios.fbx`.
+- **Onde aparecem** (`Combat/PecasDasMelhorias.cs`): nos braços de primeira pessoa (filhas do osso `gun`, o estendido no
+  `mag`, e a boca do cano, de onde sai o clarão, vai para a ponta do silenciador), no corpo (na `P_Sucata_*_corpo`; o
+  carregador curto do corpo fica com o `forceRenderingOff`), no item do chão e na estante, e na foto do detalhe. As cenas
+  e o prefab do jogador ainda não têm os 9 itens: o `ItensNoMundo.MalhaDoLoot` e o `IconeDe`/`FotoDe` buscam no prefab
+  de `Resources` o que falta.
+- **A mira de ponto** (`ArmaJogador.Melhorias.cs`, `MirarPeloPonto`, no LateUpdate): mirando, os braços vão (em ~0,2 s)
+  até o olho ficar no eixo do tubinho, na câmera dos braços: a pistola com o braço estendido (o olho 28 cm atrás do
+  tubinho), a submetralhadora e o rifle com o rosto na coronha (18 e 16 cm). O tiro sai do meio da tela, onde o pontinho
+  fica. Recarregando, ou na terceira pessoa, eles voltam. **A luneta** usa o zoom e a tela da luneta da sniper (o
+  `fovLuneta` dos números com a melhoria; o `ZombieManager` também a vê, para o nível de detalhe dos zumbis longe).
+- **Os números com as melhorias** saem do `Melhorias.Dados(arma, bits, mola, mestre)` (guardados num dicionário):
+  o `ArmaJogador.Dados` é o da arma da mão, com as peças dela e as habilidades de quem atira.
+- **A rede** foi para a versão 16 (os RPCs de pôr e tirar).
+- **O F1** (a aba "Habil."): "Melhorias: nós" (o Armeiro de sucata inteiro no máximo, sem conferir os pedidos), "Melhorias:
+  peças" (uma de cada), "Mat. melhorias" (40 sucatas, 10 fitas, 2 garrafas de refrigerante, 2 pares de pilhas e 4 peças de
+  metal) e "Painel melhorias" (abre a aba Criar nas melhorias). Para o teste pelo MCP, com o Editor sem o foco (o mouse e
+  o teclado não chegam): `ArmaJogador.MirarNoTeste`, `CliquesNoTeste`, `RecargasNoTeste` e `TelaDoInventario.FecharTela`.
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7; três partidas): sem o `a9` a receita pede a habilidade e, no
+  nível 1, o filtro pede o 2; as 9 receitas na mesa de oficina (29 sucatas com o Mestre, eram 32); pôr e tirar (o PET
+  trocado pelo filtro volta, o cano III no lugar do I, a mira de ferro com a luneta, a luneta e o carregador recusados onde
+  não servem, a pistola real recusada); o personagem salvo e lido de volta com as peças; a pistola no chão com as peças
+  (a malha sem o carregador curto) e de volta à mão igual; **o barulho** (o raio que os zumbis ouvem) 43,75 m sem nada,
+  17,5 m com o PET (40%) e 21,9 m com o filtro (50%); **o espalhamento** da pistola 0,39° → 0,33° com a mira de ferro e
+  0,27° mirando com a de ponto, o rifle 0,30° mirando → 0,21° com a de ponto e 0,12° na luneta (o FOV 31,3°, 2,5×), a
+  submetralhadora 1,17° → 0,995° (ferro) e 0,82° (ponto, mirando); **o dano** num Oco (um tiro na barriga): a pistola de
+  sucata com o Mestre 15,00 (como a real), com o filtro e o cano III 17,67 (×1,178) e sem o Mestre 13,25 (×0,75); **o
+  pente** 3 na pistola e 32 na submetralhadora, e tirar o estendido com 3 deixou 1 e devolveu 2 pregos; **o PET** se
+  desfez no 15º tiro; o pontinho no meio da tela (0,500; 0,500) mirando com a de ponto nas três. As fotos (a primeira
+  pessoa parada e mirando em 7 combinações, de noite e de dia, o corpo de frente e de lado, o chão, o painel e a tela da
+  luneta) ficaram no scratchpad da sessão. Os testes de modo editor do saque, das lojas e dos moradores passam (18). Falta
+  o Pedro jogar e o teste com dois jogadores (as peças no corpo do outro e o som abafado de longe).
+
+## A proteção de sucata, etapa 3 (11/11/2026)
+
+A etapa 3 da árvore nova (o plano aprovado pelo Pedro): o ramo Proteção de sucata da Resistência deixou de ser "em
+breve" (do `p1` ao `p5`). Quatro peças fabricadas, vestidas num grupo novo da tela (PROTEÇÃO), que cortam o golpe na
+parte do corpo que cobrem e se gastam com ele. Nenhuma cena nem o prefab do jogador mudaram: as peças são postas no Play,
+do `Resources/ProtecaoDeSucata.prefab`.
+
+- **Os números** (`Player/Protecao.cs`, as constantes no topo, para o Pedro ajustar):
+
+  | Peça (item) | Onde | Receita | Nó | Corta | Aguenta | Outro efeito |
+  |---|---|---|---|---|---|---|
+  | Capacete de panela (`Capacete`, 150; 2 × 2) | bancada | 3 sucatas, 1 fita, 1 corda | `p1` | 35% na cabeça | 150 de golpe | tira o chapéu |
+  | Colete de chapa (151; 2 × 3) | mesa de oficina | 8 sucatas, 2 fitas, 1 pneu | `p3` | 30% no tronco | 250 | anda 4% mais devagar; passos +15% |
+  | Braçadeiras de sucata (152; 2 × 1) | bancada | 4 sucatas, 2 fitas | `p2` | 30% nos braços | 150 | — |
+  | Caneleiras de sucata (153; 2 × 2) | bancada | 4 sucatas, 2 fitas | `p2` | 30% nas pernas | 150 | passos +10% |
+
+  - **O desgaste** (o `desgaste` do item, 0 a 100, como nas armas; o `Itens.ComDesgaste` inclui as peças): cada golpe
+    que a peça segura gasta dano × 100 ÷ "aguenta" (pelo menos 1%); a mordida do Oco (12) gasta 8% do capacete, das
+    braçadeiras e das caneleiras e 5% do colete. Em 100 ela quebra: segura aquele golpe e depois não protege (o lugar
+    mostra "quebrado"). O par (as braçadeiras, as caneleiras) tem um desgaste só.
+  - **Os golpes que ela segura** (`Protecao.Segura`): a mordida, o corte, a pancada, o tiro e o esmagamento. A queda, o
+    tornado e o raio passam inteiros.
+  - **O Remendo de chapa** (`p4`, 2 níveis): as peças se gastam 25% menos por nível (a mordida no capacete: 8 → 6 → 4%).
+    **O conserto** com o kit de reparo vale para todos (`Protecao.ConsertoPedeORemendo = false`: o "e se consertam com o
+    kit" do plano ficou como o conserto de sempre; mude para true se for só com o nó): na peça vestida (o botão direito no
+    lugar dela, "Consertar") ou na mochila ("Reparar", como as armas); o Reparador também poupa o kit aqui.
+  - **A Couraça** (`p5`): a ferida nova que a mordida abre numa parte coberta por uma peça inteira não infecciona (fica
+    "coberta", o `_coberta` do corpo, como a do antibiótico: não entra nos sorteios da infecção); ela ainda sangra.
+  - **O pneu do colete**: o pneu de carro (a roda inteira, 3 × 3) é a borracha. A receita gasta o mais gasto da mochila
+    (o rasgado, que não tem remendo, primeiro: o `TirarQuantos` agora prefere o menor estado nas peças com estado).
+- **Vestir** (`InventarioJogador.Protecao.cs`, a `NetworkVariable<ProtecaoVestida> Protecao`, escrita pelo anfitrião):
+  como as roupas, a peça da mochila vai para o lugar dela e a que estava lá volta para a mochila (na célula da vestida,
+  se couber). **O capacete e o chapéu não vão juntos** (a decisão desta etapa): vestir o capacete manda o chapéu para a
+  mochila (sem espaço, para o chão), e vestir um chapéu manda o capacete (sem espaço para ele, o chapéu não é vestido). O
+  golpe passa pelo `InventarioJogador.ProtegerDoGolpe`, chamado no `VidaJogador.Ferir` depois de sortear a parte. Na
+  morte, as peças vão para a mochila do chão, com as roupas.
+- **A tela** (`TelaDoInventario.Protecao.cs`): o grupo **PROTEÇÃO** é uma fileira de 4 lugares (44 px) embaixo do retrato,
+  acima dos ATALHOS: o retrato ficou com 338 de altura (era 392), as roupas em volta dele com 48 px e o passo 66 (eram 54
+  e 74), e os atalhos desceram para y = 506 (era 478). Cada lugar mostra o ícone, a barra do desgaste e "quebrado". Vestir
+  arrastando para o lugar ou para o retrato, ou "Vestir" no menu (que avisa do chapéu); tirar arrastando para a grade ou
+  para fora da janela (larga), G larga a escolhida; o menu do lugar tem Tirar, Largar e Consertar. Os detalhes mostram o
+  que a peça cobre, quanto corta, o peso e o barulho, e o estado.
+- **O peso e o barulho**: o `MovimentoPrimeiraPessoa` multiplica a velocidade por `Protecao.FatorDaVelocidade` (0,96 com
+  o colete); o `Protecao.FatorDosPassos` (1 + 0,15 do colete + 0,10 das caneleiras) entra no alcance dos passos para os
+  zumbis (o `passos` do alvo, correndo, e o respingo da poça), no ouvido dos sobreviventes e no volume do som dos passos.
+- **Os modelos** (do Blender, a etapa 3 e 4, no scratchpad da sessão): `Art/Characters/Jogador/Protecao_Sucata.fbx` (as 6
+  peças do corpo, `Protecao_Capacete`, `_Colete`, `_Bracadeira.L/.R` e `_Caneleira.L/.R`, cada uma no espaço do osso
+  dela, com a forma "Mulher") e `Art/Characters/Jogador/Loot_Etapa34.fbx` (os itens soltos `Item_<modelo>_corpo`; o
+  lampião, o molotov e o kit da fogueira são da etapa 4 e ainda não entram). O menu **Zombie City Cleaner > Habilidades >
+  Montar a proteção de sucata** (`Editor/MontagemDaProtecao.cs`) importa os dois, junta os 4 itens
+  (`Malhas/Loot_Capacete`...), faz os ícones e as fotos (`Art/UI/Icones/Icone_Capacete`...) e o
+  `Resources/ProtecaoDeSucata.prefab` (o `PecasDaProtecao`). **As malhas do corpo chegaram com o Z para cima do Blender**
+  (a caixa do json é a da malha com (x, −z, y)): a peça vai no osso com o giro de 90° no X (o `PecasDaProtecao.giro`); a
+  caixa girada bate com a do json (o relatório da montagem mostra).
+- **Onde aparecem**: no corpo de todos (`Player/ProtecaoNoCorpo.cs`, posto pelo `VidaJogador`, como os curativos: filhas
+  dos ossos `head`, `chest`, `forearm.L/R` e `shin.L/R`, num `SkinnedMeshRenderer` sem ossos, que faz a forma "Mulher" a
+  100 no corpo da mulher; no dono, só a sombra na primeira pessoa); no retrato do inventário (uma cópia, no material do
+  retrato); nos braços de primeira pessoa (as braçadeiras, no `RoupasNosBracos`: filhas do antebraço de ajuda que estica,
+  na camada dos braços); no chão e na estante (o `ItensNoMundo.MalhaDoLoot`) e nos ícones (o `IconeDe`/`FotoDe` buscam
+  no prefab de `Resources` o que as cenas ainda não têm). **O capacete troca o cabelo** pela versão de baixo do chapéu (a
+  `Vestimenta.capacete`, posta pelo `JogadorRede.AplicarAparencia`). As caneleiras ficaram largas (parecem baldes, por
+  cima da calça mais grossa): ficou como está, o Pedro decide.
+- **A rede e o save**: a versão da rede foi para a 17 (a `Protecao`, os RPCs de vestir, tirar, largar e consertar, e o
+  `PacoteDoPersonagem.protecao`). O personagem salvo leva `protecao` e `desgasteDaProtecao` (um save de antes entra sem
+  nada vestido).
+- **O F1** (a aba "Habil."): "Proteção: nós" (do `p1` ao `p5` no máximo), "Proteção: peças" (as 4), "Mat. proteção" (20
+  sucatas, 10 fitas, 1 corda, 1 pneu e 2 kits de reparo) e "Gastar proteção" (as vestidas a 5%, para testar o conserto).
+  Para o teste pelo MCP: `TelaDoInventario.AbrirNaMochila(lugar)`.
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7; duas partidas; 40 conferências, nenhuma falha): sem os nós as
+  4 receitas pedem a habilidade; com eles, as 4 na mesa de oficina gastaram 19 sucatas, 7 fitas, a corda e o pneu
+  rasgado (o bom ficou); o chapéu e o capacete trocando nos dois sentidos; as 6 peças nos ossos certos; **o corte**
+  (golpe direto de 12): a cabeça 12 → 7,80 (35%), o tronco, o braço e a perna 12 → 8,40 (30%); o tiro de 30 no tronco tirou
+  21 (o colete gastou 12%); a queda de 5 passou inteira; **o desgaste** da mordida de 12: 8% (5% no colete), 6% e 4% com o
+  Remendo 1 e 2; quebrado, o golpe seguinte tirou 12; o conserto (vestido e na mochila) gastou um kit cada; **a Couraça**:
+  6 feridas de mordida no braço coberto, 6 sem infecção (sem ela, 0 de 3); **um Oco de verdade** bateu 5 vezes (2 no
+  tronco, 3 nos braços): a vida 100 → 57, as braçadeiras +12% e o colete +4% (com o Remendo 2); o fator da velocidade 0,96
+  e o dos passos 1,25; o personagem salvo e lido de volta pelo JSON com as peças e o desgaste; a forma Mulher a 100 nas
+  peças da mulher; a braçadeira na primeira pessoa (no `forearm.L (esticado)`). As fotos (o homem e a mulher, com e sem a
+  jaqueta, de frente, de costas e a cabeça; a primeira pessoa com as mãos, o rifle, mirando, o bastão e com a jaqueta; os
+  braços com a jaqueta de perto; o painel) ficaram no scratchpad da sessão. Os testes de modo editor do saque, das lojas e
+  dos moradores passam (18). Falta o Pedro jogar e o teste com dois jogadores (as peças no corpo do outro).
+
+## O fogo, etapa 4 (11/11/2026)
+
+A etapa 4 da árvore nova (o plano aprovado pelo Pedro): o ramo Fogo da Resistência deixou de ser "em breve" (do `f1` ao
+`f7`). Três peças novas (o lampião, o coquetel molotov e o kit da fogueira portátil) e os efeitos na tocha, na mente e nos
+zumbis. Nenhuma cena nem o prefab do jogador mudaram: os braços de primeira pessoa, as malhas do corpo, os itens e a
+fogueira montada vêm do `Resources/ItensDoFogo.prefab` e são postos no Play.
+
+- **Os números** (`Player/FogoDoJogador.cs`, as constantes no topo; os raios dos zumbis no `AjustesDeZumbi`, "O fogo, etapa
+  4"). Os minutos são de relógio (o tempo jogado: uma hora do jogo é um minuto, e "15 min de jogo" a 1 min por hora daria
+  15 s; a fogueira portátil de "1 h de jogo" queimaria menos que uma madeira na de lenha):
+
+  | Nó | O que faz |
+  |---|---|
+  | `f1` Tocha duradoura (2) | a tocha dura 50% mais por nível (6 → 9 → 12 s por 1% de desgaste) |
+  | `f2` Lampião | destrava a receita; na mão, a luz quente de 10 m e os zumbis fotossensíveis na beira, a 4 m (`raioDoLampiao`); 15 min por carga; a chuva não o apaga; o clique só o balança |
+  | `f3` Coquetel molotov | destrava a receita; o clique arremessa (15 m/s; a mira mais alta vai mais longe); ao quebrar, uma área de 2,5 m por 8 s |
+  | `f4` Fogueira portátil | destrava o kit; montada, queima 60 min e segura os zumbis a 8 m, como a de lenha; o E recolhe |
+  | `f5` Fogo que pega (2) | o molotov e a tocha queimam 30% mais tempo por nível, e a área do molotov fica 20% maior (2: 3,5 m por 12,8 s) |
+  | `f6` Calor do fogo (2) | a menos de 4 m de um fogo aceso (a fogueira, o lampião, a tocha, o molotov), a mente sobe 2 por hora por nível (o motivo "CALOR DO FOGO" no HUD) |
+  | `f7` Muralha de fogo | o fogo do jogador segura os zumbis 50% mais longe (a tocha e o lampião a 6 m, a fogueira e o molotov a 12 m) e quem está dentro foge em pânico (`distanciaDoPanico` 6 m além da beira, a 4 m/s, larga quem caçava e grita) |
+
+- **As receitas** (`Loot/Receitas.cs`, o `F(...)`; a receita nova tem o `combustivel`): **1 combustível** é 1 álcool (o
+  `Desinfetante`) ou, sem ele, meio litro de gasolina do galão mais cheio (`LitrosPorCarga`; o `InventarioJogador.Fogo.cs`
+  confere e gasta; a tela mostra "1 combustível" e, nos detalhes, "1 combustível (álcool ou 0,5 L de gasolina)"). Não
+  existe vidro como item: a garrafa é a de refrigerante (como no silenciador PET).
+
+  | Peça (item) | Onde | Receita | Tamanho |
+  |---|---|---|---|
+  | Lampião (`Lampiao`, 154) | mesa de oficina | 3 sucatas, 1 garrafa de refrigerante, 1 combustível | 2 × 2 |
+  | Coquetel molotov (`Molotov`, 155) | bancada | 1 garrafa de refrigerante, 1 combustível, 1 pano | 1 × 2 |
+  | Kit da fogueira portátil (`KitFogueira`, 115) | bancada | 3 madeiras, 1 corda, 1 combustível | 2 × 2 |
+
+- **O lampião** (`InventarioJogador.Fogo.cs`, `JogadorRede.Fogo.cs`, `ItensNoMundo.Lampiao.cs`): o desgaste é o combustível
+  que já foi (0 cheio, 100 vazio). Aceso só na mão (com combustível; no carro, escondido como a tocha: o
+  `JogadorRede.LampiaoAceso`); o anfitrião gasta. "Reabastecer" no botão direito da mochila gasta 1 combustível. A chuva e
+  a gosma não o apagam. **Largado da mão aceso** (G), ele fica aceso no chão (o `qtd` 1000, o `LampiaoAcesoNoChao`) até a
+  carga acabar, segurando os zumbis a 4 m (com a Muralha do dono, que o anfitrião guarda); pego de volta, vai apagado para a
+  mochila. A luz que se vê é a do corpo (10 m, também no dono), como a da tocha; nos braços, uma chama pequena na boca.
+- **O molotov** (`ArmaJogador.Fogo.cs`, `ConstrucoesNoMundo.Molotov.cs`, `ZombieManager.Fogo.cs`, `Zumbi.Queimar.cs`): o
+  clique toca o soco direito dos braços dele (o arremesso) e, no quadro 8 (0,29 s), o dono manda a origem (à frente do olho,
+  sem atravessar a parede) e a direção (a mira mais 0,18 para cima); o anfitrião tira a garrafa, põe a próxima na mão e a
+  joga: o arco com a gravidade, conferido a cada quadro (uma esfera de 5 cm; os jogadores perto da saída não a quebram), e
+  as outras máquinas veem a mesma conta. Onde bate (a parede derruba o fogo no chão embaixo), quebra (o vidro e a labareda,
+  `Combat/SomDoFogo.cs`, gerados por código) e acende a **área de fogo**, a cada 0,25 s:
+  - os zumbis dentro levam 25 por segundo e **pegam fogo**: continuam queimando 4 s depois de sair (15 por segundo; o Fogo
+    que pega aumenta), com a chama no corpo em todas as máquinas (`PegouFogoRpc`). O fogo não os marca como feridos (o
+    ferido entra no fogo) nem os faz caçar quem jogou; quem mata ganha o XP. O Brutamonte não queima (a casca);
+  - para os zumbis, a área é um fogo de 8 m (`raioDoMolotov`), como uma fogueira: quem está dentro recua até a beira;
+  - os moradores (os sobreviventes) dentro levam 12 por segundo (com o autor: o acampamento fica hostil) e saem correndo
+    para fora (o `Sobrevivente.Fogo.cs`, antes de qualquer outra decisão); os jogadores (todos, até quem jogou) levam 8 por
+    segundo ("Queimou-se.");
+  - na chuva, fora de um teto, o tempo dela corre 1 + 2 × a chuva (a chuva de 0,62: ~2,2 vezes).
+- **A fogueira portátil** (o tipo `KitFogueira` no `ConstrucoesNoMundo`; o `Itens.EhFogueira` vale para as duas onde a de
+  lenha valia: acender, a chuva, o save, os zumbis, o Long da fogueira, a mente e assar o peixe): montada como a de lenha,
+  com o modelo novo e o fogo no vazio `Fogo` dela. Ela não é montada na chuva fora de um teto (o kit fica na mochila). **O E
+  recolhe** (a decisão desta etapa): acesa, volta o kit com a lenha que sobrou (o desgaste do kit é a lenha que já foi:
+  montado de novo, queima o resto); apagada (a lenha acabou, a chuva ou a gosma), a lenha virou cinza e sobra só a corda.
+  Com a tocha apagada na mão, o E nela acesa reacende a tocha. Ela não aceita mais lenha.
+- **Onde aparecem**: os braços de primeira pessoa (`Jogador_FP_Lampiao.fbx` e `_Molotov.fbx`, com os controladores
+  `Jogador_FP_Lampiao/Molotov.overrideController`: o soco direito no tiro, o esquerdo no gatilho sem bala) entram no Play
+  depois dos outros (`Itens.LampiaoFP` e `MolotovFP`, no `ArmaJogador.modelos`, `animadores`, `bocas` e nos
+  `JogadorRede.pintaveis`, com a pele do personagem). A chama nos braços não usa o vazio `Boca_FP_` do FBX (ele é animado e
+  fica a 38 cm da mão, como o da tocha): a montagem acha o ponto nas malhas (a fatia da malha do item no osso que o segura:
+  no lampião, 70% do caminho da mão até o fundo, dentro do vidro; no molotov, a ponta do gargalo, no osso `garrafa`) e o
+  guarda no prefab (`ossoDaChama`/`chamaNosBracos`, `ossoDoPavio`/`pavioNosBracos`); o pano aceso some no quadro 8, com a
+  garrafa. No corpo, no lugar da tocha (as poses dela: o `Tocha_Segurar` e o
+  `Tocha_Golpe`), com a malha do `Fogo.fbx` e a pegada do `Fogo_MaoDoCorpo.json` (o `Peca_Lampiao` e o `Peca_Molotov`,
+  filhos do `Arma_Tocha`); no chão, na estante e nos ícones, os do `Loot_Etapa34.fbx` (o `ItensDoFogo.MalhaDoItem`,
+  `IconeDo`, `FotoDo`, depois dos da proteção). O menu **Zombie City Cleaner > Habilidades > Montar o fogo**
+  (`Editor/MontagemDoFogo.cs`) importa tudo, faz os controladores, as malhas `Malhas/Loot_Lampiao`..., os ícones e as fotos
+  e o `Resources/ItensDoFogo.prefab`.
+- **A rede e o save**: a versão da rede foi para a 18 (as receitas novas, o arremesso, o reabastecer, as áreas e o fogo no
+  corpo). O save não mudou: o lampião e o kit guardam a carga no desgaste; a fogueira portátil vai com as construções (os
+  segundos que faltam); as áreas do molotov e o lampião aceso no chão não vão (o lampião volta apagado).
+- **O F1** (a aba "Habil."): "Fogo: nós" (do `f1` ao `f7` no máximo, e os Nervos de aço), "Fogo: peças" (o lampião, 3
+  molotovs e o kit), "Mat. fogo" (6 sucatas, 2 garrafas, 2 álcoois, 2 panos, 3 madeiras, 1 corda e um galão cheio) e
+  "Molotov na frente" (uma área de fogo a 6 m, como a do jogador). Os três itens também estão na lista "Materiais".
+- **Os retoques de animação** (11/11/2026): os `Jogador_FP_Lanca/Machado/Bastao.fbx` regravados (os pulsos e a lâmina do
+  machado aparecendo no acerto) importaram sem erro, com os mesmos clipes e quadros (Idle 48, Walk 18, Run 14, Sacar 12,
+  Golpe 14, os socos 10); os braços no prefab são instâncias dos FBX, então pegaram sozinhos (a montagem não precisou rodar).
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7, de noite; três partidas; 50 conferências e 0 erros; a da mente, que
+  falhou na primeira por medir logo depois de matar a horda, foi refeita na segunda com a medida estável): sem os nós, as 3 receitas pedem a habilidade; com eles, na mesa de oficina: o lampião e o molotov gastaram os 2
+  álcoois e o kit, sem álcool, meio litro do galão (10 → 9,5 L); os braços do lampião no lugar 19 (21 modelos), a chama na
+  boca, o lampião no corpo (no `Arma_Tocha`, no `hand.R`) com a luz de 10 m; **o lampião segurou 3 Ocos** a 4,5 m por 16 s
+  (0 de dano; um entrou até 4,1 m por um instante, entre um pensar e outro); **o arremesso**: olhando reto, a área nasceu a
+  13,7 m e, 15° para cima, a 21,7 m, com 2,5 m de raio, 8,0 s e o fogo de 8 m para os zumbis; a garrafa seguinte foi para a
+  mão; **um molotov num grupo de 6** (a 10–11 m): 3 a 4 dentro na hora, cada um levou 65–71 (o fogo de 25/s e o de 15/s
+  depois de sair), nenhum morreu, e os outros ficaram a 7,8 m do fogo; **com o Fogo que pega 2** (3,5 m, 12,8 s), os 4 que
+  estavam dentro morreram (101–103); o jogador no fogo perdeu 24 em 3 s; **a Muralha**: a área a 12 m e o lampião a 6 m,
+  com pânico (os Ocos fugiram para 6–13 m); **a fogueira portátil**: montada, acesa por 60,0 min, o fogo de 8 m, o modelo
+  novo; recolhida acesa, o kit voltou (desgaste 1); recolhida apagada, sobrou a corda; **o Calor do fogo 2**, perto dela:
+  a mente subiu 7,9 por hora (sem ele, 4,1): +3,8; **a tocha**: 2% em 12 s sem a Tocha duradoura e 1% com ela no 2 (6, 12 e,
+  com o Fogo que pega 2, 19,2 s por 1%); **na chuva** (0,62, no aberto): a tocha apagou, o lampião ficou aceso 25 s, e a
+  área do molotov durou 3,8 s (o esperado, 3,6); **o lampião largado aceso** continuou aceso no chão (o fogo `20000x` de 4 m)
+  e voltou apagado para a mochila. A primeira partida achou um defeito: a garrafa quebrava na saída, no próprio corpo de
+  quem jogava (as partes do corpo não são da camada do jogador), e o fogo nos pés o matou ("Queimou-se."): consertado (os
+  colisores de um `JogadorRede` perto da saída não contam). As fotos mostraram mais dois: a chama dos braços longe da
+  garrafa (o vazio animado; consertado como acima) e o fogo do molotov ralo (agora um tapete de 12 a 24 chamas). O fogo
+  depois de sair subiu de 10 para 15 por segundo (com 10, um Oco que estava dentro levava 54–66). Os testes de modo editor do saque, das lojas e dos moradores
+  passam (16). As fotos (a primeira pessoa com o lampião, o molotov e o arremesso, o lampião no corpo, a área de fogo, o
+  molotov no grupo, a fogueira portátil, o lampião no chão e o golpe do machado) ficaram no scratchpad da sessão
+  (`etapa4_unity`). **Não conferido:** dois jogadores (o arremesso e as áreas vistos por um cliente, o lampião de outro
+  jogador), um morador no fogo (não havia nenhum no mapa pequeno) e o Pedro jogando.
+
+## As armadilhas, etapa 5a (11/11/2026)
+
+A etapa 5a da árvore nova (o plano aprovado pelo Pedro): o ramo Armadilhas e defesas da Sobrevivência deixou de ser "em
+breve" nos nós `t1`, `t3`, `t4`, `t5` e `t6`; a Barricada de tábuas (`t2`) e a Fortaleza (`t7`) ficam "em breve" para a
+etapa 5b (descritas na árvore). Quatro peças montadas no chão, como a barricada, na mesma lista da rede
+(`Loot/ConstrucoesNoMundo`). Nenhuma cena nem o prefab do jogador mudaram: as malhas, os ícones e as fotos vêm do
+`Resources/ItensDasArmadilhas.prefab` e são postos no Play.
+
+- **Os números** (`Player/ArmadilhasDoJogador.cs`, as constantes no topo, para o Pedro ajustar):
+
+  | Nó | Peça (item) | Onde | Receita | O que faz |
+  |---|---|---|---|---|
+  | `t1` Alarme de latas | alarme de latas (`AlarmeLatas`, 156; 2 × 2) | bancada | 2 sucatas, 1 corda, 1 madeira | quem cruza o barbante (1,6 m no X, a menos de 0,35 m) em pé faz as latas tocarem: o som (35 m), os zumbis a 12 m vêm ver e o dono recebe o aviso (até 60 m, com a distância e o lado); rearma em 4 s; 12 toques, e o último arrebenta o barbante (sobra 1 sucata) |
+  | `t2` Barricada de tábuas (2) | — | — | — | veio na etapa 5b (veja "As barricadas e a Fortaleza, etapa 5b") |
+  | `t3` Tapete de pregos | tapete de pregos (`TapetePregos`, 157; 3 × 1) | bancada, com a ferramenta | 1 madeira, 12 pregos | o zumbi que pisa leva 20 (uma vez por passagem) e anda a 50% por 4 s; o morador leva 20; o jogador andando ou correndo (o dono também), 6 na perna (um corte), e agachado passa; a roda do carro fura o pneu; 8 usos (cada zumbi, morador e pneu; o jogador não gasta), e gasto ele some (sobram 4 pregos) |
+  | `t4` Estacas | estacas (`Estacas`, 158; 4 × 1) | bancada, com a ferramenta | 4 madeiras, 1 corda | seguram como a barricada (o colisor e o buraco no NavMesh); cada zumbi engajado encostado na frente (as pontas, +Z) leva 12 por segundo; a vida (100) cai como a da barricada, na metade do ritmo; o Brutamonte as quebra, mas leva 60; quebradas, 2 madeiras |
+  | `t5` Armadilheiro (2) | — | — | — | as armadilhas do dono: +50% de usos e de vida (e de tempo na cerca) e +25% de dano por nível; no 2, o tapete dele não fere jogadores |
+  | `t6` Cerca de fogo | cerca de fogo (`CercaFogo`, 159; 2 × 2) | bancada | 1 pano, **2 combustíveis** | o galão com o pavio e um rastro de 4 m para +Z; acesa, o fogo corre do pavio até a ponta (1 s) e queima 90 s; os zumbis não atravessam e quem atravessa queima como no molotov |
+  | `t7` Fortaleza | — | — | — | veio na etapa 5b (veja "As barricadas e a Fortaleza, etapa 5b") |
+
+- **A construção** (`Construcao`): ganhou o `nivel` (o Armadilheiro do dono quando montou, de 0 a 2), que vale para os
+  usos, a vida e o dano dela; o anfitrião decide tudo, sem precisar do dono na partida. O `valor` é o que resta: o alarme,
+  os toques; o tapete, os usos; as estacas, a vida (100 × o fator); a cerca, 0 apagada ou o fim do fogo no relógio do
+  servidor (como a fogueira). O kit que volta para a mochila guarda no `desgaste` o que já foi (montado de novo, ele tem só o
+  resto). A versão da rede foi para a 19 (o `nivel` na struct, as receitas e o `ArmadilhaRpc`).
+- **O anfitrião** (`ConstrucoesNoMundo.Armadilhas.cs`, um tique de 0,1 s): junta quem está a menos de 3 m de um alarme ou de
+  um tapete (os zumbis, os moradores e os jogadores fora do carro e de pé) com o lugar do tique de antes, e confere o caminho
+  (o segmento, para quem corre não passar entre dois tiques) no retângulo da armadilha. Um salto maior que 2,5 m num tique é
+  um teleporte (não cruza nada). "Uma vez por passagem": quem já estava dentro no tique de antes não conta de novo. O jogador
+  conta só andando (mais de 0,5 m/s) e não agachado (o `JogadorRede.Agachado`). As estacas olham a cada 0,5 s (o `ZumbisNa`
+  da barricada e quem está na frente); a cerca, a cada 0,25 s.
+- **O dano nos zumbis** (`ZombieManager.Armadilhas.cs`, `Zumbi.Armadilhas.cs`): o `FerirPelaArmadilha` tira da vida do
+  corpo sem marcar o ferido nem fazê-lo caçar ninguém (o Brutamonte também leva; a casca de pedra protege), e o dono ganha o
+  XP de quem morrer. A lentidão dos pregos entra no `FatorDaPedra` (todas as contas da velocidade passam por ele), e o
+  `LentosAgora` devolve a velocidade no fim. O morador leva o golpe sem autor (o acampamento não fica hostil por uma
+  armadilha).
+- **O alarme**: o barulho é o `ZombieManager.Barulho` sem autor e com 12 m (a chuva abafa); as latas do modelo foram
+  separadas do resto (as ilhas da malha penduradas no meio do barbante: `Art/Armadilhas/Malhas/Alarme_Latas` e
+  `_SemLatas`) e balançam no vazio `Latas` (o `LatasBalancando`); o som é gerado por código (`Combat/SomDasArmadilhas.cs`: as
+  latas, o barbante arrebentando, os pregos e a madeira quebrando). O aviso: "As latas tocaram: a 23 m, atrás, à direita"
+  (o lado pelo corpo do dono; perto, "aqui do seu lado").
+- **O carro** (`Vehicles/Carro.Armadilhas.cs`): as rodas (o colisor de cada uma) conferidas como os pés, com o lugar do tique
+  de antes; a que cruza o tapete com o pneu bom fura (5%, como o tiro: furado com remendo, o estouro para todos), e gasta um
+  uso. A moto também passa por ali (as rodas que ela tem).
+- **A cerca de fogo** (`ConstrucoesNoMundo.CercaDeFogo.cs`): o rastro sai do vazio `Pavio` para +Z, com 17 pontos no chão
+  (cada máquina faz a mesma conta; uma parede ou um móvel no caminho o corta, a 0,25 m de altura), e vira uma faixa escura e
+  molhada (o `Art/Armadilhas/Rastro.mat`, URP Lit transparente). **O E**: apagada, recolhe; com a tocha acesa ou o lampião
+  aceso na mão, acende pelo pavio. O fogo do molotov ou de outra cerca acesa encostando no rastro também acende (uma cerca
+  encostada na outra acende em fila). Acesa: as chamas acendem do pavio até a ponta em 1 s; 5 pontos da linha são fogos
+  que seguram os zumbis (1,3 m; com a Muralha de fogo do dono, 50% mais e o pânico), e quem está a menos de 0,6 m da linha
+  queima como no molotov (os zumbis 25/s e pegam fogo; os moradores 12/s; os jogadores 8/s, "Queimou-se."). Na chuva, fora
+  de um teto, ela queima 1 + 2 × a chuva mais depressa. Ela se acende também na chuva (como o molotov). Queimada, some. Na
+  sombra de montar, o rastro de 4 m aparece junto (verde ou vermelho, como a sombra), para a direita de quem monta (o
+  `GiroDaSombra`: a cerca começa atravessada, as estacas com as pontas para longe, o resto virado para ele). O Calor do fogo
+  (`f6`) conta a linha acesa.
+- **O save**: as armadilhas vão com as construções (o `ConstrucaoSalva.nivel`; um save de antes entra com 0); **a cerca
+  acesa não vai** (o combustível queimou: ela volta gasta), a apagada vai.
+- **A árvore**: o `PodeAprender` pula um pré-requisito "em breve" (as Estacas pedem a Barricada de tábuas, que só vem na
+  5b; quando ela ficar pronta, o pedido volta a valer sozinho). As descrições dos nós usam os números do
+  `ArmadilhasDoJogador`.
+- **As receitas**: o `Receita.combustivel` virou um número (a cerca gasta 2: cada um, 1 álcool ou meio litro do galão mais
+  cheio; o `InventarioJogador.CargasDeCombustivel` conta). Não existe lata vazia como item: as latas do alarme saem da
+  sucata.
+- **A montagem** (`Editor/MontagemDasArmadilhas.cs`, o menu **Zombie City Cleaner > Habilidades > Montar as armadilhas**):
+  importa o `Art/Armadilhas/Armadilhas.fbx` (as montadas; o Y já vem para cima e a frente em +Z: não precisou girar) e o
+  `Loot_Armadilhas.fbx` (os itens), na paleta (o material Pistola); as malhas são achadas pelo nome exato (o
+  `BarricadaPorta` é o começo do `BarricadaPorta_Danificada`); junta os itens (`Art/Characters/Jogador/Malhas/Loot_AlarmeLatas`
+  ...), faz os ícones e as fotos (`Art/UI/Icones/Icone_AlarmeLatas`...) e o prefab. **Para a 5b**, o prefab já guarda as
+  barricadas de porta e de janela, inteiras e danificadas (`barricadaPorta`, `barricadaPortaDanificada`, `barricadaJanela`,
+  `barricadaJanelaDanificada`, malhas do `Armadilhas.fbx`), e o item das tábuas (`tabuasDoItem`, o
+  `Malhas/Loot_Tabuas.asset`), ainda sem uso.
+- **O encaixe** (`Cabe`): as armadilhas aceitam a rua inclinada (a caixa começa um pouco mais alto, uns 10° na ponta mais
+  longe do meio): as estacas não cabiam numa ladeira de 13%.
+- **O F1** (a aba "Habil."): "Armadilhas: nós" (o `t1`, o `t3`, o `t4`, o Armadilheiro 2 e o `t6`, com o Artesão), "Armadilhas:
+  peças" (2 alarmes, 2 tapetes, as estacas e 2 cercas) e "Mat. armadilhas" (2 sucatas, 2 cordas, 6 madeiras, 12 pregos, a
+  ferramenta, 2 álcoois e 1 pano). Os quatro itens também estão na lista "Materiais". Para o teste pelo MCP:
+  `ConstrucoesNoMundo.ResumoDasArmadilhas()`, `ToquesDasLatas`, `UltimoAvisoDoAlarme`, `PneusFurados`, `PisadasNosPregos`,
+  `AcenderCercaDeTeste(id)`, `ZombieManager.LentosPelosPregos` e `Zumbi.LentoPelosPregos`.
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7, de dia e de noite; três partidas do roteiro inteiro, a última com 46
+  conferências, 1 falha do próprio roteiro e 0 erros; mais uma só para as fotos e uma para a cerca na ladeira): sem o nó, a receita pede a habilidade, e longe da bancada,
+  a bancada; as Estacas aprendidas sem a Barricada de tábuas; as 4 receitas na bancada (a cerca gastou os 2 álcoois e o pano;
+  sem álcool, o galão de 10 → 9 L); **o alarme**: um Oco atrás do jogador cruzou o barbante e as latas tocaram (11 de 12),
+  com o aviso "As latas tocaram: a 6 m, à frente"; dois Ocos parados a 10,7 e 10,9 m foram ver (Investigando, a 6,6 e 5,7 m
+  em 3 s); o jogador andando (2 m/s) tocou ("aqui do seu lado"), agachado passou sem tocar, e ida e volta em 3 s tocou uma
+  vez (o rearme); recolhido com 9 toques, voltou o kit (desgaste 25); o de 1 toque arrebentou e deixou 1 sucata; **o
+  tapete**: três Ocos, um de cada vez, levaram 20 cada e o agente caiu de 1,08–1,16 para 0,54–0,58 m/s por 4 s (8 → 5 usos);
+  o jogador andando perdeu 6 (a perna direita) e agachado não pisou (o sangramento do corte continuou); o de 1 uso sumiu e
+  deixou os pregos; **o carro** (a perua, a 3 m/s) furou os 4 pneus (5%) e gastou 4 usos; **as estacas**: um forte de 6 em
+  volta do jogador e 5 Ocos por 21 s: 2 morreram, os outros levaram 18 a 66; as estacas da frente ficaram com 79 e 70; o mais
+  perto chegou a 2,3 m; o Brutamonte (500) levou 60,0 e as quebrou; **a cerca**: o E com o lampião aceso acendeu, e as outras
+  duas em fila acenderam pelo fogo em menos de 2,5 s; 5 zumbis (4 Ocos e um Corredor) do outro lado por 27 s: nenhum
+  atravessou nem deu a volta, nenhum queimou, e o mais perto ficou a 3,4 m do jogador (ele a 2,5 m atrás da linha); o
+  jogador dentro da linha perdeu 17 em 2,2 s; o fogo do molotov encostando acendeu uma apagada; na chuva (0,50–0,57), em 5 s
+  ela perdeu 9,3 s (o esperado, ~10); apagada, o E a recolheu; **o Armadilheiro 2**: o alarme com 24 toques, o tapete com 16,
+  as estacas com 200 e a cerca com 180 s; um Oco no tapete levou 30,0; o tapete do dono não o feriu; **o save**: o mundo
+  salvo, a partida fechada e aberta de novo: as 4 armadilhas voltaram iguais (o tipo, o lugar, o valor e o nível), e as 5
+  cercas acesas não voltaram. As partidas acharam cinco defeitos, consertados: as estacas não cabiam numa rua inclinada (o
+  `Cabe`); um teleporte por cima da armadilha contava como passada; o rastro na sombra de montar não aparecia (o material
+  escuro: agora verde ou vermelho como a sombra); numa subida, o rastro era cortado pelo próprio chão (o raio reto a 0,25 m
+  batia na ladeira, e uma cerca não acendia a outra: agora o corte é conferido de ponto em ponto pelo chão; refeito na mesma
+  ladeira, as três acenderam em fila); e o rastro brilhava branco de dia (a suavidade 0,75 refletia o céu: agora 0,25, sem o
+  reflexo do ambiente). Na quarta partida (só as fotos, num campo aberto), 5 zumbis (um Corredor) ficaram de 1,3 a 2,0 m da
+  linha de 12 m por 15 s, sem atravessar. Os testes de modo editor do saque, das lojas e dos moradores passam (16). As
+  fotos (cada peça de dia, de 3/4 e de perto; a primeira pessoa com a sombra da cerca e do alarme e a dica de cada uma; o
+  alarme tocando com o aviso no HUD; o tapete, o carro, as estacas e a cerca de noite com os zumbis) ficaram no scratchpad da
+  sessão (`etapa5_unity`). **Não conferido:** dois jogadores, um morador nas armadilhas (não havia nenhum no mapa pequeno), a
+  Muralha de fogo na cerca (o mesmo caminho da área do molotov), a horda criando coragem diante da cerca (30 s, 5 ou mais) e o
+  Pedro jogando.
+
+## As barricadas e a Fortaleza, etapa 5b (11/11/2026)
+
+A etapa 5b da árvore nova: a Barricada de tábuas (`t2`) e a Fortaleza (`t7`) deixaram de ser "em breve", e o ramo Armadilhas
+e defesas ficou inteiro (as Estacas voltaram a pedir a Barricada de tábuas: o `PodeAprender` só pulava o pedido "em breve").
+Nenhuma cena nem o prefab do jogador mudaram: as malhas vêm do `Resources/ItensDasArmadilhas.prefab` (as que a 5a já guardou).
+
+- **Os números** (`Player/ArmadilhasDoJogador.cs`, a seção nova no fim, para o Pedro ajustar):
+
+  | O quê | Quanto |
+  |---|---|
+  | as tábuas para barricada (`Item.TabuasBarricada` = 127, 3 × 1) | bancada, com a ferramenta: 3 madeiras e 6 pregos (só com o `t2`) |
+  | a vida | a porta 150, a janela 100; o nível 2 do `t2` +50%; o Armadilheiro +50% por nível; a Fortaleza × 2 (a porta no máximo: 900) |
+  | os zumbis engajados encostados | 2,5 por segundo cada (o `DanoPorZumbi`, como na barricada solta) |
+  | o golpe de arma branca de um jogador | metade do dano da arma (dos dois lados, pela porta ou pela janela) |
+  | pregar / desmontar / consertar | segurar o E 3 s / o E 2 s / o clique 2,5 s |
+  | o martelo (pregar e consertar) | os zumbis a 15 m vêm ver (o `ZombieManager.Barulho`, com o autor) |
+  | desmontar | volta o item com 60% da vida ou mais; senão, 2 madeiras |
+  | o conserto (o nível 2) | +35% da vida máxima, com 1 madeira, 2 pregos e a ferramenta |
+  | a malha danificada | abaixo de 50% |
+  | a Fortaleza | a vida × 2 (as de tábuas, a solta e as estacas, de quem montou com ela); o conserto sozinho, 5% da máxima por hora do jogo (o `CicloDoDia`: 24 min por dia, uma hora em 60 s de relógio), com o dono a até 30 m e nenhum zumbi (nem golpe) batendo há 5 s; o alarme de latas do dono avisa de qualquer distância |
+
+- **A construção** (`Construcao`): o tipo é o `Item.TabuasBarricada` (fora do `Itens.EhConstrucao`, para a mochila não oferecer
+  "Montar no chão"); ganhou o `vao` (a chave da porta ou da janela: `PortasDoMundo.ChaveDaPorta`/`ChaveDaJanela`), a `largura` e
+  a `altura` do vão (a malha estica para ele; as portas das casas são 1,265 × 2,415 e as janelas 1,38 × 1,515: a escala 1) e o
+  `extra` (os bits `BitJanela`, `BitReforcada`, o nível 2 de quem pregou, e `BitFortaleza`). O `nivel` (o Armadilheiro)
+  agora vale também na barricada solta, cuja vida virou o valor de verdade (100 × o Armadilheiro × a Fortaleza; a dica mostra a %).
+  O `MaximoDe` dá a vida máxima das três. A versão da rede foi para a 20.
+- **Pregar** (`World/PortasDoMundo.Barricadas.cs`): a `PortaDaCasa` e a `JanelaDaCasa` seguram o E para arrombar (a trancada
+  sabida, com a ferramenta: ganha) ou para pregar (o `t2` e as tábuas na mochila); o **toque no E** (soltar antes de 0,3 s,
+  o `Interagivel.ToqueUsa` novo, no `ArmaJogador`) continua abrindo e fechando. A dica: "[E] Abrir a porta · [segure E]
+  Barricar com as tábuas"; a barra, "Pregando as tábuas", e o martelo repete na porta. O `PregarRpc` vai ao anfitrião, que acha
+  o vão pela chave (o registro das casas), confere a distância (3,5 m) e põe a construção na face da parede do lado de quem
+  prega (o +Z para ele): na porta, no meio do vão, no chão (do lado para onde a folha abre, 3,5 cm mais longe: a folha
+  fechada fica na face); na janela, no peitoril. Gasta as tábuas, faz o barulho e fecha a porta ou a janela na hora (a
+  tranca fica como estava).
+- **Barricada, não abre** (dos dois lados): o `Decidir` e o `DecidirJanela` só fazem a folha tremer; o arrombar não vale; o
+  `Aplicar`, o `Criar` e as janelas forçam a folha fechada em qualquer cópia (a lista das construções diz quem está
+  barricada: o `ConstrucoesNoMundo.BarricadaDoVao`, refeito no `Atualizar`). A dica: "Porta barricada (100%): não abre" (do
+  lado dela, a mira acha as tábuas: "Barricada de tábuas (100%) · [segure E] Desmontar") ou "Porta barricada do outro lado".
+  O `PuloDaJanela` não acha a janela barricada (ela fica fechada, e as tábuas tapam o vão), de dentro nem de fora.
+- **O anfitrião** (`Loot/ConstrucoesNoMundo.Barricadas.cs`): o tique de 0,5 s das construções tira a vida da solta e das de
+  tábuas (o `ZumbisNa`, agora pela caixa no tamanho do vão); quebrada (os zumbis, o golpe ou o Brutamonte, o
+  `QuebrarBarricadasPerto`), ela some, 2 madeiras caem no chão em frente (da janela, embaixo do peitoril) e a porta volta a
+  funcionar, fechada. A colisão é a da inteira; a porta também corta o NavMesh (o `NavMeshObstacle` desce até o chão; a janela
+  não precisa). Cada cópia troca a malha pela danificada abaixo de 50% (o `BarricadasAgora`).
+- **Desmontar e consertar** (a `ConstrucaoNaMira`): do lado dela (o +Z), segurar o E com a ferramenta desmonta
+  (`DesmontarRpc`); segurar o **clique** conserta (o nível 2, `ConsertarRpc`; o `ArmaJogador.SegurarOClique` novo segura o
+  botão esquerdo como o E, e o `UsaClique` só vale quando dá para consertar: senão, o clique golpeia). O E e o clique
+  ficaram separados para não brigar: o E sempre desmonta (como a barricada solta e as estacas), e o clique "martela".
+- **O golpe** (`ArmaJogador.Golpear`): a arma branca que pega nas tábuas, na porta ou na janela barricada manda o
+  `GolpeNaBarricadaRpc` (metade do dano da arma; a distância conferida). É o jeito de tirar a barricada do outro lado.
+- **A Fortaleza** (a cada 2 s, com o tempo que passou de verdade): a solta, as de tábuas e as estacas com o bit se consertam
+  com o dono a até 30 m e sem batida há 5 s (os zumbis no `ZumbisNa`, as estacas e os golpes marcam a batida); o
+  `AvisarDoAlarme` não corta mais nos 60 m quando o dono tem a Fortaleza.
+- **O save**: a construção vai com o `vao`, a `largura`, a `altura` e o `extra` (o `ConstrucaoSalva`); a porta fechada vai na
+  lista das portas, e o `Restaurar` ainda confere (o `FecharPelaBarricada`). A chave da casa vem da posição dela (a semente):
+  recarregado, a mesma porta e a mesma janela.
+- **O item**: as tábuas (o `Item_Tabuas_corpo` do `Loot_Armadilhas.fbx`, já juntado pela 5a) ganharam o ícone e a foto
+  (`Art/UI/Icones/Icone_Tabuas.png` e `Foto_Tabuas.png`) pelo menu novo **Zombie City Cleaner > Habilidades > Montar as tábuas
+  da barricada** (só elas, no prefab que já existe; o "Montar as armadilhas" também faz). No fim da lista do saque e das
+  receitas (os índices dos outros não mudam). A tela da mochila mostra a vida pregada (a porta e a janela, com os níveis de
+  quem olha).
+- **O som** (`Combat/SomDasArmadilhas.cs`): o martelo (três batidas no prego) e as tábuas arrancadas, gerados por código.
+- **O F1** (a aba "Habil."): "Armadilhas: nós" (agora com a Barricada de tábuas 2 e a Fortaleza), "Armadilhas: peças" (+2
+  tábuas e a barricada solta), "Mat. armadilhas" (as 5 receitas e um conserto), **"Barricar a porta"** e **"Barricar a
+  janela"** (a mais perto, a até 3,4 m, do seu lado, como a sua, sem gastar as tábuas). Para o teste pelo MCP:
+  `ConstrucoesNoMundo.ResumoDasBarricadas()`, `BarricadaDoVao`, `PorAVida`, `Pregadas`, `Quebradas`, `Consertos`,
+  `GolpesNaBarricada`, `ConsertadoPelaFortaleza`; `PortasDoMundo.Pregar(…, deGraca)`, `MaisPerto`, `PortaViva`, `JanelaViva`,
+  `AbertaAgora(chave)` e `UsarDeTeste`.
+- **Os zumbis e as portas** (a decisão que fica com o Pedro): a porta fechada já barrava os zumbis (eles não abrem nem
+  arrombam: o `Plano_Portas` deixou "os zumbis forçando as portas" para depois). Com a barricada, quem persegue o jogador do
+  lado de dentro bate nela (pela porta, encostado do lado de fora); quando ela cai, a porta fechada continua segurando, e a
+  janela fechada também (os zumbis não sobem janelas). **Contra os zumbis, hoje, a barricada só gasta**: ela vira defesa de
+  verdade quando as hordas forçarem as portas e as janelas fechadas (a próxima decisão).
+- **Testado no Play pelo MCP** (o mapa pequeno, semente 7, a casa térrea mais perto do começo; três partidas do roteiro inteiro
+  e uma só do alarme; a última inteira com 38 conferências, 5 falhas do próprio roteiro e 0 erros): sem o nó, a receita pede a
+  habilidade, e as Estacas pedem a Barricada de tábuas de novo; na bancada, 3 madeiras e 6 pregos viram as tábuas (a
+  ferramenta fica). **A porta da frente** (a folha 1,205 × 2,355: o vão 1,265 × 2,415, a escala 1): com as tábuas, o segurar
+  é de 3 s e o toque no E abriu a porta fechada; pregada de fora, 150 de 150, 1 tábua a menos, a porta fechou na hora; de
+  fora, "Barricada de tábuas (100%) · [segure E] Desmontar"; de dentro, "Porta barricada do outro lado: não abre (100%)", e
+  o E não abriu dos dois lados; de dentro, segurar não desmonta (0 s) e o anfitrião recusou o pedido; de fora, 2 s com a
+  ferramenta desmontaram e as tábuas voltaram; pregada de novo por dentro (o E de verdade, 3 s). **A janela** (1,38 ×
+  1,515, a parede 0,2): aberta, o pulo achava; pregada por dentro (100), fechou, e o pulo não achou nem de dentro nem de
+  fora; o E não abriu. **Os zumbis** (de noite, 4: 3 Ocos e um Corredor, o jogador 2 m atrás da porta barricada por
+  dentro): só um continuou perseguindo (os outros perderam a vista pela porta e foram embora) e gastou 2,2 a 2,5 por
+  segundo (150 → 85 em 30 s); baixada a 60, a malha danificada apareceu, e ela caiu aos 55 s: 1 monte de 2 madeiras no chão,
+  ninguém entrou (a porta fechada), e o E abriu a porta de novo. Com o jogador a 1 m da porta, 3 dos 4 Ocos ficaram
+  batendo (a vida caiu uns 3,5 por segundo). **O Brutamonte** derrubou a barricada sozinho numa partida (em 6 s) e nas
+  outras duas ficou parado perto (o `QuebrarBarricadasPerto` direto derrubou); o tiro de 9999 na cabeça do teste não o
+  matava, e ele ficou batendo nas barricadas seguintes. **Os golpes**: 3 de 40 pela porta, do outro lado, 150 → 90. **O
+  nível 2**: a porta com 225; gasta a 90, o clique segurado 2,5 s (o mouse do teste chegou ao jogo) gastou 1 madeira e 2
+  pregos e somou os 35% (78,75; com o Brutamonte batendo ao mesmo tempo, ficou em 157,5). **A Fortaleza** (com o
+  Armadilheiro 2): a porta 900, a solta 400, as estacas 400; o conserto sozinho em 30 s de relógio (0,5 h do jogo): +22,50
+  (o esperado, 22,51), a solta e as estacas +10; com um golpe a cada 2 s, não consertou; com os zumbis batendo, 32 s
+  caindo e nenhuma subida a menos de 5 s da última batida; o dono a 42 m, nada em 12 s, e de volta perto, +7,5 em 8 s.
+  **O alarme do dono com a Fortaleza**: a 6 m e a 80 m, "As latas tocaram: a 80 m, à frente"; sem ela, a 80 m as latas
+  tocaram e o aviso não veio. A 200 m não deu para ver: com um jogador só, o zumbi a 200 m dele fica parado, fora dos
+  ativos (mesmo com a distância média do `ZombieManager` em 300 m no teste); com outro jogador perto das latas, vale o
+  mesmo código dos 80 m. **O save**: as 4 defesas voltaram iguais (o tipo, o lugar, a vida, o nível, os bits e o vão; as da
+  Fortaleza continuam se consertando, então a vida ±5%), a porta e a janela vivas pelas mesmas chaves, barricadas e
+  fechadas, e o E sem abrir. Os testes de modo editor do saque, das lojas e dos moradores passam (18). As partidas acharam
+  dois defeitos, consertados: a dica do conserto, comprida, quebrava em duas linhas em cima da barra do segurar (agora
+  curta); e o conserto da Fortaleza passou a contar o tempo que passou de verdade entre um tique e outro (o tique é de meio
+  segundo). As fotos (a porta de fora e de dentro, de 3/4, de perto e do outro lado; a danificada; a janela; os zumbis na
+  porta de noite; a primeira pessoa pregando, desmontando, consertando, com as dicas e o aviso do alarme; depois do save)
+  ficaram no scratchpad da sessão (`etapa5b_unity`, e reduzidas em `etapa5b_unity/reduzidas`). **Não conferido:** dois
+  jogadores (o cliente pregando, vendo a barricada e a porta forçada fechada), o golpe de verdade com a arma na mão (o
+  `GolpeNaBarricada` foi chamado direto, com 40), pregar mirando a folha aberta da porta (o teste chamou o fim do segurar
+  direto: de fora, a mira não achou a folha aberta para dentro), o aviso a 200 m e o Pedro jogando. Na terceira partida o
+  Editor caiu ao começar (o D3D11 perdeu o dispositivo, 0x887A0005, criando uma RenderTexture de 2560 × 1440: a placa de
+  vídeo, não o código); reaberto, o aviso "Scene Backup Detected" guardou o backup em `Assets/_Recovery/0 (3).unity` (no
+  `.gitignore`), e a cena Mundo não mudou.
 
 ## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
 
@@ -4444,6 +5026,8 @@ depois de cada falha.
   - **`ritmoDeTeste` (ligado em 02/11/2026, para o teste com os amigos):** as calmarias e os eventos bem mais curtos (a
     primeira chuva vem uns 10 minutos depois de começar) e o tornado em `chanceDoTornado` = 60% das frentes fortes. **O
     tornado é um evento bem raro no jogo:** depois do teste, desligar o ritmo e baixar a chance (o pedido do Pedro).
+    Feito em 10/11/2026: o ritmo desligado e fora das cenas, e o tornado em 10% (`chanceDoTornadoNoJogo`; veja "As
+    pendências da fase").
 - **O sol e os zumbis:** com o céu fechado, o sol não petrifica (`Tempo.Sol`: 1 no céu aberto, uns 0,5 no chuvisco, 0 da
   chuva para cima). No chuvisco eles viram pedra mais devagar; na chuva e na tempestade, não viram, e andam onde quiserem,
   como à noite (`ProtegerDoSol` desliga): o dia perigoso. As estátuas ficam até a noite.

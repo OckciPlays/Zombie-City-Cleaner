@@ -31,6 +31,21 @@ namespace ZombieCityCleaner.Loot
         public bool fogo;
         /// <summary>A habilidade que destrava a receita (o número do <see cref="Player.Habilidade"/>; -1: nenhuma).</summary>
         public int habilidade = -1;
+        /// <summary>Quantos pontos da habilidade a receita pede (10/11/2026: o filtro de óleo, a mira de ponto e os canos II e III pedem o 2º e o 3º).</summary>
+        public int nivel = 1;
+        /// <summary>
+        /// Quantos combustíveis gasta também (11/11/2026, a etapa 4 do ramo Fogo; a cerca de fogo da etapa 5a gasta 2): cada
+        /// um é 1 álcool ou, sem ele, meio litro de gasolina do galão mais cheio (o Player.FogoDoJogador.LitrosPorCarga; o
+        /// InventarioJogador.Fogo.cs confere e gasta). 0: nenhum.
+        /// </summary>
+        public int combustivel;
+
+        /// <summary>A mesma receita, gastando <paramref name="n"/> combustíveis (11/11/2026: a cerca de fogo).</summary>
+        public Receita ComCombustivel(int n)
+        {
+            combustivel = n;
+            return this;
+        }
     }
 
     /// <summary>
@@ -66,6 +81,28 @@ namespace ZombieCityCleaner.Loot
         // a receita da árvore de habilidades (06/11/2026): só com a habilidade, na bancada ou na mesa de oficina
         static Receita H(Player.Habilidade h, Item resultado, int qtd, bool oficina, Item ferramenta, params Parte[] gasta) =>
             new Receita { resultado = resultado, qtd = qtd, bancada = !oficina, oficina = oficina, ferramenta = ferramenta, gasta = gasta, habilidade = (int)h };
+
+        // a melhoria das armas de sucata (10/11/2026, a etapa 2): pede 'nivel' pontos da habilidade
+        static Receita M(Player.Habilidade h, int nivel, Item resultado, bool oficina, params Parte[] gasta)
+        {
+            var r = H(h, resultado, 1, oficina, Item.Nada, gasta);
+            r.nivel = nivel;
+            return r;
+        }
+
+        /// <summary>Uma receita do Armeiro de sucata (as armas, as munições e as melhorias): o Mestre armeiro gasta menos sucata nelas.</summary>
+        public static bool DoArmeiroDeSucata(Receita r) =>
+            r != null && r.habilidade >= 0 && Player.Habilidades.RamoDe((Player.Habilidade)r.habilidade) == Player.RamoDaHabilidade.ArmeiroDeSucata;
+
+        /// <summary>O que a receita gasta, com o Mestre armeiro ('mestre': 25% menos sucata nas do Armeiro de sucata, para cima).</summary>
+        public static Parte[] Gasta(Receita r, bool mestre)
+        {
+            if (!mestre || !DoArmeiroDeSucata(r)) return r.gasta;
+            var g = new Parte[r.gasta.Length];
+            for (int i = 0; i < g.Length; i++)
+                g[i] = r.gasta[i].item == Item.Sucata ? new Parte(Item.Sucata, Combat.Melhorias.SucataComOMestre(r.gasta[i].qtd)) : r.gasta[i];
+            return g;
+        }
 
         /// <summary>As receitas, na ordem da aba Criar (o anfitrião recebe o índice).</summary>
         public static readonly Receita[] Todas =
@@ -117,7 +154,49 @@ namespace ZombieCityCleaner.Loot
             H(Player.Habilidade.RifleDeSucata, Item.MunicaoParafuso, 5, false, Item.Nada, P(Item.Polvora), P(Item.Sucata, 2)),
             H(Player.Habilidade.SubmetralhadoraDeSucata, Item.SubmetralhadoraSucata, 1, true, Item.Nada, P(Item.Sucata, 12), P(Item.Madeira), P(Item.FitaAdesiva, 2)),
             H(Player.Habilidade.RifleDeSucata, Item.RifleSucata, 1, true, Item.Nada, P(Item.Sucata, 10), P(Item.Madeira, 2), P(Item.FitaAdesiva)),
+            // as melhorias das armas de sucata (10/11/2026, a etapa 2; os números no Combat/Melhorias.cs): na bancada o que é
+            // simples, na mesa de oficina o resto. Não existe garrafa vazia como item: a PET é a garrafa de refrigerante (dois
+            // litros); nem filtro de óleo nas peças do carro: ele sai da sucata
+            M(Player.Habilidade.SilenciadorCaseiro, 1, Item.SilenciadorPET, false, P(Item.RefrigeranteGarrafa), P(Item.FitaAdesiva)),
+            M(Player.Habilidade.SilenciadorCaseiro, 2, Item.SilenciadorFiltro, true, P(Item.Sucata, 4), P(Item.FitaAdesiva)),
+            M(Player.Habilidade.MirasCaseiras, 1, Item.MiraDeFerro, false, P(Item.Sucata, 2)),
+            M(Player.Habilidade.MirasCaseiras, 2, Item.MiraDePonto, true, P(Item.Sucata, 3), P(Item.FitaAdesiva), P(Item.Pilhas)),
+            M(Player.Habilidade.LunetaDeCano, 1, Item.Luneta, true, P(Item.Sucata, 5), P(Item.FitaAdesiva, 2)),
+            M(Player.Habilidade.CarregadorEstendido, 1, Item.CarregadorLongo, false, P(Item.Sucata, 4), P(Item.FitaAdesiva)),
+            M(Player.Habilidade.CanoReforcado, 1, Item.CanoReforcado1, false, P(Item.Sucata, 4), P(Item.FitaAdesiva)),
+            M(Player.Habilidade.CanoReforcado, 2, Item.CanoReforcado2, true, P(Item.Sucata, 6), P(Item.FitaAdesiva, 2)),
+            M(Player.Habilidade.CanoReforcado, 3, Item.CanoReforcado3, true, P(Item.Sucata, 8), P(Item.PecasDeMetal, 2)),
+            // a proteção de sucata (11/11/2026, a etapa 3; os números no Player/Protecao.cs): o capacete, as braçadeiras e as
+            // caneleiras na bancada; o colete na mesa de oficina, com a borracha de um pneu (o mais gasto da mochila: o
+            // rasgado, que não tem remendo, vai primeiro)
+            H(Player.Habilidade.CapaceteDePanela, Item.Capacete, 1, false, Item.Nada, P(Item.Sucata, 3), P(Item.FitaAdesiva), P(Item.Corda)),
+            H(Player.Habilidade.BracadeirasECaneleiras, Item.Bracadeiras, 1, false, Item.Nada, P(Item.Sucata, 4), P(Item.FitaAdesiva, 2)),
+            H(Player.Habilidade.BracadeirasECaneleiras, Item.Caneleiras, 1, false, Item.Nada, P(Item.Sucata, 4), P(Item.FitaAdesiva, 2)),
+            H(Player.Habilidade.ColeteDeChapa, Item.Colete, 1, true, Item.Nada, P(Item.Sucata, 8), P(Item.FitaAdesiva, 2), P(Item.Pneu)),
+            // o fogo (11/11/2026, a etapa 4; os números no Player/FogoDoJogador.cs): o lampião na mesa de oficina, o molotov e o
+            // kit da fogueira portátil na bancada; os três com 1 combustível (1 álcool ou meio litro de gasolina de um galão).
+            // Não existe vidro como item: a garrafa é a de refrigerante (como no silenciador de garrafa PET)
+            F(Player.Habilidade.Lampiao, Item.Lampiao, true, P(Item.Sucata, 3), P(Item.RefrigeranteGarrafa)),
+            F(Player.Habilidade.CoquetelMolotov, Item.Molotov, false, P(Item.RefrigeranteGarrafa), P(Item.Pano)),
+            F(Player.Habilidade.FogueiraPortatil, Item.KitFogueira, false, P(Item.Madeira, 3), P(Item.Corda)),
+            // as armadilhas (11/11/2026, a etapa 5a; os números no Player/ArmadilhasDoJogador.cs): todas na bancada. Não existe
+            // lata vazia como item: as latas do alarme saem da sucata. A cerca de fogo gasta 2 combustíveis (o galão e o rastro)
+            H(Player.Habilidade.AlarmeDeLatas, Item.AlarmeLatas, 1, false, Item.Nada, P(Item.Sucata, 2), P(Item.Corda), P(Item.Madeira)),
+            H(Player.Habilidade.TapeteDePregos, Item.TapetePregos, 1, false, Item.Ferramenta, P(Item.Madeira), P(Item.Pregos, 12)),
+            H(Player.Habilidade.Estacas, Item.Estacas, 1, false, Item.Ferramenta, P(Item.Madeira, 4), P(Item.Corda)),
+            F(Player.Habilidade.CercaDeFogo, Item.CercaFogo, false, P(Item.Pano)).ComCombustivel(2),
+            // as tábuas para barricada (11/11/2026, a etapa 5b; no fim, para os índices das outras não mudarem): pregadas numa
+            // porta ou numa janela das casas (os números no Player/ArmadilhasDoJogador.cs)
+            H(Player.Habilidade.BarricadaDeTabuas, Item.TabuasBarricada, 1, false, Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 6)),
         };
+
+        // a receita do fogo (11/11/2026): a da habilidade, com 1 combustível
+        static Receita F(Player.Habilidade h, Item resultado, bool oficina, params Parte[] gasta)
+        {
+            var r = H(h, resultado, 1, oficina, Item.Nada, gasta);
+            r.combustivel = 1;
+            return r;
+        }
 
         static Desmontagem D(Item item, string verbo, Item ferramenta, params Parte[] vira) =>
             new Desmontagem { item = item, verbo = verbo, ferramenta = ferramenta, vira = vira };

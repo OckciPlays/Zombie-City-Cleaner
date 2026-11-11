@@ -158,6 +158,7 @@ namespace ZombieCityCleaner.Player
                 // personagem salvo, ou o começo de um novo (a pistola e a lanterna)
             }
             NascerRoupas();
+            NascerProtecao();   // (a proteção de sucata, 11/11/2026)
             Mudou?.Invoke();
         }
 
@@ -169,6 +170,7 @@ namespace ZombieCityCleaner.Player
             MochilaVestida.OnValueChanged -= AoMudarEquipamento;
             PneuNasMaos.OnValueChanged -= AoMudarPneu;
             SumirRoupas();
+            SumirProtecao();
             if (_pneuNoCorpo != null) Destroy(_pneuNoCorpo);
             if (_pneuNoOlho != null) Destroy(_pneuNoOlho);
         }
@@ -353,21 +355,31 @@ namespace ZombieCityCleaner.Player
         {
             falta = null;
             // (06/11/2026, a árvore de habilidades: a receita destravada pela habilidade; a mesa de oficina do bunker)
-            if (r.habilidade >= 0 && !Habilidades.Tem(_rede, (Habilidade)r.habilidade))
-                falta = $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
+            if (r.habilidade >= 0 && Habilidades.Pontos(_rede, (Habilidade)r.habilidade) < r.nivel)
+                falta = r.nivel > 1 ? $"Precisa de {Habilidades.Nome((Habilidade)r.habilidade)} no nível {r.nivel} (K)"
+                    : $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
             else if (r.oficina && !Bancada.PertoDaOficina(transform.position)) falta = "Precisa da mesa de oficina (no bunker)";
             else if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
             else if (r.fogo && !FogoPerto(transform.position)) falta = "Precisa de uma fogueira acesa perto";
             else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
             else
-                foreach (var g in r.gasta)
+            {
+                foreach (var g in GastaDe(r))
                     if (Quantos(g.item) < g.qtd)
                     {
                         falta = $"Falta {Itens.ComNumero(g.item, g.qtd - Quantos(g.item))}";
                         break;
                     }
+                // o combustível (11/11/2026, a etapa 4): 1 álcool ou a gasolina de um galão
+                if (falta == null && r.combustivel > 0 && CargasDeCombustivel < r.combustivel)
+                    falta = r.combustivel == 1 ? $"Falta combustível (1 álcool ou {FogoDoJogador.LitrosPorCarga:0.#} L de gasolina num galão)"
+                        : $"Falta combustível ({r.combustivel}: cada um, 1 álcool ou {FogoDoJogador.LitrosPorCarga:0.#} L de gasolina num galão)";
+            }
             return falta == null;
         }
+
+        /// <summary>O que a receita gasta deste jogador (o Mestre armeiro gasta menos sucata nas do Armeiro de sucata, 10/11/2026).</summary>
+        public Parte[] GastaDe(Receita r) => Receitas.Gasta(r, Habilidades.Tem(_rede, Habilidade.MestreArmeiro));
 
         /// <summary>Uma fogueira acesa a até 3 m (07/11/2026: assar o peixe).</summary>
         public static bool FogoPerto(Vector3 ponto)
@@ -554,7 +566,9 @@ namespace ZombieCityCleaner.Player
             {
                 int k = -1;
                 for (int i = 0; i < Mochila.Count; i++)
-                    if (Mochila[i].item == item && (k < 0 || Itens.Quantos(item, Mochila[i].qtd) < Itens.Quantos(item, Mochila[k].qtd))) k = i;
+                    if (Mochila[i].item == item && (k < 0 || Itens.Quantos(item, Mochila[i].qtd) < Itens.Quantos(item, Mochila[k].qtd)
+                        // (a peça com estado, 11/11/2026: o pneu do colete de chapa é o mais gasto, o rasgado primeiro)
+                        || (Itens.ComEstado(item) && Mochila[i].qtd < Mochila[k].qtd))) k = i;
                 if (k < 0) return;
                 var it = Mochila[k];
                 int tem = Itens.Quantos(item, it.qtd), tira = Mathf.Min(n, tem);
@@ -787,7 +801,8 @@ namespace ZombieCityCleaner.Player
             var it = Mochila[k];
             it.desgaste = 0;
             Mochila[k] = it;
-            AvisoRpc($"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada" + (poupou ? " (o kit não foi gasto)" : ""));
+            AvisoRpc((Player.Protecao.EhPeca(it.item) ? Player.Protecao.Consertada(it.item) : $"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(it.item))} consertada")
+                     + (poupou ? " (o kit não foi gasto)" : ""));
         }
 
         // o Reparador (06/11/2026): 30% de chance de o kit de reparo não ser gasto
@@ -822,7 +837,10 @@ namespace ZombieCityCleaner.Player
             if (parametros.Receive.SenderClientId != OwnerClientId || k >= Receitas.Todas.Length) return;
             var r = Receitas.Todas[k];
             if (!PodeCriar(r, out _)) return;
-            foreach (var g in r.gasta) TirarQuantos(g.item, g.qtd);
+            var gasta = GastaDe(r);
+            foreach (var g in gasta) TirarQuantos(g.item, g.qtd);
+            for (int c = 0; c < r.combustivel; c++)
+                if (!GastarCombustivel(out _)) Debug.LogWarning("[Fogo] O combustível sumiu no meio da receita.");
             Entregar(r.resultado, r.qtd);
             CriouRpc(k);
             // a árvore de habilidades (06/11/2026): o XP de criar; as Mãos hábeis às vezes dão em dobro e, no 2º ponto (o
@@ -833,9 +851,9 @@ namespace ZombieCityCleaner.Player
                 Entregar(r.resultado, r.qtd);
                 AvisoRpc("Mãos hábeis: saiu em dobro");
             }
-            if (r.gasta.Length > 0 && Habilidades.Pontos(_rede, Habilidade.MaosHabeis) >= 2 && Random.value < 0.2f)
+            if (gasta.Length > 0 && Habilidades.Pontos(_rede, Habilidade.MaosHabeis) >= 2 && Random.value < 0.2f)
             {
-                var sobra = r.gasta[Random.Range(0, r.gasta.Length)];
+                var sobra = gasta[Random.Range(0, gasta.Length)];
                 Entregar(sobra.item, 1);
                 AvisoRpc($"Aproveitou: sobrou {Itens.ComNumero(sobra.item, 1)}");
             }
@@ -851,6 +869,9 @@ namespace ZombieCityCleaner.Player
             Achar(id, out var it);
             // a arma desmontada devolve as balas do pente numa caixa
             if (Itens.EhArma(it.item) && it.qtd > 0) Entregar(Itens.CaixaDe(Itens.CalibreDaArma(it.item)), it.qtd);
+            // e as melhorias postas na de sucata voltam soltas (10/11/2026)
+            if (Itens.DeSucata(it.item))
+                foreach (var p in Melhorias.Postas(it.cores)) Devolver(p, Melhorias.TirosDoSilenciador(it.cores));
             TirarUm(id);
             // o Sucateiro (09/11/2026, a sucata, 2ª leva): +1 sucata por ponto, no que já dá sucata
             int bonus = Receitas.SucataDe(d) > 0 ? BonusDoSucateiro : 0;
@@ -872,8 +893,10 @@ namespace ZombieCityCleaner.Player
             if (parametros.Receive.SenderClientId != OwnerClientId || ItensNoMundo.Instancia == null) return;
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
             if (!Achar(id, out var it)) return;
+            int qtd = QtdAoLargar(id, it);   // o lampião aceso da mão continua aceso no chão (11/11/2026)
             Tirar(id);
-            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, it.qtd, it.desgaste, it.cores);
+            ItensNoMundo.Instancia.Criar(it.item, ponto, giro, qtd, it.desgaste, it.cores);
+            DepoisDeLargar(it, qtd);
         }
 
         [Rpc(SendTo.Server)]
@@ -934,7 +957,8 @@ namespace ZombieCityCleaner.Player
             int k = Indice(id);
             if (parametros.Receive.SenderClientId != OwnerClientId || k < 0 || !Itens.EhArma(Mochila[k].item)) return;
             var it = Mochila[k];
-            it.qtd = (ushort)Mathf.Min(balas, Itens.QuantidadePadrao(it.item));
+            // (com o carregador estendido da de sucata, 10/11/2026, cabe mais que o de sempre)
+            it.qtd = (ushort)Mathf.Min(balas, Melhorias.Dados(Itens.Arma(it.item), Itens.DeSucata(it.item) ? it.cores : 0UL).capacidade);
             Mochila[k] = it;
         }
 
@@ -1434,6 +1458,7 @@ namespace ZombieCityCleaner.Player
             if (IsSpawned && IsServer)
             {
                 GastarPilhas(Time.deltaTime);
+                GastarLampiao(Time.deltaTime);   // (11/11/2026, a etapa 4: InventarioJogador.Fogo.cs)
             }
             if (IsSpawned && IsOwner && _pedirComeco) EnviarPersonagem();   // o personagem (InventarioJogador.Personagem.cs)
             if (IsSpawned) PneuQueSeVe();
@@ -1563,7 +1588,8 @@ namespace ZombieCityCleaner.Player
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
-            if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length ? iconesDeLoot[l] : null;
+            // (as melhorias das armas de sucata, 10/11/2026: do Resources/MelhoriasDaSucata, se o prefab ainda não tem)
+            if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length && iconesDeLoot[l] != null ? iconesDeLoot[l] : PecasDasMelhorias.IconeDo(item) ?? PecasDaProtecao.IconeDo(item) ?? ItensDoFogo.IconeDo(item) ?? ItensDasArmadilhas.IconeDo(item);
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return iconesDePeca != null && p < iconesDePeca.Length ? iconesDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1579,7 +1605,7 @@ namespace ZombieCityCleaner.Player
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return fotosDaSinuca != null && s < fotosDaSinuca.Length ? fotosDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
-            if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length ? fotosDeLoot[l] : null;
+            if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length && fotosDeLoot[l] != null ? fotosDeLoot[l] : PecasDasMelhorias.FotoDo(item) ?? PecasDaProtecao.FotoDo(item) ?? ItensDoFogo.FotoDo(item) ?? ItensDasArmadilhas.FotoDo(item);
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return fotosDePeca != null && p < fotosDePeca.Length ? fotosDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1659,7 +1685,9 @@ namespace ZombieCityCleaner.Player
             else if (Time.time < _nomeAte)
             {
                 linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco"
-                    : Itens.EhBranca(naMao) ? $"{Itens.Nome(naMao)}   ·   clique: golpear   ·   G: largar" : Itens.Nome(naMao);
+                    : Itens.EhBranca(naMao) ? $"{Itens.Nome(naMao)}   ·   clique: golpear   ·   G: largar"
+                    : naMao == Item.Molotov ? $"{Itens.Nome(naMao)}   ·   clique: arremessar   ·   G: largar"
+                    : naMao == Item.Lampiao ? $"{Itens.Nome(naMao)} ({(LampiaoAcesoNaMao ? "aceso" : "sem combustível")})   ·   G: largar aceso" : Itens.Nome(naMao);
                 alfa = Mathf.Clamp01((_nomeAte - Time.time) / 0.4f);
             }
             if (linha != null)

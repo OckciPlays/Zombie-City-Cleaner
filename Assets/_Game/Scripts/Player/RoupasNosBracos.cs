@@ -16,6 +16,8 @@ namespace ZombieCityCleaner.Player
     /// shader <c>ZombieCityCleaner/Invisivel</c>, do <see cref="Roupas.ItensDasRoupas"/>): a malha dos braços de uns itens (a
     /// lata, a garrafa) não deixa ser mexida, e a troca dos braços da lata pelo item do saque (o
     /// <see cref="ItemNaMaoProprio"/>) mantém o material 0. Só no dono; refeito quando a roupa ou o que está na mão muda.
+    /// As braçadeiras de sucata (11/11/2026, a proteção) vão inteiras, presas aos antebraços de primeira pessoa (o osso de
+    /// ajuda, que estica junto com a manga), na pose do osso (<see cref="PecasDaProtecao"/>), com a forma do corpo.
     /// </summary>
     public class RoupasNosBracos : MonoBehaviour
     {
@@ -42,6 +44,9 @@ namespace ZombieCityCleaner.Player
         // as cópias vestidas e o material que esconde a pele dos braços de primeira pessoa
         readonly List<SkinnedMeshRenderer> _pecas = new List<SkinnedMeshRenderer>();
         Material _semPele;
+        // as braçadeiras de sucata (a esquerda e a direita) e se elas estavam vestidas na última montagem
+        readonly SkinnedMeshRenderer[] _bracadeiras = new SkinnedMeshRenderer[2];
+        bool _comBracadeiras;
         // os ossos de cada braço de primeira pessoa (com os de ajuda que esticam) e as malhas feitas
         readonly Dictionary<int, Transform[]> _ossos = new Dictionary<int, Transform[]>();
         readonly Dictionary<Mesh, Mesh> _bracosDe = new Dictionary<Mesh, Mesh>();
@@ -72,7 +77,8 @@ namespace ZombieCityCleaner.Player
                 if (roupas == null || roupas.invisivel == null) return;   // sem ele, a pele ficaria por baixo das roupas
                 _semPele = new Material(roupas.invisivel) { name = "Sem a pele" };
             }
-            if (m != _modelo || vestimenta.Versao != _versao) Montar(m, fp, vestimenta);
+            bool bracadeiras = _rede.Inventario != null && _rede.Inventario.IsSpawned && _rede.Inventario.Protecao.Value.bracadeiras != Loot.Item.Nada;
+            if (m != _modelo || vestimenta.Versao != _versao || bracadeiras != _comBracadeiras) Montar(m, fp, vestimenta, bracadeiras);
             // a pele dos braços de primeira pessoa não se desenha (o material 0; o resto é o que está na mão)
             if (fp.sharedMaterial != _semPele)
             {
@@ -85,6 +91,7 @@ namespace ZombieCityCleaner.Player
         void OnDestroy()
         {
             foreach (var p in _pecas) if (p != null) Destroy(p.gameObject);
+            foreach (var b in _bracadeiras) if (b != null) Destroy(b.gameObject);
             foreach (var m in _bracosDe.Values) if (m != null) Destroy(m);
             if (_semPele != null) Destroy(_semPele);
             foreach (var ossos in _ossos.Values)
@@ -92,7 +99,7 @@ namespace ZombieCityCleaner.Player
                     if (t != null && t.name.EndsWith(" (esticado)")) Destroy(t.gameObject);
         }
 
-        void Montar(int m, SkinnedMeshRenderer fp, Roupas.Vestimenta vestimenta)
+        void Montar(int m, SkinnedMeshRenderer fp, Roupas.Vestimenta vestimenta, bool bracadeiras)
         {
             _fp = fp;
             _modelo = m;
@@ -120,6 +127,40 @@ namespace ZombieCityCleaner.Player
                 for (int f = 0; f < malha.blendShapeCount; f++) p.SetBlendShapeWeight(f, fonte.GetBlendShapeWeight(f));
             }
             for (int k = n; k < _pecas.Count; k++) _pecas[k].gameObject.SetActive(false);
+            Bracadeiras(ossos, vestimenta.corpo, bracadeiras);
+        }
+
+        // as braçadeiras de sucata (11/11/2026): filhas dos antebraços de primeira pessoa (o de ajuda, que estica), na pose
+        // do osso, com a forma do corpo; sem elas vestidas, desligadas
+        void Bracadeiras(Transform[] ossos, string corpo, bool vestidas)
+        {
+            _comBracadeiras = vestidas;
+            var dados = PecasDaProtecao.Dados;
+            for (int lado = 0; lado < 2; lado++)
+            {
+                var antebraco = ossos[lado == 0 ? 1 : OssosDoBraco.Length + 1];   // o forearm.L e o forearm.R
+                int k = PecasDaProtecao.Bracadeiras + lado;
+                var malha = vestidas && dados != null ? PecasDaProtecao.Peca(k) : null;
+                if (malha == null || antebraco == null)
+                {
+                    if (_bracadeiras[lado] != null) _bracadeiras[lado].gameObject.SetActive(false);
+                    continue;
+                }
+                var r = _bracadeiras[lado];
+                if (r == null)
+                {
+                    r = _bracadeiras[lado] = PecasDaProtecao.Por(antebraco, malha, dados.material, "Nos braços: " + PecasDaProtecao.Pecas[k].objeto, JogadorRede.CamadaBracos, corpo);
+                    r.shadowCastingMode = ShadowCastingMode.Off;
+                    r.receiveShadows = false;
+                    r.updateWhenOffscreen = true;
+                }
+                else
+                {
+                    PecasDaProtecao.NoOsso(r.transform, antebraco);
+                    PecasDaProtecao.Forma(r, corpo);
+                }
+                r.gameObject.SetActive(true);
+            }
         }
 
         SkinnedMeshRenderer NovaPeca()

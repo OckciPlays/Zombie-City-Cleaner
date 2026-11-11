@@ -138,6 +138,14 @@ namespace ZombieCityCleaner.Zombies
         [Tooltip("À noite, numa fogueira, a coragem espera mais (s): o Long da fogueira vem antes (ZombieManager.LongNaFogueira.cs).")]
         public float esperaAteACoragemDeNoiteNaFogueira = 90f;
 
+        [Header("O fogo, etapa 4 (11/11/2026: o lampião, o molotov e a Muralha de fogo; Player/FogoDoJogador.cs)")]
+        [Tooltip("Até onde (m) eles não chegam do lampião aceso (na mão ou no chão) e da área de fogo do molotov (que assusta como uma fogueira).")]
+        public float raioDoLampiao = 4f;
+        public float raioDoMolotov = 8f;
+        [Tooltip("A Muralha de fogo: quem está dentro do fogo foge em pânico até esta distância (m) além da beira, nesta velocidade (m/s).")]
+        public float distanciaDoPanico = 6f;
+        public float velocidadeDoPanico = 4f;
+
         [Header("O Long da fogueira (05/11/2026; ZombieManager.LongNaFogueira.cs)")]
         [Tooltip("À noite, com pelo menos esta quantidade de zumbis caçando em volta de uma fogueira acesa...")]
         public int zumbisParaOLong = 6;

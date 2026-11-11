@@ -208,6 +208,9 @@ namespace ZombieCityCleaner.DiaZero
             _carregando = null;
             var rua = RuaDoDiaZero.Instancia;
             if (rua == null || !rua.Pronta) return;
+            // os shaders da gravação também aquecem aqui, junto com os cortes, e a tela espera por eles depois dos cortes
+            // (10/11/2026; veja o AquecimentoDosShaders: o travamento da entrada do bunker no executável)
+            bool graficosProntos = AquecimentoDosShaders.Andar();
             // os cortes dos zumbis ficam prontos aqui, com a tela preta (09/11/2026, a pedido: "um lag que sempre ocorre na
             // aba de criação de personagem"): antes, eles andavam na tela de criar, que ficava em 40 a 110 ms por quadro até
             // eles acabarem (uns 6 s na build). A tela espera (até 90 s, por segurança)
@@ -221,6 +224,11 @@ namespace ZombieCityCleaner.DiaZero
                     return;
                 }
                 Debug.LogWarning("[Dia 0] Os cortes dos zumbis passaram de 90 s: a rua abre sem esperar o resto.");
+            }
+            if (!graficosProntos)
+            {
+                _etapaDaRua = $"Preparando os gráficos ({AquecimentoDosShaders.Progresso * 100f:0}%)";
+                return;
             }
             _etapaDaRua = null;
             _ruaPronta = true;

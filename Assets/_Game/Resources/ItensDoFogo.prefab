@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4822473060487958545
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3710840324847583902}
+  - component: {fileID: 8077492863040406780}
+  m_Layer: 0
+  m_Name: ItensDoFogo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3710840324847583902
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4822473060487958545}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8077492863040406780
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4822473060487958545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c998ff42297e6746bbc13a7bd700d35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Player.ItensDoFogo
+  material: {fileID: 2100000, guid: bcaa04220afea46469590d88d2e74c15, type: 2}
+  malhasDosItens:
+  - {fileID: 4300000, guid: ab8bb5d2c9a04af4989d67b0d3631a1c, type: 2}
+  - {fileID: 4300000, guid: e8d46653f3fa1454f994a3194d4a3f55, type: 2}
+  - {fileID: 4300000, guid: a4736f12da510ff47a7e1819272f5dc9, type: 2}
+  icones:
+  - {fileID: 2800000, guid: 6b4fffe17b4afc241b3052a6f8041955, type: 3}
+  - {fileID: 2800000, guid: 49c99777dffa258448d5b10892cd5ba6, type: 3}
+  - {fileID: 2800000, guid: 20acca7b977e4804aaa5fb319ab032d7, type: 3}
+  fotos:
+  - {fileID: 2800000, guid: a98f3cb1d0e097e4db165196e5d70a92, type: 3}
+  - {fileID: 2800000, guid: 3bab3986814cf4d49a6626a6b6ed08fe, type: 3}
+  - {fileID: 2800000, guid: 86ca366d05d81484a9029f31fbcf79c5, type: 3}
+  bracosDoLampiao: {fileID: 919132149155446097, guid: c6a0f13f83fbd154399b7f9846e2ce65, type: 3}
+  bracosDoMolotov: {fileID: 919132149155446097, guid: a809961a0906f68418636b01b1be9c99, type: 3}
+  controladorDoLampiao: {fileID: 22100000, guid: bf4df314b954f3c47a3a110060ac4d07, type: 2}
+  controladorDoMolotov: {fileID: 22100000, guid: 021b78e2f55289947afdf266c09cc1f4, type: 2}
+  ossoDaChama: hand.R
+  ossoDoPavio: garrafa
+  chamaNosBracos: {x: 0.0694158, y: -0.15929438, z: -0.0697915}
+  pavioNosBracos: {x: 0.09501467, y: 0.123416595, z: -0.039785486}
+  lampiaoNoCorpo: {fileID: -1952157473900994240, guid: 0fa26a0d71c47b342be6f98a791ff62d, type: 3}
+  molotovNoCorpo: {fileID: 3409751274958735554, guid: 0fa26a0d71c47b342be6f98a791ff62d, type: 3}
+  chamaDoLampiao: {x: -0, y: -0.205, z: 0.000000008960835}
+  pavioDoMolotov: {x: -0, y: 0.004000004, z: 0.088}
+  lugarDoLampiao: {x: -0.02853, y: 0.07073, z: -0.032}
+  lugarDoMolotov: {x: -0.02853, y: 0.07073, z: -0.032}
+  giroDoLampiao: {x: -0.33192, y: -0.23989, z: -0.5938, w: 0.69259}
+  giroDoMolotov: {x: -0.6861, y: 0.17106, z: -0.59966, w: 0.37471}
+  fogueira: {fileID: -7690747857825285970, guid: 0fa26a0d71c47b342be6f98a791ff62d, type: 3}
+  fogoDaFogueira: {x: -0, y: 0.12, z: -0.0000000052453664}

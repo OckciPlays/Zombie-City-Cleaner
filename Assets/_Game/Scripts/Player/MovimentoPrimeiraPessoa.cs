@@ -404,6 +404,7 @@ namespace ZombieCityCleaner.Player
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value && !Agachado;
             float alvo = Agachado ? velocidadeAgachado : rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
             if (pesado) alvo *= Habilidades.Tem(rede, Habilidade.Borracheiro) ? 0.8f : InventarioJogador.LentidaoDoPneu;   // (o Borracheiro)
+            alvo *= Protecao.FatorDaVelocidade(_inventario);   // (o colete de chapa pesa, 11/11/2026)
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
             Vector3 horizontal = new Vector3(_velocidade.x, 0f, _velocidade.z);
             horizontal = Vector3.Lerp(horizontal, desejada, 1f - Mathf.Exp(-(_controle.isGrounded ? aceleracao : aceleracao * 0.2f) * dt));

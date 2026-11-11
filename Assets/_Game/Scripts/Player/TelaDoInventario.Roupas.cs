@@ -17,8 +17,9 @@ namespace ZombieCityCleaner.Player
     /// </summary>
     public partial class TelaDoInventario
     {
-        // as medidas, a 720p: as duas colunas dentro da área do retrato e as 5 linhas (com o nome embaixo de cada lugar)
-        const float ColunaDaEsquerda = 24f, ColunaDaDireita = 258f, LinhaDasRoupas = 64f, PassoDasRoupas = 74f, LadoDaRoupa = 54f;
+        // as medidas, a 720p: as duas colunas dentro da área do retrato e as 5 linhas (com o nome embaixo de cada lugar; o passo
+        // era 74 e o lado 54 até o grupo PROTEÇÃO, 11/11/2026)
+        const float ColunaDaEsquerda = 24f, ColunaDaDireita = 258f, LinhaDasRoupas = 64f, PassoDasRoupas = 66f, LadoDaRoupa = 48f;
         static readonly Color FundoDeRoupa = new Color(0.5f, 0.49f, 0.46f, 0.95f);
         static readonly Color CorQueCabe = new Color(0.35f, 0.85f, 0.35f, 0.3f), CorQueNaoCabe = new Color(0.9f, 0.25f, 0.2f, 0.35f);
 
@@ -92,6 +93,7 @@ namespace ZombieCityCleaner.Player
         void MenuDaRoupa(LugarDaRoupa l)
         {
             _roupaEscolhida = (int)l;
+            _protecaoEscolhida = -1;
             _escolhido = 0;
             _equipEscolhido = Item.Nada;
             if (inventario.CabeUmaRoupa) Opcao("Tirar (para a mochila)", () => inventario.TirarRoupa(l));

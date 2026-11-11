@@ -90,7 +90,7 @@ namespace ZombieCityCleaner.World
     /// O tempo (o clima; a pedido em 02/11/2026). O anfitrião manda: segue um calendário de frentes, como uma "mini-estação",
     /// "uma nuvem que demora pra passar": a calmaria (dias de sol), a frente fraca (um dia de chuva e um de chuvisco), a
     /// calmaria, a frente forte (um dia de tempestade e outro de tempestade com raios, com o tornado no fim em
-    /// <see cref="chanceDoTornado"/> das vezes) e a calmaria de novo; a ordem e as durações variam a cada ciclo, e os primeiros
+    /// <see cref="chanceDoTornadoNoJogo"/> das vezes) e a calmaria de novo; a ordem e as durações variam a cada ciclo, e os primeiros
     /// dias são de sol. Cada evento ocupa só umas horas do dia, com os sinais antes (as nuvens e o vento sobem) e o fim aos
     /// poucos. O anfitrião também sorteia os raios (e o que eles fazem: os zumbis viram cinza, o alarme do carro dispara, o
     /// raio direto mata) e leva o tornado pelo caminho dele (o dano, os zumbis arrastados). Os outros recebem o estado a cada
@@ -101,11 +101,21 @@ namespace ZombieCityCleaner.World
         [Header("O tempo (o clima)")]
         [Tooltip("Sem o clima, é sempre sol.")]
         public bool climaLigado = true;
-        [Tooltip("O ritmo de teste (02/11/2026, o teste com os amigos): as calmarias e os dias da frente bem mais curtos, para " +
-                 "ver o ciclo inteiro, com o tornado, em uma ou duas horas. Desligado, o ritmo de verdade: dias de sol, a chuva rara.")]
-        public bool ritmoDeTeste = true;
-        [Tooltip("A chance do tornado no fim de uma frente forte. O tornado é um evento bem raro no jogo; 0,6 é para o teste.")]
-        [Range(0f, 1f)] public float chanceDoTornado = 0.6f;
+        /// <summary>
+        /// O ritmo de teste (02/11/2026, só para o teste com os amigos): as calmarias e os dias da frente bem mais curtos, para
+        /// ver o ciclo inteiro, com o tornado, em uma ou duas horas. Desligado desde 10/11/2026 (o teste já passou: o ritmo de
+        /// verdade, dias de sol e a chuva rara) e fora das cenas: o "ligado" gravado na Mundo e na Demo_Cidade não vale mais
+        /// (as cenas ficaram como estavam). Um teste no Play ainda pode ligar, antes do primeiro ciclo.
+        /// </summary>
+        [System.NonSerialized] public bool ritmoDeTeste;
+        /// <summary>
+        /// A chance do tornado no fim de uma frente forte (10/11/2026): o tornado é um evento bem raro no jogo, como no mundo
+        /// real (o pedido do Pedro). Com uma frente forte por ciclo (uns 8 a 15 dias do jogo: de 3 a 6 horas de partida), um
+        /// tornado a cada uns dez ciclos. No teste com os amigos foram 60% (a chanceDoTornado, que ficou gravada nas cenas e
+        /// não vale mais: o campo mudou de nome).
+        /// </summary>
+        [Tooltip("A chance do tornado no fim de uma frente forte: um evento bem raro (10%). 0,6 foi só para o teste com os amigos.")]
+        [Range(0f, 1f)] public float chanceDoTornadoNoJogo = 0.1f;
 
         /// <summary>As nuvens, a chuva, o vento e as poças (de 0 a 1), do anfitrião, a cada segundo.</summary>
         readonly NetworkVariable<Vector4> _tempoRede = new NetworkVariable<Vector4>();
@@ -252,7 +262,7 @@ namespace ZombieCityCleaner.World
                 double inicioB = fimA + (teste ? Sortear(3, 6) : Sortear(12, 26));
                 double fimB = inicioB + Duracao(b, teste);
                 _calendario.Add(new Evento { inicio = inicioA, fim = fimA, nivel = a });
-                _calendario.Add(new Evento { inicio = inicioB, fim = fimB, nivel = b, tornado = frentes[f] && _sorteio.NextDouble() < chanceDoTornado });
+                _calendario.Add(new Evento { inicio = inicioB, fim = fimB, nivel = b, tornado = frentes[f] && _sorteio.NextDouble() < chanceDoTornadoNoJogo });
                 t = fimB;
             }
         }

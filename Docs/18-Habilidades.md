@@ -15,7 +15,11 @@ cada nó, as fileiras, os pré-requisitos, tirar ponto, a tela nova, o save (com
 **ramos novos** (o Armeiro de sucata, o Fogo, a Proteção de sucata, as Armadilhas e defesas) e o Sucateiro aparecem com o
 selo "em breve" e ainda não dá para aprender: o efeito deles vem nas próximas etapas (a sucata, na 1b). As seções de
 cima (o XP, as habilidades, a aba) contam a árvore de 06/11/2026; o que mudou está aqui. Desde a 1ª leva da etapa 1b
-(09/11/2026), os três primeiros nós do Armeiro de sucata já valem (veja "O Armeiro de sucata: o que já vale").
+(09/11/2026), os três primeiros nós do Armeiro de sucata já valem (veja "O Armeiro de sucata: o que já vale"); desde a
+etapa 2 (10/11/2026), o Armeiro inteiro; desde a etapa 3 (11/11/2026), a Proteção de sucata inteira (veja "A proteção
+de sucata"); desde a etapa 4 (11/11/2026), o Fogo inteiro (veja "O fogo"); desde a etapa 5a (11/11/2026), as
+Armadilhas e defesas, menos a Barricada de tábuas e a Fortaleza; e desde a etapa 5b (11/11/2026), o ramo inteiro (veja
+"As armadilhas" e "As barricadas e a Fortaleza").
 
 ### A mecânica
 
@@ -51,13 +55,17 @@ cima (o XP, as habilidades, a aba) contam a árvore de 06/11/2026; o que mudou e
   nela, como ganhar XP).
 - **Uma página por área**, com as abas no alto: o Combate (laranja), a Resistência (verde) e a Sobrevivência (roxo), com
   os pontos gastos em cada uma.
-- **Os ramos em colunas**, com o nome em cima e o selo "NOVO" nos novos; os nós em quadrados, com a letra ou o símbolo do
-  ramo (G, A, †, L; ▲, +, F, R, P; C, A, ♣, P), o nome, o "k/máx" no canto e a estrela nas pontas.
-- **As linhas** ligam cada nó aos pré-requisitos (também os de outro ramo da página), coloridas quando os dois têm ponto.
-- **Os estados:** aprendida (cheia, na cor da área; com o máximo, a borda clara), dá para aprender (a borda na cor; mais
-  fraca sem ponto livre), trancada (apagada) e "em breve" (o selo laranja).
-- **Com o mouse num nó,** um quadro com o nome, o ramo e a fileira, o nível, o efeito de agora e o do próximo nível, e o
-  que falta (os pontos da fileira, os pré-requisitos ou o ponto livre), ou se dá para tirar.
+- **Os ramos em colunas**, com o nome em cima e o selo "NOVO" nos novos. **Desde 10/11/2026, cada nó é o ícone dele**
+  (como no "Dungeons & Developers", a referência do Pedro): um quadrado com a imagem pintada no Blender (um objeto em 3D
+  low-poly, com o fundo escuro e um toque da cor da área) e o nome embaixo, numa linha (o nome longo fica com a letra
+  menor). O "k/máx" fica numa plaquinha no canto de baixo, e a estrela das pontas num círculo no canto de cima.
+- **As linhas** ligam cada nó aos pré-requisitos (também os de outro ramo da página): grossas, com uma seta no nó que
+  pede; apagadas, e douradas quando os dois lados estão aprendidos.
+- **Os estados:** aprendida (a moldura dourada e grossa, com um brilho em volta; mais forte com todos os pontos), dá para
+  aprender (a moldura na cor da área; mais fraca sem ponto livre), trancada (o ícone cinza e escuro, a moldura apagada) e
+  "em breve" (como a trancada, com a faixa "EM BREVE" no meio do ícone).
+- **Com o mouse num nó,** um quadro com o ícone, o nome, o ramo e a fileira, o nível, o efeito de agora e o do próximo
+  nível, e o que falta (os pontos da fileira, os pré-requisitos ou o ponto livre), ou se dá para tirar.
 - **O clique põe um ponto; o botão direito tira.** O que não dá pisca a borda em vermelho.
 
 ### Os nós
@@ -73,7 +81,7 @@ O efeito é por ponto (o número do nível máximo entre parênteses). ⭐ marca
 | | Braço forte | 0 | 3 | 3 | +5% de dano com arma branca (+15%) | Recarga rápida |
 | | Mão firme | 0 | 4 | 2 | 12% menos coice e tremor (24%) | Braço forte |
 | | ⭐ Mira de aço | 0 | 5 | 1 | a mira não treme | Mão firme |
-| Armeiro de sucata (os três primeiros valem desde 09/11/2026; o resto, em breve) | Pistola de sucata | 2 | 1 | 2 | a pistola de sucata (um tiro) e a munição de prego | — |
+| Armeiro de sucata (os três primeiros valem desde 09/11/2026; o resto, as melhorias, desde 10/11/2026) | Pistola de sucata | 2 | 1 | 1 (eram 2 até 10/11/2026: o segundo não fazia nada) | a pistola de sucata (um tiro) e a munição de prego | — |
 | | Rifle de precisão de sucata | 1 | 2 | 1 | o rifle de sucata e a munição de parafuso | Pistola de sucata |
 | | Submetralhadora de sucata | 3 | 2 | 1 | a submetralhadora de sucata | Pistola de sucata |
 | | Cano reforçado | 1 | 3 | 3 | o cano reforçado I, II e III: +8% de dano por nível | Rifle de precisão |
@@ -98,13 +106,13 @@ O efeito é por ponto (o número do nível máximo entre parênteses). ⭐ marca
 
 | Ramo | Nó | Col. | Fil. | Níveis | Efeito | Pede |
 |---|---|---|---|---|---|---|
-| Fogo (em breve) | Tocha duradoura | 0,5 | 1 | 2 | a tocha dura 50% mais por ponto | — |
-| | Lampião | 0 | 2 | 1 | o lampião | Tocha duradoura |
-| | Coquetel molotov | 1 | 2 | 1 | o coquetel molotov | Tocha duradoura |
-| | Fogueira portátil | 0 | 3 | 1 | a fogueira portátil | Lampião |
-| | Fogo que pega | 1 | 3 | 2 | (a definir) | Coquetel molotov |
-| | Calor do fogo | 0 | 4 | 2 | perto do fogo, a mente sobe | Fogueira portátil, Nervos de aço |
-| | ⭐ Muralha de fogo | 0,5 | 5 | 1 | (a definir) | Calor do fogo |
+| Fogo | Tocha duradoura | 0,5 | 1 | 2 | a tocha dura 50% mais por ponto | — |
+| | Lampião | 0 | 2 | 1 | o lampião (na mesa de oficina) | Tocha duradoura |
+| | Coquetel molotov | 1 | 2 | 1 | o coquetel molotov (na bancada) | Tocha duradoura |
+| | Fogueira portátil | 0 | 3 | 1 | o kit da fogueira portátil (na bancada) | Lampião |
+| | Fogo que pega | 1 | 3 | 2 | o molotov e a tocha queimam 30% mais tempo, e a área do molotov fica 20% maior, por ponto | Coquetel molotov |
+| | Calor do fogo | 0 | 4 | 2 | a menos de 4 m de um fogo aceso, a mente sobe 2 por hora por ponto | Fogueira portátil, Nervos de aço |
+| | ⭐ Muralha de fogo | 0,5 | 5 | 1 | o seu fogo segura os zumbis 50% mais longe, e eles fogem em pânico | Calor do fogo |
 | Saúde | Mãos de enfermeiro | 2 | 1 | 2 | curativos 12% mais rápidos (24%) | — |
 | | Curativo bem feito | 2 | 2 | 2 | +5% à parte (+10%) | Mãos de enfermeiro |
 | | Imunidade | 2 | 3 | 2 | infecciona 20% menos (40%) | Curativo bem feito |
@@ -120,11 +128,11 @@ O efeito é por ponto (o número do nível máximo entre parênteses). ⭐ marca
 | | Farmacêutico | 4 | 3 | 2 | analgésico e xarope 25% mais (50%) | Econômico |
 | | Reparador | 4 | 4 | 2 | 15% de não gastar o kit (30%) | Farmacêutico |
 | | ⭐ Remendão | 4 | 5 | 1 | as armas nunca emperram | Reparador |
-| Proteção de sucata (em breve) | Capacete de panela | 5 | 1 | 1 | o capacete de panela | — |
-| | Braçadeiras e caneleiras | 5 | 2 | 1 | as braçadeiras e as caneleiras | Capacete de panela |
-| | Colete de chapa | 5 | 3 | 1 | o colete de chapa | Braçadeiras e caneleiras |
-| | Remendo de chapa | 5 | 4 | 2 | (a definir) | Colete de chapa, Reparador |
-| | ⭐ Couraça | 5 | 5 | 1 | a mordida no metal não infecciona | Remendo de chapa |
+| Proteção de sucata (desde 11/11/2026) | Capacete de panela | 5 | 1 | 1 | o capacete de panela (corta 35% na cabeça) | — |
+| | Braçadeiras e caneleiras | 5 | 2 | 1 | as braçadeiras e as caneleiras (30% nos braços e nas pernas) | Capacete de panela |
+| | Colete de chapa | 5 | 3 | 1 | o colete de chapa (30% no tronco; pesa e faz barulho) | Braçadeiras e caneleiras |
+| | Remendo de chapa | 5 | 4 | 2 | as peças se gastam 25% menos (50%) | Colete de chapa, Reparador |
+| | ⭐ Couraça | 5 | 5 | 1 | a mordida numa parte coberta não infecciona | Remendo de chapa |
 
 **Sobrevivência** (o Craft 0, as Armadilhas e defesas 1 e 2, o Sortudo 3, a Pesca 4)
 
@@ -135,13 +143,13 @@ O efeito é por ponto (o número do nível máximo entre parênteses). ⭐ marca
 | | Artesão | 0 | 3 | 1 | na oficina: o machado, o pé de cabra, a mochila grande, a lanterna | Faz-tudo |
 | | Mãos hábeis | 0 | 4 | 2 | 1: 25% de sair em dobro; 2: também 20% de devolver um material | Artesão |
 | | ⭐ Armeiro | 0 | 5 | 1 | a munição na oficina, com a pólvora | Mãos hábeis |
-| Armadilhas e defesas (em breve) | Alarme de latas | 1,5 | 1 | 1 | o alarme de latas | — |
-| | Barricada de tábuas | 1 | 2 | 2 | a barricada de tábuas | Alarme de latas |
-| | Tapete de pregos | 2 | 2 | 1 | o tapete de pregos | Alarme de latas |
-| | Estacas | 1 | 3 | 1 | as estacas | Barricada de tábuas, Artesão |
-| | Armadilheiro | 2 | 3 | 2 | (a definir) | Tapete de pregos |
-| | Cerca de fogo | 1,5 | 4 | 1 | a cerca de fogo | Estacas |
-| | ⭐ Fortaleza | 1,5 | 5 | 1 | (a definir) | Cerca de fogo |
+| Armadilhas e defesas (desde 11/11/2026, as etapas 5a e 5b) | Alarme de latas | 1,5 | 1 | 1 | o alarme de latas (na bancada): quem passa em pé faz as latas tocarem, os zumbis a 12 m vêm ver e o dono recebe o aviso; 12 toques | — |
+| | Barricada de tábuas | 1 | 2 | 2 | as tábuas para barricada (na bancada, com a ferramenta: 3 madeiras e 6 pregos), pregadas numa porta (150) ou numa janela (100) das casas: ela não abre; 2: +50% de vida e o conserto (o clique, 1 madeira e 2 pregos: +35%) | Alarme de latas |
+| | Tapete de pregos | 2 | 2 | 1 | o tapete de pregos (na bancada, com a ferramenta): 20 no zumbi (e 50% mais lento por 4 s), 6 na perna de quem pisa em pé, fura o pneu; 8 usos | Alarme de latas |
+| | Estacas | 1 | 3 | 1 | as estacas (na bancada, com a ferramenta): seguram como a barricada, 12 por segundo em quem encosta na frente; o Brutamonte as quebra e leva 60 | Barricada de tábuas (desde a 5b, de novo), Artesão |
+| | Armadilheiro | 2 | 3 | 2 | as suas armadilhas: +50% de usos e vida e +25% de dano por ponto; no 2, o seu tapete não fere jogadores | Tapete de pregos |
+| | Cerca de fogo | 1,5 | 4 | 1 | a cerca de fogo (na bancada, 2 combustíveis): um rastro de 4 m que, aceso, queima 90 s; os zumbis não atravessam | Estacas |
+| | ⭐ Fortaleza | 1,5 | 5 | 1 | as suas barricadas e estacas com o dobro da vida, consertando sozinhas (5% por hora do jogo, você a até 30 m, sem zumbi batendo); o seu alarme avisa de qualquer distância | Cerca de fogo |
 | Sortudo | Olho bom | 3 | 1 | 2 | 5% de mais um comum (10%); as pilhas +12% (+25%) | — |
 | | Garimpeiro | 3 | 2 | 2 | 4% de um incomum (8%) | Olho bom |
 | | Abutre | 3 | 3 | 2 | 1: uma ou duas coisas a mais; 2: duas ou três e a munição | Garimpeiro |
@@ -160,6 +168,9 @@ O efeito é por ponto (o número do nível máximo entre parênteses). ⭐ marca
   velha, passando pela migração, como ao carregar: o aviso aparece na aba K).
 - As armas de sucata (09/11/2026): Pistola sucata, Rifle sucata, Submet. sucata, 20+20 munições (de prego e de parafuso),
   20 sucatas e Materiais sucata (20 sucatas, 3 madeiras, 3 fitas e 3 pólvoras).
+- As armadilhas (11/11/2026, a etapa 5a): "Armadilhas: nós" (o alarme, o tapete, as estacas, o Armadilheiro 2 e a cerca
+  de fogo, com o Artesão), "Armadilhas: peças" (2 alarmes, 2 tapetes, as estacas e 2 cercas) e "Mat. armadilhas" (os
+  materiais das 4 receitas, com a ferramenta e 2 álcoois).
 - A sucata, 2ª leva (09/11/2026): "Painel na frente" (um painel de teste a 1,3 m, um modelo de cada vez; não vai no save),
   "Itens desmontar" (a ferramenta, o pé de cabra, a garrafa térmica, 3 peças de metal, o radiador, o macaco e uma pistola
   quebrada) e "Ir a um painel" (para perto do painel do mapa mais perto).
@@ -178,8 +189,170 @@ destravada à parte (os números de cada arma estão no `CLAUDE.md`, "As armas d
 | Submetralhadora de sucata (`a3`) | a submetralhadora de sucata (automática, 20 tiros, munição de prego) | mesa de oficina | 12 sucatas, 1 madeira, 2 fitas |
 
 - A mesa de oficina também vale como bancada. As Mãos hábeis (sair em dobro, devolver um material) valem nelas também.
-- O `a1` tem 2 níveis na árvore; o 2º ponto ainda não muda nada (as melhorias vêm depois). Do `a4` (Cano reforçado) ao
-  `a10` (Mestre armeiro), continuam "em breve". O Sucateiro passou a valer na 2ª leva (abaixo).
+- O `a1` tem 1 nível desde 10/11/2026 (o 2º não fazia nada). Do `a4` (Cano reforçado) ao `a10` (Mestre armeiro), valem
+  desde 10/11/2026 (as melhorias, abaixo). O Sucateiro passou a valer na 2ª leva (abaixo).
+
+### O Armeiro de sucata: as melhorias (10/11/2026, a etapa 2)
+
+Peças fabricadas que se põem e se tiram nas armas de sucata, na bancada (a mesa de oficina vale): na aba Criar, a barra
+de cima tem RECEITAS e **MELHORIAS DAS ARMAS**. Ali aparecem as armas de sucata da mochila e, da escolhida, os encaixes:
+o Cano (um silenciador), a Mira (a de ferro e, em cima, a de ponto ou a luneta), o Carregador e o Reforço (um cano
+reforçado). Clicar numa peça da mochila põe (e gasta a peça; a que estava no lugar volta para a mochila); clicar numa
+posta tira (e ela volta). **A melhoria fica na própria arma**: vai junto para o chão, para a estante, para outro jogador
+e no save. As armas reais não aceitam as de sucata.
+
+| Nó | Peça | Onde | Gasta | Faz |
+|---|---|---|---|---|
+| Silenciador caseiro (`a9`), nível 1 | silenciador de garrafa PET | bancada | 1 garrafa de refrigerante, 1 fita | o tiro chega 60% menos longe para os zumbis e tira 5% menos; dura 15 tiros e se desfaz |
+| Silenciador caseiro, nível 2 | silenciador de filtro de óleo | mesa de oficina | 4 sucatas, 1 fita | 50% menos longe, 5% menos de dano; dura 80 tiros |
+| Miras caseiras (`a5`), nível 1 | mira de ferro ajustada | bancada | 2 sucatas | o tiro espalha 15% menos |
+| Miras caseiras, nível 2 | mira de ponto caseira | mesa de oficina | 3 sucatas, 1 fita, 1 par de pilhas | mirando, espalha 30% menos, e o olho vai no tubinho, com o pontinho vermelho no meio |
+| Luneta de cano (`a7`) | luneta de cano (só no rifle) | mesa de oficina | 5 sucatas, 2 fitas | mirando, aproxima 2,5 vezes (a tela da luneta da sniper) e espalha 60% menos |
+| Carregador estendido (`a6`) | carregador estendido (pistola e submetralhadora) | bancada | 4 sucatas, 1 fita | a pistola leva 3 tiros; a submetralhadora, 32 |
+| Cano reforçado (`a4`), níveis 1, 2 e 3 | cano reforçado I, II e III | I na bancada; II e III na mesa de oficina | 4 sucatas e 1 fita; 6 sucatas e 2 fitas; 8 sucatas e 2 peças de metal | +8%, +16% e +24% de dano; a arma gasta 10%, 20% e 30% mais |
+| Mola nova (`a8`), 2 níveis | — | — | — | as armas de sucata emperram 25% menos por nível |
+| ⭐ Mestre armeiro (`a10`) | — | — | — | as armas de sucata batem como as reais (sem o 75%) e as receitas do Armeiro de sucata gastam 25% menos sucata |
+
+- A mira de ferro ajustada convive com a de ponto e com a luneta; a de ponto e a luneta, não (o mesmo lugar). Os dois
+  silenciadores não vão juntos, nem os três canos.
+- O silenciador tirado volta com o desgaste dos tiros que já deu ("Ainda dá: 12 tiros"). Tirar o carregador estendido
+  com o pente cheio devolve as balas a mais numa caixa. Desmontar a arma devolve as peças.
+- Não há garrafa vazia nem filtro de óleo como item: a PET é a garrafa de refrigerante; o filtro sai da sucata.
+- O F1 (a aba "Habil."): "Melhorias: nós", "Melhorias: peças", "Mat. melhorias" e "Painel melhorias".
+
+### A proteção de sucata (11/11/2026, a etapa 3)
+
+Quatro peças que se vestem num grupo novo da tela do inventário, o **PROTEÇÃO** (a fileira embaixo do retrato, acima dos
+atalhos). Cada uma corta uma parte do golpe que pega na parte do corpo que ela cobre, e se gasta com ele.
+
+| Nó | Peça | Onde | Gasta | Cobre e corta | Mais |
+|---|---|---|---|---|---|
+| Capacete de panela (`p1`) | capacete de panela | bancada | 3 sucatas, 1 fita, 1 corda | a cabeça, 35% | não vai com o chapéu |
+| Braçadeiras e caneleiras (`p2`) | braçadeiras de sucata | bancada | 4 sucatas, 2 fitas | os braços, 30% | — |
+| Braçadeiras e caneleiras (`p2`) | caneleiras de sucata | bancada | 4 sucatas, 2 fitas | as pernas, 30% | os passos se ouvem 10% mais longe |
+| Colete de chapa (`p3`) | colete de chapa | mesa de oficina | 8 sucatas, 2 fitas, 1 pneu | o tronco, 30% | anda 4% mais devagar; passos 15% mais longe |
+| Remendo de chapa (`p4`), 2 níveis | — | — | — | — | as peças se gastam 25% menos por nível |
+| ⭐ Couraça (`p5`) | — | — | — | — | a ferida da mordida numa parte coberta não infecciona |
+
+- **O desgaste:** cada golpe que a peça segura gasta um pouco dela (a mordida do Oco, 8% do capacete, das braçadeiras e
+  das caneleiras e 5% do colete). Em 0% ela quebra: o lugar mostra "quebrado" e ela não protege mais até ser consertada
+  com um kit de reparo (o botão direito no lugar, "Consertar", ou "Reparar" na mochila; qualquer um conserta, e o
+  Reparador também poupa o kit). As braçadeiras e as caneleiras são um par: um desgaste só.
+- **O que ela segura:** a mordida, o corte, a pancada, o tiro e o esmagamento. A queda, o tornado e o raio passam inteiros.
+- **O capacete e o chapéu não vão juntos:** vestir um manda o outro para a mochila. Com o capacete, o cabelo grande fica
+  na versão de baixo do chapéu.
+- **O pneu do colete** é a roda de carro: a receita gasta a mais gasta da mochila (a rasgada primeiro).
+- Na morte, as peças ficam na mochila do chão, com as roupas. Elas vão no save do personagem, com o desgaste.
+- O F1 (a aba "Habil."): "Proteção: nós", "Proteção: peças", "Mat. proteção" e "Gastar proteção".
+- As caneleiras ficaram largas (parecem baldes, por cima da calça): o Pedro decide depois.
+
+### O fogo (11/11/2026, a etapa 4)
+
+Três peças novas e os efeitos na tocha, na mente e nos zumbis. Os números ficam no `Player/FogoDoJogador.cs` (e os raios
+dos zumbis no `AjustesDeZumbi`, "O fogo, etapa 4"). Os minutos são de relógio (o tempo jogado), não do relógio do jogo.
+
+| Nó | Peça | Onde | Gasta | O que faz |
+|---|---|---|---|---|
+| Tocha duradoura (`f1`), 2 níveis | — | — | — | a tocha dura 50% mais por nível |
+| Lampião (`f2`) | lampião (2 × 2) | mesa de oficina | 3 sucatas, 1 garrafa de refrigerante, 1 combustível | na mão: luz quente de 10 m, os zumbis na beira a 4 m; 15 min por carga; a chuva não apaga; o clique só balança |
+| Coquetel molotov (`f3`) | coquetel molotov (1 × 2) | bancada | 1 garrafa de refrigerante, 1 combustível, 1 pano | o clique arremessa; onde quebra, fogo de 2,5 m por 8 s |
+| Fogueira portátil (`f4`) | kit da fogueira portátil (2 × 2) | bancada | 3 madeiras, 1 corda, 1 combustível | montada, queima 60 min e segura os zumbis a 8 m; o E recolhe |
+| Fogo que pega (`f5`), 2 níveis | — | — | — | o molotov e a tocha queimam 30% mais tempo, e a área do molotov fica 20% maior, por nível |
+| Calor do fogo (`f6`), 2 níveis | — | — | — | a menos de 4 m de um fogo aceso, a mente sobe 2 por hora por nível |
+| ⭐ Muralha de fogo (`f7`) | — | — | — | o seu fogo segura os zumbis 50% mais longe, e eles fogem em pânico |
+
+- **O combustível:** 1 álcool ou, sem ele, meio litro de gasolina do galão mais cheio. Não existe vidro como item: a garrafa
+  é a de refrigerante.
+- **O lampião:** aceso só na mão (no carro, escondido), gasta o combustível; "Reabastecer" (o botão direito na mochila)
+  gasta 1 combustível. Largado da mão aceso, fica aceso no chão até acabar a carga, segurando os zumbis; pego de volta, vai
+  apagado para a mochila. A chuva e a gosma não o apagam.
+- **O molotov:** a garrafa sai da mão no quadro 8 do arremesso e voa em arco (olhando reto, uns 14 m; mais alto, mais
+  longe). Ao quebrar, o fogo pega no chão: os zumbis dentro levam 25 por segundo e pegam fogo (continuam queimando 4 s depois
+  de sair, 15 por segundo; quem mata ganha o XP), recuam até a beira de 8 m (como numa fogueira) e não caçam quem jogou só
+  por isso; o Brutamonte não queima. Os moradores dentro levam 12 por segundo e saem correndo; os jogadores (até quem
+  jogou) levam 8 por segundo. Na chuva, fora de um teto, o fogo dura bem menos (a chuva comum: menos da metade). Um molotov
+  sem o Fogo que pega deixa os Ocos que estavam dentro com uns 65 de dano; com o Fogo que pega 2, eles morrem.
+- **A fogueira portátil:** é uma fogueira como a de lenha (a chuva, o Long da fogueira, a mente, assar o peixe), com o modelo
+  dela, que não aceita mais lenha. Não é montada na chuva fora de um teto. **O E recolhe:** acesa, volta o kit com a lenha
+  que sobrou; apagada (acabou, a chuva ou a gosma), a lenha virou cinza e sobra a corda. Com a tocha apagada na mão, o E
+  nela acesa reacende a tocha.
+- **O Calor do fogo** conta qualquer fogo aceso perto: a fogueira, o lampião ou a tocha na mão e a área do molotov (o motivo
+  "CALOR DO FOGO" no HUD da mente).
+- **A Muralha de fogo** vale no fogo do jogador: a tocha e o lampião (6 m), a fogueira e o lampião largado que ele acendeu e
+  o molotov que ele jogou (12 m). Quem está dentro foge 6 m além da beira, larga quem caçava e grita.
+- O F1 (a aba "Habil."): "Fogo: nós", "Fogo: peças", "Mat. fogo" e "Molotov na frente".
+- Os modelos (o `Fogo.fbx`, o `Loot_Etapa34.fbx` e os braços `Jogador_FP_Lampiao` e `_Molotov`) entram pelo menu Zombie City
+  Cleaner > Habilidades > Montar o fogo, no `Resources/ItensDoFogo.prefab`: nenhuma cena nem o prefab do jogador mudaram.
+
+### As armadilhas (11/11/2026, a etapa 5a)
+
+Quatro peças montadas no chão (o botão direito no kit da mochila: "Montar no chão", a sombra verde ou vermelha, R gira, o
+clique monta), como a barricada. Os números ficam no `Player/ArmadilhasDoJogador.cs`. A Barricada de tábuas (`t2`) e a
+Fortaleza (`t7`) vieram na etapa 5b (veja "As barricadas e a Fortaleza"); desde então, as Estacas voltam a pedir a
+Barricada de tábuas.
+
+| Nó | Peça | Onde | Gasta | O que faz |
+|---|---|---|---|---|
+| Alarme de latas (`t1`) | alarme de latas (2 × 2) | bancada | 2 sucatas, 1 corda, 1 madeira | o barbante de 1,6 m: quem cruza em pé (o zumbi, o morador, o jogador andando; agachado passa) faz as latas tocarem: o som chega a 35 m, os zumbis a 12 m vêm ver e o dono recebe o aviso no HUD (até 60 m: "As latas tocaram: a 23 m, atrás, à direita"); rearma em 4 s; 12 toques, e o último arrebenta o barbante (sobra 1 sucata) |
+| Barricada de tábuas (`t2`), 2 níveis | tábuas para barricada (3 × 1) | bancada, com a ferramenta | 3 madeiras, 6 pregos | pregada numa porta ou numa janela das casas (veja "As barricadas e a Fortaleza") |
+| Tapete de pregos (`t3`) | tapete de pregos (3 × 1) | bancada, com a ferramenta | 1 madeira, 12 pregos | o zumbi que pisa leva 20 (uma vez por passagem) e anda na metade da velocidade por 4 s; o morador leva 20; o jogador andando ou correndo (o dono também), 6 na perna, e agachado passa; a roda do carro fura o pneu; 8 usos (o jogador não gasta), e gasto ele some (sobram 4 pregos) |
+| Estacas (`t4`) | estacas (4 × 1) | bancada, com a ferramenta | 4 madeiras, 1 corda | seguram como a barricada; quem encosta na frente (o lado das pontas) leva 12 por segundo; a vida (100) cai com os zumbis encostados, na metade do ritmo da barricada; o Brutamonte as quebra, mas leva 60; quebradas, sobram 2 madeiras |
+| Armadilheiro (`t5`), 2 níveis | — | — | — | as suas armadilhas têm +50% de usos e de vida (e de tempo na cerca) e +25% de dano por nível; no 2, o seu tapete de pregos não fere jogadores |
+| Cerca de fogo (`t6`) | cerca de fogo (2 × 2) | bancada | 1 pano, 2 combustíveis | o galão com o pavio e um rastro de 4 m; acesa, o fogo corre do pavio até a ponta (1 s) e queima 90 s; os zumbis não atravessam, e quem atravessa queima como no molotov |
+| ⭐ Fortaleza (`t7`) | — | — | — | as defesas do dono com o dobro da vida e o conserto sozinho; o alarme dele avisa de qualquer distância (veja "As barricadas e a Fortaleza") |
+
+- **O Armadilheiro vale pelo nível de quem montou** (guardado na armadilha): no nível 2, o alarme tem 24 toques, o tapete 16
+  usos, as estacas 200 de vida, a cerca queima 180 s, e o tapete tira 30 dos zumbis. O bônus de dano vale nos zumbis e nos
+  moradores (o tapete, as estacas e o fogo da cerca); nos jogadores, o tapete tira 6 e o fogo 8, como sempre.
+- **O E recolhe:** o alarme volta inteiro com mais da metade dos toques (com o que sobrou: montado de novo, tem só o resto);
+  senão, 1 sucata. O tapete volta com os usos que sobraram. As estacas voltam com 60% ou mais da vida; senão, 2 madeiras. A
+  cerca apagada volta; acesa, não dá.
+- **A cerca de fogo acende** com o E e a tocha acesa ou o lampião aceso na mão, ou com o fogo encostando no rastro (o
+  molotov, ou outra cerca acesa: postas em fila, uma acende a outra). Ela acende na chuva também, mas lá fora queima mais
+  depressa (como a área do molotov). Uma parede, um móvel ou as estacas no caminho cortam o rastro. Os zumbis esperam na
+  beira (a Muralha de fogo do dono os segura mais longe, e eles fogem em pânico) e só entram se a horda criar coragem. Queimada,
+  ela some. A sombra de montar mostra o rastro, para a direita de quem monta (e as estacas começam com as pontas para longe).
+- **No save:** as armadilhas montadas voltam com os usos e a vida; a cerca acesa não volta (o combustível queimou), a apagada
+  volta.
+- **O combustível** (o mesmo do fogo): 1 álcool ou meio litro de gasolina do galão mais cheio, por unidade. Não existe lata
+  vazia como item: as latas do alarme saem da sucata.
+- O F1 (a aba "Habil."): "Armadilhas: nós", "Armadilhas: peças" e "Mat. armadilhas".
+- Os modelos (o `Art/Armadilhas/Armadilhas.fbx` e o `Loot_Armadilhas.fbx`) entram pelo menu Zombie City Cleaner >
+  Habilidades > Montar as armadilhas, no `Resources/ItensDasArmadilhas.prefab` (com as barricadas da 5b): nenhuma cena
+  nem o prefab do jogador mudaram.
+
+### As barricadas e a Fortaleza (11/11/2026, a etapa 5b)
+
+A Barricada de tábuas (`t2`) e a Fortaleza (`t7`): o ramo Armadilhas e defesas inteiro. Os números ficam no
+`Player/ArmadilhasDoJogador.cs` (a seção do fim).
+
+| Nó | O que faz |
+|---|---|
+| Barricada de tábuas (`t2`), nível 1 | as **tábuas para barricada** (3 × 1; na bancada, com a ferramenta: 3 madeiras e 6 pregos). Com elas na mochila, mirando uma porta ou uma janela de casa, **segurar o E por 3 s** prega a barricada do lado de quem prega (o martelo chama os zumbis a 15 m); o toque no E continua abrindo e fechando. A porta ou a janela fecha na hora e **não abre enquanto ela existir, dos dois lados** (a folha treme; a dica diz "Porta barricada"); ninguém arromba, e a janela barricada não deixa pular. Vida: a porta 150, a janela 100 |
+| Barricada de tábuas (`t2`), nível 2 | +50% de vida (a porta 225, a janela 150) e **o conserto**: do lado dela, **segurar o clique por 2,5 s** com 1 madeira, 2 pregos e a ferramenta: +35% da vida máxima |
+| ⭐ Fortaleza (`t7`) | as suas defesas (as barricadas de tábuas, a barricada solta e as estacas) **aguentam o dobro** e **se consertam sozinhas**: 5% da vida máxima por hora do jogo (uma hora = 1 minuto de relógio), com você a até 30 m e nenhum zumbi batendo nelas há 5 s. O seu **alarme de latas avisa de qualquer distância** (sem os 60 m) |
+
+- **Gastar e quebrar:** os zumbis engajados encostados tiram 2,5 por segundo cada (como na barricada solta), o Brutamonte a
+  derruba, e o golpe de arma branca de um jogador tira metade do dano da arma (dos dois lados: do outro lado, batendo na
+  porta ou na janela). Abaixo de 50% ela aparece danificada (uma tábua solta, caída). Quebrada, some, sobram 2 madeiras no
+  chão, e a porta volta a funcionar (fechada).
+- **Desmontar:** do lado em que foi pregada, segurar o E por 2 s com a ferramenta na mochila: voltam as tábuas com 60% da
+  vida ou mais; senão, 2 madeiras. Do outro lado, não dá (só quebrando).
+- **O Armadilheiro vale nas barricadas** (as de tábuas e a solta): +50% de vida por nível, pelo nível de quem montou. A
+  barricada solta mostra a vida em %, e desmontada com 60% ou mais volta inteira, como antes.
+- **A vida fica com quem montou:** o nível da Barricada de tábuas, o Armadilheiro e a Fortaleza contam na hora de pregar
+  (uma porta da frente com tudo no máximo: 150 × 1,5 × 2 × 2 = 900).
+- **Os zumbis e as portas:** a porta fechada já barrava os zumbis (eles não abrem nem arrombam portas; "os zumbis forçando
+  as portas" ficou para depois no `Plano_Portas`). Com a barricada por dentro, quem persegue o jogador bate nela pela porta;
+  quando ela cai, a porta fechada continua segurando. Hoje, contra os zumbis, ela vale pouco além da porta fechada: vira
+  defesa de verdade quando as hordas forçarem as portas e as janelas (a decisão é do Pedro).
+- **No save:** a barricada volta na mesma porta ou janela (a casa vem da semente), com a vida, o lado e os níveis, e a porta
+  fechada.
+- O F1 (a aba "Habil."): "Armadilhas: nós" (com a Barricada de tábuas 2 e a Fortaleza), "Armadilhas: peças" (+2 tábuas e a
+  barricada solta), "Mat. armadilhas" (as 5 receitas e um conserto), "Barricar a porta" e "Barricar a janela" (a mais perto,
+  do seu lado, sem gastar as tábuas).
+- O ícone e a foto das tábuas: o menu Zombie City Cleaner > Habilidades > Montar as tábuas da barricada (o modelo é o do
+  `Loot_Armadilhas.fbx`, já no `Resources/ItensDasArmadilhas.prefab`).
 
 ### O Sucateiro e a sucata (09/11/2026, a 2ª leva da etapa 1b)
 
@@ -241,6 +414,11 @@ para aprender, e o ponto ainda pode sair).
   mais pontos que o nível). `VersaoDaRede` 12.
 - **A tela** `TelaDoInventario.Habilidades.cs` (o botão direito entra pelo `Processar`, no `TelaDoInventario.cs`); o
   aviso embaixo da mira no `XpNaTela`. Para os testes: `AbrirNaAbaHabilidades(area)`, `PontoDoNo(h)` e `MouseDeTeste`.
+- **Os ícones** (10/11/2026): `Art/UI/Habilidades/Resources/Hab_<Habilidade>.png` e `Hab_<Habilidade>_Cinza.png` (a cópia
+  sem cor, dos trancados), pelo `Resources` (`TelaDoInventario.IconeDaHabilidade`). Para refazer: o
+  `Blender/icones_habilidades.py` com `--saida <pasta>` (os `Hab_<id>.png`) e o menu Zombie City Cleaner/Habilidades/
+  Importar os ícones (o `Editor/MontagemDosIconesDasHabilidades`: o nome do enum, os cinza e a importação, 256 com mipmap
+  e BC7).
 - **Os efeitos lendo o nível:** `ArmaJogador` (o Tiro forte, o Braço forte, a Mão firme, a Recarga rápida),
   `EfeitosDoCorpo` (a Mão firme), `FomeESede`, `InventarioJogador` (o Reparador, as Mãos hábeis, o Cuidadoso, o
   Econômico), `Carro.Desgaste`, `JogadorRede.RaioDoMeuTiro`, `ZombieManager` e `ZombieManager.Clima` (os Passos leves),

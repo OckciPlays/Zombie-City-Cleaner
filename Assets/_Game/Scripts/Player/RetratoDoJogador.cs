@@ -79,6 +79,8 @@ namespace ZombieCityCleaner.Player
             // a faixa e a tala do corpo (o CurativosNoCorpo, 05/11/2026) também: o retrato põe as dele, abaixo
             CurativosNoCorpo.TirarCopiadas(copia.transform);
             foreach (var cur in copia.GetComponents<CurativosNoCorpo>()) Object.Destroy(cur);
+            // e a proteção de sucata (o ProtecaoNoCorpo, 11/11/2026)
+            ProtecaoNoCorpo.TirarCopiadas(copia.transform);
             copia.transform.localPosition = Vector3.zero;
             copia.transform.localRotation = Quaternion.identity;
             // as roupas: as mesmas peças e cores do jogador (a cópia não leva as cores, que ficam fora do material)
@@ -176,6 +178,9 @@ namespace ZombieCityCleaner.Player
                 dosCurativos.mainTextureScale = Vector2.one;
                 copia.AddComponent<CurativosNoCorpo>().NoRetrato(vida, _referencia, dosCurativos);
             }
+            // a proteção de sucata (11/11/2026): as peças do jogador, no material do retrato com a paleta dos itens
+            if (_inventario != null)
+                copia.AddComponent<ProtecaoNoCorpo>().NoRetrato(_inventario, Copia(material, PecasDaProtecao.Dados != null ? PecasDaProtecao.Dados.material : mundo?.material));
 
             var camGo = new GameObject("Câmera do retrato");
             camGo.transform.SetParent(_raiz.transform, false);

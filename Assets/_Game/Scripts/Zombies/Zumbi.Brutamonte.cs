@@ -328,7 +328,7 @@ namespace ZombieCityCleaner.Zombies
                 _m.BaqueDoBrutamonte(this);
             }
             // as barricadas no caminho caem
-            Loot.ConstrucoesNoMundo.Instancia?.QuebrarBarricadasPerto(transform.position + _direcaoDoAvanco * 0.6f, 1.6f);
+            Loot.ConstrucoesNoMundo.Instancia?.QuebrarBarricadasPerto(transform.position + _direcaoDoAvanco * 0.6f, 1.6f, this);   // (e as estacas, 11/11/2026: ele leva o dano delas)
             if (!chegou) return;
             Velocidade = 0f;
             if (_bateuNaParede)
@@ -361,7 +361,7 @@ namespace ZombieCityCleaner.Zombies
                 float k = dist <= cheio ? 1f : Mathf.Lerp(1f, 0.25f, (dist - cheio) / (raio - cheio));
                 _m.Golpear(p.quem, b.danoDoGolpeNoChao * forca * k, ponto);
             }
-            Loot.ConstrucoesNoMundo.Instancia?.QuebrarBarricadasPerto(ponto, 1.4f + 0.6f * forca);
+            Loot.ConstrucoesNoMundo.Instancia?.QuebrarBarricadasPerto(ponto, 1.4f + 0.6f * forca, this);
         }
 
         /// <summary>Onde os punhos batem: no chão, entre as duas mãos (ou na frente dele, sem os ossos das mãos).</summary>

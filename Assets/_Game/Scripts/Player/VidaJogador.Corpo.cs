@@ -269,6 +269,10 @@ namespace ZombieCityCleaner.Player
             nova = Lesao.Nenhuma;
             if (!PartesDoCorpo.Valida(parte)) parte = PartesDoCorpo.SortearParte(PartesDoCorpo.PesosDo(tipo), transform, de);
             if (!PartesDoCorpo.EhMembro(parte)) lesao = Lesao.Nenhuma;   // a cabeça e o tronco não quebram (por enquanto)
+            // a proteção de sucata (11/11/2026, a etapa 3): a peça que cobre a parte corta o golpe e se gasta; com a Couraça, a
+            // ferida nova da mordida nela não infecciona (fica coberta, como a do antibiótico)
+            bool couraca = false;
+            if (_inventario != null) valor = _inventario.ProtegerDoGolpe(parte, tipo, valor, out couraca);
             int p = (int)parte;
             // o golpe tira da vida geral o que tirava antes (07/11/2026): no tronco e na cabeça, o mesmo tanto da parte; no
             // braço e na perna, o dobro da parte (que conta metade). O que a lesão tira a mais fica só no membro
@@ -282,8 +286,10 @@ namespace ZombieCityCleaner.Player
             }
             else if (Random.value < ChanceDeFerida(tipo))
             {
+                bool jaAberta = (_sangra & Bit(parte)) != 0 || _feridaFalta[p] > 0f;
                 AbrirFerida(parte, Sangramento(tipo));
                 abriu = true;
+                if (couraca && !jaAberta) _coberta |= (byte)Bit(parte);
             }
             // a lesão: só a pior fica (a fratura por cima da entorse); a tala de antes solta
             if (lesao > _lesao[p])

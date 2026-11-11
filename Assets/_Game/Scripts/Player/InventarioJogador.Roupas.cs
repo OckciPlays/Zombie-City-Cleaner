@@ -197,6 +197,9 @@ namespace ZombieCityCleaner.Player
             var it = Mochila[k];
             var dados = Itens.Roupa(it.item);
             if (dados == null) return;
+            // o chapéu não vai com o capacete de panela (a proteção de sucata, 11/11/2026): o capacete volta para a mochila
+            if (dados.lugar == LugarDaRoupa.Chapeu && !TirarOCapaceteParaOChapeu(it.x, it.y, it.id)) return;
+            k = Indice(id);
             var r = Roupas.Value;
             var antes = r.Peca(dados.lugar);
             ulong coresAntes = r.Cores(dados.lugar);
