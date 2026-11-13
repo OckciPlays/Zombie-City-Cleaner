@@ -180,6 +180,57 @@ namespace ZombieCityCleaner.Mundo
             }
         }
 
+        /// <summary>
+        /// Uma peça de móvel com saque fora dos pontos dos móveis (o Hospital Principal, 08/11/2026: os móveis dele vêm do
+        /// <see cref="MoveisDoHospital"/>): o modelo, onde (nas coordenadas da obra), o giro e a escala dele, o ponto (o número
+        /// do móvel no andar: a chave do saque), o cômodo (o tipo e o número dele) e o que ele aceita.
+        /// </summary>
+        public struct PecaComSaque
+        {
+            public string modelo, comodo;
+            public int ponto, sala;
+            public Vector3 origem;
+            public float giro, escala;
+            public CatalogoDoSaque.Regra regra;
+        }
+
+        /// <summary>
+        /// O saque de uma lista de peças (o Hospital Principal: um andar), como o de uma moradia: de 'min' a 'max' itens, a
+        /// raridade pelas 'chances', o cômodo pelo 'pesoDoComodo' (no máximo <see cref="CatalogoDoSaque.PorComodo"/> no
+        /// mesmo), o lugar pelo peso do móvel e o item entre os que o lugar aceita e que cabem nele. A peça é a 0.
+        /// </summary>
+        public static void SortearPecas(IList<PecaComSaque> pecas, ulong semente, int unidade, int min, int max, float[] chances,
+                                        System.Func<string, float> pesoDoComodo, List<ItemDoSaque> saida)
+        {
+            var livres = new List<Livre>();
+            foreach (var p in pecas)
+            {
+                if (p.regra == null) continue;
+                var lugares = LugaresDoSaque.Do(p.modelo);
+                var giro = Quaternion.Euler(0f, p.giro, 0f);
+                for (int j = 0; j < lugares.Length; j++)
+                {
+                    var l = lugares[j];
+                    var aceita = CatalogoDoSaque.Aceita(p.regra, l) & ~EspecieDoSaque.Sinuca;
+                    if (aceita == EspecieDoSaque.Nenhuma) continue;
+                    var livre = new Livre
+                    {
+                        ponto = p.ponto, peca = 0, lugar = j, sala = p.sala, comodo = p.comodo, andar = 0, modelo = p.modelo,
+                        l = l, aceita = aceita, peso = p.regra.peso / lugares.Length,
+                        meio = p.origem + giro * (l.meio * p.escala), giro = p.giro, tamanho = l.tamanho * p.escala,
+                    };
+                    if (Preencher(livre)) livres.Add(livre);
+                }
+            }
+            if (livres.Count == 0) return;
+            var rng = new Sorteio(semente);
+            int n = rng.Entre(min, max + 1);
+            var porSala = new Dictionary<int, int>();
+            // o sorteio à parte das armas e da munição reais (o da develop, 09/11/2026), do andar
+            ulong sal = Sorteio.Misturar(semente ^ ((ulong)(uint)unidade << 8) ^ 0xA2A5EA1500000000UL);
+            for (int k = 0; k < n; k++) Colocar(rng, livres, porSala, false, unidade, chances, saida, sal, pesoDoComodo);
+        }
+
         static void SortearMorada(IList<PontoDeMovel> pontos, int semente, int unidade, List<ItemDoSaque> saida)
         {
             var livres = LugaresDa(pontos, semente, unidade);
@@ -210,7 +261,8 @@ namespace ZombieCityCleaner.Mundo
 
         // um item num lugar livre (só no porão, com 'soPorao'): a raridade (pelas chances da unidade), o lugar que aceita um
         // item dela e o item; o lugar usado sai da lista
-        static void Colocar(Sorteio rng, List<Livre> livres, Dictionary<int, int> porSala, bool soPorao, int unidade, float[] chances, List<ItemDoSaque> saida, ulong sal)
+        static void Colocar(Sorteio rng, List<Livre> livres, Dictionary<int, int> porSala, bool soPorao, int unidade, float[] chances, List<ItemDoSaque> saida,
+                            ulong sal, System.Func<string, float> pesoDoComodo = null)
         {
             float x = rng.Fracao();
             int r = 0;
@@ -242,7 +294,7 @@ namespace ZombieCityCleaner.Mundo
                     if (temLivre && ja >= CatalogoDoSaque.PorComodo) continue;
                     bool tem = false;
                     foreach (var s in salas) tem |= s.sala == l.sala;
-                    if (!tem) salas.Add((l.sala, CatalogoDoSaque.PesoDoComodo(l.comodo, unidade)));
+                    if (!tem) salas.Add((l.sala, pesoDoComodo != null ? pesoDoComodo(l.comodo) : CatalogoDoSaque.PesoDoComodo(l.comodo, unidade)));
                 }
                 int sala = salas[Escolher(rng, salas.Count, i => salas[i].peso)].sala;
                 // o lugar: pelo peso do móvel (dividido pelos lugares dele: um móvel com muitos não ganha mais)

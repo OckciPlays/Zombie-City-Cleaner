@@ -53,6 +53,7 @@ namespace ZombieCityCleaner.Player
         // a célula da estante (na medida de 720p) e onde começa a grade
         float CelulaDaEstante(EstantesDoBunker.Forma f)
         {
+            if (f.Especial) return 40f;
             float alturaUtil = AreaDaEstante.height - TituloDaEstanteH - RodapeDaEstanteH - f.Tabuas * TabuaH - (f.Tabuas - 1) * VaoEntreTabuas;
             return Mathf.Min(40f, AreaDaEstante.width / f.colunas, alturaUtil / f.Grade.y);
         }
@@ -68,6 +69,7 @@ namespace ZombieCityCleaner.Player
         Rect RetanguloNaEstante(int x, int y, Vector2Int tamanho)
         {
             var f = FormaAberta;
+            if (f.Especial) return Em(RetanguloDaVaga(f, x));
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
             return Em(new Rect(o.x + x * c, o.y + TopoDaLinha(y, c), tamanho.x * c, tamanho.y * c));
@@ -77,6 +79,16 @@ namespace ZombieCityCleaner.Player
         Rect AreaDasFaixas()
         {
             var f = FormaAberta;
+            if (f.Especial)
+            {
+                var r = RetanguloDaVaga(f, 0);
+                for (int k = 1; k < f.colunas; k++)
+                {
+                    var ov = RetanguloDaVaga(f, k);
+                    r = Rect.MinMaxRect(Mathf.Min(r.xMin, ov.xMin), Mathf.Min(r.yMin, ov.yMin), Mathf.Max(r.xMax, ov.xMax), Mathf.Max(r.yMax, ov.yMax));
+                }
+                return Encolher(Em(r), -10f * _u);
+            }
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
             float altura = f.Tabuas * AlturaDaFaixa(c) - VaoEntreTabuas;
@@ -118,6 +130,27 @@ namespace ZombieCityCleaner.Player
             x = y = 0;
             var f = FormaAberta;
             if (_estante < 0 || f == null || !AreaDasFaixas().Contains(m)) return false;
+            if (f.Especial)
+            {
+                // a vaga embaixo do mouse (ou a mais perto dele, dentro da área)
+                float melhorD = float.MaxValue;
+                for (int k = 0; k < f.colunas; k++)
+                {
+                    var r = Em(RetanguloDaVaga(f, k));
+                    if (r.Contains(m))
+                    {
+                        x = k;
+                        return true;
+                    }
+                    float d = (r.center - m).sqrMagnitude;
+                    if (d < melhorD && f.Aceita(k, item))
+                    {
+                        melhorD = d;
+                        x = k;
+                    }
+                }
+                return melhorD < float.MaxValue;
+            }
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
             var canto = (m - PegaPara(c * _u) - Em(new Rect(o.x, o.y, 0f, 0f)).position) / _u;
@@ -169,11 +202,107 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ o desenho
 
+        // ------------------------------------------------------------------ o suporte dos tacos e a mesinha do fumo
+
+        // as vagas (na medida de 720p): no suporte, a prateleirinha da caixa em cima e os 4 tacos em pé embaixo dela; na
+        // mesinha, os 4 maços em dois pares, e o cinzeiro do lado
+        const float VaoDaVaga = 10f;
+
+        Rect RetanguloDaVaga(EstantesDoBunker.Forma f, int vaga)
+        {
+            float c = CelulaDaEstante(f), g = VaoDaVaga;
+            float topo = AreaDaEstante.y + TituloDaEstanteH + 24f;
+            if (f.especial == EspecialDaEstante.Suporte)
+            {
+                float largura = 4f * c + 3f * g, x0 = AreaDaEstante.x + (AreaDaEstante.width - largura) / 2f;
+                if (vaga >= 4) return new Rect(AreaDaEstante.x + (AreaDaEstante.width - 3f * c) / 2f, topo, 3f * c, c);
+                return new Rect(x0 + vaga * (c + g), topo + c + 30f, c, 4f * c);
+            }
+            // a mesinha: duas fileiras de dois, com o cinzeiro à direita
+            float w = 1.6f * c, larguraM = 2f * w + g + 2.2f * c, xm = AreaDaEstante.x + (AreaDaEstante.width - larguraM) / 2f;
+            return new Rect(xm + (vaga % 2) * (w + g), topo + 20f + (vaga / 2) * (c * 1.4f + g), w, c * 1.4f);
+        }
+
+        void DesenharVagas(EstantesDoBunker.Forma f, EstantesDoBunker e, Vector2 mouse)
+        {
+            float u = _u, c = CelulaDaEstante(f);
+            int n = e.Quantos(_estante);
+            bool suporte = f.especial == EspecialDaEstante.Suporte;
+            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), suporte ? "4 tacos e a caixa de bolas" : "até 4 maços", _texto);
+            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), n == 0 ? (f.artigo == "o" ? "vazio" : "vazia") : n == 1 ? "1 item" : $"{n} itens", _direita);
+            Ret(Encolher(AreaDasFaixas(), 6f * u), Painel);
+            var madeira = new Color(0.33f, 0.22f, 0.14f, 0.95f);
+            for (int k = 0; k < f.colunas; k++)
+            {
+                var r = Em(RetanguloDaVaga(f, k));
+                Ret(r, CorDaCelula);
+                if (suporte && k < 4)
+                {
+                    // o copo embaixo e a fenda da travessa (o desenho do suporte)
+                    Ret(new Rect(r.x - 3f * u, r.yMax, r.width + 6f * u, 6f * u), madeira);
+                    Ret(new Rect(r.x - 3f * u, r.y + r.height * 0.18f, 4f * u, 6f * u), madeira);
+                    Ret(new Rect(r.xMax - u, r.y + r.height * 0.18f, 4f * u, 6f * u), madeira);
+                }
+                else if (suporte) Ret(new Rect(r.x - 6f * u, r.yMax, r.width + 12f * u, 6f * u), madeira);
+            }
+            if (suporte)
+            {
+                var caixa = Em(RetanguloDaVaga(f, 4));
+                GUI.Label(new Rect(caixa.x, caixa.yMax + 6f * u, caixa.width, 18f * u), "a caixa de bolas", _pequeno);
+                var t0 = Em(RetanguloDaVaga(f, 0));
+                var t3 = Em(RetanguloDaVaga(f, 3));
+                GUI.Label(new Rect(t0.x, t0.yMax + 8f * u, t3.xMax - t0.x, 18f * u), "os tacos", _pequeno);
+            }
+            else
+            {
+                // o cinzeiro, com as bitucas que ele tem
+                var v1 = Em(RetanguloDaVaga(f, 1));
+                var r = new Rect(v1.xMax + VaoDaVaga * u * 1.5f, v1.y - c * 0.5f * u, 2f * c * u, 2f * c * u);
+                Ret(Encolher(r, 4f * u), new Color(0.55f, 0.32f, 0.12f, 0.85f));
+                Ret(Encolher(r, 12f * u), new Color(0.35f, 0.34f, 0.32f, 0.9f));
+                int bitucas = BunkerDoMundo.Instancia != null ? BunkerDoMundo.Instancia.Bitucas : 0;
+                GUI.Label(new Rect(r.x - 10f * u, r.yMax + 4f * u, r.width + 20f * u, 18f * u),
+                          bitucas == 0 ? "o cinzeiro (limpo)" : bitucas == 1 ? "o cinzeiro (1 bituca)" : $"o cinzeiro ({bitucas} bitucas)", _pequeno);
+            }
+            // onde o item arrastado cairia: verde se cabe, vermelho se não
+            if (_arrastando && (_apertou == Origem.Mochila || _apertou == Origem.Estante))
+            {
+                Item item = Item.Nada;
+                ushort ignorar = 0;
+                if (_apertou == Origem.Mochila && inventario.Achar(_idApertado, out var daMochila)) item = daMochila.item;
+                else if (EstanteApertada(out var daEstante))
+                {
+                    item = daEstante.item;
+                    ignorar = daEstante.id;
+                }
+                if (item != Item.Nada && CelulaNaEstante(mouse, item, _girado, out int ax, out _))
+                    Ret(Em(RetanguloDaVaga(f, ax)), e.Cabe(_estante, item, false, ax, 0, ignorar) ? new Color(0.35f, 0.85f, 0.35f, 0.3f) : new Color(0.9f, 0.25f, 0.2f, 0.35f));
+            }
+            foreach (var it in e.Guardados)
+            {
+                if (it.estante != _estante) continue;
+                var r = Em(RetanguloDaVaga(f, it.x));
+                bool arrastado = _arrastando && _apertou == Origem.Estante && _idApertado == it.id;
+                // os tacos em pé (o ícone girado) nas vagas compridas
+                DesenharItem(it.ComoDaMochila, Encolher(r, 2 * u), suporte && it.x < 4, arrastado ? 0.3f : 1f, false, r.Contains(mouse) && !_arrastando, true);
+                if (r.Contains(mouse) && !_arrastando)
+                    _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : "");
+            }
+            var area = AreaDasFaixas();
+            GUI.Label(new Rect(area.x, area.yMax + 30f * u, area.width, 20f * u), "Arraste da mochila para guardar", _pequeno);
+            GUI.Label(new Rect(area.x, area.yMax + 48f * u, area.width, 20f * u), "e daqui para a mochila para pegar", _pequeno);
+        }
+
         void DesenharEstante(Vector2 mouse)
         {
             var f = FormaAberta;
             var e = Estantes;
             if (f == null || e == null) return;
+            if (f.Especial)
+            {
+                DesenharVagas(f, e, mouse);
+                return;
+            }
             float u = _u, c = CelulaDaEstante(f), cu = c * u;
             var o = InicioDaEstante(f, c);
             int n = e.Quantos(_estante);

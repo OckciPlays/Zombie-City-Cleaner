@@ -59,7 +59,7 @@ namespace ZombieCityCleaner.Fauna
             }
             if (_roendo)
             {
-                if (FlorestaDoMundo.Cortada(_arvore))
+                if (ArvoresDoMundo.Cortada(_arvore))
                 {
                     // caiu (por este ou por outro castor): leva um galho
                     _roendo = false;

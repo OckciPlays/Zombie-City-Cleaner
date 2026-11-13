@@ -181,6 +181,28 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>Um ponto da planta do bunker (as coordenadas da obra) no mundo.</summary>
         public Vector3 NoBunker(Vector3 local) => PosicaoDoBunker + Quaternion.Euler(0f, GiroDoBunker, 0f) * local;
 
+        /// <summary>
+        /// O chão de fora do Hospital Principal (o embasamento, 45 cm abaixo do térreo) fica este tanto acima do chão plano do
+        /// quarteirão (o terreno não aparece nas calçadas dele).
+        /// </summary>
+        public const float AcimaDoQuarteirao = 0.05f;
+        /// <summary>O mapa tem o Hospital Principal (o quarteirão dele na maior cidade grande; 08/11/2026).</summary>
+        public bool TemHospital => Plano?.LoteDoHospital != null && Plano.TracadoDoHospital != null;
+        /// <summary>A origem da obra do hospital no mundo: no chão do térreo (o chão do quarteirão mais o embasamento).</summary>
+        public Vector3 PosicaoDoHospital
+        {
+            get
+            {
+                var l = Plano.LoteDoHospital;
+                var c = Plano.TracadoDoHospital.Mundo(l.MeioDaCasa);
+                return new Vector3(c.x, l.ChaoDaCasa + AcimaDoQuarteirao + PlantaDoHospital.Embasamento, c.y);
+            }
+        }
+        /// <summary>O giro do hospital em y (graus): o +z da obra, o fundo; a entrada olha para o -z (a rua da frente).</summary>
+        public float GiroDoHospital => Plano.TracadoDoHospital.GiroDaCasa(Plano.LoteDoHospital);
+        /// <summary>Um ponto da obra do hospital (as coordenadas dela) no mundo.</summary>
+        public Vector3 NoHospital(Vector3 local) => PosicaoDoHospital + Quaternion.Euler(0f, GiroDoHospital, 0f) * local;
+
         /// <summary>O resumo dos números (checksum): igual em todas as máquinas se a geração bateu.</summary>
         public ulong Resumo;
 

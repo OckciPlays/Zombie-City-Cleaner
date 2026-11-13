@@ -173,8 +173,70 @@ namespace ZombieCityCleaner.EditorTools
             asset.material = material;
             asset.catalogo = json;
             asset.invisivel = AssetDatabase.LoadAssetAtPath<Shader>("Assets/_Game/Shaders/Invisivel.shader");
+            asset.vidro = MaterialDoVidro(material);
+            asset.comVidro = PecasComVidro(catalogo);
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
+            Debug.Log($"Os itens das roupas: as peças com vidro: {string.Join(", ", asset.comVidro)}.");
+        }
+
+        public const string ArquivoDoVidro = Arte + "/M_Roupas_Vidro.mat";
+
+        /// <summary>
+        /// O material do vidro das roupas (07/11/2026: o shader RoupasVidro, com a Texture2DArray das cores das roupas): o
+        /// segundo material das peças com vidro, transparente de verdade (antes, um pontilhado no das roupas).
+        /// </summary>
+        static Material MaterialDoVidro(Material roupas)
+        {
+            var shader = Shader.Find("ZombieCityCleaner/RoupasVidro");
+            if (shader == null)
+            {
+                Debug.LogWarning("Falta o shader ZombieCityCleaner/RoupasVidro: os vidros das roupas não se desenham.");
+                return null;
+            }
+            var m = AssetDatabase.LoadAssetAtPath<Material>(ArquivoDoVidro);
+            if (m == null)
+            {
+                m = new Material(shader);
+                AssetDatabase.CreateAsset(m, ArquivoDoVidro);
+            }
+            m.shader = shader;
+            m.SetTexture("_Cores", roupas.GetTexture("_Cores"));
+            m.enableInstancing = true;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        /// <summary>
+        /// As peças com vidro: as que têm, na camada delas da tira das cores (a grade do roupas_exportar.py), uns pixels com o
+        /// alfa abaixo da divisa do shader (0,6).
+        /// </summary>
+        static string[] PecasComVidro(CatalogoDasRoupas catalogo)
+        {
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!tex.LoadImage(File.ReadAllBytes(TiraDasCores))) return new string[0];
+                int colunas = Mathf.Max(1, catalogo.colunas_da_tira), lado = tex.width / colunas;
+                var px = tex.GetPixels32();
+                var lista = new List<string>();
+                foreach (var p in catalogo.pecas)
+                {
+                    int linha = p.textura / colunas, coluna = p.textura % colunas;
+                    // (a linha 0 da grade é a de cima; o y da Texture2D cresce para cima)
+                    int y0 = tex.height - (linha + 1) * lado, x0 = coluna * lado, n = 0;
+                    if (y0 < 0) continue;
+                    for (int y = y0; y < y0 + lado && n < 200; y += 2)
+                        for (int x = x0; x < x0 + lado; x += 2)
+                            if (px[y * tex.width + x].a < 153) n++;
+                    if (n >= 200) lista.Add(p.nome);
+                }
+                return lista.ToArray();
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
         }
 
         /// <summary>Os prefabs dos itens das roupas, na ordem do catálogo, e o lugar de cada um (para as mesas da cena das

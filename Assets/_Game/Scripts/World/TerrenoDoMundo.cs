@@ -690,6 +690,7 @@ namespace ZombieCityCleaner.World
         void PorAgua(Bloco b, MalhaDoBloco m)
         {
             CriarObjeto(b);
+            if (_dados.Lago != null) ReflexoDaAgua.Instalar(_dados.Lago.Nivel);
             var go = new GameObject("Água") { layer = 4 };   // a camada Water
             go.transform.SetParent(b.Objeto.transform, false);
             var malha = new Mesh { name = $"Água {b.Chave.x}, {b.Chave.y}" };

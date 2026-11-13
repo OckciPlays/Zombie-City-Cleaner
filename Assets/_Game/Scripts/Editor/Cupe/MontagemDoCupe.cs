@@ -22,7 +22,7 @@ namespace ZombieCityCleaner.EditorTools
     ///    o estepe e o macaco no piso) seguem o cupê;
     ///  - <b>as 2 portas e 2 lugares</b> (os da frente; `Carro.lugaresUsados` = 2): a mira na porta comprida (um gatilho
     ///    só, de ponta a ponta) leva ao banco da frente daquele lado. Os bancos de trás continuam desenhados, sem ninguém;
-    ///  - é o carro rápido: chega a 110 km/h (<see cref="VelocidadeMaxima"/>, <see cref="Torque"/>).
+    ///  - é o carro rápido: chega a ~140 km/h (<see cref="VelocidadeMaxima"/>, <see cref="Torque"/>; era 110 até 10/11/2026).
     /// Também põe o cupê na lista de prefabs da rede, no `MundoDaPartida.segundoCarro` da cena Mundo (o anfitrião o cria
     /// ao lado da laje da partida) e, na Demo_Cidade, atrás da perua. A perua não muda.
     /// Menu: Zombie City Cleaner > Veículos > Montar o cupê. Depois de um "Montar veículos", rode de novo.
@@ -53,10 +53,13 @@ namespace ZombieCityCleaner.EditorTools
         const float MeioDaPorta = 0.31f, CompDaPorta = 1.18f;
         // o ponto de saída de cada lugar, do lado de fora (a metade da frente da porta e a de trás)
         static readonly float[] ZDaSaida = { 0.61f, 0.61f, -0.04f, -0.04f };
-        // o cupê é o carro rápido (a pedido em 29/10/2026: "ele precisa chegar a 110 km de velocidade"); a perua fica em
-        // 22 m/s e 700 N·m. A força cai a zero na velocidadeMaxima e o atrito segura antes: com 33 e 950 ele parou em
-        // 93 km/h (medido numa pista reta, pneus bons); com 42 e 1.000, a conta dá ~112 km/h. O som das marchas vai até 32
-        public const float VelocidadeMaxima = 42f, Torque = 1000f, FimDasMarchas = 32f;
+        // o cupê é o carro rápido (a pedido em 29/10/2026: "ele precisa chegar a 110 km de velocidade"); a perua ficava em
+        // 22 m/s e 700 N·m (64 km/h) e, desde 10/11/2026, em 44 e 850 (~110 km/h; MontagemDosVeiculos.TorqueDaPerua). A força
+        // cai a zero na velocidadeMaxima e o atrito segura antes: com 33 e 950 ele parou em 93 km/h (medido numa pista reta,
+        // pneus bons); com 42 e 1.000, 114 km/h no plano e 91 numa subida de 12% (medido em 10/11/2026). Desde 10/11/2026 (a
+        // pedido: "sim, mude para 140"), 51 e 1.250: 139 km/h no plano, 127 a 6% e 120 a 10%, 0 a 100 em 8,5 s (a perua,
+        // 112, 99 e ~89). O som das marchas vai até 39
+        public const float VelocidadeMaxima = 51f, Torque = 1250f, FimDasMarchas = 39f;
 
         [MenuItem("Zombie City Cleaner/Veículos/Montar o cupê")]
         public static void Montar()

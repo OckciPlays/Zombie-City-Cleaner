@@ -85,8 +85,8 @@ namespace ZombieCityCleaner.Vehicles
         bool AlarmeDeFabrica(int carro)
         {
             if (Quebrado(carro) != null) return false;   // o carro quebrado (os dois estão ali do lado) não tem alarme
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            int semente = dados != null ? dados.Semente : 0;
+            var fonte = BeiraDoMapa.Atual;
+            int semente = fonte != null ? fonte.Semente : 0;
             return new Sorteio(semente ^ 0x41A2, carro).Valor() < 1f / Mathf.Max(1, umAlarmeEmCada);
         }
 
@@ -165,7 +165,7 @@ namespace ZombieCityCleaner.Vehicles
         // tiro para na superfície)
         static int CarroPerto(Vector3 p, float raio, bool dentro)
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            var dados = BeiraDoMapa.Atual;
             var objetos = ObjetosDoMundo.Instancia;
             if (dados?.Objetos == null || objetos == null) return -1;
             var min = dados.BlocoDe(p.x - raio, p.z - raio);

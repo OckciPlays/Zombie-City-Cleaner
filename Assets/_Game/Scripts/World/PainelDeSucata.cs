@@ -31,6 +31,11 @@ namespace ZombieCityCleaner.World
 
         public override string Segurando(ArmaJogador quem) => $"Desmontando {PaineisDeSucata.NomeComArtigo(modelo)}";
 
-        public override void Segurado(ArmaJogador quem) => MundoDaPartida.Instancia?.PedirDesmontarPainel(indice);
+        public override void Segurado(ArmaJogador quem)
+        {
+            // (12/11/2026) no Lakewood, a rede é a do MundoDeLakewood (MundoDeLakewood.Sucata.cs)
+            if (MundoDaPartida.Instancia != null) MundoDaPartida.Instancia.PedirDesmontarPainel(indice);
+            else MundoDeLakewood.Instancia?.PedirDesmontarPainel(indice);
+        }
     }
 }

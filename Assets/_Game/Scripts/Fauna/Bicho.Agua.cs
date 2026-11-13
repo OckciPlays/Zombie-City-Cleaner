@@ -33,8 +33,8 @@ namespace ZombieCityCleaner.Fauna
         {
             _altitude = _altitudeAlvo = altura;
             Vector3 p = transform.position;
-            float chao = Chao(p, out float f);
-            p.y = Mathf.Max(chao, f > 0.01f ? FaunaDoMundo.NivelDoLago : chao) + altura;
+            float chao = Chao(p, out float f, out float nivelDaAgua);
+            p.y = Mathf.Max(chao, f > 0.01f ? nivelDaAgua : chao) + altura;
             transform.position = p;
         }
 
@@ -54,8 +54,8 @@ namespace ZombieCityCleaner.Fauna
 
         float AlturaDe(Vector3 p, float dt, float agora)
         {
-            float chao = Chao(p, out float fundura);
-            float nivel = fundura > 0.01f ? FaunaDoMundo.NivelDoLago : chao;
+            float chao = Chao(p, out float fundura, out float nivelDaAgua);
+            float nivel = fundura > 0.01f ? nivelDaAgua : chao;
             float alvo = chao;
             bool liso = false;
             if (Dados.meio == Meio.Agua)

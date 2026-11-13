@@ -27,7 +27,7 @@ namespace ZombieCityCleaner.Roupas
         Camera _camera;
         MeshFilter _filtro;
         MeshRenderer _render;
-        Material _material;
+        Material _material, _vidro;
 
         /// <summary>O ícone da roupa com estas cores (null: ainda não feito; fica pronto no fim do quadro).</summary>
         public static Texture2D Icone(Item item, ulong cores, bool grande = false)
@@ -63,6 +63,7 @@ namespace ZombieCityCleaner.Roupas
             _feitos.Clear();
             _pedidos.Clear();
             if (_material != null) Destroy(_material);
+            if (_vidro != null) Destroy(_vidro);
             if (_host == this) _host = null;
         }
 
@@ -83,6 +84,15 @@ namespace ZombieCityCleaner.Roupas
             _material.SetFloat("_Luz", 0.82f);
             _material.SetVector("_DirecaoDaLuz", new Vector4(0.3f, 0.85f, 0.65f, 0f));
             _render.sharedMaterial = _material;
+            // o vidro (a viseira, os óculos de proteção), na mesma luz
+            if (roupas.vidro != null)
+            {
+                _vidro = new Material(roupas.vidro);
+                _vidro.SetFloat("_Retrato", 1f);
+                _vidro.SetFloat("_Ambiente", 0.4f);
+                _vidro.SetFloat("_Luz", 0.82f);
+                _vidro.SetVector("_DirecaoDaLuz", new Vector4(0.3f, 0.85f, 0.65f, 0f));
+            }
 
             var go = new GameObject("Câmera dos ícones");
             go.transform.SetParent(transform, false);
@@ -109,6 +119,7 @@ namespace ZombieCityCleaner.Roupas
             if (malha == null || roupas.material == null) return null;
             Preparar(roupas);
             _filtro.sharedMesh = malha;
+            _render.sharedMaterials = _vidro != null && roupas.TemVidro(item) ? new[] { _material, _vidro } : new[] { _material };
             roupas.Pintar(_render, item, cores);
 
             // deitada (as do tronco, as de cima, os coletes e as calças, achatadas no Roupas_Itens.fbx, com a gola e o cós

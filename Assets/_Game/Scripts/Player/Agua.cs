@@ -5,8 +5,8 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// A água do mundo (06/11/2026, a pedido: nadar, o fôlego e o afogamento; o caiaque e a pesca): o nível da água num
-    /// ponto, no lago do mundo sorteado (<c>DadosDoMundo.FunduraDaAgua</c>) ou no lago, no rio e no brejo do mapa fixo
-    /// (<c>ChaoDoMapaFixo.Agua</c>). Serve em qualquer máquina (o mundo é o mesmo em todas).
+    /// ponto, no lago do mundo sorteado (<c>DadosDoMundo.FunduraDaAgua</c>) ou no lago e nos rios do Lakewood
+    /// (<c>ChaoDeLakewood.Agua</c>). Serve em qualquer máquina (o mundo é o mesmo em todas).
     /// </summary>
     public static class Agua
     {
@@ -29,7 +29,7 @@ namespace ZombieCityCleaner.Player
                 nivel = dados.Altura(p.x, p.z) + f;
                 return true;
             }
-            var mapa = MapaFixoNaCena.Instancia;
+            var mapa = LakewoodNaCena.Instancia;
             if (mapa != null && mapa.Chao != null && mapa.Chao.Agua(p.x, p.z, out nivel)) return true;
             nivel = 0f;
             return false;
@@ -41,7 +41,7 @@ namespace ZombieCityCleaner.Player
             var mundo = MundoDaPartida.Instancia;
             if (mundo != null && mundo.Dados != null) return Mathf.Max(0f, mundo.Dados.FunduraDaAgua(p.x, p.z));
             if (!Nivel(p, out float nivel)) return 0f;
-            var mapa = MapaFixoNaCena.Instancia;
+            var mapa = LakewoodNaCena.Instancia;
             return mapa != null && mapa.Chao != null ? Mathf.Max(0f, nivel - mapa.Chao.Altura(p.x, p.z)) : 1f;
         }
 

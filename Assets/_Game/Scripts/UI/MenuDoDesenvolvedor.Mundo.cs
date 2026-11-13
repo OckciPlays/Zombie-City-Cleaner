@@ -229,7 +229,7 @@ namespace ZombieCityCleaner.UI
             var mundo = MundoDaPartida.Instancia;
             var d = Mapa;
             if (d == null) return default;
-            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, 690 * u);
+            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, (d.TemHospital ? 744 : 690) * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -296,6 +296,24 @@ namespace ZombieCityCleaner.UI
                 Avisar("O carro livre mais perto vem para a sua frente.");
             }
             y += 4 * 32 * u + 4 * u;
+            // o Hospital Principal (08/11/2026): na praça da frente, de frente para os degraus da entrada
+            if (d.TemHospital)
+            {
+                var h = HospitalDoMundo.Instancia;
+                string estado = h != null && h.CascaMontada ? $" ({h.Carregados} andares carregados)" : "";
+                if (GUI.Button(new Rect(x, y, w, 26 * u), "O Hospital Principal" + estado, _botao))
+                {
+                    var praca = d.NoHospital(new Vector3(0f, 0f, PlantaDoHospital.Marquise.yMin - 3.5f));
+                    IrPara(praca.x, praca.z);
+                }
+                y += 30 * u;
+                // a parte 7: os zumbis de dentro (no anfitrião), o saque dos andares carregados e as portas
+                var zm = Zombies.ZombieManager.Instancia;
+                var (sorteados, dePerto) = h != null ? h.SaqueCarregado : (0, 0);
+                string zumbis = zm != null && zm.IsServer ? $"{zm.ZumbisNoHospital} zumbis" : "zumbis no anfitrião";
+                GUI.Label(new Rect(x, y, w, 20 * u), $"Dentro: {zumbis} · saque {dePerto}/{sorteados} · {PortasDoMundo.Instancia?.Vivas ?? 0} portas", _texto);
+                y += 24 * u;
+            }
             if (GUI.Button(new Rect(x, y, w, 26 * u), _atravessando ? "Atravessando..." : "Teste de travessia (60 s a 160 km/h)", _botao) && !_atravessando)
                 ComecarTravessia();
             y += 32 * u;

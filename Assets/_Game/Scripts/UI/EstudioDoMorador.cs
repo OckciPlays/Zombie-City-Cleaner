@@ -95,7 +95,7 @@ namespace ZombieCityCleaner.UI
         // o material das roupas na luz fixa do retrato (uma cópia por material), como no estúdio do personagem
         Material NoRetrato(Material de)
         {
-            if (de == null || de.shader == null || de.shader.name != "ZombieCityCleaner/Roupas") return de;
+            if (de == null || de.shader == null || !de.shader.name.StartsWith("ZombieCityCleaner/Roupas")) return de;
             if (_materiais.TryGetValue(de, out var m)) return m;
             m = new Material(de);
             m.SetFloat("_Retrato", 1f);

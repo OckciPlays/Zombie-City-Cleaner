@@ -23,6 +23,10 @@ AvatarMask:
     m_Weight: 0
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest
     m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/caixa
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/caixa/Morador_Caixa
+    m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/brasa
@@ -41,6 +45,14 @@ AvatarMask:
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/cigarro/Fumo_Cigarro/Fumo_Cigarro_Ponta
     m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/colher
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/colher/bocado
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/colher/bocado/Morador_Bocado
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/colher/Morador_Colher
+    m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/chama
@@ -52,6 +64,10 @@ AvatarMask:
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/Fumo_Isqueiro
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/isqueiro/Fumo_Isqueiro/Fumo_Isqueiro_Corpo
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/livro
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/livro/Morador_Livro
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/maco
     m_Weight: 1
@@ -68,6 +84,10 @@ AvatarMask:
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/neck/head
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/prato
+    m_Weight: 1
+  - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/prato/Morador_Prato
     m_Weight: 1
   - m_Path: PrincipalBloco_Rig/root/hips/spine/chest/shoulder.L
     m_Weight: 1

@@ -115,8 +115,8 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>O que sobrou no carro que ninguém mexeu: sorteado pela semente do mundo e pelo número do carro.</summary>
         CarroMexido Padrao(int carro)
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            int semente = dados != null ? dados.Semente : 0;
+            var fonte = BeiraDoMapa.Atual;
+            int semente = fonte != null ? fonte.Semente : 0;
             if (semente != _sementeDosPadroes)
             {
                 _sementeDosPadroes = semente;
@@ -176,8 +176,7 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>O carro quebrado do acostamento com este número (os sobreviventes, a etapa 4), ou null.</summary>
         public static ZombieCityCleaner.Mundo.CarroQuebrado Quebrado(int carro)
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            return dados?.Objetos?.QuebradoDe(carro);
+            return BeiraDoMapa.Atual?.Objetos?.QuebradoDe(carro);
         }
 
         // no anfitrião: grava o carro mexido na lista da rede

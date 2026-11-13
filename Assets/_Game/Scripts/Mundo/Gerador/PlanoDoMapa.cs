@@ -171,6 +171,14 @@ namespace ZombieCityCleaner.Mundo
         public Lugar CasaDaFamilia, CasaDoLago, Laboratorio;
         /// <summary>O lote da casa da família (no traçado da cidade dela).</summary>
         public Lote LoteDaFamilia;
+        /// <summary>
+        /// O Hospital Principal (o Plano_Hospital.md da pasta de arte, a parte 7, 08/11/2026): a maior cidade grande, que o
+        /// recebe, o quarteirão inteiro dele (um lote <see cref="TipoDeLote.Hospital"/>) e o traçado; null sem quarteirão que
+        /// caiba (nesse caso, a cidade fica com o hospital sorteado de antes).
+        /// </summary>
+        public Cidade CidadeDoHospital;
+        public Lote LoteDoHospital;
+        public TracadoDaCidade TracadoDoHospital;
         public Cidade CidadeDaFamilia;
         public Bairro BairroDaFamilia;
 

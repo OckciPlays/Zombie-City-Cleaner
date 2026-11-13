@@ -20,7 +20,9 @@ namespace ZombieCityCleaner.Mundo
     /// atrás do ombro direito, como a CameraTerceiraPessoa do jogo (0,5 m para o lado, 0,15 para cima e 2,3 para trás da
     /// cabeça, parando nas paredes; colada numa, o corpo some). Na primeira pessoa, o corpo fica só na sombra.
     /// O E abre e fecha a porta ou a gaveta de um móvel (o <see cref="ParteQueAbre"/>, a mobília nova): mirando nela, com
-    /// o meio da tela, até <see cref="Alcance"/> da cabeça, a tela mostra "[E] Abrir" ou "[E] Fechar". As teclas da cena
+    /// o meio da tela, até <see cref="Alcance"/> da cabeça, a tela mostra "[E] Abrir" ou "[E] Fechar". Uma coisa de fora
+    /// deste assembly (<see cref="IUsavelNoExemplo"/>: o papel do hospital, "[E] Ler") ganha da parte do móvel; enquanto a
+    /// tela dela está aberta (<see cref="Travado"/>), o jogador fica parado. As teclas da cena
     /// (<see cref="CenaDeExemplo.Teclas"/>) vêm junto.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
@@ -60,8 +62,28 @@ namespace ZombieCityCleaner.Mundo
         const float RaioDaCamera = 0.2f, PertoDemais = 0.55f;
         /// <summary>Até onde o E alcança, da cabeça (na terceira pessoa também: o raio sai da câmera, mas conta da cabeça).</summary>
         public const float Alcance = 2.5f;
+
+        /// <summary>
+        /// As teclas e a ajuda de quem fica fora deste assembly (o Assembly-CSharp, que o do mundo não enxerga): hoje, a
+        /// pixelação (o X; o UI/Graficos se registra aqui a cada Play).
+        /// </summary>
+        public static System.Action<Keyboard> TeclasDeFora;
+        public static System.Func<string> AjudaDeFora;
+
+        /// <summary>
+        /// Uma tela de fora deste assembly aberta por cima (a folha de um papel do hospital): o jogador fica parado, sem a
+        /// mira e sem as teclas, até ela fechar.
+        /// </summary>
+        public static bool Travado;
+
+        // o Play sem recarregar o domínio guarda os estáticos de um Play para o outro
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void Zerar() => Travado = false;
+
         // a parte de móvel na mira (null: nenhuma) e os acertos do raio
         ParteQueAbre _mirada;
+        // a coisa de fora na mira (o papel), que ganha da parte de móvel
+        IUsavelNoExemplo _usavel;
         // o móvel do mostruário na mira (o C troca a cor dele)
         MovelDoMostruario _movel;
         readonly RaycastHit[] _acertos = new RaycastHit[16];
@@ -112,14 +134,19 @@ namespace ZombieCityCleaner.Mundo
         {
             var k = Keyboard.current;
             var mouse = Mouse.current;
-            if (k == null || mouse == null) return;
+            if (k == null || mouse == null || Travado) return;
             float dt = Time.deltaTime;
             if (mouse.leftButton.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
             if (k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
             if (k.hKey.wasPressedThisFrame) _semTexto = !_semTexto;
             if (k.tKey.wasPressedThisFrame) TerceiraPessoa = !TerceiraPessoa;
             if (_rua != null) _rua.Teclas(k);
-            if (k.eKey.wasPressedThisFrame && _mirada != null && !_planta) _mirada.Alternar();
+            TeclasDeFora?.Invoke(k);
+            if (k.eKey.wasPressedThisFrame && !_planta)
+            {
+                if (_usavel != null) _usavel.UsarNoExemplo();
+                else if (_mirada != null) _mirada.Alternar();
+            }
             if (k.cKey.wasPressedThisFrame && _movel != null && !_planta) _movel.Proxima();
 
             if (k.rKey.wasPressedThisFrame && _rua != null)
@@ -202,7 +229,7 @@ namespace ZombieCityCleaner.Mundo
                 _velocidade = Mathf.Lerp(_velocidade, v.magnitude, 1f - Mathf.Exp(-12f * Time.deltaTime));
                 corpo.SetFloat(SpeedId, _velocidade);
             }
-            if (_planta) { _mirada = null; _movel = null; return; }
+            if (_planta || Travado) { _mirada = null; _movel = null; _usavel = null; if (_planta) return; }
             if (!_terceira)
             {
                 cabeca.localPosition = _cabecaNoCorpo;
@@ -233,13 +260,34 @@ namespace ZombieCityCleaner.Mundo
         void Mirar()
         {
             _mirada = null;
+            _usavel = null;
+            _movel = null;
+            if (Travado) return;
             var raio = _cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             Vector3 olho = transform.TransformPoint(_cabecaNoCorpo);
-            int n = Physics.RaycastNonAlloc(raio, _acertos, Vector3.Distance(raio.origin, olho) + Alcance, ~0, QueryTriggerInteraction.Ignore);
+            int n = Physics.RaycastNonAlloc(raio, _acertos, Vector3.Distance(raio.origin, olho) + Alcance, ~0, QueryTriggerInteraction.Collide);
+            // o primeiro sólido (os gatilhos não tapam)
             int melhor = -1;
             for (int i = 0; i < n; i++)
-                if (!_acertos[i].collider.transform.IsChildOf(transform) && (melhor < 0 || _acertos[i].distance < _acertos[melhor].distance)) melhor = i;
-            _movel = null;
+                if (!_acertos[i].collider.isTrigger && !_acertos[i].collider.transform.IsChildOf(transform) &&
+                    (melhor < 0 || _acertos[i].distance < _acertos[melhor].distance)) melhor = i;
+            // uma coisa de fora (o papel) no gatilho dela: antes do sólido, ou depois dele, se ganha dele (o papel em cima do
+            // móvel, dentro da caixa de colisão do móvel)
+            float ate = melhor >= 0 ? _acertos[melhor].distance : float.MaxValue;
+            int usavel = -1;
+            for (int i = 0; i < n; i++)
+            {
+                if (!_acertos[i].collider.isTrigger || Vector3.Distance(_acertos[i].point, olho) > Alcance) continue;
+                var u = _acertos[i].collider.GetComponent<IUsavelNoExemplo>();
+                if (u == null || u.DicaNoExemplo == null) continue;
+                if (_acertos[i].distance > ate && !u.GanhaNoExemplo(_acertos[melhor].point)) continue;
+                if (usavel < 0 || _acertos[i].distance < _acertos[usavel].distance) usavel = i;
+            }
+            if (usavel >= 0)
+            {
+                _usavel = _acertos[usavel].collider.GetComponent<IUsavelNoExemplo>();
+                return;
+            }
             if (melhor < 0 || Vector3.Distance(_acertos[melhor].point, olho) > Alcance) return;
             _mirada = _acertos[melhor].collider.GetComponentInParent<ParteQueAbre>();
             _movel = _acertos[melhor].collider.GetComponentInParent<MovelDoMostruario>();
@@ -306,6 +354,7 @@ namespace ZombieCityCleaner.Mundo
             string ajuda = "WASD andar · Shift correr · Espaço pular · V voar (Espaço/Ctrl sobem e descem) · T terceira pessoa · E abre e fecha (mirando) · R gerar de novo (semente nova) · H esconde o texto · clique prende o mouse, Esc solta";
             if (TemParadas) ajuda += "\n← → a construção anterior e a próxima · P a planta (↑ ↓ o piso, a roda aproxima)";
             if (_rua != null && _rua.AjudaDasTeclas != null) ajuda += " · " + _rua.AjudaDasTeclas;
+            if (AjudaDeFora != null) ajuda += " · " + AjudaDeFora();
             if (_planta)
             {
                 var pp = _rua.Paradas[_parada];
@@ -318,7 +367,7 @@ namespace ZombieCityCleaner.Mundo
             GUI.Box(new Rect(6, 4, largura + 12, alto + 10), GUIContent.none);
             GUI.Label(new Rect(12, 8, largura, alto), ajuda + "\n\n" + texto, _texto);
 
-            if (!_planta)
+            if (!_planta && !Travado)
             {
                 // a mira (um ponto no meio da tela, amarelo numa parte que abre) e o aviso do E
                 if (_aviso == null) _aviso = new GUIStyle(_texto) { fontSize = 18, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = false };
@@ -326,13 +375,14 @@ namespace ZombieCityCleaner.Mundo
                 var antes = GUI.color;
                 GUI.color = new Color(0f, 0f, 0f, 0.6f);
                 GUI.DrawTexture(new Rect(mx - 3f, my - 3f, 6f, 6f), Texture2D.whiteTexture);
-                GUI.color = _mirada != null || _movel != null ? new Color(1f, 0.85f, 0.3f) : Color.white;
+                GUI.color = _mirada != null || _movel != null || _usavel != null ? new Color(1f, 0.85f, 0.3f) : Color.white;
                 GUI.DrawTexture(new Rect(mx - 2f, my - 2f, 4f, 4f), Texture2D.whiteTexture);
                 GUI.color = antes;
-                if (_mirada == null && _movel == null) return;
-                // o nome do móvel e a cor dele, o [E] da porta ou da gaveta e o [C] da cor
+                if (_mirada == null && _movel == null && _usavel == null) return;
+                // o nome do móvel e a cor dele, o [E] da porta ou da gaveta e o [C] da cor (ou o [E] da coisa de fora)
                 string aviso = "";
-                if (_movel != null && _movel.Tipo != null)
+                if (_usavel != null) aviso = _usavel.DicaNoExemplo;
+                else if (_movel != null && _movel.Tipo != null)
                 {
                     aviso = _movel.Tipo.nome;
                     if (_movel.Quantas > 1) aviso += $" ({_movel.NomeDaVariacao}, {_movel.variacao + 1} de {_movel.Quantas})\n[C] Outra cor";

@@ -46,7 +46,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 var p = Planta(a);
                 for (int b = 0; b < p.Bancas.Count; b++)
                 {
-                    var r = new System.Random(unchecked(Dados.Semente * 3571 + a * 911 + b * 37 + 5));
+                    var r = new System.Random(unchecked(Dados.SementeDaPartida * 3571 + a * 911 + b * 37 + 5));
                     var itens = PrecosDosSobreviventes.Itens(p.Bancas[b].categoria);
                     for (int i = 0; i < itens.Length; i++)
                     {
@@ -82,7 +82,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (p == null) continue;
                 for (int b = 0; b < p.Bancas.Count; b++)
                 {
-                    var r = new System.Random(unchecked(Dados.Semente * 3571 + a * 911 + b * 37 + 5));
+                    var r = new System.Random(unchecked(Dados.SementeDaPartida * 3571 + a * 911 + b * 37 + 5));
                     var itens = PrecosDosSobreviventes.Itens(p.Bancas[b].categoria);
                     for (int i = 0; i < itens.Length; i++)
                     {

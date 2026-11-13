@@ -24,10 +24,11 @@ namespace ZombieCityCleaner.Mundo
             ("MetalEscovado", 2.0f), ("Esmalte", 1.0f), ("Plastico", 1.0f), ("Borracha", 2.0f), ("Couro", 2.0f),
             ("Cotele", 3.0f), ("Xadrez", 1.5f), ("Colchao", 1.0f), ("Colcha", 1.0f), ("Louca", 1.0f), ("Lombada", 1.0f),
             ("Quadros", 1.0f), ("Tapetes", 1.0f), ("Tijolo", 1.6667f), ("Ferro", 1.5f), ("Terra", 2.0f), ("Granito", 1.5f),
+            ("Papelao", 2.0f), ("Pegboard", 2.4606f), ("Alvos", 1.0f),
         };
 
         /// <summary>As que a face pega inteiras (o ajustar do kit): o UV delas não está em metros.</summary>
-        static readonly HashSet<string> Ajustadas = new HashSet<string> { "Lombada", "Quadros", "Tapetes" };
+        static readonly HashSet<string> Ajustadas = new HashSet<string> { "Lombada", "Quadros", "Tapetes", "Alvos" };
 
         public static int Textura(string nome)
         {

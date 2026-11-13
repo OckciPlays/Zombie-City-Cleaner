@@ -6,16 +6,15 @@ namespace ZombieCityCleaner.Fauna
 {
     /// <summary>
     /// O lago para os bichos (a etapa 3, 12/11/2026): o mundo gerado tem um lago só (<see cref="DadosDoMundo.Lago"/>, com a
-    /// ilha no meio). Aqui, os pontos na água (pela fundura) e na margem, para nascer, pastar, pescar e pousar.
+    /// ilha no meio). Aqui, os pontos na água (pela fundura) e na margem, para nascer, pastar, pescar e pousar. No Lakewood
+    /// (a parte 2 do "O jogo do mundo sorteado no Lakewood"), a água é o reservatório, os rios e o canal, cada um na sua
+    /// altura: os pontos são procurados em volta de quem pede (FaunaDoMundo.Terreno.cs).
     /// </summary>
     public sealed partial class FaunaDoMundo
     {
         static DadosDoMundo DadosDoMapa => MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
 
-        /// <summary>A altura da água do lago (ou 0, sem lago).</summary>
-        internal static float NivelDoLago => DadosDoMapa?.Lago != null ? DadosDoMapa.Lago.Nivel : 0f;
-
-        static float Fundura(Vector3 p) => DadosDoMapa != null ? DadosDoMapa.FunduraDaAgua(p.x, p.z) : 0f;
+        static float Fundura(Vector3 p) => AguaEm(p.x, p.z, out _);
 
         /// <summary>A fundura da água no ponto (0 em terra).</summary>
         internal static float FunduraEm(Vector3 p) => Fundura(p);
@@ -28,7 +27,8 @@ namespace ZombieCityCleaner.Fauna
         {
             p = default;
             var d = DadosDoMapa;
-            if (d?.Lago == null) return false;
+            if (d == null) return PontoNaAguaEmVolta(perto, de, ate, min, max, out p, tentativas);
+            if (d.Lago == null) return false;
             var lago = d.Lago;
             for (int k = 0; k < tentativas; k++)
             {
@@ -51,7 +51,8 @@ namespace ZombieCityCleaner.Fauna
         {
             p = default;
             var d = DadosDoMapa;
-            if (d?.Lago == null) return false;
+            if (d == null) return PontoNaMargemEmVolta(perto, raio, de, ate, out p);
+            if (d.Lago == null) return false;
             var lago = d.Lago;
             for (int k = 0; k < 40; k++)
             {
@@ -74,7 +75,8 @@ namespace ZombieCityCleaner.Fauna
         {
             m = default;
             var d = DadosDoMapa;
-            if (d?.Lago == null) return false;
+            if (d == null) return MargemMaisPerto(p, fora, out m);
+            if (d.Lago == null) return false;
             var lago = d.Lago;
             var para = new Vector2(p.x - lago.Centro.x, p.z - lago.Centro.y);
             if (para.sqrMagnitude < 0.01f) para = Vector2.right;
@@ -96,21 +98,80 @@ namespace ZombieCityCleaner.Fauna
         internal static bool AguaMaisPerto(Vector3 de, float funduraMin, float raio, out Vector3 p)
         {
             p = default;
-            var d = DadosDoMapa;
-            if (d?.Lago == null) return false;
+            if (!TemMapa) return false;
             float melhor = float.MaxValue;
             for (int a = 0; a < 16; a++)
                 for (float r = 2f; r <= raio; r += 3f)
                 {
                     var c = de + Quaternion.Euler(0f, a * 22.5f, 0f) * Vector3.forward * r;
-                    if (d.FunduraDaAgua(c.x, c.z) < funduraMin) continue;
+                    if (AguaEm(c.x, c.z, out float nivel) < funduraMin) continue;
                     if (r < melhor)
                     {
                         melhor = r;
-                        p = new Vector3(c.x, d.Lago.Nivel, c.z);
+                        p = new Vector3(c.x, nivel, c.z);
                     }
                     break;
                 }
+            return melhor < float.MaxValue;
+        }
+
+        // ------------------------------------------------------------------ a água em volta (o Lakewood)
+
+        // um ponto na água com a fundura entre min e max, no anel de 'de' a 'ate' m em volta de 'perto' (a altura: a da água)
+        static bool PontoNaAguaEmVolta(Vector3 perto, float de, float ate, float min, float max, out Vector3 p, int tentativas)
+        {
+            p = default;
+            if (!TemMapa) return false;
+            for (int k = 0; k < tentativas; k++)
+            {
+                float ang = Random.Range(0f, Mathf.PI * 2f);
+                float dist = Mathf.Sqrt(Random.Range(de * de, ate * ate));
+                var c = new Vector3(perto.x + Mathf.Cos(ang) * dist, 0f, perto.z + Mathf.Sin(ang) * dist);
+                float f = AguaEm(c.x, c.z, out float nivel);
+                if (f < min || f > max) continue;
+                p = new Vector3(c.x, nivel, c.z);
+                return true;
+            }
+            return false;
+        }
+
+        // um ponto em terra a até 'raio' m de 'perto', de 'de' a 'ate' m da água
+        static bool PontoNaMargemEmVolta(Vector3 perto, float raio, float de, float ate, out Vector3 p)
+        {
+            p = default;
+            var chao = ChaoDoLakewood;
+            if (chao == null) return false;
+            for (int k = 0; k < 40; k++)
+            {
+                Vector2 r = Random.insideUnitCircle * raio;
+                float x = perto.x + r.x, z = perto.z + r.y;
+                if (chao.Agua(x, z, out _, de) || !chao.Agua(x, z, out _, ate)) continue;
+                p = new Vector3(x, chao.Altura(x, z), z);
+                return true;
+            }
+            return false;
+        }
+
+        // a terra mais perto de um ponto da água (em 16 rumos, até 120 m), e 'fora' m além dela
+        static bool MargemMaisPerto(Vector3 p, float fora, out Vector3 m)
+        {
+            m = default;
+            if (!TemMapa) return false;
+            float melhor = float.MaxValue;
+            for (int a = 0; a < 16; a++)
+            {
+                var dir = Quaternion.Euler(0f, a * 22.5f, 0f) * Vector3.forward;
+                for (float r = 1f; r <= 120f && r < melhor; r += 1.5f)
+                {
+                    var c = p + dir * r;
+                    if (AguaEm(c.x, c.z, out _) > 0.02f) continue;
+                    melhor = r;
+                    c += dir * fora;
+                    c.y = AlturaDoMapa(c.x, c.z);
+                    m = c;
+                    break;
+                }
+            }
             return melhor < float.MaxValue;
         }
 

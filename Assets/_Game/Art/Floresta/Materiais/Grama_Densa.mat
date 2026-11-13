@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Grama_Densa
+  m_Shader: {fileID: 4800000, guid: c844e8a6955baf0479e9ce609940311e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: fa1ee4b23ed528a49b6519ef1929d04d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Balanco: 1
+    - _Cima: 0.85
+    - _Colunas: 4
+    - _Cutoff: 0.4
+    - _Dobra: 1
+    - _Suavidade: 0.05
+    - _Translucencia: 0.35
+    - _Tremor: 0.03
+    - _Variacao: 0.5
+    m_Colors:
+    - _Aparece: {r: 0, g: 0, b: 0, a: 0}
+    - _Cor: {r: 1, g: 1, b: 1, a: 1}
+    - _CorDaBase: {r: 0.42, g: 0.48, b: 0.36, a: 1}
+    - _CorDoChao: {r: 0.35299996, g: 0.43299997, b: 0.20799997, a: 1}
+    - _Desbota: {r: 0, g: 0, b: 0, a: 0}
+    - _Some: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

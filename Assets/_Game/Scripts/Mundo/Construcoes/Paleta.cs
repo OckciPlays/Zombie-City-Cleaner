@@ -63,6 +63,8 @@ namespace ZombieCityCleaner.Mundo
             ["MilhoSeco"] = new Vector2Int(2, 14), ["MilhoEscuro"] = new Vector2Int(3, 14), ["Palha"] = new Vector2Int(4, 14),
             ["Trigo"] = new Vector2Int(5, 14), ["TrigoClaro"] = new Vector2Int(6, 14), ["Feno"] = new Vector2Int(7, 14),
             ["FenoEscuro"] = new Vector2Int(8, 14),
+            // o tijolo aparente do Hospital Principal (o shader do abandono desenha os tijolos)
+            ["TijoloAparente"] = new Vector2Int(9, 14),
         };
 
         /// <summary>O UV do meio do quadradinho da cor.</summary>

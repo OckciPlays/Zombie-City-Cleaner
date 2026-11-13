@@ -204,7 +204,7 @@ namespace ZombieCityCleaner.EditorTools
         public static readonly string[] EmLacoDosMoradores = { "Sentado_Cadeira", "Sentado_Sofa", "Sentado_Banco", "Sentado_Lendo",
                                                                "Sentado_Rezando", "Sentado_Triste", "Comer", "Dormindo", "Cozinhar",
                                                                "Lavar_Louca", "Consertar", "Andar_Mancando", "Caixa_Carregar",
-                                                               "Conversa", "Chorar" };
+                                                               "Conversa", "Chorar", "Dobrar_Roupa" };
         /// <summary>Os clipes da camada de cima no controlador do corpo (os da pistola); os override trocam cada um.</summary>
         static readonly string[] CamadaDeCima = { "Pistola_Segurar", "Pistola_Mirar", "Pistola_Atirar", "Pistola_Recarregar" };
         /// <summary>

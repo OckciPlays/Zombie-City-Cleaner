@@ -95,24 +95,18 @@ namespace ZombieCityCleaner.Sobreviventes
             ApagarConstrucoes();
         }
 
-        static DadosDoMundo Dados
-        {
-            get
-            {
-                var m = MundoDaPartida.Instancia;
-                return m != null && m.Pronto && !m.NoDiaZero ? m.Dados : null;
-            }
-        }
+        // o mundo do jogo (12/11/2026: o sorteado ou o Lakewood, com os acampamentos dele)
+        static IMundoDoJogo Dados => MundoDoJogo.Pronto;
 
         /// <summary>Quantos acampamentos o mundo tem.</summary>
-        public int Quantos => Dados?.Plano?.Acampamentos.Count ?? 0;
+        public int Quantos => Dados != null ? Dados.Acampamentos.Count : 0;
 
         /// <summary>O desenho do acampamento (null fora do mundo).</summary>
         public PlantaDoAcampamento Planta(int a)
         {
             var d = Dados;
-            if (d?.Plano == null || a < 0 || a >= d.Plano.Acampamentos.Count) return null;
-            return PlantaDoAcampamento.Da(d, d.Plano.Acampamentos[a]);
+            if (d == null || a < 0 || a >= d.Acampamentos.Count) return null;
+            return PlantaDoAcampamento.Da(d, d.Acampamentos[a]);
         }
 
         /// <summary>O acampamento ficou contra os jogadores (alguém feriu um deles).</summary>

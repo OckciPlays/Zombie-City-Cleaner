@@ -1,0 +1,155 @@
+# Os documentos da loja de armas (o Plano_LojaDeArmas.md da pasta de arte, a decisão 9; o mesmo formato do Hospital.txt).
+# Cada um começa com "=== id" (o id é o do DocumentosDaLojaDeArmas, que diz onde ele fica e a forma do papel), os campos e,
+# depois do "---", o texto que se lê na tela (em português; o papel, os cabeçalhos, os carimbos e os nomes ficam em
+# inglês, como as placas: o jogo se passa nos Estados Unidos).
+#   titulo:     o nome do papel (para as notas e o F1; não aparece na tela)
+#   cabecalho:  o timbre, em cima da folha (vazio: sem timbre)
+#   tipo:       a linha de baixo do timbre (o formulário, a data)
+#   carimbo:    o carimbo vermelho torto (vazio: sem carimbo)
+#   letra:      maquina (datilografado), mao (escrito à mão) ou formulario (o formulário impresso, preenchido à mão)
+# No texto, a linha que começa com "~ " foi escrita à mão por cima (a caneta de outra cor). Uma linha vazia separa os
+# parágrafos. As datas não têm o ano (o jogo não diz em que ano é).
+
+=== fechamento
+titulo: O aviso de fechamento na porta
+cabecalho: GUNS & AMMO · FIREARMS · AMMUNITION · SHOOTING RANGE
+tipo: NOTICE TO CUSTOMERS
+carimbo: CLOSED
+letra: maquina
+---
+A loja está fechada até segunda ordem.
+
+Por determinação do Condado de Blackwater (a ordem de emergência nº 7), a venda de armas de fogo e de munição está suspensa. As armas encomendadas e já pagas ficam guardadas na loja até a ordem cair.
+
+Não temos mais munição de 9 mm, de .223 nem de calibre 12. Não adianta bater na porta. O estande também está fechado.
+
+Quem precisar de ajuda: o posto da Guarda Nacional fica na escola da Main Street.
+
+— A gerência
+~ A GUARDA FOI EMBORA NO SÁBADO.
+~ ninguém vem.
+
+=== livro_vendas
+titulo: O livro de vendas do balcão
+cabecalho:
+tipo: SALES LOG
+carimbo:
+letra: mao
+---
+Dia 22 · 14 pistolas, 6 espingardas, toda a .22. O Jimmy diz que nunca viu a loja assim. As pessoas falam da febre do hospital e da tal "infecção respiratória".
+
+Dia 24 · Fila na porta desde as seis. Acabou o 9 mm às oito e meia. Limitei a duas caixas por pessoa e quase apanhei por isso.
+
+Dia 26 · Chegou a ordem do condado: sem venda de armas. Fechei a porta da frente e atendi pela porta dos fundos só os conhecidos. O xerife sabe.
+
+Dia 27 · Arrombaram a porta dos fundos de noite. Levaram o que estava no estoque. Mudei o resto para o cofre.
+
+Dia 29 · Ninguém. Na rua, o carro da polícia passou três vezes, sem a sirene.
+
+Dia 30 · Tiros a noite inteira, para os lados do hospital. Gente correndo na rua, gente que não corre direito.
+~ o Earl veio bater no vidro. Não era mais o Earl.
+
+=== bilhete_funcionario
+titulo: O bilhete do funcionário na mesa
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+Frank,
+
+Peguei a minha parte do pagamento na gaveta e deixei a chave do estoque embaixo do telefone.
+
+Vou levar a Nancy e as crianças para o norte, pela 20, antes que fechem a estrada de vez. Dizem que depois da cerca está tudo bem.
+
+Você devia vir também. Não fica aqui sozinho com esse cofre.
+
+— Jimmy
+
+=== relatorio_estoque
+titulo: O relatório do estoque na parede
+cabecalho: GUNS & AMMO · STOCKROOM
+tipo: STOCK TRANSFER · DAY 27
+carimbo: TO VAULT
+letra: formulario
+---
+Fuzis (.223 e .308) · 12 · para o cofre
+Espingardas (calibre 12) · 9 · para o cofre
+Pistolas (as que sobraram do balcão) · 31 · para o cofre
+Caixas de 9 mm · 40 · para o cofre
+Caixas de .45 · 22 · para o cofre
+Caixas de calibre 12 · 18 · para o cofre
+Munição de .22 · 0 · (acabou no dia 22)
+~ O resto foi levado na noite do dia 27. A porta dos fundos não fecha mais.
+~ Não deixe ninguém entrar no estoque sem mim. — F.
+
+=== inventario_cofre
+titulo: O inventário da sala segura
+cabecalho: GUNS & AMMO · VAULT
+tipo: VAULT INVENTORY · AUTHORIZED PERSONNEL ONLY
+carimbo:
+letra: maquina
+---
+Cofre de armas 1 · as armas longas da vitrine, os fuzis do pedido do xerife.
+Cofre de armas 2 · as pistolas, as consignadas e as minhas.
+Caixas militares · a munição da Guarda (a que não voltaram para buscar).
+Estantes · as caixas de 9 mm, de .45 e de calibre 12.
+Cofre pequeno do escritório · o dinheiro e os documentos da loja.
+
+A combinação da porta foi trocada no dia 29.
+~ Só eu sei. Se eu não voltar, ela morre comigo.
+
+=== regras_estande
+titulo: As regras do estande
+cabecalho: GUNS & AMMO · SHOOTING RANGE
+tipo: RANGE RULES
+carimbo:
+letra: maquina
+---
+1. Abafador e óculos de proteção o tempo todo, dentro do estande.
+
+2. A arma só sai do estojo dentro da baia, com o cano para os alvos.
+
+3. Ninguém passa da linha amarela. Para trocar o alvo, use o carro.
+
+4. Tiro rápido é proibido.
+
+5. Ouviu "cessar-fogo": tire o dedo do gatilho, ponha a arma na bancada e afaste-se dela.
+
+Quem não seguir as regras sai e não volta.
+~ REGRA NOVA: NA CABEÇA.
+
+=== diario_sobrevivente
+titulo: O diário do acampamento no estande
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+Dia 9 aqui dentro. O estande é o único lugar da loja sem janela, e o barulho lá de fora não passa pelas paredes. Aqui eles não nos ouvem.
+
+A gente fechou a saída do lado com o balcão velho. Se eles vierem, vêm pela loja, e a gente vê pela porta.
+
+Munição, só o que estava jogado nas baias. As prateleiras da loja estavam vazias quando a gente chegou.
+
+Não vá para o fundo da loja de noite. Tem barulho lá atrás, de metal.
+
+A Carol quer ir embora para o norte, para a cerca. O Marcus quer ficar até achar o resto das armas. Eu só quero que a chuva pare.
+~ dia 23. Vamos amanhã cedo.
+
+=== bilhete_dono
+titulo: O bilhete do dono na porta de cofre
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+NÃO ABRAM.
+
+Fui mordido no dia 30, no braço, atrás do balcão.
+
+Me tranquei aqui dentro com o resto.
+
+Se a porta ainda estiver fechada, eu ainda estou aqui. E já não sou eu.
+
+— Frank Dolan

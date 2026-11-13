@@ -60,6 +60,12 @@ namespace ZombieCityCleaner.World
             if (c != null && c.IsSpawned && c.IsServer) c.PressaRede.Value = pressa;
         }
 
+        /// <summary>
+        /// O relógio rápido do F1 (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md da pasta de arte: ×10 e ×60, para testar a
+        /// agenda dos moradores), no anfitrião; os outros recebem a hora a cada segundo. Volta a 1 a cada partida.
+        /// </summary>
+        public static float Acelerado = 1f;
+
         float _proximoEnvio;
 
         void Awake()
@@ -80,6 +86,7 @@ namespace ZombieCityCleaner.World
         {
             Pressa = 1f;   // (06/11/2026: a pressa do sono não passa de uma partida para outra)
             TempoAoComecar();
+            Acelerado = 1f;
             if (IsServer)
             {
                 HoraRede.Value = Hora;
@@ -155,7 +162,10 @@ namespace ZombieCityCleaner.World
             if (!Parado)
             {
                 float antes = Hora;
-                Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Pressa * Time.deltaTime, 24f);
+                // a pressa do sono (todos dormindo: a noite passa) e o relógio rápido do F1 BUNKER (só no anfitrião;
+                // os outros recebem a hora a cada segundo)
+                float rapido = !IsSpawned || IsServer ? Mathf.Max(1f, Acelerado) : 1f;
+                Hora = Mathf.Repeat(Hora + 24f / (minutosPorDia * 60f) * Pressa * rapido * Time.deltaTime, 24f);
                 // passou da meia-noite: mais um dia (no anfitrião; os outros recebem)
                 if (Hora < antes && (!IsSpawned || IsServer)) Dia++;
             }

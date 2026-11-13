@@ -217,7 +217,8 @@ namespace ZombieCityCleaner.Player
         internal static Material CopiaDoMaterial(Material retrato, Material de, List<Material> materiais)
         {
             // as roupas (o shader delas, com as cores por peça): a cópia do material delas na luz fixa do retrato
-            if (de != null && de.shader != null && de.shader.name == "ZombieCityCleaner/Roupas")
+            // (e o vidro delas, o RoupasVidro: as mesmas propriedades do retrato)
+            if (de != null && de.shader != null && de.shader.name.StartsWith("ZombieCityCleaner/Roupas"))
             {
                 var roupa = new Material(de);
                 roupa.SetFloat("_Retrato", 1f);

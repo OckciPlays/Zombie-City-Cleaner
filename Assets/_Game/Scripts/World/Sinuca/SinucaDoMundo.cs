@@ -43,6 +43,8 @@ namespace ZombieCityCleaner.World
         public float distanciaMaxima = 3.5f;
 
         public const ulong Ninguem = ulong.MaxValue;
+        /// <summary>A mesa está com os moradores do bunker (a parte 8 do Plano_NPCs_Bunker.md: o anfitrião joga por eles).</summary>
+        public const ulong Moradores = ulong.MaxValue - 1;
         /// <summary>A parte das chaves das mesas (a da obra e do ponto, como as partes que abrem).</summary>
         public const int ParteDaMesa = 1000;
 
@@ -144,9 +146,94 @@ namespace ZombieCityCleaner.World
             if (mesa != null) _naCena[mesa.chave] = mesa;
         }
 
-        public void Esquecer(MesaDeSinuca mesa)
+        /// <summary>A mesa sai da cena (a chave é a com que ela se registrou).</summary>
+        public void Esquecer(MesaDeSinuca mesa, ulong chave)
         {
-            if (mesa != null && _naCena.TryGetValue(mesa.chave, out var m) && m == mesa) _naCena.Remove(mesa.chave);
+            if (mesa != null && _naCena.TryGetValue(chave, out var m) && m == mesa) _naCena.Remove(chave);
+        }
+
+        /// <summary>A mesa da chave nesta máquina (null: ela não está de perto agora).</summary>
+        public MesaDeSinuca NaCena(ulong chave) => _naCena.TryGetValue(chave, out var m) && m != null ? m : null;
+
+        // ------------------------------------------------------------------ os moradores (no anfitrião; a parte 8)
+
+        // a mesa da chave (entra na lista se ninguém usou ainda)
+        int MesaDosMoradores(ulong chave, Vector3 centro)
+        {
+            int i = Indice(chave);
+            if (i >= 0 || !IsServer) return i;
+            _mesas.Add(new MesaNaRede { chave = chave, centro = centro, jogador = Ninguem });
+            foreach (var p in FisicaDaSinuca.Arrumadas(UnityEngine.Random.Range(0, int.MaxValue))) _bolas.Add(p);
+            return _mesas.Count - 1;
+        }
+
+        /// <summary>No anfitrião: a mesa fica com os moradores (livre, ou já deles). Falso se um jogador está nela.</summary>
+        public bool MoradoresPegam(ulong chave, Vector3 centro)
+        {
+            if (!IsSpawned || !IsServer) return false;
+            int i = MesaDosMoradores(chave, centro);
+            var m = _mesas[i];
+            if (m.jogador == Moradores) return true;
+            if (m.jogador != Ninguem) return false;
+            m.jogador = Moradores;
+            _mesas[i] = m;
+            return true;
+        }
+
+        /// <summary>No anfitrião: os moradores saem da mesa (as bolas ficam onde estão).</summary>
+        public void MoradoresSoltam(ulong chave)
+        {
+            int i = IsSpawned && IsServer ? Indice(chave) : -1;
+            if (i >= 0 && _mesas[i].jogador == Moradores) Liberar(i, false);
+        }
+
+        /// <summary>No anfitrião: um morador põe as bolas na mesa (a caixa dele fica vazia). Falso se já tinham bolas.</summary>
+        public bool MoradorPoeAsBolas(ulong chave, Vector3 centro)
+        {
+            if (!IsSpawned || !IsServer) return false;
+            int i = MesaDosMoradores(chave, centro);
+            if (_mesas[i].comBolas) return false;
+            Arrumar(i);
+            var m = _mesas[i];
+            m.comBolas = true;
+            _mesas[i] = m;
+            return true;
+        }
+
+        /// <summary>No anfitrião: um morador recolhe as bolas (ninguém mais jogando). Falso se não havia bolas.</summary>
+        public bool MoradorRecolheAsBolas(ulong chave)
+        {
+            int i = IsSpawned && IsServer ? Indice(chave) : -1;
+            if (i < 0 || !_mesas[i].comBolas || (_mesas[i].jogador != Ninguem && _mesas[i].jogador != Moradores)) return false;
+            var m = _mesas[i];
+            m.comBolas = false;
+            _mesas[i] = m;
+            return true;
+        }
+
+        /// <summary>No anfitrião: um quadro da tacada de um morador (a mesa daqui mostra, e as das outras máquinas).</summary>
+        public void QuadroDosMoradores(ulong chave, QuadroDaSinuca quadro)
+        {
+            if (!IsSpawned || !IsServer) return;
+            NaCena(chave)?.ReceberQuadro(quadro);
+            QuadroRpc(chave, quadro);
+        }
+
+        /// <summary>No anfitrião: as bolas pararam (a tacada de um morador): grava, ou arruma de novo (a preta, ou todas, caíram).</summary>
+        public void FimDosMoradores(ulong chave, Vector2[] pos, ushort fora, bool recomecar)
+        {
+            int i = IsSpawned && IsServer ? Indice(chave) : -1;
+            if (i < 0 || !_mesas[i].comBolas) return;
+            if (recomecar)
+            {
+                Arrumar(i);
+                return;
+            }
+            for (int b = 0; b < FisicaDaSinuca.Bolas; b++)
+                if (_bolas[i * FisicaDaSinuca.Bolas + b] != pos[b]) _bolas[i * FisicaDaSinuca.Bolas + b] = pos[b];
+            var m = _mesas[i];
+            m.fora = fora;
+            _mesas[i] = m;
         }
 
         // ------------------------------------------------------------------ o que a mesa lê
@@ -303,7 +390,10 @@ namespace ZombieCityCleaner.World
         void QuadroRpc(ulong chave, QuadroDaSinuca quadro, RpcParams parametros = default)
         {
             if (quadro.pos == null || !_naCena.TryGetValue(chave, out var mesa) || mesa == null) return;
-            if (!Estado(chave, out var m) || m.jogador != parametros.Receive.SenderClientId) return;
+            if (!Estado(chave, out var m)) return;
+            // (a tacada de um morador vem do anfitrião)
+            bool doMorador = m.jogador == Moradores && parametros.Receive.SenderClientId == NetworkManager.ServerClientId;
+            if (m.jogador != parametros.Receive.SenderClientId && !doMorador) return;
             mesa.ReceberQuadro(quadro);
         }
 
@@ -312,7 +402,7 @@ namespace ZombieCityCleaner.World
             // quem jogava saiu da partida: a mesa fica livre, e as bolas voltam para onde o anfitrião gravou
             if (!IsSpawned || !IsServer) return;
             for (int i = 0; i < _mesas.Count; i++)
-                if (_mesas[i].jogador != Ninguem && !NetworkManager.ConnectedClients.ContainsKey(_mesas[i].jogador)) Liberar(i);
+                if (_mesas[i].jogador != Ninguem && _mesas[i].jogador != Moradores && !NetworkManager.ConnectedClients.ContainsKey(_mesas[i].jogador)) Liberar(i);
         }
     }
 }

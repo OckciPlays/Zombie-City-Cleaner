@@ -159,12 +159,12 @@ namespace ZombieCityCleaner.Vehicles
 
         [Header("Direção")]
         [Tooltip("Torque em cada roda da frente (N·m), com o acelerador no fundo e o carro parado.")]
-        public float torque = 700f;
-        [Tooltip("A força do motor cai a zero nesta velocidade (m/s); com o atrito, o carro para um pouco antes (o cupê, com " +
-                 "42 e 1.000 N·m, chega a ~110 km/h).")]
-        public float velocidadeMaxima = 22f;
-        [Tooltip("Onde acaba a 4ª marcha imaginária do som do motor (m/s): perto da velocidade que o carro alcança. A perua: 23.")]
-        public float fimDasMarchas = 23f;
+        public float torque = 850f;
+        [Tooltip("A força do motor cai a zero nesta velocidade (m/s); com o atrito, o carro para um pouco antes (a perua, com " +
+                 "44 e 850 N·m, chega a ~110 km/h no plano e a ~86 numa subida de 12%; o cupê, com 42 e 1.000 N·m, a ~114 e ~91).")]
+        public float velocidadeMaxima = 44f;
+        [Tooltip("Onde acaba a 4ª marcha imaginária do som do motor (m/s): perto da velocidade que o carro alcança. A perua: 31.")]
+        public float fimDasMarchas = 31f;
         public float velocidadeDeRe = 7f;
         public float freio = 2400f;
         public float freioDeMao = 4500f;
@@ -184,6 +184,20 @@ namespace ZombieCityCleaner.Vehicles
         public float giroMaximoDoVolanteVisto = 320f;
         [Tooltip("A chave deste veículo (o item que dá a partida direta; sem ela, só a ligação direta).")]
         public Loot.Item chaveDoVeiculo = Loot.Item.ChaveDaPerua;
+
+        /// <summary>
+        /// O começo de um veículo arrumado (o F3 > Veículos e a casa da partida do Lakewood, 10/11/2026): a vela, a bateria e
+        /// o radiador a 100%, os pneus e o estepe a 100%, o macaco no porta-malas e o tanque cheio. Antes do Spawn (o carro
+        /// aplica os campos do começo ao nascer na rede).
+        /// </summary>
+        public void ArrumadoDeFabrica()
+        {
+            velaInicial = bateriaInicial = radiadorInicial = 100;
+            pneusIniciais = new[] { 100, 100, 100, 100 };
+            estepeInicial = 100;
+            macacoInicial = true;
+            combustivel = 1f;
+        }
 
         /// <summary>Quem está em cada lugar: o id do cliente + 1 (0 = vazio).</summary>
         public struct Ocupantes : INetworkSerializeByMemcpy

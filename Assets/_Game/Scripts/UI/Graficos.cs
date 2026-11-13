@@ -26,8 +26,14 @@ namespace ZombieCityCleaner.UI
     /// parados, respirando) e mandados pela rede para este jogador, e a partir de onde os novos nascem perto dele
     /// (<see cref="NascerAPartirDe"/>). Escolher uma qualidade traz a distância dela (Baixa Curta, Média Média, Alta Longa,
     /// Ultra Máxima); depois dá para mudar à parte. A Curta é o jogo como era antes.</item>
+    /// <item>a pixelação (a pedido em 07/11/2026, para testar: "como ficaria o jogo com um efeito de pixelação?"): Desligada,
+    /// Leve, Média, Média PS1 e Forte PS1. O 3D é desenhado em poucas linhas (270, 180 ou 135: o <c>renderScale</c> do URP
+    /// pela altura da tela, refeito quando ela muda) e ampliado sem suavizar (o filtro Point do URP); nas do PS1, também as
+    /// cores reduzidas a 5 bits por canal com o pontilhado (o passe "Pixelacao" do PC_Renderer,
+    /// Editor/MontagemDaPixelacao, ligado só nelas). A interface (o OnGUI) continua nítida. Com ela, a escala de
+    /// renderização não vale.</item>
     /// </list>
-    /// Gravados no computador (<c>graficos.escala</c>, <c>graficos.qualidade</c>, <c>graficos.visao</c>). As opções mudam o asset do URP em uso;
+    /// Gravados no computador (<c>graficos.escala</c>, <c>graficos.qualidade</c>, <c>graficos.visao</c>, <c>graficos.pixelacao</c>). As opções mudam o asset do URP em uso;
     /// no Editor, ele volta ao original ao sair do Play (senão o projeto ficaria com a escolha de quem testou).
     /// </summary>
     public static class Graficos
@@ -35,7 +41,7 @@ namespace ZombieCityCleaner.UI
         public static readonly string[] NomesDaQualidade = { "Baixa", "Média", "Alta", "Ultra" };
         public static readonly string[] NomesDosModos = { "Tela cheia", "Janela sem borda", "Janela" };
         static readonly FullScreenMode[] Modos = { FullScreenMode.ExclusiveFullScreen, FullScreenMode.FullScreenWindow, FullScreenMode.Windowed };
-        const int Alta = 2;
+        const int Alta = 2, Ultra = 3;
         public const float EscalaMinima = 0.5f, EscalaMaxima = 2f;
 
         /// <summary>A escala de renderização do 3D (1 = a resolução da tela).</summary>
@@ -62,6 +68,40 @@ namespace ZombieCityCleaner.UI
         /// <summary>Mais perto que isto de um jogador com esta distância de visão, zumbi novo não nasce (m).</summary>
         public static float NascerAPartirDe(int visao) => NascerDe[Mathf.Clamp(visao, 0, NascerDe.Length - 1)];
 
+        public static readonly string[] NomesDaPixelacao = { "Desligada", "Leve", "Média", "Média PS1", "Forte PS1" };
+        static readonly int[] LinhasDaPixelacao = { 0, 270, 180, 180, 135 };
+
+        /// <summary>A pixelação: 0 desligada, 1 leve (270 linhas), 2 média (180), 3 média com as cores do PS1, 4 forte (135) com elas.</summary>
+        public static int Pixelacao { get; private set; }
+        /// <summary>As linhas em que o 3D é desenhado (0: sem pixelação).</summary>
+        public static int LinhasPixeladas => LinhasDaPixelacao[Pixelacao];
+        public static bool CoresDoPs1 => Pixelacao >= 3;
+
+        public static void MudarPixelacao(int pixelacao)
+        {
+            Pixelacao = Mathf.Clamp(pixelacao, 0, NomesDaPixelacao.Length - 1);
+            PlayerPrefs.SetInt("graficos.pixelacao", Pixelacao);
+            Aplicar();
+        }
+
+        // nas cenas de exemplo (o hospital, o bunker, as variações), que não têm as Configurações: a mesma pixelação escolhida
+        // no jogo, e o X passa para a próxima (e grava, como o menu); o resto fica como a cena era (a Alta em 100%). O
+        // AndarNoExemplo fica no assembly do mundo, que não enxerga este: o Graficos se registra nele a cada Play (o domínio não
+        // recarrega entre eles: a escolha gravada é lida de novo, e a altura zerada faz ela entrar no primeiro quadro)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void NasCenasDeExemplo()
+        {
+            Pixelacao = Mathf.Clamp(PlayerPrefs.GetInt("graficos.pixelacao", 0), 0, NomesDaPixelacao.Length - 1);
+            _alturaPixelada = 0;
+            ZombieCityCleaner.Mundo.AndarNoExemplo.TeclasDeFora = k =>
+            {
+                if (k.xKey.wasPressedThisFrame) MudarPixelacao((Pixelacao + 1) % NomesDaPixelacao.Length);
+                // a gravada entra no primeiro quadro; depois, segue o tamanho da janela Game
+                if (Pixelacao > 0 && Screen.height != _alturaPixelada) Aplicar();
+            };
+            ZombieCityCleaner.Mundo.AndarNoExemplo.AjudaDeFora = () => $"X pixelação: {NomesDaPixelacao[Pixelacao]}";
+        }
+
         public static void MudarVisao(int visao)
         {
             Visao = Mathf.Clamp(visao, 0, NomesDaVisao.Length - 1);
@@ -71,12 +111,44 @@ namespace ZombieCityCleaner.UI
         // o asset do URP e a qualidade como vieram (a Alta usa estes; no Editor, voltam ao sair do Play)
         static UniversalRenderPipelineAsset _urp;
         static bool _guardado;
-        static float _escala0, _sombra0, _lod0, _desenho0;
+        static float _escala0, _sombra0, _lod0, _desenho0, _borda0;
+        static UpscalingFilterSelection _filtro0;
+        static int _alturaPixelada;
+        // o passe das cores do PS1 (o "Pixelacao" do PC_Renderer) e se ele estava ativo no asset
+        static ScriptableRendererFeature _passePs1;
+        static bool _passePs1Ativo0;
         static int _msaa0, _mapaDaSombra0, _cascatas0, _texturas0, _aa0, _atlas0;
+        static bool _opaca0;
+        static readonly int RefracaoId = Shader.PropertyToID("_ZccAguaRefracao");
         static Camera _camera;
         static int _qualidadeNaCamera = -1;
 
         static UniversalRenderPipelineAsset Urp => GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+
+        // a tabela das sombras do sol da floresta (o Plano_Floresta.md, "As sombras por qualidade" e "A medida das
+        // instâncias"): a distância, as cascatas e o mapa da Baixa, da Média, da Alta e da Ultra
+        static readonly float[] SombraDaFloresta = { 40f, 70f, 90f, 200f };
+        static readonly int[] CascatasDaFloresta = { 2, 3, 3, 4 };
+        static readonly int[] MapaDaFloresta = { 1024, 2048, 2048, 4096 };
+        static bool _tabelaDaFloresta;
+
+        /// <summary>
+        /// A sombra do sol pela tabela da floresta (09/11/2026, a floresta nova no Lakewood: a da cena de floresta, que o
+        /// usuário aprovou como a Alta): 40 m em 2 cascatas na Baixa, 70 m em 3 na Média, 90 m em 3 na Alta e 200 m em 4,
+        /// com o mapa de 4096, na Ultra, o fim da sombra esmaecendo mais devagar (a borda das cascatas em 0,2) e a sombra
+        /// suave do sol pela qualidade (baixa, média, alta e alta). Ligada pela cena do Lakewood (o LakewoodNaCena) enquanto
+        /// ela está aberta; no mundo sorteado continua a tabela de antes.
+        /// </summary>
+        public static bool TabelaDaFloresta
+        {
+            get => _tabelaDaFloresta;
+            set
+            {
+                if (_tabelaDaFloresta == value) return;
+                _tabelaDaFloresta = value;
+                if (_guardado) Aplicar();
+            }
+        }
 
         /// <summary>Ao abrir o jogo (pelo Opcoes.Carregar): lê as escolhas e aplica.</summary>
         public static void Carregar()
@@ -85,6 +157,7 @@ namespace ZombieCityCleaner.UI
             Escala = Mathf.Clamp(PlayerPrefs.GetFloat("graficos.escala", 1f), EscalaMinima, EscalaMaxima);
             Qualidade = Mathf.Clamp(PlayerPrefs.GetInt("graficos.qualidade", Alta), 0, NomesDaQualidade.Length - 1);
             Visao = Mathf.Clamp(PlayerPrefs.GetInt("graficos.visao", Qualidade), 0, NomesDaVisao.Length - 1);   // sem escolha: a da qualidade
+            Pixelacao = Mathf.Clamp(PlayerPrefs.GetInt("graficos.pixelacao", 0), 0, NomesDaPixelacao.Length - 1);
             Aplicar();
         }
 
@@ -142,10 +215,18 @@ namespace ZombieCityCleaner.UI
             _guardado = true;
             _urp = Urp;
             _escala0 = _urp.renderScale;
+            _filtro0 = _urp.upscalingFilter;
+            _passePs1 = null;
+            foreach (var dados in _urp.rendererDataList)
+                if (dados != null)
+                    foreach (var f in dados.rendererFeatures)
+                        if (f != null && f.name == "Pixelacao") { _passePs1 = f; _passePs1Ativo0 = f.isActive; }
             _sombra0 = _urp.shadowDistance;
             _msaa0 = _urp.msaaSampleCount;
+            _opaca0 = _urp.supportsCameraOpaqueTexture;
             _mapaDaSombra0 = _urp.mainLightShadowmapResolution;
             _cascatas0 = _urp.shadowCascadeCount;
+            _borda0 = _urp.cascadeBorder;
             _atlas0 = _urp.additionalLightsShadowmapResolution;
             _lod0 = QualitySettings.lodBias;
             _texturas0 = QualitySettings.globalTextureMipmapLimit;
@@ -166,7 +247,19 @@ namespace ZombieCityCleaner.UI
             Guardar();
             if (_urp != null)
             {
-                _urp.renderScale = Escala;
+                // a pixelação: o 3D em poucas linhas (pela altura da tela) e ampliado sem suavizar; sem ela, a escala escolhida
+                _alturaPixelada = Screen.height;
+                if (Pixelacao > 0)
+                {
+                    _urp.renderScale = Mathf.Clamp(LinhasPixeladas / (float)Mathf.Max(1, Screen.height), 0.1f, 1f);
+                    _urp.upscalingFilter = UpscalingFilterSelection.Point;
+                }
+                else
+                {
+                    _urp.renderScale = Escala;
+                    _urp.upscalingFilter = _filtro0;
+                }
+                if (_passePs1 != null) _passePs1.SetActive(CoresDoPs1);
                 switch (Qualidade)
                 {
                     case 0:   // Baixa: a sombra só perto, pequena e sem cascatas
@@ -194,9 +287,25 @@ namespace ZombieCityCleaner.UI
                         _urp.msaaSampleCount = _msaa0;
                         break;
                 }
+                // a floresta (o Lakewood): a sombra do sol pela tabela dela, por cima da de cima (o MSAA continua)
+                if (_tabelaDaFloresta)
+                {
+                    int q = Mathf.Clamp(Qualidade, 0, SombraDaFloresta.Length - 1);
+                    _urp.shadowDistance = SombraDaFloresta[q];
+                    _urp.shadowCascadeCount = CascatasDaFloresta[q];
+                    _urp.mainLightShadowmapResolution = MapaDaFloresta[q];
+                    _urp.cascadeBorder = 0.2f;
+                }
+                else _urp.cascadeBorder = _borda0;
                 // a Baixa: o mapa das sombras das lanternas menor (lá, só a lanterna de quem joga aqui faz sombra)
                 _urp.additionalLightsShadowmapResolution = Qualidade == 0 ? Mathf.Min(_atlas0, 1024) : _atlas0;
+                // a água (08/11/2026): a cópia da tela para a refração na Alta e na Ultra; na Média e na Baixa, a água mistura
+                // por alfa. O reflexo do cenário no lago (a câmera espelhada, que desenha a mata de novo) só na Ultra
+                // (09/11/2026, a pedido, depois da medida da floresta: ele era 40% das instâncias); nas outras, só o céu
+                _urp.supportsCameraOpaqueTexture = Qualidade >= Alta;
             }
+            Shader.SetGlobalFloat(RefracaoId, Qualidade >= Alta ? 1f : 0f);
+            ReflexoDaAgua.Ativo = Qualidade >= Ultra;
             QualitySettings.globalTextureMipmapLimit = Qualidade == 0 ? Mathf.Max(_texturas0, 1) : _texturas0;   // Baixa: texturas pela metade
             QualitySettings.lodBias = _lod0 * (Qualidade == 0 ? 0.6f : Qualidade == 1 ? 0.8f : Qualidade == 3 ? 1.5f : 1f);
             AplicarSsao();
@@ -233,7 +342,10 @@ namespace ZombieCityCleaner.UI
         {
             var sombra = original;
             var suavidade = SoftShadowQuality.UsePipelineSettings;
-            if (original != LightShadows.None && Qualidade < Alta)
+            if (_tabelaDaFloresta && tipo == Luz.Sol && original != LightShadows.None)
+                // a floresta: o sol com a sombra suave em todas, o filtro pela qualidade
+                suavidade = Qualidade == 0 ? SoftShadowQuality.Low : Qualidade == 1 ? SoftShadowQuality.Medium : SoftShadowQuality.High;
+            else if (original != LightShadows.None && Qualidade < Alta)
             {
                 if (tipo == Luz.LanternaDosOutros) sombra = LightShadows.None;
                 else if (Qualidade == 0 || tipo == Luz.MinhaLanterna) sombra = LightShadows.Hard;
@@ -310,13 +422,16 @@ namespace ZombieCityCleaner.UI
         /// </summary>
         public static void NoQuadro()
         {
+            // a pixelação segue a altura da tela (a janela mudou de tamanho: as mesmas linhas)
+            if (Pixelacao > 0 && Screen.height != _alturaPixelada) Aplicar();
             if (ModoVideo.Ligado) return;
             var eu = JogadorRede.Local;
             var cam = eu != null ? eu.cameraMundo : null;
             if (cam == null) return;
             if (cam != _camera) _desenho0 = cam.farClipPlane;   // a do prefab (a da Alta)
-            // a distância de desenho (a Média e a Baixa); pela luneta, a de sempre (a neblina afina, e o alvo pode estar longe)
-            float longe = AmbienteDoDia.NaLuneta ? _desenho0 : Desenho(_desenho0);
+            // a distância de desenho (a Média e a Baixa); pela luneta, a de sempre (a neblina afina, e o alvo pode estar longe);
+            // sem a neblina (o N da cena do Lakewood), o condado inteiro (09/11/2026: o far de 150 m do prefab escondia o horizonte)
+            float longe = AmbienteDoDia.SemNeblina ? LakewoodNaCena.FarSemNeblina : AmbienteDoDia.NaLuneta ? _desenho0 : Desenho(_desenho0);
             if (cam.farClipPlane != longe) cam.farClipPlane = longe;
             if (cam == _camera && _qualidadeNaCamera == Qualidade) return;
             _camera = cam;
@@ -342,10 +457,13 @@ namespace ZombieCityCleaner.UI
             if (_urp != null)
             {
                 _urp.renderScale = _escala0;
+                _urp.upscalingFilter = _filtro0;
                 _urp.shadowDistance = _sombra0;
                 _urp.msaaSampleCount = _msaa0;
+                _urp.supportsCameraOpaqueTexture = _opaca0;
                 _urp.mainLightShadowmapResolution = _mapaDaSombra0;
                 _urp.shadowCascadeCount = _cascatas0;
+                _urp.cascadeBorder = _borda0;
                 _urp.additionalLightsShadowmapResolution = _atlas0;
             }
             foreach (var s in _ssaos)
@@ -354,6 +472,7 @@ namespace ZombieCityCleaner.UI
                 s.efeito.SetActive(s.ativo0);
                 if (s.meia != null) s.meia.SetValue(s.ajustes, s.meia0);
             }
+            if (_passePs1 != null) _passePs1.SetActive(_passePs1Ativo0);
             if (_comGrupo) QualitySettings.SetTextureMipmapLimitSettings(GrupoDasTexturas, _grupo0);
             QualitySettings.lodBias = _lod0;
             QualitySettings.globalTextureMipmapLimit = _texturas0;

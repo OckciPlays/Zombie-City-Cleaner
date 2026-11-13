@@ -34,7 +34,7 @@ namespace ZombieCityCleaner.UI
         public static int Tamanho { get; private set; }
 
         MapaDoMundo _mapa;
-        MundoDaPartida _mundoOuvido;
+        IMarcasDoMundo _mundoOuvido;
         float _proximoPing;
         GUIStyle _rotulo, _norte, _nomeDaMarca, _distancia;
 
@@ -58,7 +58,7 @@ namespace ZombieCityCleaner.UI
         void OnDisable() => Ouvir(null);
 
         // o bipe dos pings que chegam (da partida de agora)
-        void Ouvir(MundoDaPartida m)
+        void Ouvir(IMarcasDoMundo m)
         {
             if (_mundoOuvido == m) return;
             if (_mundoOuvido != null) _mundoOuvido.MarcaNova -= AoChegarMarca;
@@ -75,11 +75,13 @@ namespace ZombieCityCleaner.UI
 
         void Update()
         {
-            var mundo = MundoDaPartida.Instancia;
+            // (12/11/2026: as marcas e o chão do mundo da cena, o sorteado ou o Lakewood)
+            var mundo = MarcasDoMundo.Atual;
             Ouvir(mundo != null && mundo.IsSpawned ? mundo : null);
             if (mundo != null && mundo.IsSpawned && mundo.IsServer) mundo.LimparOsPings();
             var local = JogadorRede.Local;
-            if (local == null || mundo == null || mundo.Dados == null || !MenuOnline.Controla) return;
+            var chao = MundoDoJogo.Atual;
+            if (local == null || mundo == null || chao == null || !MenuOnline.Controla) return;
             var teclado = Keyboard.current;
             if (teclado != null && teclado.nKey.wasPressedThisFrame)
             {
@@ -88,7 +90,7 @@ namespace ZombieCityCleaner.UI
                 catch { }
             }
             var mouse = Mouse.current;
-            if (mouse != null && mouse.middleButton.wasPressedThisFrame && Time.unscaledTime >= _proximoPing && OndeOlha(local, mundo.Dados, out var ponto))
+            if (mouse != null && mouse.middleButton.wasPressedThisFrame && Time.unscaledTime >= _proximoPing && OndeOlha(local, chao, out var ponto))
             {
                 _proximoPing = Time.unscaledTime + 0.4f;
                 local.PedirPing(ponto);
@@ -97,7 +99,7 @@ namespace ZombieCityCleaner.UI
 
         // o ponto para onde o jogador olha: o que o raio pega (sem o próprio corpo) até 300 m; sem nada (o chão longe ainda
         // sem colisor), o relevo dos dados, andando pelo raio
-        static bool OndeOlha(JogadorRede j, Mundo.DadosDoMundo d, out Vector3 ponto)
+        static bool OndeOlha(JogadorRede j, IMundoDoJogo d, out Vector3 ponto)
         {
             var olho = j.Olho;
             Vector3 o = olho.position, dir = olho.forward;
@@ -140,8 +142,8 @@ namespace ZombieCityCleaner.UI
             // só desenha (nada aqui recebe clique): os outros eventos do OnGUI passam direto
             if (Event.current.type != EventType.Repaint) return;
             var local = JogadorRede.Local;
-            var mundo = MundoDaPartida.Instancia;
-            if (local == null || mundo == null || !mundo.IsSpawned || mundo.Dados == null || TelaCheia) return;
+            var mundo = MarcasDoMundo.Atual;
+            if (local == null || mundo == null || !mundo.IsSpawned || MundoDoJogo.Atual == null || TelaCheia) return;
             float u = Screen.height / 720f;
             Estilos(u);
             // as marcas por baixo dos pings (o ping é o recado de agora)
@@ -159,7 +161,7 @@ namespace ZombieCityCleaner.UI
         /// menos de 150 m ou na marca mais perto do meio da tela (onde se mira; uma só, para os textos não se encavalarem).
         /// Não some com o tempo: sai quando é apagada no mapa (sai da lista).
         /// </summary>
-        void AlfinetesNoMundo(JogadorRede local, MundoDaPartida mundo, float u)
+        void AlfinetesNoMundo(JogadorRede local, IMarcasDoMundo mundo, float u)
         {
             var lista = mundo.Marcas;
             var cam = local.cameraMundo != null ? local.cameraMundo : Camera.main;
@@ -247,7 +249,7 @@ namespace ZombieCityCleaner.UI
         }
 
         // o losango de cada ping, por cima de tudo, com quem marcou e a distância (some nos 3 s finais)
-        void PingsNoMundo(JogadorRede local, MundoDaPartida mundo, float u)
+        void PingsNoMundo(JogadorRede local, IMarcasDoMundo mundo, float u)
         {
             var lista = mundo.Marcas;
             var cam = local.cameraMundo != null ? local.cameraMundo : Camera.main;
@@ -276,9 +278,10 @@ namespace ZombieCityCleaner.UI
             GUI.color = antes;
         }
 
-        void Minimapa(JogadorRede local, MundoDaPartida mundo, float u)
+        void Minimapa(JogadorRede local, IMarcasDoMundo mundo, float u)
         {
-            var d = mundo.Dados;
+            // o retângulo do mapa (12/11/2026: no sorteado, o quadrado em volta da origem; no Lakewood, 12 × 10 km a partir dela)
+            var r = _mapa.Area;
             float lado = Lados[Tamanho] * u, metros = Metros[Tamanho];
             // embaixo do contador de FPS quando ele está ligado (08/11/2026: o contador, de 10 a 34 px, cobria o alto do
             // minimapa, que começava nos 30 px)
@@ -295,14 +298,14 @@ namespace ZombieCityCleaner.UI
             // no lugar dela no quadrado (08/11/2026: antes o recorte inteiro ia para a textura, e perto da beira o Clamp dela
             // esticava a última fileira de pixels por cima do que é fora do mapa)
             var p = local.transform.position;
-            float L = d.Lado, M = d.Metade, meia = metros / 2f, escala = lado / metros;
-            float x0 = Mathf.Max(p.x - meia, -M), x1 = Mathf.Min(p.x + meia, M);
-            float z0 = Mathf.Max(p.z - meia, -M), z1 = Mathf.Min(p.z + meia, M);
+            float meia = metros / 2f, escala = lado / metros;
+            float x0 = Mathf.Max(p.x - meia, r.xMin), x1 = Mathf.Min(p.x + meia, r.xMax);
+            float z0 = Mathf.Max(p.z - meia, r.yMin), z1 = Mathf.Min(p.z + meia, r.yMax);
             if (x1 > x0 && z1 > z0)
             {
                 // na tela, o y cresce para baixo: o alto do pedaço é o z maior
                 var pedaco = new Rect(area.x + (x0 - (p.x - meia)) * escala, area.y + (p.z + meia - z1) * escala, (x1 - x0) * escala, (z1 - z0) * escala);
-                GUI.DrawTextureWithTexCoords(pedaco, _mapa.Textura, new Rect((x0 + M) / L, (z0 + M) / L, (x1 - x0) / L, (z1 - z0) / L));
+                GUI.DrawTextureWithTexCoords(pedaco, _mapa.Textura, new Rect((x0 - r.xMin) / r.width, (z0 - r.yMin) / r.height, (x1 - x0) / r.width, (z1 - z0) / r.height));
             }
             GUI.BeginGroup(area);
             var meio = new Vector2(lado / 2f, lado / 2f);

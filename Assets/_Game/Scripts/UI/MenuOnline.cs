@@ -20,10 +20,17 @@ namespace ZombieCityCleaner.UI
     /// (o mundo de quem hospeda). O personagem é criado ao entrar na partida (a tela de criar, a TelaDeCriarPersonagem do
     /// jogador; o Plano_Personagem.md da pasta de arte): a escolha dos retratos saiu do menu.
     /// Na cena Mundo (com o <see cref="MundoDaPartida"/>), o começo é o menu principal; o "Novo jogo" e o "Continuar" estão
-    /// no MenuOnline.NovoJogo.cs (repaginados em 06/11/2026).
+    /// no MenuOnline.NovoJogo.cs (repaginados em 06/11/2026). Desde 12/11/2026 (a pedido: "o lakewood seja o mapa que
+    /// aparece no jogo normal"), também na cena Lakewood (com o <see cref="LakewoodNaCena"/>), com o Novo jogo dela (o
+    /// MenuOnline.Lakewood.cs: sem a tela das cartas dos moradores, sem o Continuar).
     /// </summary>
     public partial class MenuOnline : MonoBehaviour
     {
+        /// <summary>O menu do jogo (o título, o Novo jogo, o fundo): na cena Mundo e, desde 12/11/2026, na cena Lakewood.</summary>
+        static bool MenuDoJogo => MundoDaPartida.Instancia != null || LakewoodNaCena.Instancia != null;
+        /// <summary>O jogo normal no Lakewood (12/11/2026): a cena dele, sem o mundo sorteado.</summary>
+        static bool NoLakewood => MundoDaPartida.Instancia == null && LakewoodNaCena.Instancia != null;
+
         /// <summary>Menu aberto (ou uma tela obrigatória, a de criar o personagem): o jogador local não recebe comandos.</summary>
         public static bool Aberto { get; private set; } = true;
         /// <summary>O menu da partida (ESC) está aberto: as telas embaixo dele não respondem.</summary>
@@ -108,8 +115,9 @@ namespace ZombieCityCleaner.UI
         {
             _sessao = SessaoOnline.Instancia;
             Opcoes.Carregar();   // antes da linha de comando: o robô de teste fica em 60 FPS
-            // o fundo do menu (o vídeo da cidade e a trilha do menu) só na cena Mundo, a do jogo
-            if (MundoDaPartida.Instancia != null) FundoDoMenu.Criar();
+            // o fundo do menu (o vídeo da cidade e a trilha do menu) só nas cenas do jogo (a Mundo e, desde 12/11/2026, a
+            // Lakewood)
+            if (MenuDoJogo) FundoDoMenu.Criar();
             else _principal = false;
             var args = Environment.GetCommandLineArgs();
             // o mundo da cena Mundo antes de hospedar: -semente N, -tamanho pequeno|medio|grande e -nome TEXTO
@@ -145,7 +153,7 @@ namespace ZombieCityCleaner.UI
             // ESC nas opções volta para o menu; no Novo jogo e no Continuar, volta ao menu principal (a tela das cartas cuida
             // do ESC dela); com uma tela do jogo aberta, fecha a tela; na partida, abre e fecha o menu
             if (esc && _opcoes) _opcoes = false;
-            else if (esc && !naPartida && !_principal && MundoDaPartida.Instancia != null && !_telaDosMoradores.Aberta &&
+            else if (esc && !naPartida && !_principal && MenuDoJogo && !_telaDosMoradores.Aberta &&
                      _sessao.Atual == SessaoOnline.Estado.Desconectado) Voltar();
             else if (naPartida && esc && _telas.Count > _obrigatorias.Count && !_pausa) FecharTelas?.Invoke();
             else if (naPartida && esc) _pausa = !_pausa;
@@ -157,7 +165,7 @@ namespace ZombieCityCleaner.UI
             // menu principal
             if (_estavaNaPartida && !naPartida)
             {
-                _principal = MundoDaPartida.Instancia != null;
+                _principal = MenuDoJogo;
                 _continuar = false;
                 _personagens = null;   // a lista do save muda depois de uma partida: lê de novo
                 _mundos = null;
@@ -168,7 +176,7 @@ namespace ZombieCityCleaner.UI
                 if (_sessao.Atual != SessaoOnline.Estado.Desconectado) _telaDosMoradores.Fechar();
                 else _telaDosMoradores.Atualizar();
             }
-            FundoDoMenu.Pedido = !naPartida && MundoDaPartida.Instancia != null && !ModoVideo.Ligado;
+            FundoDoMenu.Pedido = !naPartida && MenuDoJogo && !ModoVideo.Ligado;
             if (!naPartida) _ultimoGravado = false;
             else if (!_ultimoGravado) GravarOUltimoMundo();
             bool solto = Aberto || ComTela;
@@ -299,13 +307,14 @@ namespace ZombieCityCleaner.UI
                 return;
             }
 
-            bool doJogo = MundoDaPartida.Instancia != null;
+            bool doJogo = MenuDoJogo;
             if (doJogo && _principal && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
             {
                 MenuPrincipal(u);
                 return;
             }
-            if (doJogo && _telaDosMoradores.Aberta && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
+            // (no Lakewood, as cartas dos moradores ficam desligadas: 12/11/2026)
+            if (doJogo && !NoLakewood && _telaDosMoradores.Aberta && !_opcoes && estado == SessaoOnline.Estado.Desconectado)
             {
                 Moradores();
                 return;
@@ -313,7 +322,8 @@ namespace ZombieCityCleaner.UI
             // o Novo jogo e o Continuar (repaginados em 06/11/2026: MenuOnline.NovoJogo.cs); também enquanto conecta
             if (doJogo && !_opcoes)
             {
-                if (_continuar) TelaDoContinuar();
+                if (NoLakewood) TelaDoNovoJogoNoLakewood();
+                else if (_continuar) TelaDoContinuar();
                 else TelaDoNovoJogo();
                 return;
             }
@@ -393,18 +403,20 @@ namespace ZombieCityCleaner.UI
                 _personagens = null;
             }
             y += 56 * u;
-            // o Continuar abre a lista dos mundos salvos (02/11/2026, o save)
+            // o Continuar abre a lista dos mundos salvos (02/11/2026, o save); no Lakewood, os jogos salvos dele (12/11/2026,
+            // a parte 8 do "O jogo do mundo sorteado no Lakewood"; a lista de cada cena só tem os dela)
+            bool lakewood = NoLakewood;
             var mundos = Mundos();
-            if (Opcao(new Rect(x, y, w, 46 * u), "Continuar", mundos.Count > 0, u) && mundos.Count > 0)
+            bool podeContinuar = mundos.Count > 0;
+            if (Opcao(new Rect(x, y, w, 46 * u), "Continuar", podeContinuar, u) && podeContinuar)
             {
                 _principal = false;
                 _continuar = true;
                 _personagens = null;
             }
             // (12/11/2026: sem mundo, o porquê: o Dia 0 não salva, o mundo entra aqui quando o abrigo abre)
-            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0
-                ? $"{mundos[0].nome} · {mundos[0].Resumo()}"
-                : "nenhum mundo salvo ainda (o Dia 0 não salva)", _detalhe);
+            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0 ? $"{mundos[0].nome} · {mundos[0].Resumo()}"
+                : lakewood ? "nenhum jogo salvo ainda" : "nenhum mundo salvo ainda (o Dia 0 não salva)", _detalhe);
             y += 76 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Configurações", true, u)) _opcoes = true;
             y += 56 * u;
@@ -626,7 +638,8 @@ namespace ZombieCityCleaner.UI
         // ------------------------------------------------------------------ o save (02/11/2026)
 
         System.Collections.Generic.List<PersonagemSalvo> Personagens() => _personagens ??= PersonagemSalvo.Todos();
-        System.Collections.Generic.List<MundoSalvo> Mundos() => _mundos ??= MundoSalvo.Todos();
+        // (12/11/2026: os do Lakewood só na cena dele, e os do mundo sorteado só na dele)
+        System.Collections.Generic.List<MundoSalvo> Mundos() => _mundos ??= MundoSalvo.Todos().FindAll(m => m.lakewood == NoLakewood);
 
         // o personagem escolhido no painel vira o da partida (um novo, se for o "Novo personagem")
         void AplicarAEscolha()
@@ -654,12 +667,13 @@ namespace ZombieCityCleaner.UI
             }
             // um mundo salvo antes dos moradores do bunker abre a tela das cartas na primeira vez; um da tela de antes das
             // cartas (com os moradores e sem os NPCs do mapa) ganha os do mapa
-            if (m.moradores == null || m.moradores.Count == 0)
+            // (o Lakewood não tem o bunker nem os moradores por enquanto)
+            if (!m.lakewood && (m.moradores == null || m.moradores.Count == 0))
             {
                 AbrirOsMoradores(_redeLocal, m);
                 return;
             }
-            if (m.npcsDoMapa == null || m.npcsDoMapa.Count == 0) CompletarOsNpcs(m);
+            if (!m.lakewood && (m.npcsDoMapa == null || m.npcsDoMapa.Count == 0)) CompletarOsNpcs(m);
             JogarNoMundo(m);
         }
 
@@ -667,10 +681,13 @@ namespace ZombieCityCleaner.UI
         {
             AplicarAEscolha();
             Salvamento.Atual = m;
-            MundoDaPartida.Pedido = m.Pedido;
-            _nomeDoMundo = m.nome;
-            _tamanho = (TamanhoDoMundo)Mathf.Clamp(m.tamanho, 0, 2);
-            _semente = m.semente.ToString();
+            if (!m.lakewood)
+            {
+                MundoDaPartida.Pedido = m.Pedido;
+                _nomeDoMundo = m.nome;
+                _tamanho = (TamanhoDoMundo)Mathf.Clamp(m.tamanho, 0, 2);
+                _semente = m.semente.ToString();
+            }
             if (_redeLocal) _sessao.HospedarLocal();
             else _sessao.Hospedar();
         }

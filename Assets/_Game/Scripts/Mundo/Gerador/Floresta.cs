@@ -12,6 +12,10 @@ namespace ZombieCityCleaner.Mundo
         Taboa, PedraA, PedraB, PedraC,
         // as lavouras das fazendas (Parte M9d)
         MilhoA, MilhoB, TrigoA, TrigoB, Fardo,
+        // os pinheiros do gerador de floresta (o Plano_Floresta, a fase 1, 09/11/2026): as malhas geradas por código, pelo nome
+        PinheiroAlto1, PinheiroAlto2, PinheiroAlto3, PinheiroAlto4, PinheiroAlto5,
+        PinheiroMedio1, PinheiroMedio2, PinheiroMedio3, PinheiroMedio4, PinheiroMedio5,
+        PinheiroPequeno1, PinheiroPequeno2, PinheiroPequeno3, PinheiroPequeno4, PinheiroPequeno5,
     }
 
     /// <summary>Uma planta da floresta: a espécie, o pé no chão, o giro em y (graus) e a escala.</summary>
@@ -72,6 +76,9 @@ namespace ZombieCityCleaner.Mundo
             "Morta_A", "Morta_B", "Toco_A", "Toco_B", "TroncoCaido_A", "TroncoCaido_B", "Arbusto_A", "Arbusto_B", "Arbusto_C",
             "Samambaia_A", "Samambaia_B", "Capim_A", "Capim_B", "Grama_A", "Grama_B", "Taboa", "Pedra_A", "Pedra_B", "Pedra_C",
             "Milho_A", "Milho_B", "Trigo_A", "Trigo_B", "Fardo",
+            "PinheiroAlto_1", "PinheiroAlto_2", "PinheiroAlto_3", "PinheiroAlto_4", "PinheiroAlto_5",
+            "PinheiroMedio_1", "PinheiroMedio_2", "PinheiroMedio_3", "PinheiroMedio_4", "PinheiroMedio_5",
+            "PinheiroPequeno_1", "PinheiroPequeno_2", "PinheiroPequeno_3", "PinheiroPequeno_4", "PinheiroPequeno_5",
         };
         public static int Quantas => Nomes.Length;
 
@@ -85,18 +92,24 @@ namespace ZombieCityCleaner.Mundo
             0.35f, 0.29f, 0.19f, 0.36f, 0.36f, 0.30f, 0.30f, 0.30f, 0.30f, 0.30f, 0.46f, 0.46f, 0.30f, 0.26f, 0.50f, 0.30f, 0.30f,
             0.36f, 0.30f, 0.32f, 0.28f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0.55f, 1.05f,
             0f, 0f, 0f, 0f, 0.72f,
+            0.38f, 0.38f, 0.38f, 0.38f, 0.38f, 0.26f, 0.26f, 0.26f, 0.26f, 0.26f, 0.14f, 0.14f, 0.14f, 0.14f, 0.14f,
         };
         public static readonly float[] AlturaDoTronco =
         {
             14f, 10f, 4f, 15f, 12f, 14f, 11f, 4f, 4f, 4f, 3f, 3f, 6f, 5f, 3f, 4f, 10f, 0.45f, 1.1f, 6f, 4.5f,
             0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 1.0f, 1.9f,
             0f, 0f, 0f, 0f, 1.25f,
+            14f, 14f, 14f, 14f, 14f, 9f, 9f, 9f, 9f, 9f, 4f, 4f, 4f, 4f, 4f,
         };
 
         public static bool Deitada(Especie e) => e == Especie.TroncoCaidoA || e == Especie.TroncoCaidoB || e == Especie.Fardo;
 
         /// <summary>O que é árvore (tem copa alta): o resto é o chão da mata.</summary>
-        public static bool EhArvore(Especie e) => e <= Especie.MortaB;
+        public static bool EhArvore(Especie e) => e <= Especie.MortaB || (e >= Especie.PinheiroAlto1 && e <= Especie.PinheiroPequeno5);
+
+        /// <summary>Os pinheiros do gerador de floresta (a fase 1): as 5 variações de um tamanho, 0 alto, 1 médio, 2 pequeno.</summary>
+        public static Especie PinheiroGerado(int tamanho, int variacao) =>
+            (Especie)((int)Especie.PinheiroAlto1 + Mathf.Clamp(tamanho, 0, 2) * 5 + Mathf.Clamp(variacao, 0, 4));
 
         /// <summary>A grama baixa (só perto do jogador, de <see cref="GramaDoBloco"/>).</summary>
         public static bool EhGrama(Especie e) => e == Especie.GramaA || e == Especie.GramaB;

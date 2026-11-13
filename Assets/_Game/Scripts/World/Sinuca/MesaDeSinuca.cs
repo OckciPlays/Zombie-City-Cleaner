@@ -66,6 +66,10 @@ namespace ZombieCityCleaner.World
         bool _pular = true;
         int _rodadaVista = int.MinValue;
         SinucaDoMundo _registrada;
+        // a chave com que ela está registrada (07/11/2026: o SinucaDoMundo.Ligar põe a chave depois do AddComponent, e o
+        // OnEnable registrava a mesa com a chave 0; a mesa não era achada pela dela, e os quadros das tacadas dos outros
+        // não chegavam nela)
+        ulong _chaveRegistrada;
         // o último quadro de quem joga (os outros mostram ele até o fim da tacada chegar no anfitrião)
         float _quadroAte;
 
@@ -96,16 +100,17 @@ namespace ZombieCityCleaner.World
         void OnDisable()
         {
             SairJa();
-            if (_registrada != null) _registrada.Esquecer(this);
+            if (_registrada != null) _registrada.Esquecer(this, _chaveRegistrada);
             _registrada = null;
         }
 
         void Registrar()
         {
             var r = SinucaDoMundo.Instancia;
-            if (r == null || r == _registrada) return;
-            _registrada?.Esquecer(this);
+            if (r == null || (r == _registrada && chave == _chaveRegistrada)) return;
+            _registrada?.Esquecer(this, _chaveRegistrada);
             _registrada = r;
+            _chaveRegistrada = chave;
             r.Registrar(this);
             Confirmado();
         }
@@ -152,7 +157,7 @@ namespace ZombieCityCleaner.World
         void Update()
         {
             // o jogo das mesas chegou depois da mesa (a partida começando), ou mudou (outra partida)
-            if (SinucaDoMundo.Instancia != _registrada) Registrar();
+            if (SinucaDoMundo.Instancia != _registrada || chave != _chaveRegistrada) Registrar();
             if (Rede == null) return;
             AtualizarJogo();
             AtualizarVista();
@@ -214,7 +219,7 @@ namespace ZombieCityCleaner.World
         {
             var inventario = quem != null ? quem.Inventario : null;
             if (Rede == null || inventario == null || _jogando) return null;
-            if (Ocupada && !EuJogo) return "Alguém está jogando sinuca";
+            if (Ocupada && !EuJogo) return Estado().jogador == SinucaDoMundo.Moradores ? "Os moradores estão jogando sinuca" : "Alguém está jogando sinuca";
             bool taco = Itens.EhTaco(inventario.NaMao);
             if (!ComBolas)
                 return inventario.Primeiro(Item.CaixaDeBolas) != 0 ? "[E] Pôr as bolas na mesa"

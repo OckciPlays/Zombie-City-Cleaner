@@ -375,10 +375,13 @@ namespace ZombieCityCleaner.Player
         /// ossos que encolhem para sumir (0,001: a brasa e a chama) a conta dele estraga em centímetros (a brasa ficava do
         /// lado do cigarro); nos braços, até a posição fixa no FBX vem assim. Aqui, depois da animação, tudo volta.
         /// </summary>
-        static void Assentar(Pecas p)
+        static void Assentar(Pecas p) => Assentar(p.vazios);
+
+        /// <summary>Os vazios do fumo no lugar deles (veja acima); o fumo dos moradores do bunker usa o mesmo.</summary>
+        public static void Assentar(Transform[] vazios)
         {
-            if (p.vazios == null) return;
-            foreach (var v in p.vazios)
+            if (vazios == null) return;
+            foreach (var v in vazios)
             {
                 if (v == null) continue;
                 v.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -486,10 +489,13 @@ namespace ZombieCityCleaner.Player
         /// fino) ou a baforada (umas 14 maiores de uma vez, para a frente, abrindo). Na primeira pessoa (fp), menores e mais
         /// transparentes: a câmera fica a uns 30 cm do cigarro, e as do corpo pareciam pedras na frente da tela.
         /// </summary>
-        ParticleSystem NovaFumaca(string nome, int camada, bool baforada, bool fp)
+        ParticleSystem NovaFumaca(string nome, int camada, bool baforada, bool fp) => Fumaca(transform, materialDaFumaca, nome, camada, baforada, fp);
+
+        /// <summary>A fumaça (veja <see cref="NovaFumaca"/>), filha de <paramref name="pai"/>: o fumo dos moradores usa a mesma.</summary>
+        public static ParticleSystem Fumaca(Transform pai, Material material, string nome, int camada, bool baforada, bool fp)
         {
             var go = new GameObject(nome) { layer = camada };
-            go.transform.SetParent(transform, false);
+            go.transform.SetParent(pai, false);
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
@@ -560,7 +566,7 @@ namespace ZombieCityCleaner.Player
             var r = go.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Mesh;
             r.mesh = Icosfera();
-            r.sharedMaterial = materialDaFumaca;
+            r.sharedMaterial = material;
             r.shadowCastingMode = ShadowCastingMode.Off;
             r.receiveShadows = false;
             r.alignment = ParticleSystemRenderSpace.World;
@@ -569,9 +575,14 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>A bituca: cai com física, solta um fio de fumaça da ponta queimada por uns 18 s e some (só um efeito).</summary>
-        void Bituca(Vector3 ponto, Quaternion giro, Vector3 velocidade)
+        void Bituca(Vector3 ponto, Quaternion giro, Vector3 velocidade) =>
+            Bituca(this, malhaDaBituca, materialDaBituca, materialDaFumaca, ponto, giro, velocidade, _corpoFisico);
+
+        /// <summary>A bituca (veja acima), com a fumaça; <paramref name="dono"/> roda o apagar. O fumo dos moradores usa a mesma.</summary>
+        public static void Bituca(MonoBehaviour dono, Mesh malhaDaBituca, Material materialDaBituca, Material materialDaFumaca, Vector3 ponto,
+                                  Quaternion giro, Vector3 velocidade, Collider ignorar)
         {
-            if (malhaDaBituca == null) return;
+            if (malhaDaBituca == null || dono == null) return;
             var go = new GameObject("Bituca");
             go.transform.SetPositionAndRotation(ponto, giro);
             go.AddComponent<MeshFilter>().sharedMesh = malhaDaBituca;
@@ -581,7 +592,7 @@ namespace ZombieCityCleaner.Player
             var col = go.AddComponent<BoxCollider>();
             col.center = b.center;
             col.size = Vector3.Max(b.size, Vector3.one * 0.008f);
-            if (_corpoFisico != null) Physics.IgnoreCollision(col, _corpoFisico);
+            if (ignorar != null) Physics.IgnoreCollision(col, ignorar);
             var rb = go.AddComponent<Rigidbody>();
             rb.mass = 0.01f;
             rb.linearDamping = 0.2f;
@@ -590,15 +601,14 @@ namespace ZombieCityCleaner.Player
             rb.linearVelocity = velocidade;
             rb.angularVelocity = Random.insideUnitSphere * 14f;
             // a fumaça da ponta queimada (a ponta do comprido da malha, do lado do papel)
-            var fio = NovaFumaca("Fumaça da bituca", go.layer, false, false);
-            fio.transform.SetParent(go.transform, false);
+            var fio = Fumaca(go.transform, materialDaFumaca, "Fumaça da bituca", go.layer, false, false);
             Vector3 eixo = b.size.x >= b.size.y && b.size.x >= b.size.z ? Vector3.right : b.size.y >= b.size.z ? Vector3.up : Vector3.forward;
             fio.transform.localPosition = b.center + Vector3.Scale(b.extents, eixo);
             var em = fio.emission;
             em.enabled = true;
             em.rateOverTime = 6f;
             Destroy(go, BitucaSome + 1f);   // se o jogador sair antes (a rotina para com ele)
-            StartCoroutine(ApagarBituca(go, fio));
+            dono.StartCoroutine(ApagarBituca(go, fio));
         }
 
         static IEnumerator ApagarBituca(GameObject go, ParticleSystem fio)

@@ -101,7 +101,29 @@ namespace ZombieCityCleaner.Mundo
     public class Obra
     {
         // do estoque: quem junta a obra em outra malha (MalhasDasCasas) devolve as duas depois (ou fica com elas)
-        public readonly MalhaDeObra vis, col;
+        // (não são readonly só para o DesenharEm trocar as duas por um momento)
+        public MalhaDeObra vis { get; private set; }
+        public MalhaDeObra col { get; private set; }
+
+        /// <summary>
+        /// Desenha 'desenho' em 'alvo' (as peças visuais) em vez da malha da obra, e joga fora a colisão dele: a folha de uma
+        /// porta que abre, que o jogo põe à parte (as do Hospital Principal). A obra continua igual depois.
+        /// </summary>
+        protected void DesenharEm(MalhaDeObra alvo, System.Action desenho)
+        {
+            var v = vis;
+            var c = col;
+            var lixo = MalhaDeObra.Emprestar();
+            vis = alvo;
+            col = lixo;
+            try { desenho(); }
+            finally
+            {
+                vis = v;
+                col = c;
+                MalhaDeObra.Devolver(lixo);
+            }
+        }
         public readonly Medidas m;
         public readonly List<Parede> paredes = new List<Parede>();
         protected readonly System.Random rnd;
@@ -354,6 +376,49 @@ namespace ZombieCityCleaner.Mundo
         {
             Vector2 c = w.a + w.u * ((s0 + s1) / 2) + w.n * fora;
             Caixa(new Vector3(c.x, w.baseY + (y0 + y1) / 2, c.y), new Vector3(s1 - s0, y1 - y0, esp), cor, w.yaw, RZ(giro), colide);
+        }
+
+        readonly List<Vector3> _traco = new List<Vector3>(8), _traco2 = new List<Vector3>(8);
+
+        /// <summary>
+        /// Um letreiro numa face, na fonte das construções (<see cref="Letras"/>): o texto (o que não está na fonte vira
+        /// espaço) centrado em 'meio' (no pé das letras), correndo em 'u' (a direita de quem lê), saindo 'fora' da face; 'h' é a
+        /// altura das maiúsculas. Cada peça de cada letra é um polígono: com 'plano', só a frente, a 'sai' da face (as placas);
+        /// sem, extrudado com 'grossura', o meio a 'sai' da face (as letras em relevo da fachada e as pintadas do bunker). Com
+        /// 'fundo', a placa pintada atrás.
+        /// </summary>
+        public void Letreiro(string texto, Vector3 meio, Vector3 u, Vector3 fora, float h, Cor cor, string fundo = null,
+                             bool plano = false, float sai = 0.015f, float grossura = 0.006f)
+        {
+            float total = Letras.Largura(texto, h);
+            Vector3 inicio = meio - u * (total / 2);
+            if (fundo != null)
+                CaixaM(Matrix4x4.TRS(meio + Vector3.up * (h / 2) + fora * 0.006f, Quaternion.LookRotation(fora, Vector3.up), Vector3.one),
+                       new Vector3(total + h * 0.6f, h * 1.6f, 0.012f), fundo);
+            float x = 0f;
+            for (int i = 0; i < texto.Length; i++)
+            {
+                var g = Letras.De(texto[i]);
+                if (g == null) { x += Letras.Espaco + Letras.Entre; continue; }
+                foreach (var parte in g.partes)
+                {
+                    _traco.Clear();
+                    _traco2.Clear();
+                    foreach (var q in parte)
+                    {
+                        Vector3 ponto = inicio + u * ((x + q.x) * h) + Vector3.up * (q.y * h);
+                        if (plano) _traco.Add(ponto + fora * sai);
+                        else
+                        {
+                            _traco.Add(ponto + fora * (sai - grossura / 2));
+                            _traco2.Add(ponto + fora * (sai + grossura / 2));
+                        }
+                    }
+                    if (plano) vis.Face(_traco, fora, cor);
+                    else vis.Solido(_traco, _traco2, cor);
+                }
+                x += g.largura + Letras.Entre;
+            }
         }
 
         /// <summary>Até onde as portas que abrem (<see cref="portasVivas"/>) abrem (graus).</summary>

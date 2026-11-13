@@ -89,7 +89,6 @@ namespace ZombieCityCleaner.Fauna
             Vector3 olho = p + Vector3.up * (b.Altura * 1.25f + 0.1f);
             float noite = CicloDoDia.Noite, chuva = Tempo.Ouvido, melhor = float.MaxValue;
             Vector2 vento = Vento();
-            var floresta = FlorestaDoMundo.Instancia;
             float alcance = Mathf.Max(d.visao, Mathf.Max(d.faro, d.ouvido));
             foreach (var g in Pessoas)
             {
@@ -115,7 +114,7 @@ namespace ZombieCityCleaner.Fauna
                 {
                     float visao = d.visao * (g.vel > 0.5f ? 1f : 0.4f) * (g.agachado ? 0.55f : 1f) * Mathf.Lerp(1f, 0.4f, noite);
                     if (g.lanterna && noite > 0.4f) visao = Mathf.Max(visao, d.visao * 0.8f);
-                    if (floresta != null && floresta.SobAsCopas(g.pes)) visao *= 0.7f;
+                    if (ArvoresDoMundo.SobAsCopas(g.pes)) visao *= 0.7f;
                     if (dist < visao && Random.value < 0.25f + 0.75f * (1f - dist / visao)
                         && Enxerga(olho, g.pes + Vector3.up * (g.agachado ? 0.9f : 1.4f))) notou = true;
                 }

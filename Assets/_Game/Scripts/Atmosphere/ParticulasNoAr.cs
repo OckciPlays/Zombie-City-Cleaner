@@ -46,7 +46,7 @@ namespace ZombieCityCleaner.Atmosphere
         {
             var cam = Camera.main;
             if (cam != null) transform.position = cam.transform.position;
-            bool embaixo = cam != null && (cam.transform.position.y < alturaDoSubsolo || AmbienteDoDia.NeblinaNoBunker < 0.5f);
+            bool embaixo = cam != null && (cam.transform.position.y < alturaDoSubsolo || AmbienteDoDia.NeblinaNoBunker < 0.5f || AmbienteDoDia.NeblinaNoHospital < 0.5f);
             if (embaixo != _embaixo)
             {
                 _embaixo = embaixo;

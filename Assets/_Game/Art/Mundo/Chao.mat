@@ -45,6 +45,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _NeveAltura: 560
     - _Nitidez: 0.3
     - _RochaTiling: 9
     - _Smoothness: 0.06
@@ -52,6 +53,7 @@ Material:
     - _VariacaoEscala: 42
     - _VariacaoForca: 0.2
     m_Colors:
+    - _NeveCor: {r: 0.88, g: 0.9, b: 0.94, a: 1}
     - _RochaInclinacao: {r: 0.8, g: 0.62, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

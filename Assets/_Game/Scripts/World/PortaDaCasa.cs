@@ -57,7 +57,9 @@ namespace ZombieCityCleaner.World
         /// </summary>
         public void Definir(bool aberta, bool doComeco, bool ja = false)
         {
-            float alvo = !aberta ? 0f : doComeco && dados.giro > 1f ? dados.giro : Mathf.Min(dados.maximo, 90f);
+            // (as do hospital abrem até o giro delas: a corta-fogo encosta na parede, a 172°)
+            float aberto = dados.abertaEm > 1f ? dados.abertaEm : Mathf.Min(dados.maximo, 90f);
+            float alvo = !aberta ? 0f : doComeco && dados.giro > 1f ? dados.giro : aberto;
             if (Mathf.Approximately(alvo, _alvo) && !ja) return;
             _alvo = alvo;
             if (ja) _giro = alvo;
@@ -110,6 +112,12 @@ namespace ZombieCityCleaner.World
             return (q.x - dados.dobradica.x) * dados.abre.x + (q.z - dados.dobradica.z) * dados.abre.y > 0f;
         }
 
+        /// <summary>
+        /// O jogador está do lado de dentro de uma porta de fora (destranca sem ferramenta): o lado para onde ela abre nas
+        /// casas, o outro nas saídas do hospital (que abrem para fora).
+        /// </summary>
+        public bool PorDentro(Vector3 ponto) => dados.PorDentro(transform.parent.InverseTransformPoint(ponto));
+
         public override string Dica(ArmaJogador quem)
         {
             var mundo = PortasDoMundo.Instancia;
@@ -121,7 +129,7 @@ namespace ZombieCityCleaner.World
             if (Aberta) return "[E] Fechar a porta" + pregar;
             if (mundo.Trancada(this))
             {
-                if (dados.DeFora && DoLadoQueAbre(quem.transform.position)) return "[E] Destrancar e abrir a porta" + pregar;
+                if (PorDentro(quem.transform.position)) return "[E] Destrancar e abrir a porta" + pregar;
                 if (mundo.SabidaTrancada(chave)) return mundo.DicaDaTrancada(this, quem) + (mundo.TempoDeArrombar(this, quem) > 0f ? "" : pregar);
             }
             return "[E] Abrir a porta" + pregar;

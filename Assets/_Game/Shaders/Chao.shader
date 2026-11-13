@@ -25,6 +25,8 @@ Shader "ZombieCityCleaner/Chao"
         _RochaInclinacao("Rocha: a normal.y de / até", Vector) = (0.8, 0.62, 0, 0)
         _RochaTiling("Rocha: metros por repetição", Float) = 9
         _Smoothness("Brilho", Range(0, 1)) = 0.06
+        _NeveAltura("Neve a partir de (m)", Float) = 100000
+        _NeveCor("Cor da neve", Color) = (0.88, 0.9, 0.94, 1)
     }
 
     SubShader
@@ -43,6 +45,8 @@ Shader "ZombieCityCleaner/Chao"
             float4 _RochaInclinacao;
             float _RochaTiling;
             half _Smoothness;
+            float _NeveAltura;
+            half4 _NeveCor;
         CBUFFER_END
         ENDHLSL
 
@@ -150,6 +154,9 @@ Shader "ZombieCityCleaner/Chao"
                     pedra = saturate((pedra - 0.5 + (rocha.a - 0.5) * 0.5) / 0.35 + 0.5);
                     cor = lerp(cor, rocha.rgb, pedra);
                 }
+                // a neve nos picos (acima de _NeveAltura, a borda torta pela variação grande), só no chão deitado
+                half neve = smoothstep(_NeveAltura, _NeveAltura + 60.0, input.positionWS.y + (macro - 0.4) * 90.0) * saturate((n.y - 0.5) * 2.5);
+                cor = lerp(cor, _NeveCor.rgb, neve);
 
                 SurfaceData surface = (SurfaceData)0;
                 surface.albedo = cor;

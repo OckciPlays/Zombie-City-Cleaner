@@ -50,7 +50,9 @@ namespace ZombieCityCleaner.Sobreviventes
 
         readonly List<Estado> _estados = new List<Estado>();
         readonly List<Lugar> _bases = new List<Lugar>();
-        DadosDoMundo _dados;
+        // o mundo do jogo (12/11/2026: o sorteado ou o Lakewood) e a chave dele (outra partida, outro mundo)
+        IMundoDoJogo _dados;
+        int _chave;
         float _proximaConferencia, _proximoPensar;
 
         void Awake() => Instancia = this;
@@ -63,14 +65,7 @@ namespace ZombieCityCleaner.Sobreviventes
 
         static bool Servidor => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.IsServer;
 
-        static DadosDoMundo Dados
-        {
-            get
-            {
-                var m = MundoDaPartida.Instancia;
-                return m != null && m.Pronto && !m.NoDiaZero ? m.Dados : null;
-            }
-        }
+        static IMundoDoJogo Dados => MundoDoJogo.Pronto;
 
         /// <summary>Quantas bases o mundo tem.</summary>
         public int Quantas => _bases.Count;
@@ -86,13 +81,15 @@ namespace ZombieCityCleaner.Sobreviventes
         void Garantir()
         {
             var d = Dados;
-            if (d == _dados) return;
+            int chave = MundoDoJogo.Chave(d);
+            if (d == _dados && chave == _chave) return;
             _dados = d;
+            _chave = chave;
             PlantaDaBase.Esquecer();   // (o mundo anterior não fica preso no cache das plantas)
             ApagarConstrucoes();
             _estados.Clear();
             _bases.Clear();
-            if (d != null) _bases.AddRange(PlantaDaBase.Bases(d));
+            if (d != null) _bases.AddRange(d.BasesMilitares);
             while (_estados.Count < _bases.Count) _estados.Add(new Estado());
             if (d != null) Debug.Log($"[Bases] {_bases.Count} bases militares no mundo.");
         }
@@ -160,7 +157,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void Povoar(int b, PlantaDaBase p, Estado e, GameObject prefab)
         {
             var g = new GrupoDeSobreviventes { cidade = -1, baseMilitar = b, quantos = p.Militares };
-            var s = new System.Random(unchecked(_dados.Semente * 3911 + b * 60013 + e.geracao * 7919 + 5));
+            var s = new System.Random(unchecked(_dados.SementeDaPartida * 3911 + b * 60013 + e.geracao * 7919 + 5));
             for (int i = 0; i < p.Militares; i++)
             {
                 int r = s.Next(100);

@@ -67,10 +67,11 @@ namespace ZombieCityCleaner.Fauna
             go.AddComponent<VigiaDaFauna>();
         }
 
-        internal static void Criar(MundoDaPartida mundo)
+        /// <summary>A fauna na cena do mundo (a do "Mundo" do sorteado, ou a do Lakewood).</summary>
+        internal static void Criar(Scene cena)
         {
             var go = new GameObject("Fauna");
-            SceneManager.MoveGameObjectToScene(go, mundo.gameObject.scene);
+            if (cena.IsValid()) SceneManager.MoveGameObjectToScene(go, cena);
             go.AddComponent<FaunaDoMundo>();
         }
 
@@ -628,15 +629,23 @@ namespace ZombieCityCleaner.Fauna
         }
     }
 
-    /// <summary>Liga e desliga a fauna com a partida (o mundo gerado pronto e a rede ligada).</summary>
+    /// <summary>
+    /// Liga e desliga a fauna com a partida: o mundo pronto e a rede ligada. No mundo sorteado, o "Mundo" gerado e pronto
+    /// (fora do Dia 0, como sempre: o Mundo.Pronto só fica verdadeiro depois dele); no Lakewood (12/11/2026, a parte 2 do
+    /// "O jogo do mundo sorteado no Lakewood"), o <see cref="MundoDeLakewood"/> na rede, com a semente da partida.
+    /// </summary>
     public sealed class VigiaDaFauna : MonoBehaviour
     {
         void Update()
         {
             var nm = NetworkManager.Singleton;
+            bool rede = nm != null && nm.IsListening;
             var mundo = MundoDaPartida.Instancia;
-            bool deve = nm != null && nm.IsListening && mundo != null && mundo.Gerado && mundo.Pronto;
-            if (deve && FaunaDoMundo.Instancia == null) FaunaDoMundo.Criar(mundo);
+            var lakewood = MundoDeLakewood.Instancia;
+            bool noSorteado = mundo != null && mundo.Gerado && mundo.Pronto;
+            bool noLakewood = mundo == null && lakewood != null && lakewood.Pronto;
+            bool deve = rede && (noSorteado || noLakewood);
+            if (deve && FaunaDoMundo.Instancia == null) FaunaDoMundo.Criar(noSorteado ? mundo.gameObject.scene : lakewood.gameObject.scene);
             else if (!deve && FaunaDoMundo.Instancia != null) Destroy(FaunaDoMundo.Instancia.gameObject);
         }
     }

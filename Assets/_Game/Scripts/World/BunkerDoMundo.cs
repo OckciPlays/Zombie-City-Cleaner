@@ -62,6 +62,51 @@ namespace ZombieCityCleaner.World
 
         readonly NetworkVariable<byte> _portas = new NetworkVariable<byte>(0);
         readonly NetworkVariable<byte> _luzes = new NetworkVariable<byte>(0x1F);
+        // o lazer dos moradores (a parte 8 do Plano_NPCs_Bunker.md, a segunda fatia), que o anfitrião põe: as bitucas no
+        // cinzeiro da mesinha do fumo (de 0 a 12) e a TV e o rádio ligados (os bits 0 e 1)
+        readonly NetworkVariable<byte> _bitucas = new NetworkVariable<byte>(0);
+        readonly NetworkVariable<byte> _lazer = new NetworkVariable<byte>(0);
+        public const int BitucasNoCinzeiro = 12;
+
+        /// <summary>As bitucas no cinzeiro da mesinha do fumo (de 0 a <see cref="BitucasNoCinzeiro"/>).</summary>
+        public int Bitucas => IsSpawned ? _bitucas.Value : 0;
+        /// <summary>Um morador está vendo TV (a tela acende: <see cref="TelaDaTV"/>).</summary>
+        public bool TvLigada => IsSpawned && (_lazer.Value & 1) != 0;
+        /// <summary>Um morador está ouvindo o rádio das operações (<see cref="RadioDoBunker"/>).</summary>
+        public bool RadioLigado => IsSpawned && (_lazer.Value & 2) != 0;
+
+        /// <summary>
+        /// A chave da mesa de sinuca do bunker (a da <see cref="MesaDeSinuca"/> dela no <see cref="SinucaDoMundo"/>) e o meio dela
+        /// no mundo: os moradores jogam nela (a parte 8). Falso antes do bunker.
+        /// </summary>
+        public bool ChaveDaSinuca(out ulong chave, out Vector3 centro)
+        {
+            chave = 0;
+            centro = default;
+            var todos = MoveisDoBunker.Todos;
+            int ponto = System.Array.FindIndex(todos, x => x.modelo == "MesaSinuca");
+            if (_raiz == null || ponto < 0) return false;
+            var obra = MobiliaNova.ChaveDaObra(_raiz.position, 100 + todos[ponto].andar);
+            chave = MobiliaNova.ChaveDaParte(obra, ponto, 0, SinucaDoMundo.ParteDaMesa);
+            centro = _raiz.TransformPoint(todos[ponto].lugar);
+            return true;
+        }
+
+        /// <summary>No anfitrião: as bitucas no cinzeiro (o save, e o morador que apaga o cigarro nele).</summary>
+        public void PorAsBitucas(int n)
+        {
+            if (!IsServer || !IsSpawned) return;
+            byte b = (byte)Mathf.Clamp(n, 0, BitucasNoCinzeiro);
+            if (_bitucas.Value != b) _bitucas.Value = b;
+        }
+
+        /// <summary>No anfitrião: a TV e o rádio (ligados enquanto um morador vê ou ouve).</summary>
+        public void LigarOLazer(bool tv, bool radio)
+        {
+            if (!IsServer || !IsSpawned) return;
+            byte b = (byte)((tv ? 1 : 0) | (radio ? 2 : 0));
+            if (_lazer.Value != b) _lazer.Value = b;
+        }
         // fora da rede (o F1 sem partida): o estado daqui
         byte _portasAqui, _luzesAqui = 0x1F;
 
@@ -120,6 +165,18 @@ namespace ZombieCityCleaner.World
                 return n;
             }
         }
+
+        /// <summary>
+        /// O objeto do bunker no mundo (a obra: a <see cref="PlantaDeBunker"/>, com o chão da garagem em y = 0); nulo antes do
+        /// mundo. Os moradores (a parte 6 do Plano_NPCs_Bunker.md) passam por ele das coordenadas do bunker para as do mundo.
+        /// </summary>
+        public Transform Raiz => _raiz;
+
+        /// <summary>
+        /// O andar f está montado nesta máquina, com a colisão e os móveis (no anfitrião: perto de algum jogador). Os
+        /// moradores só têm o corpo num andar assim; nos outros, eles seguem no papel.
+        /// </summary>
+        public bool AndarPronto(int f) => f >= 0 && f < Andares && _andares[f] != null && _andares[f].Pronto && _andares[f].Pondo == null && _andares[f].Objeto != null;
 
         void Awake() => Instancia = this;
 
@@ -760,6 +817,14 @@ namespace ZombieCityCleaner.World
                 // a mesa de sinuca da sala de jogos se joga; as estantes e as prateleiras guardam itens
                 if (m.modelo == "MesaSinuca") SinucaDoMundo.Ligar(go, MobiliaNova.ChaveDaParte(obra, ponto, 0, SinucaDoMundo.ParteDaMesa));
                 else if (EstantesDoBunker.EhEstante(m.modelo)) EstantesDoBunker.Ligar(go, ponto, m.modelo);
+                // os computadores da sala de operações abrem o terminal (a parte 7 do Plano_NPCs_Bunker.md)
+                else if (m.modelo == "Computador" && f == 0) ComputadorNaMira.Ligar(go);
+                // o lazer dos moradores (a parte 8): o cinzeiro enchendo, a tela da TV, o rádio e as pilhas de roupa na
+                // mesa de dobrar
+                else if (m.modelo == "Cinzeiro") go.AddComponent<CinzeiroDoBunker>();
+                else if (m.modelo == "TVConsole") TelaDaTV.Ligar(go);
+                else if (m.modelo == "EstacaoDeRadio") RadioDoBunker.Ligar(go);
+                else if (m.modelo == "Mesa4" && f == 3) PilhasDeRoupa.Por(pai, ponto, 0.76f * m.escala);
                 yield return null;
             }
             foreach (var (modelo, lugar, giro) in MoveisDoBunker.PortasDeModelo(f))

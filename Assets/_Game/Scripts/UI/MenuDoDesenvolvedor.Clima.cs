@@ -27,23 +27,36 @@ namespace ZombieCityCleaner.UI
         bool _abaDoClima;
         static readonly GUIContent _conteudoDoClima = new GUIContent();
 
-        static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo", "Habil.", "Fauna" };
+        static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo", "Habil.", "Fauna", "Bunker" };
 
         /// <summary>A faixa das abas acima do painel do canto (o <see cref="AbasDoCanto"/>), para a Area pegar os cliques nela.</summary>
         static float AlturaDasAbas(float u) => 24 * u;
+
+        // a letra das abas (07/11/2026: com as seis, "Habil." e "Bunker", cada aba fica com uns 38 px no painel de 250, e
+        // a letra dos botões, de 13, não cabia; 12/11/2026: com as sete, a "Fauna" da develop e o "Bunker", uns 32 px, e a
+        // letra cai para 9)
+        GUIStyle _aba;
+        float _uDaAba;
 
         // as abas numa faixa logo acima do painel do canto (05/11/2026: com a quarta, "Corpo", a linha dentro do painel
         // cobria os títulos "ZUMBIS (TESTE)" e "SOBREVIVENTES"); a aba ativa em branco, as outras a 55%
         void AbasDoCanto(float u, Rect painel)
         {
+            if (_aba == null || !Mathf.Approximately(_uDaAba, u))
+            {
+                _uDaAba = u;
+                _aba = new GUIStyle(_botao) { fontSize = Mathf.RoundToInt((NomesDasAbas.Length > 6 ? 9 : 11) * u) };
+                int p = Mathf.RoundToInt((NomesDasAbas.Length > 6 ? 1 : 2) * u);
+                _aba.padding = new RectOffset(p, p, _botao.padding.top, _botao.padding.bottom);
+            }
             float vao = 4 * u, h = 20 * u, y = painel.y - AlturaDasAbas(u);
             float w = (painel.width - vao * (NomesDasAbas.Length - 1)) / NomesDasAbas.Length;
-            int ativa = _abaDaFauna ? 5 : _abaDasHabilidades ? 4 : _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
+            int ativa = _abaDoBunker ? 6 : _abaDaFauna ? 5 : _abaDasHabilidades ? 4 : _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
             var antes = GUI.color;
             for (int i = 0; i < NomesDasAbas.Length; i++)
             {
                 GUI.color = i == ativa ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-                if (GUI.Button(new Rect(painel.x + i * (w + vao), y, w, h), NomesDasAbas[i], _botao)) MostrarAba(i);
+                if (GUI.Button(new Rect(painel.x + i * (w + vao), y, w, h), NomesDasAbas[i], _aba)) MostrarAba(i);
             }
             GUI.color = antes;
         }
@@ -57,6 +70,7 @@ namespace ZombieCityCleaner.UI
             _abaDoCorpo = qual == 3;
             _abaDasHabilidades = qual == 4;   // (06/11/2026: MenuDoDesenvolvedor.Habilidades.cs)
             _abaDaFauna = qual == 5;   // (12/11/2026: MenuDoDesenvolvedor.Fauna.cs)
+            _abaDoBunker = qual == 6;         // (06/11/2026: MenuDoDesenvolvedor.Bunker.cs, os moradores; a 6 desde a Fauna)
         }
 
         Rect PainelDoClima(float u, Rect aoLado)

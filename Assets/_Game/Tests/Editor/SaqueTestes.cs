@@ -27,7 +27,9 @@ namespace ZombieCityCleaner.Testes
             Assert.GreaterOrEqual(CatalogoDoSaque.Itens.Count(i => i.nome.StartsWith("Roupa.")), 70, "as roupas não entraram no catálogo");
             for (int r = 0; r < 5; r++) Assert.IsNotEmpty(CatalogoDoSaque.DaRaridade((Raridade)r), $"nenhum item {CatalogoDoSaque.NomesDasRaridades[r]}");
             foreach (var m in CatalogoDoSaque.ModelosComRegra) Assert.IsTrue(LugaresDoSaque.Tem(m), $"{m} tem a regra do saque, mas não tem lugares");
-            foreach (var m in LugaresDoSaque.Nomes) Assert.IsNotNull(CatalogoDoSaque.DoModelo(m), $"{m} tem lugares, mas não tem a regra do saque");
+            // (os móveis do Hospital Principal têm a regra do SaqueDoHospital, pelo cômodo)
+            foreach (var m in LugaresDoSaque.Nomes)
+                Assert.IsTrue(CatalogoDoSaque.DoModelo(m) != null || SaqueDoHospital.Guarda(m), $"{m} tem lugares, mas não tem a regra do saque");
             foreach (var it in CatalogoDoSaque.Itens) Assert.Greater(it.tamanho.x * it.tamanho.z, 0f, $"{it.nome} sem tamanho");
         }
 

@@ -1098,7 +1098,17 @@ namespace ZombieCityCleaner.Player
         {
             var floresta = World.FlorestaDoMundo.Instancia;
             var mundo = World.MundoDaPartida.Instancia;
-            if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out long chave, out var pe)) return;
+            long chave;
+            Vector3 pe;
+            // (12/11/2026) no Lakewood, os pinheiros dele (LakewoodNaCena.Arvores.cs e MundoDeLakewood.Arvores.cs)
+            var lakewood = World.LakewoodNaCena.Instancia;
+            var redeDoLakewood = World.MundoDeLakewood.Instancia;
+            bool noLakewood = mundo == null && lakewood != null && redeDoLakewood != null;
+            if (noLakewood)
+            {
+                if (!lakewood.TroncoEm(c, ponto, out chave, out pe)) return;
+            }
+            else if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out chave, out pe)) return;
             // o lado do tronco onde o machado pegou (07/11/2026: os cortes dos lados; um dos 4, de 90 em 90° a partir do
             // norte); quem confere e conta é o anfitrião (MundoDaPartida.Arvores.cs)
             Vector3 d = ponto - pe;
@@ -1109,7 +1119,8 @@ namespace ZombieCityCleaner.Player
                 d.y = 0f;
             }
             int lado = Mathf.RoundToInt(Mathf.Repeat(Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, 360f) / 90f) & 3;
-            mundo.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
+            if (noLakewood) redeDoLakewood.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
+            else mundo.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
         }
 
         // o Tiro forte (06/11/2026, a árvore de habilidades): +4% por ponto no dano da arma de fogo (o dono conta o dano)

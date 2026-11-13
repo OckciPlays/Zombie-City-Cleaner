@@ -31,11 +31,16 @@ namespace ZombieCityCleaner.World
 
         public static bool Cortada(long chave) => _cortadas.Contains(chave);
 
+        /// <summary>Há alguma árvore cortada no mundo (para pular as contas quando não há).</summary>
+        public static bool TemCortadas => _cortadas.Count > 0;
+
         /// <summary>As cortadas do mundo (a lista da rede mudou, ou chegou): os blocos montados viram toco onde precisa.</summary>
         public static void DefinirCortadas(IEnumerable<long> chaves)
         {
             var novas = new HashSet<long>(chaves);
             _cortadas = novas;
+            // (12/11/2026) o Lakewood: os pinheiros cortados viram toco (LakewoodNaCena.Arvores.cs)
+            LakewoodNaCena.Instancia?.AplicarCortadas();
             var f = Instancia;
             if (f == null) return;
             foreach (var b in f._blocos.Values) f.AplicarCortadas(b);

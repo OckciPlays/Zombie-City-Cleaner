@@ -25,6 +25,12 @@ namespace ZombieCityCleaner.Salvar
         public int versao = 1;
         public string id, nome;
         public int semente, tamanho, versaoDoGerador;
+        /// <summary>
+        /// Um jogo do Lakewood (12/11/2026, o mapa fixo: a parte 8 do "O jogo do mundo sorteado no Lakewood"): a semente é a da
+        /// partida (os bichos, os grupos, o que sobrou nos carros); o tamanho e a versão do gerador não contam. O Continuar de
+        /// cada cena mostra só os dela.
+        /// </summary>
+        public bool lakewood;
         public int modo;
         /// <summary>O fogo amigo, escolhido ao criar o mundo (03/11/2026).</summary>
         public bool fogoAmigo;
@@ -89,6 +95,26 @@ namespace ZombieCityCleaner.Salvar
         /// </summary>
         public List<FichaDoMorador> moradores = new List<FichaDoMorador>();
         /// <summary>
+        /// A vida de cada morador no bunker (a parte 6 do Plano_NPCs_Bunker.md, 06/11/2026): as barras, a cama, o que ele está
+        /// fazendo e onde está (<c>Moradores/MoradoresDoBunker</c>). Pelo id da ficha; quem não tem começa no lugar da agenda.
+        /// </summary>
+        public List<VidaDoMorador> vidaDosMoradores = new List<VidaDoMorador>();
+        /// <summary>A reserva do começo dos moradores (7 dias de comida e água na despensa) já foi posta neste mundo.</summary>
+        public bool reservaDosMoradores;
+        /// <summary>
+        /// O registro do bunker (a parte 7 do Plano_NPCs_Bunker.md, 06/11/2026): o diário do terminal, os 100 últimos
+        /// ("Dia 12, 07:14: Walter comeu a lata de feijão."), do mais velho ao mais novo.
+        /// </summary>
+        public List<string> registroDoBunker = new List<string>();
+        /// <summary>As metas dos lugares do estoque, mudadas no terminal (na ordem do <c>TipoDoEstoque</c>; vazia: as do começo).</summary>
+        public List<int> metasDosLugares = new List<int>();
+        /// <summary>
+        /// O lazer dos moradores (a parte 8 do Plano_NPCs_Bunker.md, a segunda fatia): os tacos, a caixa de bolas e os maços do
+        /// começo já foram postos no suporte e na mesinha do fumo, e as bitucas no cinzeiro dela (de 0 a 12).
+        /// </summary>
+        public bool lazerDosMoradores;
+        public int bitucasNoCinzeiro;
+        /// <summary>
         /// Os outros NPCs do mundo (a tela das cartas, 04/11/2026): os 52 sorteados com o mundo, menos os do bunker. Eles vão
         /// estar pelo mapa (as comunidades, as bases, os que esperam resgate; a parte do mapa vem depois). Os laços dos
         /// moradores podem apontar para eles (o irmão que ficou lá fora).
@@ -106,6 +132,16 @@ namespace ZombieCityCleaner.Salvar
         public PedidoDoMundo Pedido => new PedidoDoMundo
         {
             semente = semente, tamanho = (TamanhoDoMundo)Mathf.Clamp(tamanho, 0, 2), nome = nome, diaZero = false, fogoAmigo = fogoAmigo,
+        };
+
+        /// <summary>Um jogo novo do Lakewood (a semente vem da partida, no primeiro salvamento).</summary>
+        public static MundoSalvo NovoNoLakewood(ModoDeSalvar modo) => new MundoSalvo
+        {
+            id = Guid.NewGuid().ToString("N"),
+            nome = "Condado de Lakewood",
+            lakewood = true,
+            modo = (int)modo,
+            criadoEm = DateTime.Now.ToString("s"),
         };
 
         public static MundoSalvo Novo(PedidoDoMundo pedido, ModoDeSalvar modo) => new MundoSalvo
@@ -190,7 +226,7 @@ namespace ZombieCityCleaner.Salvar
                     if (m == null || string.IsNullOrEmpty(m.id) || !m.temEstado) continue;
                     lista.Add(new MundoSalvo
                     {
-                        id = m.id, nome = m.nome, semente = m.semente, tamanho = m.tamanho, versaoDoGerador = m.versaoDoGerador,
+                        id = m.id, nome = m.nome, semente = m.semente, tamanho = m.tamanho, versaoDoGerador = m.versaoDoGerador, lakewood = m.lakewood,
                         modo = m.modo, fogoAmigo = m.fogoAmigo, criadoEm = m.criadoEm, salvoEm = m.salvoEm, dia = m.dia, hora = m.hora, temEstado = true,
                     });
                 }

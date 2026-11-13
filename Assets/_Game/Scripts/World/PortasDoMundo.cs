@@ -70,6 +70,8 @@ namespace ZombieCityCleaner.World
             if (Instancia == this) Instancia = null;
             foreach (var m in _malhas.Values) if (m != null) Destroy(m);
             _malhas.Clear();
+            foreach (var m in _malhasDasObras.Values) if (m != null) Destroy(m);
+            _malhasDasObras.Clear();
             foreach (var m in _folhasDeJanela.Values) if (m != null) Destroy(m);
             _folhasDeJanela.Clear();
             base.OnDestroy();
@@ -150,6 +152,8 @@ namespace ZombieCityCleaner.World
         /// </summary>
         public static float GiroDoComeco(PortaDaObra d, int semente, int i)
         {
+            // as do Hospital Principal: o começo vem da obra (Hospital.ComecoDaPorta)
+            if (d.doKit) return d.giro;
             float s = Sorte(semente, i, 1);
             switch (d.tipo)
             {
@@ -165,6 +169,7 @@ namespace ZombieCityCleaner.World
         public static bool TrancadaNoComeco(PortaDaObra d, int semente, int i)
         {
             if (GiroDoComeco(d, semente, i) > 1f) return false;
+            if (d.doKit) return d.trancada;
             float chance = d.tipo switch
             {
                 PortaDaObra.Tipo.Frente => 0.6f,
@@ -227,7 +232,7 @@ namespace ZombieCityCleaner.World
             }
             if (AbertaAgora(c, i)) Escrever(c, i, false, false);
             else if (!TrancadaAgora(c, i)) Escrever(c, i, true, false);
-            else if (d.DeFora && DoLadoQueAbre(c, d, quem)) Escrever(c, i, true, true);
+            else if (d.PorDentro(c.transform.InverseTransformPoint(quem))) Escrever(c, i, true, true);
             else if (naRede) TremerRpc(c.chaves[i]);
             else Tremeu(c.chaves[i]);
         }
@@ -238,14 +243,20 @@ namespace ZombieCityCleaner.World
             return c.transform.TransformPoint(d.dobradica + new Vector3(d.fechada.x, 0f, d.fechada.y) * (d.largura / 2) + Vector3.up);
         }
 
-        static bool DoLadoQueAbre(PortasDaConstrucao c, PortaDaObra d, Vector3 ponto)
+        // no anfitrião: a porta fica aberta ou fechada ('destrancar': e destrancada, para sempre); a dupla, as duas folhas
+        void Escrever(PortasDaConstrucao c, int i, bool aberta, bool destrancar)
         {
-            var q = c.transform.InverseTransformPoint(ponto);
-            return (q.x - d.dobradica.x) * d.abre.x + (q.z - d.dobradica.z) * d.abre.y > 0f;
+            EscreverChave(c.chaves[i], aberta, destrancar);
+            int par = c.portas[i].Par;
+            if (par >= 0 && par < c.chaves.Length) EscreverChave(c.chaves[par], aberta, destrancar);
         }
 
-        // no anfitrião: a porta fica aberta ou fechada ('destrancar': e destrancada, para sempre)
-        void Escrever(PortasDaConstrucao c, int i, bool aberta, bool destrancar) => EscreverChave(c.chaves[i], aberta, destrancar);
+        // no anfitrião: a porta da chave (com a outra folha, na dupla) ou a janela
+        void EscreverComPar(ulong chave, bool aberta, bool destrancar)
+        {
+            if (_registro.TryGetValue(chave, out var r) && r.c != null) Escrever(r.c, r.i, aberta, destrancar);
+            else EscreverChave(chave, aberta, destrancar);
+        }
 
         // no anfitrião: a porta ou a janela da chave
         void EscreverChave(ulong chave, bool aberta, bool destrancar)
@@ -283,6 +294,14 @@ namespace ZombieCityCleaner.World
             if (!_vivas.TryGetValue(chave, out var p) || p == null) return;
             p.Tremer();
             Efeitos.Som(SomDasPortas.Trancada, p.Meio, 0.9f, true, 18f);
+            // a outra folha da dupla treme junto (e também se sabe trancada)
+            int par = p.dados.Par;
+            if (par >= 0 && p.construcao != null && par < p.construcao.chaves.Length)
+            {
+                ulong outra = p.construcao.chaves[par];
+                _sabidas.Add(outra);
+                if (_vivas.TryGetValue(outra, out var q) && q != null) q.Tremer();
+            }
         }
 
         // ------------------------------------------------------------ as casas e as folhas
@@ -341,7 +360,7 @@ namespace ZombieCityCleaner.World
             var go = new GameObject($"Porta {i}") { layer = Camada };
             go.transform.SetParent(c.transform, false);
             go.transform.localPosition = d.dobradica;
-            go.AddComponent<MeshFilter>().sharedMesh = Malha(d.largura, d.altura, d.cor);
+            go.AddComponent<MeshFilter>().sharedMesh = d.folha != null ? MalhaDaObra(d) : Malha(d.largura, d.altura, d.cor);
             go.AddComponent<MeshRenderer>().sharedMaterial = Material;
             var col = go.AddComponent<BoxCollider>();
             col.center = new Vector3(d.largura / 2, d.altura / 2, 0f);
@@ -352,7 +371,8 @@ namespace ZombieCityCleaner.World
             p.chave = c.chaves[i];
             p.dados = d;
             bool mudou = _estado.TryGetValue(p.chave, out byte bits);
-            float giro = mudou ? ((bits & BitAberta) != 0 ? Mathf.Min(d.maximo, 90f) : 0f) : d.giro;
+            float aberta = d.abertaEm > 1f ? d.abertaEm : Mathf.Min(d.maximo, 90f);
+            float giro = mudou ? ((bits & BitAberta) != 0 ? aberta : 0f) : d.giro;
             if (Barricada(p.chave)) giro = 0f;   // (a barricada de tábuas, 11/11/2026: a folha nasce fechada)
             // o obstáculo do NavMesh só no anfitrião (a IA dos zumbis roda lá)
             p.Preparar(giro, IsSpawned && IsServer);
@@ -366,6 +386,9 @@ namespace ZombieCityCleaner.World
             {
                 if (_material == null && TerrenoDoMundo.Instancia != null)
                     _material = TerrenoDoMundo.Instancia.materialDasCasas != null ? TerrenoDoMundo.Instancia.materialDasCasas : TerrenoDoMundo.Instancia.materialDaCidade;
+                // no Lakewood (Etapa 6), o das casas de lá
+                if (_material == null && LakewoodNaCena.Instancia != null)
+                    _material = LakewoodNaCena.Instancia.materialDasCasas != null ? LakewoodNaCena.Instancia.materialDasCasas : LakewoodNaCena.Instancia.materialDaCidade;
                 return _material;
             }
         }
@@ -384,6 +407,18 @@ namespace ZombieCityCleaner.World
             m = o.ParaMesh($"Porta {largura:0.00} × {altura:0.00} ({cor})");
             MalhaDeObra.Devolver(o);
             _malhas[k] = m;
+            return m;
+        }
+
+        // a folha que a obra desenhou (as do Hospital Principal), uma malha por modelo
+        readonly Dictionary<string, Mesh> _malhasDasObras = new Dictionary<string, Mesh>();
+
+        Mesh MalhaDaObra(PortaDaObra d)
+        {
+            string k = d.modelo ?? $"{d.largura:0.000} × {d.altura:0.000}";
+            if (_malhasDasObras.TryGetValue(k, out var m) && m != null) return m;
+            m = d.folha.ParaMesh(k);
+            _malhasDasObras[k] = m;
             return m;
         }
     }

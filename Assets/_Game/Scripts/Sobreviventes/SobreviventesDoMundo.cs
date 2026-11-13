@@ -76,6 +76,8 @@ namespace ZombieCityCleaner.Sobreviventes
             Instancia = this;
             // as bases militares (03/11/2026): no mesmo objeto, posto aqui (sem mexer na cena do Mundo, que é dos dois)
             if (GetComponent<BasesMilitaresDoMundo>() == null) gameObject.AddComponent<BasesMilitaresDoMundo>();
+            // os moradores do bunker (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md), também daqui
+            if (GetComponent<Moradores.MoradoresDoBunker>() == null) gameObject.AddComponent<Moradores.MoradoresDoBunker>();
         }
 
         public override void OnDestroy()
@@ -94,16 +96,10 @@ namespace ZombieCityCleaner.Sobreviventes
 
         public override void OnNetworkDespawn() => _ativos.Clear();
 
-        static DadosDoMundo Dados => MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+        // o mundo do jogo (12/11/2026: o sorteado ou o Lakewood; as cidades, a semente e a altura vêm dele)
+        static IMundoDoJogo Mundo => MundoDoJogo.Pronto;
 
-        bool Pronto
-        {
-            get
-            {
-                var m = MundoDaPartida.Instancia;
-                return IsServer && IsSpawned && m != null && m.Pronto && !m.NoDiaZero && prefab != null;
-            }
-        }
+        bool Pronto => IsServer && IsSpawned && MundoDoJogo.Pronto != null && prefab != null;
 
         /// <summary>O estado do grupo da parte da cidade.</summary>
         public EstadoDaCidade Estado(int cidade, int parte = 0)
@@ -114,15 +110,15 @@ namespace ZombieCityCleaner.Sobreviventes
         }
 
         /// <summary>Quantos grupos a cidade tem: 6 na grande (o <see cref="gruposNaCidadeGrande"/>), 1 na pequena e na vila.</summary>
-        public int GruposNaCidade(int cidade) => CidadeGrande(cidade) ? Mathf.Clamp(gruposNaCidadeGrande, 1, 8) : 1;
+        public int GruposNaCidade(int cidade) => Mundo != null ? Mundo.GruposDaCidade(cidade, gruposNaCidadeGrande) : 1;
 
         /// <summary>A parte da cidade onde o ponto está (a fatia em volta do meio; 0 numa cidade de um grupo só).</summary>
         public int ParteDaCidade(int cidade, Vector3 p)
         {
             int n = GruposNaCidade(cidade);
-            var cidades = Dados?.Plano?.Cidades;
-            if (n <= 1 || cidades == null || cidade < 0 || cidade >= cidades.Count) return 0;
-            var c = cidades[cidade].Centro;
+            var m = Mundo;
+            if (n <= 1 || m == null || cidade < 0 || cidade >= m.QuantasCidades) return 0;
+            var c = m.MeioDaCidade(cidade);
             float ang = Mathf.Atan2(p.z - c.y, p.x - c.x);
             if (ang < 0f) ang += Mathf.PI * 2f;
             return Mathf.Clamp(Mathf.FloorToInt(ang / (Mathf.PI * 2f / n)), 0, n - 1);
@@ -169,15 +165,13 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void TentarUmGrupo()
         {
-            var d = Dados;
-            if (d?.Plano == null) return;
+            var d = Mundo;
+            if (d == null) return;
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null || !j.AlvoValido || !j.Criado) continue;
                 var p = j.transform.position;
-                var tracado = d.CidadeEm(p.x, p.z);
-                if (tracado == null) continue;
-                int cidade = IndiceDaCidade(tracado);
+                int cidade = d.CidadeEm(p.x, p.z);
                 if (cidade < 0) continue;
                 int parte = ParteDaCidade(cidade, p);
                 if (NoMundo(cidade, parte)) continue;   // o desta parte já está no mundo
@@ -206,19 +200,7 @@ namespace ZombieCityCleaner.Sobreviventes
 
         static bool TemVivos(EstadoDaCidade e) => e.vivos != 0;
 
-        int IndiceDaCidade(TracadoDaCidade t)
-        {
-            var cidades = Dados?.Plano?.Cidades;
-            if (cidades == null) return -1;
-            for (int i = 0; i < cidades.Count; i++) if (cidades[i].Tracado == t) return i;
-            return -1;
-        }
-
-        bool CidadeGrande(int cidade)
-        {
-            var cidades = Dados?.Plano?.Cidades;
-            return cidades != null && cidade >= 0 && cidade < cidades.Count && cidades[cidade].Tipo == TipoDeLugar.CidadeGrande;
-        }
+        bool CidadeGrande(int cidade) => Mundo != null && Mundo.CidadeGrande(cidade);
 
         // ------------------------------------------------------------------ nascer e sair
 
@@ -230,7 +212,7 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             if (!Pronto || (!doF1 && _ativos.Count >= Mathf.Max(1, gruposJuntos))) return false;
             if (!AcharLugar(perto, doF1, out var lugar)) return false;
-            var s = new System.Random(unchecked(Dados.Semente * 7919 + cidade * 104729 + e.geracao * 31337 + parte * 7727 + 11));
+            var s = new System.Random(unchecked(Mundo.SementeDaPartida * 7919 + cidade * 104729 + e.geracao * 31337 + parte * 7727 + 11));
             int quantos = 6 + s.Next(3);
             if (e.quantos == 0) e.quantos = quantos;
             quantos = e.quantos;
@@ -554,10 +536,8 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             if (!Pronto) return "Agora não dá (o mundo não está pronto, ou é o Dia 0).";
             TirarTodos();
-            var d = Dados;
             var p = j.transform.position;
-            var tracado = d.CidadeEm(p.x, p.z);
-            int cidade = tracado != null ? IndiceDaCidade(tracado) : -1;
+            int cidade = Mundo.CidadeEm(p.x, p.z);
             int parte = cidade >= 0 ? ParteDaCidade(cidade, p) : 0;
             var e = cidade >= 0 ? Estado(cidade, parte) : new EstadoDaCidade();
             if (!TemVivos(e))

@@ -11,7 +11,8 @@ namespace ZombieCityCleaner.UI
     /// dos itens, no lugar do F1 (um ou outro aberto), com as espécies de antes (as armas, a comida, os remédios, os
     /// materiais e os outros) e as roupas, por lugar no corpo, com as cores do catálogo ou sorteadas (as receitas dos tipos
     /// do sorteio e as dos NPCs prontos). Na mochila (sem espaço, no chão) ou no chão à frente. Os pedidos vão para o
-    /// anfitrião (<see cref="CriarItemRpc"/>), como os do F1.
+    /// anfitrião (<see cref="CriarItemRpc"/>), como os do F1. Desde 10/11/2026, também os veículos arrumados
+    /// (MenuDoDesenvolvedor.Veiculos.cs).
     /// </summary>
     public partial class MenuDoDesenvolvedor
     {
@@ -28,7 +29,7 @@ namespace ZombieCityCleaner.UI
 
         static string[] Especies()
         {
-            var nomes = new List<string>(System.Array.ConvertAll(ItensDoMenu, e => e.nome)) { "Roupas" };
+            var nomes = new List<string>(System.Array.ConvertAll(ItensDoMenu, e => e.nome)) { "Roupas", "Veículos" };
             return nomes.ToArray();
         }
 
@@ -50,12 +51,13 @@ namespace ZombieCityCleaner.UI
         void PainelDosItens(float u)
         {
             var inventario = GetComponent<InventarioJogador>();
-            bool roupas = _especie >= ItensDoMenu.Length;
             int maior = 0;
             foreach (var e in ItensDoMenu) maior = Mathf.Max(maior, e.itens.Length);
+            // a grade das espécies, em linhas de 3 (com os veículos, são 3 linhas)
+            float grade = (EspeciesDoF3.Length + 2) / 3 * 29f - 3f;
             // a altura da maior lista (a janela não pula ao trocar): a dos óculos (12, com os lugares e as cores em cima) ou
             // a maior espécie
-            float altura = 8 + 30 + 34 + 64 + Mathf.Max(92 + 6 * 32, (maior + 1) / 2 * 32) + 44;
+            float altura = 8 + 30 + 34 + grade + 6 + Mathf.Max(92 + 6 * 32, (maior + 1) / 2 * 32) + 44;
             var area = new Rect(12 * u, 40 * u, 380 * u, altura * u);
             Area = area;
             var antes = GUI.color;
@@ -70,12 +72,13 @@ namespace ZombieCityCleaner.UI
             y += 30 * u;
             _destino = GUI.SelectionGrid(new Rect(x, y, w, 26 * u), _destino, Destinos, 2, _botao);
             y += 34 * u;
-            _especie = GUI.SelectionGrid(new Rect(x, y, w, 58 * u), _especie, EspeciesDoF3, 3, _botao);
+            _especie = GUI.SelectionGrid(new Rect(x, y, w, grade * u), _especie, EspeciesDoF3, 3, _botao);
             // o clique em "Roupas" vale já neste quadro (antes a lista de antes lia fora do ItensDoMenu)
-            roupas = _especie >= ItensDoMenu.Length;
-            y += 64 * u;
+            bool roupas = _especie == ItensDoMenu.Length, veiculos = _especie > ItensDoMenu.Length;
+            y += (grade + 6) * u;
             float bw = (w - 8 * u) / 2f;
-            if (roupas)
+            if (veiculos) BotoesDosVeiculos(x, y, w, bw, u);
+            else if (roupas)
             {
                 _lugarDaRoupa = GUI.SelectionGrid(new Rect(x, y, w, 58 * u), _lugarDaRoupa, LugaresDasRoupas, 5, _botao);
                 y += 64 * u;

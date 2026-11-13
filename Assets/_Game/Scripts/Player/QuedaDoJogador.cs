@@ -184,7 +184,7 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// A água acima dos pés, no ponto (0 em terra): o lago do mundo sorteado, ou o lago, o rio e o brejo do mapa fixo.
+        /// A água acima dos pés, no ponto (0 em terra): o lago do mundo sorteado, ou o lago e os rios do Lakewood.
         /// </summary>
         static float FunduraDaAgua(Vector3 p)
         {
@@ -197,7 +197,7 @@ namespace ZombieCityCleaner.Player
                 // o nível da água (o fundo mais a fundura) acima dos pés: em cima de alguma coisa, a água fica embaixo
                 return Mathf.Clamp(dados.Altura(p.x, p.z) + f - p.y, 0f, f);
             }
-            var mapa = MapaFixoNaCena.Instancia;
+            var mapa = LakewoodNaCena.Instancia;
             if (mapa != null && mapa.Chao != null && mapa.Chao.Agua(p.x, p.z, out float nivel)) return Mathf.Max(0f, nivel - p.y);
             return 0f;
         }

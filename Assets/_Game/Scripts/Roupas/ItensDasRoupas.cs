@@ -22,10 +22,47 @@ namespace ZombieCityCleaner.Roupas
         public TextAsset catalogo;
         [Tooltip("O shader que não desenha nada (a pele dos braços de primeira pessoa, debaixo das roupas: Player/RoupasNosBracos).")]
         public Shader invisivel;
+        [Tooltip("O material do vidro (o shader RoupasVidro: só os pixels de vidro, transparentes de verdade), que vai junto do das roupas nas peças com vidro.")]
+        public Material vidro;
+        [Tooltip("As peças com vidro (o alfa da cor abaixo de 1 em algum lugar: a lente dos óculos de proteção, a viseira), achadas pela montagem.")]
+        public string[] comVidro;
 
         static ItensDasRoupas _carregado;
         [System.NonSerialized] CatalogoDasRoupas _catalogo;
+        [System.NonSerialized] System.Collections.Generic.HashSet<string> _comVidro;
+        [System.NonSerialized] Material[] _soARoupa, _comOVidro;
         static MaterialPropertyBlock _bloco;
+
+        /// <summary>A peça (o nome do catálogo) tem vidro.</summary>
+        public bool TemVidro(string peca)
+        {
+            if (vidro == null || string.IsNullOrEmpty(peca)) return false;
+            _comVidro ??= new System.Collections.Generic.HashSet<string>(comVidro ?? new string[0]);
+            return _comVidro.Contains(peca);
+        }
+
+        /// <summary>A roupa (o item) tem vidro.</summary>
+        public bool TemVidro(Item item) => Itens.Roupa(item) is { } dados && TemVidro(dados.peca);
+
+        /// <summary>
+        /// Os materiais do item da roupa: o das roupas e, com vidro, o do vidro depois dele (a mesma malha desenhada duas
+        /// vezes: as roupas sem o vidro, e o vidro transparente). Antes, o vidro era um pontilhado no material das roupas, e
+        /// de perto se viam as bolinhas brancas no lugar do vidro (07/11/2026).
+        /// </summary>
+        public Material[] Materiais(Item item) => TemVidro(item) ? (_comOVidro ??= new[] { material, vidro }) : (_soARoupa ??= new[] { material });
+
+        /// <summary>Põe (ou tira) o vidro no renderer de uma peça vestida: o primeiro material fica o que estava.</summary>
+        public void PorOVidro(Renderer r, string peca)
+        {
+            var mats = r.sharedMaterials;
+            if (mats.Length == 0) return;
+            bool quer = TemVidro(peca);
+            var ultimo = mats[mats.Length - 1];
+            // (a cópia do retrato tem a cópia do vidro: o mesmo shader)
+            bool tem = mats.Length > 1 && ultimo != null && vidro != null && ultimo.shader == vidro.shader;
+            if (quer == tem) return;
+            r.sharedMaterials = quer ? new[] { mats[0], vidro } : new[] { mats[0] };
+        }
 
         /// <summary>O de Resources (null: ainda não montado).</summary>
         public static ItensDasRoupas Carregar()

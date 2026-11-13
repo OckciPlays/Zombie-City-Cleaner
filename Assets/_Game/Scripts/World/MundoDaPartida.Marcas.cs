@@ -15,7 +15,7 @@ namespace ZombieCityCleaner.World
     ///  - a marca e a anotação ficam (e vão no save do mundo); qualquer um edita ou apaga.
     /// Em cada máquina, a marca nova chega pelo <see cref="MarcaNova"/> (o bipe do ping, no minimapa).
     /// </summary>
-    public partial class MundoDaPartida
+    public partial class MundoDaPartida : IMarcasDoMundo
     {
         NetworkList<MarcaNoMapa> _marcas;
         ushort _proximaMarca = 1;

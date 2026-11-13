@@ -1,0 +1,363 @@
+# Os documentos do Hospital Principal (o Plano_Hospital.md da pasta de arte, a parte 6, "A narrativa, os documentos").
+# Cada um começa com "=== id" (o id é o do DocumentosDoHospital, que diz onde ele fica e a forma do papel), os campos e, depois
+# do "---", o texto que se lê na tela (em português; o papel, os cabeçalhos, os carimbos e os nomes ficam em inglês, como
+# as placas: o jogo se passa nos Estados Unidos).
+#   titulo:     o nome do papel (para as notas e o F1; não aparece na tela)
+#   cabecalho:  o timbre, em cima da folha (vazio: sem timbre)
+#   tipo:       a linha de baixo do timbre (o formulário, a data)
+#   carimbo:    o carimbo vermelho torto (vazio: sem carimbo)
+#   letra:      maquina (datilografado), mao (escrito à mão) ou formulario (o formulário impresso, preenchido à mão)
+# No texto, a linha que começa com "~ " foi escrita à mão por cima (a caneta de outra cor). Uma linha vazia separa os
+# parágrafos. As datas não têm o ano (o jogo não diz em que ano é).
+
+=== triagem
+titulo: O quadro da triagem
+cabecalho: BLACKWATER GENERAL HOSPITAL · EMERGENCY DEPARTMENT
+tipo: TRIAGE LOG · NOV 13
+carimbo:
+letra: formulario
+---
+06:10 · Marsha Doyle, 61. Febre, olhos vermelhos. AMARELO.
+06:25 · Tom e Ricky Bell, 8 e 11 anos. Coceira no corpo todo. A mãe ficou na espera. VERDE.
+06:40 · Homem sem nome, uns 40 anos. Trazido pela polícia, contido. Sem pulso. Agitado. VERMELHO.
+07:05 · Leanne Ortiz, 29, grávida. Febre de 40. AMARELO.
+07:15 · Sem nome. Mordida no antebraço.
+07:16 · Sem nome. Mordida.
+07:20 · Sem nome.
+~ Parem de mandar gente para cá. Não tem mais leito, não tem mais maca.
+~ O das 06:40 soltou as correias da sala vermelha.
+
+=== evacuacao
+titulo: O aviso de evacuação
+cabecalho: BLACKWATER GENERAL HOSPITAL
+tipo: NOTICE TO ALL STAFF AND VISITORS · NOV 13
+carimbo: EVACUATION
+letra: maquina
+---
+Por ordem do Departamento de Saúde do Estado de Washington e da Guarda Nacional, o hospital será evacuado a partir das 14h de hoje.
+
+Os pacientes que conseguem andar seguem com a equipe até os ônibus do estacionamento. Os outros serão retirados pelas equipes do estado.
+
+Os acompanhantes NÃO podem subir aos andares. Os pacientes do 2º andar (isolamento) e do subsolo ficam sob a responsabilidade do estado.
+
+Não usem o elevador. Mantenham a calma. Há lugar para todos.
+~ Não havia.
+
+=== seguranca
+titulo: O registro do segurança
+cabecalho: BLACKWATER GENERAL HOSPITAL · SECURITY
+tipo: SHIFT LOG · D. HUTCHINS
+carimbo:
+letra: mao
+---
+13/11, 07:30 · A fila lá fora vai até a rua. Gente gritando o nome dos parentes.
+08:10 · O diretor mandou trancar as portas da frente. Só entra ambulância.
+08:45 · Uma mulher bateu no vidro até cortar a mão. Não abri.
+10:00 · Barulho no 2º. A enfermeira Lowell pediu reforço. Mandei o Pete.
+10:20 · O Pete não responde no rádio.
+11:05 · As câmeras do subsolo apagaram, uma por uma.
+11:30 · Os de fora pararam de bater no vidro. Os de dentro começaram.
+~ Se alguém ler isto: a saída de serviço, no fundo, ainda abre.
+
+=== bilhete_ellen
+titulo: O bilhete da enfermeira
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+Lucy, meu amor,
+
+se a vovó te trouxer até aqui, não entre. Fique no carro com ela e voltem para casa.
+
+A mamãe está bem, só cansada. Não deixam a gente sair por causa da doença, mas é por pouco tempo.
+
+Tome o xarope da tosse, o da prateleira de cima. Não abra a porta para quem você não conhece. Nem para quem você conhece, se estiver com os olhos vermelhos.
+
+Eu volto no domingo. Prometo.
+Mamãe
+
+=== ambulancias
+titulo: O registro das ambulâncias
+cabecalho: BLACKWATER COUNTY EMS · DISPATCH
+tipo: UNIT STATUS · NOV 13
+carimbo:
+letra: formulario
+---
+Unidade 3 · saiu 05:50, Rota 9, acidente. Voltou 06:35 com dois.
+Unidade 1 · saiu 06:10, Pine Street, "pessoa agressiva". Sem retorno.
+Unidade 3 · saiu 07:00, Silver Lake. Sem retorno.
+Unidade 2 · saiu 07:30, escola de Maple Grove. Último contato às 07:52: "são as crianças".
+Unidade 1 · chamada às 08:00, 08:15 e 08:30. Nada.
+~ Ninguém mais sai. Ordem do Whitaker.
+~ A 2 voltou sozinha. Está parada na rampa, com as portas de trás abertas. Ninguém foi ver.
+
+=== ficha_iso4
+titulo: A ficha do paciente do quarto 4
+cabecalho: BLACKWATER GENERAL HOSPITAL · ISOLATION WARD
+tipo: PATIENT CHART · ISO 4
+carimbo:
+letra: formulario
+---
+Paciente: Daniel Costa, 34 anos. Voltou de São Paulo em 12/10. O primeiro caso do condado.
+
+Dia 1 (14/10) · Febre de 39,4. Olhos vermelhos. Coceira nos braços e no pescoço.
+Dia 4 · A esposa e a filha internadas no 2º.
+Dia 9 · A pele da nuca endureceu em placas. Diz que não sente mais frio.
+Dia 17 · Parou de falar. Fica virado para a janela, mas pediu, por escrito, para fecharmos a persiana: o sol "pesa".
+Dia 26 · Sem pulso no punho. Está de pé.
+~ Dia 29 · NÃO ENTRAR SOZINHO. O Dr. Reyes mandou lacrar.
+~ Ele bate na porta quando ouve passos.
+
+=== recado_iso4
+titulo: O recado ao lado do quarto 4
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+NÃO ABRA.
+
+NÃO RESPONDA QUANDO ELE CHAMAR.
+
+ELE SABE O SEU NOME.
+
+S. R.
+
+=== protocolo
+titulo: O protocolo do isolamento
+cabecalho: BLACKWATER GENERAL HOSPITAL · INFECTION CONTROL
+tipo: ISOLATION PROTOCOL · REV. 3
+carimbo: STAFF ONLY
+letra: maquina
+---
+1. Ninguém entra num quarto sem a roupa completa: o avental, as duas luvas, a máscara e a viseira.
+
+2. Sempre dois. Um entra, o outro fica no vidro.
+
+3. As persianas dos quartos ficam fechadas de dia. Não abram, mesmo que o paciente peça (veja o caso do pátio, 24/10).
+
+4. Paciente sem pulso NÃO é óbito. Não se declara óbito no 2º andar: chamem o Dr. Reyes.
+
+5. Quem parar de responder desce para a A-01, pelo elevador, com dois seguranças.
+
+6. Este protocolo não sai deste andar.
+~ O item 4 é novo. Leiam de novo.
+
+=== diario_lowell
+titulo: O diário da enfermeira-chefe
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+20/10 · Mais doze hoje. O condado inteiro está vindo para cá. O Whitaker diz que é infecção respiratória. Ninguém tosse.
+
+24/10 · O sr. Albright saiu para fumar no pátio e ficou lá, sentado no sol. Quando fomos buscar, ele era pedra. Pedra mesmo, ainda quente. As meninas choraram no vestiário.
+
+2/11 · Desceram mais quatro para a A-01. Nenhum voltou. Ninguém lá embaixo atende o ramal.
+
+9/11 · Os do isolamento não dormem. Ficam de pé, encostados no vidro, olhando o corredor.
+
+12/11 · Amanhã faz trinta dias do Daniel. Pedi para trocar de turno. Não deixaram.
+M. Lowell
+
+=== lista_uti
+titulo: A lista da UTI para a A-01
+cabecalho: BLACKWATER GENERAL HOSPITAL · INTENSIVE CARE UNIT
+tipo: TRANSFER LIST · UNIT A-01
+carimbo: AUTHORIZED
+letra: formulario
+---
+Autorização: H. Whitaker · S. Reyes
+
+02/11 · Leito 3: R. Albright (o irmão). Leito 5: C. Nguyen. Leito 6: P. Weller. Leito 8: Julia Costa (a esposa do ISO 4).
+06/11 · Leito 1: M. Ruiz. Leito 2: sem nome. Leito 4: T. Gaines.
+10/11 · Leito 7: Ana Costa, 9 anos.
+~ Ela pediu para levar o urso. Deixei.
+~ Não assino mais nenhuma. M. L.
+
+=== memorando
+titulo: O memorando confidencial do diretor
+cabecalho: BLACKWATER GENERAL HOSPITAL · OFFICE OF THE DIRECTOR
+tipo: INTERNAL MEMORANDUM · OCT 17
+carimbo: CONFIDENTIAL
+letra: maquina
+---
+Aos chefes de setor.
+
+Recebemos hoje a orientação do estado: até segunda ordem, os casos do condado vêm todos para cá.
+
+Com as famílias e com a imprensa, ninguém fala em "pedra": o diagnóstico é infecção respiratória grave.
+
+Os pacientes que pararem de responder descem para a unidade A-01, no subsolo. Só a equipe da lista tem acesso.
+
+As visitas estão suspensas. Os telefonemas dos andares passam pela secretaria.
+
+Eu sei o que estou pedindo.
+H. Whitaker, diretor
+~ Cópia para o arquivo. J. M.
+
+=== ata
+titulo: A ata da reunião
+cabecalho: BLACKWATER GENERAL HOSPITAL · BOARD OF DIRECTORS
+tipo: MINUTES OF THE EXTRAORDINARY MEETING · OCT 25
+carimbo: CONFIDENTIAL
+letra: maquina
+---
+Presentes: H. Whitaker (diretor), S. Reyes (infectologia), M. Lowell (enfermagem), R. Hale (jurídico), D. Moss (finanças) e dois representantes do estado, que não se identificaram.
+
+Pauta: avisar a população do condado sobre a natureza da doença.
+
+O Dr. Reyes apresentou os casos de petrificação do Brasil e o caso do pátio, do dia 24. Pediu que o condado fosse avisado.
+
+O estado lembrou que o apoio ao hospital depende do sigilo.
+
+Votação: 5 contra, 2 a favor (Reyes e Lowell).
+
+Decidido: o assunto não sai desta sala.
+~ O Reyes saiu antes do fim. Bateu a porta.
+
+=== ordem_estado
+titulo: A ordem do Departamento de Saúde do estado
+cabecalho: STATE OF WASHINGTON · DEPARTMENT OF HEALTH
+tipo: EMERGENCY ORDER 14-B · OCT 16
+carimbo: CLASSIFIED
+letra: maquina
+---
+Ao diretor do Blackwater General Hospital.
+
+1. O hospital fica designado como o centro único de contenção do Condado de Blackwater.
+
+2. Todos os casos suspeitos do condado serão levados para lá, sem exceção.
+
+3. O hospital não dará informações à imprensa nem às famílias. As comunicações passam por este departamento.
+
+4. Os casos avançados ficam na unidade A-01, preparada pelo estado, para estudo.
+
+5. Se a contenção falhar, o condado será fechado. O hospital não deve contar com a evacuação.
+~ "Não deve contar com a evacuação": perguntar o que isso quer dizer. H. W.
+
+=== carta_whitaker
+titulo: A última carta do diretor
+cabecalho: BLACKWATER GENERAL HOSPITAL · OFFICE OF THE DIRECTOR
+tipo:
+carimbo:
+letra: mao
+---
+A quem encontrar isto,
+
+fecharam a estrada hoje de manhã. Do 3º andar dá para ver a cerca subindo na rodovia, e os soldados de costas para ela, virados para nós.
+
+Eu podia ter avisado o condado em outubro. O Reyes me pediu. A Peg me pediu. Eu tinha um contrato e uma ordem, e achei que bastava.
+
+Mandei descer aquelas pessoas para a A-01 e assinei cada folha. O que está lá embaixo não é culpa do estado. É minha.
+
+Não abram a A-01.
+
+Eu fico. Alguém tem que ficar.
+Harold Whitaker, 14 de novembro
+
+=== email_ti
+titulo: O e-mail impresso da TI
+cabecalho: BLACKWATER GENERAL HOSPITAL · MAIL SYSTEM
+tipo: PRINTED MESSAGE
+carimbo:
+letra: maquina
+---
+De: Kevin Park (TI)
+Para: Harold Whitaker
+Data: 13 nov, 22:47
+Assunto: RE: os registros
+
+Feito. Apaguei do servidor e das fitas de backup os prontuários do 2º andar e da A-01, como o senhor pediu. O sistema do estado já tinha copiado tudo antes, então não sei de que adianta.
+
+Os servidores ficam ligados no gerador até o diesel acabar.
+
+Vou embora agora, pela saída de serviço. Se o senhor tiver juízo, vem junto.
+K.
+
+=== livro_necroterio
+titulo: O livro do necrotério
+cabecalho: BLACKWATER GENERAL HOSPITAL · MORGUE
+tipo: MORGUE REGISTER
+carimbo:
+letra: formulario
+---
+28/10 · R. Albright. Entrada 16:20. Causa: "petrificação". Gaveta 2. (Foram precisos quatro para carregar.)
+03/11 · C. Nguyen. Vindo da A-01. Gaveta 5.
+04/11 · Gaveta 5 aberta por dentro. Corpo não encontrado.
+07/11 · P. Weller. Vindo da A-01. Gaveta 9, amarrado.
+08/11 · Gaveta 9: as correias rompidas. Corpo não encontrado.
+~ O Dr. Reyes disse para não escrever mais "corpo não encontrado".
+~ Então não escrevo mais nada. W. Briggs
+
+=== laudo
+titulo: O laudo da autópsia
+cabecalho: BLACKWATER GENERAL HOSPITAL · PATHOLOGY
+tipo: AUTOPSY REPORT · CASE 0031
+carimbo: STATE PROPERTY
+letra: maquina
+---
+Patologista: Dra. Anne Calloway. Data: 5 de novembro.
+
+Corpo: masculino, uns 50 anos, vindo da unidade A-01, sem identificação.
+
+Exame externo: placas duras e esbranquiçadas cobrem o crânio e a nuca, em camadas, como osso crescendo para fora. O rosto afundou para dentro, numa fenda vertical. Os olhos não foram encontrados.
+
+Exame interno: os órgãos estão no lugar, sem nenhum sinal de decomposição. A temperatura do corpo é de 31 °C, quarenta horas depois do óbito declarado.
+
+Conclusão:
+~ Não consigo concluir.
+~ Quando abri o tórax, os dedos da mão direita se fecharam.
+
+=== ordem_servico
+titulo: A ordem de serviço da A-01
+cabecalho: BLACKWATER GENERAL HOSPITAL · FACILITIES
+tipo: WORK ORDER #2291 · NOV 13
+carimbo: URGENT
+letra: formulario
+---
+Pedido por: H. Whitaker (diretor)
+Local: subsolo, a porta da unidade A-01 e as duas salas técnicas.
+Serviço: soldar as folhas da porta da A-01 por fora. Travar as portas das salas técnicas com barra. Cortar a energia da A-01 no quadro elétrico.
+Prioridade: imediata.
+Pergunta: a equipe do estado continua lá dentro?
+~ Resposta do diretor: "faça o serviço".
+Executado por: F. Dorsey, 13/11, 21:30.
+~ Bateram do outro lado o tempo todo. Não era pedindo para sair.
+
+=== registro_a01
+titulo: O registro de entrada da A-01
+cabecalho: UNIT A-01 · RESTRICTED ACCESS
+tipo: ENTRY LOG
+carimbo: AUTHORIZED PERSONNEL ONLY
+letra: formulario
+---
+Nome · entrada · saída · quem levou
+
+P. Weller (paciente) · 02/11 19:10 · · seg. Pete e seg. Lou
+C. Nguyen (paciente) · 02/11 19:25 · · seg. Pete e seg. Lou
+Equipe do estado (quatro) · 03/11 08:00 · ·
+Ana Costa (paciente, 9 anos) · 10/11 20:40 · · enf. Lowell
+S. Reyes · 13/11 20:58 · ·
+~ O Dr. Reyes desceu sozinho. Disse que ia buscar a menina.
+~ 21:30 · a manutenção chegou com a solda.
+
+=== recado_ray
+titulo: O recado do vigia do subsolo
+cabecalho:
+tipo:
+carimbo:
+letra: mao
+---
+Lou,
+
+eu não volto para o turno da noite. Pode contar para o Hutchins.
+
+Ontem, às três da manhã, ouvi alguém andando na A-01. Andando em volta, a noite toda, passando a mão na parede, do lado de dentro, como quem procura a porta.
+
+E a menina canta. Juro por Deus. A mesma música, baixinho.
+
+Se a cerca deixar, eu vou para o norte.
+Ray

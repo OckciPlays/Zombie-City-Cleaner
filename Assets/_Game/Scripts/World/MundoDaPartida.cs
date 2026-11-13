@@ -570,6 +570,8 @@ namespace ZombieCityCleaner.World
             var p = jogador.transform.position;
             // no bunker da família, os andares ficam embaixo do chão (e do morro)
             if (BunkerDoMundo.Dentro(p)) return;
+            // e no Hospital Principal, o subsolo (08/11/2026)
+            if (HospitalDoMundo.Dentro(p)) return;
             float chao = Dados.Altura(p.x, p.z);
             if (p.y > chao - 3f || !terreno.Pronto(p, 4f)) return;
             mov.Teleportar(new Vector3(p.x, chao + 0.3f, p.z), jogador.transform.eulerAngles.y);

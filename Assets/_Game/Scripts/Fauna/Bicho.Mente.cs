@@ -558,7 +558,7 @@ namespace ZombieCityCleaner.Fauna
             float raio = Mathf.Max(0.12f, Dados.altura * Escala * 0.22f);
             float olhar = 1.4f + vel * 0.45f + Dados.comprimento * Escala * 0.5f;
             Vector3 origem = p + Vector3.up * Mathf.Max(0.25f, Dados.altura * Escala * 0.6f);
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            bool temMapa = FaunaDoMundo.TemMapa;
             bool voando = Voando || Dados.meio == Meio.Ar;
             for (int i = 0; i < Desvios.Length; i++)
             {
@@ -566,11 +566,10 @@ namespace ZombieCityCleaner.Fauna
                 if (!voando && Physics.SphereCast(origem, raio, d, out var hit, olhar, MascaraDoCaminho, QueryTriggerInteraction.Ignore)
                     && !(Estado == EstadoDoBicho.Investindo && _alvo != null && hit.collider.transform.IsChildOf(_alvo.transform))) continue;
                 Vector3 adiante = p + d * olhar;
-                if (dados != null)
+                if (temMapa)
                 {
-                    if (!voando && AguaBarra(dados.FunduraDaAgua(adiante.x, adiante.z))) continue;
-                    float lim = dados.Metade - 30f;
-                    if (Mathf.Abs(adiante.x) > lim || Mathf.Abs(adiante.z) > lim) continue;
+                    if (!voando && AguaBarra(FaunaDoMundo.AguaEm(adiante.x, adiante.z, out _))) continue;
+                    if (!FaunaDoMundo.DentroDoMapa(adiante.x, adiante.z, 30f)) continue;
                 }
                 return _desvio * 0.5f + Desvios[i];
             }

@@ -1,0 +1,2936 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!29 &1
+OcclusionCullingSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_OcclusionBakeSettings:
+    smallestOccluder: 5
+    smallestHole: 0.25
+    backfaceThreshold: 100
+  m_SceneGUID: 00000000000000000000000000000000
+  m_OcclusionCullingData: {fileID: 0}
+--- !u!104 &2
+RenderSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 10
+  m_Fog: 1
+  m_FogColor: {r: 0.6, g: 0.62, b: 0.62, a: 1}
+  m_FogMode: 2
+  m_FogDensity: 0.009
+  m_LinearFogStart: 0
+  m_LinearFogEnd: 300
+  m_AmbientSkyColor: {r: 0.56, g: 0.58, b: 0.6, a: 1}
+  m_AmbientEquatorColor: {r: 0.44, g: 0.45, b: 0.44, a: 1}
+  m_AmbientGroundColor: {r: 0.25, g: 0.24, b: 0.22, a: 1}
+  m_AmbientIntensity: 1
+  m_AmbientMode: 1
+  m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
+  m_SkyboxMaterial: {fileID: 0}
+  m_HaloStrength: 0.5
+  m_FlareStrength: 1
+  m_FlareFadeSpeed: 3
+  m_HaloTexture: {fileID: 0}
+  m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
+  m_DefaultReflectionMode: 0
+  m_DefaultReflectionResolution: 128
+  m_ReflectionBounces: 1
+  m_ReflectionIntensity: 1
+  m_CustomReflection: {fileID: 0}
+  m_Sun: {fileID: 0}
+  m_UseRadianceAmbientProbe: 0
+--- !u!157 &3
+LightmapSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
+  m_GISettings:
+    serializedVersion: 2
+    m_BounceScale: 1
+    m_IndirectOutputScale: 1
+    m_AlbedoBoost: 1
+    m_EnvironmentLightingMode: 0
+    m_EnableBakedLightmaps: 1
+    m_EnableRealtimeLightmaps: 0
+  m_LightmapEditorSettings:
+    serializedVersion: 12
+    m_Resolution: 2
+    m_BakeResolution: 40
+    m_AtlasSize: 1024
+    m_AO: 0
+    m_AOMaxDistance: 1
+    m_CompAOExponent: 1
+    m_CompAOExponentDirect: 0
+    m_ExtractAmbientOcclusion: 0
+    m_Padding: 2
+    m_LightmapParameters: {fileID: 0}
+    m_LightmapsBakeMode: 1
+    m_TextureCompression: 1
+    m_ReflectionCompression: 2
+    m_MixedBakeMode: 2
+    m_BakeBackend: 2
+    m_PVRSampling: 1
+    m_PVRDirectSampleCount: 32
+    m_PVRSampleCount: 512
+    m_PVRBounces: 2
+    m_PVREnvironmentSampleCount: 256
+    m_PVREnvironmentReferencePointCount: 2048
+    m_PVRFilteringMode: 1
+    m_PVRDenoiserTypeDirect: 2
+    m_PVRDenoiserTypeIndirect: 2
+    m_PVRDenoiserTypeAO: 2
+    m_PVRFilterTypeDirect: 0
+    m_PVRFilterTypeIndirect: 0
+    m_PVRFilterTypeAO: 0
+    m_PVREnvironmentMIS: 1
+    m_PVRCulling: 1
+    m_PVRFilteringGaussRadiusDirect: 1
+    m_PVRFilteringGaussRadiusIndirect: 1
+    m_PVRFilteringGaussRadiusAO: 1
+    m_PVRFilteringAtrousPositionSigmaDirect: 0.5
+    m_PVRFilteringAtrousPositionSigmaIndirect: 2
+    m_PVRFilteringAtrousPositionSigmaAO: 1
+    m_ExportTrainingData: 0
+    m_TrainingDataDestination: TrainingData
+    m_LightProbeSampleCountMultiplier: 4
+  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingSettings: {fileID: 0}
+--- !u!196 &4
+NavMeshSettings:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_BuildSettings:
+    serializedVersion: 3
+    agentTypeID: 0
+    agentRadius: 0.5
+    agentHeight: 2
+    agentSlope: 45
+    agentClimb: 0.4
+    ledgeDropHeight: 0
+    maxJumpAcrossDistance: 0
+    minRegionArea: 2
+    manualCellSize: 0
+    cellSize: 0.16666667
+    manualTileSize: 0
+    tileSize: 256
+    buildHeightMesh: 0
+    maxJobWorkers: 0
+    preserveTilesOutsideBounds: 0
+    debug:
+      m_Flags: 0
+  m_NavMeshData: {fileID: 0}
+--- !u!1001 &10933662
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1014172100}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_Name
+      value: Corpo
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 3fb3dde969a2dd94d9f1a333b329bf9f, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+--- !u!95 &10933663 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+  m_PrefabInstance: {fileID: 10933662}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &10933664 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: bb3d1c50751745643a6211adf3a68d7b, type: 3}
+  m_PrefabInstance: {fileID: 10933662}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &31972110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 31972112}
+  - component: {fileID: 31972111}
+  m_Layer: 0
+  m_Name: Sol
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!108 &31972111
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31972110}
+  m_Enabled: 1
+  serializedVersion: 13
+  m_Type: 1
+  m_Color: {r: 0.88, g: 0.87, b: 0.83, a: 1}
+  m_Intensity: 1.25
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize2D: {x: 0.5, y: 0.5}
+  m_Shadows:
+    m_Type: 2
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShapeRadius: 0.025
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &31972112
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31972110}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.3541975, y: -0.30186155, z: 0.12195998, w: 0.8766696}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &172962292
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 172962293}
+  - component: {fileID: 172962296}
+  - component: {fileID: 172962295}
+  - component: {fileID: 172962294}
+  m_Layer: 0
+  m_Name: "Cabe\xE7a"
+  m_TagString: MainCamera
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &172962293
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 172962292}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.62, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1014172100}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!81 &172962294
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 172962292}
+  m_Enabled: 1
+--- !u!114 &172962295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 172962292}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 2
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
+--- !u!20 &172962296
+Camera:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 172962292}
+  m_Enabled: 1
+  serializedVersion: 2
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.6, g: 0.62, b: 0.62, a: 1}
+  m_projectionMatrixMode: 1
+  m_GateFitMode: 2
+  m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
+  m_SensorSize: {x: 36, y: 24}
+  m_LensShift: {x: 0, y: 0}
+  m_NormalizedViewPortRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
+  near clip plane: 0.05
+  far clip plane: 600
+  field of view: 70
+  orthographic: 0
+  orthographic size: 5
+  m_Depth: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingPath: -1
+  m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
+  m_TargetEye: 3
+  m_HDR: 1
+  m_AllowMSAA: 1
+  m_AllowDynamicResolution: 0
+  m_ForceIntoRT: 0
+  m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: 0.022
+--- !u!1 &375068090
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 375068092}
+  - component: {fileID: 375068091}
+  m_Layer: 0
+  m_Name: Sons do hospital
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &375068091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 375068090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7603431c8b985684eb7e2f15d8e1e4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Music.AmbienteSonoro
+  tipos:
+  - nome: Porta
+    clipes:
+    - {fileID: 8300000, guid: 0f0abce5cd6db1d4ea35f1647bbb3269, type: 3}
+    - {fileID: 8300000, guid: 89913165cb922e14690bcaf44ce2a722, type: 3}
+    - {fileID: 8300000, guid: ffdcbc250c364ae48b6d0fdce6909361, type: 3}
+    pesos:
+    - 0.5
+    - 3
+    - 2
+    - 1
+    volume: {x: 0.45, y: 0.65}
+    tom: {x: 0.9, y: 1.08}
+    distancia: {x: 8, y: 30}
+    alcance: 40
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Vento
+    clipes:
+    - {fileID: 8300000, guid: b325267e2c9b20740a5bd6cdb0a34c8d, type: 3}
+    - {fileID: 8300000, guid: f176cb8fb3ce7f34b9005b891e14551d, type: 3}
+    pesos:
+    - 0
+    - 3
+    - 1
+    - 2.5
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.92, y: 1.06}
+    distancia: {x: 5, y: 26}
+    alcance: 32
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Goteira
+    clipes:
+    - {fileID: 8300000, guid: dc0fb7d8fb9629f4c87bc2bca208d98a, type: 3}
+    - {fileID: 8300000, guid: 0d7ae4d71dba15b44b84707ad1382ff6, type: 3}
+    - {fileID: 8300000, guid: df5930b87cb85d14f82d85fb881e37a0, type: 3}
+    pesos:
+    - 3
+    - 2
+    - 1
+    - 1.5
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.9, y: 1.12}
+    distancia: {x: 4, y: 18}
+    alcance: 24
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Metal
+    clipes:
+    - {fileID: 8300000, guid: 5feae054bbad4934f801a453a7f95a07, type: 3}
+    - {fileID: 8300000, guid: c55ec266c5895c44faa883d34fd0d321, type: 3}
+    - {fileID: 8300000, guid: e522196a397b8e941ba4b9cd9b344f0e, type: 3}
+    pesos:
+    - 2
+    - 0.5
+    - 0.5
+    - 1
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.92, y: 1.08}
+    distancia: {x: 8, y: 30}
+    alcance: 40
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Cano
+    clipes:
+    - {fileID: 8300000, guid: a51e8fe5acc973d4b90f87ad474d09e4, type: 3}
+    - {fileID: 8300000, guid: 95b8fd4609ac3de46a0e6cd1de228627, type: 3}
+    pesos:
+    - 3
+    - 0
+    - 0
+    - 0
+    volume: {x: 0.45, y: 0.65}
+    tom: {x: 0.9, y: 1.06}
+    distancia: {x: 6, y: 28}
+    alcance: 38
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Estrutura
+    clipes:
+    - {fileID: 8300000, guid: 6ee91565e40eaaa42b813d30053f0946, type: 3}
+    - {fileID: 8300000, guid: 4adc67902fd029544a39d7f717eb55a1, type: 3}
+    pesos:
+    - 0.5
+    - 0.5
+    - 1
+    - 3
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.9, y: 1.06}
+    distancia: {x: 6, y: 30}
+    alcance: 38
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Papeis
+    clipes:
+    - {fileID: 8300000, guid: 4d55494149486cc409bbc5714ded10e7, type: 3}
+    - {fileID: 8300000, guid: 8bd7512c28e6c86459eae6495ea73d64, type: 3}
+    pesos:
+    - 0
+    - 1
+    - 0.5
+    - 3
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.92, y: 1.08}
+    distancia: {x: 4, y: 18}
+    alcance: 22
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Pancada
+    clipes:
+    - {fileID: 8300000, guid: a8a1f2c6f6aa6454aa18ce6bc4917fd5, type: 3}
+    - {fileID: 8300000, guid: 0826b780452536f45b41e7fb729f4292, type: 3}
+    pesos:
+    - 1
+    - 1
+    - 1.5
+    - 0.5
+    volume: {x: 0.5, y: 0.7}
+    tom: {x: 0.85, y: 1.05}
+    distancia: {x: 15, y: 45}
+    alcance: 60
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Maca
+    clipes:
+    - {fileID: 8300000, guid: 4f38c970d18d8aa4cbba43a91f734f09, type: 3}
+    - {fileID: 8300000, guid: 8ecf3b2907c6a5446bcef67eb602ff48, type: 3}
+    pesos:
+    - 0
+    - 0.5
+    - 2.5
+    - 0
+    volume: {x: 0.4, y: 0.6}
+    tom: {x: 0.92, y: 1.06}
+    distancia: {x: 6, y: 25}
+    alcance: 34
+    trecho: {x: 0, y: 0}
+    corte: 0
+  - nome: Zumbi
+    clipes:
+    - {fileID: 8300000, guid: 70cca28de9d7bf84c9e8ac77e082eeb8, type: 3}
+    pesos:
+    - 1
+    - 0.5
+    - 1.5
+    - 0
+    volume: {x: 0.35, y: 0.5}
+    tom: {x: 0.78, y: 0.95}
+    distancia: {x: 6, y: 25}
+    alcance: 30
+    trecho: {x: 1.5, y: 3}
+    corte: 650
+  pontos:
+  - lugar: {x: -26, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 26, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -8, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -20, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -13, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 0, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 10, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 19, y: -2.9, z: 8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -23, y: -2.9, z: 5}
+    tipo: 0
+    area: 0
+  - lugar: {x: -23, y: -2.9, z: -5}
+    tipo: 0
+    area: 0
+  - lugar: {x: -12, y: -2.9, z: -5}
+    tipo: 0
+    area: 0
+  - lugar: {x: -6, y: -2.9, z: -1.75}
+    tipo: 0
+    area: 0
+  - lugar: {x: 6, y: -2.9, z: -1.75}
+    tipo: 0
+    area: 0
+  - lugar: {x: 18, y: -2.9, z: 0}
+    tipo: 0
+    area: 0
+  - lugar: {x: 12, y: -2.9, z: -5}
+    tipo: 0
+    area: 0
+  - lugar: {x: -22, y: -2.9, z: -8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -13, y: -2.9, z: -8}
+    tipo: 0
+    area: 0
+  - lugar: {x: -1.5, y: -2.9, z: -10}
+    tipo: 0
+    area: 0
+  - lugar: {x: 1.5, y: -2.9, z: -10}
+    tipo: 0
+    area: 0
+  - lugar: {x: 0, y: -2.9, z: -12}
+    tipo: 0
+    area: 0
+  - lugar: {x: 15, y: -2.9, z: -8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 24, y: -2.9, z: -8}
+    tipo: 0
+    area: 0
+  - lugar: {x: 0, y: -3.7, z: 6.5}
+    tipo: 2
+    area: 0
+  - lugar: {x: -24, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -24, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -24, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: -16, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -16, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -16, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: -8, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -8, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -8, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 0, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 0, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 8, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 8, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 8, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 16, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 16, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 16, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 24, y: -1, z: 6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 24, y: -1.2, z: 6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 24, y: -0.9000001, z: 6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -2.8, z: 6.5}
+    tipo: 7
+    area: 0
+  - lugar: {x: 0, y: -3.7, z: -6.5}
+    tipo: 2
+    area: 0
+  - lugar: {x: -24, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -24, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -24, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: -16, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -16, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -16, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: -8, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: -8, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: -8, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 0, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 0, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 8, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 8, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 8, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 16, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 16, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 16, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 24, y: -1, z: -6.5}
+    tipo: 4
+    area: 0
+  - lugar: {x: 24, y: -1.2, z: -6.5}
+    tipo: 3
+    area: 0
+  - lugar: {x: 24, y: -0.9000001, z: -6.5}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -2.8, z: -6.5}
+    tipo: 7
+    area: 0
+  - lugar: {x: -20, y: -3.7, z: 12}
+    tipo: 2
+    area: 0
+  - lugar: {x: -20, y: -1.4000001, z: 12}
+    tipo: 3
+    area: 0
+  - lugar: {x: -20, y: -1, z: 12}
+    tipo: 4
+    area: 0
+  - lugar: {x: -20, y: -0.9000001, z: 12}
+    tipo: 5
+    area: 0
+  - lugar: {x: -20, y: -2.8, z: 12}
+    tipo: 7
+    area: 0
+  - lugar: {x: -13, y: -3.7, z: 12}
+    tipo: 2
+    area: 0
+  - lugar: {x: -13, y: -1.4000001, z: 12}
+    tipo: 3
+    area: 0
+  - lugar: {x: -13, y: -1, z: 12}
+    tipo: 4
+    area: 0
+  - lugar: {x: -13, y: -2.8, z: 12}
+    tipo: 7
+    area: 0
+  - lugar: {x: 0, y: -3.7, z: 12}
+    tipo: 2
+    area: 0
+  - lugar: {x: 0, y: -1.4000001, z: 12}
+    tipo: 3
+    area: 0
+  - lugar: {x: 0, y: -1, z: 12}
+    tipo: 4
+    area: 0
+  - lugar: {x: 0, y: -0.9000001, z: 12}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -2.8, z: 12}
+    tipo: 7
+    area: 0
+  - lugar: {x: 10, y: -3.7, z: 12}
+    tipo: 2
+    area: 0
+  - lugar: {x: 10, y: -1.4000001, z: 12}
+    tipo: 3
+    area: 0
+  - lugar: {x: 10, y: -1, z: 12}
+    tipo: 4
+    area: 0
+  - lugar: {x: 10, y: -0.9000001, z: 12}
+    tipo: 5
+    area: 0
+  - lugar: {x: 10, y: -2.8, z: 12}
+    tipo: 7
+    area: 0
+  - lugar: {x: 19, y: -3.7, z: 12}
+    tipo: 2
+    area: 0
+  - lugar: {x: 19, y: -1.4000001, z: 12}
+    tipo: 3
+    area: 0
+  - lugar: {x: 19, y: -1, z: 12}
+    tipo: 4
+    area: 0
+  - lugar: {x: 19, y: -0.9000001, z: 12}
+    tipo: 5
+    area: 0
+  - lugar: {x: 19, y: -2.8, z: 12}
+    tipo: 7
+    area: 0
+  - lugar: {x: -23, y: -3.7, z: 0}
+    tipo: 2
+    area: 0
+  - lugar: {x: -23, y: -1.4000001, z: 0}
+    tipo: 3
+    area: 0
+  - lugar: {x: -23, y: -1, z: 0}
+    tipo: 4
+    area: 0
+  - lugar: {x: -23, y: -0.9000001, z: 0}
+    tipo: 5
+    area: 0
+  - lugar: {x: -23, y: -2.8, z: 0}
+    tipo: 7
+    area: 0
+  - lugar: {x: -12, y: -3.7, z: 0}
+    tipo: 2
+    area: 0
+  - lugar: {x: -12, y: -0.9000001, z: 0}
+    tipo: 5
+    area: 0
+  - lugar: {x: -12, y: -2.8, z: 0}
+    tipo: 7
+    area: 0
+  - lugar: {x: 0, y: -3.7, z: -1.75}
+    tipo: 2
+    area: 0
+  - lugar: {x: 0, y: -0.9000001, z: -1.75}
+    tipo: 5
+    area: 0
+  - lugar: {x: 0, y: -2.8, z: -1.75}
+    tipo: 7
+    area: 0
+  - lugar: {x: -3.75, y: -3.7, z: 3.25}
+    tipo: 2
+    area: 0
+  - lugar: {x: 3.75, y: -3.7, z: 3.25}
+    tipo: 2
+    area: 0
+  - lugar: {x: 12, y: -3.7, z: 0}
+    tipo: 2
+    area: 0
+  - lugar: {x: 12, y: -0.9000001, z: 0}
+    tipo: 5
+    area: 0
+  - lugar: {x: 12, y: -2.8, z: 0}
+    tipo: 7
+    area: 0
+  - lugar: {x: 23, y: -2.8, z: 0}
+    tipo: 9
+    area: 0
+  - lugar: {x: 23, y: -3.7, z: 0}
+    tipo: 2
+    area: 0
+  - lugar: {x: 23, y: -0.9000001, z: 0}
+    tipo: 5
+    area: 0
+  - lugar: {x: 23, y: -2.8, z: 0}
+    tipo: 7
+    area: 0
+  - lugar: {x: -22, y: -3.7, z: -12}
+    tipo: 2
+    area: 0
+  - lugar: {x: -22, y: -1.4000001, z: -12}
+    tipo: 3
+    area: 0
+  - lugar: {x: -22, y: -1, z: -12}
+    tipo: 4
+    area: 0
+  - lugar: {x: -22, y: -0.9000001, z: -12}
+    tipo: 5
+    area: 0
+  - lugar: {x: -22, y: -2.8, z: -12}
+    tipo: 7
+    area: 0
+  - lugar: {x: -13, y: -3.7, z: -12}
+    tipo: 2
+    area: 0
+  - lugar: {x: -13, y: -2.8, z: -12}
+    tipo: 7
+    area: 0
+  - lugar: {x: -5.75, y: -2.8, z: -10}
+    tipo: 9
+    area: 0
+  - lugar: {x: 0, y: -3.7, z: -10}
+    tipo: 2
+    area: 0
+  - lugar: {x: 5.75, y: -2.8, z: -10}
+    tipo: 9
+    area: 0
+  - lugar: {x: 0, y: -2.8, z: -14}
+    tipo: 9
+    area: 0
+  - lugar: {x: 15, y: -3.7, z: -12}
+    tipo: 2
+    area: 0
+  - lugar: {x: 15, y: -1.4000001, z: -12}
+    tipo: 3
+    area: 0
+  - lugar: {x: 15, y: -1, z: -12}
+    tipo: 4
+    area: 0
+  - lugar: {x: 15, y: -0.9000001, z: -12}
+    tipo: 5
+    area: 0
+  - lugar: {x: 15, y: -2.8, z: -12}
+    tipo: 7
+    area: 0
+  - lugar: {x: 24, y: -3.7, z: -12}
+    tipo: 2
+    area: 0
+  - lugar: {x: 24, y: -0.9000001, z: -12}
+    tipo: 5
+    area: 0
+  - lugar: {x: 24, y: -2.8, z: -12}
+    tipo: 7
+    area: 0
+  - lugar: {x: -15.342161, y: -3.6, z: 7.467}
+    tipo: 8
+    area: 0
+  - lugar: {x: 23.305815, y: -3.6, z: 7.4267}
+    tipo: 8
+    area: 0
+  - lugar: {x: -15.276569, y: -3.6, z: -7.467}
+    tipo: 8
+    area: 0
+  - lugar: {x: 25.586853, y: -3.6, z: -7.4267}
+    tipo: 8
+    area: 0
+  - lugar: {x: 12, y: -3.6, z: -2.45}
+    tipo: 8
+    area: 0
+  - lugar: {x: -22, y: -3.6, z: -12}
+    tipo: 8
+    area: 0
+  - lugar: {x: -26, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 26, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -8, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -19.5, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -12.5, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -2, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 4, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 14, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 22, y: 1.1, z: 8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -28, y: 1.1, z: 0}
+    tipo: 0
+    area: 1
+  - lugar: {x: -17.5, y: 1.1, z: 5}
+    tipo: 0
+    area: 1
+  - lugar: {x: -17.5, y: 1.1, z: -5}
+    tipo: 0
+    area: 1
+  - lugar: {x: -12, y: 1.1, z: 2.5}
+    tipo: 0
+    area: 1
+  - lugar: {x: -12, y: 1.1, z: -2.5}
+    tipo: 0
+    area: 1
+  - lugar: {x: -8, y: 1.1, z: 3.25}
+    tipo: 0
+    area: 1
+  - lugar: {x: -8, y: 1.1, z: -2.5}
+    tipo: 0
+    area: 1
+  - lugar: {x: 8, y: 1.1, z: 3.25}
+    tipo: 0
+    area: 1
+  - lugar: {x: 8, y: 1.1, z: -2.5}
+    tipo: 0
+    area: 1
+  - lugar: {x: 20, y: 1.1, z: 5}
+    tipo: 0
+    area: 1
+  - lugar: {x: 16, y: 1.1, z: -5}
+    tipo: 0
+    area: 1
+  - lugar: {x: -24.5, y: 1.1, z: -8}
+    tipo: 0
+    area: 1
+  - lugar: {x: -17.5, y: 1.1, z: -8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 14, y: 1.1, z: -8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 20.5, y: 1.1, z: -8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 25.5, y: 1.1, z: -8}
+    tipo: 0
+    area: 1
+  - lugar: {x: 0, y: 1.1, z: -16}
+    tipo: 0
+    area: 1
+  - lugar: {x: -27.4, y: 1.7, z: 6.5}
+    tipo: 1
+    area: 1
+  - lugar: {x: 27.4, y: 1.7, z: 6.5}
+    tipo: 1
+    area: 1
+  - lugar: {x: -24, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: -16, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: -8, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 8, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 16, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 24, y: 3.1, z: 6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: 6.5}
+    tipo: 7
+    area: 1
+  - lugar: {x: -27.4, y: 1.7, z: -6.5}
+    tipo: 1
+    area: 1
+  - lugar: {x: 27.4, y: 1.7, z: -6.5}
+    tipo: 1
+    area: 1
+  - lugar: {x: -24, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: -16, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: -8, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 8, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 16, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 24, y: 3.1, z: -6.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: -6.5}
+    tipo: 7
+    area: 1
+  - lugar: {x: -19.5, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -19.5, y: 3.1, z: 12}
+    tipo: 5
+    area: 1
+  - lugar: {x: -19.5, y: 1.2, z: 12}
+    tipo: 7
+    area: 1
+  - lugar: {x: -12.5, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -2, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -2, y: 3.1, z: 12}
+    tipo: 5
+    area: 1
+  - lugar: {x: -2, y: 1.2, z: 12}
+    tipo: 7
+    area: 1
+  - lugar: {x: 4, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 4, y: 0.3, z: 12}
+    tipo: 2
+    area: 1
+  - lugar: {x: 8, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 15, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 15, y: 3.1, z: 12}
+    tipo: 5
+    area: 1
+  - lugar: {x: 15, y: 1.2, z: 12}
+    tipo: 7
+    area: 1
+  - lugar: {x: 22, y: 1.7, z: 15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -27.4, y: 1.7, z: 0}
+    tipo: 1
+    area: 1
+  - lugar: {x: -25.5, y: 1.2, z: 0}
+    tipo: 7
+    area: 1
+  - lugar: {x: -17.5, y: 3.1, z: 0}
+    tipo: 5
+    area: 1
+  - lugar: {x: -17.5, y: 1.2, z: 0}
+    tipo: 7
+    area: 1
+  - lugar: {x: 0, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 0, y: 3.1, z: -12}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: -12}
+    tipo: 7
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: -1.75}
+    tipo: 1
+    area: 1
+  - lugar: {x: 0, y: 3.1, z: -1.75}
+    tipo: 5
+    area: 1
+  - lugar: {x: 0, y: 0.2, z: -1.75}
+    tipo: 6
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: -1.75}
+    tipo: 7
+    area: 1
+  - lugar: {x: -4.75, y: 1.2, z: 3.25}
+    tipo: 1
+    area: 1
+  - lugar: {x: -4.75, y: 0.2, z: 3.25}
+    tipo: 6
+    area: 1
+  - lugar: {x: 4.75, y: 1.2, z: 3.25}
+    tipo: 1
+    area: 1
+  - lugar: {x: 4.75, y: 0.2, z: 3.25}
+    tipo: 6
+    area: 1
+  - lugar: {x: 27.4, y: 1.7, z: 0}
+    tipo: 1
+    area: 1
+  - lugar: {x: 20.5, y: 3.1, z: 0}
+    tipo: 5
+    area: 1
+  - lugar: {x: 20.5, y: 1.2, z: 0}
+    tipo: 7
+    area: 1
+  - lugar: {x: -24.5, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -27.4, y: 1.7, z: -12}
+    tipo: 1
+    area: 1
+  - lugar: {x: -24.5, y: 1.2, z: -12}
+    tipo: 7
+    area: 1
+  - lugar: {x: -15.5, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: -15.5, y: 3.1, z: -12}
+    tipo: 5
+    area: 1
+  - lugar: {x: -15.5, y: 1.2, z: -12}
+    tipo: 7
+    area: 1
+  - lugar: {x: 14, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 14, y: 3.1, z: -12}
+    tipo: 5
+    area: 1
+  - lugar: {x: 14, y: 1.2, z: -12}
+    tipo: 7
+    area: 1
+  - lugar: {x: 20.5, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 20.5, y: 0.3, z: -12}
+    tipo: 2
+    area: 1
+  - lugar: {x: 25.5, y: 1.7, z: -15.4}
+    tipo: 1
+    area: 1
+  - lugar: {x: 27.4, y: 1.7, z: -12}
+    tipo: 1
+    area: 1
+  - lugar: {x: 25.5, y: 0.3, z: -12}
+    tipo: 2
+    area: 1
+  - lugar: {x: -35.5, y: 3.1, z: 1.5}
+    tipo: 5
+    area: 1
+  - lugar: {x: -35.5, y: 1.2, z: 1.5}
+    tipo: 7
+    area: 1
+  - lugar: {x: 0, y: 1.2, z: -18}
+    tipo: 1
+    area: 1
+  - lugar: {x: 24.500002, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -11.499999, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -26.5, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -9.099999, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -4.2999988, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -2.499999, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: 26.900002, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: 22.7, y: 0.3, z: 6.200001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -16.300001, y: 0.3, z: -6.9999995}
+    tipo: 2
+    area: 1
+  - lugar: {x: 15.500002, y: 0.3, z: -6.9999995}
+    tipo: 2
+    area: 1
+  - lugar: {x: -22.900002, y: 0.3, z: 14.600001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -17.5, y: 0.3, z: 9.800001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -10.899999, y: 0.3, z: 9.800001}
+    tipo: 2
+    area: 1
+  - lugar: {x: -26.5, y: 0.3, z: 1.4000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: -18.1, y: 0.3, z: 3.8000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: -13.9, y: 0.3, z: 0.20000064}
+    tipo: 2
+    area: 1
+  - lugar: {x: -21.7, y: 0.3, z: -0.9999994}
+    tipo: 2
+    area: 1
+  - lugar: {x: -14.499999, y: 0.3, z: -2.1999993}
+    tipo: 2
+    area: 1
+  - lugar: {x: -19.9, y: 0.3, z: 3.8000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: -15.099999, y: 0.3, z: 0.20000064}
+    tipo: 2
+    area: 1
+  - lugar: {x: -20.5, y: 0.3, z: -0.9999994}
+    tipo: 2
+    area: 1
+  - lugar: {x: -9.699999, y: 0.3, z: 3.8000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: -9.099999, y: 0.3, z: -0.9999994}
+    tipo: 2
+    area: 1
+  - lugar: {x: -7.299999, y: 0.3, z: -13}
+    tipo: 2
+    area: 1
+  - lugar: {x: -4.2999988, y: 0.3, z: -11.799999}
+    tipo: 2
+    area: 1
+  - lugar: {x: -3.699999, y: 0.3, z: 3.8000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: 2.3000011, y: 0.3, z: 2.6000009}
+    tipo: 2
+    area: 1
+  - lugar: {x: 10.100001, y: 0.3, z: 3.8000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: 25.100002, y: 0.3, z: -3.3999996}
+    tipo: 2
+    area: 1
+  - lugar: {x: 21.500002, y: 0.3, z: -0.9999994}
+    tipo: 2
+    area: 1
+  - lugar: {x: 20.900002, y: 0.3, z: 2.6000009}
+    tipo: 2
+    area: 1
+  - lugar: {x: 26.900002, y: 0.3, z: 1.4000007}
+    tipo: 2
+    area: 1
+  - lugar: {x: -22.300001, y: 0.3, z: -9.4}
+    tipo: 2
+    area: 1
+  - lugar: {x: -15.7, y: 0.3, z: -9.4}
+    tipo: 2
+    area: 1
+  - lugar: {x: -16.300001, y: 0.3, z: -11.799999}
+    tipo: 2
+    area: 1
+  - lugar: {x: -18.1, y: 0.3, z: -11.799999}
+    tipo: 2
+    area: 1
+  - lugar: {x: -14.499999, y: 0.3, z: -13}
+    tipo: 2
+    area: 1
+  - lugar: {x: 10.700002, y: 0.3, z: -9.4}
+    tipo: 2
+    area: 1
+  - lugar: {x: -23.698053, y: 0.4, z: 7.3890004}
+    tipo: 8
+    area: 1
+  - lugar: {x: -14.073408, y: 0.4, z: 7.4267}
+    tipo: 8
+    area: 1
+  - lugar: {x: 16.695877, y: 0.4, z: 7.3890004}
+    tipo: 8
+    area: 1
+  - lugar: {x: -24.035593, y: 0.4, z: -5.6109996}
+    tipo: 8
+    area: 1
+  - lugar: {x: -14.075616, y: 0.4, z: -7.4267}
+    tipo: 8
+    area: 1
+  - lugar: {x: 12.902245, y: 0.4, z: -5.6109996}
+    tipo: 8
+    area: 1
+  - lugar: {x: -21.26, y: 0.4, z: 12}
+    tipo: 8
+    area: 1
+  - lugar: {x: -17.74, y: 0.4, z: 12}
+    tipo: 8
+    area: 1
+  - lugar: {x: 17.756693, y: 0.4, z: 15.33465}
+    tipo: 8
+    area: 1
+  - lugar: {x: -26.51955, y: 0.4, z: -4.419}
+    tipo: 8
+    area: 1
+  - lugar: {x: -26.51955, y: 0.4, z: -3.0518}
+    tipo: 8
+    area: 1
+  - lugar: {x: -27.33465, y: 0.4, z: 4.4567003}
+    tipo: 8
+    area: 1
+  - lugar: {x: -27.33465, y: 0.4, z: 3.4501004}
+    tipo: 8
+    area: 1
+  - lugar: {x: -21.819, y: 0.4, z: 3.51955}
+    tipo: 8
+    area: 1
+  - lugar: {x: -19.6518, y: 0.4, z: 3.51955}
+    tipo: 8
+    area: 1
+  - lugar: {x: -15.584593, y: 0.4, z: 3.51955}
+    tipo: 8
+    area: 1
+  - lugar: {x: -21.51955, y: 0.4, z: -3.819}
+    tipo: 8
+    area: 1
+  - lugar: {x: -13.480451, y: 0.4, z: -1.0138016}
+    tipo: 8
+    area: 1
+  - lugar: {x: -10.397498, y: 0.4, z: -0.56135}
+    tipo: 8
+    area: 1
+  - lugar: {x: -7.33465, y: 0.4, z: -0.043300107}
+    tipo: 8
+    area: 1
+  - lugar: {x: -2.16535, y: 0.4, z: 3.1432989}
+    tipo: 8
+    area: 1
+  - lugar: {x: 2.16535, y: 0.4, z: 3.3567014}
+    tipo: 8
+    area: 1
+  - lugar: {x: 12.438649, y: 0.4, z: 3.3975005}
+    tipo: 8
+    area: 1
+  - lugar: {x: 12.438649, y: 0.4, z: -1.6025001}
+    tipo: 8
+    area: 1
+  - lugar: {x: -18.99, y: 0.4, z: -14.514999}
+    tipo: 8
+    area: 1
+  - lugar: {x: -16.1111, y: 0.4, z: -14.514999}
+    tipo: 8
+    area: 1
+  - lugar: {x: -13.232198, y: 0.4, z: -14.514999}
+    tipo: 8
+    area: 1
+  - lugar: {x: -11.485001, y: 0.4, z: -11.117}
+    tipo: 8
+    area: 1
+  - lugar: {x: -20.4567, y: 0.4, z: -15.33465}
+    tipo: 8
+    area: 1
+  - lugar: {x: -38.535797, y: 0.4, z: 7.3890004}
+    tipo: 8
+    area: 1
+  - lugar: {x: -3.4567, y: 0.4, z: -19.33465}
+    tipo: 8
+    area: 1
+  - lugar: {x: -2.4701002, y: 0.4, z: -19.33465}
+    tipo: 8
+    area: 1
+  - lugar: {x: -26, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 26, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -21.5, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -16.5, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -10, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -2, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 4.5, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 7, y: 5.1, z: 12}
+    tipo: 0
+    area: 2
+  - lugar: {x: 13, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 19, y: 5.1, z: 12}
+    tipo: 0
+    area: 2
+  - lugar: {x: 21.5, y: 5.1, z: 8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -20, y: 5.1, z: 5}
+    tipo: 0
+    area: 2
+  - lugar: {x: -12, y: 5.1, z: -1.75}
+    tipo: 0
+    area: 2
+  - lugar: {x: 20, y: 5.1, z: 5}
+    tipo: 0
+    area: 2
+  - lugar: {x: 12, y: 5.1, z: -1.75}
+    tipo: 0
+    area: 2
+  - lugar: {x: -24, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -6, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 5, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -18.1, y: 5.1, z: -10.5}
+    tipo: 0
+    area: 2
+  - lugar: {x: -11.1, y: 5.1, z: -10.5}
+    tipo: 0
+    area: 2
+  - lugar: {x: -4.1000004, y: 5.1, z: -10.5}
+    tipo: 0
+    area: 2
+  - lugar: {x: 2.8999996, y: 5.1, z: -10.5}
+    tipo: 0
+    area: 2
+  - lugar: {x: 13, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 20.5, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: 25.5, y: 5.1, z: -8}
+    tipo: 0
+    area: 2
+  - lugar: {x: -27.4, y: 5.7, z: 6.5}
+    tipo: 1
+    area: 2
+  - lugar: {x: 27.4, y: 5.7, z: 6.5}
+    tipo: 1
+    area: 2
+  - lugar: {x: -24, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: -16, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: -8, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 0, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 8, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 16, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 24, y: 7.1, z: 6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 0, y: 5.2, z: 6.5}
+    tipo: 7
+    area: 2
+  - lugar: {x: -27.4, y: 5.7, z: -6.5}
+    tipo: 1
+    area: 2
+  - lugar: {x: 27.4, y: 5.7, z: -6.5}
+    tipo: 1
+    area: 2
+  - lugar: {x: -24, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: -16, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: -8, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 0, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 8, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 16, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 24, y: 7.1, z: -6.5}
+    tipo: 5
+    area: 2
+  - lugar: {x: 0, y: 5.2, z: -6.5}
+    tipo: 7
+    area: 2
+  - lugar: {x: -21.5, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -16.5, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -6, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -6, y: 7.1, z: 12}
+    tipo: 5
+    area: 2
+  - lugar: {x: -6, y: 5.2, z: 12}
+    tipo: 7
+    area: 2
+  - lugar: {x: 4.5, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 13, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 13, y: 7.1, z: 12}
+    tipo: 5
+    area: 2
+  - lugar: {x: 13, y: 5.2, z: 12}
+    tipo: 7
+    area: 2
+  - lugar: {x: 21.5, y: 5.7, z: 15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -27.4, y: 5.7, z: 0}
+    tipo: 1
+    area: 2
+  - lugar: {x: -20, y: 7.1, z: 0}
+    tipo: 5
+    area: 2
+  - lugar: {x: -20, y: 5.2, z: 0}
+    tipo: 7
+    area: 2
+  - lugar: {x: 0, y: 7.1, z: -1.75}
+    tipo: 5
+    area: 2
+  - lugar: {x: 0, y: 4.2, z: -1.75}
+    tipo: 6
+    area: 2
+  - lugar: {x: 0, y: 5.2, z: -1.75}
+    tipo: 7
+    area: 2
+  - lugar: {x: -6.75, y: 4.2, z: 3.25}
+    tipo: 6
+    area: 2
+  - lugar: {x: 6.75, y: 4.2, z: 3.25}
+    tipo: 6
+    area: 2
+  - lugar: {x: 27.4, y: 5.7, z: 0}
+    tipo: 1
+    area: 2
+  - lugar: {x: 20, y: 7.1, z: 0}
+    tipo: 5
+    area: 2
+  - lugar: {x: 20, y: 5.2, z: 0}
+    tipo: 7
+    area: 2
+  - lugar: {x: -24, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -27.4, y: 5.7, z: -12}
+    tipo: 1
+    area: 2
+  - lugar: {x: -24, y: 7.1, z: -12}
+    tipo: 5
+    area: 2
+  - lugar: {x: -24, y: 5.2, z: -12}
+    tipo: 7
+    area: 2
+  - lugar: {x: -6, y: 7.1, z: -9.25}
+    tipo: 5
+    area: 2
+  - lugar: {x: -6, y: 5.2, z: -9.25}
+    tipo: 7
+    area: 2
+  - lugar: {x: -16.5, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -9.5, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: -2.5, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 4.5, y: 5.2, z: -13.25}
+    tipo: 9
+    area: 2
+  - lugar: {x: 13, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 13, y: 7.1, z: -12}
+    tipo: 5
+    area: 2
+  - lugar: {x: 13, y: 5.2, z: -12}
+    tipo: 7
+    area: 2
+  - lugar: {x: 20.5, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 20.5, y: 4.3, z: -12}
+    tipo: 2
+    area: 2
+  - lugar: {x: 25.5, y: 5.7, z: -15.4}
+    tipo: 1
+    area: 2
+  - lugar: {x: 27.4, y: 5.7, z: -12}
+    tipo: 1
+    area: 2
+  - lugar: {x: 25.5, y: 4.3, z: -12}
+    tipo: 2
+    area: 2
+  - lugar: {x: 13.700002, y: 4.3, z: 6.200001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -22.300001, y: 4.3, z: 6.200001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -1.299999, y: 4.3, z: 6.200001}
+    tipo: 2
+    area: 2
+  - lugar: {x: 2.3000011, y: 4.3, z: 6.200001}
+    tipo: 2
+    area: 2
+  - lugar: {x: 5.3000016, y: 4.3, z: -6.9999995}
+    tipo: 2
+    area: 2
+  - lugar: {x: -15.099999, y: 4.3, z: 9.800001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -1.8999989, y: 4.3, z: 14.600001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -2.499999, y: 4.3, z: 11.000002}
+    tipo: 2
+    area: 2
+  - lugar: {x: -4.2999988, y: 4.3, z: 11.000002}
+    tipo: 2
+    area: 2
+  - lugar: {x: 1.1000011, y: 4.3, z: 9.800001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -13.299999, y: 4.3, z: 14.600001}
+    tipo: 2
+    area: 2
+  - lugar: {x: -22.300001, y: 4.3, z: -0.9999994}
+    tipo: 2
+    area: 2
+  - lugar: {x: -25.300001, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: -18.7, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: -24.1, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: -22.300001, y: 4.3, z: 3.8000007}
+    tipo: 2
+    area: 2
+  - lugar: {x: 5.3000016, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: 2.9000013, y: 4.3, z: -2.1999993}
+    tipo: 2
+    area: 2
+  - lugar: {x: -7.299999, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: -4.8999987, y: 4.3, z: 2.6000009}
+    tipo: 2
+    area: 2
+  - lugar: {x: 4.7000017, y: 4.3, z: 2.6000009}
+    tipo: 2
+    area: 2
+  - lugar: {x: 10.700002, y: 4.3, z: 3.8000007}
+    tipo: 2
+    area: 2
+  - lugar: {x: 25.100002, y: 4.3, z: 0.20000064}
+    tipo: 2
+    area: 2
+  - lugar: {x: 26.900002, y: 4.3, z: 1.4000007}
+    tipo: 2
+    area: 2
+  - lugar: {x: 23.300001, y: 4.3, z: 1.4000007}
+    tipo: 2
+    area: 2
+  - lugar: {x: 26.900002, y: 4.3, z: -2.1999993}
+    tipo: 2
+    area: 2
+  - lugar: {x: 19.7, y: 4.3, z: -3.3999996}
+    tipo: 2
+    area: 2
+  - lugar: {x: -12.099999, y: 4.3, z: -9.4}
+    tipo: 2
+    area: 2
+  - lugar: {x: -0.09999889, y: 4.3, z: -9.4}
+    tipo: 2
+    area: 2
+  - lugar: {x: -7.299999, y: 4.3, z: -9.4}
+    tipo: 2
+    area: 2
+  - lugar: {x: -18.1, y: 4.3, z: -13}
+    tipo: 2
+    area: 2
+  - lugar: {x: -19.300001, y: 4.3, z: -11.799999}
+    tipo: 2
+    area: 2
+  - lugar: {x: -10.299999, y: 4.3, z: -14.2}
+    tipo: 2
+    area: 2
+  - lugar: {x: -9.099999, y: 4.3, z: -11.799999}
+    tipo: 2
+    area: 2
+  - lugar: {x: -4.2999988, y: 4.3, z: -14.2}
+    tipo: 2
+    area: 2
+  - lugar: {x: 16.7, y: 4.3, z: -9.4}
+    tipo: 2
+    area: 2
+  - lugar: {x: -22.826424, y: 4.4, z: 5.6109996}
+    tipo: 8
+    area: 2
+  - lugar: {x: 6.299639, y: 4.4, z: 7.4267}
+    tipo: 8
+    area: 2
+  - lugar: {x: -21.263962, y: 4.4, z: -7.3890004}
+    tipo: 8
+    area: 2
+  - lugar: {x: 2.7657664, y: 4.4, z: -7.4267}
+    tipo: 8
+    area: 2
+  - lugar: {x: -23.43865, y: 4.4, z: 13.1714945}
+    tipo: 8
+    area: 2
+  - lugar: {x: -15.997493, y: 4.4, z: 15.438649}
+    tipo: 8
+    area: 2
+  - lugar: {x: -12.25, y: 4.4, z: 14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -8.6711, y: 4.4, z: 14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -5.0922, y: 4.4, z: 14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -1.5132998, y: 4.4, z: 14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: 0.515, y: 4.4, z: 10.510002}
+    tipo: 8
+    area: 2
+  - lugar: {x: -26.515, y: 4.4, z: -3.25}
+    tipo: 8
+    area: 2
+  - lugar: {x: -26.515, y: 4.4, z: -0.37110007}
+    tipo: 8
+    area: 2
+  - lugar: {x: -26.515, y: 4.4, z: 2.5078}
+    tipo: 8
+    area: 2
+  - lugar: {x: -23.117, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -20.2381, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -17.3592, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -14.480298, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -23.376999, y: 4.4, z: 3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -17.998089, y: 4.4, z: 3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: -12.543301, y: 4.4, z: 4.33465}
+    tipo: 8
+    area: 2
+  - lugar: {x: 14.510002, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 17.3889, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 20.267801, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 23.146702, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 26.025602, y: 4.4, z: -3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 26.515, y: 4.4, z: -0.11700016}
+    tipo: 8
+    area: 2
+  - lugar: {x: 26.515, y: 4.4, z: 2.7619}
+    tipo: 8
+    area: 2
+  - lugar: {x: 13.485001, y: 4.4, z: 0.32299984}
+    tipo: 8
+    area: 2
+  - lugar: {x: 16.623001, y: 4.4, z: 3.515}
+    tipo: 8
+    area: 2
+  - lugar: {x: 12.66535, y: 4.4, z: -3.656701}
+    tipo: 8
+    area: 2
+  - lugar: {x: -16.37, y: 4.4, z: -14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -9.37, y: 4.4, z: -14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -2.37, y: 4.4, z: -14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: 4.63, y: 4.4, z: -14.514999}
+    tipo: 8
+    area: 2
+  - lugar: {x: -26, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 26, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -21, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -14, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -3, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 8, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 20, y: 9.1, z: 8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -18, y: 9.1, z: 5}
+    tipo: 0
+    area: 3
+  - lugar: {x: -18, y: 9.1, z: -5}
+    tipo: 0
+    area: 3
+  - lugar: {x: -8, y: 9.1, z: -1.75}
+    tipo: 0
+    area: 3
+  - lugar: {x: 18, y: 9.1, z: 5}
+    tipo: 0
+    area: 3
+  - lugar: {x: 18, y: 9.1, z: -5}
+    tipo: 0
+    area: 3
+  - lugar: {x: 8, y: 9.1, z: -1.75}
+    tipo: 0
+    area: 3
+  - lugar: {x: -24, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -17, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -10, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 0, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 6, y: 9.1, z: -12}
+    tipo: 0
+    area: 3
+  - lugar: {x: 12, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 20.5, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: 25.5, y: 9.1, z: -8}
+    tipo: 0
+    area: 3
+  - lugar: {x: -27.4, y: 9.7, z: 6.5}
+    tipo: 1
+    area: 3
+  - lugar: {x: 27.4, y: 9.7, z: 6.5}
+    tipo: 1
+    area: 3
+  - lugar: {x: 0, y: 8.3, z: 6.5}
+    tipo: 2
+    area: 3
+  - lugar: {x: -24, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: -16, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: -8, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 8, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 16, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 24, y: 11.1, z: 6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 9.2, z: 6.5}
+    tipo: 7
+    area: 3
+  - lugar: {x: -27.4, y: 9.7, z: -6.5}
+    tipo: 1
+    area: 3
+  - lugar: {x: 27.4, y: 9.7, z: -6.5}
+    tipo: 1
+    area: 3
+  - lugar: {x: 0, y: 8.3, z: -6.5}
+    tipo: 2
+    area: 3
+  - lugar: {x: -24, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: -16, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: -8, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 8, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 16, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 24, y: 11.1, z: -6.5}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 9.2, z: -6.5}
+    tipo: 7
+    area: 3
+  - lugar: {x: -21, y: 9.7, z: 15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -21, y: 8.3, z: 12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -21, y: 9.2, z: 12}
+    tipo: 7
+    area: 3
+  - lugar: {x: -14, y: 9.7, z: 15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -14, y: 8.3, z: 12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -14, y: 11.1, z: 12}
+    tipo: 5
+    area: 3
+  - lugar: {x: -14, y: 9.2, z: 12}
+    tipo: 7
+    area: 3
+  - lugar: {x: -3, y: 9.7, z: 15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -3, y: 8.3, z: 12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -3, y: 11.1, z: 12}
+    tipo: 5
+    area: 3
+  - lugar: {x: -3, y: 8.2, z: 12}
+    tipo: 6
+    area: 3
+  - lugar: {x: -3, y: 9.2, z: 12}
+    tipo: 7
+    area: 3
+  - lugar: {x: 14, y: 9.7, z: 15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: 14, y: 8.3, z: 12}
+    tipo: 2
+    area: 3
+  - lugar: {x: 14, y: 11.1, z: 12}
+    tipo: 5
+    area: 3
+  - lugar: {x: 14, y: 8.2, z: 12}
+    tipo: 6
+    area: 3
+  - lugar: {x: 14, y: 9.2, z: 12}
+    tipo: 7
+    area: 3
+  - lugar: {x: -27.4, y: 9.7, z: 0}
+    tipo: 1
+    area: 3
+  - lugar: {x: -18, y: 8.3, z: 0}
+    tipo: 2
+    area: 3
+  - lugar: {x: -18, y: 11.1, z: 0}
+    tipo: 5
+    area: 3
+  - lugar: {x: -18, y: 8.2, z: 0}
+    tipo: 6
+    area: 3
+  - lugar: {x: -18, y: 9.2, z: 0}
+    tipo: 7
+    area: 3
+  - lugar: {x: 0, y: 8.3, z: -1.75}
+    tipo: 2
+    area: 3
+  - lugar: {x: 0, y: 11.1, z: -1.75}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 9.2, z: -1.75}
+    tipo: 7
+    area: 3
+  - lugar: {x: -4.75, y: 8.3, z: 3.25}
+    tipo: 2
+    area: 3
+  - lugar: {x: 4.75, y: 8.3, z: 3.25}
+    tipo: 2
+    area: 3
+  - lugar: {x: 27.4, y: 9.7, z: 0}
+    tipo: 1
+    area: 3
+  - lugar: {x: 18, y: 8.3, z: 0}
+    tipo: 2
+    area: 3
+  - lugar: {x: 18, y: 11.1, z: 0}
+    tipo: 5
+    area: 3
+  - lugar: {x: 18, y: 8.2, z: 0}
+    tipo: 6
+    area: 3
+  - lugar: {x: 18, y: 9.2, z: 0}
+    tipo: 7
+    area: 3
+  - lugar: {x: -24, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -27.4, y: 9.7, z: -12}
+    tipo: 1
+    area: 3
+  - lugar: {x: -24, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -24, y: 11.1, z: -12}
+    tipo: 5
+    area: 3
+  - lugar: {x: -24, y: 9.2, z: -12}
+    tipo: 7
+    area: 3
+  - lugar: {x: -17, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -17, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -17, y: 8.2, z: -12}
+    tipo: 6
+    area: 3
+  - lugar: {x: -17, y: 9.2, z: -12}
+    tipo: 7
+    area: 3
+  - lugar: {x: -10, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: -10, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: -10, y: 11.1, z: -12}
+    tipo: 5
+    area: 3
+  - lugar: {x: -10, y: 8.2, z: -12}
+    tipo: 6
+    area: 3
+  - lugar: {x: -10, y: 9.2, z: -12}
+    tipo: 7
+    area: 3
+  - lugar: {x: 0, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: 0, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: 0, y: 11.1, z: -12}
+    tipo: 5
+    area: 3
+  - lugar: {x: 0, y: 8.2, z: -12}
+    tipo: 6
+    area: 3
+  - lugar: {x: 0, y: 9.2, z: -12}
+    tipo: 7
+    area: 3
+  - lugar: {x: 12, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: 12, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: 12, y: 11.1, z: -12}
+    tipo: 5
+    area: 3
+  - lugar: {x: 12, y: 8.2, z: -12}
+    tipo: 6
+    area: 3
+  - lugar: {x: 12, y: 9.2, z: -12}
+    tipo: 7
+    area: 3
+  - lugar: {x: 20.5, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: 20.5, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: 25.5, y: 9.7, z: -15.4}
+    tipo: 1
+    area: 3
+  - lugar: {x: 27.4, y: 9.7, z: -12}
+    tipo: 1
+    area: 3
+  - lugar: {x: 25.5, y: 8.3, z: -12}
+    tipo: 2
+    area: 3
+  - lugar: {x: 4.0904937, y: 8.4, z: 7.4267}
+    tipo: 8
+    area: 3
+  - lugar: {x: 5.056621, y: 8.4, z: -7.4267}
+    tipo: 8
+    area: 3
+  areas:
+  - {x: -4.3, y: -0.3}
+  - {x: -0.3, y: 3.7}
+  - {x: 3.7, y: 7.7}
+  - {x: 7.7, y: 13}
+  limites:
+    m_Center: {x: -7.5, y: 4, z: -2}
+    m_Extent: {x: 36.5, y: 9, z: 19}
+  margem: 6
+  intervalo: {x: 45, y: 120}
+  volume: 1
+  pedeSilencio: 1
+  anotar: 0
+--- !u!4 &375068092
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 375068090}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &637461361
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 637461363}
+  - component: {fileID: 637461362}
+  m_Layer: 0
+  m_Name: "P\xF3s-processamento (dia)"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &637461362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637461361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: fc677dd4cbfe8f24c819d44f7fb71d98, type: 2}
+--- !u!4 &637461363
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 637461361}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1014172097
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1014172100}
+  - component: {fileID: 1014172099}
+  - component: {fileID: 1014172098}
+  m_Layer: 0
+  m_Name: Jogador de exemplo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1014172098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1014172097}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d18713b12100d874fab3eaf1c5ac8f44, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ZombieCityCleaner.Mundo::ZombieCityCleaner.Mundo.AndarNoExemplo
+  cabeca: {fileID: 172962293}
+  andar: 2
+  correr: 4.2
+  voar: 10
+  sensibilidade: 0.08
+  corpo: {fileID: 10933663}
+  ombro: {x: 0.5, y: 0.15, z: -2.3}
+--- !u!143 &1014172099
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1014172097}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 1.8
+  m_Radius: 0.3
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!4 &1014172100
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1014172097}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.35, z: -36}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 172962293}
+  - {fileID: 10933664}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1388733902
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1388733904}
+  - component: {fileID: 1388733903}
+  m_Layer: 0
+  m_Name: "Pap\xE9is do hospital"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1388733903
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1388733902}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d091dd3c3ee464d4d9ecbd979bc6d525, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Documentos.PapeisDoLugar
+  arquivo: Documentos/Hospital
+  material: {fileID: 2100000, guid: 2c69bbd4c5acd4040abdfcdcd82fa869, type: 2}
+  papeis:
+  - id: triagem
+    forma: 3
+    lugar: {x: -11.606999, y: 1.02, z: 0.57195}
+    giro: {x: 0, y: 0.9986295, z: 0, w: -0.05233594}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -11.106999, y: 0.60515, z: 0.52755004}
+    caixaTamanho: {x: 1.586, y: 1.2103, z: 0.81509995}
+    caixaGiro: 0
+  - id: evacuacao
+    forma: 2
+    lugar: {x: 9.824999, y: 1.9000001, z: -11.68}
+    giro: {x: -0.51291716, y: 0.51291716, z: 0.48674026, w: 0.4867402}
+    naParede: 1
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: seguranca
+    forma: 6
+    lugar: {x: -22.679989, y: 1.0040001, z: -15.139999}
+    giro: {x: 0, y: 0.99939084, z: 0, w: 0.034899496}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -23.69999, y: 1.079, z: -15.36}
+    caixaTamanho: {x: 2.6, y: 2.158, z: 1.04}
+    caixaGiro: 0
+  - id: bilhete_ellen
+    forma: 5
+    lugar: {x: -14.324999, y: 1.173, z: 9.820001}
+    giro: {x: 0, y: 0.77714604, z: 0, w: -0.6293203}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -14.424999, y: 0.663, z: 9.27}
+    caixaTamanho: {x: 2.34, y: 1.326, z: 0.90999997}
+    caixaGiro: 90
+  - id: ambulancias
+    forma: 3
+    lugar: {x: -24.55, y: 0.018, z: 0.9}
+    giro: {x: 0, y: 0.31730464, z: 0, w: 0.94832367}
+    naParede: 0
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: ficha_iso4
+    forma: 3
+    lugar: {x: 4.12, y: 5.48, z: -10.39}
+    giro: {x: 0.012340717, y: 0.7069991, z: 0.7069991, w: 0.012340717}
+    naParede: 1
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: recado_iso4
+    forma: 2
+    lugar: {x: 1.55, y: 5.62, z: -10.395}
+    giro: {x: -0.024677673, y: 0.70667607, z: 0.70667607, w: -0.024677673}
+    naParede: 1
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: protocolo
+    forma: 2
+    lugar: {x: -8.45, y: 5.5, z: -8.105}
+    giro: {x: -0.7070463, y: -0.009255744, z: 0.009255744, w: 0.7070463}
+    naParede: 1
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: diario_lowell
+    forma: 6
+    lugar: {x: 15.51, y: 5.004, z: -11.98}
+    giro: {x: 0, y: 0.0784591, z: 0, w: 0.9969173}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: 15.45, y: 4.494, z: -12}
+    caixaTamanho: {x: 1.5600001, y: 0.988, z: 1.04}
+    caixaGiro: 0
+  - id: lista_uti
+    forma: 3
+    lugar: {x: -5.0421996, y: 4.8780003, z: 14.294999}
+    giro: {x: 0, y: 0.99254614, z: 0, w: -0.12186929}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -4.9621997, y: 5.2714, z: 14.4435}
+    caixaTamanho: {x: 1.5600001, y: 2.5428, z: 2.873}
+    caixaGiro: 180
+  - id: memorando
+    forma: 0
+    lugar: {x: 6.3929996, y: 9.015, z: -15.41805}
+    giro: {x: 0, y: 0.99939084, z: 0, w: -0.034899462}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: 6.8929996, y: 8.60515, z: -15.472449}
+    caixaTamanho: {x: 1.586, y: 1.2103, z: 0.81509995}
+    caixaGiro: 0
+  - id: ata
+    forma: 4
+    lugar: {x: -4.495, y: 8.999, z: 12.04}
+    giro: {x: 0, y: -0.06104854, z: 0, w: 0.9981348}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -4.1749997, y: 8.494, z: 12}
+    caixaTamanho: {x: 2.34, y: 0.988, z: 1.17}
+    caixaGiro: 0
+  - id: ordem_estado
+    forma: 4
+    lugar: {x: -9.74, y: 8.999, z: -12.08}
+    giro: {x: 0, y: 0.1305262, z: 0, w: 0.9914449}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -10, y: 8.494, z: -12}
+    caixaTamanho: {x: 2.34, y: 0.988, z: 1.17}
+    caixaGiro: 0
+  - id: carta_whitaker
+    forma: 1
+    lugar: {x: 1.6660001, y: 9.015, z: -14.469999}
+    giro: {x: 0, y: -0.104528435, z: 0, w: -0.9945219}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: 1.4160001, y: 8.75205, z: -14.302599}
+    caixaTamanho: {x: 2.522, y: 1.5040998, z: 1.2284999}
+    caixaGiro: 180
+  - id: email_ti
+    forma: 0
+    lugar: {x: -22.106997, y: 8.993, z: 15.348049}
+    giro: {x: 0, y: 0.06975647, z: 0, w: -0.9975641}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -22.206997, y: 8.60515, z: 15.472449}
+    caixaTamanho: {x: 1.586, y: 1.2103, z: 0.81509995}
+    caixaGiro: 180
+  - id: livro_necroterio
+    forma: 6
+    lugar: {x: 9.779971, y: -2.816, z: 4.3650002}
+    giro: {x: 0, y: -0.017452395, z: 0, w: -0.9998477}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: 9.329971, y: -3.337, z: 4.425}
+    caixaTamanho: {x: 2.34, y: 1.326, z: 0.90999997}
+    caixaGiro: 180
+  - id: laudo
+    forma: 3
+    lugar: {x: -16.279999, y: -2.822, z: 4.3650002}
+    giro: {x: 0, y: 0.07845904, z: 0, w: -0.99691737}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -16.73, y: -3.337, z: 4.425}
+    caixaTamanho: {x: 2.34, y: 1.326, z: 0.90999997}
+    caixaGiro: 180
+  - id: ordem_servico
+    forma: 0
+    lugar: {x: -11.5, y: -2.8270001, z: 15.3375}
+    giro: {x: 0, y: -0.0697564, z: 0, w: -0.9975641}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -11.14, y: -2.804, z: 15.3951}
+    caixaTamanho: {x: 2.08, y: 2.392, z: 0.96979994}
+    caixaGiro: 180
+  - id: registro_a01
+    forma: 3
+    lugar: {x: 1.39, y: -2.52, z: -11.3}
+    giro: {x: 0.50865006, y: -0.50865006, z: -0.49119765, w: -0.49119765}
+    naParede: 1
+    temCaixa: 0
+    caixaMeio: {x: 0, y: 0, z: 0}
+    caixaTamanho: {x: 0, y: 0, z: 0}
+    caixaGiro: 0
+  - id: recado_ray
+    forma: 5
+    lugar: {x: -13.65, y: -3.407, z: -11.9}
+    giro: {x: 0, y: 0.104528464, z: 0, w: 0.9945219}
+    naParede: 0
+    temCaixa: 1
+    caixaMeio: {x: -13, y: -3.7075, z: -12}
+    caixaTamanho: {x: 3.1200001, y: 0.585, z: 0.442}
+    caixaGiro: 0
+--- !u!4 &1388733904
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1388733902}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1799806310
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1799806312}
+  - component: {fileID: 1799806311}
+  m_Layer: 0
+  m_Name: Hospital de teste
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1799806311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1799806310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a81e75fb56dd4ac42805c81e3a8de199, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ZombieCityCleaner.Mundo::ZombieCityCleaner.Mundo.CenaDoHospital
+  semente: 7
+  material: {fileID: 2100000, guid: f8a9c6e3bd46c3842b5c372a58a3ec06, type: 2}
+  poste: {fileID: 985472821302921024, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  carros:
+  - {fileID: -807163983385293437, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: -5761893083332722200, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: 112857496062930692, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: 574055042119564879, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  arvores:
+  - {fileID: -8984960693311073146, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: -7218191154383328691, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: -4307282910045138849, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: -2123691343515589935, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  - {fileID: -4270172392719922950, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  luzDentro: 1
+  luzNoSubsolo: 0.15
+  neblinaDeFora: 0.012
+  abandono: 0.9
+  vegetacao: {fileID: 2100000, guid: 043aa4574443edd49a5bdab9c9d5bb0b, type: 2}
+  arbustoA: {fileID: -4032179729299110190, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  arbustoB: {fileID: -2733589995884010319, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  arbustoC: {fileID: 7467557260532811106, guid: cd015eb777c1d604f9c4e020bec65776, type: 3}
+  lixeira: {fileID: 4976106111585889953, guid: 1cf6a00bf55481647bc2a001cad7ff0a, type: 3}
+  mobilia:
+  - {fileID: 3804729944867200493, guid: 9e8b55e7292534243910665d0be654bc, type: 3}
+  - {fileID: 4613265520382533759, guid: f59a1384416065a4d860d63aaf6fee97, type: 3}
+  - {fileID: 4174122988250163747, guid: 4640eea5e4cba514c88176b6cdff586e, type: 3}
+  - {fileID: 2257924048964895320, guid: 278269bf2c1bf3a4ba20c35b7603a215, type: 3}
+  - {fileID: 1592104888017288059, guid: ade7f355adb1e124bb501c167fdfafda, type: 3}
+  - {fileID: 7520709586085159892, guid: 909caf6768135e0478bb44e54e5df277, type: 3}
+  - {fileID: 8020120449923939468, guid: 1d499755297b39c4ab90730644ac61ba, type: 3}
+  - {fileID: 1275051664046508580, guid: 030b6256a348fc64ab56a3ee2cbe073a, type: 3}
+  - {fileID: 6388767320158387621, guid: da0d35377d3aada479e276976887d0b2, type: 3}
+  - {fileID: 6831182471088714719, guid: 6074da841380cc14fb86c8fab91bfcd6, type: 3}
+  - {fileID: 2307758499010529769, guid: 3ab3babe089851043902d0504f50a1b5, type: 3}
+  - {fileID: 2618575603177191907, guid: 1d583f0aece8507439dd7839280470aa, type: 3}
+  - {fileID: 8089651807265108377, guid: 37aa482bad6ef9a498f2b51af76e7c1d, type: 3}
+  - {fileID: 2468862460620932802, guid: 6e5c6d667dc9da04ca6b06c43aa9053a, type: 3}
+  - {fileID: 331718632995565264, guid: 49f599302085f114689b8921736accf4, type: 3}
+  - {fileID: 1461904909504974042, guid: bc84d7bd2dd5a724db510fc70b4d5e99, type: 3}
+  - {fileID: 5994870571941391516, guid: 55d380cbbfbb36449979e5fc323fd754, type: 3}
+  - {fileID: 1686663151890132650, guid: 65071d4b6f248d0479d8044aafb91189, type: 3}
+  - {fileID: 1694022752153000832, guid: 529d564ae12988244a95c738ea15de93, type: 3}
+  - {fileID: 8996361395438523469, guid: 0fc4d439eb86e45428e653a319a8665e, type: 3}
+  - {fileID: 3688515109708075126, guid: 52e7696d53376054a8cb29014224207a, type: 3}
+  - {fileID: 221550901040896298, guid: 195d310bf3401e24582b906fc4b1f9f3, type: 3}
+  - {fileID: 1719944813381170913, guid: 363cf21b07573cf4fa275c6c2eb8362a, type: 3}
+  - {fileID: 5446233055942766226, guid: 60886c841873869459df7de930153e88, type: 3}
+  - {fileID: 6640264661171162134, guid: 7b796f0b9d41ab5428a30e0965bb91be, type: 3}
+  - {fileID: 8024298397561570444, guid: 0289b466e155aae4fb38e750ea9cbf39, type: 3}
+  - {fileID: 8163112523591784453, guid: fb0e62443cb8fa2489fe06106635f5f2, type: 3}
+  - {fileID: 3145339013100593256, guid: f3eddbb205270fa4dba65e48d7e2550c, type: 3}
+  - {fileID: 8140207931137699423, guid: 867e2d1295312ae4887605154bbb4283, type: 3}
+  - {fileID: 6960241011143608856, guid: 90d9740f0f585ff46ad4ea5c0af83fca, type: 3}
+  - {fileID: 2942437822791388021, guid: 4d8c4c19ff852c749957e148dd80bb7b, type: 3}
+  - {fileID: 3676963963545594193, guid: 783c5c8b409e3c24d825ab109e5b2c65, type: 3}
+  - {fileID: 1636701150039199292, guid: bb929b87655279e4190e1ac89a7c4a82, type: 3}
+  - {fileID: 1849402736699261872, guid: 382b7251512dfe74db910b64bd9126e8, type: 3}
+  - {fileID: 58446230838127994, guid: e5a7c6affde9c3a4384e6afde77b6519, type: 3}
+  - {fileID: 3389765804262516301, guid: a2fe0ef8be47f444dbbc348e59f1466a, type: 3}
+  - {fileID: 2320580573388871997, guid: 839c1ac05c15ed240abc4baceca2ceef, type: 3}
+  - {fileID: 9035428054315359341, guid: 3aa0a092849293c4f9ff22b892188f89, type: 3}
+  - {fileID: 295108688915297213, guid: 48b8ff4d495a4f44c997c9896edfd7fb, type: 3}
+  - {fileID: 1116860640506344631, guid: 22fce3ed9dfb8a74f87d1b54663d5fc6, type: 3}
+  - {fileID: 3187588500288517974, guid: bfbfa30fe76ebb646ab81a39ef153838, type: 3}
+  - {fileID: 2253739137551690052, guid: ddc4cb0eeff4ba64899281032c06b5f3, type: 3}
+  - {fileID: 5743380975099318532, guid: 6cf62e5f7e03791438349f4ac2ed2282, type: 3}
+  - {fileID: 4562548700625710465, guid: 4259da79357650241a84cb681da22edd, type: 3}
+  - {fileID: 5745860758540218667, guid: 868dc1804a16f75418be2923994c9229, type: 3}
+  - {fileID: 5208056067304774929, guid: 0a9679147032cc24bb517d93975c29f0, type: 3}
+  - {fileID: 2702627774363095885, guid: 0593d7e0bf43b704db69ca665c6cdcae, type: 3}
+  - {fileID: 2376621492728369621, guid: 3f7412aa5a84b13468c3040ec0c9c971, type: 3}
+  - {fileID: 2813152656885842085, guid: 5731e856899d33349bafe7e3e0bd247f, type: 3}
+  - {fileID: 790774095797994495, guid: ae683d37cc65447408f43e06f2976fdf, type: 3}
+  - {fileID: 8020941519697348439, guid: 315febb7440958a4e945aefcee5c4865, type: 3}
+  - {fileID: 6698635306452370870, guid: 7ad8b05f895bd644095fd2bf47be59b3, type: 3}
+  - {fileID: 5263461705342810448, guid: 8a980448a081f1848ad78991f0e6abe3, type: 3}
+  - {fileID: 2221878306355787584, guid: 68ebae10a3880d440a6e5c43946c0707, type: 3}
+  - {fileID: 8685008444655162090, guid: 817f0840fa7731b4d837f3496dac989b, type: 3}
+  - {fileID: 6548772148184627871, guid: 097be1469fcd15f48a2c246d76e964c0, type: 3}
+  - {fileID: 3797016391550671496, guid: e1109b40dfdb86141a7c16a2e0bbab0e, type: 3}
+  - {fileID: 6371845328652198824, guid: 85c06ef2a9c227445807606f2a797a61, type: 3}
+  - {fileID: 5527452469560122274, guid: 52abb96d404e87b4ba942cb18411670c, type: 3}
+  - {fileID: 2730945033001285884, guid: 18b07ee8720482240b8c1efb2a7046a2, type: 3}
+  - {fileID: 1926162294240192216, guid: a9f04d15232d6874c8476d4c6bcf0eaf, type: 3}
+  - {fileID: 6943242214200645005, guid: 439287c741b399843a5ce2c671f31435, type: 3}
+  - {fileID: 3289644127870391635, guid: 67df7045d5ab0ed469e4e3807115fdb5, type: 3}
+  - {fileID: 2297381222501996096, guid: cc2a8753d1178b046be4c7f561c19b38, type: 3}
+  - {fileID: 5515894659467384887, guid: 3fca4b60786777742a1037cfd2a76baf, type: 3}
+  - {fileID: 6609199255783283563, guid: cce9432293cd67b4e957f2883e5ec1f0, type: 3}
+  - {fileID: 4985637611764733429, guid: 5ceae5b6bc2de784bb22c854ebcf0993, type: 3}
+  - {fileID: 6568625521663227228, guid: 5edb3d7fa61bbfe4eb7d3b03ac04bf01, type: 3}
+  - {fileID: 2481916766001126838, guid: 6aacebaaf9c87e54baa9a362244ee6ad, type: 3}
+  - {fileID: 788090300492018775, guid: 2f5b14909615720469a64afec0b93669, type: 3}
+  - {fileID: 6421021957201109649, guid: f8ec8f6a67c9f8941bbccb551efe8f34, type: 3}
+  - {fileID: 2065295818346030592, guid: 33fba46f038148a44a281c877804522d, type: 3}
+  - {fileID: 3384114815333980069, guid: f9e4da59b1fc46c4ea436bef2fa5121c, type: 3}
+  - {fileID: 7535300226141369793, guid: 44c59ae45d8d7a64d9007bb8294d1e87, type: 3}
+  - {fileID: 1217966729586831843, guid: 5f2777d9a18da7f4e99867095ae6ab26, type: 3}
+  - {fileID: 7111218796059218909, guid: 255e6fc20543f344685b0ca1374bbb54, type: 3}
+  - {fileID: 5886255554818439285, guid: c9dc8441d47ecfd4c820ceef044b120b, type: 3}
+  - {fileID: 999348096648652603, guid: 4dae9d21372cea341be3174c256658ec, type: 3}
+  - {fileID: 7364131291984488692, guid: c67b29c51e3f6594380b59b0790b36e3, type: 3}
+  - {fileID: 1953185591808619123, guid: 985f2ba1a1ce1a4429d801d7fe53d3a6, type: 3}
+  - {fileID: 1542923369637187699, guid: 48db599f1259a234586be70e05999d46, type: 3}
+  - {fileID: 2365911112027150655, guid: 65b07b735306dc146b221c52c701e003, type: 3}
+  - {fileID: 3091004861826644489, guid: 8bd5199f85584734a941ffef96da5df2, type: 3}
+  - {fileID: 8639880243542063934, guid: 3c491b4594df40c4681e74163c0a54f8, type: 3}
+  - {fileID: 531179137934674637, guid: 260f3864800442748a61afd58aa7135b, type: 3}
+  - {fileID: 300096933267538793, guid: 9555515af9b17354486a1b8ff4182b0e, type: 3}
+  - {fileID: 4065442166222090672, guid: b8815588458270044a7bae30ae458223, type: 3}
+  - {fileID: 6475851828860493989, guid: 3f6f68d19ebf8fe488aff44e97ab7e33, type: 3}
+  - {fileID: 7252715517607054764, guid: ea42802441cfe074cb6107f7acc5b368, type: 3}
+  - {fileID: 1229881858158071923, guid: a5d71fa0f99a15c4aad6c767968197f0, type: 3}
+  - {fileID: 8138743079466480375, guid: 02a62ef40f7e9d9438f1de6d718e1b39, type: 3}
+  - {fileID: 7615958715426617485, guid: afd1b1f2d4e5790488ac4cf64c069018, type: 3}
+  - {fileID: 4467608386047516467, guid: 0c584ccea496f88438c50cc0d7d58698, type: 3}
+  - {fileID: 694929357232030160, guid: 00acc1fdfc61e6145b1623dc98eb3be5, type: 3}
+  - {fileID: 7248146901415338357, guid: e40cc5f6906e8f149bb7380808a5b3b9, type: 3}
+  - {fileID: 6040349208065135033, guid: 8af9f70567f2bf346b163e488099d365, type: 3}
+  - {fileID: 3567498970717191839, guid: f5563f0651834eb4ead228a6ec64f1d3, type: 3}
+  - {fileID: 3711874510565963284, guid: c5f4572290943d846a88f772332f5360, type: 3}
+  - {fileID: 3380023974092360609, guid: cafe2a164f266ed46a9c139858f91375, type: 3}
+  - {fileID: 8494511028042029988, guid: 5c7949230bb61924a9b12e742961f08c, type: 3}
+  - {fileID: 3148400546670980011, guid: ec6e2f07a1dc67c4dbfa8463363c706d, type: 3}
+  - {fileID: 1517703823682377096, guid: 0c7835d899af4af44812aead7c3fb2b7, type: 3}
+  - {fileID: 6371001685931324373, guid: 312865310f00d384aa457ec09efa52ae, type: 3}
+  - {fileID: 4206285326798126614, guid: 55896fe6fec114d46934890507618b1a, type: 3}
+  - {fileID: 1097456100142759111, guid: d9d4812076f19aa4da34047619f3f781, type: 3}
+  - {fileID: 243621461660702434, guid: cc99645114d85c34c93e40a71a587623, type: 3}
+  - {fileID: 1281546866516944504, guid: 78bfd8ea14cc50c4e866b9d87f6e1d26, type: 3}
+  - {fileID: 8021918185650789974, guid: 5279cdf1a1b32d04aaf2f112600b3e68, type: 3}
+  - {fileID: 2730443999600823990, guid: cfd21f5634d455d4fb31c7db64f4f755, type: 3}
+  - {fileID: 4012702914041142248, guid: 986559790c4b5fb4e92df852a7e323a0, type: 3}
+  - {fileID: 7616607389404922569, guid: 27bb9a18504c37d488caa1bfd881092e, type: 3}
+  - {fileID: 629765158553426089, guid: cbdbe6d4d25370343add7cee4ec752c9, type: 3}
+  - {fileID: 762724211471569040, guid: 90fe4e59f1d17a141be80e0fa3b13113, type: 3}
+  - {fileID: 3558471891964642637, guid: a6c9bbe1b4e86954091d85495bc50a68, type: 3}
+  - {fileID: 1120068565577214251, guid: a203800bf254ca8498c81140eb7fc47f, type: 3}
+  - {fileID: 8161547619797836276, guid: cb3fde91a8e37dc4c824005c3c2d6fc7, type: 3}
+  - {fileID: 8208771605587909833, guid: 1eb8f237d72cc9d41b10112841057c6e, type: 3}
+  - {fileID: 5928679948954900707, guid: 0c014cf1e9c724a42800885cab3247ac, type: 3}
+  - {fileID: 7651034868496056784, guid: 9d951d0521f04764b97e0daf9295518c, type: 3}
+  - {fileID: 4853008037551921182, guid: e713acd5fd522c246b1a6232f1e0e168, type: 3}
+  - {fileID: 5695597311085799501, guid: a71f8c6be0198e948a072f8504a8dcf3, type: 3}
+  - {fileID: 2858932739882311013, guid: a3689d63419e235439357438208a81f6, type: 3}
+  - {fileID: 1578636989578971694, guid: 604684356259d16458e9bc5b3f6cf9d3, type: 3}
+  - {fileID: 8543087629790300668, guid: ef4969dab87bc994680ddb3b25352f1d, type: 3}
+  - {fileID: 8749795469930032189, guid: 6fbbf379322254a4fbfebfc377608e6f, type: 3}
+  - {fileID: 4979292946613611233, guid: f89eb5f2a3d7d5c4485c578b5b80162e, type: 3}
+  - {fileID: 1284387745006960096, guid: a857cbd68aa422044a3f17f023ccae43, type: 3}
+  - {fileID: 3968519969609657009, guid: e0b0b39053338444db406182d7ea0bd7, type: 3}
+  - {fileID: 953493639139336133, guid: 9e081fa385edb2a46bd7040577eeff3e, type: 3}
+  - {fileID: 3246510135303649282, guid: 7c7086363f1877b499132912c0841fa8, type: 3}
+  - {fileID: 1652172882896768140, guid: a6510328fb556a245bcb670c8191b6fa, type: 3}
+  - {fileID: 7219083477494686183, guid: f9e9ad69884317449a55fd3f7fc184c5, type: 3}
+  - {fileID: 7791613515097477178, guid: cfac954e68f0aa147bd09418901c44b5, type: 3}
+  - {fileID: 8866518655317309978, guid: 2da0b9636199e5a4f9bbd7e7f292fc16, type: 3}
+  - {fileID: 8436664432138444722, guid: c909ad5f1060c364cb9315426770837f, type: 3}
+  - {fileID: 2080530212061298843, guid: 4bf8bc4457ad3c1479c7ae73eeff808f, type: 3}
+  - {fileID: 8102290367158387798, guid: 54d9166262ee0e14ea8826b832fb1251, type: 3}
+  - {fileID: 8751748339274280381, guid: e777c20fa61966744b18c9128d4967d4, type: 3}
+  - {fileID: 8338283390735901947, guid: 2df47b2c3b2fa334eb887a8f237b1d9b, type: 3}
+  - {fileID: 1534012592885403756, guid: 9b211d5bf5f18704ea3796ca40e45bc6, type: 3}
+  - {fileID: 5170727567872074644, guid: e13e5a46ee5acb248ab366228e02c04d, type: 3}
+  - {fileID: 862458411637112102, guid: 6f0c4288032ef3d4681f8bd6e3959d8b, type: 3}
+  - {fileID: 6339443894595628296, guid: 7e4a774a44094334284e5c1109ea61ac, type: 3}
+  - {fileID: 986273256711455391, guid: ec29d49c50d0425438490664f4c09710, type: 3}
+  - {fileID: 5739437094546857899, guid: 3f0049ec1d9be7c4fac45691b5428dce, type: 3}
+  - {fileID: 7259480045171011062, guid: e077758f90733da438b4165cad8d44fe, type: 3}
+  - {fileID: 1215007937176123519, guid: a885de6f3e071d044aa95cd412d87d6c, type: 3}
+  - {fileID: 4969191693184836168, guid: 5fcb5ff8e2ac5f548a174205715ccda6, type: 3}
+  - {fileID: 6596871976350011693, guid: 7bcec0b4042439748a4591dd7479b17d, type: 3}
+  - {fileID: 2057572149635726760, guid: 6382d3e60d05d1c459172020f07f0af4, type: 3}
+  - {fileID: 2378610013177102333, guid: 75fca948e95df854db4bf4d7949c8878, type: 3}
+  - {fileID: 4742521020805004266, guid: bfeda9cbd26f58847a1174af9e455c9e, type: 3}
+  - {fileID: 4153248835871713413, guid: 535767aa69338ab4a92932c033803702, type: 3}
+  - {fileID: 2984011480901312419, guid: f6e30ec89010a6f4b8ea02bea848c1ac, type: 3}
+  - {fileID: 3687358636899612169, guid: 6d83f640e302d0349a6992295d223c98, type: 3}
+  - {fileID: 7968762933454604947, guid: 4dadf92b7da59f744ae90e98fe08892d, type: 3}
+  - {fileID: 7162334342625787686, guid: b7088c673f58e9c4091d799fb3959bb4, type: 3}
+  - {fileID: 5913572174490347544, guid: 9fe6e28395f49b04f8907c4bde719f89, type: 3}
+  - {fileID: 1219051367655767655, guid: 0624c27a5ece003438e1de13934601ac, type: 3}
+  - {fileID: 6083877137215555333, guid: 25f6de07f349fec4996a3a1994c8ae1a, type: 3}
+  - {fileID: 8517743079092585596, guid: a3e81de1d39f1934192c8bfd3ef8143f, type: 3}
+  - {fileID: 1473942978308681297, guid: 6f0929ba793177a4083da6bb1a46f859, type: 3}
+  - {fileID: 1234215103421023709, guid: 808e2429d7454484186537c4c6c08cf9, type: 3}
+  - {fileID: 6139421552153626154, guid: 25a04c1dcdc7cb7468e242bbe1a84644, type: 3}
+  - {fileID: 6764429893230939955, guid: 828e61c4d3c37f4489abf9a3e9f36d63, type: 3}
+  - {fileID: 5354044210104201608, guid: effa9c0238264ac4089a4392b97f376e, type: 3}
+  - {fileID: 6660138428531586641, guid: 6c6e1d686c58213498a8e5a0c838eb51, type: 3}
+  - {fileID: 6154703687713553093, guid: 90e661564d0c8e2449781543b66398fa, type: 3}
+  - {fileID: 7530842398308375552, guid: a09b3ec551f5c674695dfb74e4effe53, type: 3}
+  - {fileID: 1665050755998088739, guid: 62b595489f539774abb42481a01c24dc, type: 3}
+  - {fileID: 8676483815639737849, guid: 57e18888714ba034fb343629a9bbfa96, type: 3}
+  - {fileID: 7521458169084868742, guid: 85d8c639820fac94a88d258bf70f9b22, type: 3}
+  - {fileID: 325691544284451515, guid: b4afcfee359fd164cab3a797d02b11fc, type: 3}
+  - {fileID: 322658488117673958, guid: a579f91c083ac1b45a8d2ab3f4803cfe, type: 3}
+  - {fileID: 8413589530599341855, guid: 99f9448d5fa196346a8787544c147fdd, type: 3}
+  - {fileID: 4304913985754656105, guid: 82ce54cdcd37c75489684c40d303bdf5, type: 3}
+  materialDasMarcas: {fileID: 2100000, guid: eb4192027a158044888fa77ddccc472a, type: 2}
+--- !u!4 &1799806312
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1799806310}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1660057539 &9223372036854775807
+SceneRoots:
+  m_ObjectHideFlags: 0
+  m_Roots:
+  - {fileID: 31972112}
+  - {fileID: 637461363}
+  - {fileID: 1799806312}
+  - {fileID: 1014172100}
+  - {fileID: 375068092}
+  - {fileID: 1388733904}

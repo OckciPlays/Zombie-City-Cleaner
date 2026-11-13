@@ -137,7 +137,7 @@ namespace ZombieCityCleaner.Mundo
 
         // tapada por fora: a chapa de compensado inteira (às vezes pichada) ou tábuas pregadas, em X ou de 3 a 4 deitadas,
         // um pouco tortas. Com colisão (28/10/2026): a janela tapada não deixa pular por ela (PuloDaJanela) nem passa tiro
-        static void Tabuas(Obra obra, Parede w, Abertura ab, System.Random rnd, float k, MalhaDePichacao pichacoes)
+        internal static void Tabuas(Obra obra, Parede w, Abertura ab, System.Random rnd, float k, MalhaDePichacao pichacoes)
         {
             float h = ab.alto - ab.baixo, cs = ab.ini + ab.larg / 2, cy = ab.baixo + h / 2;
             float fora = obra.m.esp / 2 + 0.05f;
@@ -172,21 +172,23 @@ namespace ZombieCityCleaner.Mundo
         [System.ThreadStatic] static List<(float ang, Vector2 p)> _borda, _buraco;
         [System.ThreadStatic] static List<Vector3> _tri;
 
-        static void Vidro(Obra obra, Parede w, Abertura ab, System.Random rnd, bool buraco)
+        // (o Hospital Principal usa com o vidro escuro e a margem negativa: o vidro entra no caixilho, sem a fresta)
+        internal static void Vidro(Obra obra, Parede w, Abertura ab, System.Random rnd, bool buraco, string cor = "VidroSujo", float margem = 0.03f)
         {
             _borda ??= new List<(float, Vector2)>();
             _buraco ??= new List<(float, Vector2)>();
             _tri ??= new List<Vector3>(3);
-            float s0 = ab.ini + 0.03f, s1 = ab.ini + ab.larg - 0.03f, y0 = ab.baixo + 0.03f, y1 = ab.alto - 0.03f;
+            _cor = cor;
+            float s0 = ab.ini + margem, s1 = ab.ini + ab.larg - margem, y0 = ab.baixo + margem, y1 = ab.alto - margem;
             var fora = new Vector3(w.n.x, 0f, w.n.y);
             if (!buraco)
             {
                 var q = new List<Vector3> { w.Ponto(s0, y0, 0f), w.Ponto(s1, y0, 0f), w.Ponto(s1, y1, 0f), w.Ponto(s0, y1, 0f) };
-                obra.vis.Face(q, fora, "VidroSujo");
-                obra.vis.Face(q, -fora, "VidroSujo");
+                obra.vis.Face(q, fora, cor);
+                obra.vis.Face(q, -fora, cor);
                 // o vidro inteiro fecha a janela (não se pula por ela); o quebrado, com o buraco, não
                 Vector2 c = w.a + w.u * ((s0 + s1) / 2);
-                obra.Caixa(new Vector3(c.x, w.baseY + (y0 + y1) / 2, c.y), new Vector3(s1 - s0, y1 - y0, 0.02f), "VidroSujo", w.yaw, null, true, false);
+                obra.Caixa(new Vector3(c.x, w.baseY + (y0 + y1) / 2, c.y), new Vector3(s1 - s0, y1 - y0, 0.02f), cor, w.yaw, null, true, false);
                 return;
             }
             float cs = Mathf.Lerp(s0, s1, Faixa(rnd, 0.3f, 0.7f)), cy = Mathf.Lerp(y0, y1, Faixa(rnd, 0.3f, 0.7f));
@@ -242,9 +244,11 @@ namespace ZombieCityCleaner.Mundo
             _tri.Add(w.Ponto(a.x, a.y, 0f));
             _tri.Add(w.Ponto(b.x, b.y, 0f));
             _tri.Add(w.Ponto(c.x, c.y, 0f));
-            obra.vis.Face(_tri, fora, "VidroSujo");
-            obra.vis.Face(_tri, -fora, "VidroSujo");
+            obra.vis.Face(_tri, fora, _cor);
+            obra.vis.Face(_tri, -fora, _cor);
         }
+
+        [System.ThreadStatic] static string _cor;
 
         // ------------------------------------------------------------------ as pichações
 

@@ -26,6 +26,38 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>O tipo do cômodo para onde ela abre ("quarto", "banheiro"...), nas de dentro; null nas outras.</summary>
         public string comodo;
 
+        // ------------------------------------------------------------ as do Hospital Principal (08/11/2026)
+
+        /// <summary>
+        /// O começo vem da obra (o <see cref="giro"/>: 0 fechada, e a <see cref="trancada"/>), sem o sorteio das casas: as
+        /// portas do Hospital Principal (o Plano_Hospital.md da pasta de arte, a parte 7), que a obra decide pela semente.
+        /// </summary>
+        public bool doKit;
+        /// <summary>Com <see cref="doKit"/>: começa trancada (só fechada).</summary>
+        public bool trancada;
+        /// <summary>
+        /// A folha abre para fora da obra (as saídas do hospital): "por dentro", para destrancar sem ferramenta, é o lado
+        /// contrário ao que ela abre. Nas casas, as de fora abrem para dentro.
+        /// </summary>
+        public bool abreParaFora;
+        /// <summary>
+        /// A outra folha da porta dupla: o índice dela na lista da obra mais 1 (0: sem; o padrão das casas). As duas abrem,
+        /// fecham e trancam juntas.
+        /// </summary>
+        public int parMaisUm;
+
+        /// <summary>O índice da outra folha da porta dupla (-1: sem).</summary>
+        public int Par => parMaisUm - 1;
+        /// <summary>O giro da folha aberta por alguém (graus; 0: 90°, ou o máximo): a corta-fogo da escada encosta na parede, a 172°.</summary>
+        public float abertaEm;
+        /// <summary>
+        /// A malha da folha, quando a obra desenha a dela (a de vai-e-vem com o visor, a corta-fogo, a reforçada com o
+        /// aviso): no espaço da folha (a origem na dobradiça, embaixo; a folha ao longo do +X, o +Y para cima). O
+        /// <see cref="modelo"/> é a chave dela (as folhas iguais usam a mesma malha). Null: a folha das casas.
+        /// </summary>
+        public MalhaDeObra folha;
+        public string modelo;
+
         /// <summary>A de fora (abre de dentro da casa para dentro dela): as trancas se abrem por dentro.</summary>
         public bool DeFora => tipo != Tipo.Dentro;
 
@@ -44,6 +76,16 @@ namespace ZombieCityCleaner.Mundo
             p.fechada.x = -p.fechada.x;
             p.abre.x = -p.abre.x;
             return p;
+        }
+
+        /// <summary>
+        /// O ponto (nas coordenadas da obra) está do lado de dentro da obra, onde uma de fora destranca sem ferramenta: o
+        /// lado para onde ela abre (nas casas) ou o outro (com <see cref="abreParaFora"/>).
+        /// </summary>
+        public bool PorDentro(Vector3 q)
+        {
+            bool doLadoQueAbre = (q.x - dobradica.x) * abre.x + (q.z - dobradica.z) * abre.y > 0f;
+            return DeFora && doLadoQueAbre != abreParaFora;
         }
     }
 }

@@ -161,7 +161,8 @@ namespace ZombieCityCleaner.Music
             if (agora >= _proximoEvento)
             {
                 var faixa = ComMusicaCalma ? ambienteNaMusica : ambienteNoSilencio;
-                _proximoEvento = agora + Random.Range(faixa.x, faixa.y);
+                // num lugar quieto (o hospital), os sons de fora ficam três vezes mais raros
+                _proximoEvento = agora + Random.Range(faixa.x, faixa.y) * (NumLugarQuieto ? 3f : 1f);
                 TocarEvento(Sortear(dia), agora + 0.05, "solto");
             }
         }

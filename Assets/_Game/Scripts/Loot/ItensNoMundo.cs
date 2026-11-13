@@ -286,13 +286,29 @@ namespace ZombieCityCleaner.Loot
             return proprio != null ? proprio : material;
         }
 
+        readonly Dictionary<Material, Material[]> _sozinhos = new Dictionary<Material, Material[]>();
+
+        /// <summary>
+        /// Os materiais do item (para o renderer: <c>sharedMaterials</c>): o de <see cref="MaterialDe"/>, e a roupa com
+        /// vidro com o material do vidro depois (<see cref="Roupas.ItensDasRoupas.Materiais"/>).
+        /// </summary>
+        public Material[] MateriaisDe(Item item)
+        {
+            var roupas = Itens.EhRoupa(item) ? Roupas.ItensDasRoupas.Carregar() : null;
+            if (roupas != null) return roupas.Materiais(item);
+            var m = MaterialDe(item);
+            if (m == null) return new Material[0];
+            if (!_sozinhos.TryGetValue(m, out var lista)) _sozinhos[m] = lista = new[] { m };
+            return lista;
+        }
+
         void Montar(ItemNoChaoNaMira o, ItemNoChao it)
         {
             o.item = it.item;
             var malha = MalhaDe(it.item);
             o.GetComponent<MeshFilter>().sharedMesh = malha;
             var render = o.GetComponent<MeshRenderer>();
-            render.sharedMaterial = MaterialDe(it.item);
+            render.sharedMaterials = MateriaisDe(it.item);
             // a roupa com as cores dela
             var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
             if (roupas != null) roupas.Pintar(render, it.item, it.cores);

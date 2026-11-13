@@ -230,6 +230,15 @@ namespace ZombieCityCleaner.UI
         delegate bool BarraDoPainel(string nome, float valor, out float novo, float min = 0f, float max = 1f);
 
         // a aba Gráficos: a resolução, o modo da tela, a escala de renderização e a qualidade (UI/Graficos)
+        // o nome à esquerda e as escolhas na mesma linha
+        static int NaLinha(float u, float x, float w, ref float y, GUIStyle texto, GUIStyle opcao, string nome, float rotulo, int atual, string[] nomes)
+        {
+            GUI.Label(new Rect(x, y + 6 * u, rotulo, 26 * u), nome, texto);
+            int novo = GUI.SelectionGrid(new Rect(x + rotulo, y, w - rotulo, 36 * u), atual, nomes, nomes.Length, opcao);
+            y += 42 * u;
+            return novo;
+        }
+
         static void AbaDosGraficos(float u, float x, float w, ref float y, GUIStyle texto, GUIStyle centro, GUIStyle detalhe, GUIStyle opcao, BarraDoPainel barra)
         {
             // a resolução: < 2560 × 1440 >, da lista do monitor
@@ -260,25 +269,29 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(x, y - 8 * u, w, 22 * u), "Acima de 100%: o 3D mais nítido e mais pesado. Abaixo: mais leve e borrado.", detalhe);
             y += 26 * u;
 
-            GUI.Label(new Rect(x, y, w, 26 * u), "Qualidade gráfica", texto);
-            int qualidade = GUI.SelectionGrid(new Rect(x, y + 32 * u, w, 36 * u), UI.Graficos.Qualidade, UI.Graficos.NomesDaQualidade, UI.Graficos.NomesDaQualidade.Length, opcao);
+            // as escolhas curtas na mesma linha do nome (com a pixelação, o painel passava da altura da tela)
+            int qualidade = NaLinha(u, x, w, ref y, texto, opcao, "Qualidade gráfica", 170 * u, UI.Graficos.Qualidade, UI.Graficos.NomesDaQualidade);
             if (qualidade != UI.Graficos.Qualidade) UI.Graficos.MudarQualidade(qualidade);
-            y += 76 * u;
             GUI.Label(new Rect(x, y, w, 44 * u), SobreAQualidade[UI.Graficos.Qualidade], detalhe);
             y += 50 * u;
 
             // a distância de visão dos zumbis (a qualidade traz a dela; dá para mudar à parte)
             int visao = UI.Graficos.Visao;
-            GUI.Label(new Rect(x, y, w, 26 * u), "Distância de visão (zumbis)", texto);
-            GUI.Label(new Rect(x, y, w, 26 * u), $"até {UI.Graficos.Metros(visao):0} m", new GUIStyle(texto) { alignment = TextAnchor.UpperRight });
-            int novaVisao = GUI.SelectionGrid(new Rect(x, y + 32 * u, w, 36 * u), visao, UI.Graficos.NomesDaVisao, UI.Graficos.NomesDaVisao.Length, opcao);
+            int novaVisao = NaLinha(u, x, w, ref y, texto, opcao, "Visão (zumbis)", 170 * u, visao, UI.Graficos.NomesDaVisao);
             if (novaVisao != visao)
             {
                 UI.Graficos.MudarVisao(novaVisao);
                 _gravarEm = Time.unscaledTime + 0.6f;
             }
-            y += 74 * u;
-            GUI.Label(new Rect(x, y, w, 22 * u), "Mais longe: os zumbis aparecem antes, na neblina, e nascem mais longe de você.", detalhe);
+            GUI.Label(new Rect(x, y, w, 22 * u), $"Até {UI.Graficos.Metros(UI.Graficos.Visao):0} m. Mais longe: os zumbis aparecem antes e nascem mais longe.", detalhe);
+            y += 30 * u;
+
+            // a pixelação (para testar o visual; UI/Graficos)
+            int pixelacao = NaLinha(u, x, w, ref y, texto, opcao, "Pixelação", 110 * u, UI.Graficos.Pixelacao, UI.Graficos.NomesDaPixelacao);
+            if (pixelacao != UI.Graficos.Pixelacao) UI.Graficos.MudarPixelacao(pixelacao);
+            GUI.Label(new Rect(x, y, w, 22 * u), UI.Graficos.Pixelacao == 0
+                ? "O 3D em poucas linhas, ampliado sem suavizar; nas PS1, também as cores."
+                : $"O 3D em {UI.Graficos.LinhasPixeladas} linhas{(UI.Graficos.CoresDoPs1 ? ", com as cores do PS1" : "")}. A escala de renderização não vale.", detalhe);
             y += 30 * u;
         }
     }

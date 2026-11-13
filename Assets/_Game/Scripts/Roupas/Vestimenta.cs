@@ -115,6 +115,9 @@ namespace ZombieCityCleaner.Roupas
             {
                 if (r.name != Corpo && !r.name.StartsWith(PrefixoDasPecas)) continue;
                 _renderers[r.name] = r;
+                Folgar(r);
+                // as peças com vidro (a lente dos óculos de proteção, a viseira): o vidro num material transparente à parte
+                if (r.name != Corpo) ItensDasRoupas.Carregar()?.PorOVidro(r, r.name.Substring(PrefixoDasPecas.Length));
                 // a cópia de um corpo já vestido (o retrato, o estúdio) chega com as malhas sem as faces: a inteira é a de
                 // origem delas, e esta passa a usar a que chegou até se vestir (sem isso, a de lá sumia com o dono)
                 var chegou = r.sharedMesh;
@@ -127,6 +130,22 @@ namespace ZombieCityCleaner.Roupas
                 }
                 else _originais[r] = chegou;
             }
+        }
+
+        /// <summary>
+        /// A caixa da peça (por ela a Unity sabe se a peça está na tela): a do FBX é justa, na pose T (a do cabelo e a do
+        /// chapéu na cabeça em pé, a 1,7 m). Agachado, sentado, deitado ou só mexendo a cabeça, a peça saía da caixa, e de
+        /// perto, olhando para baixo, a caixa saía da tela antes da peça: o cabelo e o que estava na cabeça sumiam, um de
+        /// cada vez (07/11/2026). Agora todas têm a do corpo inteiro em qualquer pose: um cubo de 3,2 m em volta do meio
+        /// dele (a 0,9 m do chão).
+        /// </summary>
+        void Folgar(SkinnedMeshRenderer r)
+        {
+            var raiz = r.rootBone;
+            if (raiz == null) return;
+            var centro = raiz.InverseTransformPoint(transform.TransformPoint(new Vector3(0f, 0.9f, 0f)));
+            float lado = raiz.InverseTransformVector(transform.TransformVector(Vector3.right * 3.2f)).magnitude;
+            r.localBounds = new Bounds(centro, Vector3.one * lado);
         }
 
         /// <summary>

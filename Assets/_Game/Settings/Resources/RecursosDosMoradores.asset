@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: RecursosDosMoradores
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.UI.RecursosDosMoradores
   npc: {fileID: 3819921260847115518, guid: 9f3a133ffba4f234aa7547e767efa541, type: 3}
+  corpo: {fileID: 6897493866334423885, guid: 93725079382d532409bfa053d11b3939, type: 3}

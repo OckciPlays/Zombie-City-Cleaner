@@ -19,8 +19,11 @@ namespace ZombieCityCleaner.World
         internal int proxima, proximaJanela;
         internal ulong[] chaves, chavesDasJanelas;
 
-        /// <summary>Põe as portas e as janelas no objeto da casa (já no lugar). Nada, sem elas ou sem o <see cref="PortasDoMundo"/>.</summary>
-        public static void Por(GameObject go, List<PortaDaObra> portas, List<JanelaDaObra> janelas, int semente)
+        /// <summary>
+        /// Põe as portas e as janelas no objeto da casa (já no lugar). Nada, sem elas ou sem o <see cref="PortasDoMundo"/>.
+        /// 'andar' entra na chave (as partes do Hospital Principal, a casca e os andares, ficam no mesmo lugar).
+        /// </summary>
+        public static void Por(GameObject go, List<PortaDaObra> portas, List<JanelaDaObra> janelas, int semente, int andar = -100)
         {
             if (PortasDoMundo.Instancia == null || (portas == null || portas.Count == 0) && (janelas == null || janelas.Count == 0)) return;
             var c = go.AddComponent<PortasDaConstrucao>();
@@ -28,7 +31,7 @@ namespace ZombieCityCleaner.World
             c.janelas = janelas != null ? janelas.ToArray() : new JanelaDaObra[0];
             c.semente = semente;
             // a chave da casa (a mesma em todas as máquinas: o lugar dela, como a dos móveis novos)
-            ulong obra = MobiliaNova.ChaveDaObra(go.transform.position, -100);
+            ulong obra = MobiliaNova.ChaveDaObra(go.transform.position, andar);
             c.chaves = new ulong[c.portas.Length];
             for (int i = 0; i < c.portas.Length; i++) c.chaves[i] = PortasDoMundo.ChaveDaPorta(obra, i);
             c.chavesDasJanelas = new ulong[c.janelas.Length];

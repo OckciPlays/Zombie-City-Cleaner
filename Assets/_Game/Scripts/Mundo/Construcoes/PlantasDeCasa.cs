@@ -126,9 +126,9 @@ namespace ZombieCityCleaner.Mundo
         static T Um<T>(System.Random r, params T[] o) => o[r.Next(o.Length)];
 
         /// <summary>Uma casa sorteada (térrea ou sobrado), com a aparência sorteada.</summary>
-        public static Planta Sortear(System.Random r, Medidas m)
+        public static Planta Sortear(System.Random r, Medidas m, bool? porao = null)
         {
-            var p = r.NextDouble() < 0.55 ? Terrea(r, m) : Sobrado(r, m);
+            var p = r.NextDouble() < 0.55 ? Terrea(r, m, porao) : Sobrado(r, m, porao);
             Estilo(r, p);
             return p;
         }
@@ -139,11 +139,11 @@ namespace ZombieCityCleaner.Mundo
         /// (<see cref="Casa.Profundidade"/>). Sorteia até 10 vezes; sem nenhuma que caiba, um sobrado sem porão com a vaga
         /// (a casa mais estreita); e null se nem ele couber.
         /// </summary>
-        public static Planta ParaOLote(System.Random r, Medidas m, float largura, float fundo)
+        public static Planta ParaOLote(System.Random r, Medidas m, float largura, float fundo, bool? porao = null)
         {
             for (int k = 0; k < 10; k++)
             {
-                var p = Sortear(r, m);
+                var p = Sortear(r, m, porao);
                 if (Cabe(p, m, largura, fundo)) return p;
             }
             var s = Sobrado(r, m, false);

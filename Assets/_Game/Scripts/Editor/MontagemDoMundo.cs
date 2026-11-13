@@ -124,7 +124,38 @@ namespace ZombieCityCleaner.EditorTools
             MontagemDosSobreviventes.PorNoMundo(mundo, AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDosSobreviventes.Prefab));
 
             // a beira das estradas (M4): os modelos do Blender, a paleta e o material das letras das placas
-            var objetos = mundo.AddComponent<ObjetosDoMundo>();
+            PorOsObjetosDaBeira(mundo);
+
+            // o NavMesh em volta dos jogadores, no anfitrião (M6)
+            mundo.AddComponent<NavMeshDoMundo>();
+            // a floresta (M9a) e o abandono (M9c: os materiais da cidade, a hera e as pichações)
+            PorAFloresta(mundo);
+            PorOAbandono(mundo);
+            // os carros abandonados com o capô, as rodas e o macaco (os kits e o PecasDosCarrosDoMundo)
+            MontagemDosVeiculos.PorOsCarrosNoMundo(mundo);
+            // a mobília (os móveis nos pontos das casas, das lojas e dos prédios)
+            PorAMobilia(mundo);
+            // o bunker da família (o Plano_Bunker.md, a parte 5) e a parede de armas dele
+            PorOBunker(mundo, cena);
+            // o Hospital Principal (o Plano_Hospital.md, a parte 7)
+            PorOHospital(mundo);
+            // os zumbis, sem hordas (o F1 cria perto do jogador)
+            MontagemDosZumbis.PorOsZumbisNaCena(cena);
+
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log($"Cena do mundo montada: {Cena}. Dê Play e crie um mundo no menu (ou use a prévia: Zombie City Cleaner > Mundo > Prévia com semente).");
+        }
+
+        /// <summary>
+        /// O <see cref="ObjetosDoMundo"/> (a beira das estradas: os carros, as placas, as blitz e as coisas das ruas) num objeto,
+        /// com os modelos do Cidade_Rua.fbx e o material das letras (o material dos objetos, com o abandono, vem do
+        /// <see cref="PorOAbandono"/>). Serve para a cena Mundo e para o Lakewood (12/11/2026: os carros dele).
+        /// </summary>
+        public static ObjetosDoMundo PorOsObjetosDaBeira(GameObject mundo)
+        {
+            var objetos = mundo.GetComponent<ObjetosDoMundo>();
+            if (objetos == null) objetos = mundo.AddComponent<ObjetosDoMundo>();
             objetos.materialDasLetras = MaterialDasLetras();
             const string fbxRua = "Assets/_Game/Art/Cidade/Cidade_Rua.fbx";
             Mesh Malha(string nome) => AssetDatabase.LoadAllAssetsAtPath(fbxRua).OfType<Mesh>().FirstOrDefault(m => m.name == nome);
@@ -139,24 +170,8 @@ namespace ZombieCityCleaner.EditorTools
             objetos.arvoreSeca = Malha("Arvore_Seca");
             objetos.hidrante = Malha("Hidrante");
             objetos.lixeira = Malha("Lixeira");
-
-            // o NavMesh em volta dos jogadores, no anfitrião (M6)
-            mundo.AddComponent<NavMeshDoMundo>();
-            // a floresta (M9a) e o abandono (M9c: os materiais da cidade, a hera e as pichações)
-            PorAFloresta(mundo);
-            PorOAbandono(mundo);
-            // os carros abandonados com o capô, as rodas e o macaco (os kits e o PecasDosCarrosDoMundo)
-            MontagemDosVeiculos.PorOsCarrosNoMundo(mundo);
-            // a mobília (os móveis nos pontos das casas, das lojas e dos prédios)
-            PorAMobilia(mundo);
-            // o bunker da família (o Plano_Bunker.md, a parte 5) e a parede de armas dele
-            PorOBunker(mundo, cena);
-            // os zumbis, sem hordas (o F1 cria perto do jogador)
-            MontagemDosZumbis.PorOsZumbisNaCena(cena);
-
-            EditorSceneManager.MarkSceneDirty(cena);
-            EditorSceneManager.SaveScene(cena);
-            Debug.Log($"Cena do mundo montada: {Cena}. Dê Play e crie um mundo no menu (ou use a prévia: Zombie City Cleaner > Mundo > Prévia com semente).");
+            EditorUtility.SetDirty(objetos);
+            return objetos;
         }
 
         public const string MaterialDoLetreiro = "Assets/_Game/Art/Mundo/Letreiro.mat";
@@ -197,10 +212,7 @@ namespace ZombieCityCleaner.EditorTools
             var floresta = mundo.GetComponent<FlorestaDoMundo>();
             if (floresta == null) floresta = mundo.AddComponent<FlorestaDoMundo>();
             floresta.material = material;
-            var todas = AssetDatabase.LoadAllAssetsAtPath(FbxDasArvores).OfType<Mesh>().ToDictionary(m => m.name);
-            string[] sufixos = { "", "_Longe1", "_Longe2" };
-            floresta.malhas = ZombieCityCleaner.Mundo.Floresta.Nomes
-                .SelectMany(n => sufixos.Select(s => todas.TryGetValue(n + s, out var m) ? m : null)).ToArray();
+            floresta.malhas = GeradorDeFloresta.MalhasDasPlantas();   // as do FBX e as geradas por código (os pinheiros)
             int faltam = floresta.malhas.Count(m => m == null);
             if (faltam > 0) Debug.LogWarning($"Faltam {faltam} malhas da floresta no {FbxDasArvores}.");
             EditorUtility.SetDirty(floresta);
@@ -363,6 +375,47 @@ namespace ZombieCityCleaner.EditorTools
             EditorSceneManager.MarkSceneDirty(cena);
             EditorSceneManager.SaveScene(cena);
             Debug.Log($"Bunker posto na cena: {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} prefabs da mobília nova, a parede de armas, as estantes e a sinuca.");
+        }
+
+        /// <summary>
+        /// O Hospital Principal no objeto "Mundo" (o Plano_Hospital.md da pasta de arte, a parte 7, 08/11/2026): o
+        /// <see cref="HospitalDoMundo"/> com o material das marcas do abandono e os sons do hospital (os mesmos da cena de
+        /// teste). Os materiais da casca e da hera são os do <see cref="TerrenoDoMundo"/>; os móveis, os da
+        /// <see cref="MobiliaNovaDoMundo"/> (os prefabs são lidos de novo: o lote do hospital entra junto); os papéis, os do
+        /// Resources/Documentos. Serve para a montagem da cena e para o menu Zombie City Cleaner > Mundo > Pôr o hospital na cena.
+        /// </summary>
+        public static HospitalDoMundo PorOHospital(GameObject mundo)
+        {
+            var h = mundo.GetComponent<HospitalDoMundo>();
+            if (h == null) h = mundo.AddComponent<HospitalDoMundo>();
+            h.materialDasMarcas = TexturasDoAbandono.Marcas();
+            h.sons = MontagemDoExemploDasCasas.TiposDeSomDoHospital();
+            if (AssetDatabase.LoadAssetAtPath<Material>(MontagemDosPapeis.Pasta + "/M_Papeis.mat") == null) MontagemDosPapeis.Montar();
+            EditorUtility.SetDirty(h);
+            PorAMobiliaNova(mundo);
+            return h;
+        }
+
+        [MenuItem("Zombie City Cleaner/Mundo/Pôr o hospital na cena")]
+        public static void PorOHospitalNaCena()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de mexer na cena do mundo.");
+                return;
+            }
+            var cena = EditorSceneManager.GetActiveScene();
+            if (cena.path != Cena) cena = EditorSceneManager.OpenScene(Cena);
+            var mundo = cena.GetRootGameObjects().FirstOrDefault(g => g.name == "Mundo");
+            if (mundo == null)
+            {
+                Debug.LogWarning("A cena do mundo não tem o objeto \"Mundo\": monte a cena antes.");
+                return;
+            }
+            var h = PorOHospital(mundo);
+            EditorSceneManager.MarkSceneDirty(cena);
+            EditorSceneManager.SaveScene(cena);
+            Debug.Log($"Hospital posto na cena: {h.sons.Length} tipos de som e {mundo.GetComponent<MobiliaNovaDoMundo>().prefabs.Length} prefabs da mobília nova.");
         }
 
         [MenuItem("Zombie City Cleaner/Mundo/Pôr a mobília na cena")]

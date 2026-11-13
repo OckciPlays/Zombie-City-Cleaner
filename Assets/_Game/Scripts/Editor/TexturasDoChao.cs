@@ -43,6 +43,7 @@ namespace ZombieCityCleaner.EditorTools
             chao.SetTexture("_CascalhoTex", cascalho);
             chao.SetTexture("_FolhasTex", folhas);
             chao.SetTexture("_RochaTex", rocha);
+            chao.SetFloat("_NeveAltura", 560f);   // os picos do Lakewood (o mundo sorteado não chega lá)
             EditorUtility.SetDirty(chao);
             Material(MaterialDaAgua, "ZombieCityCleaner/Agua");
             AssetDatabase.SaveAssets();
@@ -64,10 +65,12 @@ namespace ZombieCityCleaner.EditorTools
 
         // ------------------------------------------------------------------ as texturas
 
+        // a grama de campo (09/11/2026, a pedido: "a textura do terreno de perto é sempre esse marrom morto"): o verde de
+        // campo com uns tufos secos, e não a palha de antes
         static Color[] Grama()
         {
             var px = new Color[Lado * Lado];
-            Color escuro = new Color(0.33f, 0.33f, 0.24f), meio = new Color(0.41f, 0.4f, 0.29f), claro = new Color(0.5f, 0.48f, 0.35f);
+            Color escuro = new Color(0.22f, 0.31f, 0.15f), meio = new Color(0.31f, 0.41f, 0.19f), claro = new Color(0.42f, 0.5f, 0.24f);
             for (int y = 0; y < Lado; y++)
             for (int x = 0; x < Lado; x++)
             {
@@ -78,7 +81,7 @@ namespace ZombieCityCleaner.EditorTools
                 c.a = 0.3f + fino * 0.2f;
                 px[y * Lado + x] = c;
             }
-            // os tufos: traços curtos, a palha clara (alta) e o oliva escuro (baixo), uns poucos ainda esverdeados
+            // os tufos: traços curtos, o verde claro (alto) e o verde escuro (baixo), uns secos
             var rnd = new System.Random(21);
             for (int k = 0; k < 6200; k++)
             {
@@ -86,10 +89,10 @@ namespace ZombieCityCleaner.EditorTools
                 float ang = (float)(rnd.NextDouble() * Mathf.PI * 2f);
                 float comp = 4f + (float)rnd.NextDouble() * 8f;
                 double tipo = rnd.NextDouble();
-                Color c = tipo < 0.5 ? Color.Lerp(claro, new Color(0.58f, 0.54f, 0.38f), (float)rnd.NextDouble())
-                        : tipo < 0.85 ? Color.Lerp(escuro, new Color(0.26f, 0.28f, 0.2f), (float)rnd.NextDouble())
-                        : new Color(0.31f, 0.34f, 0.25f);
-                c.a = tipo < 0.5 ? 0.85f : 0.35f;
+                Color c = tipo < 0.45 ? Color.Lerp(claro, new Color(0.52f, 0.58f, 0.28f), (float)rnd.NextDouble())
+                        : tipo < 0.82 ? Color.Lerp(escuro, new Color(0.17f, 0.25f, 0.12f), (float)rnd.NextDouble())
+                        : new Color(0.5f, 0.46f, 0.28f);
+                c.a = tipo < 0.45 ? 0.85f : 0.35f;
                 Traco(px, p, ang, comp, 1.1f, c, 0.75f);
             }
             return px;
@@ -153,39 +156,49 @@ namespace ZombieCityCleaner.EditorTools
             return px;
         }
 
+        // o chão da mata (09/11/2026): a terra escura com as agulhas, as folhas e o musgo em manchas (era só as folhas secas)
         static Color[] Folhas()
         {
             var px = new Color[Lado * Lado];
-            Color solo = new Color(0.22f, 0.18f, 0.14f), solo2 = new Color(0.29f, 0.24f, 0.18f);
+            Color solo = new Color(0.17f, 0.14f, 0.1f), solo2 = new Color(0.24f, 0.2f, 0.14f);
+            Color musgo = new Color(0.24f, 0.34f, 0.16f), musgo2 = new Color(0.32f, 0.42f, 0.2f);
             for (int y = 0; y < Lado; y++)
             for (int x = 0; x < Lado; x++)
             {
-                var c = Color.Lerp(solo, solo2, Fbm(x, y, 8, 6.6f));
-                c.a = 0.15f;
+                float n = Fbm(x, y, 4, 2.2f);
+                float fino = Fbm(x, y, 40, 6.6f);
+                Color c = Color.Lerp(solo, solo2, n) * (0.88f + fino * 0.24f);
+                // o musgo em manchas, onde o ruído grande sobe
+                float m = Fbm(x, y, 3, 9.9f);
+                float musgoAqui = Mathf.Clamp01((m - 0.55f) / 0.18f);
+                c = Color.Lerp(c, Color.Lerp(musgo, musgo2, fino), musgoAqui);
+                c.a = 0.2f + fino * 0.2f + musgoAqui * 0.25f;
                 px[y * Lado + x] = c;
             }
-            var rnd = new System.Random(77);
-            // os gravetos
-            for (int k = 0; k < 90; k++)
+            var rnd = new System.Random(11);
+            // as agulhas e os gravetos
+            for (int k = 0; k < 2600; k++)
             {
                 var p = new Vector2(rnd.Next(Lado), rnd.Next(Lado));
                 float ang = (float)(rnd.NextDouble() * Mathf.PI * 2f);
-                Traco(px, p, ang, 18f + (float)rnd.NextDouble() * 26f, 1.4f, new Color(0.36f, 0.28f, 0.2f, 0.6f), 1f);
+                bool graveto = rnd.NextDouble() < 0.12;
+                Traco(px, p, ang, graveto ? 18f + (float)rnd.NextDouble() * 26f : 5f + (float)rnd.NextDouble() * 7f, graveto ? 1.4f : 0.8f,
+                      graveto ? new Color(0.34f, 0.26f, 0.18f, 0.6f) : new Color(0.38f, 0.3f, 0.17f, 0.5f), 0.9f);
             }
-            // as folhas secas, em tons apagados, em camadas
+            // as folhas secas, menos que antes e mais escuras
             Color[] tons =
             {
-                new Color(0.47f, 0.36f, 0.23f), new Color(0.53f, 0.41f, 0.27f), new Color(0.4f, 0.3f, 0.2f),
-                new Color(0.44f, 0.38f, 0.27f), new Color(0.36f, 0.34f, 0.24f), new Color(0.56f, 0.46f, 0.3f),
+                new Color(0.42f, 0.31f, 0.19f), new Color(0.48f, 0.36f, 0.22f), new Color(0.36f, 0.27f, 0.17f),
+                new Color(0.4f, 0.34f, 0.22f), new Color(0.33f, 0.3f, 0.2f), new Color(0.5f, 0.4f, 0.25f),
             };
-            for (int k = 0; k < 1400; k++)
+            for (int k = 0; k < 900; k++)
             {
                 var p = new Vector2(rnd.Next(Lado), rnd.Next(Lado));
                 float ang = (float)(rnd.NextDouble() * Mathf.PI * 2f);
-                float comp = 9f + (float)rnd.NextDouble() * 9f;
-                var c = tons[rnd.Next(tons.Length)] * (0.85f + (float)rnd.NextDouble() * 0.3f);
-                c.a = 0.5f + k / 1400f * 0.45f;   // as de cima ficam "mais altas"
-                Folha(px, p + new Vector2(1f, -1.5f), ang, comp, new Color(0.14f, 0.11f, 0.08f, c.a - 0.15f));   // a sombra
+                float comp = 7f + (float)rnd.NextDouble() * 7f;
+                var c = tons[rnd.Next(tons.Length)];
+                c.a = 0.75f + (float)rnd.NextDouble() * 0.2f;
+                Folha(px, p + new Vector2(1f, -1.5f), ang, comp, new Color(0.1f, 0.08f, 0.06f, c.a - 0.15f));   // a sombra
                 Folha(px, p, ang, comp, c);
             }
             return px;

@@ -378,7 +378,7 @@ namespace ZombieCityCleaner.Mundo
         // a luz de fora guardada (a cena volta a ela fora do bunker)
         bool _guardada;
         Color _ceu, _equador, _chao;
-        float _sol;
+        float _sol, _reflexo = 1f;
         bool _neblina;
         Light _luzDoSol;
         int _zona = -1;
@@ -403,6 +403,7 @@ namespace ZombieCityCleaner.Mundo
             {
                 _ceu = RenderSettings.ambientSkyColor; _equador = RenderSettings.ambientEquatorColor; _chao = RenderSettings.ambientGroundColor;
                 _neblina = RenderSettings.fog;
+                _reflexo = RenderSettings.reflectionIntensity;
                 foreach (var l in FindObjectsByType<Light>())
                     if (l.type == LightType.Directional) { _luzDoSol = l; _sol = l.intensity; break; }
                 _guardada = true;
@@ -412,6 +413,8 @@ namespace ZombieCityCleaner.Mundo
             RenderSettings.ambientSkyColor = _ceu * k;
             RenderSettings.ambientEquatorColor = _equador * k;
             RenderSettings.ambientGroundColor = _chao * k;
+            // o reflexo do céu (o do dia, fixo) junto: no escuro, o azulejo ficava com um brilho cinza
+            RenderSettings.reflectionIntensity = _reflexo * k;
             RenderSettings.fog = _neblina && zona == 0;
             if (_luzDoSol != null) _luzDoSol.intensity = zona == 2 ? _sol * luzEmbaixo : _sol;
         }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZombieCityCleaner.Mundo;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Sobreviventes
 {
@@ -49,7 +50,7 @@ namespace ZombieCityCleaner.Sobreviventes
         /// <summary>Fora do portão, a 25 m (para o F1 levar o jogador).</summary>
         public readonly Vector3 Portao = new Vector3(0f, 0f, Meia + 25f);
 
-        readonly DadosDoMundo _d;
+        readonly IMundoDoJogo _d;
         readonly Matrix4x4 _paraOMundo;
         readonly float _giro;
         readonly float _altura;
@@ -57,7 +58,7 @@ namespace ZombieCityCleaner.Sobreviventes
         // o cache é só do mundo de agora (03/11/2026: a planta guarda o DadosDoMundo, e o cache static guardava os mundos de
         // todas as partidas da sessão: o mundo grande inteiro preso na memória a cada mundo novo)
         static readonly Dictionary<int, PlantaDaBase> _cache = new Dictionary<int, PlantaDaBase>();
-        static DadosDoMundo _doCache;
+        static int _doCache;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Zerar() => Esquecer();
@@ -66,25 +67,17 @@ namespace ZombieCityCleaner.Sobreviventes
         public static void Esquecer()
         {
             _cache.Clear();
-            _doCache = null;
-        }
-
-        /// <summary>As bases militares do mapa, na ordem do plano.</summary>
-        public static List<Lugar> Bases(DadosDoMundo d)
-        {
-            var lista = new List<Lugar>();
-            if (d?.Plano == null) return lista;
-            foreach (var l in d.Plano.Lugares) if (l.Tipo == TipoDeLugar.BaseMilitar) lista.Add(l);
-            return lista;
+            _doCache = 0;
         }
 
         /// <summary>O desenho da base (feito uma vez por mundo).</summary>
-        public static PlantaDaBase Da(DadosDoMundo d, Lugar l, int indice)
+        public static PlantaDaBase Da(IMundoDoJogo d, Lugar l, int indice)
         {
-            if (_doCache != d)
+            int chave = MundoDoJogo.Chave(d);
+            if (_doCache != chave)
             {
                 Esquecer();
-                _doCache = d;
+                _doCache = chave;
             }
             if (!_cache.TryGetValue(indice, out var p))
             {
@@ -94,13 +87,13 @@ namespace ZombieCityCleaner.Sobreviventes
             return p;
         }
 
-        PlantaDaBase(DadosDoMundo d, Lugar l, int indice)
+        PlantaDaBase(IMundoDoJogo d, Lugar l, int indice)
         {
             _d = d;
             Lugar = l;
             Indice = indice;
-            var r = new System.Random(unchecked(d.Semente * 7349 + indice * 51203 + 11));
-            _giro = GiroDaEstrada(d, l);
+            var r = new System.Random(unchecked(d.SementeDaPartida * 7349 + indice * 51203 + 11));
+            _giro = d.GiroDaBase(l);
             _altura = d.Altura(l.Centro.x, l.Centro.y);
             _paraOMundo = Matrix4x4.TRS(new Vector3(l.Centro.x, _altura, l.Centro.y), Quaternion.Euler(0f, _giro, 0f), Vector3.one);
             float H = Meia;
@@ -139,23 +132,6 @@ namespace ZombieCityCleaner.Sobreviventes
             Postos.Add(new Posto { pos = new Vector3(-7.5f, 0f, -8f), ronda = new Vector3(-15f, 0f, -6f), giro = 0f });
             Postos.Add(new Posto { pos = new Vector3(-16f, 0f, -16.5f), ronda = new Vector3(-16f, 0f, -7f), giro = 225f });
             Militares = 6 + r.Next(3);
-        }
-
-        // o giro da base: o portão para a estrada que sai do meio do lugar (a de terra que liga a base à rede); sem ela, o do lugar
-        static float GiroDaEstrada(DadosDoMundo d, Lugar l)
-        {
-            int indice = d.Plano.Lugares.IndexOf(l);
-            foreach (var e in d.Plano.Estradas)
-            {
-                if (e.De != indice || e.Pontos.Count < 2) continue;
-                foreach (var p in e.Pontos)
-                {
-                    var para = p - l.Centro;
-                    if (para.magnitude < Meia + 8f) continue;
-                    return Mathf.Atan2(para.x, para.y) * Mathf.Rad2Deg;
-                }
-            }
-            return l.Giro;
         }
 
         void Por(Coisa tipo, Vector3 pos, float giro, int variante, float comprimento) =>

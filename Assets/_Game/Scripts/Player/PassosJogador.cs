@@ -109,7 +109,9 @@ namespace ZombieCityCleaner.Player
         {
             if (!_cache.TryGetValue(c, out var chao))
             {
-                chao = (c.name == "Chão" ? Superficie.Grama : Superficie.Concreto, c.name == "Chão" ? null : c.GetComponentInParent<PisoPorZona>());
+                // (12/11/2026: os blocos do Lakewood se chamam "Chão x z", e soavam como concreto)
+                bool terreno = EhTerreno(c);
+                chao = (terreno ? Superficie.Grama : Superficie.Concreto, terreno ? null : c.GetComponentInParent<PisoPorZona>());
                 // os colisores dos blocos do terreno são novos a cada vez: sem o teto, os que já sumiram ficavam aqui
                 if (_cache.Count >= 4096) _cache.Clear();
                 _cache[c] = chao;
@@ -119,15 +121,23 @@ namespace ZombieCityCleaner.Player
             return chao.fixa;
         }
 
+        /// <summary>
+        /// O colisor é do terreno: os blocos do mundo sorteado ("Chão") e os do Lakewood ("Chão x z", com as coordenadas). Os
+        /// chãos das cenas de exemplo ("Chão (rua, calçadas e grama)") continuam concreto.
+        /// </summary>
+        internal static bool EhTerreno(Collider c)
+        {
+            if (c == null) return false;
+            string n = c.name;
+            return n == "Chão" || (n.Length > 5 && n.StartsWith("Chão ") && (char.IsDigit(n[5]) || n[5] == '-'));
+        }
+
         internal static bool NaEstrada(Vector3 p)
         {
-            var mundo = ZombieCityCleaner.World.MundoDaPartida.Instancia;
-            var dados = mundo != null ? mundo.Dados : null;
-            if (dados == null) return false;
-            // as ruas das cidades (o asfalto não tem colisor próprio: o pé fica no terreno, 5 cm abaixo)
-            if (dados.OcupadoPelaCidade(new Vector2(p.x, p.z), 0f)) return true;
-            var rede = dados.Rede;
-            return rede != null && rede.Acostado(p.x, p.z, out bool deTerra) > 0.5f && !deTerra;
+            // o mundo do jogo (12/11/2026): no sorteado, as ruas das cidades e as estradas (o asfalto não tem colisor próprio:
+            // o pé fica no terreno, 5 cm abaixo); no Lakewood, as estradas têm o colisor delas, e isto só vale embaixo delas
+            var mundo = MundoDoJogo.Atual;
+            return mundo != null && mundo.NaEstrada(p.x, p.z);
         }
     }
 }

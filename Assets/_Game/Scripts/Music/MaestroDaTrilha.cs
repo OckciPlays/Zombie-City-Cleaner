@@ -176,6 +176,15 @@ namespace ZombieCityCleaner.Music
         /// <summary>Pelo F1: o silêncio entre os trechos fica curto (de 15 a 30 s), para testar.</summary>
         public static bool SilencioCurto;
 
+        /// <summary>
+        /// Até quando (o Time.unscaledTime) um lugar pediu silêncio: o hospital (o AmbienteSonoro dele, enquanto quem joga está
+        /// dentro; 07/11/2026, o Plano_Hospital.md, a parte 6: "o mais importante é o silêncio"; a música do hospital saiu, a
+        /// pedido). Nele, a exploração não começa, a que estiver tocando sai no fim do bloco (pela saída) e os sons de ambiente
+        /// de fora ficam três vezes mais raros. O perigo continua igual.
+        /// </summary>
+        public static float QuietoAte;
+        public static bool NumLugarQuieto => Time.unscaledTime < QuietoAte;
+
         // ------------------------------------------------------------------ o que o F1 mostra
         public int Nivel => _nivel;
         /// <summary>Os que te caçam (o alvo é você, a até 30 m; ou brigando a até 8 m de você).</summary>
@@ -334,7 +343,7 @@ namespace ZombieCityCleaner.Music
                     if (entrar == Entrar.Esperando) CacaEsperando(agora);
                     // 04/11/2026: com a caça esperando, o trecho não começa no meio dela (como no maestro.py: só com "nada");
                     // antes ele começava e, no quadro seguinte, a R7 já o fechava: tocava só a saída, por cima da briga
-                    if (_estado == Estado.Silencio && entrar == Entrar.Nada && agora >= _proximaMusica) ComecarTrecho(agora, dia);
+                    if (_estado == Estado.Silencio && entrar == Entrar.Nada && agora >= _proximaMusica && !NumLugarQuieto) ComecarTrecho(agora, dia);
                     else if (_estado == Estado.Exploracao) SeguirTrecho(agora);
                 }
             }
@@ -576,6 +585,12 @@ namespace ZombieCityCleaner.Music
         void SeguirTrecho(double agora)
         {
             if (agora < _proximoBloco - 0.4) return;
+            // num lugar quieto (o hospital), o trecho fecha: o próximo bloco é a saída
+            if (NumLugarQuieto && _fila.Count > 1)
+            {
+                _fila.Clear();
+                _fila.Enqueue("saida");
+            }
             var familia = FamiliaPeloNome(_familia);
             if (_fila.Count == 0)
             {

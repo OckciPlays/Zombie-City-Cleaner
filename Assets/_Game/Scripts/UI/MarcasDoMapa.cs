@@ -70,7 +70,7 @@ namespace ZombieCityCleaner.UI
         {
             get
             {
-                var m = MundoDaPartida.Instancia;
+                var m = MarcasDoMundo.Atual;
                 return m != null && m.IsSpawned ? m.Marcas : null;
             }
         }

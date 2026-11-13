@@ -106,7 +106,7 @@ namespace ZombieCityCleaner.UI
             var lista = MarcasDoMapa.Lista;
             if (lista == null) return;
             EstilosDasMarcas(u);
-            var mundo = MundoDaPartida.Instancia;
+            var mundo = MarcasDoMundo.Atual;
             double agora = mundo != null ? mundo.Agora : 0.0;
             var mouse = Mouse.current;
             Vector2 doMouse = mouse != null ? NaTelaDoGui(mouse.position.ReadValue()) - janela.position : new Vector2(-999f, -999f);
@@ -240,6 +240,6 @@ namespace ZombieCityCleaner.UI
         }
 
         // o ponto do mapa no chão do mundo (a altura do relevo ali)
-        Vector3 PontoNoChao(Vector2 p) => new Vector3(p.x, _dados != null ? _dados.Altura(p.x, p.y) : 0f, p.y);
+        Vector3 PontoNoChao(Vector2 p) => new Vector3(p.x, MundoDoJogo.Atual != null ? MundoDoJogo.Atual.Altura(p.x, p.y) : 0f, p.y);
     }
 }

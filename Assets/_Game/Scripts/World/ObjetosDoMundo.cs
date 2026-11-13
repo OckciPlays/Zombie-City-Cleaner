@@ -77,7 +77,8 @@ namespace ZombieCityCleaner.World
         readonly List<Letras> _letras = new List<Letras>();
         readonly List<Bloco> _fila = new List<Bloco>();
         readonly List<Bloco> _sobra = new List<Bloco>();
-        DadosDoMundo _dados;
+        // de onde vêm os objetos: os dados do mundo sorteado ou os carros do Lakewood (12/11/2026; World/BeiraDoMapa.cs)
+        IBeiraDoMapa _fonte;
         Transform _raiz;
         // (sem guardar: na recarga do Play, a Unity devolveria o vetor nulo como vazio)
         [System.NonSerialized] Material[] _letrasPorCor;
@@ -106,20 +107,19 @@ namespace ZombieCityCleaner.World
             _letras.Clear();
             if (_raiz != null) Destroy(_raiz.gameObject);
             _raiz = null;
-            _dados = null;
+            _fonte = null;
         }
 
         void Update()
         {
-            var mundo = MundoDaPartida.Instancia;
-            var dados = mundo != null ? mundo.Dados : null;
-            if (dados != _dados)
+            var fonte = BeiraDoMapa.Atual;
+            if (fonte != _fonte)
             {
                 Limpar();
-                _dados = dados;
-                if (dados != null) _raiz = new GameObject("Beira das estradas").transform;
+                _fonte = fonte;
+                if (fonte != null) _raiz = new GameObject("Beira das estradas").transform;
             }
-            if (_dados?.Objetos == null) return;
+            if (_fonte?.Objetos == null) return;
             if (_versaoDasLetras != Letreiro.Versao) RefazerAsLetras();
             if (Time.unscaledTime >= _proximaRevisao)
             {
@@ -146,17 +146,17 @@ namespace ZombieCityCleaner.World
             if (local != null) centro = local.transform.position;
             // na tela de carregamento, em volta de onde o jogador vai nascer (03/11/2026: antes era a câmera do menu, na
             // origem do mapa, e tudo em volta do bunker começava de uma vez quando ele nascia, com o jogo já na tela)
-            else if (_dados != null) centro = _dados.Partida;
+            else if (_fonte != null) centro = _fonte.Partida;
             else if (Camera.main != null) centro = Camera.main.transform.position;
             else return;
             float agora = Time.unscaledTime;
-            var min = _dados.BlocoDe(centro.x - raio, centro.z - raio);
-            var max = _dados.BlocoDe(centro.x + raio, centro.z + raio);
+            var min = _fonte.BlocoDe(centro.x - raio, centro.z - raio);
+            var max = _fonte.BlocoDe(centro.x + raio, centro.z + raio);
             for (int bz = min.y; bz <= max.y; bz++)
             for (int bx = min.x; bx <= max.x; bx++)
             {
-                if (_dados.Objetos.DoBloco(bx, bz) == null) continue;
-                var c = _dados.CentroDoBloco(bx, bz);
+                if (_fonte.Objetos.DoBloco(bx, bz) == null) continue;
+                var c = _fonte.CentroDoBloco(bx, bz);
                 float d = Vector2.Distance(c, new Vector2(centro.x, centro.z)) - DadosDoMundo.TamanhoDoBloco * 0.7f;
                 if (d > raio) continue;
                 var chave = new Vector2Int(bx, bz);
@@ -197,7 +197,7 @@ namespace ZombieCityCleaner.World
         // continua o bloco de onde parou, até acabar o tempo do quadro
         void Montar(Bloco b)
         {
-            var lista = _dados.Objetos.DoBloco(b.Chave.x, b.Chave.y);
+            var lista = _fonte.Objetos.DoBloco(b.Chave.x, b.Chave.y);
             if (lista == null)
             {
                 b.Feito = true;
@@ -211,7 +211,7 @@ namespace ZombieCityCleaner.World
             while (b.Proximo < lista.Length)
             {
                 int indice = lista[b.Proximo++];
-                Criar(_dados.Objetos.Todos[indice], indice, b);
+                Criar(_fonte.Objetos.Todos[indice], indice, b);
                 if (_relogio.Elapsed.TotalMilliseconds > orcamentoMs) return;
             }
             b.Feito = true;
@@ -334,20 +334,20 @@ namespace ZombieCityCleaner.World
         {
             float x = o.Posicao.x, z = o.Posicao.y;
             giro = Quaternion.Euler(0f, o.Giro, 0f);
-            float y = _dados.Altura(x, z);
-            if (o.NaEstrada) y += RedeDeEstradas.AcimaDoChao;
+            float y = _fonte.Altura(x, z);
+            if (o.NaEstrada) y += _fonte.AcimaDaEstrada;
             if (o.NaCalcada) y += TracadoDaCidade.AlturaDaCalcada;
             if (o.NaGaragem) y += 0.05f;   // o chão de concreto da garagem (ou da vaga), no patamar da casa
             var frente = giro * Vector3.forward;
             if (o.Tipo == TipoDeObjeto.Carro && o.NaEstrada)
             {
-                float hf = _dados.Altura(x + frente.x * 2f, z + frente.z * 2f), ht = _dados.Altura(x - frente.x * 2f, z - frente.z * 2f);
+                float hf = _fonte.Altura(x + frente.x * 2f, z + frente.z * 2f), ht = _fonte.Altura(x - frente.x * 2f, z - frente.z * 2f);
                 giro *= Quaternion.Euler(-Mathf.Atan2(hf - ht, 4f) * Mathf.Rad2Deg, 0f, 0f);
             }
             if (o.NoTalude)
             {
                 const float r = 1.5f;
-                float hx1 = _dados.Altura(x + r, z), hx0 = _dados.Altura(x - r, z), hz1 = _dados.Altura(x, z + r), hz0 = _dados.Altura(x, z - r);
+                float hx1 = _fonte.Altura(x + r, z), hx0 = _fonte.Altura(x - r, z), hz1 = _fonte.Altura(x, z + r), hz0 = _fonte.Altura(x, z - r);
                 var normal = new Vector3(hx0 - hx1, 2f * r, hz0 - hz1).normalized;
                 giro = Quaternion.FromToRotation(Vector3.up, normal) * giro;
             }
@@ -430,8 +430,8 @@ namespace ZombieCityCleaner.World
             posicao = default;
             giro = Quaternion.identity;
             kit = null;
-            if (_dados?.Objetos == null || indice < 0 || indice >= _dados.Objetos.Todos.Count) return false;
-            var o = _dados.Objetos.Todos[indice];
+            if (_fonte?.Objetos == null || indice < 0 || indice >= _fonte.Objetos.Todos.Count) return false;
+            var o = _fonte.Objetos.Todos[indice];
             if (!ComKit(o) || carros == null || carros.Length == 0) return false;
             kit = KitDe(o.Variante, out _);
             var malha = carros[o.Variante % carros.Length];
@@ -448,7 +448,7 @@ namespace ZombieCityCleaner.World
         {
             caixa = default;
             if (!PoseDoCarro(indice, out posicao, out giro, out _)) return false;
-            caixa = carros[_dados.Objetos.Todos[indice].Variante % carros.Length].bounds;
+            caixa = carros[_fonte.Objetos.Todos[indice].Variante % carros.Length].bounds;
             return true;
         }
 

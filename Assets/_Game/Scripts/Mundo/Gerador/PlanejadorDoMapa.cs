@@ -135,6 +135,10 @@ namespace ZombieCityCleaner.Mundo
             // 4. os postos, os lotes das cidades (fora das estradas e dos postos), a casa da família e os bunkers
             PorPostos(d, plano, nomes, s, q);
             PorAcampamentos(d, plano);   // (02/11/2026: o sorteio é o deles, o resto do mapa não muda)
+            // o Hospital Principal (08/11/2026): na maior cidade grande, num quarteirão inteiro (o traçado dela escolhe)
+            foreach (var c in plano.Cidades)
+                if (c.Tipo == TipoDeLugar.CidadeGrande && (plano.CidadeDoHospital == null || c.Raio > plano.CidadeDoHospital.Raio))
+                    plano.CidadeDoHospital = c;
             foreach (var t in plano.Tracados) t.Lotear(plano);
             PorACasaDaFamilia(plano, s);
             PorOBunkerDaFamilia(d, plano);

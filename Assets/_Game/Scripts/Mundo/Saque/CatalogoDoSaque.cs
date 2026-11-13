@@ -47,6 +47,14 @@ namespace ZombieCityCleaner.Mundo
         Farmacia = 1 << 22,
         /// <summary>O que fica atrás das portas da cozinha, com os produtos de limpeza: o álcool (o Desinfetante).</summary>
         Limpeza = 1 << 23,
+        /// <summary>
+        /// As roupas do Hospital Principal (08/11/2026, o SaqueDoHospital): o jaleco, as máscaras, os óculos de proteção, a
+        /// viseira, o respirador e a roupa social e o tênis da equipe, no vestiário e nos carrinhos de roupa. As casas não
+        /// aceitam esta.
+        /// </summary>
+        RoupaDoHospital = 1 << 24,
+        /// <summary>A roupa dos seguranças do hospital (a camisa e a calça do uniforme, o boné e o cinto da polícia), na sala da segurança.</summary>
+        RoupaDaSeguranca = 1 << 25,
     }
 
     /// <summary>
@@ -205,6 +213,14 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>Os lugares das roupas pequenas no corpo (vão também no criado-mudo e no tampo da cômoda).</summary>
         static readonly HashSet<string> LugaresPequenos = new HashSet<string> { "Cabeca", "Oculos", "Mascara", "Maos", "Cintura" };
 
+        /// <summary>As roupas da equipe do hospital e as dos seguranças (as espécies <see cref="EspecieDoSaque.RoupaDoHospital"/> e <see cref="EspecieDoSaque.RoupaDaSeguranca"/>).</summary>
+        static readonly HashSet<string> DoHospital = new HashSet<string>
+        {
+            "Jaleco", "Mascara_Cirurgica", "Mascara_Pano", "Oculos_Protecao", "Viseira", "Respirador", "Camisa_Social", "Calca_Social",
+            "Sapato_Social", "Tenis_Baixo",
+        };
+        static readonly HashSet<string> DaSeguranca = new HashSet<string> { "Camisa_Uniforme", "Camisa_Uniforme_Longa", "Calca_Uniforme", "Bone_Policia", "Cinto_Policia" };
+
         static List<Item> _itens;
         static List<Item>[] _porRaridade;
         static List<string> _faltando;
@@ -263,7 +279,9 @@ namespace ZombieCityCleaner.Mundo
                     {
                         nome = d.nome, numero = d.item, tamanho = d.tamanho,
                         raridade = RaridadeDasRoupas.TryGetValue(peca, out var r) ? r : N,
-                        especie = EspecieDoSaque.Roupa | (LugaresPequenos.Contains(d.lugar) ? EspecieDoSaque.RoupaPequena : EspecieDoSaque.Nenhuma),
+                        especie = EspecieDoSaque.Roupa | (LugaresPequenos.Contains(d.lugar) ? EspecieDoSaque.RoupaPequena : EspecieDoSaque.Nenhuma)
+                                  | (DoHospital.Contains(peca) ? EspecieDoSaque.RoupaDoHospital : EspecieDoSaque.Nenhuma)
+                                  | (DaSeguranca.Contains(peca) ? EspecieDoSaque.RoupaDaSeguranca : EspecieDoSaque.Nenhuma),
                     });
                 }
                 var por = new List<Item>[5];

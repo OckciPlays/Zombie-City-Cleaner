@@ -83,7 +83,8 @@ namespace ZombieCityCleaner.World
         Mesh[] _malhas;
         Material[] _materiais;
         bool _semModelos;
-        DadosDoMundo _dados;
+        // de onde vêm os painéis: o mundo sorteado ou o Lakewood (12/11/2026; World/BeiraDoMapa.cs)
+        IBeiraDoMapa _fonte;
         PaineisDeSucata _paineis;
         Transform _raiz;
         bool _refazerOsDeTeste;
@@ -105,7 +106,7 @@ namespace ZombieCityCleaner.World
             _vivos.Clear();
             if (_raiz != null) Destroy(_raiz.gameObject);
             _raiz = null;
-            _dados = null;
+            _fonte = null;
             _paineis = null;
         }
 
@@ -137,15 +138,15 @@ namespace ZombieCityCleaner.World
 
         void Update()
         {
-            var mundo = MundoDaPartida.Instancia;
-            var dados = mundo != null && mundo.Pronto ? mundo.Dados : null;
-            if (dados != _dados)
+            var jogo = MundoDoJogo.Atual;
+            var fonte = jogo != null && jogo.PartidaPronta ? BeiraDoMapa.Atual : null;
+            if (fonte != _fonte)
             {
                 Limpar();
-                _dados = dados;
-                if (dados != null)
+                _fonte = fonte;
+                if (fonte != null)
                 {
-                    _paineis = PaineisDeSucata.Do(dados);
+                    _paineis = fonte.Paineis;
                     _raiz = new GameObject("Painéis de sucata").transform;
                     _refazerOsDeTeste = true;
                 }
@@ -165,8 +166,8 @@ namespace ZombieCityCleaner.World
             var local = JogadorRede.Local;
             if (local == null) return;
             var c = local.transform.position;
-            var min = _dados.BlocoDe(c.x - Raio, c.z - Raio);
-            var max = _dados.BlocoDe(c.x + Raio, c.z + Raio);
+            var min = _fonte.BlocoDe(c.x - Raio, c.z - Raio);
+            var max = _fonte.BlocoDe(c.x + Raio, c.z + Raio);
             float r2 = Raio * Raio;
             for (int bz = min.y; bz <= max.y; bz++)
             for (int bx = min.x; bx <= max.x; bx++)
@@ -178,7 +179,7 @@ namespace ZombieCityCleaner.World
                     if (_vivos.ContainsKey(i) || _desmontados.Contains(i)) continue;
                     var p = _paineis.Todos[i];
                     if ((p.Posicao - new Vector2(c.x, c.z)).sqrMagnitude > r2) continue;
-                    Criar(i, new Vector3(p.Posicao.x, PaineisDeSucata.AlturaDoChao(_dados, p), p.Posicao.y), p.Giro, p.Modelo, true);
+                    Criar(i, new Vector3(p.Posicao.x, _fonte.AlturaDoPainel(p), p.Posicao.y), p.Giro, p.Modelo, true);
                 }
             }
             // os que ficaram longe saem (os do F1 ficam); os que ainda não acharam o chão tentam de novo

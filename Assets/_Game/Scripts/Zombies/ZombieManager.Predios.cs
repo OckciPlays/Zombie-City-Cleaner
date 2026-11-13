@@ -31,7 +31,7 @@ namespace ZombieCityCleaner.Zombies
         public int AndaresPovoados => _andaresPovoados.Count;
 
         // a cada segundo, no anfitrião: até 2 andares por vez
-        void PovoarAndares(DadosDoMundo dados)
+        void PovoarAndares(IChaoDosZumbis dados)
         {
             float agoraD = DensidadeAgora;
             int feitos = 0;

@@ -5578,6 +5578,7 @@ MonoBehaviour:
   - {fileID: 9079314758979788134}
   - {fileID: 3007224448694599464}
   lugaresUsados: 4
+  tetoPorDentro: 0
   farois:
   - {fileID: 7369572449888227749}
   - {fileID: 4044438944381097879}
@@ -5641,9 +5642,9 @@ MonoBehaviour:
   macacoApoiado: {fileID: 8012725805900912312}
   alturaDoMacaco: 0.25
   tempoDoMacaco: 2.2
-  torque: 700
-  velocidadeMaxima: 22
-  fimDasMarchas: 23
+  torque: 850
+  velocidadeMaxima: 44
+  fimDasMarchas: 31
   velocidadeDeRe: 7
   freio: 2400
   freioDeMao: 4500

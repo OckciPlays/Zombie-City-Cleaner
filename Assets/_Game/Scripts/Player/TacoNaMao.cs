@@ -129,7 +129,13 @@ namespace ZombieCityCleaner.Player
         }
 
         // o taco está deitado ao longo do X da malha: a ponta é o lado mais fino; a mão segura a 42 cm da base
-        void Medir(Mesh malha)
+        void Medir(Mesh malha) => Medir(malha, out _eixo, out _pegadaNaMalha);
+
+        /// <summary>
+        /// Na malha do taco (deitada ao longo do X): para que lado é a ponta (o lado mais fino) e onde a mão segura (a 42 cm
+        /// da base). Os moradores do bunker usam o mesmo (o <c>CorpoDoMorador</c>).
+        /// </summary>
+        public static void Medir(Mesh malha, out Vector3 eixo, out Vector3 pegadaNaMalha)
         {
             var b = malha.bounds;
             float raioMin = 0f, raioMax = 0f;
@@ -141,9 +147,16 @@ namespace ZombieCityCleaner.Player
                 if (v.x > b.max.x - 0.03f) { raioMax += r; nMax++; }
             }
             bool pontaNoMax = nMin == 0 || (nMax > 0 && raioMax / nMax < raioMin / nMin);
-            _eixo = pontaNoMax ? Vector3.right : Vector3.left;
+            eixo = pontaNoMax ? Vector3.right : Vector3.left;
             float baseX = pontaNoMax ? b.min.x : b.max.x;
-            _pegadaNaMalha = new Vector3(baseX + _eixo.x * Pegada, b.center.y, b.center.z);
+            pegadaNaMalha = new Vector3(baseX + eixo.x * Pegada, b.center.y, b.center.z);
+        }
+
+        /// <summary>O taco com a pegada no lugar dela e a ponta para a ponta (os moradores usam o mesmo).</summary>
+        public static void Por(Transform taco, Vector3 eixo, Vector3 pegadaNaMalha, Vector3 pegada, Vector3 ponta)
+        {
+            var giro = Quaternion.FromToRotation(eixo, ponta - pegada);
+            taco.SetPositionAndRotation(pegada - giro * pegadaNaMalha, giro);
         }
     }
 }

@@ -136,7 +136,7 @@ namespace ZombieCityCleaner.UI
                 AbrirItens(!_abertoItens);
             }
             AtalhosDoMundo(teclado);
-            AtalhosDoMapaFixo(teclado);
+            AtalhosDeLakewood(teclado);
             AtalhoDoVideo(teclado);
         }
 
@@ -269,8 +269,8 @@ namespace ZombieCityCleaner.UI
             // (no Dia 0, o painel dele no lugar)
             var mundo = PainelDoDiaZero(u, area);
             if (mundo.width <= 0f) mundo = PainelDoMundo(u, area);
-            // ou, na cena do mapa fixo, o painel dele
-            if (mundo.width <= 0f) mundo = PainelDoMapaFixo(u, area);
+            // ou, na cena do Lakewood (o mapa fixo), o painel dele
+            if (mundo.width <= 0f) mundo = PainelDeLakewood(u, area);
             if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(Area.yMax, mundo.yMax));
             // o Oco de teste, ao lado do último painel
             var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
@@ -285,7 +285,8 @@ namespace ZombieCityCleaner.UI
             // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
             // (e os sobreviventes, 02/11/2026, na terceira aba; o corpo, 05/11/2026, na quarta: as quatro numa faixa logo
             // acima do painel, que a Area também cobre)
-            var zumbis = _abaDaFauna ? PainelDaFauna(u, oco) : _abaDasHabilidades ? PainelDasHabilidades(u, oco) : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
+            var zumbis = _abaDoBunker ? PainelDoBunker(u, oco) : _abaDaFauna ? PainelDaFauna(u, oco) : _abaDasHabilidades ? PainelDasHabilidades(u, oco)
+                       : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
                        : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
             AbasDoCanto(u, zumbis);
             Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
@@ -355,16 +356,23 @@ namespace ZombieCityCleaner.UI
         void CriarItemRpc(Item item, bool noChao, ulong cores, RpcParams parametros = default)
         {
             if (!Aceita(parametros) || item == Item.Nada) return;
+            DarItem(item, noChao, cores);
+        }
+
+        /// <summary>No anfitrião: o item na mochila deste jogador (true) ou, sem espaço ou pedido assim, no chão à frente.</summary>
+        bool DarItem(Item item, bool noChao, ulong cores)
+        {
             var inventario = GetComponent<InventarioJogador>();
             // o saque vem numa pilha cheia (os materiais da fabricação, de uma vez)
             int qtd = Itens.EmPilha(item) && !Itens.EhMunicao(item) ? Itens.Pilha(item) : -1;
-            if (!noChao && inventario != null && inventario.Receber(item, qtd, 0, cores)) return;
-            if (ItensNoMundo.Instancia == null) return;
+            if (!noChao && inventario != null && inventario.Receber(item, qtd, 0, cores)) return true;
+            if (ItensNoMundo.Instancia == null) return false;
             // no chão, 1,2 m à frente (onde um raio de cima bater)
             Vector3 frente = transform.position + transform.forward * 1.2f;
             var ponto = Physics.Raycast(frente + Vector3.up * 1.5f, Vector3.down, out var chao, 4f, ~((1 << 2) | (1 << JogadorRede.CamadaJogador)), QueryTriggerInteraction.Ignore)
                 ? chao.point : transform.position;
             ItensNoMundo.Instancia.Criar(item, ponto, transform.eulerAngles.y + 90f, qtd, 0, cores);
+            return false;
         }
 
         [Rpc(SendTo.Server)]

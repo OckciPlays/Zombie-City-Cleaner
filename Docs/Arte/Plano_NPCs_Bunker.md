@@ -627,13 +627,15 @@ resto usa a ficha.
    - a agenda de cada um, as camas e as quatro barras;
    - dormir e sentar;
    - comer e beber do estoque (ir até a estante, pegar, as vagas e o gasto) e a reserva do começo;
-   - os lugares (os tipos e as metas, o suporte e a mesinha);
+   - os lugares (os tipos e as metas; o suporte e a mesinha foram para a parte 8);
    - o F1 BUNKER e o save.
 7. **O computador:** a tela do terminal e as abas (MEMBROS com a ficha, ESTOQUE com os dias, LUGARES, REGISTRO, MAPA e
    RÁDIO) e a das cartas (os 52 do mundo: os descobertos com a ficha, os outros com "?"). Ele vem cedo porque ajuda a
    testar o resto.
 8. **O lazer, o humor, as falas e a opinião:**
    - a sinuca (sozinho e a dois), o cigarro, a TV, ler, rezar e o rádio, e os afazeres;
+   - o suporte dos tacos (os tacos em pé nas vagas e a caixa de bolas na prateleirinha) e a mesinha do fumo (o maço e o
+     cinzeiro), com os modelos da parte 4 exportados para a mobília e a tela e o desenho próprios (vieram da parte 6);
    - os motivos, os traços no humor, as faixas e as crises;
    - a opinião e as lembranças;
    - as falas sozinho, o cumprimento, o menu do E e as conversas entre eles.
@@ -823,7 +825,7 @@ No projeto Unity (os detalhes no `CLAUDE.md` de lá, "Os moradores do bunker"):
 - **Fica para depois:** a lista do computador (as cartas descobertas e as com "?", na parte 7) e os NPCs no mapa (onde
   cada grupo vive e como se encontra cada um).
 
-## A parte 5: as animações dos moradores (05/11/2026, feita, esperando a aprovação)
+## A parte 5: as animações dos moradores (05/11/2026, aprovada em 06/11/2026: "pode continuar no sistema dos NPCs")
 
 No `PrincipalBloco.blend`, pelo `bloco_morador.py` da pasta `Modelo 3D/Principal` (que roda o `bloco_cigarro.py`: o
 corpo, as armas, os itens, o taco, o fumo e o IK). Os detalhes no `CLAUDE.md` da pasta de arte ("Convenções do
@@ -879,11 +881,322 @@ personagem principal em blocos", "Os moradores"). A cópia de antes está em `Pr
 - **As fotos:** `Imgs/Renders/Moradores_Anim_Sentar.png`, `_Sentado.png`, `_Cama_e_Comer.png`, `_Trabalho.png` e
   `_Outras.png` (cada ação de três quartos e de lado, com os móveis de referência).
 
-## O estado (05/11/2026): a parte 5, esperando a aprovação
+## A parte 6: os moradores no bunker (06/11/2026; a primeira fatia aprovada: "pode seguir para o próximo passo"; a segunda em andamento)
+
+Em duas fatias. **A primeira** (esta): o corpo e a rede, o andar pelo bunker (o NavMesh, a escada e o papel), a agenda,
+as camas e as barras, dormir e sentar, as refeições e os afazeres, o F1 BUNKER e o save. **A segunda**: comer e beber do
+estoque (ir até a estante, pegar, as vagas e o gasto), a reserva do começo (7 dias) e os lugares (os tipos e as metas, o
+suporte dos tacos e a mesinha do fumo, que precisam da mobília nova exportada com o lote dos moradores). Os detalhes do
+código estão no `CLAUDE.md` do projeto Unity ("Os moradores no bunker").
+
+- **O corpo:** o do jogador (a cópia do `Corpo_PrincipalBloco`, como o dos sobreviventes; ele já tem os ossos das peças e
+  o fumo, então o `NPC_Corpo` das roupas não precisou mudar), vestido pela ficha (o mesmo sorteio da tela das cartas, em
+  todas as máquinas) e com o nome em cima da cabeça (o apelido, quando tem; num tom mais quente que o dos jogadores). Um
+  NetworkObject por morador, que o anfitrião põe quando o andar dele está montado e tira quando não está.
+- **O controlador** só dos moradores: a locomoção (parado e andando, normal e mancando, com o passo na rapidez dele) e as
+  ações da parte 5 (sentar, sentado e levantar da cadeira, do sofá e do banco, ler, rezar e triste, comer, deitar,
+  dormindo e levantar, as bancadas, a estante e a sinuca), com o sentar e o deitar indo sozinhos para o parado. O prato, a
+  comida, a colher e o bocado do `Loot.fbx` nos vazios do corpo, só no comer e no lavar a louça; o livro aberto (uma malha
+  simples, como a prévia do Blender), só no ler.
+- **A rapidez** pela ficha: 1,6 m/s (com 1,3, o clipe do andar, de 2,0 m/s e passos longos, tocava em câmera lenta), o
+  rápido e o lento 20%, o joelho ruim 25% (mancando: o `Andar_Mancando`), os de 65 anos para cima 15% (e o corpo um pouco
+  curvado em pé).
+- **Os lugares** (tirados dos móveis do bunker, pelas medidas das animações): os 10 assentos dos sofás do B1, os 64 do
+  refeitório (atrás dos bancos), os dois lados de cada cama (o de lá com o corpo espelhado: a animação deita com a cabeça
+  para a esquerda), as pias e as bancadas, os espelhos dos banheiros e uns lugares em pé. Um lugar só fica se a raiz cabe
+  no cômodo e fora dos outros móveis. **As cadeiras do bunker ficaram todas de fora** (estão empurradas para baixo das
+  mesas): ler, rezar e ficar triste usam a beira do sofá (a animação da cadeira cabe nele, uns 5 cm afundada).
+- **A agenda e as barras:** as das decisões 10 e 11 (dormir das 22:00 às 6:30, o banheiro, as três refeições, os afazeres
+  em pedaços de 1 a 2 horas, o lazer, o cochilo dos velhos, as rezas do religioso, o notívago e o insone); a fome e a sede
+  abaixo de 25 passam na frente (ele come fora de hora), e o sono abaixo de 10 dá um cochilo no sofá. **Por enquanto, a
+  refeição enche a fome e a sede sem gastar o estoque** (a segunda fatia). Os afazeres: lavar a louça (as pias do B2),
+  consertar (as bancadas do B0) ou ler; o lazer: a TV no sofá, ler ou ficar em pé na sala.
+- **As camas:** os casais na cama de casal (os quartos 5 e 6 primeiro, um de cada lado), o parente da família sem casal num
+  deles, os outros na cama de baixo dos beliches (cada um longe do vão do outro) e depois nas dos quartos. Na de casal e na
+  de solteiro, o colchão fica 12 cm acima do do beliche (o das animações), e o corpo sobe isso deitado.
+- **O papel e o corpo:** com o andar desmontado, ele anda pelo tempo (a distância, a escada e a rapidez dele) e chega no
+  lugar sem corpo; com o andar montado (e o NavMesh pronto), ele aparece onde está (sentado, deitado, ou no caminho) e anda
+  de verdade, pela escada quando os andares do caminho estão montados; senão, ele vai até a porta da escada e some.
+- **O F1 BUNKER** (a quinta aba do canto): os moradores (o que cada um faz, o andar, o lugar, o corpo ou o papel, as
+  barras e a cama), o relógio rápido (×1, ×10 e ×60), as barras de todos (cheias, a fome e a sede em 20, o sono em 5), pôr
+  um morador sorteado e tirar o último, e ir aos andares (do B0 ao B3, na porta da escada). As doenças, o humor, o portão
+  e o estoque vêm nas partes deles.
+- **O save:** a vida de cada morador (as barras, a cama, a atividade, o lugar e onde ele está) no mundo salvo; quem não
+  tem começa já no lugar da atividade de agora.
+- **Conferido no Play do Editor** (com um jogador, num mundo de teste de 5 moradores, sem gravar nada): a noite no lazer
+  (sentados nos sofás do B1, lendo com o livro), a hora de dormir (levantam, vão até a escada e somem com o B3
+  desmontado; no B3, aparecem nas camas, deitados, o do lado de lá espelhado), a manhã (acordam, vão ao banheiro do B3 com
+  o corpo e descem a escada até o refeitório do B2), o comer (sentados no banco, o prato com o ensopado na mesa e a colher
+  na mão) e os afazeres (lavando a louça nas pias do B2). O save vai e volta: a vida gravada num JSON e o mundo recarregado
+  dele, os cinco voltaram deitados nas mesmas camas. Os 4 testes do Editor (`VidaNoBunkerTestes`) passam. O painel do F1
+  não foi aberto no teste (só as ações dele, pelo código).
+- **As fotos** (do Play, com a câmera de teste): `Imgs/Renders/Moradores_Bunker_Sofa.png`, `_Lendo.png`, `_Comendo.png`,
+  `_Beliche.png` (do lado de lá, espelhado) e `_Casal.png`.
+- **Depois do teste do usuário** (06/11/2026: "às vezes os NPCs ficam andando travando e sem sair muito do lugar, eles
+  andam devagar dando umas travadinhas"): o caminho era pedido de novo a cada quadro (o lugar fica uns centímetros fora do
+  NavMesh, perto do móvel, e a comparação era com o ponto do NavMesh), e ele nunca ficava pronto. Agora o caminho só é
+  pedido quando o lugar muda (do banheiro do B3 ao refeitório do B2, dois pedidos por morador), com a chegada no fim do
+  caminho até 2 m do lugar (o resto ele desliza), a vez de cada um nos corredores (a prioridade pelo id) e a rapidez de 1,6
+  m/s. O nome em cima da cabeça é o apelido só quando ninguém mais no bunker tem o mesmo (o teste tinha três "Doc"), e a
+  ficha vai para a rede no nascer do corpo (antes, um aviso a cada um).
+- **Fica para depois:** as cadeiras soltas (para ler numa cadeira de verdade), a animação de subir na cama de cima do
+  beliche, o E no morador (a conversa, da parte 8) e os zumbis (eles ainda não veem os moradores: a parte 10).
+
+### A segunda fatia: o estoque (06/11/2026; aprovada: "Aprovar, seguir")
+
+- **Os lugares do estoque** (a decisão 12): o que está nas estantes, nas prateleiras e, agora, nas bancadas de inox (o tampo
+  delas guarda, como uma estante de uma tábua; o E abre a mesma tela). Cada um tem um tipo pelo cômodo: a **despensa** (as
+  estantes da despensa e a da cozinha do B2: a comida, meta 12), a **bancada da água** (a bancada de inox do refeitório: a
+  bebida, meta 6) e o **depósito** (o resto: qualquer coisa, sem meta). As metas ficam escritas (o F1 mostra quanto cada
+  um tem); quem as mantém é o organizador, na parte 9, e quem as muda é o computador, na parte 7.
+- **Comer e beber do estoque:** na hora da refeição (com a fome ou a sede abaixo de 60), ou com muita fome ou sede (abaixo
+  de 25, até antes de dormir), o morador vê o que falta nas vagas (a comida, a bebida) e vai buscar no lugar mais perto
+  que tenha, de qualquer tipo: anda até a frente da estante (cada estante tem de 2 a 4 lugares ao longo dela, e ele para no
+  lado do item), pega com a animação da tábua (no chão, embaixo, no meio ou no alto; a tábua de cima das estantes de aço,
+  a 2,37 m, ninguém alcança) e o item vai para as vagas. Com a comida e a bebida, ele senta no refeitório e come: o que ele
+  tirou das vagas vai entrando na fome e na sede (o que cada item dá: a lata de comida 40 de fome, a garrafa 45 de sede).
+  No papel, ele pega na hora em que chega. Sem nada no estoque, ele tenta de novo 2 horas depois e volta à agenda.
+- **As vagas** (a decisão 13): 6 (4 com a coluna ruim), com as pilhas; ficam no save. O F1 mostra o que cada um leva. O
+  "O que você carrega?" do E vem na parte 8.
+- **A reserva do começo** (a decisão 11): uma vez por mundo, uns segundos depois de os moradores começarem, 7 dias para o
+  grupo (por dia, cada um gasta três quartos de uma lata e uma garrafa): para 5, 27 latas (comida, feijão, carne, milho e
+  sopa) e 35 bebidas (a água e umas caixas de leite), na despensa, e 6 garrafas na bancada da água. O mundo salvo marca que
+  já pôs (`reservaDosMoradores`); um mundo de antes ganha a reserva no próximo Continuar.
+- **O F1 BUNKER:** o estoque (as comidas e as bebidas que eles alcançam, a fome e a sede que elas dão e quantos dias dura),
+  a despensa e a bancada da água com as metas, o que cada um leva e "Encher o estoque" (mais 7 dias).
+- **O suporte dos tacos e a mesinha do fumo** ficam para a parte 8, junto da sinuca e do cigarro: os tacos ficam em pé nas
+  vagas do suporte e a caixa de bolas na prateleirinha, e o maço na mesinha com o cinzeiro, e isso pede o desenho e a tela
+  próprios (a das estantes é uma grade de tábuas), além dos modelos novos exportados para a mobília. Sem a sinuca e o
+  cigarro, ninguém usa os dois.
+- **Conferido no Play do Editor** (um jogador, o mundo de teste dos 5, sem gravar nada): a reserva entrou (62 itens, 7 dias
+  para 5); com a fome e a sede em 20, cada um foi à despensa ou à bancada da água, pegou com a animação (a foto), levou nas
+  vagas, sentou no refeitório e comeu (a fome de 19 para 63–68), e o estoque desceu junto. Os testes do Editor passam
+  (cada estante e bancada que guarda, do B0 ao B3, tem onde o morador parar na frente).
+- **A foto:** `Imgs/Renders/Moradores_Bunker_Estante.png`.
+
+## A parte 7: o computador (06/11/2026; aprovada em 07/11/2026: "Aprovar, parte 8")
+
+- **O terminal** (a decisão 20): nos dois computadores da sala de operações (B0), o E ("Usar o terminal do bunker") abre a
+  tela, verde no preto, com a letra de máquina (Consolas), as riscas de monitor e o cursor piscando. Qualquer jogador
+  abre de dentro do bunker; o 1 a 7 e o Tab trocam as abas, a roda rola, o E e o ESC fecham. O que é dos moradores vem do
+  anfitrião a cada segundo, só da aba aberta (em pedaços, pela rede); o estoque, as estantes, o mapa e os jogadores cada
+  máquina já tem.
+- **MEMBROS:** cada morador (o nome, a idade, o que está fazendo e onde, "indo dormir (para B3, Quarto 5)", as barras da
+  fome, da sede e do sono, a vontade de fumar dos fumantes, a saúde com as condições, o que carrega e a cama) e, do
+  escolhido, a ficha inteira (a história, as habilidades com a paixão, os traços e as condições com o efeito, o que não
+  faz, os laços e a opinião sobre cada um do bunker); a cama se muda ali ("[mudar]": as camas com lugar). Embaixo, os
+  jogadores (a vida, a fome, a sede e onde estão: "no B1" ou "fora, a 2,4 km"). O humor e a função aparecem com "—" até
+  as partes 8 e 9.
+- **ESTOQUE:** a comida e a bebida em itens, no que enchem e em **dias** (só os moradores e, ao lado, com os jogadores
+  comendo daqui: eles comem no dobro do ritmo), os remédios, o fumo (os maços e os cigarros) e a sinuca, e a lista de tudo
+  por categoria (a comida, a bebida, os remédios, o fumo, a sinuca, as armas e a munição, os materiais e as peças, e o
+  resto), com a estante e o andar de cada coisa; o que está na tábua de cima das estantes de aço aparece "(alto)" e não
+  conta (os moradores não alcançam).
+- **LUGARES:** a despensa, a bancada da água e o depósito (onde ficam, quanto têm e a meta, que se muda ali, [−] e [+],
+  de 0 a 60; vão no save), as estantes uma por uma (o tipo e quantos itens) e as camas (19 móveis, 25 lugares, de quem é
+  cada uma e as livres).
+- **REGISTRO:** o diário do bunker, os 100 últimos, do mais novo ao mais velho, no save: o terminal ligado, a reserva do
+  começo, cada refeição ("Dia 2, 07:11: Dana comeu a lata de feijão e bebeu a garrafa de água."), quem não achou comida no
+  estoque (uma vez, até comer de novo), a fome e a sede muito baixas, quem chegou e quem saiu (o F1), a meta e a cama
+  mudadas no terminal ("Ana mudou a cama de Dana: B3 Dormitório · beliche 1.") e o que os jogadores guardam e pegam nas
+  estantes (juntado por estante: "Ana pegou a lata de feijão e a garrafa de água do depósito do B0."). O sono saiu: quem
+  deitava tarde passava do limite toda noite.
+- **MAPA:** o mapa do M em verde, com o bunker e as setas dos jogadores, e os pedidos de socorro (nenhum ainda).
+- **RÁDIO:** o canal com o chiado e "Ninguém chamando."; os pedidos de abrigo e de socorro vêm na parte 11.
+- **CARTAS:** os 52 NPCs do mundo em cartas, os conhecidos (os do bunker e os descobertos) com o nome, a idade e "no
+  bunker" ou "lá fora", e a ficha ao lado; os outros com "?".
+- **Conferido no Play do Editor** (um jogador, o mundo de teste dos 5, sem gravar nada): a dica e o E no computador, as
+  sete abas, a ficha de um de fora (e nada de um desconhecido), a meta e a cama mudadas pelo pedido do jogador (a cama
+  nova no lugar livre), o aviso da estante e o registro e as metas atravessando o save (em memória). Os testes do Editor
+  dos moradores passam. Falta o teste com dois jogadores (os pedaços pela rede de verdade).
+- **As fotos:** `Imgs/Renders/Moradores_Terminal_Membros.png`, `_Estoque.png`, `_Lugares.png`, `_Registro.png`,
+  `_Mapa.png` e `_Cartas.png`.
+
+## A parte 8: o lazer, o humor, as falas e a opinião (07/11/2026; em andamento)
+
+A parte é grande, e vai em três fatias, cada uma aprovada antes da outra:
+
+1. **O humor** (a primeira): o número de 0 a 100 e os motivos com prazo que dá para ter hoje (passou fome e sede,
+   dormiu na cama ou mal, se divertiu e o tempo sem lazer, rezou, fez o que gosta, a fartura e a escassez, junto do
+   casal, um jogador que volta depois de 2 dias fora, o portão aberto para o medroso), os traços no humor (o alegre, o
+   pessimista, o notívago, o simples, o guloso e o acumulador), as três faixas (o triste senta triste no lazer) e as
+   crises que não pedem fala (as leves: chorar trancado no quarto, comer sem fome e andar sem rumo; a forte: jogar no
+   chão o que está numa estante), com o registro, o terminal (o humor e os motivos na ficha) e o F1.
+2. **O lazer:** a sinuca (sozinho e a dois, de verdade), o cigarro (com as animações do jogador e o cinzeiro), o suporte
+   dos tacos e a mesinha do fumo (os modelos da parte 4 na mobília, a tela e o desenho próprios), a TV, o rádio e os
+   afazeres que faltam (dobrar a roupa e a bancada do arsenal), com os motivos deles (o fumante sem cigarro, a sinuca
+   do jogador).
+3. **As falas e a opinião:** o texto em cima da cabeça, as falas sozinho, o cumprimento, o menu do E (com "Conte uma
+   história"), as conversas entre eles, a opinião que muda com as lembranças (os amigos e os rivais), o falador e o
+   calado, as crises que pedem fala (a discussão) e quem acalma quem está em crise.
+
+O ir embora (3 dias seguidos abaixo de 20) fica para a parte 11, com o trazer e o perder moradores.
+
+### A primeira fatia: o humor (07/11/2026; aprovada: "Aprovar, o lazer")
+
+- **O número:** de 0 a 100, começa em 50; a conta é 50, o fixo dos traços (o alegre +10, o pessimista −10, o notívago +4
+  de noite) e os motivos. O número mostrado anda até a conta aos poucos (12 por hora do jogo), como no RimWorld. As
+  faixas: triste abaixo de 35, feliz acima de 65.
+- **Os motivos de agora** (com o prazo): passou fome e passou sede (−15, enquanto abaixo de 25 e mais 1 dia), dormiu na
+  cama dele (+5, 1 dia; 3 horas de sono ou mais) ou dormiu mal (−8, no sofá ou o insone uma noite em três; o simples −4),
+  se divertiu (+8, 1 dia: meia hora de TV ou de leitura no lazer), nenhum lazer há 2 dias (−8), rezou (+6, 12 horas: o
+  religioso; conta como lazer), fez o que gosta (+4 ou +8 pela paixão: lavar a louça e cozinhar com a Cozinha, consertar
+  com a Mecânica ou o Ofício; enquanto faz e mais 2 horas), a fartura (+8, mais de 7 dias de comida e água; o acumulador
+  +16, o guloso +4 a mais) e a escassez (−12, menos de 2 dias; o acumulador −24), junto do casal (+5, os dois no bunker e o
+  outro não triste), um jogador voltou depois de 2 dias fora (+10 para todos, 1 dia), o portão aberto (o medroso, −6) e
+  os itens no chão do bunker (o arrumado, −4, ou −8 com mais de 5). O fumante sem cigarro e a sinuca vêm na fatia do
+  lazer; a conversa, na das falas; a doença e o luto, na parte 10.
+- **O triste** senta e fica triste (o "Sentado_Triste") em 60% dos lazeres, no lugar da TV ou do livro.
+- **As crises:**
+  - **as leves**, abaixo de 15 por 2 horas: chorar trancado no quarto (4 horas, em pé num lugar do quarto da cama dele,
+    com o choro na camada de cima do controlador), comer sem fome (pega 3 comidas no estoque e come as 3 de uma vez; sem
+    comida no estoque, vira o andar sem rumo) ou andar sem rumo (4 horas, de um lugar em pé a outro, em andares
+    sorteados). O largar a função vem com as funções (a parte 9);
+  - **a forte**, abaixo de 5 por 1 hora: vai à estante mais perto que tenha o que ele alcança e joga no chão até 4 itens
+    dela ("Hawk jogou no chão 4 itens da despensa (B2)."). A discussão com o rival vem com as falas;
+  - depois de uma crise, o "desabafou" (+20 por 1 dia) e 1 dia sem outra.
+- **Os lugares em pé:** eram 5 (um em cada sala); agora são 83, de 1 a 3 em cada cômodo do B0 ao B3 (os quartos têm 2
+  ou 3), para o choro no quarto e o andar sem rumo. O lazer em pé continua só nos cômodos de ficar à toa (as salas, o
+  refeitório, o dormitório e as operações). Os índices dos lugares do save não mudam (os novos vêm no fim).
+- **O registro:** quem fica triste (com o motivo que mais pesa: "Dana está triste (passou fome)."), as crises ("Dana teve
+  uma crise: chorando trancada no quarto.", "Hawk comeu três latas de uma vez, sem fome.", "Irene se acalmou."), a escassez
+  do estoque (quando entra e quando sai) e o jogador que volta ("Ana voltou depois de 3 dias fora.").
+- **O terminal:** em MEMBROS, o humor e a faixa de cada um (a cor pela faixa) e a crise em vermelho; na ficha, o humor e
+  os motivos, os que pesam mais primeiro ("−15 passou fome", "+8 se divertiu", "+10 alegre (sempre)").
+- **O F1 BUNKER:** o humor de cada um no resumo e os botões "Humor 3", "Humor 12" e "Humor normal" (um motivo de teste
+  por 6 horas, que põe o número já no valor).
+- **O save:** o humor, os motivos, a crise e os contadores vão na vida de cada um.
+- **Conferido no Play do Editor** (um jogador, o mundo de teste dos 5, sem gravar nada): o "se divertiu" depois do lazer,
+  o passou fome e sede, o humor descendo aos poucos, o "está triste" no registro, as três crises leves (com o "Humor 12":
+  uma andando sem rumo, uma comendo sem fome e três chorando), a Dana chorando no dormitório (a foto), a crise forte do
+  Hawk na estante da cozinha (4 itens no chão) e o terminal. Com o relógio a ×60, quem tem corpo num andar montado anda no
+  tempo de verdade (cada segundo vale uma hora): ir até a escada leva "horas", e na noite rápida eles quase não dormem; a
+  ×1 não acontece. Os testes do Editor dos moradores passam (com um novo: o humor vem dos motivos e dos traços). Falta o
+  teste com dois jogadores.
+- **As fotos:** `Imgs/Renders/Moradores_Humor_Chorando.png` e `Moradores_Humor_Terminal.png`.
+
+### A segunda fatia: o lazer (07/11/2026; feita, esperando a aprovação)
+
+- **Os modelos da parte 4 no jogo:** o `Mobilia_Nova.fbx` exportado de novo (com o suporte dos tacos, o cinzeiro, a
+  panela grande e a caixa de papelão) e a tira das texturas com o papelão. No bunker (B1), dois móveis novos, **no fim
+  da lista** (os índices dos móveis de antes, que são as estantes dos itens guardados, não mudam): o **suporte dos
+  tacos** na parede da sala de jogos, perto da sinuca (no tamanho final, como os tacos), e o **cinzeiro** em cima da
+  mesinha de canto da sala de estar, que virou a **mesinha do fumo**.
+- **O suporte e a mesinha guardam itens, com a tela e o desenho próprios:** no E, a tela do inventário mostra as vagas
+  deles no lugar das faixas das estantes: no suporte, as 4 vagas dos tacos (em pé) e a da caixa de bolas (na
+  prateleirinha); na mesinha, 4 vagas para os maços, e o cinzeiro desenhado ao lado com as bitucas. Cada vaga leva só o
+  que é dela (um taco, a caixa, um maço). No mundo, os tacos ficam em pé nos copos do suporte, a caixa na prateleira e os
+  maços deitados na mesinha.
+- **O começo:** na primeira vez do mundo (o `lazerDosMoradores` do save), dois tacos e a caixa de bolas no suporte e,
+  se tem um fumante, dois maços cheios na mesinha ("Os tacos e a caixa de bolas foram para o suporte da sala de jogos,
+  e 2 maços para a mesinha do fumo.", no registro).
+- **O cigarro:** o fumante tem a vontade de fumar (a barra do fumo, da parte 6). Cheia, ele busca um maço numa estante
+  (o maço inteiro, que vai nas vagas dele) e fuma onde pode: no lazer, nas salas, no refeitório e nos quartos (fora da
+  cozinha, da enfermaria e do isolamento), sentado ou em pé. Nos afazeres, ele pede **a pausa para o cigarro** (meia
+  hora em pé, no lugar mais perto do mesmo andar onde se pode fumar) e volta à agenda. Fumando: o maço na mão (o
+  "Maco_Segurar"), o acender (3 s), o cigarro aceso (o "Cigarro_Segurar"), uma tragada a cada uns 8 s com a baforada
+  (o "Cigarro_Tragar"), 6 tragadas ou uns 70 s, e o peteleco no fim (a bituca cai com física e solta fumaça, como a do
+  jogador). As peças, a brasa, o fio de fumaça e a luz laranja são as do jogador (o `FumoJogador` empresta as funções),
+  pela rede (a mão, quantos cigarros sobram e as tragadas). **O canto do fumo:** dois lugares em pé dos lados da
+  mesinha (as poltronas do canto de leitura ficam de fora: a mesinha está perto demais delas), e os fumantes com vontade
+  vão para lá em 60% dos lazeres; perto do cinzeiro (1,7 m), a bituca vai para ele, e não para o chão. **O cinzeiro**
+  mostra até 12 bitucas (uma a mais por cigarro), e quem apaga o 13º o esvazia antes ("Irene esvaziou o cinzeiro da
+  mesinha do fumo."); as
+  bitucas vão no save. O último cigarro do maço vai para o registro ("Herb fumou o último cigarro do maço.").
+- **A sinuca de verdade:** os moradores jogam na mesa do B1 com a física do jogo (a mesma dos jogadores), sozinhos ou a
+  dois (15% dos lazeres; 50% para quem tem a paixão no Jogador; quem passa perto de uma partida com um só entra nela em
+  55%). Quem joga pega um taco no suporte (e a caixa de bolas, se a mesa está sem elas), põe as bolas no triângulo, e os
+  dois se revezam: cada um anda até um dos 6 lugares em volta da mesa, de onde a tacada dá, faz a tacada (o
+  "Sinuca_Tacada", com o taco na mão; a batida na branca é no quadro da animação) e espera as bolas pararem; quem
+  encaçapa joga de novo. A tacada é escolhida de verdade (a bola e a caçapa mais fáceis, com o caminho livre, o corte até
+  70°) e erra pela habilidade (Jogador) e por estar triste ou ter a vista fraca. No fim (a hora do lazer acaba, ou as 15
+  bolas caem), as bolas voltam para a caixa, o taco e a caixa voltam para o suporte, e o registro diz "Hawk e Travis
+  jogaram sinuca (14 tacadas, 6 bolas encaçapadas).". A mesa fica dos moradores enquanto eles jogam (o jogador vê
+  "Os moradores estão jogando sinuca"); os jogadores veem as tacadas pela rede, como as dos outros jogadores. Andando
+  com o taco, o "Taco_Segurar" na camada de cima.
+- **A TV, o rádio e o resto do lazer:** a TV de chão da sala de estar liga quando alguém está no sofá olhando para ela
+  (a tela com o chiado em preto e branco ou as barras de cor de uma fita, a luz azulada e o som do chiado, gerados por
+  código); o rádio da sala de operações (B0) liga quando alguém está na cadeira na frente dele (o chiado com os
+  assobios e os bipes). Os dois pela rede. No lazer: o canto do fumo, a TV (40%), o rádio, a leitura.
+- **Os afazeres que faltavam:** **dobrar a roupa** na mesa da lavanderia (B3), com uma animação nova
+  (`PrincipalBloco_Dobrar_Roupa`, 5 s em laço: pega uma peça da pilha da esquerda, sacode, abre na mesa, dobra ao meio,
+  dobra de novo e põe na pilha da direita; a roupa na mão é um pano que muda de forma: aberto, ao meio e em quatro), com
+  as duas pilhas de roupa na mesa; e **a bancada do arsenal** (B0), o consertar da parte 6. Nos afazeres: a louça, a
+  bancada, a roupa e a leitura.
+- **Os motivos novos:** fumou (+6, 6 horas), sem cigarro há mais de um dia (o fumante, −12, enquanto) e jogou sinuca
+  (+8, 1 dia; +16 com a paixão no Jogador). O rádio conta como lazer para o "se divertiu".
+- **O terminal e o F1:** em MEMBROS, "jogando sinuca", "vendo TV no sofá", "ouvindo o rádio", "dobrando a roupa",
+  "guardando o taco" e o ", fumando"; o F1 BUNKER ganhou "Fumo cheio" (a vontade de todos os fumantes cheia) e "Sinuca
+  agora" (os dois primeiros vão jogar).
+- **Os lugares novos** (no fim, depois de todos os outros: os índices do save não mudam): a cadeira do rádio, os dois
+  lados compridos das mesas da lavanderia (dobrar), os 6 em volta da mesa de sinuca, os da frente do suporte e da mesinha
+  (para guardar e pegar) e os dois em pé do canto do fumo. São 461 ao todo.
+- **Um conserto de antes:** a mesa de sinuca se registrava com a chave 0 (a chave vem depois do componente), e os quadros
+  das tacadas de um jogador não chegavam na mesa dos outros. Agora ela se registra de novo quando a chave muda.
+- **Conferido no Play do Editor** (um jogador, o mundo de teste dos 5, sem gravar nada): a reserva do lazer no suporte e
+  na mesinha (com o registro), a tela do suporte, uma partida a dois com a física (os turnos, as bolas encaçapadas, o
+  recolher e o registro), o taco na mão, o fumo (as 6 tragadas e o "fumou"), a pausa para o cigarro no trabalho, o canto
+  do fumo (o Herb em pé do lado da mesinha, com a bituca no cinzeiro), o taco voltando ao suporte, a TV ligada com o
+  chiado, o rádio ligado e a roupa dobrada com as pilhas. Um acerto do teste: o fumante só vai ao canto do fumo com um
+  maço nas vagas (sem maço, ele ia para lá e ficava parado com vontade). Os testes do Editor dos
+  moradores passam (com um novo: os lugares do lazer vêm depois dos outros, com o canto do fumo). Falta o teste com dois
+  jogadores (a sinuca e o fumo pela rede de verdade).
+- **As fotos:** `Imgs/Renders/Moradores_Lazer_Sinuca.png`, `_Tacada.png`, `_Suporte.png`, `_Suporte_Tela.png`,
+  `_Fumando.png`, `_TV.png`, `_Radio.png` e `_Roupa.png`, e a animação no Blender, `Modelo 3D/Principal/Renders/
+  Clipe_PrincipalBloco_Dobrar_Roupa.png`.
+
+### Os ajustes depois do primeiro teste do lazer (07/11/2026, a pedido: seis bugs, antes de aprovar)
+
+1. **"Alguns NPCs, quando levantam do sofá, ficam em cima dele travados":** não se repetiu aqui. Num teste, cada um dos
+   10 assentos de sofá do B1 recebeu um morador sentado, que depois levantou e saiu andando: todos ficaram no chão e se
+   afastaram de 3 a 7 m em 7 s. Também nenhum dos 1.278 pontos onde um corpo pode aparecer no B1 (a reta da escada
+   até cada lugar) cai em cima de um móvel. Ficou uma proteção: quem liga o agente (o levantar, o corpo novo) procura
+   o NavMesh na altura dos pés, em volta, e não o mais perto de qualquer altura (o alto de um móvel pode ser mais perto
+   que o chão). Falta saber onde aconteceu (o andar, o sofá, com um ou com dois jogadores).
+2. **A mão na tacada da sinuca:** a tacada do `bloco_morador.py` tem a ponte (a mão esquerda) 74 cm à frente da raiz,
+   no pano, e a bola branca a 1,03 m. No jogo, com a bola perto da tabela do lado de quem joga, a ponte caía em cima
+   da tabela, que fica 6 cm acima do pano, e a mão ficava dentro da madeira (de frente, parecia dentro do corpo); nos
+   velhos, o "anda curvado" do jogo curvava o corpo também na tacada, e a mão ficava 7 cm abaixo do pano mesmo no meio
+   da mesa. Agora, depois da animação, o punho vai para 2 cm acima do que está embaixo dele (o pano, ou a tabela), a
+   mão que passou da beira volta para cima da tabela (o braço por IK de dois ossos, a mão com o mesmo giro), o taco
+   sobe junto na ponte e o velho não se curva na tacada. Medido em 7 tacadas: o punho a 2,5 cm do pano no pano e a
+   8,8 cm em cima da tabela, nos novos e nos velhos. A foto: `Imgs/Renders/Moradores_Lazer_Ponte.png`.
+3. **Os vidros em bolinhas brancas** (a viseira e os óculos de proteção): eram um pontilhado no material das roupas.
+   Agora o vidro é um segundo material, transparente de verdade (o shader `RoupasVidro`, com o brilho e mais opaco de
+   lado), nas peças com vidro (achadas pela montagem das roupas pelo alfa da textura: a viseira e os óculos de
+   proteção), no corpo, nos itens no chão, nas estantes, nos móveis e nos ícones. A foto:
+   `Imgs/Renders/Roupas_Vidro_Transparente.png`.
+4. **O cabelo e o que está na cabeça sumindo de perto, olhando para baixo:** a caixa de cada peça (por onde a Unity
+   decide se ela está na tela) era a do FBX, justa na pose T, com a cabeça a 1,7 m. Agachado, sentado ou mexendo a
+   cabeça, a peça saía da caixa, e de perto a caixa saía da tela antes da peça. Agora todas as peças, nos jogadores e
+   nos NPCs, têm a caixa do corpo inteiro em qualquer pose.
+5. **O sumiço na escada:** antes, quem ia para um andar que não estava carregado sumia na porta da escada do andar
+   dele. Agora o corpo desce (ou sobe) pela escada, que é da casca e está sempre lá, até o patamar do andar do lugar, e
+   só some lá, quando nenhum jogador vê (até 30 m, sem parede no meio; com alguém olhando, ele espera até 30 s). Se o
+   andar carrega no caminho (alguém foi atrás dele), ele segue até o lugar. Conferido: o Travis e a Irene, indo para o
+   B3, desceram do B1 até o patamar do B3 e sumiram lá, fora da vista.
+6. **A sobreposição na porta da escada e nas paredes da escada:** três causas. (a) O furo da laje para a escada
+   terminava exatamente na face das paredes do núcleo (de 20 cm) e da parede de fora, e a faixa da grossura da laje
+   (60 cm) piscava nas paredes da escada, em cada andar: agora o furo entra 5 cm nas paredes. (b) Na porta da escada,
+   a barra verde terminava na mesma face do batente de metal, e as faixas pretas e amarelas ficavam a 2 mm da barra e
+   do friso: a barra para 4 mm antes da porta, e as faixas saem 1 cm mais. (c) Nas portas de aço (a do B4 e a da
+   casinha), o batente do modelo tinha as faces no mesmo plano do vão da parede: o vão ficou 2 cm maior em volta e em
+   cima, por dentro do batente (que vai de 0,70 a 0,78 m do meio do vão). Achadas por um detector (os triângulos no
+   mesmo plano, virados para o mesmo lado e se cobrindo, de peças diferentes, em volta da escada, do B4 à casinha):
+   depois, só sobraram faces escondidas dentro das paredes e no chão, e uma faixinha de 0,014 m² na porta de aço do B4.
+- **Conferido no Play do Editor** (um jogador, o mundo de teste dos 5, sem gravar nada): o vidro, os assentos dos sofás,
+  a escada, a porta do B1 e as tacadas. Os testes do Editor dos moradores e do bunker passam. Falta o teste com dois
+  jogadores.
+
+## O estado (07/11/2026): a parte 7 aprovada; a parte 8 em andamento
 
 O sistema de personagens (as decisões 1 a 8) entrou no mesmo dia, a pedido, no lugar do pai sozinho. **As 20 decisões
 foram aprovadas pela recomendação** ("Aprovar, parte 2"), a parte 2 também ("Aprovar, parte 3"), e a parte 3 também
 ("Aprovar, parte 4"). Depois da parte 4, a pedido, a tela dos moradores virou **a tela das cartas** (os 52 do mundo),
 que ficou limpa em 05/11/2026 (só as cartas e o botão; a ficha na revisão) e **foi aprovada** ("Aprovar as cartas").
-A parte 4 (os modelos novos) também foi aprovada ("Aprovar, parte 5"), e **a parte 5 (as animações) está feita, esperando
-a aprovação**. A próxima é a parte 6, os moradores no bunker.
+A parte 4 (os modelos novos) também foi aprovada ("Aprovar, parte 5"), e **a parte 5 (as animações) também**
+("pode continuar no sistema dos NPCs", 06/11/2026). A parte 6 (os moradores no bunker) está em andamento: **a primeira
+fatia foi aprovada** ("pode seguir para o próximo passo"; o mapa lento fica para depois), e **a segunda (o estoque e os lugares) também** ("Aprovar, seguir"). **A parte 7 (o computador)
+também** ("Aprovar, parte 8", 07/11/2026). **A parte 8 (o lazer, o humor, as falas e a opinião) está em
+andamento**, em três fatias (veja "A parte 8"): **a primeira (o humor) foi aprovada** ("Aprovar, o lazer"), e **a
+segunda (o lazer) está feita, esperando a aprovação** e o teste com dois jogadores.

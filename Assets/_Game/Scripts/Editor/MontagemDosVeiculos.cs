@@ -25,6 +25,9 @@ namespace ZombieCityCleaner.EditorTools
     /// </summary>
     public static partial class MontagemDosVeiculos
     {
+        /// <summary>A perua: o torque em cada roda da frente (N·m), onde a força acaba (m/s) e o fim das marchas do som (m/s).</summary>
+        public const float TorqueDaPerua = 850f, VelocidadeMaximaDaPerua = 44f, FimDasMarchasDaPerua = 31f;
+
         const string Fbx = "Assets/_Game/Art/Veiculos/Carro.fbx";
         const string PastaMateriais = "Assets/_Game/Art/Veiculos/Materials";
         const string PastaMalhas = "Assets/_Game/Art/Veiculos/Malhas";
@@ -287,6 +290,11 @@ namespace ZombieCityCleaner.EditorTools
             nt.Interpolate = true;
             raiz.AddComponent<NetworkRigidbody>();
             var carro = raiz.AddComponent<Carro>();
+            // a perua chega a ~110 km/h no plano (10/11/2026, a pedido: "o mapa é grande"; medida na física de verdade:
+            // 112 no plano, 99 numa subida de 6%, 92 a 9% e 86 a 12%; 0 a 60 km/h em 5,5 s); era 700 N·m e 22 m/s (64 km/h)
+            carro.torque = TorqueDaPerua;
+            carro.velocidadeMaxima = VelocidadeMaximaDaPerua;
+            carro.fimDasMarchas = FimDasMarchasDaPerua;
 
             // os zumbis desviam do carro (e o NavMesh assado não o conta: ele anda)
             var obstaculo = raiz.AddComponent<NavMeshObstacle>();

@@ -52,9 +52,25 @@ namespace ZombieCityCleaner.Player
                 if (string.IsNullOrEmpty(nome)) continue;
                 Desenhar(nome, new Vector2(tela.x, Screen.height - tela.y), d, u);
             }
+            // os moradores do bunker (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md da pasta de arte): o nome (ou o apelido)
+            // em cima deles também, num tom mais quente
+            foreach (var m in Moradores.CorpoDoMorador.Todos)
+            {
+                if (m == null || !m.IsSpawned || m.Cabeca == null) continue;
+                var topo = m.Cabeca.position + Vector3.up * AcimaDaCabeca;
+                float d = Vector3.Distance(olho, topo);
+                if (d > Alcance) continue;
+                var tela = cam.WorldToScreenPoint(topo);
+                if (tela.z <= 0f) continue;
+                if (Physics.Linecast(olho, m.Cabeca.position + Vector3.up * 0.12f, MascaraDaVista, QueryTriggerInteraction.Ignore)) continue;
+                string nome = m.Nome;
+                if (!string.IsNullOrEmpty(nome)) Desenhar(nome, new Vector2(tela.x, Screen.height - tela.y), d, u, true);
+            }
         }
 
-        void Desenhar(string nome, Vector2 p, float d, float u)
+        static readonly Color CorDosMoradores = new Color(0.98f, 0.86f, 0.62f);
+
+        void Desenhar(string nome, Vector2 p, float d, float u, bool morador = false)
         {
             // de 17 px perto a 11 px a 30 m; os últimos 6 m somem aos poucos
             int tamanho = Mathf.RoundToInt(Mathf.Lerp(17f, 11f, d / Alcance) * u);
@@ -67,7 +83,10 @@ namespace ZombieCityCleaner.Player
             var antes = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, alfa);
             GUI.Label(new Rect(r.x + 1f * u, r.y + 1f * u, r.width, r.height), conteudo, _sombra);
+            var cor = _estilo.normal.textColor;
+            if (morador) _estilo.normal.textColor = CorDosMoradores;
             GUI.Label(r, conteudo, _estilo);
+            _estilo.normal.textColor = cor;
             GUI.color = antes;
         }
 

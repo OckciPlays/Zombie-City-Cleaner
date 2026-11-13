@@ -6,7 +6,9 @@ namespace ZombieCityCleaner.Mundo
 {
     public enum TipoDeRua : byte { Rua, Avenida }
 
-    public enum TipoDeLote : byte { Casa, Loja, Predio, Praca, Estacionamento, Baldio, Laboratorio, Familia }
+    /// <summary>O tipo do lote. Hospital: o quarteirão inteiro do Hospital Principal (08/11/2026; sem construção de longe:
+    /// quem desenha é o HospitalDoMundo).</summary>
+    public enum TipoDeLote : byte { Casa, Loja, Predio, Praca, Estacionamento, Baldio, Laboratorio, Familia, Hospital }
 
     /// <summary>
     /// Um lote da cidade, no plano local dela (u, v; <see cref="TracadoDaCidade"/>): o terreno (um retângulo nos eixos da
@@ -503,12 +505,24 @@ namespace ZombieCityCleaner.Mundo
                     }
                 }
             }
+            // o Hospital Principal (08/11/2026): o quarteirão inteiro dele, escolhido antes dos lotes
+            var hospital = plano.CidadeDoHospital == Cidade ? QuarteiraoDoHospital(plano, corredores) : null;
+            if (hospital != null)
+            {
+                plano.LoteDoHospital = hospital;
+                plano.TracadoDoHospital = this;
+            }
             for (int i = 0; i + 1 < nu; i++)
             for (int j = 0; j + 1 < nv; j++)
             {
                 bool oeste = RuaU[i, j], leste = RuaU[i + 1, j], sul = RuaV[i, j], norte = RuaV[i, j + 1];
                 if (!(oeste || leste || sul || norte)) continue;
                 _celulaAtual = i * nv + j;
+                if (hospital != null && hospital.Celula == _celulaAtual)
+                {
+                    Lotes.Add(hospital);
+                    continue;
+                }
                 float pu0 = Us[i] + AU(i) + SU(i), pu1 = Us[i + 1] - AU(i + 1) - SU(i + 1);
                 float pv0 = Vs[j] + AV(j) + SV(j), pv1 = Vs[j + 1] - AV(j + 1) - SV(j + 1);
                 if (pu1 - pu0 < 12f || pv1 - pv0 < 12f) continue;
@@ -601,7 +615,103 @@ namespace ZombieCityCleaner.Mundo
                 else tipos[i] = TipoDeLoja.Comum;
             }
             for (int i = 0; i < lojas.Count; i++) PorLoja(lojas[i], tipos[i]);
-            if (grande) Hospital(s);
+            // o hospital sorteado de antes, nas cidades grandes sem o Hospital Principal
+            if (grande && !Lotes.Exists(l => l.Tipo == TipoDeLote.Hospital)) Hospital(s);
+        }
+
+        /// <summary>
+        /// O quarteirão do Hospital Principal (o Plano_Hospital.md da pasta de arte, a parte 7, 08/11/2026): um inteiro (as 4
+        /// ruas em volta), fora da praça do meio, do laboratório e das estradas, onde o terreno dele
+        /// (<see cref="PlantaDoHospital.TerrenoNoMundo"/>: o prédio, a garagem com a rampa das ambulâncias, a varanda com os
+        /// degraus, as saídas e os pátios) cabe rígido, com a deformação das ruas, de frente para a rua de baixo ou para a de
+        /// cima; o mais perto de 70% do raio do centro (onde ficava o hospital sorteado), o mais plano e fora das casas. O lote
+        /// é o quarteirão inteiro, sem construção de longe; o meio da casa é a origem da obra, e o chão da casa, o do terreno
+        /// (plano no quarteirão: <see cref="NoPatamar"/>). Null sem quarteirão que caiba.
+        /// </summary>
+        Lote QuarteiraoDoHospital(PlanoDoMapa plano, List<(Vector2 a, Vector2 b, float meia)> corredores)
+        {
+            int nu = Us.Length, nv = Vs.Length;
+            var lab = plano.Laboratorio;
+            var r = PlantaDoHospital.TerrenoNoMundo;
+            float alvo = Cidade.Raio * Cidade.FimDoCentro * 0.7f;
+            Lote melhor = null;
+            float menor = float.MaxValue;
+            for (int i = 0; i + 1 < nu; i++)
+            for (int j = 0; j + 1 < nv; j++)
+            {
+                if (!(RuaU[i, j] && RuaU[i + 1, j] && RuaV[i, j] && RuaV[i, j + 1])) continue;
+                if (i == IC && j == JC) continue;
+                float pu0 = Us[i] + AU(i) + SU(i), pu1 = Us[i + 1] - AU(i + 1) - SU(i + 1);
+                float pv0 = Vs[j] + AV(j) + SV(j), pv1 = Vs[j + 1] - AV(j + 1) - SV(j + 1);
+                if (pu1 - pu0 < r.width + 0.6f || pv1 - pv0 < r.height + 0.6f) continue;
+                var meio = new Vector2((pu0 + pu1) * 0.5f, (pv0 + pv1) * 0.5f);
+                var meioNoMapa = Mundo(meio);
+                if (lab != null && Vector2.Distance(meioNoMapa, lab.Centro) < lab.Raio + 30f) continue;
+                if (Cidade.Q(meioNoMapa.x, meioNoMapa.y) > 0.85f) continue;
+                var zona = Cidade.ZonaEm(meioNoMapa.x, meioNoMapa.y);
+                foreach (var frente in new[] { new Vector2(0f, -1f), new Vector2(0f, 1f) })
+                {
+                    var l = new Lote
+                    {
+                        Tipo = TipoDeLote.Hospital, Zona = zona, U0 = pu0, U1 = pu1, V0 = pv0, V1 = pv1, Frente = frente,
+                        BU0 = pu0, BU1 = pu1, BV0 = pv0, BV1 = pv1, Celula = i * nv + j,
+                        Semente = (uint)Sorteio.Hash(_d.Semente, Indice * 1000 + i, j, 0x4851), Cor = "TijoloAparente",
+                    };
+                    // o meio do terreno do hospital no meio do quarteirão
+                    l.MeioDaCasa = meio - l.LadoDaCasa * r.center.x - l.FundoDaCasa * r.center.y;
+                    if (!CabeNoQuarteirao(l, r, 0.3f) || NoCorredor(l, corredores)) continue;
+                    // o chão: a média dos cantos e do meio do terreno; o desnível do quarteirão conta contra
+                    float soma = 0f, baixo = float.MaxValue, alto = float.MinValue;
+                    foreach (var p in new[] { new Vector2(r.xMin, r.yMin), new Vector2(r.xMax, r.yMin), new Vector2(r.xMax, r.yMax), new Vector2(r.xMin, r.yMax), r.center })
+                    {
+                        var w = NaObraDoHospital(l, p);
+                        float h = GeradorDoMundo.AlturaDoChao(_d, w.x, w.y);
+                        soma += h;
+                        baixo = Mathf.Min(baixo, h);
+                        alto = Mathf.Max(alto, h);
+                    }
+                    l.ChaoDaCasa = soma / 5f;
+                    float nota = Mathf.Abs(Vector2.Distance(meioNoMapa, Centro) - alvo) + (alto - baixo) * 25f +
+                                 (zona == TipoDeBairro.Residencial ? 80f : 0f);
+                    if (nota < menor)
+                    {
+                        menor = nota;
+                        melhor = l;
+                    }
+                }
+            }
+            if (melhor == null) return null;
+            var b = PlantaDoHospital.Pegada;
+            melhor.RetDaCasa = NoLocal(melhor, b.xMin, b.xMax, b.yMin, b.yMax);
+            melhor.RetDoPatamar = Rect.MinMaxRect(melhor.U0, melhor.V0, melhor.U1, melhor.V1);
+            return melhor;
+        }
+
+        /// <summary>
+        /// Um ponto da obra do Hospital Principal (x, z) no mapa, com a obra rígida: na origem dela (o meio da casa do lote),
+        /// girada pelo giro da casa (<see cref="GiroDaCasa"/>).
+        /// </summary>
+        public Vector2 NaObraDoHospital(Lote l, Vector2 p)
+        {
+            var o = Mundo(l.MeioDaCasa);
+            float g = GiroDaCasa(l) * Mathf.Deg2Rad, c = Mathf.Cos(g), s = Mathf.Sin(g);
+            // o +z da obra vai para (sen g, cos g) e o +x para (cos g, -sen g), como no Quaternion.Euler(0, g, 0)
+            return o + new Vector2(p.x * c + p.y * s, -p.x * s + p.y * c);
+        }
+
+        // o retângulo r da obra, rígido, fica dentro do quarteirão do lote (com a margem), a cada 4 m da beira dele
+        bool CabeNoQuarteirao(Lote l, Rect r, float margem)
+        {
+            int nx = Mathf.CeilToInt(r.width / 4f), nz = Mathf.CeilToInt(r.height / 4f);
+            for (int k = 0; k <= nx; k++)
+            for (int m = 0; m <= nz; m++)
+            {
+                if (k != 0 && k != nx && m != 0 && m != nz) continue;
+                var p = new Vector2(Mathf.Lerp(r.xMin, r.xMax, k / (float)nx), Mathf.Lerp(r.yMin, r.yMax, m / (float)nz));
+                var q = Local(NaObraDoHospital(l, p));
+                if (q.x < l.U0 + margem || q.x > l.U1 - margem || q.y < l.V0 + margem || q.y > l.V1 - margem) return false;
+            }
+            return true;
         }
 
         static float FrenteDaConstrucao(Lote l) => l.Frente.y != 0f ? l.BU1 - l.BU0 : l.BV1 - l.BV0;
@@ -1033,6 +1143,8 @@ namespace ZombieCityCleaner.Mundo
                     if (l.x < lote.U0 || l.x > lote.U1 || l.y < lote.V0 || l.y > lote.V1) continue;
                     if (lote.Tipo == TipoDeLote.Praca) return NoMapa.Praca;
                     if (lote.Tipo == TipoDeLote.Estacionamento) return NoMapa.Estacionamento;
+                    // o Hospital Principal: o corpo dele (o retângulo da casa)
+                    if (lote.Tipo == TipoDeLote.Hospital) return lote.RetDaCasa.Contains(l) ? NoMapa.Construcao : NoMapa.Nada;
                     if (lote.TemConstrucao && l.x >= lote.BU0 && l.x <= lote.BU1 && l.y >= lote.BV0 && l.y <= lote.BV1) return NoMapa.Construcao;
                 }
             return NoMapa.Nada;
@@ -1081,7 +1193,8 @@ namespace ZombieCityCleaner.Mundo
                 foreach (int k in lotes)
                 {
                     var lote = Lotes[k];
-                    bool todo = lote.Tipo == TipoDeLote.Praca || lote.Tipo == TipoDeLote.Estacionamento || lote.Tipo == TipoDeLote.Familia || lote.Tipo == TipoDeLote.Laboratorio;
+                    bool todo = lote.Tipo == TipoDeLote.Praca || lote.Tipo == TipoDeLote.Estacionamento || lote.Tipo == TipoDeLote.Familia || lote.Tipo == TipoDeLote.Laboratorio
+                                || lote.Tipo == TipoDeLote.Hospital;
                     if (todo && l.x > lote.U0 - folga && l.x < lote.U1 + folga && l.y > lote.V0 - folga && l.y < lote.V1 + folga) return true;
                     if (lote.TemConstrucao && l.x > lote.BU0 - folga && l.x < lote.BU1 + folga && l.y > lote.BV0 - folga && l.y < lote.BV1 + folga) return true;
                 }
@@ -1177,6 +1290,10 @@ namespace ZombieCityCleaner.Mundo
             float pv0 = Vs[j] + AV(j) + SV(j), pv1 = Vs[j + 1] - AV(j + 1) - SV(j + 1);
             float dentro = Mathf.Min(Mathf.Min(l.x - pu0, pu1 - l.x), Mathf.Min(l.y - pv0, pv1 - l.y));
             if (dentro <= -2f) return h;
+            // o quarteirão do Hospital Principal (08/11/2026): plano na altura dele, voltando à da calçada no primeiro 1,2 m
+            foreach (int k in lotes)
+                if (Lotes[k].Tipo == TipoDeLote.Hospital)
+                    return dentro <= 0f ? h : Mathf.Lerp(h, Lotes[k].ChaoDaCasa, Geo.Suave(0f, 1.2f, dentro));
             Lote perto = null;
             float menor = float.MaxValue;
             foreach (int k in lotes)

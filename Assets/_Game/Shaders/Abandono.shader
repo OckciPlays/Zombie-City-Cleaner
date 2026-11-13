@@ -18,7 +18,8 @@
 //            concreto): rachaduras com limo, manchas de água, terra e folhas, poças;
 //   asfalto: rachaduras com limo, remendos, manchas de óleo, terra e folhas, poças (escuras e brilhando);
 //   telhado: musgo em manchas e o escorrido; metal: ferrugem em manchas; madeira: acinzentada e escorrida;
-//   vidro: encardido (mais claro e fosco); de dentro: o mofo em manchas.
+//   vidro: encardido (mais claro e fosco); de dentro: o mofo em manchas; o tijolo aparente (o tipo 9, o do Hospital
+//   Principal): os tijolos e o rejunte desenhados (Tijolos) e, por cima, o abandono da alvenaria.
 // Iluminação: a PBR da URP (UniversalFragmentPBR), como o shader do chão: o sol e as sombras, as luzes, o SSAO e a neblina.
 // Com a variante das instâncias DOTS (DOTS.hlsl da URP) em todos os passes: sem ela, o GPU Resident Drawer não junta os
 // objetos com este material, e no centro da cidade grande eram uns 290 draw calls a mais que com o Lit (Parte M9c).
@@ -137,6 +138,32 @@ Shader "ZombieCityCleaner/Abandono"
 
             half4 R(float2 q) { return SAMPLE_TEXTURE2D(_Ruido, sampler_Ruido, q); }
 
+            float Sorte(float2 v) { return frac(sin(dot(v, float2(12.9898, 78.233))) * 43758.5453); }
+
+            // o tijolo aparente (o tipo 9, o do Hospital Principal, 07/11/2026): os tijolos de 23 × 7,5 cm (os de 20 × 6,5
+            // na escala do jogo) em amarração, a fiada de cima deslocada meio tijolo, cada um num tom e um pouco mais escuro
+            // na borda, e o rejunte claro de 1 cm; de longe, quando o pixel fica do tamanho do rejunte, o desenho some no tom
+            // médio (sem o serrilhado)
+            half3 Tijolos(half3 cor, float2 q)
+            {
+                const float L = 0.233, A = 0.075, J = 0.01;
+                float fiada = floor(q.y / A);
+                float u = q.x / L + 0.5 * fmod(abs(fiada), 2.0);
+                float coluna = floor(u);
+                float2 f = float2(frac(u) * L, frac(q.y / A) * A);
+                float2 w = max(fwidth(q), 1e-4);
+                half junta = max(1.0 - smoothstep(J - w.x, J + w.x, f.x), 1.0 - smoothstep(J - w.y, J + w.y, f.y));
+                half s = Sorte(float2(coluna, fiada)), s2 = Sorte(float2(fiada * 1.7 + 3.1, coluna * 0.9));
+                half3 tijolo = cor * (0.8 + 0.36 * s) * lerp(half3(1.0, 1.0, 1.0), half3(1.08, 0.94, 0.86), s2);
+                // a borda do tijolo um pouco mais escura (o volume)
+                half borda = saturate(min(min(f.x - J, L - f.x), min(f.y - J, A - f.y)) / 0.012);
+                tijolo *= 0.86 + 0.14 * borda;
+                half3 rejunte = half3(0.24, 0.23, 0.21);
+                half3 perto = lerp(tijolo, rejunte, junta);
+                half3 medio = lerp(cor * 0.98, rejunte, 0.17);
+                return lerp(perto, medio, saturate((max(w.x, w.y) - 0.004) / 0.012));
+            }
+
             // as marcas do chão (o asfalto e a calçada deitados): rachaduras com limo, remendos, manchas, terra e folhas, poças
             void Chao(inout half3 cor, inout half suave, float3 p, half k, half grande, bool asfalto)
             {
@@ -192,7 +219,8 @@ Shader "ZombieCityCleaner/Abandono"
                 half k = saturate(_Intensidade * (0.65 + 0.7 * longe.g));
                 float altura = input.altura;
 
-                if ((cat == 1 || cat == 2 || cat == 6) && dePe)
+                if (cat == 9 && dePe) cor = Tijolos(cor, q);
+                if ((cat == 1 || cat == 2 || cat == 6 || cat == 9) && dePe)
                 {
                     if (cat == 1)
                     {
@@ -223,11 +251,12 @@ Shader "ZombieCityCleaner/Abandono"
                         cor = lerp(cor * (1.0 - borda * 0.4), fundo, casca);
                     }
                     // o salitre na alvenaria: manchas brancas em uns trechos, mais embaixo
-                    if (cat == 2)
+                    if (cat == 2 || cat == 9)
                     {
                         half sal = R(q * 0.21 + 0.15).r * 0.6 + perto.g * 0.4 + (1.0 - saturate(altura / 2.0)) * 0.1;
                         sal = smoothstep(0.7 - 0.16 * k, 0.8, sal) * k * _Escorrido;
-                        cor = lerp(cor, half3(0.6, 0.58, 0.53), sal * 0.45);
+                        // (no tijolo aparente, mais fraco e mais escuro: claro e grande, ele parecia a neblina)
+                        cor = lerp(cor, cat == 9 ? half3(0.42, 0.4, 0.37) : half3(0.6, 0.58, 0.53), sal * (cat == 9 ? 0.2 : 0.45));
                     }
                     // a umidade e o limo na base, com a beirada torta
                     half h0 = (0.3 + 1.2 * k) * (0.65 + 0.7 * perto.r);

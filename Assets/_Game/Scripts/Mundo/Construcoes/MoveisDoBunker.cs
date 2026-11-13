@@ -32,7 +32,7 @@ namespace ZombieCityCleaner.Mundo
         public static readonly HashSet<string> TamanhoFinal = new HashSet<string>
         {
             "Portao", "PortaDeAco", "PortaCamaraFria", "CanoReto", "CanoCurva", "CanoT", "Registro", "SuporteDeCano", "Duto",
-            "DutoCurva", "Grelha", "TorreDeVentilacao", "Antena",
+            "DutoCurva", "Grelha", "TorreDeVentilacao", "Antena", "SuporteDeTacos",
         };
 
         /// <summary>Os que não têm caixa de colisão (os da parede, os tapetes e o que fica em cima de outro).</summary>
@@ -270,11 +270,30 @@ namespace ZombieCityCleaner.Mundo
             Enc(4, "Bancada", 0, 12.1f, 26.0f), Enc(4, "EstanteAco120", 0, 12.1f, 29.0f),
         };
 
+        /// <summary>A altura do tampo da mesa de canto (a mesinha do fumo), na escala dos móveis.</summary>
+        public const float AlturaDaMesinha = 0.58f * MedidasDaMobilia.Escala;
+
+        /// <summary>
+        /// Os móveis do lazer (a parte 8 do Plano_NPCs_Bunker.md, a segunda fatia): o suporte dos tacos na parede da sala de
+        /// jogos, entre o quadro e a estante baixa, e o cinzeiro na mesinha do fumo (a mesa de canto do canto de leitura da
+        /// sala de estar, entre as duas poltronas). Vêm depois de todos (<see cref="Antigos"/>): o índice de cada móvel é a
+        /// estante dos itens guardados e a chave das partes que abrem, e os dois vão no save.
+        /// </summary>
+        static readonly Movel[] DoLazer =
+        {
+            Enc(1, "SuporteDeTacos", 180, 23.8f, 17.2f),
+            Solto(1, "Cinzeiro", 11.6f + 0.12f * MedidasDaMobilia.Escala, 7.4f + 0.12f * MedidasDaMobilia.Escala, 0f, AlturaDaMesinha),
+        };
+
         public static readonly Movel[] Todos = Fixos
             .Concat(Refeitorio(2, new[] { 13.0f, 17.5f, 22.0f, 26.5f }, new[] { 3.0f, 6.4f }))
             .Concat(QuartoDoCorredor(9f, false)).Concat(QuartoDoCorredor(14f, true))
             .Concat(QuartoDoCorredor(19f, false)).Concat(QuartoDoCorredor(24f, true))
+            .Concat(DoLazer)
             .ToArray();
+
+        /// <summary>Quantos móveis havia antes dos do lazer (os lugares deles ficam como eram: <see cref="LugaresDoBunker"/>).</summary>
+        public static readonly int Antigos = Todos.Length - DoLazer.Length;
 
         /// <summary>As mesas do refeitório, cada uma com um banco de cada lado (as mesas ao longo de x).</summary>
         static IEnumerable<Movel> Refeitorio(int f, float[] xs, float[] zs)

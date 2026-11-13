@@ -38,6 +38,26 @@ namespace ZombieCityCleaner.Mundo
                 L(-0.19f, 0.118f, 0f, 0.38f, 0.305f, 0.58f, "Porta.2"),
                 L(-0.19f, 0.441f, -0.02f, 0.38f, 0.273f, 0.52f, "Porta.2"),
             },
+            ["ArmarioDeAco"] = new[]
+            {
+                L(0.25f, 0.08f, 0f, 0.46f, 0.361f, 0.48f, "Porta.1"),
+                L(0.25f, 0.458f, -0.01f, 0.46f, 0.351f, 0.44f, "Porta.1"),
+                L(-0.24f, 0.08f, 0f, 0.48f, 0.361f, 0.48f, "Porta.2"),
+                L(-0.24f, 0.458f, -0.01f, 0.48f, 0.351f, 0.44f, "Porta.2"),
+                L(-0.24f, 0.858f, -0.01f, 0.48f, 0.351f, 0.44f, "Porta.2"),
+                L(-0.24f, 1.258f, -0.01f, 0.48f, 0.321f, 0.44f, "Porta.2"),
+            },
+            ["ArmarioDeRemedios"] = new[]
+            {
+                L(-0.24f, 1.106f, -0.01f, 0.4f, 0.206f, 0.38f),
+                L(0.24f, 1.106f, -0.01f, 0.4f, 0.206f, 0.38f),
+                L(-0.21f, 1.326f, -0.01f, 0.34f, 0.206f, 0.38f),
+                L(0.24f, 1.326f, -0.01f, 0.4f, 0.206f, 0.38f),
+                L(0.25f, 0.07f, 0.01f, 0.46f, 0.392f, 0.4f, "Porta.1"),
+                L(0.25f, 0.476f, -0.01f, 0.46f, 0.392f, 0.38f, "Porta.1"),
+                L(-0.24f, 0.07f, 0.01f, 0.48f, 0.392f, 0.4f, "Porta.2"),
+                L(-0.24f, 0.476f, -0.01f, 0.48f, 0.392f, 0.38f, "Porta.2"),
+            },
             ["ArmarioParede40"] = new[]
             {
                 L(0f, 0.018f, 0f, 0.36f, 0.321f, 0.32f, "Porta.1"),
@@ -79,6 +99,22 @@ namespace ZombieCityCleaner.Mundo
                 L(-0.69f, 0.902f, -0.04f, 0.2f, 0.18f, 0.36f),
                 L(0.11f, 0.902f, 0.05f, 1.36f, 0.191f, 0.54f),
             },
+            ["BancadaInox"] = new[]
+            {
+                L(0f, 0.21f, 0.24f, 1.68f, 0.6f, 0.14f),
+                L(-0.55f, 0.28f, 0f, 0.52f, 0.578f, 0.32f),
+                L(-0.42f, 0.9f, 0.15f, 0.94f, 0.6f, 0.38f),
+                L(0f, 0.9f, -0.25f, 1.78f, 0.118f, 0.18f),
+            },
+            ["BancadaLaboratorio"] = new[]
+            {
+                L(-0.33f, 0.9f, 0.18f, 1f, 0.117f, 0.38f),
+                L(-0.31f, 0.9f, -0.18f, 1.36f, 0.39f, 0.18f),
+                L(-0.05f, 0.136f, 0.13f, 0.52f, 0.224f, 0.44f, "Gaveta.1", true),
+                L(-0.05f, 0.646f, 0.11f, 0.52f, 0.222f, 0.48f, "Gaveta.3", true),
+                L(0.806f, 0.118f, 0f, 0.34f, 0.574f, 0.72f, "Porta.1"),
+                L(0.436f, 0.118f, 0f, 0.36f, 0.574f, 0.72f, "Porta.2"),
+            },
             ["Bau"] = new[]
             {
                 L(0f, 0.082f, 0f, 0.86f, 0.324f, 0.44f, "Tampa.1"),
@@ -88,13 +124,43 @@ namespace ZombieCityCleaner.Mundo
                 L(0f, 0.495f, 0.292f, 0.84f, 0.6f, 1.24f),
                 L(0f, 0.515f, -0.401f, 0.86f, 0.6f, 0.12f),
             },
+            ["CaixasDeSuprimentos"] = new[]
+            {
+                L(-0.62f, 0.32f, 0.3f, 0.22f, 0.6f, 0.22f),
+                L(0.453f, 0.36f, -0.123f, 0.1f, 0.6f, 0.32f),
+                L(-0.266f, 0.662f, 0.141f, 0.36f, 0.087f, 0.08f),
+            },
             ["CamaCasal"] = new[]
             {
                 L(0f, 0.585f, 0.321f, 1.5f, 0.6f, 1.32f),
             },
+            ["CamaHospital"] = new[]
+            {
+                L(0f, 0.67f, -0.01f, 0.76f, 0.6f, 1.16f),
+            },
             ["CamaSolteiro"] = new[]
             {
                 L(0f, 0.585f, 0.303f, 0.96f, 0.6f, 1.28f),
+            },
+            ["CarrinhoDeLimpeza"] = new[]
+            {
+                L(-0.3f, 0.135f, 0.11f, 0.34f, 0.348f, 0.22f),
+                L(-0.297f, 0.975f, 0f, 0.42f, 0.6f, 0.44f),
+                L(0.05f, 0.98f, 0f, 0.24f, 0.6f, 0.36f),
+            },
+            ["CarrinhoDeParada"] = new[]
+            {
+                L(0f, 1.045f, 0.2f, 0.76f, 0.6f, 0.14f),
+                L(0f, 0.889f, 0.09f, 0.7f, 0.124f, 0.3f, "Gaveta.1", true),
+                L(0f, 0.757f, 0.09f, 0.7f, 0.121f, 0.3f, "Gaveta.2", true),
+                L(0f, 0.626f, 0.09f, 0.7f, 0.121f, 0.3f, "Gaveta.3", true),
+                L(0f, 0.429f, 0.09f, 0.7f, 0.187f, 0.3f, "Gaveta.4", true),
+                L(0f, 0.166f, 0.09f, 0.7f, 0.253f, 0.3f, "Gaveta.5", true),
+            },
+            ["CarrinhoDeRoupa"] = new[]
+            {
+                L(0.069f, 0.893f, 0.008f, 0.12f, 0.6f, 0.12f),
+                L(0.232f, 0.893f, -0.012f, 0.12f, 0.6f, 0.12f),
             },
             ["ColchaoNoChao"] = new[]
             {
@@ -121,6 +187,13 @@ namespace ZombieCityCleaner.Mundo
                 L(0.295f, 0.611f, 0.07f, 0.52f, 0.222f, 0.28f, "Gaveta.5", true),
                 L(-0.295f, 0.611f, 0.07f, 0.52f, 0.222f, 0.28f, "Gaveta.6", true),
             },
+            ["CriadoHospitalar"] = new[]
+            {
+                L(0f, 0.85f, 0.16f, 0.48f, 0.6f, 0.14f),
+                L(0f, 0.85f, -0.18f, 0.48f, 0.6f, 0.1f),
+                L(0f, 0.678f, 0.07f, 0.4f, 0.15f, 0.26f, "Gaveta.1", true),
+                L(0f, 0.098f, 0f, 0.44f, 0.542f, 0.44f, "Porta.1"),
+            },
             ["CriadoMudo"] = new[]
             {
                 L(-0.14f, 0.088f, 0f, 0.16f, 0.32f, 0.4f),
@@ -135,6 +208,13 @@ namespace ZombieCityCleaner.Mundo
                 L(0f, 0.015f, 0f, 0.46f, 0.2f, 0.14f, "Porta.1"),
                 L(0f, 0.223f, 0f, 0.46f, 0.212f, 0.12f, "Porta.1"),
             },
+            ["EstacaoDeTrabalho"] = new[]
+            {
+                L(-0.603f, 0.757f, -0.245f, 0.28f, 0.6f, 0.4f),
+                L(0.268f, 0.757f, -0.025f, 0.34f, 0.6f, 1.44f),
+                L(0.588f, 0.757f, -0.015f, 0.26f, 0.6f, 0.54f),
+                L(-0.52f, 0.078f, -0.3f, 0.34f, 0.195f, 0.32f, "Gaveta.1", true),
+            },
             ["EstanteAco120"] = new[]
             {
                 L(0f, 0.082f, 0f, 1.14f, 0.415f, 0.38f),
@@ -148,6 +228,15 @@ namespace ZombieCityCleaner.Mundo
                 L(0f, 0.502f, 0f, 0.84f, 0.415f, 0.38f),
                 L(0f, 0.922f, 0f, 0.84f, 0.415f, 0.38f),
                 L(0f, 1.342f, 0f, 0.84f, 0.475f, 0.38f),
+            },
+            ["EstanteArquivo"] = new[]
+            {
+                L(-0.118f, 0.363f, 0.103f, 0.66f, 0.085f, 0.22f),
+                L(0.382f, 0.363f, -0.007f, 0.3f, 0.085f, 0.4f),
+                L(0.38f, 0.743f, 0.017f, 0.32f, 0.085f, 0.4f),
+                L(0.13f, 0.85f, 0f, 0.24f, 0.358f, 0.44f),
+                L(-0.506f, 1.123f, -0.006f, 0.32f, 0.085f, 0.38f),
+                L(-0.166f, 1.123f, 0.004f, 0.32f, 0.085f, 0.4f),
             },
             ["EstanteBaixa"] = new[]
             {
@@ -216,6 +305,10 @@ namespace ZombieCityCleaner.Mundo
                 L(0f, 1.226f, -0.043f, 0.72f, 0.182f, 0.54f, "Porta.1"),
                 L(0f, 1.45f, 0.018f, 0.7f, 0.16f, 0.64f, "Porta.2"),
             },
+            ["GeladeiraLaboratorio"] = new[]
+            {
+                L(-0.09f, 0.115f, 0.01f, 0.1f, 0.329f, 0.64f, "Porta.1"),
+            },
             ["GuardaRoupa2"] = new[]
             {
                 L(0.25f, 0.098f, 0f, 0.46f, 0.6f, 0.56f, "Porta.1"),
@@ -259,6 +352,14 @@ namespace ZombieCityCleaner.Mundo
             {
                 L(-0.245f, 0f, -0.053f, 0.12f, 0.6f, 0.18f),
             },
+            ["MacaEmergencia"] = new[]
+            {
+                L(0.17f, 0.26f, 0f, 0.22f, 0.338f, 1.66f),
+            },
+            ["MacaExame"] = new[]
+            {
+                L(0.18f, 0.757f, 0f, 1.26f, 0.6f, 0.6f),
+            },
             ["Mesa4"] = new[]
             {
                 L(0f, 0.76f, 0f, 1.18f, 0.6f, 0.78f),
@@ -281,6 +382,20 @@ namespace ZombieCityCleaner.Mundo
                 L(-0.25f, 0.109f, 0f, 0.44f, 0.269f, 0.48f),
                 L(0.3f, 0.42f, 0f, 0.48f, 0.107f, 0.58f),
             },
+            ["MesaDeInstrumentos"] = new[]
+            {
+                L(-0.32f, 0.308f, 0f, 0.14f, 0.553f, 0.4f),
+                L(0.2f, 0.308f, 0f, 0.3f, 0.553f, 0.48f),
+            },
+            ["MesaDiretor"] = new[]
+            {
+                L(0.71f, 0.12f, 0.15f, 0.4f, 0.183f, 0.56f, "Gaveta.1", true),
+                L(0.71f, 0.334f, 0.15f, 0.4f, 0.183f, 0.56f, "Gaveta.2", true),
+                L(0.71f, 0.548f, 0.15f, 0.4f, 0.18f, 0.56f, "Gaveta.3", true),
+                L(-0.71f, 0.12f, 0.15f, 0.4f, 0.183f, 0.56f, "Gaveta.4", true),
+                L(-0.71f, 0.334f, 0.15f, 0.4f, 0.183f, 0.56f, "Gaveta.5", true),
+                L(-0.71f, 0.548f, 0.15f, 0.4f, 0.18f, 0.56f, "Gaveta.6", true),
+            },
             ["MesaEscritorio"] = new[]
             {
                 L(-0.54f, 0.76f, 0.135f, 0.12f, 0.6f, 0.32f),
@@ -291,6 +406,13 @@ namespace ZombieCityCleaner.Mundo
                 L(-0.36f, 0.776f, -0.14f, 0.22f, 0.6f, 0.26f),
                 L(-0.38f, 0.116f, 0.11f, 0.34f, 0.292f, 0.34f, "Gaveta.1", true),
                 L(-0.38f, 0.439f, 0.1f, 0.34f, 0.289f, 0.36f, "Gaveta.2", true),
+            },
+            ["MesaMonitoramento"] = new[]
+            {
+                L(-0.41f, 0.76f, 0.27f, 0.36f, 0.6f, 0.24f),
+                L(0f, 0.76f, 0.01f, 1.98f, 0.6f, 0.08f),
+                L(0.83f, 0.76f, 0.23f, 0.32f, 0.6f, 0.32f),
+                L(-0.31f, 0.793f, -0.22f, 0.24f, 0.373f, 0.36f),
             },
             ["MesaRedonda"] = new[]
             {
@@ -366,6 +488,13 @@ namespace ZombieCityCleaner.Mundo
             ["SacoDeDormir"] = new[]
             {
                 L(0f, 0.11f, 0.53f, 0.72f, 0.6f, 0.88f),
+            },
+            ["Vestiario"] = new[]
+            {
+                L(0.45f, 0.1f, 0f, 0.26f, 0.6f, 0.48f, "Porta.1"),
+                L(0.16f, 0.1f, 0f, 0.28f, 0.6f, 0.48f, "Porta.2"),
+                L(-0.16f, 0.1f, 0f, 0.28f, 0.6f, 0.48f, "Porta.3"),
+                L(-0.45f, 0.1f, 0f, 0.26f, 0.6f, 0.48f, "Porta.4"),
             },
         };
     }

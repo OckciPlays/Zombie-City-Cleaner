@@ -67,11 +67,11 @@ namespace ZombieCityCleaner.Mundo
                 float y0 = Base(f) - GrossuraDaLaje, y1 = f == 0 ? TopoDaCaixa : Teto(f);
                 for (int lado = 0; lado < 4; lado++) ParedeExterna(f, lado, y0, y1);
                 Laje(X0 + ParedeDeFora / 2, X1 - ParedeDeFora / 2, Z0 + ParedeDeFora / 2, Z1 - ParedeDeFora / 2, Base(f), GrossuraDaLaje,
-                     CorDaLajeDoBunker, true, f < Andares - 1 ? new[] { VaoDaEscada } : null);
+                     CorDaLajeDoBunker, true, f < Andares - 1 ? new[] { DentroDasParedes(VaoDaEscada, false) } : null);
             }
             // a laje de cima da garagem (a terra fica por cima dela), com o vão da escada que sobe até a casinha
             Laje(X0 + ParedeDeFora / 2, X1 - ParedeDeFora / 2, Z0 + ParedeDeFora / 2, Z1 - ParedeDeFora / 2, TopoDaCaixa, GrossuraDaLaje,
-                 CorDaLajeDoBunker, true, new[] { VaoDaSubida });
+                 CorDaLajeDoBunker, true, new[] { DentroDasParedes(VaoDaSubida, true) });
             NucleoDoBunker();
             EscadaDoBunker();
             CasinhaDoBunker();
@@ -79,6 +79,12 @@ namespace ZombieCityCleaner.Mundo
             NoMorro();
             Avisos();
         }
+
+        // o vão da escada na laje, 5 cm maior para dentro das paredes em volta (a de fora, as do núcleo e, na laje de cima da
+        // garagem, a da porta): a borda dele ficava na mesma face delas (a parede do núcleo tem 20 cm, e o chão da escada
+        // começa na face dela), e a faixa da grossura da laje piscava nas paredes da escada, em cada andar (07/11/2026)
+        static Rect DentroDasParedes(Rect vao, bool ladoDaPorta) =>
+            Rect.MinMaxRect(vao.xMin - 0.05f, vao.yMin - 0.05f, ladoDaPorta ? vao.xMax + 0.05f : vao.xMax, vao.yMax + 0.05f);
 
         // a parede de fora de um lado (0 frente, 1 direita, 2 fundo, 3 esquerda) no andar f, cortada onde muda o cômodo
         // (a cor de dentro de cada pedaço é a do cômodo dele); na frente da garagem, o vão do portão
@@ -148,6 +154,11 @@ namespace ZombieCityCleaner.Mundo
             RegistrarLinha(_nucleo[3].a, _nucleo[3].b, TopoDaCaixa, Morro + AlturaDaCasinha);
         }
 
+        // o vão das portas de aço (a do B4 e a da casinha) é 2 cm maior que o da porta em volta e em cima: o batente do modelo
+        // da porta tem as faces de dentro no vão, e com o vão do mesmo tamanho as faces da parede ficavam no mesmo plano delas
+        // e piscavam (07/11/2026); assim a borda da parede fica escondida dentro do batente
+        const float FolgaDoBatente = 0.02f;
+
         // as paredes do núcleo de cada andar, do chão até o chão de cima (passando pela laje, que tem o vão), com a porta da
         // escada (sem folha: a de aço do B4 é à parte) e a do elevador, fechada
         void NucleoDoBunker()
@@ -158,7 +169,9 @@ namespace ZombieCityCleaner.Mundo
                 foreach (var (a, c, tipo) in _nucleo)
                 {
                     var aberturas = new List<Abertura>();
-                    if (tipo == 1) aberturas.Add(new Abertura(PortaDaEscadaZ - a.y - LarguraDaPortaDaEscada / 2, LarguraDaPortaDaEscada, 0f, m.alturaPorta));
+                    // (no B4, o vão é 2 cm maior em volta: o batente do modelo da porta de aço fica nele)
+                    float folga = f == Andares - 1 ? FolgaDoBatente : 0f;
+                    if (tipo == 1) aberturas.Add(new Abertura(PortaDaEscadaZ - a.y - LarguraDaPortaDaEscada / 2 - folga, LarguraDaPortaDaEscada + 2 * folga, 0f, m.alturaPorta + folga));
                     if (tipo == 2) aberturas.Add(new Abertura(PortaDoElevadorZ - a.y - 0.55f, 1.1f, 0f, 2.2f));
                     var w = LevantarParede(a, c, aberturas, false, "nucleo", b, alto);
                     BarraNaParede(w);
@@ -210,7 +223,8 @@ namespace ZombieCityCleaner.Mundo
         {
             float b = TopoDaCaixa, alto = Morro + AlturaDaCasinha - b;
             for (int i = 0; i < 2; i++) LevantarParede(_nucleo[i].a, _nucleo[i].b, new List<Abertura>(), true, "casinha", b, alto);
-            var porta = new Abertura(PortaDaEscadaZ - Escada.yMin - LarguraDaPortaDaEscada / 2, LarguraDaPortaDaEscada, Morro - b, Morro - b + m.alturaPorta);
+            var porta = new Abertura(PortaDaEscadaZ - Escada.yMin - LarguraDaPortaDaEscada / 2 - FolgaDoBatente, LarguraDaPortaDaEscada + 2 * FolgaDoBatente,
+                                     Morro - b, Morro - b + m.alturaPorta + FolgaDoBatente);
             LevantarParede(_nucleo[3].a, _nucleo[3].b, new List<Abertura> { porta }, true, "casinha", b, alto, "Concreto");
             Caixa(new Vector3(X0, (b + Morro + AlturaDaCasinha) / 2, Escada.center.y), new Vector3(ParedeDeFora, alto, Escada.height + 0.2f), corDeParede, colide: true);
             float topo = Morro + AlturaDaCasinha;
@@ -312,9 +326,17 @@ namespace ZombieCityCleaner.Mundo
                     Vector3 q = w.Ponto((pc.x + pc.y) / 2, 0.6f, lado * (m.esp / 2 + 0.1f));
                     if (!TemBarra(q)) continue;
                     float topo = Mathf.Min(pc.w, AlturaDaBarra);
-                    Placa(w, pc.x, pc.y, 0f, topo, lado * (m.esp / 2 + 0.006f), 0.012f, CorDaBarra);
+                    // onde a parede acaba numa porta, a barra para 4 mm antes: o fim dela ficava na mesma face do batente (a
+                    // moldura da porta), e as duas piscavam, a barra verde no batente de metal da porta da escada (07/11/2026)
+                    float x0 = pc.x, x1 = pc.y;
+                    foreach (var ab in w.aberturas)
+                    {
+                        if (Mathf.Abs(ab.ini - x1) < 0.01f) x1 -= 0.004f;
+                        if (Mathf.Abs(ab.ini + ab.larg - x0) < 0.01f) x0 += 0.004f;
+                    }
+                    Placa(w, x0, x1, 0f, topo, lado * (m.esp / 2 + 0.006f), 0.012f, CorDaBarra);
                     if (pc.w >= AlturaDaBarra + 0.06f)
-                        Placa(w, pc.x, pc.y, AlturaDaBarra, AlturaDaBarra + 0.06f, lado * (m.esp / 2 + 0.008f), 0.016f, CorDoFriso);
+                        Placa(w, x0, x1, AlturaDaBarra, AlturaDaBarra + 0.06f, lado * (m.esp / 2 + 0.008f), 0.016f, CorDoFriso);
                 }
             }
         }
@@ -323,78 +345,20 @@ namespace ZombieCityCleaner.Mundo
         /// A faixa de aviso amarela e preta: 'meio' no meio dela, na face; 'u' corre ao longo dela, 'fora' sai da face; os
         /// blocos alternados, quadrados.
         /// </summary>
-        void Listras(Vector3 meio, Vector3 u, Vector3 fora, float comprimento, float largura)
+        void Listras(Vector3 meio, Vector3 u, Vector3 fora, float comprimento, float largura, float sai = 0.007f)
         {
             int n = Mathf.Max(2, Mathf.RoundToInt(comprimento / largura));
             float passo = comprimento / n;
             var giro = Quaternion.LookRotation(fora, Vector3.Cross(fora, u));
             for (int i = 0; i < n; i++)
             {
-                Vector3 c = meio + u * (-comprimento / 2 + passo * (i + 0.5f)) + fora * 0.007f;
+                Vector3 c = meio + u * (-comprimento / 2 + passo * (i + 0.5f)) + fora * sai;
                 CaixaM(Matrix4x4.TRS(c, giro, Vector3.one), new Vector3(passo - 0.001f, largura, 0.014f), i % 2 == 0 ? CorDoFriso : Preto);
             }
         }
 
-        // as letras pintadas, em traços numa grade de 2 × 4 (x0, y0, x1, y1 de cada traço): só as que os letreiros usam
-        static readonly Dictionary<char, float[]> Letras = new Dictionary<char, float[]>
-        {
-            ['A'] = new float[] { 0, 0, 0, 3, 0, 3, 1, 4, 1, 4, 2, 3, 2, 3, 2, 0, 0, 2, 2, 2 },
-            ['B'] = new float[] { 0, 0, 0, 4, 0, 4, 1.5f, 4, 1.5f, 4, 2, 3.5f, 2, 3.5f, 2, 2.5f, 2, 2.5f, 1.5f, 2, 0, 2, 1.5f, 2, 1.5f, 2, 2, 1.5f, 2, 1.5f, 2, 0.5f, 2, 0.5f, 1.5f, 0, 1.5f, 0, 0, 0 },
-            ['C'] = new float[] { 2, 4, 0, 4, 0, 4, 0, 0, 0, 0, 2, 0 },
-            ['D'] = new float[] { 0, 0, 0, 4, 0, 4, 1.3f, 4, 1.3f, 4, 2, 3.3f, 2, 3.3f, 2, 0.7f, 2, 0.7f, 1.3f, 0, 1.3f, 0, 0, 0 },
-            ['E'] = new float[] { 2, 4, 0, 4, 0, 4, 0, 0, 0, 0, 2, 0, 0, 2, 1.5f, 2 },
-            ['G'] = new float[] { 2, 4, 0, 4, 0, 4, 0, 0, 0, 0, 2, 0, 2, 0, 2, 2, 2, 2, 1, 2 },
-            ['H'] = new float[] { 0, 0, 0, 4, 2, 0, 2, 4, 0, 2, 2, 2 },
-            ['I'] = new float[] { 1, 0, 1, 4, 0.4f, 4, 1.6f, 4, 0.4f, 0, 1.6f, 0 },
-            ['K'] = new float[] { 0, 0, 0, 4, 0, 1.6f, 2, 4, 0.7f, 2.4f, 2, 0 },
-            ['L'] = new float[] { 0, 4, 0, 0, 0, 0, 2, 0 },
-            ['M'] = new float[] { 0, 0, 0, 4, 0, 4, 1, 2, 1, 2, 2, 4, 2, 4, 2, 0 },
-            ['N'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 0, 2, 0, 2, 4 },
-            ['O'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 4, 2, 4, 2, 0, 2, 0, 0, 0 },
-            ['P'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 4, 2, 4, 2, 2, 2, 2, 0, 2 },
-            ['Q'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 4, 2, 4, 2, 0, 2, 0, 0, 0, 1.1f, 0.9f, 2.1f, -0.3f },
-            ['R'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 4, 2, 4, 2, 2, 2, 2, 0, 2, 0.8f, 2, 2, 0 },
-            ['S'] = new float[] { 2, 4, 0, 4, 0, 4, 0, 2, 0, 2, 2, 2, 2, 2, 2, 0, 2, 0, 0, 0 },
-            ['T'] = new float[] { 0, 4, 2, 4, 1, 4, 1, 0 },
-            ['U'] = new float[] { 0, 4, 0, 0, 0, 0, 2, 0, 2, 0, 2, 4 },
-            ['Y'] = new float[] { 0, 4, 1, 2, 2, 4, 1, 2, 1, 2, 1, 0 },
-            ['Z'] = new float[] { 0, 4, 2, 4, 2, 4, 0, 0, 0, 0, 2, 0 },
-            ['0'] = new float[] { 0, 0, 0, 4, 0, 4, 2, 4, 2, 4, 2, 0, 2, 0, 0, 0, 0, 0.4f, 2, 3.6f },
-            ['1'] = new float[] { 1, 0, 1, 4, 1, 4, 0.3f, 3.3f, 0.4f, 0, 1.6f, 0 },
-            ['2'] = new float[] { 0, 4, 2, 4, 2, 4, 2, 2, 2, 2, 0, 2, 0, 2, 0, 0, 0, 0, 2, 0 },
-            ['3'] = new float[] { 0, 4, 2, 4, 2, 4, 2, 0, 2, 0, 0, 0, 0.5f, 2, 2, 2 },
-            ['4'] = new float[] { 0, 4, 0, 2, 0, 2, 2, 2, 2, 4, 2, 0 },
-            ['-'] = new float[] { 0.4f, 2, 1.6f, 2 },
-        };
-
-        /// <summary>
-        /// Um letreiro pintado numa face de parede: o texto (as letras de <see cref="Letras"/>; o resto vira espaço) centrado em
-        /// 'meio' (no pé das letras), correndo em 'u' (a direita de quem lê), saindo 'fora' da face; 'h' é a altura das letras.
-        /// Com 'fundo', a placa pintada atrás.
-        /// </summary>
-        void Letreiro(string texto, Vector3 meio, Vector3 u, Vector3 fora, float h, string cor, string fundo = null)
-        {
-            float e = h / 4f, passo = 2.6f * e, traco = 0.55f * e;
-            float total = texto.Length * passo - 0.6f * e;
-            Vector3 inicio = meio - u * (total / 2);
-            if (fundo != null)
-                CaixaM(Matrix4x4.TRS(meio + Vector3.up * (h / 2) + fora * 0.006f, Quaternion.LookRotation(fora, Vector3.up), Vector3.one),
-                       new Vector3(total + h * 0.5f, h * 1.6f, 0.012f), fundo);
-            for (int i = 0; i < texto.Length; i++)
-            {
-                if (!Letras.TryGetValue(texto[i], out var tracos)) continue;
-                Vector3 o = inicio + u * (i * passo);
-                for (int t = 0; t + 3 < tracos.Length; t += 4)
-                {
-                    Vector3 a = o + u * (tracos[t] * e) + Vector3.up * (tracos[t + 1] * e) + fora * 0.015f;
-                    Vector3 b = o + u * (tracos[t + 2] * e) + Vector3.up * (tracos[t + 3] * e) + fora * 0.015f;
-                    Vector3 d = b - a;
-                    float l = d.magnitude;
-                    if (l < 1e-4f) continue;
-                    CaixaM(Matrix4x4.TRS((a + b) / 2, Quaternion.LookRotation(fora, d / l), Vector3.one), new Vector3(traco, l + traco, 0.006f), cor);
-                }
-            }
-        }
+        // o meio das faixas que passam por cima da barra (ela sai 1,2 cm da parede, e o friso 1,6): de 1,9 a 3,3 cm
+        const float ForaDaBarra = 0.026f;
 
         /// <summary>Os nomes dos andares (em inglês: o jogo se passa nos Estados Unidos), pintados em cima da porta da escada.</summary>
         public static readonly string[] NomesNaParede = { "B0 GARAGE", "B1 COMMONS", "B2 KITCHEN", "B3 QUARTERS", "B4 MAINTENANCE" };
@@ -410,15 +374,17 @@ namespace ZombieCityCleaner.Mundo
                 float b = Base(f), z = PortaDaEscadaZ;
                 Letreiro(NomesNaParede[f], new Vector3(xHall, b + 2.66f, z), Vector3.forward, Vector3.right, 0.26f, Preto, CorDoFriso);
                 Letreiro(NomesNaParede[f], new Vector3(xPatamar, b + (f == Andares - 1 ? 2.92f : 2.66f), z), Vector3.back, Vector3.left, 0.26f, Preto, CorDoFriso);
+                // (as faixas dos lados da porta passam por cima da barra verde e do friso: 1 cm mais para fora que eles; a
+                // 2 mm deles, piscavam)
                 foreach (int s in new[] { -1, 1 })
-                    Listras(new Vector3(xHall, b + m.alturaPorta / 2, z + s * meiaPorta), Vector3.up, Vector3.right, m.alturaPorta, 0.14f);
+                    Listras(new Vector3(xHall, b + m.alturaPorta / 2, z + s * meiaPorta), Vector3.up, Vector3.right, m.alturaPorta, 0.14f, ForaDaBarra);
             }
             Letreiro("AUTHORIZED PERSONNEL ONLY", new Vector3(xPatamar, Base(Andares - 1) + 2.57f, PortaDaEscadaZ), Vector3.back, Vector3.left, 0.12f,
                      "PlacaVermelha", "PlacaBranca");
             // o portão, por dentro: as faixas nos dois lados e em cima, e a faixa no chão, na frente dele
             float zi = Z0 + ParedeDeFora / 2;
-            Listras(new Vector3(PortaoX0 - 0.2f, PortaoAltura / 2, zi), Vector3.up, Vector3.forward, PortaoAltura, 0.3f);
-            Listras(new Vector3(PortaoX0 + PortaoLargura + 0.2f, PortaoAltura / 2, zi), Vector3.up, Vector3.forward, PortaoAltura, 0.3f);
+            Listras(new Vector3(PortaoX0 - 0.2f, PortaoAltura / 2, zi), Vector3.up, Vector3.forward, PortaoAltura, 0.3f, ForaDaBarra);
+            Listras(new Vector3(PortaoX0 + PortaoLargura + 0.2f, PortaoAltura / 2, zi), Vector3.up, Vector3.forward, PortaoAltura, 0.3f, ForaDaBarra);
             Listras(new Vector3(PortaoX0 + PortaoLargura / 2, PortaoAltura + 0.2f, zi), Vector3.right, Vector3.forward, PortaoLargura + 0.7f, 0.3f);
             Listras(new Vector3(PortaoX0 + PortaoLargura / 2, 0.0f, zi + 0.35f), Vector3.right, Vector3.up, PortaoLargura, 0.3f);
         }

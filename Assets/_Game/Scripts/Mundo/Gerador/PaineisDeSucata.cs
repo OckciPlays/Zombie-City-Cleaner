@@ -32,7 +32,7 @@ namespace ZombieCityCleaner.Mundo
     /// Nada cai em cima de um carro, de um poste, de uma árvore da rua ou de outro painel (<see cref="Livre"/>). O número de
     /// cada um é o índice em <see cref="Todos"/>: o save do mundo guarda os desmontados por ele.
     /// </summary>
-    public sealed class PaineisDeSucata
+    public sealed partial class PaineisDeSucata
     {
         /// <summary>Os três modelos do Loot_Sucata.fbx (Painel_Chapa_corpo, Painel_Porta_corpo e Painel_Placa_corpo), nesta ordem.</summary>
         public const int Modelos = 3;
@@ -61,6 +61,9 @@ namespace ZombieCityCleaner.Mundo
         int[][] _porBloco;
         readonly DadosDoMundo _d;
         readonly Sorteio _s;
+        // a grade dos blocos de 64 m (a dos dados; no Lakewood, a dele: Mundo/Lakewood/PaineisDeLakewood.cs)
+        readonly System.Func<float, float, Vector2Int> _blocoDe;
+        readonly int _blocosX, _blocosZ;
         // o que já ocupa o chão (os carros, os postes, as árvores da rua, as barreiras e os painéis), numa grade de 8 m
         readonly Dictionary<long, List<(Vector2 p, float r, int dono)>> _ocupado = new Dictionary<long, List<(Vector2, float, int)>>();
         const float Celula = 8f;
@@ -69,6 +72,8 @@ namespace ZombieCityCleaner.Mundo
         {
             _d = d;
             _s = Sorteio.Da(d.Semente, "paineis-de-sucata");
+            _blocoDe = d.BlocoDe;
+            _blocosX = _blocosZ = d.BlocosPorLado;
         }
 
         static PaineisDeSucata _ultimo;
@@ -100,19 +105,20 @@ namespace ZombieCityCleaner.Mundo
         }
 
         /// <summary>Os índices (em <see cref="Todos"/>) dos painéis do bloco, ou null.</summary>
-        public int[] DoBloco(int bx, int bz) => _porBloco?[bz * _d.BlocosPorLado + bx];
+        public int[] DoBloco(int bx, int bz) =>
+            _porBloco == null || bx < 0 || bz < 0 || bx >= _blocosX || bz >= _blocosZ ? null : _porBloco[bz * _blocosX + bx];
 
         /// <summary>O painel com este número existe?</summary>
         public bool Existe(int indice) => indice >= 0 && indice < Todos.Count;
 
         void Indexar()
         {
-            int lado = _d.BlocosPorLado;
-            var listas = new List<int>[lado * lado];
+            var listas = new List<int>[_blocosX * _blocosZ];
             for (int i = 0; i < Todos.Count; i++)
             {
-                var b = _d.BlocoDe(Todos[i].Posicao.x, Todos[i].Posicao.y);
-                (listas[b.y * lado + b.x] ??= new List<int>()).Add(i);
+                var b = _blocoDe(Todos[i].Posicao.x, Todos[i].Posicao.y);
+                if (b.x < 0 || b.y < 0 || b.x >= _blocosX || b.y >= _blocosZ) continue;
+                (listas[b.y * _blocosX + b.x] ??= new List<int>()).Add(i);
             }
             _porBloco = new int[listas.Length][];
             for (int k = 0; k < listas.Length; k++) _porBloco[k] = listas[k]?.ToArray();

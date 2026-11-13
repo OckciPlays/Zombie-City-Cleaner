@@ -53,7 +53,7 @@ namespace ZombieCityCleaner.World
         {
             if (p.Aberta || !Trancada(p) || !SabidaTrancada(p.chave)) return 0f;
             if (Barricada(p.chave)) return 0f;   // (a barricada de tábuas, 11/11/2026: nem do outro lado)
-            if (p.dados.DeFora && p.DoLadoQueAbre(quem.transform.position)) return 0f;   // por dentro, destranca sem ferramenta
+            if (p.PorDentro(quem.transform.position)) return 0f;   // por dentro, destranca sem ferramenta
             return TempoDa(FerramentaDe(quem.Inventario), quem.Inventario);
         }
 
@@ -75,7 +75,7 @@ namespace ZombieCityCleaner.World
             if (f == Item.Nada) return;
             if (!IsSpawned)
             {
-                EscreverChave(chave, true, true);
+                EscreverComPar(chave, true, true);
                 Efeitos.Som(f != Item.PeDeCabra ? SomDasPortas.Gazua : SomDasPortas.PeDeCabra, onde, 1f, true, 30f);
                 return;
             }
@@ -107,7 +107,7 @@ namespace ZombieCityCleaner.World
                 inv.GastarItem(Item.Gazua, 1);
                 inv.AvisarDono("A gazua quebrou na fechadura");
             }
-            EscreverChave(chave, true, true);
+            EscreverComPar(chave, true, true);
             ArrombouRpc(chave, ferramenta);
             // o pé de cabra arrebentando a fechadura chama os zumbis de perto
             // (as Mãos leves, 06/11/2026: em silêncio)

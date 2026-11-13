@@ -301,8 +301,8 @@ namespace ZombieCityCleaner.World
             bool carro = local != null && local.Passageiro != null && local.Passageiro.Sentado;
             bool area = AreaInterna.Contem(ouvido);
             bool teto = Physics.Raycast(ouvido, Vector3.up, out var h, 40f, Abafamento.Mascara, QueryTriggerInteraction.Ignore);
-            var mundo = MundoDaPartida.Instancia;
-            float chao = mundo != null && mundo.Dados != null ? mundo.Dados.Altura(ouvido.x, ouvido.z) : float.NegativeInfinity;
+            var mundo = MundoDoJogo.Atual;
+            float chao = mundo != null ? mundo.Altura(ouvido.x, ouvido.z) : float.NegativeInfinity;
             bool fundo = (BunkerRede.Instancia != null && BunkerRede.Instancia.Dentro(ouvido)) || (teto && ouvido.y < chao - 1.2f);
             if (fundo)
             {
@@ -1045,16 +1045,18 @@ namespace ZombieCityCleaner.World
             float ox = ((h >> 10) & 255u) / 255f, oz = ((h >> 18) & 255u) / 255f;
             float raio = Mathf.Lerp(0.9f, 2.1f, ((h >> 26) & 63u) / 63f);
             var c = new Vector3((cx + 0.2f + 0.6f * ox) * Celula, 0f, (cz + 0.2f + 0.6f * oz) * Celula);
-            var mundo = MundoDaPartida.Instancia;
-            float topo = mundo != null && mundo.Dados != null ? mundo.Dados.Altura(c.x, c.z) + 3f : 300f;
-            if (!Physics.Raycast(new Vector3(c.x, topo, c.z), Vector3.down, out var chao, topo > 299f ? 600f : 8f, Abafamento.Mascara, QueryTriggerInteraction.Ignore))
+            // (12/11/2026: o mundo do jogo; no Lakewood o chão passa de 500 m, e de y = 300 o raio nascia dentro do morro)
+            var mundo = MundoDoJogo.Atual;
+            bool temChao = mundo != null;
+            float topo = temChao ? mundo.Altura(c.x, c.z) + 3f : 300f;
+            if (!Physics.Raycast(new Vector3(c.x, topo, c.z), Vector3.down, out var chao, temChao ? 8f : 600f, Abafamento.Mascara, QueryTriggerInteraction.Ignore))
                 return p;   // sem chão ainda: não guarda
             if (_pocas.Count > 40000) _pocas.Clear();
             _pocas[chave] = p;
             if (chao.normal.y < 0.985f || AreaInterna.Contem(chao.point + Vector3.up)) return p;
             // no terreno, só nas ruas (o asfalto fica 5 cm acima do terreno, sem colisor); no gramado, a água entra no chão
             float acima = 0.02f;
-            if (chao.collider.name == "Chão")
+            if (PassosJogador.EhTerreno(chao.collider))
             {
                 if (!PassosJogador.NaEstrada(chao.point)) return p;
                 acima = 0.075f;

@@ -109,7 +109,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void NovoDestino(Sobrevivente lider)
         {
             _proximoDestino = Time.time + Random.Range(25f, 45f);
-            var d = World.MundoDaPartida.Instancia != null ? World.MundoDaPartida.Instancia.Dados : null;
+            var d = World.MundoDoJogo.Atual;
             Vector3 c = lider.transform.position;
             for (int t = 0; t < 10; t++)
             {
@@ -117,7 +117,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 var p = c + new Vector3(r.x, 0f, r.y);
                 if (!NavMesh.SamplePosition(p, out var hit, 4f, NavMesh.AllAreas)) continue;
                 if (PertoDeUmJogador(hit.position) > 60f) continue;
-                if (d != null && d.CidadeEm(hit.position.x, hit.position.z) == null && t < 7) continue;
+                if (d != null && d.CidadeEm(hit.position.x, hit.position.z) < 0 && t < 7) continue;
                 destino = hit.position;
                 temDestino = true;
                 return;

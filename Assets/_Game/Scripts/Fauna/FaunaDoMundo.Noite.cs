@@ -21,37 +21,9 @@ namespace ZombieCityCleaner.Fauna
     {
         // ------------------------------------------------------------------ as árvores
 
-        static readonly List<PlantaDaFloresta> _plantasDaNoite = new List<PlantaDaFloresta>(256);
-
         /// <summary>A árvore em pé mais perto do ponto (a até 'raio' m): o pé e o raio do tronco.</summary>
-        internal static bool ArvoreMaisPerto(Vector3 p, float raio, out Vector3 pe, out float raioDoTronco)
-        {
-            pe = default;
-            raioDoTronco = 0f;
-            var d = DadosDoMapa;
-            if (d?.Floresta == null) return false;
-            var a = d.BlocoDe(p.x - raio, p.z - raio);
-            var b = d.BlocoDe(p.x + raio, p.z + raio);
-            float melhor = raio * raio;
-            bool achou = false;
-            for (int bz = a.y; bz <= b.y; bz++)
-                for (int bx = a.x; bx <= b.x; bx++)
-                {
-                    d.Floresta.DoBloco(bx, bz, _plantasDaNoite);
-                    for (int i = 0; i < _plantasDaNoite.Count; i++)
-                    {
-                        var pl = _plantasDaNoite[i];
-                        if (!Floresta.EhArvore(pl.Especie) || Floresta.Deitada(pl.Especie) || Floresta.RaioDoTronco[(int)pl.Especie] <= 0f) continue;
-                        float dd = (new Vector2(pl.Posicao.x, pl.Posicao.z) - new Vector2(p.x, p.z)).sqrMagnitude;
-                        if (dd >= melhor || FlorestaDoMundo.Cortada(FlorestaDoMundo.Chave(bx, bz, i))) continue;
-                        melhor = dd;
-                        pe = pl.Posicao;
-                        raioDoTronco = Floresta.RaioDoTronco[(int)pl.Especie] * pl.Escala;
-                        achou = true;
-                    }
-                }
-            return achou;
-        }
+        internal static bool ArvoreMaisPerto(Vector3 p, float raio, out Vector3 pe, out float raioDoTronco) =>
+            ArvoresDoMundo.MaisPerto(p, raio, out _, out pe, out raioDoTronco);
 
         /// <summary>O bicho vivo da espécie mais perto de 'de', a até 'raio' m (a cascavel e o sapo).</summary>
         internal Bicho PresaPerto(Bicho de, Especie e, float raio)
@@ -78,7 +50,8 @@ namespace ZombieCityCleaner.Fauna
         {
             lixeira = default;
             var d = DadosDoMapa;
-            if (d?.Objetos == null) return false;
+            if (d == null) return LixeiraDoLakewood(p, raio, out lixeira);
+            if (d.Objetos == null) return false;
             float melhor = raio * raio;
             bool achou = false;
             foreach (var o in d.Objetos.Todos)
@@ -87,6 +60,30 @@ namespace ZombieCityCleaner.Fauna
                 float dd = (o.Posicao - new Vector2(p.x, p.z)).sqrMagnitude;
                 if (dd >= melhor) continue;
                 var c = new Vector3(o.Posicao.x, d.Altura(o.Posicao.x, o.Posicao.y), o.Posicao.y);
+                if (Revirada(c)) continue;
+                melhor = dd;
+                lixeira = c;
+                achou = true;
+            }
+            return achou;
+        }
+
+        // no Lakewood (a parte 2 do "O jogo do mundo sorteado no Lakewood"): a lata de lixo na frente de cada casa, na beira do
+        // lote do lado da rua (ela não é desenhada: o guaxinim espalha o lixo ali)
+        bool LixeiraDoLakewood(Vector3 p, float raio, out Vector3 lixeira)
+        {
+            lixeira = default;
+            var chao = ChaoDoLakewood;
+            if (chao == null) return false;
+            float melhor = raio * raio;
+            bool achou = false;
+            foreach (var l in chao.Lotes)
+            {
+                if (l.Plano == null || l.Lote.tipo != UsoDoLote.Casa) continue;
+                var q = l.Lote.NoMapa(l.Lote.largura * 0.35f, -l.Lote.fundo * 0.5f + 0.8f);
+                float dd = (q - new Vector2(p.x, p.z)).sqrMagnitude;
+                if (dd >= melhor) continue;
+                var c = new Vector3(q.x, chao.Altura(q.x, q.y), q.y);
                 if (Revirada(c)) continue;
                 melhor = dd;
                 lixeira = c;

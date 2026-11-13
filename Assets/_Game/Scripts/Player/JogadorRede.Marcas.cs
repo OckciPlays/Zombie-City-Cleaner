@@ -37,11 +37,12 @@ namespace ZombieCityCleaner.Player
         [Rpc(SendTo.Server)]
         void MarcaRpc(byte tipo, Vector3 ponto, byte cor, string texto, RpcParams parametros = default)
         {
-            var m = MundoDaPartida.Instancia;
-            if (parametros.Receive.SenderClientId != OwnerClientId || m == null || m.Dados == null) return;
+            // (12/11/2026: as marcas do mundo da cena, o sorteado ou o Lakewood)
+            var m = MarcasDoMundo.Atual;
+            var mundo = MundoDoJogo.Atual;
+            if (parametros.Receive.SenderClientId != OwnerClientId || m == null || mundo == null) return;
             // dentro do mapa
-            float limite = m.Dados.Metade;
-            if (Mathf.Abs(ponto.x) > limite || Mathf.Abs(ponto.z) > limite) return;
+            if (!mundo.Area.Contains(new Vector2(ponto.x, ponto.z))) return;
             m.PorMarca((TipoDeMarca)Mathf.Min(tipo, (byte)2), ponto, cor, texto, OwnerClientId, NomeNoMapa);
         }
 
@@ -49,14 +50,14 @@ namespace ZombieCityCleaner.Player
         void ApagarMarcaRpc(ushort id, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
-            MundoDaPartida.Instancia?.ApagarMarca(id);
+            MarcasDoMundo.Atual?.ApagarMarca(id);
         }
 
         [Rpc(SendTo.Server)]
         void EditarMarcaRpc(ushort id, byte cor, string texto, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
-            MundoDaPartida.Instancia?.EditarMarca(id, cor, texto);
+            MarcasDoMundo.Atual?.EditarMarca(id, cor, texto);
         }
     }
 }

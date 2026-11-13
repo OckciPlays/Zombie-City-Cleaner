@@ -89,3 +89,7 @@ MonoBehaviour:
   material: {fileID: 2100000, guid: dab32762e5babfa409c322c321632207, type: 2}
   catalogo: {fileID: 4900000, guid: 4c46735ab9bf0de48b06b98245ddcb4e, type: 3}
   invisivel: {fileID: 4800000, guid: c44702a04ba18c34a8256ac78a0c62f4, type: 3}
+  vidro: {fileID: 2100000, guid: c6d0ea459090ae24bab50f0350411967, type: 2}
+  comVidro:
+  - Oculos_Protecao
+  - Viseira

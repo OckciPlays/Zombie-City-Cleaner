@@ -111,21 +111,17 @@ namespace ZombieCityCleaner.Fauna
         // a altura acima do chão ou da água (a ave voando), pela altura do mundo (sem raio: barato)
         float AcimaDaSuperficie()
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            if (dados == null) return 0f;
+            if (!FaunaDoMundo.TemMapa) return 0f;
             Vector3 p = transform.position;
-            float chao = dados.Altura(p.x, p.z);
-            if (dados.FunduraDaAgua(p.x, p.z) > 0.01f) chao = Mathf.Max(chao, FaunaDoMundo.NivelDoLago);
-            return p.y - chao;
+            return p.y - FaunaDoMundo.SuperficieEm(p.x, p.z, FaunaDoMundo.AlturaDoMapa(p.x, p.z));
         }
 
         // nadando: o lombo bem abaixo da água
         bool Nadando()
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            if (dados == null) return false;
+            if (!FaunaDoMundo.TemMapa) return false;
             Vector3 p = transform.position;
-            return dados.FunduraDaAgua(p.x, p.z) > 0.2f && p.y < FaunaDoMundo.NivelDoLago - Altura * 0.45f;
+            return FaunaDoMundo.AguaEm(p.x, p.z, out float nivel) > 0.2f && p.y < nivel - Altura * 0.45f;
         }
 
         // o que leva: o galho atravessado na boca do castor, o peixe nas garras da águia (feito na primeira vez)
@@ -173,16 +169,17 @@ namespace ZombieCityCleaner.Fauna
 
         /// <summary>
         /// A altura do chão no ponto: o colisor do cenário perto dos jogadores (as ruas, as calçadas, o terreno com
-        /// colisão), senão a altura exata do mundo gerado. 'agua': a fundura da água ali.
+        /// colisão), senão a altura exata do mundo (o sorteado ou o Lakewood). 'agua': a fundura da água ali; 'nivel': a altura
+        /// dela (cada água do Lakewood tem a sua).
         /// </summary>
-        internal static float Chao(Vector3 p, out float agua)
+        internal static float Chao(Vector3 p, out float agua) => Chao(p, out agua, out _);
+
+        internal static float Chao(Vector3 p, out float agua, out float nivel)
         {
-            agua = 0f;
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            if (dados != null) agua = dados.FunduraDaAgua(p.x, p.z);
+            agua = FaunaDoMundo.AguaEm(p.x, p.z, out nivel);
             if (Physics.Raycast(new Vector3(p.x, p.y + 2.5f, p.z), Vector3.down, out var hit, 8f, 1, QueryTriggerInteraction.Ignore))
                 return hit.point.y;
-            return dados != null ? dados.Altura(p.x, p.z) : p.y;
+            return FaunaDoMundo.TemMapa ? FaunaDoMundo.AlturaDoMapa(p.x, p.z) : p.y;
         }
 
         // ------------------------------------------------------------------ a cópia (nos clientes)

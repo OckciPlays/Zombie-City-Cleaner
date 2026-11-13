@@ -99,7 +99,7 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             Vector3 c = cam.transform.position;
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            bool temMapa = FaunaDoMundo.TemMapa;
             int vivos = Mathf.RoundToInt(Quantos * _forca);
             int n = 0;
             for (int i = 0; i < Quantos; i++)
@@ -109,12 +109,12 @@ namespace ZombieCityCleaner.Fauna
                 // longe demais (a câmera andou): renasce em volta
                 if (v.vivo <= 0f || (v.pos - c).sqrMagnitude > Longe * Longe * 1.3f)
                 {
-                    if (!Nascer(ref v, c, dados)) continue;
+                    if (!Nascer(ref v, c, temMapa)) continue;
                 }
                 // boia: o rumo muda devagar, perto do chão
                 v.rumo = Vector3.Lerp(v.rumo, Random.insideUnitSphere * 0.5f, dt * 0.3f);
                 v.pos += v.rumo * dt;
-                float chao = dados != null ? dados.Altura(v.pos.x, v.pos.z) : c.y - 1.6f;
+                float chao = temMapa ? FaunaDoMundo.AlturaDoMapa(v.pos.x, v.pos.z) : c.y - 1.6f;
                 v.pos.y = Mathf.Clamp(v.pos.y, chao + 0.3f, chao + 2f);
                 // o pisca: aceso por ~0,3 s a cada ciclo
                 v.fase += dt / v.ritmo;
@@ -133,21 +133,21 @@ namespace ZombieCityCleaner.Fauna
                 _particulas[n++] = p;
             }
             _ps.SetParticles(_particulas, n);
-            Sapos(dados);
+            Sapos();
         }
 
-        bool Nascer(ref VagaLume v, Vector3 c, DadosDoMundo dados)
+        bool Nascer(ref VagaLume v, Vector3 c, bool temMapa)
         {
             for (int k = 0; k < 4; k++)
             {
                 Vector2 r = Random.insideUnitCircle.normalized * Random.Range(Perto, Longe);
                 var p = new Vector3(c.x + r.x, 0f, c.z + r.y);
-                if (dados != null)
+                if (temMapa)
                 {
-                    if (dados.FunduraDaAgua(p.x, p.z) > 0.05f) continue;
-                    var m = dados.Floresta != null ? dados.Floresta.ManchaEm(p.x, p.z, out _) : Mancha.Campo;
+                    if (FaunaDoMundo.AguaEm(p.x, p.z, out _) > 0.05f) continue;
+                    var m = FaunaDoMundo.ManchaEm(p.x, p.z);
                     if (m != Mancha.Campo && m != Mancha.Rebrota && m != Mancha.Beira && m != Mancha.Mista && m != Mancha.Lavoura && m != Mancha.Outono) continue;
-                    p.y = dados.Altura(p.x, p.z) + Random.Range(0.3f, 2f);
+                    p.y = FaunaDoMundo.AlturaDoMapa(p.x, p.z) + Random.Range(0.3f, 2f);
                 }
                 else p.y = c.y + Random.Range(-1f, 0.5f);
                 v.pos = p;
@@ -163,7 +163,7 @@ namespace ZombieCityCleaner.Fauna
 
         // o sapo come o vaga-lume que passa perto da boca (às vezes)
         float _proximoSapo;
-        void Sapos(DadosDoMundo dados)
+        void Sapos()
         {
             if (Time.time < _proximoSapo) return;
             _proximoSapo = Time.time + 0.5f;

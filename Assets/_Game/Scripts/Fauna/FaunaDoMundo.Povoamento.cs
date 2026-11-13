@@ -98,8 +98,7 @@ namespace ZombieCityCleaner.Fauna
 
         void Povoar(float agora)
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            if (dados == null || dados.Floresta == null) return;
+            if (!TemMapa) return;
             foreach (var g in Pessoas)
             {
                 foreach (var e in NoMundo)
@@ -118,7 +117,7 @@ namespace ZombieCityCleaner.Fauna
                     {
                         float ang = Random.Range(0f, Mathf.PI * 2f), dist = Random.Range(NascerMin, NascerMax);
                         Vector3 p = g.pes + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * dist;
-                        if (!LugarBom(p, e, dados) || MaisPerto(p) < NascerMin) continue;
+                        if (!LugarBom(p, e) || MaisPerto(p) < NascerMin) continue;
                         if (Random.value > Nivel(p)) break;   // a região caçada demais: menos chance (e tenta de novo depois)
                         NascerGrupo(e, p, false);
                         break;
@@ -135,12 +134,11 @@ namespace ZombieCityCleaner.Fauna
             return n;
         }
 
-        static bool LugarBom(Vector3 p, Especie e, DadosDoMundo dados)
+        static bool LugarBom(Vector3 p, Especie e)
         {
-            float lim = dados.Metade - 60f;
-            if (Mathf.Abs(p.x) > lim || Mathf.Abs(p.z) > lim) return false;
-            if (dados.FunduraDaAgua(p.x, p.z) > 0.05f) return false;
-            var m = dados.Floresta.ManchaEm(p.x, p.z, out _);
+            if (!DentroDoMapa(p.x, p.z, 60f)) return false;
+            if (AguaEm(p.x, p.z, out _) > 0.05f) return false;
+            var m = ManchaEm(p.x, p.z);
             foreach (var h in Especies.De(e).habitats) if (h == m) return true;
             return false;
         }
@@ -149,14 +147,14 @@ namespace ZombieCityCleaner.Fauna
         internal Vector3 NovoPasto(Vector3 antes, Especie e)
         {
             if (PastoNaAgua(antes, e, out var naAgua)) return naAgua;
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
+            bool temMapa = TemMapa;
             for (int k = 0; k < 8; k++)
             {
                 // os predadores andam mais (de 40 a 110 m); os outros pastam por perto
                 bool longe = Especies.De(e).papel != Papel.Presa;
                 float ang = Random.Range(0f, Mathf.PI * 2f), dist = longe ? Random.Range(40f, 110f) : Random.Range(15f, 35f);
                 Vector3 p = antes + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * dist;
-                if (dados == null || LugarBom(p, e, dados)) return p;
+                if (!temMapa || LugarBom(p, e)) return p;
             }
             return antes;
         }

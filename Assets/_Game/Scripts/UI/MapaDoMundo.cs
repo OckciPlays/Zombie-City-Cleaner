@@ -18,7 +18,9 @@ namespace ZombieCityCleaner.UI
     /// descoberta (só onde o grupo passou, e os mapas de papel) vem depois.
     /// O nome de cada jogador vai ao lado da seta dele (03/11/2026, a pedido: "o nome dos jogadores no mapa"), com as marcas,
     /// as anotações e os pings (MapaDoMundo.Marcas.cs); o minimapa (<see cref="MinimapaDoMundo"/>) usa a mesma imagem.
-    /// Fica no objeto "Mundo" da cena Mundo.
+    /// Fica no objeto "Mundo" da cena Mundo. No Lakewood (12/11/2026, o Plano_Lakewood, "O jogo do mundo sorteado no
+    /// Lakewood", a parte 7), no "Mundo (Lakewood)": a imagem é a do pintor dele (<see cref="PintorDeLakewood"/>, a mesma do
+    /// Lakewood_Mapa.png, sem a legenda), no retângulo de 12 × 10 km (<see cref="Area"/>), com os nomes dele.
     /// </summary>
     public partial class MapaDoMundo : MonoBehaviour
     {
@@ -31,13 +33,20 @@ namespace ZombieCityCleaner.UI
         public static MapaDoMundo Instancia { get; private set; }
         /// <summary>A imagem do mapa inteiro (null enquanto pinta).</summary>
         public Texture2D Textura => _textura;
+        /// <summary>Os dados do mundo sorteado (null no Lakewood).</summary>
         public DadosDoMundo Dados => _dados;
+        /// <summary>O retângulo do mapa no mundo (x e z): a imagem cobre ele inteiro.</summary>
+        public Rect Area => _area;
 
         static Texture2D _setaCompartilhada;
         /// <summary>A seta dos jogadores (a mesma do mapa grande, para o minimapa).</summary>
         public static Texture2D SetaDosJogadores => _setaCompartilhada != null ? _setaCompartilhada : _setaCompartilhada = Seta();
 
         DadosDoMundo _dados;
+        // o mundo da imagem (os dados do sorteado ou o chão do Lakewood), o retângulo e o tamanho da imagem
+        object _fonte;
+        Rect _area;
+        int _largura, _altura;
         Texture2D _textura;
         Task<Color32[][]> _pintando;
         List<PintorDoMapa.Rotulo> _rotulos;
@@ -79,21 +88,26 @@ namespace ZombieCityCleaner.UI
         {
             Aberto = abrir;
             MenuOnline.Tela(this, abrir);
-            if (!abrir || _dados == null) return;
+            if (!abrir || _fonte == null) return;
             // abre mostrando o mapa todo
             _zoom = 1f;
-            _centro = Vector2.zero;
+            _centro = _area.center;
         }
 
         void Update()
         {
             var mundo = MundoDaPartida.Instancia;
             var dados = mundo != null ? mundo.Dados : null;
-            if (dados != _dados)
+            // (12/11/2026) o Lakewood, com a partida começada
+            var lakewood = dados == null && LakewoodNaCena.Instancia != null && MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Pronto
+                ? LakewoodNaCena.Instancia : null;
+            object fonte = (object)dados ?? lakewood?.Chao;
+            if (fonte != _fonte)
             {
                 // outro mundo (ou nenhum): a imagem do anterior sai, e a deste é pintada em outra thread
                 if (_textura != null) Destroy(_textura);
                 _textura = null;
+                _fonte = fonte;
                 _dados = dados;
                 _pintando = null;
                 _rotulos = null;
@@ -101,11 +115,24 @@ namespace ZombieCityCleaner.UI
                 if (dados != null)
                 {
                     int lado = resolucao;
-                    _pintando = Task.Run(() => ComMipmaps(PintorDoMapa.Pintar(dados, lado), lado));
+                    _area = Rect.MinMaxRect(-dados.Metade, -dados.Metade, dados.Metade, dados.Metade);
+                    _largura = _altura = lado;
+                    _pintando = Task.Run(() => ComMipmaps(PintorDoMapa.Pintar(dados, lado), lado, lado));
                     _rotulos = PintorDoMapa.Rotulos(dados);
-                    // os maiores primeiro: na hora de escrever, o que encostaria num já escrito fica de fora
-                    _rotulos.Sort((a, b) => a.Nivel.CompareTo(b.Nivel));
                 }
+                else if (lakewood != null)
+                {
+                    var mapa = lakewood.mapa;
+                    var relevo = lakewood.Chao.Relevo;
+                    int w = resolucao, h = PintorDeLakewood.AlturaPara(mapa, w);
+                    _area = new Rect(0f, 0f, mapa.largura, mapa.comprimento);
+                    _largura = w;
+                    _altura = h;
+                    _pintando = Task.Run(() => ComMipmaps(PintorDeLakewood.Pintar(mapa, relevo, w), w, h));
+                    _rotulos = RotulosDoLakewood(mapa, relevo);
+                }
+                // os maiores primeiro: na hora de escrever, o que encostaria num já escrito fica de fora
+                _rotulos?.Sort((a, b) => a.Nivel.CompareTo(b.Nivel));
             }
             if (_pintando != null && _pintando.IsCompleted)
             {
@@ -115,7 +142,7 @@ namespace ZombieCityCleaner.UI
                     // com mipmaps: no mapa inteiro a imagem fica 2 a 3 vezes menor na tela, e as linhas finas tremeriam. Eles
                     // vêm prontos da outra thread (ComMipmaps): aqui, só a cópia e a subida
                     var mips = _pintando.Result;
-                    _textura = new Texture2D(resolucao, resolucao, TextureFormat.RGBA32, mips.Length, false)
+                    _textura = new Texture2D(_largura, _altura, TextureFormat.RGBA32, mips.Length, false)
                         { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Trilinear, anisoLevel = 1, name = "Mapa do mundo" };
                     for (int k = 0; k < mips.Length; k++) _textura.SetPixelData(mips[k], k);
                     _textura.Apply(false, true);
@@ -162,43 +189,58 @@ namespace ZombieCityCleaner.UI
                 var p = JogadorRede.Local.transform.position;
                 _centro = new Vector2(p.x, p.z);
             }
-            float limite = _dados.Metade;
-            _centro = new Vector2(Mathf.Clamp(_centro.x, -limite, limite), Mathf.Clamp(_centro.y, -limite, limite));
+            _centro = new Vector2(Mathf.Clamp(_centro.x, _area.xMin, _area.xMax), Mathf.Clamp(_centro.y, _area.yMin, _area.yMax));
+        }
+
+        // os nomes do Lakewood (os do pintor dele, sem os dos setores), nos níveis do mapa: os grandes (o reservatório, a
+        // cidade principal) sempre; as cidades pequenas e as vilas; os lugares, as ilhas e os picos ao aproximar; os rios e as
+        // alturas mais perto
+        static List<PintorDoMapa.Rotulo> RotulosDoLakewood(MapaDeLakewood mapa, RelevoDeLakewood relevo)
+        {
+            var lista = new List<PintorDoMapa.Rotulo>();
+            foreach (var r in PintorDeLakewood.Rotulos(mapa, relevo))
+            {
+                if (r.Cor.a < 0.6f) continue;   // (os nomes dos setores)
+                int nivel = r.Tamanho >= 300f ? 0 : r.Tamanho >= 210f ? 1 : r.Tamanho >= 170f ? 2 : 3;
+                lista.Add(new PintorDoMapa.Rotulo { Ponto = r.Ponto, Texto = r.Texto, Nivel = nivel });
+            }
+            return lista;
         }
 
         // a imagem e os mipmaps dela (a média de 2 × 2 de um nível para o próximo), na outra thread (03/11/2026: o
         // SetPixels32 com o Apply que gerava os mipmaps levava ~30 ms num quadro só, já com o jogo na tela)
-        static Color32[][] ComMipmaps(Color32[] base0, int lado)
+        static Color32[][] ComMipmaps(Color32[] base0, int largura, int altura)
         {
             int niveis = 1;
-            for (int n = lado; n > 1; n >>= 1) niveis++;
+            for (int n = Mathf.Max(largura, altura); n > 1; n >>= 1) niveis++;
             var mips = new Color32[niveis][];
             mips[0] = base0;
-            int antes = lado;
+            int antesX = largura, antesY = altura;
             for (int k = 1; k < niveis; k++)
             {
-                int n = Mathf.Max(1, antes >> 1);
+                int nx = Mathf.Max(1, antesX >> 1), ny = Mathf.Max(1, antesY >> 1);
                 var a = mips[k - 1];
-                var m = new Color32[n * n];
-                for (int y = 0; y < n; y++)
+                var m = new Color32[nx * ny];
+                for (int y = 0; y < ny; y++)
                 {
-                    int y0 = Mathf.Min(2 * y, antes - 1) * antes, y1 = Mathf.Min(2 * y + 1, antes - 1) * antes;
-                    for (int x = 0; x < n; x++)
+                    int y0 = Mathf.Min(2 * y, antesY - 1) * antesX, y1 = Mathf.Min(2 * y + 1, antesY - 1) * antesX;
+                    for (int x = 0; x < nx; x++)
                     {
-                        int x0 = Mathf.Min(2 * x, antes - 1), x1 = Mathf.Min(2 * x + 1, antes - 1);
+                        int x0 = Mathf.Min(2 * x, antesX - 1), x1 = Mathf.Min(2 * x + 1, antesX - 1);
                         Color32 p = a[y0 + x0], q = a[y0 + x1], r = a[y1 + x0], s = a[y1 + x1];
-                        m[y * n + x] = new Color32((byte)((p.r + q.r + r.r + s.r + 2) >> 2), (byte)((p.g + q.g + r.g + s.g + 2) >> 2),
+                        m[y * nx + x] = new Color32((byte)((p.r + q.r + r.r + s.r + 2) >> 2), (byte)((p.g + q.g + r.g + s.g + 2) >> 2),
                                                    (byte)((p.b + q.b + r.b + s.b + 2) >> 2), (byte)((p.a + q.a + r.a + s.a + 2) >> 2));
                     }
                 }
                 mips[k] = m;
-                antes = n;
+                antesX = nx;
+                antesY = ny;
             }
             return mips;
         }
 
         // pixels por metro: o mapa inteiro cabe na altura da tela com zoom 1
-        float Escala() => LadoNaTela() * _zoom / _dados.Lado;
+        float Escala() => LadoNaTela() * _zoom / Mathf.Max(_area.width, _area.height);
 
         static float LadoNaTela() => Mathf.Min(Screen.height - 130f * Mathf.Min(Screen.height / 720f, Screen.width / 1280f), Screen.width - 40f);
 
@@ -248,7 +290,7 @@ namespace ZombieCityCleaner.UI
 
         void OnGUI()
         {
-            if (!Aberto || _textura == null || _dados == null || ModoVideo.Ligado) return;
+            if (!Aberto || _textura == null || _fonte == null || ModoVideo.Ligado) return;
             GUI.depth = -8;
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
@@ -262,8 +304,8 @@ namespace ZombieCityCleaner.UI
             var janela = new Rect((Screen.width - lado) / 2f, (Screen.height - lado) / 2f, lado, lado);
             GUI.BeginGroup(janela);
             Vector2 NaJanela(Vector2 mundo) => NaTela(mundo, escala) - janela.position;
-            var cantoA = NaJanela(new Vector2(-_dados.Metade, _dados.Metade));
-            var cantoB = NaJanela(new Vector2(_dados.Metade, -_dados.Metade));
+            var cantoA = NaJanela(new Vector2(_area.xMin, _area.yMax));
+            var cantoB = NaJanela(new Vector2(_area.xMax, _area.yMin));
             GUI.DrawTexture(Rect.MinMaxRect(cantoA.x, cantoA.y, cantoB.x, cantoB.y), _textura);
 
             // os nomes dos jogadores primeiro (03/11/2026): colados na seta, e os nomes dos lugares desviam deles (antes, o nome
@@ -328,7 +370,8 @@ namespace ZombieCityCleaner.UI
             MenuDasMarcasNaTela(u);
 
             var mundo = MundoDaPartida.Instancia;
-            string titulo = $"{mundo?.Nome}  ·  {Tamanhos.NomeComLado(_dados.Tamanho)}  ·  semente {_dados.Semente}";
+            string titulo = _dados != null ? $"{mundo?.Nome}  ·  {Tamanhos.NomeComLado(_dados.Tamanho)}  ·  semente {_dados.Semente}"
+                : $"Condado de Lakewood  ·  {_area.width / 1000f:0} × {_area.height / 1000f:0} km";
             GUI.Label(new Rect(0, 8 * u, Screen.width, 26 * u), titulo, _titulo);
             GUI.Label(new Rect(0, Screen.height - 30 * u, Screen.width, 22 * u),
                 "M ou ESC fecha  ·  roda do mouse aproxima  ·  arraste para mover  ·  Espaço: você  ·  clique direito: ping, marca ou anotação", _texto);

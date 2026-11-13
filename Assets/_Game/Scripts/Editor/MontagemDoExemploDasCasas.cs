@@ -410,7 +410,7 @@ namespace ZombieCityCleaner.EditorTools
         /// O jogador simples: a cápsula de 1,80 m, a cabeça a 1,62 m e a câmera de 70°, como o do jogo, e o corpo do
         /// personagem (para a terceira pessoa do AndarNoExemplo).
         /// </summary>
-        static void Jogador(Vector3 pos)
+        internal static void Jogador(Vector3 pos)
         {
             var jogador = new GameObject("Jogador de exemplo");
             jogador.transform.SetPositionAndRotation(pos, Quaternion.identity);
@@ -474,7 +474,7 @@ namespace ZombieCityCleaner.EditorTools
             return cena;
         }
 
-        static void Ajustar(Camera cam, float campo)
+        internal static void Ajustar(Camera cam, float campo)
         {
             cam.fieldOfView = campo;
             cam.nearClipPlane = 0.05f;

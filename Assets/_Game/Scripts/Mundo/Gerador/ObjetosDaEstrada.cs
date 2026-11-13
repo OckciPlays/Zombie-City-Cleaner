@@ -91,6 +91,9 @@ namespace ZombieCityCleaner.Mundo
         public readonly List<ObjetoDaEstrada> Todos = new List<ObjetoDaEstrada>();
         int[][] _porBloco;
         readonly DadosDoMundo _d;
+        // a grade dos blocos de 64 m (no sorteado, a dos dados; no Lakewood, a dele: 12/11/2026, DeUmMapa)
+        readonly System.Func<float, float, Vector2Int> _blocoDe;
+        readonly int _blocosX, _blocosZ;
         readonly PlanoDoMapa _plano;
         readonly RedeDeEstradas _rede;
         readonly Sorteio _s;
@@ -112,6 +115,35 @@ namespace ZombieCityCleaner.Mundo
             _plano = d.Plano;
             _rede = d.Rede;
             _s = Sorteio.Da(d.Semente, "beira-da-estrada");
+            _blocoDe = d.BlocoDe;
+            _blocosX = _blocosZ = d.BlocosPorLado;
+        }
+
+        ObjetosDaEstrada(System.Func<float, float, Vector2Int> blocoDe, int blocosX, int blocosZ)
+        {
+            _blocoDe = blocoDe;
+            _blocosX = blocosX;
+            _blocosZ = blocosZ;
+        }
+
+        /// <summary>
+        /// Os objetos de um mapa feito por outro (o Lakewood, 12/11/2026: os carros abandonados das estradas e das ruas dele e
+        /// os quebrados do acostamento), indexados numa grade de blocos de 64 m (blocoDe e o tamanho dela). Os quebrados
+        /// apontam para o índice do carro na lista.
+        /// </summary>
+        public static ObjetosDaEstrada DeUmMapa(List<ObjetoDaEstrada> objetos, List<CarroQuebrado> quebrados,
+            System.Func<float, float, Vector2Int> blocoDe, int blocosX, int blocosZ)
+        {
+            var o = new ObjetosDaEstrada(blocoDe, blocosX, blocosZ);
+            o.Todos.AddRange(objetos);
+            if (quebrados != null)
+                foreach (var q in quebrados)
+                {
+                    o.Quebrados.Add(q);
+                    o._quebradoDe[q.Indice] = q;
+                }
+            o.Indexar();
+            return o;
         }
 
         public static ObjetosDaEstrada Planejar(DadosDoMundo d)
@@ -134,16 +166,17 @@ namespace ZombieCityCleaner.Mundo
         }
 
         /// <summary>Os índices (em <see cref="Todos"/>) dos objetos do bloco, ou null.</summary>
-        public int[] DoBloco(int bx, int bz) => _porBloco?[bz * _d.BlocosPorLado + bx];
+        public int[] DoBloco(int bx, int bz) =>
+            _porBloco == null || bx < 0 || bz < 0 || bx >= _blocosX || bz >= _blocosZ ? null : _porBloco[bz * _blocosX + bx];
 
         void Indexar()
         {
-            int lado = _d.BlocosPorLado;
-            var listas = new List<int>[lado * lado];
+            var listas = new List<int>[_blocosX * _blocosZ];
             for (int i = 0; i < Todos.Count; i++)
             {
-                var b = _d.BlocoDe(Todos[i].Posicao.x, Todos[i].Posicao.y);
-                (listas[b.y * lado + b.x] ??= new List<int>()).Add(i);
+                var b = _blocoDe(Todos[i].Posicao.x, Todos[i].Posicao.y);
+                if (b.x < 0 || b.y < 0 || b.x >= _blocosX || b.y >= _blocosZ) continue;
+                (listas[b.y * _blocosX + b.x] ??= new List<int>()).Add(i);
             }
             _porBloco = new int[listas.Length][];
             for (int k = 0; k < listas.Length; k++) _porBloco[k] = listas[k]?.ToArray();

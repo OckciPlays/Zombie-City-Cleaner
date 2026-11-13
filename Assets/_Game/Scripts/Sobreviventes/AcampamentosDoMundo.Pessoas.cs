@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void Povoar(int a, PlantaDoAcampamento p, Estado e, GameObject prefab)
         {
             var g = new GrupoDeSobreviventes { cidade = -1, acampamento = a, quantos = p.Pessoas };
-            var s = new System.Random(unchecked(Dados.Semente * 5113 + a * 70001 + 17));
+            var s = new System.Random(unchecked(Dados.SementeDaPartida * 5113 + a * 70001 + 17));
             for (int i = 0; i < p.Pessoas; i++)
             {
                 var papel = p.PapelDe(i);

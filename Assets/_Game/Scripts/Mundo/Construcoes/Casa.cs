@@ -358,6 +358,11 @@ namespace ZombieCityCleaner.Mundo
                 case "banheiro": return U >= larg ? 1 : 0;
                 case "corredor": return (lado == 0 || lado == 2) && U >= larg ? 1 : 0;
                 case "porao": return Mathf.Clamp(Mathf.FloorToInt(U / 3.5f), 0, 3);
+                // os especiais do Lakewood (Plano_Lakewood, Etapa 6, a parte 6): a nave da igreja só nos lados (a torre fica
+                // na frente), as salas de aula e os escritórios como a sala e o quarto
+                case "nave": return lado == 1 || lado == 3 ? Mathf.Clamp(Mathf.FloorToInt(U / 3.4f), 0, 8) : 0;
+                case "aula": return U >= 3 * larg + 3f ? 3 : U >= 2 * larg + 2f ? 2 : U >= larg ? 1 : 0;
+                case "escritorio": return U >= 2 * larg + 2.2f ? 2 : U >= larg ? 1 : 0;
                 default: return 0;
             }
         }
@@ -372,6 +377,12 @@ namespace ZombieCityCleaner.Mundo
                 if (l.b != null || l.a.andar != f || l.lado != lado) continue;
                 bool frente = lado == 0 && f == 0;
                 float larg = frente ? m.portaFrente : m.porta, alto = frente ? m.alturaPortaFrente : m.alturaPorta;
+                // o vão largo para fora, sem folha (o portão aberto dos bombeiros): a largura dele, até 0,45 m do teto
+                if (l.passagem)
+                {
+                    larg = l.largura > 0f ? l.largura : m.passagem;
+                    alto = Altura(f) - 0.45f;
+                }
                 float s = S(lado, l.pos);
                 aberturas.Add(new Abertura(s - larg / 2, larg, 0f, alto));
                 portas.Add(l);
@@ -620,6 +631,7 @@ namespace ZombieCityCleaner.Mundo
             }
             foreach (var pf in _portasDeFora)
             {
+                if (pf.l != null && pf.l.passagem) continue;   // o vão largo, sem folha
                 bool frente = pf.l != null && pf.l.lado == 0 && pf.l.a.andar == 0;
                 if (frente)
                 {

@@ -27,6 +27,12 @@ namespace ZombieCityCleaner.Salvar
     ///    cada personagem que entra vai para onde estava (<see cref="AoCarregarPersonagem"/>);
     ///  - no Dia 0, o personagem salvo de quem entra espera a porta do abrigo (<see cref="GuardarParaDepois"/>).
     /// Sem <see cref="Atual"/> (os testes, a linha de comando, o robô), a partida não salva.
+    /// <para>
+    /// No Lakewood (12/11/2026, a parte 8 do "O jogo do mundo sorteado no Lakewood"), no "Mundo (Lakewood)", com o
+    /// <see cref="MundoDeLakewood"/>: o mesmo save, com a semente da partida, as árvores, os painéis e as marcas de lá, e os
+    /// veículos da casa da partida pela vaga deles; o mapa é sempre o mesmo, e o arquivo é marcado
+    /// (<see cref="MundoSalvo.lakewood"/>).
+    /// </para>
     /// </summary>
     public class Salvamento : NetworkBehaviour
     {
@@ -53,6 +59,9 @@ namespace ZombieCityCleaner.Salvar
         public float SalvouEm { get; private set; } = -1f;
 
         MundoDaPartida _mundo;
+        // (12/11/2026) o Lakewood: a rede dele, e se ele já ficou pronto nesta partida
+        MundoDeLakewood _lakewood;
+        bool _viuOLakewoodPronto;
         float _proximo;
         bool _restaurado, _saindo;
         readonly Dictionary<ulong, PacoteDoPersonagem> _depois = new Dictionary<ulong, PacoteDoPersonagem>();
@@ -61,7 +70,11 @@ namespace ZombieCityCleaner.Salvar
         {
             Instancia = this;
             _mundo = GetComponent<MundoDaPartida>();
+            _lakewood = GetComponent<MundoDeLakewood>();
         }
+
+        // o mundo está jogável: o sorteado pronto e fora do Dia 0, ou o Lakewood com a partida começada
+        bool MundoJogavel => _mundo != null ? _mundo.Pronto && !_mundo.NoDiaZero : _lakewood != null && _lakewood.Pronto;
 
         public override void OnDestroy()
         {
@@ -73,6 +86,8 @@ namespace ZombieCityCleaner.Salvar
         {
             Instancia = this;
             if (_mundo == null) _mundo = MundoDaPartida.Instancia;
+            if (_mundo == null && _lakewood == null) _lakewood = MundoDeLakewood.Instancia;
+            _viuOLakewoodPronto = false;
             _restaurado = false;
             _saindo = false;
             _depois.Clear();
@@ -105,7 +120,13 @@ namespace ZombieCityCleaner.Salvar
 
         void Update()
         {
-            if (!IsServer || !Salva || _mundo == null || !_mundo.Pronto || _mundo.NoDiaZero) return;
+            // o Lakewood não tem o aviso do pronto do mundo sorteado: a primeira vez que ele fica pronto, aqui
+            if (IsServer && _mundo == null && _lakewood != null && !_viuOLakewoodPronto && _lakewood.Pronto)
+            {
+                _viuOLakewoodPronto = true;
+                AoFicarPronto(null);
+            }
+            if (!IsServer || !Salva || !MundoJogavel) return;
             // o primeiro salvamento (12/11/2026, a pedido: "tenho o personagem, tenho o mundo, porém não consigo ir em
             // continuar"): o mundo só entra no Continuar depois de salvo, e saindo no Dia 0, no modo "só dormindo" sem dormir,
             // ou fechando antes do primeiro automático, ele nunca era. Agora, em qualquer modo, um mundo que ainda não foi
@@ -138,13 +159,22 @@ namespace ZombieCityCleaner.Salvar
         /// </summary>
         public bool Salvar(string motivo)
         {
-            if (!IsServer || Atual == null || _mundo == null || !_mundo.Pronto || _mundo.NoDiaZero) return false;
+            if (!IsServer || Atual == null || !MundoJogavel) return false;
             _proximo = Time.unscaledTime + MinutosEntreSalvamentos * 60f;
             var m = Atual;
-            m.versaoDoGerador = GeradorDoMundo.Versao;
-            m.semente = _mundo.Semente;
-            m.tamanho = (int)_mundo.Tamanho;
-            m.nome = _mundo.Nome;
+            if (_mundo != null)
+            {
+                m.versaoDoGerador = GeradorDoMundo.Versao;
+                m.semente = _mundo.Semente;
+                m.tamanho = (int)_mundo.Tamanho;
+                m.nome = _mundo.Nome;
+            }
+            else
+            {
+                m.lakewood = true;
+                m.semente = _lakewood.Semente;
+                if (string.IsNullOrEmpty(m.nome)) m.nome = "Condado de Lakewood";
+            }
             m.hora = CicloDoDia.Hora;
             m.dia = CicloDoDia.Dia;
             if (CicloDoDia.Instancia != null) m.tempo = CicloDoDia.Instancia.CopiaDoTempo();
@@ -167,8 +197,10 @@ namespace ZombieCityCleaner.Salvar
             foreach (var carro in Carro.Todos)
             {
                 if (carro == null || !carro.IsSpawned) continue;
+                int qual = QualDoCarro(carro);   // 0 a perua, 1 o cupê, 2 em diante as motos
+                if (qual < 0) continue;   // (no Lakewood, os do F3)
                 var s = carro.ParaSalvar();
-                s.qual = _mundo.QualDoCarro(carro);   // 0 a perua, 1 o cupê, 2 em diante as motos
+                s.qual = qual;
                 m.carros.Add(s);
             }
 
@@ -181,8 +213,8 @@ namespace ZombieCityCleaner.Salvar
                     m.carrosDoMundo.Add(s);
                 }
 
-            m.arvoresCortadas = _mundo.ArvoresCortadas();   // (06/11/2026)
-            m.paineisDesmontados = _mundo.PaineisDesmontados();   // (09/11/2026, a sucata)
+            m.arvoresCortadas = _mundo != null ? _mundo.ArvoresCortadas() : _lakewood.ArvoresCortadas();   // (06/11/2026)
+            m.paineisDesmontados = _mundo != null ? _mundo.PaineisDesmontados() : _lakewood.PaineisDesmontados();   // (09/11/2026, a sucata)
             m.fauna = Fauna.FaunaDoMundo.NiveisParaSalvar();   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.CastoresParaSalvar(out m.tocasDosCastores, out m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
             m.mobiliaAberta.Clear();
@@ -205,6 +237,18 @@ namespace ZombieCityCleaner.Salvar
                         estante = it.estante, item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = it.qtd, desgaste = it.desgaste,
                         cores = unchecked((long)it.cores),
                     });
+
+            // os moradores do bunker (a parte 6 do Plano_NPCs_Bunker.md): a vida de cada um (as fichas já estão no mundo)
+            if (Moradores.MoradoresDoBunker.Instancia != null && Moradores.MoradoresDoBunker.Instancia.Todos.Count > 0)
+                m.vidaDosMoradores = Moradores.MoradoresDoBunker.Instancia.Copia();
+            // o registro do terminal e as metas dos lugares (a parte 7)
+            if (Moradores.MoradoresDoBunker.Instancia != null && Moradores.MoradoresDoBunker.Instancia.Carregado)
+            {
+                m.registroDoBunker = new List<string>(Moradores.MoradoresDoBunker.Instancia.Registro);
+                m.metasDosLugares = new List<int>(Moradores.EstoqueDoBunker.Metas);
+            }
+            // as bitucas do cinzeiro da mesinha do fumo (a parte 8)
+            if (BunkerDoMundo.Instancia != null && BunkerDoMundo.Instancia.IsSpawned) m.bitucasNoCinzeiro = BunkerDoMundo.Instancia.Bitucas;
 
             m.sustos = ZombieManager.Instancia != null ? ZombieManager.Instancia.Sustos() : new List<int>();
             if (ParedeDeArmas.Instancia != null) ParedeDeArmas.Instancia.Copia(out m.armasNaParede, out m.pentesNaParede);
@@ -230,8 +274,9 @@ namespace ZombieCityCleaner.Salvar
                     m.basesMilitares.Add(new BaseMilitarSalva { indice = indice, mortos = mortos, geracao = geracao, diaDoReforco = dia });
 
             m.marcas.Clear();
-            if (MundoDaPartida.Instancia != null)
-                foreach (var (tipo, pos, cor, texto, autor) in MundoDaPartida.Instancia.CopiaDasMarcas())
+            var marcasDoMundo = _mundo != null ? _mundo.CopiaDasMarcas() : _lakewood != null ? _lakewood.CopiaDasMarcas() : null;
+            if (marcasDoMundo != null)
+                foreach (var (tipo, pos, cor, texto, autor) in marcasDoMundo)
                     m.marcas.Add(new MarcaSalva { tipo = (int)tipo, pos = pos, cor = cor, texto = texto, autor = autor });
 
             m.mochilas.Clear();
@@ -286,6 +331,7 @@ namespace ZombieCityCleaner.Salvar
             j.Inventario.Encher(p);
             p.jogou = true;
             if (MundoDaPartida.Instancia != null) p.ultimoMundo = MundoDaPartida.Instancia.Nome;
+            else if (MundoDeLakewood.Instancia != null) p.ultimoMundo = "Condado de Lakewood";
             p.Gravar();
         }
 
@@ -415,6 +461,32 @@ namespace ZombieCityCleaner.Salvar
                     mov.Esperando = false;
                 }
             }
+            else if (MundoDoJogo.Atual is LakewoodNaCena lakewood)
+            {
+                // (12/11/2026) no Lakewood: parado lá até os blocos do chão de perto terem a colisão e as obras estarem montadas
+                mov.Esperando = true;
+                bool avisou = false;
+                float ate = comecou + 60f;
+                IChaoDosZumbis chao = lakewood;
+                while (!chao.Pronto(pos, 12f) && Time.unscaledTime < ate)
+                {
+                    if (!avisou && Time.unscaledTime - comecou > 0.5f)
+                    {
+                        avisou = true;
+                        InventarioJogador.AvisoLocal("Carregando o lugar onde você estava...");
+                    }
+                    yield return null;
+                }
+                float ateOPiso = Time.unscaledTime + 8f;
+                while (!Physics.Raycast(pos + Vector3.up * 1f, Vector3.down, 2.6f, MascaraDoChao, QueryTriggerInteraction.Ignore)
+                       && Time.unscaledTime < ateOPiso)
+                    yield return null;
+                if (mov != null)
+                {
+                    mov.Teleportar(onde, mov.transform.eulerAngles.y);
+                    mov.Esperando = false;
+                }
+            }
             Debug.Log($"[Save] O personagem voltou para onde estava, ({pos.x:F0}, {pos.y:F1}, {pos.z:F0}), depois de " +
                       $"{Time.unscaledTime - comecou:F1} s esperando o chão{(terreno != null && !terreno.Pronto(pos, 12f) ? " (sem ele: passou do tempo)" : "")}.");
             yield return new WaitForSeconds(2f);
@@ -458,8 +530,17 @@ namespace ZombieCityCleaner.Salvar
             }
             PecasDosCarrosDoMundo.Instancia?.Restaurar(mexidos);
 
-            _mundo.RestaurarArvores(m.arvoresCortadas);   // as árvores cortadas (06/11/2026)
-            _mundo.RestaurarPaineis(m.paineisDesmontados);   // os painéis de metal desmontados (09/11/2026)
+            // as árvores cortadas (06/11/2026) e os painéis de metal desmontados (09/11/2026), no mundo sorteado ou no Lakewood
+            if (_mundo != null)
+            {
+                _mundo.RestaurarArvores(m.arvoresCortadas);
+                _mundo.RestaurarPaineis(m.paineisDesmontados);
+            }
+            else if (_lakewood != null)
+            {
+                _lakewood.RestaurarArvores(m.arvoresCortadas);
+                _lakewood.RestaurarPaineis(m.paineisDesmontados);
+            }
             Fauna.FaunaDoMundo.Restaurar(m.fauna);   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.RestaurarCastores(m.tocasDosCastores, m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
@@ -483,6 +564,7 @@ namespace ZombieCityCleaner.Salvar
                     desgaste = (byte)Mathf.Clamp(it.desgaste, 0, 100), cores = unchecked((ulong)it.cores),
                 });
             EstantesDoBunker.Instancia?.Restaurar(estantes);
+            BunkerDoMundo.Instancia?.PorAsBitucas(m.bitucasNoCinzeiro);
 
             ZombieManager.Instancia?.RestaurarSustos(m.sustos);
             if (m.armasNaParede != 0 || m.pentesNaParede != 0) ParedeDeArmas.Instancia?.Restaurar(m.armasNaParede, m.pentesNaParede);
@@ -507,11 +589,12 @@ namespace ZombieCityCleaner.Salvar
                 Sobreviventes.CarrosQuebradosDoMundo.Instancia?.Restaurar(quebrados);
             }
 
-            if (m.marcas != null && m.marcas.Count > 0 && MundoDaPartida.Instancia != null)
+            if (m.marcas != null && m.marcas.Count > 0 && (_mundo != null || _lakewood != null))
             {
                 var marcas = new List<(UI.TipoDeMarca, Vector3, byte, string, string)>(m.marcas.Count);
                 foreach (var x in m.marcas) marcas.Add(((UI.TipoDeMarca)Mathf.Clamp(x.tipo, 1, 2), x.pos, (byte)Mathf.Clamp(x.cor, 0, 4), x.texto, x.autor));
-                MundoDaPartida.Instancia.RestaurarMarcas(marcas);
+                if (_mundo != null) _mundo.RestaurarMarcas(marcas);
+                else _lakewood.RestaurarMarcas(marcas);
             }
 
             if (m.basesMilitares != null && m.basesMilitares.Count > 0)
@@ -543,6 +626,13 @@ namespace ZombieCityCleaner.Salvar
             MochilasNoChao.Instancia?.Restaurar(mochilas);
 
             foreach (var c in m.carros) CriarCarro(c);
+            if (_mundo == null)
+            {
+                Debug.Log($"[Save] O Lakewood voltou (a partida {m.semente}): dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
+                          $"{m.carros.Count} veículos, {mexidos.Count} carros do mundo mexidos, {m.arvoresCortadas.Count} árvores cortadas, {pegos.Count} itens do saque pegos, " +
+                          $"{portas.Count} portas e janelas mexidas.");
+                return;
+            }
             // um save de antes da chave do cupê: ela aparece uma vez no chão da sala do bunker (a marca vai no próximo salvar)
             if (!m.chaveDoCupe && _mundo.PorAChaveDoCupe())
             {
@@ -569,12 +659,15 @@ namespace ZombieCityCleaner.Salvar
                       $"{estantes.Count} itens nas estantes.");
         }
 
+        // o número do veículo para o save (o sorteado: a perua, o cupê e as motos; o Lakewood: a vaga dele no terreiro, -1 os outros)
+        int QualDoCarro(Carro c) => _mundo != null ? _mundo.QualDoCarro(c) : LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.QualDoCarro(c) : -1;
+
         // um carro do save: nasce parado (sem a física) e fica assim até alguém chegar perto e o chão de lá ter colisão
         // (Carro.Parado.cs; antes, o NetworkRigidbody soltava o corpo ao nascer, e o terreno pronto não queria dizer o piso
         // do bunker pronto). O que caiu do mundo num save de antes volta para a vaga dele.
         void CriarCarro(CarroSalvo c)
         {
-            var prefab = _mundo.PrefabDoCarro(c.qual);
+            var prefab = _mundo != null ? _mundo.PrefabDoCarro(c.qual) : LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.PrefabDoCarro(c.qual) : null;
             if (prefab == null) return;
             var novo = Instantiate(prefab, c.pos + Vector3.up * 0.15f, c.giro);
             novo.name = c.qual >= 1 ? prefab.name : "Carro";

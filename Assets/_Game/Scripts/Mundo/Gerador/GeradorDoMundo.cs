@@ -37,9 +37,10 @@ namespace ZombieCityCleaner.Mundo
         /// Plano_Bunker.md da pasta de arte, a parte 5, 01/11/2026). 11 = a casa da família sempre a mesma (a do Dia 0,
         /// 01/11/2026; as duas foram feitas como a 10, em lados diferentes, e juntadas no merge). 12 = os acampamentos dos
         /// sobreviventes, com o chão aplainado (02/11/2026; vieram da develop como a 11 e foram juntados no merge com o
-        /// bunker).
+        /// bunker). 13 = o Hospital Principal num quarteirão inteiro da maior cidade grande, com o chão plano e o buraco do
+        /// subsolo (o Plano_Hospital.md da pasta de arte, a parte 7, 08/11/2026).
         /// </summary>
-        public const int Versao = 12;
+        public const int Versao = 13;
 
         /// <summary>As etapas para a tela de carregamento (de 0 a 1, e o texto). Pode ser chamado de outras threads.</summary>
         public delegate void Progresso(float fracao, string etapa);
@@ -58,6 +59,7 @@ namespace ZombieCityCleaner.Mundo
             d.Rede = RedeDeEstradas.Montar(d);
             AbrirOsPoroes(d);
             AbrirOBunker(d);
+            AbrirOHospital(d);
             PartidaNoBunker(d);
             progresso?.Invoke(0.32f, "Levantando as colinas e as serras");
             int feitas = 0, linhas = d.Vertices;
@@ -79,6 +81,18 @@ namespace ZombieCityCleaner.Mundo
             progresso?.Invoke(0.95f, "Conferindo");
             d.Resumo = Resumir(d);
             progresso?.Invoke(1f, "Pronto");
+            return d;
+        }
+
+        /// <summary>
+        /// Só o desenho do mapa (o lago e o plano, com os traçados e os lotes das cidades), sem a rede, o relevo e o resto:
+        /// para os testes do Editor que olham o plano de muitas sementes (o quarteirão do hospital) em segundos.
+        /// </summary>
+        public static DadosDoMundo SoOPlano(int semente, TamanhoDoMundo tamanho)
+        {
+            var d = new DadosDoMundo(semente, tamanho);
+            EscolherOLago(d);
+            d.Plano = PlanejadorDoMapa.Planejar(d);
             return d;
         }
 
@@ -251,6 +265,23 @@ namespace ZombieCityCleaner.Mundo
             cantos[2] = Mundo(caixa.xMax, caixa.yMax);
             cantos[3] = Mundo(caixa.xMin, caixa.yMax);
             d.MarcarBuracoEm(cantos);
+        }
+
+        /// <summary>
+        /// O buraco do Hospital Principal (08/11/2026): o terreno sai de baixo do corpo inteiro (o subsolo fica embaixo dele;
+        /// a laje do térreo cobre, e as calçadas em volta, no chão de fora, tapam a beira do buraco), como o do bunker.
+        /// </summary>
+        static void AbrirOHospital(DadosDoMundo d)
+        {
+            if (!d.TemHospital) return;
+            var c = PlantaDoHospital.Pegada;
+            var caixa = Rect.MinMaxRect(c.xMin - 0.3f, c.yMin - 0.3f, c.xMax + 0.3f, c.yMax + 0.3f);
+            Vector2 Mundo(float x, float z)
+            {
+                var p = d.NoHospital(new Vector3(x, 0f, z));
+                return new Vector2(p.x, p.z);
+            }
+            d.MarcarBuracoEm(new[] { Mundo(caixa.xMin, caixa.yMin), Mundo(caixa.xMax, caixa.yMin), Mundo(caixa.xMax, caixa.yMax), Mundo(caixa.xMin, caixa.yMax) });
         }
 
         /// <summary>
@@ -608,6 +639,12 @@ namespace ZombieCityCleaner.Mundo
                     SomarNumero(d.GiroDoBunker);
                     SomarPonto(d.PosicaoDoBunker);
                 }
+            }
+            // o Hospital Principal: a origem e o giro
+            if (d.TemHospital)
+            {
+                SomarNumero(d.GiroDoHospital);
+                SomarPonto(d.PosicaoDoHospital);
             }
             if (d.Objetos != null)
                 foreach (var o in d.Objetos.Todos)

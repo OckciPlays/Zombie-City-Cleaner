@@ -19,6 +19,9 @@ namespace ZombieCityCleaner.EditorTools
         [MenuItem("Zombie City Cleaner/Testes/Moradores")]
         static void Moradores() => Rodar("MoradoresTestes");
 
+        [MenuItem("Zombie City Cleaner/Testes/Lakewood")]
+        static void Lakewood() => Rodar("LakewoodTestes");
+
         /// <summary>Roda os testes da classe <paramref name="grupo"/> (o nome da classe, sem o namespace).</summary>
         public static void Rodar(string grupo)
         {

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using ZombieCityCleaner.Mundo;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Sobreviventes
 {
@@ -72,28 +73,29 @@ namespace ZombieCityCleaner.Sobreviventes
         readonly float _giro;
 
         // (o tamanho na chave: a mesma semente em outro tamanho é outro mundo)
-        static readonly Dictionary<(int, TamanhoDoMundo, int), PlantaDoAcampamento> _cache = new Dictionary<(int, TamanhoDoMundo, int), PlantaDoAcampamento>();
+        static readonly Dictionary<(int, int, Vector2), PlantaDoAcampamento> _cache = new Dictionary<(int, int, Vector2), PlantaDoAcampamento>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void Zerar() => _cache.Clear();
 
         /// <summary>O desenho do acampamento (feito uma vez por mundo).</summary>
-        public static PlantaDoAcampamento Da(DadosDoMundo d, Acampamento a)
+        public static PlantaDoAcampamento Da(IMundoDoJogo d, Acampamento a)
         {
-            var chave = (d.Semente, d.Tamanho, a.Indice);
+            // (o meio na chave: a mesma semente em outro mundo, ou no Lakewood, é outro acampamento)
+            var chave = (d.SementeDaPartida, a.Indice, a.Centro);
             if (!_cache.TryGetValue(chave, out var p))
             {
                 if (_cache.Count >= 64) _cache.Clear();   // os mundos de antes, numa sessão longa
-                p = new PlantaDoAcampamento(d, a);
+                p = new PlantaDoAcampamento(d.SementeDaPartida, a);
                 _cache[chave] = p;
             }
             return p;
         }
 
-        PlantaDoAcampamento(DadosDoMundo d, Acampamento a)
+        PlantaDoAcampamento(int semente, Acampamento a)
         {
             Lugar = a;
-            var r = new System.Random(unchecked(d.Semente * 6151 + a.Indice * 92821 + 3));
+            var r = new System.Random(unchecked(semente * 6151 + a.Indice * 92821 + 3));
             // (a cerca é bem menor que o lugar: 0,8 do raio deixava 72 m de chão vazio no grande)
             float H = Meia = Mathf.Round(a.Raio * 0.6f);
             // o mundo: +z para a frente (o portão)

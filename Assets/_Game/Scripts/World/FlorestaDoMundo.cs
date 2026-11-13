@@ -234,7 +234,8 @@ namespace ZombieCityCleaner.World
                 _dados = dados;
                 if (dados != null) _raiz = new GameObject("Floresta").transform;
             }
-            if (_dados?.Floresta == null || malhas == null || malhas.Length < Floresta.Quantas * 3) return;
+            if (_dados?.Floresta == null || malhas == null) return;
+            if (malhas.Length < Floresta.Quantas * 3) System.Array.Resize(ref malhas, Floresta.Quantas * 3);   // as espécies novas sem malha ficam vazias
             Preparar();
             _relogio.Restart();
             if (Time.unscaledTime >= _proximaRevisao)
@@ -560,10 +561,13 @@ namespace ZombieCityCleaner.World
                 int e = k / 3;
                 rp.shadowCastingMode = ShadowCastingMode.Off;
                 rp.matProps = _blocosDoSome[e];
+                // a grama baixa só na câmera do jogador (fora do reflexo da água; 09/11/2026)
+                rp.camera = Floresta.EhGrama((Especie)e) ? cam : null;
                 for (int ini = 0; ini < n; ini += 1023)
                     Graphics.RenderMeshInstanced(rp, malha, 0, _listas[k], Mathf.Min(1023, n - ini), ini);
             }
             // a sombra: só as plantas que podem fazer sombra na área sombreada
+            rp.camera = null;
             for (int k = 0; k < _listasDaSombra.Length; k++)
             {
                 int n = _contagemDaSombra[k];

@@ -59,6 +59,7 @@ namespace ZombieCityCleaner.Fauna
             margem = default;
             giro = 0f;
             var d = DadosDoMapa;
+            if (j != null && d == null) return MargemParaOF1(j.transform.position, out margem, out giro);
             if (j == null || d?.Lago == null) return false;
             var lago = d.Lago;
             Vector3 p = j.transform.position;
@@ -73,6 +74,41 @@ namespace ZombieCityCleaner.Fauna
                 c.y = d.Altura(c.x, c.z);
                 margem = c;
                 giro = Quaternion.LookRotation(new Vector3(-para.x, 0f, -para.y)).eulerAngles.y;
+                return true;
+            }
+            return false;
+        }
+
+        // no Lakewood: a água mais perto (em 32 rumos, até 2,5 km) e a terra logo antes dela, de frente para a água
+        static bool MargemParaOF1(Vector3 p, out Vector3 margem, out float giro)
+        {
+            margem = default;
+            giro = 0f;
+            if (!TemMapa) return false;
+            float melhor = float.MaxValue;
+            Vector3 rumo = Vector3.forward;
+            for (int a = 0; a < 32; a++)
+            {
+                var dir = Quaternion.Euler(0f, a * 11.25f, 0f) * Vector3.forward;
+                for (float r = 6f; r < 2500f && r < melhor; r += 6f)
+                {
+                    var c = p + dir * r;
+                    if (AguaEm(c.x, c.z, out _) < 0.6f) continue;
+                    melhor = r;
+                    rumo = dir;
+                    break;
+                }
+            }
+            if (melhor == float.MaxValue) return false;
+            // volta da água até a terra seca, mais uns metros
+            for (float r = melhor; r > 0f; r -= 1f)
+            {
+                var c = p + rumo * r;
+                if (AguaEm(c.x, c.z, out _) > 0.01f) continue;
+                c -= rumo * 4f;
+                c.y = AlturaDoMapa(c.x, c.z);
+                margem = c;
+                giro = Quaternion.LookRotation(rumo).eulerAngles.y;
                 return true;
             }
             return false;

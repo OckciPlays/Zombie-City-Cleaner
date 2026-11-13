@@ -70,11 +70,30 @@ namespace ZombieCityCleaner.World
         public sealed class Forma
         {
             public string nome;
+            /// <summary>O artigo do nome ("a estante de aço", "o suporte dos tacos").</summary>
+            public string artigo = "a";
             public int colunas;
             public float[] alturas;
             public float largura, fundo, vao;
+            /// <summary>
+            /// O suporte dos tacos e a mesinha do fumo (a parte 8 do Plano_NPCs_Bunker.md, a segunda fatia) não têm tábuas: têm
+            /// vagas, uma por item (as colunas), cada uma com o que aceita e o lugar dela no móvel (<see cref="vagas"/>).
+            /// </summary>
+            public EspecialDaEstante especial;
+            /// <summary>Nas especiais: onde cada vaga fica no móvel (no tamanho real, sem a escala dos móveis): o meio no chão
+            /// dela (x e z) e a altura em que o item assenta (y).</summary>
+            public Vector3[] vagas;
             public int Tabuas => alturas.Length;
             public Vector2Int Grade => new Vector2Int(colunas, Tabuas * LinhasPorTabua);
+            public bool Especial => especial != EspecialDaEstante.Nenhuma;
+
+            /// <summary>Nas especiais: a vaga aceita o item (os tacos nas 4 do suporte e a caixa de bolas na quinta; os maços na mesinha).</summary>
+            public bool Aceita(int vaga, Item item) => especial switch
+            {
+                EspecialDaEstante.Suporte => vaga < 4 ? Itens.EhTaco(item) : vaga == 4 && Itens.EhCaixaDeBolas(item),
+                EspecialDaEstante.Mesinha => vaga >= 0 && vaga < colunas && Itens.EhFumo(item),
+                _ => true,
+            };
         }
 
         static readonly float[] TabuasDeAco = { 0.08f + 0.0015f, 0.50f + 0.0015f, 0.92f + 0.0015f, 1.34f + 0.0015f, 1.82f + 0.0015f };
@@ -86,6 +105,34 @@ namespace ZombieCityCleaner.World
             ["EstanteAco120"] = new Forma { nome = "estante de aço", colunas = 8, alturas = TabuasDeAco, largura = 1.12f, fundo = 0.37f, vao = 0.42f },
             ["PrateleiraMadeira90"] = new Forma { nome = "prateleira de madeira", colunas = 6, alturas = TabuasDeMadeira, largura = 0.79f, fundo = 0.37f, vao = 0.52f },
             ["PrateleiraMadeira150"] = new Forma { nome = "prateleira de madeira", colunas = 10, alturas = TabuasDeMadeira, largura = 1.39f, fundo = 0.37f, vao = 0.52f },
+            // a bancada de inox (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md: a do refeitório é a bancada da água): o tampo,
+            // a 0,90 m (o bancada_inox do mobilia_bunker.py)
+            ["BancadaInox"] = new Forma { nome = "bancada de inox", colunas = 10, alturas = new[] { 0.90f + 0.002f }, largura = 1.70f, fundo = 0.60f, vao = 0.6f },
+            // o suporte dos tacos (a parte 8 do Plano_NPCs_Bunker.md, no tamanho final): as 4 vagas dos tacos em pé (o pé de
+            // cada um no copo) e a prateleirinha da caixa de bolas, a quinta. As medidas do mobilia_moradores.py da pasta de
+            // arte (VAGAS_DOS_TACOS, TACO_Y, TACO_Z e CAIXA_NO_SUPORTE: o x do Blender é o -x daqui, e o -y, o z)
+            ["SuporteDeTacos"] = new Forma
+            {
+                nome = "suporte dos tacos", artigo = "o", especial = EspecialDaEstante.Suporte, colunas = 5, alturas = new[] { 0.045f },
+                largura = 0.64f, fundo = 0.20f, vao = 1.6f,
+                vagas = new[]
+                {
+                    new Vector3(0.195f, 0.045f, 0.02f), new Vector3(0.065f, 0.045f, 0.02f), new Vector3(-0.065f, 0.045f, 0.02f),
+                    new Vector3(-0.195f, 0.045f, 0.02f), new Vector3(0f, 1.555f, 0.02f),
+                },
+            },
+            // a mesinha do fumo (a mesa de canto do canto de leitura da sala de estar): até 4 maços no tampo, em volta do
+            // cinzeiro (no canto de +x e +z: o MoveisDoBunker.DoLazer)
+            ["MesaDeCanto"] = new Forma
+            {
+                nome = "mesinha do fumo", especial = EspecialDaEstante.Mesinha, colunas = 4, alturas = new[] { 0.58f },
+                largura = 0.5f, fundo = 0.5f, vao = 0.4f,
+                vagas = new[]
+                {
+                    new Vector3(-0.15f, 0.58f, -0.12f), new Vector3(-0.15f, 0.58f, 0.03f), new Vector3(-0.02f, 0.58f, -0.13f),
+                    new Vector3(0.11f, 0.58f, -0.12f),
+                },
+            },
         };
 
         /// <summary>O número da estante do compartimento do primeiro caiaque (os outros, os seguintes).</summary>
@@ -204,6 +251,13 @@ namespace ZombieCityCleaner.World
         public bool Cabe(int estante, Item item, bool girado, int x, int y, ushort ignorar = 0)
         {
             var f = FormaDa(estante);
+            // nas especiais (o suporte e a mesinha), um item por vaga, do que ela aceita
+            if (f != null && f.Especial)
+            {
+                if (x < 0 || x >= f.colunas || y != 0 || !f.Aceita(x, item)) return false;
+                foreach (var o in _itens) if (o.estante == estante && o.id != ignorar && o.x == x) return false;
+                return true;
+            }
             var t = InventarioJogador.TamanhoNaGrade(item, girado);
             if (f == null || t.x <= 0 || x < 0 || y < 0 || x + t.x > f.colunas || y + t.y > f.Grade.y) return false;
             if (y % LinhasPorTabua + t.y > LinhasPorTabua) return false;
@@ -225,6 +279,14 @@ namespace ZombieCityCleaner.World
         {
             var f = FormaDa(estante);
             var t = Itens.Tamanho(item);
+            girado = false;
+            if (f != null && f.Especial)
+            {
+                for (x = 0, y = 0; x < f.colunas; x++)
+                    if (Cabe(estante, item, false, x, 0)) return true;
+                x = y = -1;
+                return false;
+            }
             if (f != null)
             {
                 var tabuas = new List<int>();
@@ -320,6 +382,77 @@ namespace ZombieCityCleaner.World
             return false;
         }
 
+        // ------------------------------------------------------------------ os moradores (a parte 6 do Plano_NPCs_Bunker.md)
+
+        /// <summary>A escala do móvel da estante no bunker (a dos móveis, ×1,30).</summary>
+        public static float EscalaDa(int estante)
+        {
+            var todos = MoveisDoBunker.Todos;
+            return estante >= 0 && estante < todos.Length ? todos[estante].escala : MedidasDaMobilia.Escala;
+        }
+
+        /// <summary>A altura da tábua do item (m do chão do andar, na escala do jogo).</summary>
+        public static float AlturaDe(ItemNaEstante it)
+        {
+            var f = FormaDa(it.estante);
+            if (f == null) return 0f;
+            // no suporte, a mão pega o taco no meio dele (e a caixa na prateleirinha); na mesinha, no tampo
+            if (f.especial == EspecialDaEstante.Suporte) return it.x < 4 ? 1.2f : 1.62f;
+            if (f.Especial && it.x >= 0 && it.x < f.vagas.Length) return f.vagas[it.x].y * EscalaDa(it.estante);
+            int tabua = Mathf.Clamp(f.Tabuas - 1 - it.y / LinhasPorTabua, 0, f.Tabuas - 1);
+            return f.alturas[tabua] * EscalaDa(it.estante);
+        }
+
+        /// <summary>Onde o item fica ao longo da estante (o x do móvel, na escala do jogo; a coluna 0 fica no +X).</summary>
+        public static float LadoDe(ItemNaEstante it)
+        {
+            var f = FormaDa(it.estante);
+            if (f == null) return 0f;
+            if (f.Especial && it.x >= 0 && it.x < f.vagas.Length) return f.vagas[it.x].x * EscalaDa(it.estante);
+            float cw = f.largura / f.colunas;
+            return (f.largura / 2f - (it.x + it.Tamanho.x / 2f) * cw) * EscalaDa(it.estante);
+        }
+
+        /// <summary>
+        /// Só no anfitrião (um morador pegando): tira um do item da estante (da pilha, um; senão, o item) e diz qual era.
+        /// Falso se ele não está mais lá.
+        /// </summary>
+        public bool TirarUm(int estante, ushort id, out Item item)
+        {
+            item = Item.Nada;
+            int k = Indice(estante, id);
+            if (!IsServer || k < 0) return false;
+            var it = _itens[k];
+            item = it.item;
+            int tem = Itens.Quantos(it.item, it.qtd);
+            if (Itens.EmPilha(it.item) && !Itens.EhMunicao(it.item) && tem > 1)
+            {
+                it.qtd = (ushort)(tem - 1);
+                _itens[k] = it;
+            }
+            else _itens.RemoveAt(k);
+            return true;
+        }
+
+        /// <summary>
+        /// Só no anfitrião (um morador devolvendo o taco, a caixa de bolas ou o maço): guarda o item na estante, no primeiro
+        /// lugar em que couber. Falso se não coube.
+        /// </summary>
+        public bool GuardarDoMorador(int estante, Item item, int qtd) => IsServer && item != Item.Nada && PorNaPrimeira(new[] { estante }, item, qtd, 0, 0);
+
+        /// <summary>Só no anfitrião (um morador pegando um maço): tira o item inteiro (a pilha toda) e diz qual era e quantos.</summary>
+        public bool TirarOItem(int estante, ushort id, out Item item, out int qtd)
+        {
+            item = Item.Nada;
+            qtd = 0;
+            int k = Indice(estante, id);
+            if (!IsServer || k < 0) return false;
+            item = _itens[k].item;
+            qtd = Itens.Quantos(item, _itens[k].qtd);
+            _itens.RemoveAt(k);
+            return true;
+        }
+
         /// <summary>O ponto está perto da estante (a do bunker, no chão do andar dela).</summary>
         public static bool Perto(int estante, Vector3 ponto, float distancia)
         {
@@ -372,6 +505,17 @@ namespace ZombieCityCleaner.World
 
         // ------------------------------------------------------------------ no anfitrião
 
+        /// <summary>
+        /// No anfitrião: um jogador guardou (true) ou pegou itens de uma estante: o cliente, a estante, o item e quantos (o
+        /// registro do bunker, no terminal).
+        /// </summary>
+        public static event System.Action<ulong, int, Item, int, bool> Mexeu;
+
+        static void Avisar(RpcParams parametros, int estante, Item item, int n, bool guardou)
+        {
+            if (n > 0) Mexeu?.Invoke(parametros.Receive.SenderClientId, estante, item, n, guardou);
+        }
+
         bool Quem(RpcParams parametros, int estante, out InventarioJogador inventario)
         {
             inventario = null;
@@ -413,6 +557,7 @@ namespace ZombieCityCleaner.World
                     if (resta <= 0)
                     {
                         inventario.Tirar(id);
+                        Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd), true);
                         return;
                     }
                     qtd = resta;
@@ -420,7 +565,11 @@ namespace ZombieCityCleaner.World
                 if (!Espaco(estante, it.item, out int lx, out int ly, out bool lg))
                 {
                     // não coube inteira: o que entrou nas pilhas sai da mochila, e o resto fica nela
-                    if (qtd != it.qtd) inventario.AcertarQuantidade(id, qtd);
+                    if (qtd != it.qtd)
+                    {
+                        inventario.AcertarQuantidade(id, qtd);
+                        Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd) - Itens.Quantos(it.item, qtd), true);
+                    }
                     return;
                 }
                 x = (byte)lx;
@@ -431,6 +580,7 @@ namespace ZombieCityCleaner.World
             inventario.Tirar(id);
             _itens.Add(new ItemNaEstante { estante = estante, id = NovoId(), item = it.item, x = x, y = y, girado = girado, qtd = (ushort)qtd,
                                            desgaste = it.desgaste, cores = it.cores });
+            Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd), true);
         }
 
         [Rpc(SendTo.Server)]
@@ -444,6 +594,7 @@ namespace ZombieCityCleaner.World
                 if (Itens.EmPilha(it.item))
                 {
                     int sobra = inventario.ReceberEmPilha(it.item, Itens.Quantos(it.item, it.qtd));
+                    Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd) - Mathf.Max(0, sobra), false);
                     if (sobra <= 0) _itens.RemoveAt(k);
                     else if (sobra != Itens.Quantos(it.item, it.qtd))
                     {
@@ -452,10 +603,18 @@ namespace ZombieCityCleaner.World
                     }
                     return;
                 }
-                if (inventario.Receber(it.item, it.qtd, it.desgaste, it.cores)) _itens.RemoveAt(k);
+                if (inventario.Receber(it.item, it.qtd, it.desgaste, it.cores))
+                {
+                    _itens.RemoveAt(k);
+                    Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd), false);
+                }
                 return;
             }
-            if (inventario.PorNaGrade(it.item, x, y, girado, it.qtd, it.desgaste, it.cores)) _itens.RemoveAt(k);
+            if (inventario.PorNaGrade(it.item, x, y, girado, it.qtd, it.desgaste, it.cores))
+            {
+                _itens.RemoveAt(k);
+                Avisar(parametros, estante, it.item, Itens.Quantos(it.item, it.qtd), false);
+            }
         }
 
         [Rpc(SendTo.Server)]
@@ -496,6 +655,9 @@ namespace ZombieCityCleaner.World
             itens.forma = forma;
         }
     }
+
+    /// <summary>As estantes que não têm tábuas, só vagas (a parte 8 do Plano_NPCs_Bunker.md): o suporte dos tacos e a mesinha do fumo.</summary>
+    public enum EspecialDaEstante : byte { Nenhuma, Suporte, Mesinha }
 
     /// <summary>
     /// Os itens guardados numa estante, na tábua deles (em todas as máquinas): a malha do chão de cada um, no meio das
@@ -561,8 +723,55 @@ namespace ZombieCityCleaner.World
                     _guardados.SetParent(transform, false);
                     _guardados.localScale = Vector3.one / Mathf.Max(0.01f, s);
                 }
-                Por(it, chao, s);
+                if (forma.Especial) PorNaVaga(it, chao, s);
+                else Por(it, chao, s);
             }
+        }
+
+        // no suporte e na mesinha: o taco em pé no copo da vaga (o pé dele, a ponta grossa, para baixo), a caixa de bolas na
+        // prateleirinha e os maços deitados no tampo, cada um um pouco virado
+        void PorNaVaga(ItemNaEstante it, ItensNoMundo chao, float s)
+        {
+            var malha = chao.MalhaDe(it.item);
+            if (malha == null || it.x >= forma.vagas.Length) return;
+            var v = forma.vagas[it.x] * s;
+            var b = malha.bounds;
+            Quaternion giro;
+            Vector3 ponto;
+            if (Itens.EhTaco(it.item))
+            {
+                // o taco da malha está deitado ao longo do X: a ponta é o lado mais fino (o pé fica embaixo)
+                float raioMin = 0f, raioMax = 0f;
+                int nMin = 0, nMax = 0;
+                foreach (var p in malha.vertices)
+                {
+                    float r = new Vector2(p.y - b.center.y, p.z - b.center.z).magnitude;
+                    if (p.x < b.min.x + 0.03f) { raioMin += r; nMin++; }
+                    if (p.x > b.max.x - 0.03f) { raioMax += r; nMax++; }
+                }
+                bool pontaNoMax = nMin == 0 || (nMax > 0 && raioMax / nMax < raioMin / nMin);
+                giro = Quaternion.Euler(0f, 30f * it.x, 0f) * Quaternion.FromToRotation(pontaNoMax ? Vector3.right : Vector3.left, Vector3.up);
+                ponto = new Vector3(pontaNoMax ? b.min.x : b.max.x, b.center.y, b.center.z);
+            }
+            else
+            {
+                giro = Itens.EhFumo(it.item) ? Quaternion.Euler(0f, 18f * (it.x - 1.5f), 0f) : Quaternion.identity;
+                var tam = Medir(giro, b, out float baixo, out var meio);
+                if (!Itens.EhFumo(it.item) && tam.z > tam.x)
+                {
+                    giro = Quaternion.Euler(0f, 90f, 0f) * giro;
+                    Medir(giro, b, out baixo, out meio);
+                }
+                ponto = Quaternion.Inverse(giro) * new Vector3(meio.x, baixo, meio.z);
+            }
+            var go = new GameObject(Itens.Nome(it.item));
+            go.transform.SetParent(_guardados, false);
+            go.transform.localRotation = giro;
+            go.transform.localPosition = v - giro * ponto + Vector3.up * 0.002f;
+            go.AddComponent<MeshFilter>().sharedMesh = malha;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = chao.MateriaisDe(it.item);
+            mr.shadowCastingMode = UI.Graficos.SombraDosMoveis ? ShadowCastingMode.On : ShadowCastingMode.Off;
         }
 
         static readonly Vector3[] _cantos = new Vector3[8];
@@ -596,7 +805,7 @@ namespace ZombieCityCleaner.World
             go.transform.localPosition = new Vector3(cx - meio.x * k, f.alturas[tabua] * s - baixo * k + 0.002f, cz - meio.z * k);
             go.AddComponent<MeshFilter>().sharedMesh = malha;
             var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = chao.MaterialDe(it.item);
+            r.sharedMaterials = chao.MateriaisDe(it.item);
             r.shadowCastingMode = UI.Graficos.SombraDosMoveis ? ShadowCastingMode.On : ShadowCastingMode.Off;
             var roupas = Itens.EhRoupa(it.item) ? Roupas.ItensDasRoupas.Carregar() : null;
             if (roupas != null) roupas.Pintar(r, it.item, it.cores);
@@ -632,7 +841,7 @@ namespace ZombieCityCleaner.World
             var f = EstantesDoBunker.FormaDa(estante);
             if (e == null || !e.IsSpawned || f == null || quem == null) return null;
             int n = e.Quantos(estante);
-            return $"[E] Abrir a {f.nome}" + (n == 0 ? " (vazia)" : n == 1 ? " (1 item)" : $" ({n} itens)");
+            return $"[E] Abrir {f.artigo} {f.nome}" + (n == 0 ? (f.artigo == "o" ? " (vazio)" : " (vazia)") : n == 1 ? " (1 item)" : $" ({n} itens)");
         }
 
         public override void Usar(ArmaJogador quem)

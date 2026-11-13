@@ -11,7 +11,7 @@ namespace ZombieCityCleaner.Zombies
     /// <summary>
     /// O povoamento do mundo gerado e os rastejantes embaixo dos carros (a pedido em 28/10/2026, a etapa 5: "pode liberar
     /// todos os zumbis"; antes, no mundo gerado, nenhum zumbi nascia sozinho). Só no anfitrião, e só com o mundo gerado
-    /// (na Demo_Cidade valem as hordas da cena).
+    /// ou o Lakewood (o <see cref="ChaoDosZumbis.Atual"/>; na Demo_Cidade valem as hordas da cena).
     /// <para><b>As células:</b> o mapa é cortado em células de 40 m. Quando o meio de uma chega a 52 m de um jogador (o
     /// NavMesh do mundo vai a 60 m dele) e o NavMesh já chegou ali, ela se povoa uma vez: na cidade, de 1 a 4 zumbis
     /// acordados e, de dia, até 2 estátuas; fora da cidade, às vezes um acordado ou uma estátua; e, com 4 árvores ou
@@ -105,11 +105,12 @@ namespace ZombieCityCleaner.Zombies
         {
             if (agora < _proximoPovoamento) return;
             _proximoPovoamento = agora + 1f;
-            var dados = Dados;
+            var dados = ChaoDosZumbis.Atual;
             if (dados == null || QuantosJogadores == 0) return;
             Recolher(agora);
             if (!PovoarOMundo.Value) return;
             PovoarAndares(dados);   // os andares dos prédios que carregaram (ZombieManager.Predios.cs)
+            PovoarOHospital(dados);   // os andares do Hospital Principal que carregaram (ZombieManager.Hospital.cs)
             float c = celulaDoPovoamento, agoraD = DensidadeAgora;
             _candidatas.Clear();
             for (int k = 0; k < QuantosJogadores; k++)
@@ -149,10 +150,10 @@ namespace ZombieCityCleaner.Zombies
             }
         }
 
-        void PovoarCelula(Vector2Int celula, DadosDoMundo dados, Vector3 meio, float densidade, int rodada)
+        void PovoarCelula(Vector2Int celula, IChaoDosZumbis dados, Vector3 meio, float densidade, int rodada)
         {
             var sorte = new System.Random(Misturar(dados.Semente + rodada * 7919, celula.x, celula.y));
-            bool cidade = dados.CidadeEm(meio.x, meio.z) != null;
+            bool cidade = dados.NaCidade(meio.x, meio.z);
             int acordados = Vezes(cidade ? sorte.Next(acordadosNaCidade.x, acordadosNaCidade.y + 1) : sorte.NextDouble() < acordadoForaDaCidade ? 1 : 0, densidade, sorte);
             int estatuas = Vezes(cidade ? sorte.Next(estatuasNaCidade.x, estatuasNaCidade.y + 1) : sorte.NextDouble() < estatuaForaDaCidade ? 1 : 0, densidade, sorte);
             if (!EDia) estatuas = 0;   // à noite e ao amanhecer, elas se soltariam
@@ -191,7 +192,7 @@ namespace ZombieCityCleaner.Zombies
                     var tentativa = tronco + new Vector3(Mathf.Sin(ang), 0f, Mathf.Cos(ang)) * dist;
                     if (!NavMesh.SamplePosition(tentativa, out var hit, 1.2f, NavMesh.AllAreas)) continue;
                     Vector3 p = hit.position;
-                    if (EmAreaLivre(p) || PertoDemaisParaNascer(p)) continue;
+                    if (EmAreaLivre(p) || PertoDemaisParaNascer(p) || HospitalDoMundo.Dentro(p)) continue;
                     if (ProtegerDoSol && Exposto(p)) continue;
                     if (Nascer(p) != null) PovoamentoPos++;
                     break;
@@ -232,7 +233,7 @@ namespace ZombieCityCleaner.Zombies
         /// Um ponto do NavMesh dentro da célula, longe dos jogadores: na sombra (de preferência sob um teto: dentro de uma
         /// casa), no sol, ou em qualquer lugar (à noite, um em cada três ainda procura um teto).
         /// </summary>
-        bool PontoNaCelula(System.Random sorte, DadosDoMundo dados, Vector3 meio, Lugar onde, out Vector3 ponto)
+        bool PontoNaCelula(System.Random sorte, IChaoDosZumbis dados, Vector3 meio, Lugar onde, out Vector3 ponto)
         {
             float c = celulaDoPovoamento;
             bool querTeto = onde == Lugar.Sombra || (onde == Lugar.Qualquer && sorte.NextDouble() < 0.5);
@@ -243,7 +244,8 @@ namespace ZombieCityCleaner.Zombies
                 var tentativa = new Vector3(x, dados.Altura(x, z), z);
                 if (!NavMesh.SamplePosition(tentativa, out var hit, 3f, NavMesh.AllAreas)) continue;
                 Vector3 p = hit.position;
-                if (EmAreaLivre(p) || PertoDemaisParaNascer(p)) continue;
+                // (o corpo do Hospital Principal tem os zumbis dele, por andar: ZombieManager.Hospital.cs)
+                if (EmAreaLivre(p) || PertoDemaisParaNascer(p) || HospitalDoMundo.Dentro(p)) continue;
                 bool teto = t < 20 && querTeto;   // nas últimas tentativas, aceita sem teto
                 if (onde == Lugar.Sol && (!Exposto(p) || Coberto(p))) continue;
                 if (onde == Lugar.Sombra && Exposto(p)) continue;

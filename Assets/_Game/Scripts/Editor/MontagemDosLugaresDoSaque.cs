@@ -67,6 +67,17 @@ namespace ZombieCityCleaner.EditorTools
             // o acampamento: em cima do colchonete e do saco de dormir, e no chão entre as latas, o fogareiro e as garrafas
             (Onde.Cima, 1, new[] { "Colchonete", "SacoDeDormir" }),
             (Onde.Chao, 3, new[] { "Latas", "Fogareiro", "Garrafas" }),
+            // o Hospital Principal (08/11/2026, a parte 7 do Plano_Hospital.md): os leitos, os armários e os carrinhos da área
+            // médica, as mesas da administração e da segurança, os depósitos e o vestiário (o que cada um aceita fica no
+            // SaqueDoHospital; as casas não usam estes)
+            (Onde.Cima, 1, new[] { "MacaEmergencia", "MacaExame", "CamaHospital" }),
+            (Onde.Cima, 2, new[] { "MesaDeInstrumentos", "CarrinhoDeRoupa" }),
+            (Onde.Cima, 3, new[] { "CaixasDeSuprimentos", "CarrinhoDeLimpeza" }),
+            (Onde.Cima, 6, new[] { "EstanteArquivo" }),
+            (Onde.Ambos, 4, new[] { "CriadoHospitalar", "BancadaInox", "EstacaoDeTrabalho", "MesaMonitoramento" }),
+            (Onde.Ambos, 6, new[] { "CarrinhoDeParada", "BancadaLaboratorio", "MesaDiretor" }),
+            (Onde.Ambos, 8, new[] { "ArmarioDeRemedios" }),
+            (Onde.Dentro, 6, new[] { "GeladeiraLaboratorio", "ArmarioDeAco", "Vestiario" }),
         };
 
         /// <summary>A célula da grade, a altura livre que um lugar precisa e até onde ela conta (no tamanho real).</summary>

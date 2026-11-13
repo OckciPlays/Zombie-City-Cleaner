@@ -19,6 +19,14 @@ namespace ZombieCityCleaner.World
         }
 
         public Light sol;
+
+        // o céu (09/11/2026; o Ceu.shader): o skybox em Resources/Ceu.mat, carregado uma vez; as câmeras do mundo passam a
+        // limpar com ele, e as globais do sol, da lua, das cores e das nuvens vão a cada quadro
+        Material _ceu;
+        bool _ceuProcurado;
+        static readonly int CeuTopoId = Shader.PropertyToID("_ZccCeuTopo"), CeuHorizonteId = Shader.PropertyToID("_ZccCeuHorizonte");
+        static readonly int CeuNeblinaId = Shader.PropertyToID("_ZccCeuNeblina"), SolId = Shader.PropertyToID("_ZccSol"), SolCorId = Shader.PropertyToID("_ZccSolCor");
+        static readonly int LuaId = Shader.PropertyToID("_ZccLua"), NuvensId = Shader.PropertyToID("_ZccNuvens"), EstrelasId = Shader.PropertyToID("_ZccEstrelas");
         Camera[] _cameras = new Camera[8];
         public Volume volumeDia;
         public Volume volumeNoite;
@@ -95,6 +103,13 @@ namespace ZombieCityCleaner.World
         public static float NeblinaNoBunker { get; set; } = 1f;
 
         /// <summary>
+        /// Dentro do Hospital Principal (<see cref="HospitalDoMundo"/>, 08/11/2026): o mesmo, à parte do bunker (cada um
+        /// escreve o seu a cada quadro; vale o menor). No subsolo, sem janela, sobra pouca luz e quase nenhuma neblina.
+        /// </summary>
+        public static float LuzNoHospital { get; set; } = 1f;
+        public static float NeblinaNoHospital { get; set; } = 1f;
+
+        /// <summary>
         /// O dia limpo do Dia 0 (de 0 a 1, nesta máquina; o DiaZeroDaPartida liga): o dia vira o <see cref="limpo"/>, e o
         /// pós-processamento do dia dá lugar ao do Dia 0 (o volume da cena dele).
         /// </summary>
@@ -109,6 +124,10 @@ namespace ZombieCityCleaner.World
         int _versaoDosGraficos = -1;
 
         void OnEnable() => NaLuneta = false;
+
+        // ao sair da cena (ou do Play): a neblina de altura desligada. As globais ficam na memória do Editor entre as cenas,
+        // e as cenas de exemplo (sem o AmbienteDoDia) herdavam a neblina do mundo (09/11/2026, a cena de floresta leve).
+        void OnDisable() => Shader.SetGlobalVector(ParamsId, Vector4.zero);
 
         static readonly int CorId = Shader.PropertyToID("_NeblinaCor");
         static readonly int ParamsId = Shader.PropertyToID("_NeblinaParams");
@@ -137,7 +156,7 @@ namespace ZombieCityCleaner.World
             var olho = Camera.main;
             float fundo = olho != null ? Mathf.InverseLerp(subsolo.x, subsolo.y, olho.transform.position.y) : 0f;
             fundo = Mathf.Max(fundo, ModoVideo.Subsolo);   // o corte do bunker na cena de vídeo olha do alto, com a luz de dentro
-            float fora = Mathf.Min(Mathf.Lerp(1f, sobraNoSubsolo, fundo), LuzNoBunker) * (1f - 0.9f * Escurecer);
+            float fora = Mathf.Min(Mathf.Lerp(1f, sobraNoSubsolo, fundo), Mathf.Min(LuzNoBunker, LuzNoHospital)) * (1f - 0.9f * Escurecer);
             // dentro de casa a neblina de fora fica rala (sem mexer na luz)
             bool dentro = olho != null && AreaInterna.Contem(olho.transform.position);
             _dentro = Mathf.SmoothDamp(_dentro, dentro ? 1f : 0f, ref _dentroVel, trocaDentro);
@@ -151,7 +170,7 @@ namespace ZombieCityCleaner.World
             dia = Misturar(dia, tempestadeDia, nuvens);
             var noite = Misturar(this.noite, tempestadeNoite, nuvens);
             float neblinaAqui = (1f - fundo) * Mathf.Lerp(1f, neblinaDentro, _dentro) * Mathf.Lerp(1f, neblinaNaLuneta, _luneta) * ModoVideo.Neblina * (SemNeblina ? 0f : 1f)
-                                * NeblinaNoBunker;
+                                * Mathf.Min(NeblinaNoBunker, NeblinaNoHospital);
             Color neblina = Color.Lerp(dia.neblina, noite.neblina, n);
             CorDaNeblina = neblina;
             RenderSettings.fogColor = neblina;
@@ -170,6 +189,10 @@ namespace ZombieCityCleaner.World
                 RenderSettings.fogColor = neblina;
                 CorDaNeblina = neblina;
             }
+            // o reflexo do céu acompanha a luz ambiente (a noite, o céu fechado, o subsolo e o bunker): ele é o do dia, fixo, e
+            // no escuro as faces lisas, como o azulejo, ficavam com um brilho cinza (07/11/2026, a pedido)
+            float ceuDoDia = dia.ceu.grayscale;
+            RenderSettings.reflectionIntensity = ceuDoDia > 0.001f ? Mathf.Clamp01(RenderSettings.ambientSkyColor.grayscale / ceuDoDia) : 1f;
             if (sol != null)
             {
                 if (_versaoDosGraficos != UI.Graficos.Versao)
@@ -192,10 +215,37 @@ namespace ZombieCityCleaner.World
             // o fundo das câmeras do mundo é a neblina (as que desenham numa textura, como o retrato do inventário, não)
             if (_cameras.Length < Camera.allCamerasCount) _cameras = new Camera[Camera.allCamerasCount + 4];
             int quantas = Camera.GetAllCameras(_cameras);   // (o Camera.allCameras fazia uma lista nova a cada quadro)
+            if (!_ceuProcurado)
+            {
+                _ceuProcurado = true;
+                _ceu = Resources.Load<Material>("Ceu");
+                if (_ceu != null) RenderSettings.skybox = _ceu;
+            }
             for (int i = 0; i < quantas; i++)
             {
                 var cam = _cameras[i];
-                if (cam.clearFlags == CameraClearFlags.SolidColor && cam.targetTexture == null) cam.backgroundColor = neblina;
+                if (cam.targetTexture != null) continue;
+                if (_ceu != null && cam.clearFlags == CameraClearFlags.SolidColor) cam.clearFlags = CameraClearFlags.Skybox;
+                if (cam.clearFlags == CameraClearFlags.SolidColor) cam.backgroundColor = neblina;
+            }
+            if (_ceu != null)
+            {
+                // o céu: de dia um azul acinzentado (mais cinza com as nuvens), de noite o escuro da noite; o horizonte com a
+                // cor do horizonte, e a névoa da neblina embaixo
+                var azul = new Color(0.3f, 0.46f, 0.74f);
+                var topoDia = Color.Lerp(dia.ceu * 0.95f, azul, 0.6f * (1f - nuvens));
+                var topo = Color.Lerp(topoDia, noite.ceu * 0.9f, n) * fora;
+                var horizonte = Color.Lerp(dia.horizonte * 1.15f, noite.horizonte * 1.1f, n) * fora;
+                Shader.SetGlobalColor(CeuTopoId, topo);
+                Shader.SetGlobalColor(CeuHorizonteId, horizonte);
+                Shader.SetGlobalColor(CeuNeblinaId, neblina);
+                var direcao = sol != null ? -sol.transform.forward : Vector3.up;
+                float transicao = 1f - Mathf.Abs(n - 0.5f) * 2f;
+                Shader.SetGlobalVector(SolId, new Vector4(direcao.x, direcao.y, direcao.z, (1f - n) * (1f - 0.6f * transicao) * fora));
+                Shader.SetGlobalColor(SolCorId, dia.luz * 1.6f);
+                Shader.SetGlobalVector(LuaId, new Vector4(direcao.x, direcao.y, direcao.z, n * (1f - 0.6f * transicao) * fora));
+                Shader.SetGlobalFloat(NuvensId, nuvens * 0.6f);
+                Shader.SetGlobalFloat(EstrelasId, n * (1f - nuvens) * fora);
             }
 
             float alturaFixa = Mathf.Lerp(dia.neblinaDeAltura, noite.neblinaDeAltura, n) * neblinaAqui;

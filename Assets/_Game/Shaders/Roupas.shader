@@ -10,8 +10,9 @@
 //   personagem principal: R a pele, G a cueca e B as sobrancelhas), com a mesma conta: as cores dele são a pele, a
 //   cueca e a cor dos pelos (a do cabelo). Assim o corpo e as peças usam o mesmo material.
 // - Os vidros (a lente dos óculos de proteção, a viseira; o lote 6, 31/10/2026): o alfa da textura de cor diz o quanto
-//   eles cobrem, desenhado em pontilhado (a matriz de Bayer 4 x 4 na tela, a mesma em todos os passes: a cor, a
-//   profundidade e as normais); na sombra, o vidro (alfa abaixo de 0,5) não entra. O resto tem alfa 1.
+//   eles cobrem (o resto tem alfa 1). Aqui eles não se desenham (o alfa abaixo de 0,6 sai, em todos os passes: a cor, a
+//   profundidade, as normais e a sombra): o vidro é do RoupasVidro, um segundo material nas peças com vidro, transparente
+//   de verdade (07/11/2026; antes, um pontilhado aqui, e de perto se viam as bolinhas brancas).
 // Iluminação: a PBR da URP (UniversalFragmentPBR), como a da mobília. No retrato do inventário (_Retrato = 1, a cópia
 // do material feita pelo RetratoDoJogador; o jogador vestido, 31/10/2026), a luz fixa do shader do retrato (a de cima e
 // da frente e o contorno fraco, sem as luzes da cena, a neblina e o ambiente): o retrato fica igual de dia, de noite e
@@ -61,13 +62,11 @@ Shader "ZombieCityCleaner/Roupas"
             return SAMPLE_TEXTURE2D_ARRAY(_Cores, sampler_Cores, uv.xy, uv.z).a;
         }
 
-        // o pontilhado dos vidros: a matriz de Bayer 4 x 4 na posição do pixel na tela
-        void Pontilhado(half alfa, float2 pixel)
+        // o vidro sai (é do RoupasVidro, a mesma divisa lá)
+        #define DIVISA_DO_VIDRO 0.6
+        void SemOVidro(half alfa)
         {
-            if (alfa >= 0.99) return;
-            uint2 p = uint2(pixel) & 3u;
-            static const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
-            clip(alfa - (bayer[p.y * 4 + p.x] + 0.5) / 16.0);
+            clip(alfa - DIVISA_DO_VIDRO);
         }
         ENDHLSL
 
@@ -151,7 +150,7 @@ Shader "ZombieCityCleaner/Roupas"
                 else
                 {
                     half4 cor = SAMPLE_TEXTURE2D_ARRAY(_Cores, sampler_Cores, input.uv.xy, input.uv.z);
-                    Pontilhado(cor.a, input.positionCS.xy);
+                    SemOVidro(cor.a);
                     base = cor.rgb;
                     m = SAMPLE_TEXTURE2D_ARRAY(_Mascaras, sampler_Cores, input.uv.xy, input.uv.z).rgb;
                 }
@@ -252,7 +251,7 @@ Shader "ZombieCityCleaner/Roupas"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                clip(AlfaDaPeca(input.uv) - 0.5);
+                SemOVidro(AlfaDaPeca(input.uv));
                 return 0;
             }
             ENDHLSL
@@ -297,7 +296,7 @@ Shader "ZombieCityCleaner/Roupas"
 
             half Frag(Varyings input) : SV_Target
             {
-                Pontilhado(AlfaDaPeca(input.uv), input.positionCS.xy);
+                SemOVidro(AlfaDaPeca(input.uv));
                 return input.positionCS.z;
             }
             ENDHLSL
@@ -352,7 +351,7 @@ Shader "ZombieCityCleaner/Roupas"
             #endif
             )
             {
-                Pontilhado(AlfaDaPeca(input.uv), input.positionCS.xy);
+                SemOVidro(AlfaDaPeca(input.uv));
             #if defined(_GBUFFER_NORMALS_OCT)
                 float2 oct = saturate(PackNormalOctQuadEncode(normalize(input.normalWS)) * 0.5 + 0.5);
                 outNormalWS = half4(PackFloat2To888(oct), 0.0);

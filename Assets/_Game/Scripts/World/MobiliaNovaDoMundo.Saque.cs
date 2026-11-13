@@ -73,18 +73,25 @@ namespace ZombieCityCleaner.World
         /// 'caixaDoPonto': a caixa do móvel nas coordenadas dele (o móvel antigo da farmácia e do hospital, 05/11/2026, que não tem malha: o
         /// objeto vazio no ponto, com a caixa do ponto); sem ela, a da malha do móvel.
         /// </summary>
-        internal void PorOSaque(MobiliaDaConstrucao m, GameObject movel, string modelo, ulong obra, int ponto, int peca, List<SaqueNaMira> saida, Bounds? caixaDoPonto = null)
+        internal void PorOSaque(MobiliaDaConstrucao m, GameObject movel, string modelo, ulong obra, int ponto, int peca, List<SaqueNaMira> saida, Bounds? caixaDoPonto = null) =>
+            PorOSaque(m.Saque, m.transform, movel, modelo, obra, ponto, peca, saida, caixaDoPonto);
+
+        /// <summary>
+        /// O mesmo, com o saque e a obra dados (o Hospital Principal, 08/11/2026: cada andar é uma obra, com o saque dele;
+        /// os lugares nas coordenadas de 'obraT').
+        /// </summary>
+        internal void PorOSaque(IList<ItemDoSaque> saque, Transform obraT, GameObject movel, string modelo, ulong obra, int ponto, int peca,
+                                List<SaqueNaMira> saida, Bounds? caixaDoPonto = null)
         {
             var itens = ItensNoMundo.Instancia;
-            if (itens == null) return;
+            if (itens == null || saque == null) return;
             _doMovel.Clear();
-            foreach (var it in m.Saque)
+            foreach (var it in saque)
                 if (it.ponto == ponto && it.peca == peca) _doMovel.Add(it);
             if (_doMovel.Count == 0) return;
             var raiz = movel.transform;
             var corpo = movel.GetComponent<MeshFilter>();
             var caixa = caixaDoPonto ?? (corpo != null && corpo.sharedMesh != null ? corpo.sharedMesh.bounds : new Bounds(Vector3.zero, Vector3.zero));
-            var obraT = m.transform;
             foreach (var it in _doMovel)
             {
                 ulong chave = ChaveDoSaque(obra, ponto, peca, it.lugar);
@@ -97,7 +104,7 @@ namespace ZombieCityCleaner.World
                 var go = new GameObject($"Saque: {Itens.Nome(item)}") { layer = CamadaDasPartes };
                 go.AddComponent<MeshFilter>().sharedMesh = malha;
                 var r = go.AddComponent<MeshRenderer>();
-                r.sharedMaterial = itens.MaterialDe(item);
+                r.sharedMaterials = itens.MateriaisDe(item);
                 r.shadowCastingMode = UI.Graficos.SombraDosMoveis ? ShadowCastingMode.On : ShadowCastingMode.Off;
                 // a roupa com as cores do catálogo
                 var roupas = Itens.EhRoupa(item) ? Roupas.ItensDasRoupas.Carregar() : null;
@@ -195,9 +202,13 @@ namespace ZombieCityCleaner.World
             var inventario = cliente.PlayerObject.GetComponent<InventarioJogador>();
             ulong chave = ChaveDoSaque(obra, ponto, peca, lugar);
             if (inventario == null || _pegosAqui.Contains(chave)) return;
+            ItemDoSaque it;
+            Transform obraT;
             var m = MobiliaDaConstrucao.DaObra(obra);
-            if (m == null || !m.AcharNoSaque(ponto, peca, lugar, out var it)) return;
-            var onde = m.transform.TransformPoint(it.apoio);
+            if (m != null && m.AcharNoSaque(ponto, peca, lugar, out it)) obraT = m.transform;
+            // os andares do Hospital Principal (08/11/2026): o anfitrião carrega os de perto de todos
+            else if (!HospitalDoMundo.AcharNoSaque(obra, ponto, peca, lugar, out it, out obraT)) return;
+            var onde = obraT.TransformPoint(it.apoio);
             var pes = cliente.PlayerObject.transform.position;
             if ((pes - onde).sqrMagnitude > DistanciaDePegar * DistanciaDePegar) return;
             var item = (Item)it.item;

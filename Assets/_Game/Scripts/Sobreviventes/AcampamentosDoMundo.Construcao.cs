@@ -47,7 +47,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void AtualizarConstrucoes()
         {
             var d = Dados;
-            if (d?.Plano == null)
+            if (d == null)
             {
                 if (_construidos.Count > 0) ApagarConstrucoes();
                 return;
@@ -127,7 +127,8 @@ namespace ZombieCityCleaner.Sobreviventes
             var objetos = ObjetosDoMundo.Instancia;
             var terreno = TerrenoDoMundo.Instancia;
             Material daCidade = objetos != null && objetos.materialDaCidade != null ? objetos.materialDaCidade : terreno != null ? terreno.materialDaCidade : null;
-            Material dasCasas = terreno != null && terreno.materialDasCasas != null ? terreno.materialDasCasas : daCidade;
+            Material dasCasas = terreno != null && terreno.materialDasCasas != null ? terreno.materialDasCasas
+                : LakewoodNaCena.Instancia != null && LakewoodNaCena.Instancia.materialDasCasas != null ? LakewoodNaCena.Instancia.materialDasCasas : daCidade;
 
             MontarACasa(p, raiz.transform, dasCasas, c);
 

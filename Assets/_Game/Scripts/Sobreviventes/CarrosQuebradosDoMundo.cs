@@ -117,23 +117,18 @@ namespace ZombieCityCleaner.Sobreviventes
             ApagarVisuais();
         }
 
-        static DadosDoMundo Dados
-        {
-            get
-            {
-                var m = MundoDaPartida.Instancia;
-                return m != null && m.Pronto && !m.NoDiaZero ? m.Dados : null;
-            }
-        }
+        // o mundo do jogo (12/11/2026: o sorteado ou o Lakewood) e os carros da beira das estradas dele
+        static IMundoDoJogo Dados => MundoDoJogo.Pronto;
+        static ObjetosDaEstrada Objetos => Dados != null ? BeiraDoMapa.Atual?.Objetos : null;
 
         /// <summary>Quantos carros quebrados o mundo tem.</summary>
-        public int Quantos => Dados?.Objetos?.Quebrados.Count ?? 0;
+        public int Quantos => Objetos?.Quebrados.Count ?? 0;
 
         /// <summary>O carro quebrado (o lugar, a roda, o número do carro do mundo), ou null.</summary>
         public CarroQuebrado Carro(int q)
         {
-            var d = Dados;
-            return d?.Objetos != null && q >= 0 && q < d.Objetos.Quebrados.Count ? d.Objetos.Quebrados[q] : null;
+            var o = Objetos;
+            return o != null && q >= 0 && q < o.Quebrados.Count ? o.Quebrados[q] : null;
         }
 
         public EstadoDoCarroQuebrado Estado(int q) => IsSpawned && q >= 0 && q < _cenas.Count ? _cenas[q].estado : EstadoDoCarroQuebrado.Esperando;
@@ -154,10 +149,10 @@ namespace ZombieCityCleaner.Sobreviventes
         /// </summary>
         public string Ocupado(int carro)
         {
-            var d = Dados;
-            var c = d?.Objetos?.QuebradoDe(carro);
+            var o = Objetos;
+            var c = o?.QuebradoDe(carro);
             if (c == null) return null;
-            int q = d.Objetos.Quebrados.IndexOf(c);
+            int q = o.Quebrados.IndexOf(c);
             if (IsSpawned && q >= 0 && q < _cenas.Count && _cenas[q].mortos == 3) return null;
             return "O carro é deles";
         }
@@ -303,7 +298,7 @@ namespace ZombieCityCleaner.Sobreviventes
             var depois = NoChao(roda + fora * 1.8f);   // o mecânico depois da troca: de pé, do lado do carro
             var cena = _cenas[q];
             var g = new GrupoDeSobreviventes { cidade = -1, cena = q, quantos = 2 };
-            var s = new System.Random(unchecked(Dados.Semente * 7919 + q * 104729 + 23));
+            var s = new System.Random(unchecked(Dados.SementeDaPartida * 7919 + q * 104729 + 23));
             for (int i = 0; i < 2; i++)
             {
                 bool mecanico = i == 0;
@@ -751,7 +746,7 @@ namespace ZombieCityCleaner.Sobreviventes
             }
             var inv = quem != null ? quem.GetComponent<InventarioJogador>() : null;
             if (inv == null) return;
-            var s = new System.Random(unchecked(Dados.Semente * 31 + q * 977 + 5));
+            var s = new System.Random(unchecked(Dados.SementeDaPartida * 31 + q * 977 + 5));
             int dinheiro = 60 + s.Next(0, 9) * 10;
             inv.Pagar(dinheiro);
             Item arma = Itens.EhArma(inv.NaMao) ? inv.NaMao : Item.Nada;

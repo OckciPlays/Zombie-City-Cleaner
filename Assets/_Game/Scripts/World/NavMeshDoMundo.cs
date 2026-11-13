@@ -16,7 +16,8 @@ namespace ZombieCityCleaner.World
     /// Na altura, a área vai de 15 m abaixo do chão (ou de quem está mais baixo) a 65 m acima (Parte M6, segunda fatia: um
     /// prédio de 15 andares, da rua à cobertura, entra inteiro). Os andares dos prédios carregam e saem com os jogadores
     /// perto: quando a colisão de um muda, a área em volta é refeita (<see cref="Mudou"/>, no máximo uma vez por segundo).
-    /// Fica no "Mundo" da cena Mundo (posto pela montagem da cena).
+    /// Fica no "Mundo" da cena Mundo (posto pela montagem da cena) e, no Lakewood, nas "Obras das cidades" (Plano_Lakewood,
+    /// Etapa 6, a parte 5): o chão de cada um é o <see cref="ChaoDosZumbis.Atual"/>.
     /// <para>
     /// A água do lago fica fora (07/11/2026, a pedido: "sem zumbis na água, eles param na beira"): caixas que tiram o chão
     /// do fundo do lago, onde a água passa de <see cref="AguaQueOsZumbisEntram"/> (<see cref="TirarAAgua"/>). Atrás de quem
@@ -121,13 +122,13 @@ namespace ZombieCityCleaner.World
             get
             {
                 var s = new System.Text.StringBuilder();
-                var terreno = TerrenoDoMundo.Instancia;
+                var chao = ChaoDosZumbis.Atual;
                 float raio = Mathf.Max(tamanhoDaArea.x, tamanhoDaArea.z) * 0.7f;
                 foreach (var a in _areas.Values)
                     s.Append($"a área em ({a.Centro.x:F0}, {a.Centro.z:F0}), pedida em ({a.Pedido.x:F0}, {a.Pedido.z:F0}), ")
                      .Append(a.Montada ? $"montada há {Time.unscaledTime - a.MontadaEm:F1} s" : "por montar")
                      .Append(a.Suja ? ", suja" : "").Append(a.Montando != null && !a.Montando.isDone ? ", montando" : "")
-                     .Append($", o terreno em volta do pedido: {(terreno == null ? "nenhum" : terreno.QueFalta(a.Pedido, raio) ?? "pronto")}; ");
+                     .Append($", o terreno em volta do pedido: {(chao == null ? "nenhum" : chao.QueFalta(a.Pedido, raio) ?? "pronto")}; ");
                 return s.Append($"{Montagens} montagens").ToString();
             }
         }
@@ -135,8 +136,8 @@ namespace ZombieCityCleaner.World
         void Update()
         {
             var rede = NetworkManager.Singleton;
-            var terreno = TerrenoDoMundo.Instancia;
-            if (rede == null || !rede.IsServer || terreno == null || !terreno.Ligado)
+            var chao = ChaoDosZumbis.Atual;
+            if (rede == null || !rede.IsServer || chao == null || !chao.Ligado)
             {
                 if (_areas.Count > 0) Limpar();
                 return;
@@ -166,18 +167,18 @@ namespace ZombieCityCleaner.World
                 bool precisa = !a.Montada || Horizontal(a.Pedido - a.Centro) >= refazerA || (a.Suja && Time.unscaledTime - a.MontadaEm >= 1f);
                 if (!precisa) continue;
                 float raio = Mathf.Max(tamanhoDaArea.x, tamanhoDaArea.z) * 0.7f;
-                if (!terreno.Pronto(a.Pedido, raio)) continue;
-                Montar(a, a.Pedido);
+                if (!chao.Pronto(a.Pedido, raio)) continue;
+                Montar(a, a.Pedido, chao);
                 break;
             }
         }
 
-        void Montar(Area a, Vector3 centro)
+        void Montar(Area a, Vector3 centro, IChaoDosZumbis chaoDoMundo)
         {
             _relogio.Restart();
             // na altura: do chão (ou de quem está mais baixo) a 'abaixo' para baixo, e dele (ou de quem está mais alto) a
             // 'acima' para cima
-            float chao = MundoDaPartida.Instancia != null && MundoDaPartida.Instancia.Dados != null ? MundoDaPartida.Instancia.Dados.Altura(centro.x, centro.z) : centro.y;
+            float chao = chaoDoMundo.Altura(centro.x, centro.z);
             float y0 = Mathf.Min(centro.y, chao) - abaixo, y1 = Mathf.Max(centro.y, chao) + acima;
             var limites = new Bounds(new Vector3(centro.x, (y0 + y1) * 0.5f, centro.z), new Vector3(tamanhoDaArea.x, y1 - y0, tamanhoDaArea.z));
             a.Limites = limites;
@@ -188,7 +189,7 @@ namespace ZombieCityCleaner.World
             var cena = gameObject.scene;
             for (int i = _fontes.Count - 1; i >= 0; i--)
                 if (_fontes[i].component == null || _fontes[i].component.gameObject.scene != cena) _fontes.RemoveAt(i);
-            TirarAAgua(limites);
+            TirarAAgua(limites, chaoDoMundo);
             var ajustes = NavMesh.GetSettingsByIndex(0);
             // poucos workers: com todos, os jobs da física (PxScene.simulate) e do GPU Resident Drawer esperavam na fila
             // atrás dos da montagem, e o quadro passava de 30 ms na cidade
@@ -208,29 +209,29 @@ namespace ZombieCityCleaner.World
         static float Horizontal(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
         /// <summary>
-        /// O lago dentro da área sai do NavMesh: nas linhas da grade do mundo (2 m), cada trecho seguido de água mais funda
-        /// que <see cref="AguaQueOsZumbisEntram"/> vira uma caixa que marca o chão como sem passagem (do fundo até acima da
-        /// água). A ilha do meio fica (ela não tem água).
+        /// A água dentro da área sai do NavMesh: nas linhas da grade (2 m), cada trecho seguido de água mais funda que
+        /// <see cref="AguaQueOsZumbisEntram"/> vira uma caixa que marca o chão como sem passagem (do fundo até 3 m acima da
+        /// água). As ilhas ficam (elas não têm água), e as pontes e a crista da barragem, mais altas, também.
         /// </summary>
-        void TirarAAgua(Bounds limites)
+        void TirarAAgua(Bounds limites, IChaoDosZumbis chao)
         {
-            var dados = MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
-            var lago = dados?.Lago;
-            if (lago == null) return;
-            float alcance = lago.Raio * 1.6f;
-            float x0 = Mathf.Max(limites.min.x, lago.Centro.x - alcance), x1 = Mathf.Min(limites.max.x, lago.Centro.x + alcance);
-            float z0 = Mathf.Max(limites.min.z, lago.Centro.y - alcance), z1 = Mathf.Min(limites.max.z, lago.Centro.y + alcance);
-            if (x0 >= x1 || z0 >= z1) return;
+            if (!chao.PodeTerAgua(limites)) return;
             const float passo = ZombieCityCleaner.Mundo.DadosDoMundo.Celula;
-            float fundo = lago.Nivel - lago.Fundura - 2f, topo = lago.Nivel + 3f;
+            float x0 = limites.min.x, x1 = limites.max.x, z0 = limites.min.z, z1 = limites.max.z;
             for (float z = z0 + passo * 0.5f; z < z1; z += passo)
             {
-                float comeco = float.NaN;
+                float comeco = float.NaN, fundo = float.MaxValue, topo = float.MinValue;
                 for (float x = x0 + passo * 0.5f; ; x += passo)
                 {
-                    bool agua = x < x1 && dados.FunduraDaAgua(x, z) > AguaQueOsZumbisEntram;
-                    if (agua && float.IsNaN(comeco)) comeco = x - passo * 0.5f;
-                    else if (!agua && !float.IsNaN(comeco))
+                    float nivel = 0f, fundura = x < x1 ? chao.FunduraDaAgua(x, z, out nivel) : 0f;
+                    bool agua = fundura > AguaQueOsZumbisEntram;
+                    if (agua)
+                    {
+                        if (float.IsNaN(comeco)) comeco = x - passo * 0.5f;
+                        fundo = Mathf.Min(fundo, nivel - fundura - 2f);
+                        topo = Mathf.Max(topo, nivel + 3f);
+                    }
+                    else if (!float.IsNaN(comeco))
                     {
                         float fim = x - passo * 0.5f;
                         _fontes.Add(new NavMeshBuildSource
@@ -241,6 +242,8 @@ namespace ZombieCityCleaner.World
                             area = AreaSemPassagem,
                         });
                         comeco = float.NaN;
+                        fundo = float.MaxValue;
+                        topo = float.MinValue;
                     }
                     if (x >= x1) break;
                 }

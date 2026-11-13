@@ -109,7 +109,7 @@ namespace ZombieCityCleaner.Fauna
             p = default;
             foreach (var t in _tocas)
             {
-                var c = new Vector3(t.x, NivelDoLago, t.z);
+                var c = new Vector3(t.x, NivelEm(t.x, t.z), t.z);
                 float d = Vector2.Distance(new Vector2(c.x, c.z), new Vector2(pes.x, pes.z));
                 if (d >= de && d <= ate) { p = c; return true; }
             }
@@ -148,6 +148,10 @@ namespace ZombieCityCleaner.Fauna
             pe = default;
             raio = 0f;
             var d = DadosDoMapa;
+            // o Lakewood (a parte 2 do "O jogo do mundo sorteado no Lakewood"): a beira é a terra a até 12 m da água
+            var chao = ChaoDoLakewood;
+            if (d == null && chao != null)
+                return ArvoresDoMundo.MaisPerto(toca, 35f, out chave, out pe, out raio, q => !chao.Agua(q.x, q.z, out _) && chao.Agua(q.x, q.z, out _, 12f));
             if (d?.Floresta == null || d.Lago == null) return false;
             var a = d.BlocoDe(toca.x - 35f, toca.z - 35f);
             var b = d.BlocoDe(toca.x + 35f, toca.z + 35f);
@@ -184,16 +188,9 @@ namespace ZombieCityCleaner.Fauna
             _roendo[chave] = t;
             if (t < (CastorRapido ? 8f : TempoParaRoer)) return false;
             _roendo.Remove(chave);
-            var mundo = MundoDaPartida.Instancia;
-            if (mundo == null || !mundo.DerrubarPeloCastor(chave, deOnde)) return true;
+            if (!ArvoresDoMundo.DerrubarPeloCastor(chave, deOnde)) return true;
             float raio = 0.25f;
-            FlorestaDoMundo.Abrir(chave, out int bx, out int bz, out int i);
-            var d = DadosDoMapa;
-            if (d?.Floresta != null)
-            {
-                d.Floresta.DoBloco(bx, bz, _plantas);
-                if (i >= 0 && i < _plantas.Count) raio = Floresta.RaioDoTronco[(int)_plantas[i].Especie] * _plantas[i].Escala;
-            }
+            if (ArvoresDoMundo.Planta(chave, out var planta)) raio = ArvoresDoMundo.RaioDoTronco(planta);
             _roidas.Add(new ArvoreRoida { chave = chave, x = pe.x, y = pe.y, z = pe.z, raio = raio });
             if (_roidas.Count > 200) _roidas.RemoveAt(0);
             return true;
@@ -242,7 +239,7 @@ namespace ZombieCityCleaner.Fauna
             float r2 = raio * raio;
             foreach (var t in _tocas)
             {
-                var p = new Vector3(t.x, NivelDoLago, t.z);
+                var p = new Vector3(t.x, NivelEm(t.x, t.z), t.z);
                 if ((p - perto).sqrMagnitude < r2 && saida.Count < 60) saida.Add(new Casa { tipo = 0, pos = p, tamanho = TamanhoDaToca(t) });
             }
             foreach (var r in _roidas)

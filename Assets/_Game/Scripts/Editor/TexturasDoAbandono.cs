@@ -44,6 +44,7 @@ namespace ZombieCityCleaner.EditorTools
             (6, new[] { "Madeira", "MadeiraVelha", "BancoMadeira", "Papelao", "Compensado" }),
             (7, new[] { "Vidro", "VidroCarro", "VidroSujo", "Farol" }),
             (8, new[] { "ParedeInterna", "PapelVerde", "PapelRosa", "Azulejo", "Piso", "Carpete", "Taco", "Teto" }),
+            (9, new[] { "TijoloAparente" }),
         };
 
         [MenuItem("Zombie City Cleaner/Exemplos/Gerar as texturas do abandono")]
@@ -108,6 +109,51 @@ namespace ZombieCityCleaner.EditorTools
             m.SetFloat("_ModoDaAltura", modoDaAltura);
             m.enableInstancing = true;
             EditorUtility.SetDirty(m);
+        }
+
+        public const string MaterialDasMarcas = Pasta + "/Marcas.mat";
+        const string AtlasDasMarcas = Pasta + "/T_Marcas.png";
+
+        /// <summary>
+        /// A importação do atlas das marcas do hospital (o T_Marcas, do hospital_marcas.py da pasta de arte) e o material
+        /// delas (o shader ZombieCityCleaner/Marcas; null, sem o atlas).
+        /// </summary>
+        public static Material Marcas()
+        {
+            var imp = (TextureImporter)AssetImporter.GetAtPath(AtlasDasMarcas);
+            if (imp == null)
+            {
+                Debug.LogWarning($"[Abandono] Falta o atlas das marcas ({AtlasDasMarcas}): rode o hospital_marcas.py da pasta de arte.");
+                return null;
+            }
+            if (!imp.alphaIsTransparency || imp.wrapMode != TextureWrapMode.Clamp)
+            {
+                imp.textureType = TextureImporterType.Default;
+                imp.sRGBTexture = true;
+                imp.alphaIsTransparency = true;
+                imp.mipmapEnabled = true;
+                imp.wrapMode = TextureWrapMode.Clamp;
+                imp.filterMode = FilterMode.Trilinear;
+                imp.anisoLevel = 4;
+                imp.maxTextureSize = 2048;
+                imp.textureCompression = TextureImporterCompression.CompressedHQ;
+                imp.SaveAndReimport();
+            }
+            var shader = Shader.Find("ZombieCityCleaner/Marcas");
+            var m = AssetDatabase.LoadAssetAtPath<Material>(MaterialDasMarcas);
+            if (m == null)
+            {
+                m = new Material(shader);
+                AssetDatabase.CreateAsset(m, MaterialDasMarcas);
+            }
+            m.shader = shader;
+            m.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasDasMarcas));
+            // pouco desgaste: o sangue seco é opaco (com o das pichações, ele ficava ralo e rosado)
+            m.SetFloat("_Desgaste", 0.15f);
+            m.SetTexture("_Ruido", AssetDatabase.LoadAssetAtPath<Texture2D>(Pasta + "/T_Abandono_Ruido.png"));
+            EditorUtility.SetDirty(m);
+            AssetDatabase.SaveAssets();
+            return m;
         }
 
         /// <summary>A importação do atlas das pichações e o material delas (null, sem o atlas).</summary>
