@@ -106,8 +106,26 @@ namespace ZombieCityCleaner.Salvar
         void Update()
         {
             if (!IsServer || !Salva || _mundo == null || !_mundo.Pronto || _mundo.NoDiaZero) return;
+            // o primeiro salvamento (12/11/2026, a pedido: "tenho o personagem, tenho o mundo, porém não consigo ir em
+            // continuar"): o mundo só entra no Continuar depois de salvo, e saindo no Dia 0, no modo "só dormindo" sem dormir,
+            // ou fechando antes do primeiro automático, ele nunca era. Agora, em qualquer modo, um mundo que ainda não foi
+            // salvo salva uma vez logo que fica jogável (pronto e fora do Dia 0: o abrigo abriu, ou o mundo carregou)
+            if (Atual != null && !Atual.temEstado)
+            {
+                if (_primeiroEm < 0f) _primeiroEm = Time.unscaledTime + SegundosAntesDoPrimeiro;
+                else if (Time.unscaledTime >= _primeiroEm)
+                {
+                    _primeiroEm = Time.unscaledTime + 30f;   // (se não deu agora, tenta de novo daqui a pouco)
+                    Salvar("o mundo novo");
+                }
+                return;
+            }
             if (Modo == ModoDeSalvar.Automatico && Time.unscaledTime >= _proximo) Salvar("automático");
         }
+
+        /// <summary>O mundo novo salva pela primeira vez tantos segundos depois de ficar jogável (os jogadores já no lugar).</summary>
+        const float SegundosAntesDoPrimeiro = 4f;
+        float _primeiroEm = -1f;
 
         InventarioJogador InventarioDe(ulong cliente) =>
             NetworkManager.ConnectedClients.TryGetValue(cliente, out var c) && c.PlayerObject != null ? c.PlayerObject.GetComponent<InventarioJogador>() : null;
@@ -165,6 +183,8 @@ namespace ZombieCityCleaner.Salvar
 
             m.arvoresCortadas = _mundo.ArvoresCortadas();   // (06/11/2026)
             m.paineisDesmontados = _mundo.PaineisDesmontados();   // (09/11/2026, a sucata)
+            m.fauna = Fauna.FaunaDoMundo.NiveisParaSalvar();   // a população das regiões caçadas (12/11/2026)
+            Fauna.FaunaDoMundo.CastoresParaSalvar(out m.tocasDosCastores, out m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
             m.mobiliaAberta.Clear();
             if (MobiliaNovaDoMundo.Instancia != null)
                 foreach (var k in MobiliaNovaDoMundo.Instancia.Copia()) m.mobiliaAberta.Add(unchecked((long)k));
@@ -440,6 +460,8 @@ namespace ZombieCityCleaner.Salvar
 
             _mundo.RestaurarArvores(m.arvoresCortadas);   // as árvores cortadas (06/11/2026)
             _mundo.RestaurarPaineis(m.paineisDesmontados);   // os painéis de metal desmontados (09/11/2026)
+            Fauna.FaunaDoMundo.Restaurar(m.fauna);   // a população das regiões caçadas (12/11/2026)
+            Fauna.FaunaDoMundo.RestaurarCastores(m.tocasDosCastores, m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
             foreach (long k in m.mobiliaAberta) abertas.Add(unchecked((ulong)k));
             MobiliaNovaDoMundo.Instancia?.Restaurar(abertas);

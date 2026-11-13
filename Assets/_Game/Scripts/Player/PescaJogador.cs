@@ -25,7 +25,7 @@ namespace ZombieCityCleaner.Player
     /// Os peixes maiores ficam na água mais funda (o meio do lago, de caiaque). Na margem ou no caiaque (o lugar da frente).
     /// <para>As habilidades (o ramo Pesca): a Paciência (morde 40% mais rápido), a Isca fina (40% de chance de não gastar
     /// a isca), o Peixe grande (mais peixes grandes), a Noite de pesca (a noite e a chuva ajudam mais) e o Mestre pescador
-    /// (o dourado, raro, do fundo).</para>
+    /// (a truta-dourada, rara, do fundo).</para>
     /// <para>A boia e a linha aparecem para todos: a boia vai pela rede (<see cref="InventarioJogador.BoiaNaRede"/>), e os
     /// outros desenham a linha da vara do corpo (<see cref="PescaVista"/>).</para>
     /// </summary>
@@ -287,6 +287,7 @@ namespace ZombieCityCleaner.Player
                 Item.PeixePequeno => (0.35f, 4f),
                 Item.PeixeMedio => (0.55f, 7f),
                 Item.PeixeGrande => (0.8f, 11f),
+                Item.Bagre => (0.7f, 12f),
                 _ => (0.95f, 14f),
             };
             _folegoDoPeixe = _folegoTotal;
@@ -324,13 +325,15 @@ namespace ZombieCityCleaner.Player
         /// <summary>
         /// O peixe que morde, pela fundura onde a boia está (07/11/2026, a pedido: os maiores no meio do lago): de 1 a 4 m de
         /// fundo, os pequenos ficam mais raros e os grandes mais comuns. O Peixe grande puxa para os grandes; o Mestre
-        /// pescador pode pegar o dourado (mais na água funda).
+        /// pescador pode pegar a truta-dourada (mais na água funda). Desde 12/11/2026 (a etapa 3 da fauna, os peixes
+        /// americanos), o bagre: no fundo, e à noite bem mais (de 3% no raso de dia a ~30% no fundo de noite).
         /// </summary>
         Item SortearPeixe()
         {
             float fundo = Mathf.Clamp01((Agua.Fundura(_pontoDaBoia) - 1f) / 3f);
             int grande = Habilidades.Pontos(_rede, Habilidade.PeixeGrande);
             if (Habilidades.Tem(_rede, Habilidade.MestrePescador) && Random.value < Mathf.Lerp(0.02f, 0.08f, fundo)) return Item.PeixeDourado;
+            if (Random.value < Mathf.Lerp(0.03f, 0.17f, fundo) * (World.CicloDoDia.Noite > 0.5f ? 1.8f : 0.7f)) return Item.Bagre;
             float p = 0.55f - 0.30f * fundo, g = 0.12f + 0.25f * fundo;
             p *= 1f - 0.15f * grande;   // (o Peixe grande: com 2 pontos, 0,7 e 1,6)
             g *= 1f + 0.3f * grande;

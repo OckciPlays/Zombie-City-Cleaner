@@ -119,32 +119,52 @@ namespace ZombieCityCleaner.Player
         void OnGUI()
         {
             if (!IsSpawned || !IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
+            // com a mochila aberta, os medidores saem (a tela cobre o canto)
+            var tela = GetComponent<TelaDoInventario>();
+            if (tela != null && tela.Aberta) return;
             float u = Screen.height / 720f;
-            // em cima da barra da vida (VidaJogador): a sede logo acima, a fome acima dela
-            float yVida = Screen.height - 44 * u;
-            Barra(u, yVida - 72 * u, "FOME", Fome.Value, new Color(0.78f, 0.6f, 0.3f, 0.9f), "com fome");
-            Barra(u, yVida - 38 * u, "SEDE", Sede.Value, new Color(0.38f, 0.58f, 0.74f, 0.9f), "com sede");
+            // os medidores redondos (12/11/2026, a pedido: "um símbolo igual da sanidade para a fome e a sede, redondo ao invés
+            // de barra horizontal, ai deixaria todos do lado em cima da barra de vida"): o estômago e a gota, ao lado do cérebro
+            var rFome = EstadosNoHud.AreaDoMedidor(1, u);
+            var rSede = EstadosNoHud.AreaDoMedidor(2, u);
+            Medidor(rFome, Fome.Value, new Color(0.88f, 0.64f, 0.32f), IconesDaFomeESede.Estomago, IconesDaFomeESede.ContornoDoEstomago, null);
+            Medidor(rSede, Sede.Value, new Color(0.42f, 0.7f, 0.96f), IconesDaFomeESede.Gota, IconesDaFomeESede.ContornoDaGota, IconesDaFomeESede.BrilhoDaGota);
+            // o mouse solto em cima: o quanto
+            if (!EstadosNoHud.MouseSolto) return;
+            var mouse = Event.current.mousePosition;
+            if (rFome.Contains(mouse)) EstadosNoHud.Dica(rFome, $"Fome: {Mathf.RoundToInt(Fome.Value)}%", Fome.Value < pouca ? "Com fome: coma alguma coisa." : "Cheio é satisfeito.", u);
+            else if (rSede.Contains(mouse)) EstadosNoHud.Dica(rSede, $"Sede: {Mathf.RoundToInt(Sede.Value)}%", Sede.Value < pouca ? "Com sede: beba alguma coisa." : "Cheio é satisfeito.", u);
         }
 
-        void Barra(float u, float y, string nome, float valor, Color cor, string aviso)
+        // um medidor: o vazio escuro, o cheio de baixo para cima e o contorno; baixo, ele fica vermelho e pulsa; vazio, o
+        // fundo pisca vermelho (está tirando vida)
+        void Medidor(Rect r, float valor, Color cor, Texture2D miolo, Texture2D contorno, Texture2D brilho)
         {
-            float x = 20 * u, w = 150 * u, h = 7 * u;
-            float fracao = Mathf.Clamp01(valor / 100f);
+            float f = Mathf.Clamp01(valor / 100f);
             bool baixa = valor < pouca;
-            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(13 * u), FontStyle.Bold);
-            estilo.normal.textColor = baixa ? new Color(0.95f, 0.42f, 0.36f) : new Color(0.86f, 0.84f, 0.76f);
-            GUI.Label(new Rect(x, y - 19 * u, 260 * u, 18 * u), baixa ? $"{nome}  ·  {aviso}" : nome, estilo);
-            // com a barra vazia, o fundo pisca vermelho (está tirando vida)
-            float pisca = valor <= 0f ? 0.25f + 0.25f * Mathf.Sin(Time.time * 6f) : 0f;
-            Retangulo(x, y, w, h, Color.Lerp(new Color(0f, 0f, 0f, 0.5f), new Color(0.8f, 0.15f, 0.1f, 0.8f), pisca));
-            Retangulo(x, y, w * fracao, h, baixa ? new Color(0.85f, 0.28f, 0.22f, 0.95f) : cor);
-        }
-
-        static void Retangulo(float x, float y, float w, float h, Color c)
-        {
+            if (baixa)
+            {
+                float k = 0.07f * (0.5f + 0.5f * Mathf.Sin(Time.time * 6f));
+                r = new Rect(r.center.x - r.width * (1f + k) / 2f, r.center.y - r.height * (1f + k) / 2f, r.width * (1f + k), r.height * (1f + k));
+            }
             var antes = GUI.color;
-            GUI.color = c;
-            GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
+            float pisca = valor <= 0f ? 0.5f + 0.5f * Mathf.Sin(Time.time * 6f) : 0f;
+            GUI.color = Color.Lerp(new Color(0.3f, 0.31f, 0.34f, 0.72f), new Color(0.75f, 0.12f, 0.08f, 0.85f), pisca);
+            GUI.DrawTexture(r, miolo);
+            if (f > 0.001f)
+            {
+                // (do fundo ao topo da forma, não do quadrado)
+                float h = IconesDaFomeESede.Altura(miolo, f);
+                GUI.color = baixa ? new Color(0.92f, 0.32f, 0.24f, 0.95f) : new Color(cor.r, cor.g, cor.b, 0.92f);
+                GUI.DrawTextureWithTexCoords(new Rect(r.x, r.yMax - r.height * h, r.width, r.height * h), miolo, new Rect(0f, 0f, 1f, h));
+            }
+            GUI.color = new Color(0f, 0f, 0f, 0.62f);
+            GUI.DrawTexture(r, contorno);
+            if (brilho != null)
+            {
+                GUI.color = new Color(1f, 1f, 1f, 0.5f);
+                GUI.DrawTexture(r, brilho);
+            }
             GUI.color = antes;
         }
     }

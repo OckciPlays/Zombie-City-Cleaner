@@ -312,6 +312,13 @@ namespace ZombieCityCleaner.Loot
                     _garrafas.RemoveAt(i);
                     break;
                 }
+            MostrarAreaDeFogo(id, centro, raio, segundos);
+            SomDoFogo.Quebrar(centro);
+        }
+
+        // as chamas da área de fogo (o molotov e, desde 12/11/2026, o combustível do galão que estourou)
+        void MostrarAreaDeFogo(int id, Vector3 centro, float raio, float segundos)
+        {
             var go = new GameObject($"Fogo do molotov {id}");
             go.transform.SetParent(transform, false);
             go.transform.position = centro;
@@ -332,7 +339,6 @@ namespace ZombieCityCleaner.Loot
             tremula.luz = luz;
             _areasVistas[id] = go;
             Destroy(go, segundos * 2f + 10f);   // (se o aviso do fim não chegar)
-            SomDoFogo.Quebrar(centro);
         }
 
         [Rpc(SendTo.ClientsAndHost)]

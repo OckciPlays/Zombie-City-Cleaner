@@ -9,7 +9,16 @@ namespace ZombieCityCleaner.Combat
     public static class SomDoFogo
     {
         const int Taxa = 44100;
-        static AudioClip _vidro, _labareda;
+        static AudioClip _vidro, _labareda, _estouro;
+
+        /// <summary>O galão da cerca de fogo estourando com o tiro (12/11/2026): o baque grave, o estalo e a labareda grande.</summary>
+        public static AudioClip Estouro => _estouro ??= Fazer("Estouro do galão", 2.4f, (t, r, f) =>
+        {
+            float baque = Mathf.Sin(2f * Mathf.PI * (58f - 22f * Mathf.Min(1f, t / 0.4f)) * t) * Mathf.Exp(-t / 0.32f) * 0.9f;
+            float estalo = Batida(t, r, 0f, 1f, 0.025f) * 0.7f;
+            float fogo = (t < 0.06f ? t / 0.06f : Mathf.Exp(-(t - 0.06f) / 0.85f)) * f.Baixa(Ruido(r), 0.05f) * 1.5f;
+            return baque + estalo + fogo;
+        });
 
         /// <summary>O vidro da garrafa quebrando no chão.</summary>
         public static AudioClip Vidro => _vidro ??= Fazer("Vidro quebrando", 0.55f, (t, r, f) =>

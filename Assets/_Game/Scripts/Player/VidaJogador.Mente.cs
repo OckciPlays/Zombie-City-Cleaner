@@ -60,7 +60,17 @@ namespace ZombieCityCleaner.Player
         float _mente = MenteMaxima, _tempoDaMente, _proximoSusto, _proximoBruto, _proximoGolpeNaMente, _proximaTragada;
         bool _abrigado;
         readonly float[] _motivoAte = new float[32];
-        HashSet<Zumbi> _cacandoAntes = new HashSet<Zumbi>(), _cacandoAgora = new HashSet<Zumbi>();
+        HashSet<Zumbi> _cacandoAgora = new HashSet<Zumbi>();
+        // o susto (12/11/2026): os zumbis que ele via por perto no passo de antes e os de agora
+        HashSet<Zumbi> _vistosAntes = new HashSet<Zumbi>(), _vistosAgora = new HashSet<Zumbi>();
+        /// <summary>O susto: o zumbi que aparece (passa a ser visto) a menos disto (m)...</summary>
+        const float SustoPerto = 3.5f;
+        /// <summary>...e que não estava sendo visto a menos disto (m) meio segundo antes.</summary>
+        const float SustoVisto = 8f;
+        /// <summary>O raio que cai até esta distância (m) assusta (eles caem de 8 a 40 m de alguém).</summary>
+        const float SustoDoRaio = 45f;
+        // o que tapa a vista (o cenário: as casas, os muros)
+        const int MascaraDaVista = (1 << 0) | (1 << 1);
         LanternaJogador _lanterna;
         bool _ouvindoOsRaios;
 
@@ -131,10 +141,11 @@ namespace ZombieCityCleaner.Player
             else if (tensao > 0 || pertoDeMim > 0) Abala(ref taxa, ref motivos, MotivoDaMente.Tensao, 2f);
             // com zumbi por perto, o fogo e o dia não acalmam (o bunker, sim: lá dentro é o abrigo)
             bool ameaca = cacando > 0 || tensao > 0 || pertoDeMim > 0;
-            int novos = 0;
-            foreach (var z in _cacandoAgora)
-                if (z != null && !_cacandoAntes.Contains(z) && (z.transform.position - pes).sqrMagnitude < 7f * 7f) novos++;
-            (_cacandoAntes, _cacandoAgora) = (_cacandoAgora, _cacandoAntes);
+            // o susto (12/11/2026, a pedido: "toda vez que tem contato com um zumbi conta como susto, e não deveria ser assim, o
+            // susto só deve ser quando o zumbi aparece muito perto do jogador"): só o zumbi que ele passa a ver já colado (a
+            // menos de SustoPerto), sem ter visto por perto meio segundo antes. O que vem vindo à vista não assusta; o que sai
+            // de uma porta, de trás de um muro, ou chega por trás e aparece quando ele vira, sim
+            int novos = ZumbisQueApareceram(zm, pes);
             if (novos > 0 && Time.time >= _proximoSusto)
             {
                 _proximoSusto = Time.time + 8f;
@@ -296,11 +307,39 @@ namespace ZombieCityCleaner.Player
             AbalarAgora(8f, MotivoDaMente.Matou);
         }
 
+        // os zumbis à vista agora (a menos de SustoVisto, na frente dele, sem parede no meio); devolve quantos apareceram já
+        // colados (a menos de SustoPerto) sem estar à vista no passo de antes
+        int ZumbisQueApareceram(ZombieManager zm, Vector3 pes)
+        {
+            _vistosAgora.Clear();
+            int novos = 0;
+            if (zm != null)
+            {
+                Vector3 olho = pes + Vector3.up * 1.6f, frente = transform.forward;
+                frente.y = 0f;
+                foreach (var z in zm.Ativos)
+                {
+                    if (z == null || z.Morto) continue;
+                    Vector3 d = z.transform.position - pes;
+                    float d2 = d.sqrMagnitude;
+                    if (d2 > SustoVisto * SustoVisto) continue;
+                    d.y = 0f;
+                    // na frente (uns 140° de vista) ou encostado, e sem parede no meio
+                    bool naFrente = d2 < 1.2f * 1.2f || Vector3.Angle(frente, d) < 70f;
+                    if (!naFrente || Physics.Linecast(olho, z.transform.position + Vector3.up * 1.2f, MascaraDaVista, QueryTriggerInteraction.Ignore)) continue;
+                    _vistosAgora.Add(z);
+                    if (d2 < SustoPerto * SustoPerto && !_vistosAntes.Contains(z)) novos++;
+                }
+            }
+            (_vistosAntes, _vistosAgora) = (_vistosAgora, _vistosAntes);
+            return novos;
+        }
+
         // o raio (em cada máquina; aqui, no anfitrião): perto assusta, em cima de alguém mais
         void AoCairUmRaio(Raio r)
         {
             if (!IsServer || !IsSpawned || r.tipo == 0) return;
-            if ((r.ponto - transform.position).sqrMagnitude > 35f * 35f) return;
+            if ((r.ponto - transform.position).sqrMagnitude > SustoDoRaio * SustoDoRaio) return;
             AbalarAgora(r.tipo >= 2 ? 10f : 5f, MotivoDaMente.Susto);
         }
 

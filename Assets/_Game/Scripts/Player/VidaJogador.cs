@@ -263,6 +263,7 @@ namespace ZombieCityCleaner.Player
                 AtualizarDesmaio();
                 AtualizarSono();   // a etapa 3 da mente: dormir, acordar e a noite passando
                 AtualizarFolego(Time.deltaTime);   // a água (06/11/2026): o fôlego e o afogamento
+                if (_inventario != null) _inventario.AtualizarOMolhado(Time.deltaTime, MotivosDaMente.Value, SentadoNaAgua);   // a roupa molhada (12/11/2026)
                 AtualizarEnjoo(Time.deltaTime);   // o peixe cru que caiu mal (07/11/2026)
             }
         }

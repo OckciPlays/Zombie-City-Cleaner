@@ -67,14 +67,28 @@ namespace ZombieCityCleaner.EditorTools
         /// Os braços de primeira pessoa de um modelo (na ordem de Itens.Modelos: as armas, a lata e a garrafa; depois, os
         /// punhos da mão vazia, Itens.Punhos, e a mão com o taco de sinuca, Itens.TacoFP).
         /// </summary>
-        public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ArquivoFP(modelo)}.fbx";
+        public static string FbxFP(int modelo) => $"{Arte}/Jogador_FP_{Itens.ArquivoDosBracosFP(modelo)}.fbx";
         /// <summary>A malha avulsa de um modelo: Arma_&lt;nome&gt; ou Item_&lt;nome&gt; (origem onde a mão segura, topo em +Y).</summary>
         public static string MalhaDo(int modelo) => $"{Malhas}/{(modelo < Armas.Quantas ? "Arma" : "Item")}_{Itens.Modelos[modelo]}.asset";
-        // (as armas de sucata, 09/11/2026, usam os controladores da real)
+        // (as armas de sucata, 09/11/2026, usam os controladores da real; o rifle de sucata com os braços próprios, 11/11/2026,
+        // o dele: Armas.BracosFP)
         public static string ControladorFPDa(int modelo)
         {
-            if (modelo >= 0 && modelo < Armas.Quantas) modelo = (int)Armas.Real((TipoDeArma)modelo);
-            return modelo == 0 ? ControladorFP : $"{Arte}/Jogador_FP_{Itens.ModeloFP(modelo)}.overrideController";
+            string nome = modelo >= 0 && modelo < Armas.Quantas ? Armas.BracosFP((TipoDeArma)modelo) : Itens.ModeloFP(modelo);
+            return nome == Armas.Modelos[0] ? ControladorFP : $"{Arte}/Jogador_FP_{nome}.overrideController";
+        }
+        /// <summary>Uma arma de sucata com os braços de primeira pessoa próprios, fora os da real (o rifle de sucata, 11/11/2026).</summary>
+        public static bool BracosProprios(int arma) =>
+            arma >= 0 && arma < Armas.Quantas && Armas.BracosFP((TipoDeArma)arma) != Armas.Modelos[(int)Armas.Real((TipoDeArma)arma)];
+        /// <summary>
+        /// Os braços próprios de uma arma de sucata: a importação do FBX (a mesma dos outros braços) e o override do controlador
+        /// dos braços (os clipes dele, com os mesmos nomes). O corpo continua o da real.
+        /// </summary>
+        internal static void PrepararBracosProprios(int arma)
+        {
+            if (!BracosProprios(arma)) return;
+            ImportarFP(FbxFP(arma));
+            MontarOverride(ControladorFP, FbxFP(0), FbxFP(arma), ClipesFP, c => c, ControladorFPDa(arma));
         }
         public static string ControladorTPDa(int arma)
         {
@@ -115,7 +129,8 @@ namespace ZombieCityCleaner.EditorTools
             if (!File.Exists(FbxLoot)) return;
             var nomes = AssetDatabase.LoadAllAssetsAtPath(FbxLoot).OfType<Mesh>().Select(m => m.name).ToList();
             for (int k = 0; k < Itens.QuantosLoots; k++)
-                if (nomes.Any(n => n.StartsWith(Itens.ModeloDoLoot(k) + "_"))) Juntar(FbxLoot, Itens.ModeloDoLoot(k) + "_", MalhaDoLoot(k));
+                if (System.Array.IndexOf(ItensDaCaca.Todos, Itens.DoLoot(k).item) >= 0) continue;   // a caça e o bagre: caixinhas feitas no Play
+                else if (nomes.Any(n => n.StartsWith(Itens.ModeloDoLoot(k) + "_"))) Juntar(FbxLoot, Itens.ModeloDoLoot(k) + "_", MalhaDoLoot(k));
                 else if (!JuntarDaSucata(Itens.ModeloDoLoot(k), MalhaDoLoot(k)))
                     Debug.LogWarning($"O {Itens.ModeloDoLoot(k)} não está no Loot.fbx (rode o Blender/loot.py).");
             MontagemDoSaque.JuntarMontadas();
@@ -324,8 +339,13 @@ namespace ZombieCityCleaner.EditorTools
             PrepararPersonagens();
             for (int i = 1; i < Itens.QuantosModelos; i++)
             {
-                // as de sucata (09/11/2026) usam os controladores da real (ControladorFPDa e ControladorTPDa)
-                if (i < Armas.Quantas && Armas.DeSucata((TipoDeArma)i)) continue;
+                // as de sucata (09/11/2026) usam os controladores da real (ControladorFPDa e ControladorTPDa); o rifle de sucata com
+                // os braços próprios (11/11/2026), o override dos braços dele
+                if (i < Armas.Quantas && Armas.DeSucata((TipoDeArma)i))
+                {
+                    if (BracosProprios(i)) MontarOverride(ControladorFP, FbxFP(0), FbxFP(i), ClipesFP, c => c, ControladorFPDa(i));
+                    continue;
+                }
                 if (Itens.ModeloBranco(i))
                 {
                     // as armas brancas (31/10/2026, o básico): os braços dos punhos com ela na mão; no lugar do tiro, o golpe

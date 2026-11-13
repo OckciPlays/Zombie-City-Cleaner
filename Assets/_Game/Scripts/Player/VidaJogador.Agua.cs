@@ -26,16 +26,23 @@ namespace ZombieCityCleaner.Player
         float _folego = 100f, _afogando;
         PassageiroDoCarro _passageiroNaAgua;
 
+        /// <summary>Sentado no carro ou no caiaque (a água não o pega).</summary>
+        bool SentadoNaAgua
+        {
+            get
+            {
+                if (_passageiroNaAgua == null) _passageiroNaAgua = GetComponent<PassageiroDoCarro>();
+                return (_passageiroNaAgua != null && _passageiroNaAgua.NoCarro) || PassageiroDoCaiaque.Sentado(this);
+            }
+        }
+
         // no anfitrião, a cada quadro
         void AtualizarFolego(float dt)
         {
-            if (_passageiroNaAgua == null) _passageiroNaAgua = GetComponent<PassageiroDoCarro>();
-            bool sentado = (_passageiroNaAgua != null && _passageiroNaAgua.NoCarro) || PassageiroDoCaiaque.Sentado(this);
+            bool sentado = SentadoNaAgua;
             bool embaixo = !Caido.Value && !sentado && Agua.Submerso(transform.position);
-            bool rapido = !embaixo && !Caido.Value && !sentado && _rede != null && _rede.Velocidade > VelocidadeDoNadoRapido
-                          && Agua.Nivel(transform.position, out float nivel) && nivel - transform.position.y > 1.05f;
+            // (o nado rápido gasta o vigor do dono desde 12/11/2026, e não mais o fôlego: o VigorDoJogador)
             if (embaixo) _folego = Mathf.Max(0f, _folego - 100f / SegundosDeFolego * dt);
-            else if (rapido) _folego = Mathf.Max(0f, _folego - 100f / SegundosDeNadoRapido * dt);
             else _folego = Mathf.Min(100f, _folego + 25f * dt);
             if (embaixo && _folego <= 0f)
             {

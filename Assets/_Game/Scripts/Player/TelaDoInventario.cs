@@ -57,6 +57,9 @@ namespace ZombieCityCleaner.Player
         static readonly Rect AreaDoNome = new Rect(840, 58, 302, 40);
         static readonly Rect AreaDaFoto = new Rect(840, 106, 302, 250);
         static readonly Rect AreaDosDetalhes = new Rect(840, 364, 302, 208);
+        // a receita escolhida (11/11/2026): a foto menor e os detalhes maiores (os quadrados do que ela pede)
+        static readonly Rect AreaDaFotoDaReceita = new Rect(840, 106, 302, 124);
+        static readonly Rect AreaDosDetalhesDaReceita = new Rect(840, 238, 302, 334);
         // (06/11/2026: as 4 abas, com a HABILIDADES, cabem até a coluna da direita)
         static readonly Rect AbaMochila = new Rect(336, 14, 112, 36), AbaCriar = new Rect(454, 14, 100, 36);
         static readonly Rect BotaoFechar = new Rect(W - 52, 12, 36, 36);
@@ -140,6 +143,17 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>Abre a tela na aba Criar (a bancada).</summary>
+        /// <summary>Para o teste: a aba Criar com a receita <paramref name="indice"/> (de <see cref="Receitas.Todas"/>) escolhida e à vista.</summary>
+        public void EscolherReceitaDeTeste(int indice)
+        {
+            _aba = Aba.Criar;
+            _melhorias = false;
+            _receita = Mathf.Clamp(indice, -1, Receitas.Todas.Length - 1);
+            _escolhido = 0;
+            _equipEscolhido = Item.Nada;
+            _rolagem = Mathf.Clamp(_receita - 2, 0, Mathf.Max(0, Receitas.Todas.Length - ReceitasNaTela));
+        }
+
         public void AbrirNaAbaCriar()
         {
             if (rede == null || !rede.IsOwner || MenuOnline.Aberto) return;
@@ -181,6 +195,8 @@ namespace ZombieCityCleaner.Player
         {
             _retrato?.Destruir();
             _retrato = null;
+            _imagemDoCorpo?.Destruir();
+            _imagemDoCorpo = null;
         }
 
         static float Escala() => Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
@@ -204,6 +220,7 @@ namespace ZombieCityCleaner.Player
             ConferirEstante();
             if (!Aberta) return;
             _retrato?.Atualizar();
+            AtualizarImagemDoCorpo();   // (a foto da aba CORPO, só quando o personagem muda: 11/11/2026)
             // arrastando, o botão solto fora da janela do jogo não chega ao OnGUI: solto há uns quadros, solta onde o
             // mouse estava (antes disso, o soltar de verdade ainda pode chegar)
             var mouse = Mouse.current;
@@ -355,7 +372,7 @@ namespace ZombieCityCleaner.Player
             var e = Event.current;
             _ultimoMouse = e.mousePosition;
             if (!MenuDoDesenvolvedor.Area.Contains(e.mousePosition)) Processar(e);
-            if (e.type == EventType.Repaint) Desenhar(e.mousePosition);
+            if (e.type == EventType.Repaint) Desenhar(MouseDeTeste.x >= 0f ? MouseDeTeste : e.mousePosition);
         }
 
         /// <summary>
@@ -888,7 +905,8 @@ namespace ZombieCityCleaner.Player
                 {
                     _sobMouse = it.id;
                     _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.ComUsos(it.item) ? $" ({TextoDosUsos(Itens.UsosQueSobram(it.desgaste))})"
-                        : Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)" : "");
+                        : Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)"
+                        : Itens.EhRoupa(it.item) && it.desgaste > 0 ? $" (molhada: {it.desgaste}%)" : "");
                 }
             }
             // o tamanho da grade: os bolsos ou a mochila vestida
@@ -1078,7 +1096,7 @@ namespace ZombieCityCleaner.Player
             }
             var todas = Receitas.Todas;
             _rolagem = Mathf.Clamp(_rolagem, 0, Mathf.Max(0, todas.Length - ReceitasNaTela));
-            var linha = new GUIStyle(_pequeno) { wordWrap = false };
+            var linha = new GUIStyle(_pequeno) { wordWrap = false, alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold };
             for (int i = 0; i < ReceitasNaTela && i + _rolagem < todas.Length; i++)
             {
                 int k = i + _rolagem;
@@ -1093,33 +1111,65 @@ namespace ZombieCityCleaner.Player
                 if (icone != null) GUI.DrawTexture(Encolher(caixa, 2 * u), icone, ScaleMode.ScaleToFit);
                 float x = caixa.xMax + 8 * u;
                 GUI.Label(new Rect(x, l.y + 2 * u, l.width, 20 * u), Maiuscula(Itens.Nome(rec.resultado)) + (rec.qtd > 1 ? $" ×{rec.qtd}" : ""), new GUIStyle(_texto) { fontStyle = FontStyle.Bold, wordWrap = false });
-                // o que gasta (verde o que já tem, vermelho o que falta; quanto tem, nos detalhes), a ferramenta e a
-                // bancada, até o botão (o que não couber vira "...")
+                // o que pede, em miniatura (11/11/2026, como os quadrados dos detalhes): o ícone com "tem/precisa" (vermelho
+                // falta, verde dá), o combustível, a ferramenta e a habilidade (o ícone com a moldura da cor) e onde, até o
+                // botão (o que não couber vira "..."); o mouse em cima dá o nome
                 var b = BotaoDeCriar(l);
-                float y = l.y + 23 * u, limite = b.x - 8 * u;
-                var partes = new List<(string texto, bool ok)>();
-                foreach (var g in inventario.GastaDe(rec)) partes.Add((Itens.ComNumero(g.item, g.qtd), inventario.Quantos(g.item) >= g.qtd));
-                if (rec.combustivel > 0) partes.Add(($"{rec.combustivel} combustíve{(rec.combustivel > 1 ? "is" : "l")}", inventario.CargasDeCombustivel >= rec.combustivel));   // (o fogo, 11/11/2026)
-                if (rec.ferramenta != Item.Nada) partes.Add(("+ " + Itens.Nome(rec.ferramenta), inventario.Quantos(rec.ferramenta) > 0));
-                if (rec.habilidade >= 0) partes.Insert(0, ("[" + Habilidades.Nome((Habilidade)rec.habilidade) + (rec.nivel > 1 ? $" {rec.nivel}" : "") + "]",
-                                                           Habilidades.Pontos(rede, (Habilidade)rec.habilidade) >= rec.nivel));
-                if (rec.oficina) partes.Add(("na mesa de oficina", Bancada.PertoDaOficina(inventario.transform.position)));
-                else if (rec.bancada) partes.Add(("na bancada", Bancada.Perto(inventario.transform.position)));
-                else if (rec.fogo) partes.Add(("perto do fogo", InventarioJogador.FogoPerto(inventario.transform.position)));
-                float reticencias = linha.CalcSize(new GUIContent("...")).x;
-                for (int p = 0; p < partes.Count; p++)
+                float y = l.y + 23 * u, limite = b.x - 8 * u, li = 20 * u;
+                _miudos.Clear();
+                foreach (var g in inventario.GastaDe(rec))
                 {
-                    float largura = linha.CalcSize(new GUIContent(partes[p].texto)).x;
-                    bool ultima = p == partes.Count - 1;
+                    int tem = inventario.Quantos(g.item);
+                    _miudos.Add((inventario.IconeDe(g.item), FundoDo(g.item), $"{tem}/{g.qtd}", tem >= g.qtd, $"{Maiuscula(Itens.Nome(g.item))}: tem {tem}, gasta {g.qtd}"));
+                }
+                if (rec.combustivel > 0)   // (o fogo, 11/11/2026)
+                {
+                    int cargas = inventario.CargasDeCombustivel;
+                    var qual = inventario.Quantos(Item.Desinfetante) == 0 && cargas > 0 ? Item.Galao : Item.Desinfetante;
+                    _miudos.Add((inventario.IconeDe(qual), FundoDo(qual), $"{cargas}/{rec.combustivel}", cargas >= rec.combustivel,
+                                 $"Combustível: 1 álcool ou {FogoDoJogador.LitrosPorCarga:0.#} L de gasolina (tem {cargas}, gasta {rec.combustivel})"));
+                }
+                if (rec.ferramenta != Item.Nada)
+                    _miudos.Add((inventario.IconeDe(rec.ferramenta), FundoDo(rec.ferramenta), null, inventario.Quantos(rec.ferramenta) > 0, $"{Maiuscula(Itens.Nome(rec.ferramenta))}: a ferramenta (não gasta)"));
+                if (rec.habilidade >= 0)
+                {
+                    var h = (Habilidade)rec.habilidade;
+                    bool sabe = Habilidades.Pontos(rede, h) >= rec.nivel;
+                    _miudos.Add((IconeDaHabilidade(h, !sabe), new Color(0f, 0f, 0f, 0.35f), null, sabe, $"Habilidade: {Habilidades.Nome(h)}{(rec.nivel > 1 ? $", nível {rec.nivel}" : "")}"));
+                }
+                if (rec.oficina) _miudos.Add((null, default, "oficina", Bancada.PertoDaOficina(inventario.transform.position), "Na mesa de oficina (no bunker)"));
+                else if (rec.bancada) _miudos.Add((null, default, "bancada", Bancada.Perto(inventario.transform.position), "Perto de uma bancada"));
+                else if (rec.fogo) _miudos.Add((null, default, "fogo", InventarioJogador.FogoPerto(inventario.transform.position), "Perto de uma fogueira acesa"));
+                float reticencias = linha.CalcSize(new GUIContent("...")).x;
+                for (int p = 0; p < _miudos.Count; p++)
+                {
+                    var m = _miudos[p];
+                    float largura = (m.icone != null ? li : 0f) + (m.texto != null ? (m.icone != null ? 3 * u : 0f) + linha.CalcSize(new GUIContent(m.texto)).x : 0f);
+                    bool ultima = p == _miudos.Count - 1;
                     // a última precisa caber; as outras, com lugar para as reticências depois
                     if (x + largura + (ultima ? 0f : 10 * u + reticencias) > limite && !(ultima && x + largura <= limite))
                     {
                         PorCor(linha, TextoApagado);
-                        GUI.Label(new Rect(x, y, reticencias + 4 * u, 18 * u), "...", linha);
+                        GUI.Label(new Rect(x, y, reticencias + 4 * u, li), "...", linha);
                         break;
                     }
-                    PorCor(linha, partes[p].ok ? Bom : Ruim);
-                    GUI.Label(new Rect(x, y, largura + 2 * u, 18 * u), partes[p].texto, linha);
+                    var area = new Rect(x, y, largura, li);
+                    if (m.icone != null)
+                    {
+                        // um quadradinho como os da grade (o fundo da espécie do item); a ferramenta e a habilidade, que não
+                        // têm número, com a moldura da cor
+                        var ri = new Rect(x, y, li, li);
+                        Ret(ri, m.fundo);
+                        Moldura(ri, Mathf.Max(1f, Mathf.Round(u)), m.texto == null ? (m.ok ? NumeroDa : NumeroFalta) : new Color(1f, 1f, 1f, 0.14f));
+                        GUI.DrawTexture(Encolher(ri, 1 * u), m.icone, ScaleMode.ScaleToFit);
+                    }
+                    if (m.texto != null)
+                    {
+                        PorCor(linha, m.ok ? NumeroDa : NumeroFalta);
+                        float xt = x + (m.icone != null ? li + 3 * u : 0f);
+                        GUI.Label(new Rect(xt, y, area.xMax - xt + 2 * u, li), m.texto, linha);
+                    }
+                    if (area.Contains(mouse)) _dicaTexto = m.dica;
                     x += largura + 10 * u;
                 }
                 // o botão
@@ -1144,55 +1194,210 @@ namespace ZombieCityCleaner.Player
             Aviso(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 26, AreaDasReceitas.width, 20));
         }
 
-        // os detalhes da receita escolhida: o que sai, o resumo, o que gasta (e quanto tem), a ferramenta e onde
+        // os detalhes da receita escolhida (refeitos a pedido, 11/11/2026: o resumo encavalava na linha de baixo e o
+        // combustível passava por baixo do "falta"): a foto do que sai (menor), o resumo com a altura medida, o que ela pede
+        // em quadrados como os da grade (o ícone, "tem/precisa" no canto: vermelho falta, verde dá; o combustível; a
+        // ferramenta, que não gasta) e, embaixo, onde e a habilidade, com a marca verde ou vermelha
         void DetalhesDaReceita(Receita rec, Rect nome, Rect foto, Rect det)
         {
             float u = _u;
+            var mouse = MouseNaTela;
             GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(rec.resultado)) + (rec.qtd > 1 ? $" ×{rec.qtd}" : ""), _nome);
             var imagem = inventario.FotoDe(rec.resultado);
             if (imagem == null) imagem = inventario.IconeDe(rec.resultado);
-            if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
-            float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;
-            GUI.Label(new Rect(x, y, w, 20 * u), Itens.Resumo(rec.resultado), _texto);
-            y += 30 * u;
+            if (imagem != null) GUI.DrawTexture(Encolher(foto, 8 * u), imagem, ScaleMode.ScaleToFit);
+            float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u;
+
+            // o resumo: até 3 linhas na letra do texto; mais que isso, na pequena (e o que passar, cortado)
+            _conteudoDaReceita.text = Itens.Resumo(rec.resultado);
+            var resumo = _texto;
+            float alto = resumo.CalcHeight(_conteudoDaReceita, w);
+            if (alto > resumo.lineHeight * 3.2f)
+            {
+                resumo = _pequeno;
+                alto = Mathf.Min(resumo.CalcHeight(_conteudoDaReceita, w), resumo.lineHeight * 4.2f);
+            }
+            GUI.Label(new Rect(x, y, w, alto), _conteudoDaReceita, resumo);
+            y += alto + 10 * u;
+
+            // os quadrados: o que gasta, o combustível e a ferramenta
+            _pedidos.Clear();
             foreach (var g in inventario.GastaDe(rec))
             {
                 int tem = inventario.Quantos(g.item);
-                GUI.Label(new Rect(x, y, w, linha), $"Gasta {Itens.ComNumero(g.item, g.qtd)}", _texto);
-                var v = new GUIStyle(_texto) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold };
-                PorCor(v, tem >= g.qtd ? Bom : Ruim);
-                GUI.Label(new Rect(x, y, w, linha), $"tem {tem}", v);
-                y += linha;
+                string n = Maiuscula(Itens.Nome(g.item));
+                _pedidos.Add((inventario.IconeDe(g.item), FundoDo(g.item), $"{tem}/{g.qtd}", tem >= g.qtd, n, null,
+                              $"{n}: tem {tem}, gasta {g.qtd}"));
             }
             if (rec.combustivel > 0)
             {
-                // o fogo (11/11/2026): 1 álcool ou meio litro de gasolina de um galão
-                GUI.Label(new Rect(x, y, w, linha), "Gasta " + InventarioJogador.NomeDosCombustiveis(rec.combustivel), _texto);
-                var v = new GUIStyle(_texto) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold };
                 int cargas = inventario.CargasDeCombustivel;
-                PorCor(v, cargas >= rec.combustivel ? Bom : Ruim);
-                GUI.Label(new Rect(x, y, w, linha), cargas >= rec.combustivel ? (rec.combustivel > 1 ? $"tem {cargas}" : "tem") : (rec.combustivel > 1 ? $"tem {cargas}" : "falta"), v);
-                y += linha;
+                // o ícone do álcool; só com a gasolina de um galão, o do galão
+                var qual = inventario.Quantos(Item.Desinfetante) == 0 && cargas > 0 ? Item.Galao : Item.Desinfetante;
+                _pedidos.Add((inventario.IconeDe(qual), FundoDo(qual), $"{cargas}/{rec.combustivel}", cargas >= rec.combustivel, "Combustível", null,
+                              $"Combustível: {(rec.combustivel > 1 ? $"{rec.combustivel}, cada um " : "")}1 álcool ou {FogoDoJogador.LitrosPorCarga:0.#} L de gasolina (tem {cargas})"));
             }
             if (rec.ferramenta != Item.Nada)
             {
-                GUI.Label(new Rect(x, y, w, linha), $"Ferramenta (não gasta): {Itens.Nome(rec.ferramenta)}", _texto);
-                y += linha;
+                bool tem = inventario.Quantos(rec.ferramenta) > 0;
+                string n = Maiuscula(Itens.Nome(rec.ferramenta));
+                _pedidos.Add((inventario.IconeDe(rec.ferramenta), FundoDo(rec.ferramenta), null, tem, n, "NÃO GASTA",
+                              $"{n}: a ferramenta, não gasta ({(tem ? "tem" : "não tem")})"));
             }
-            GUI.Label(new Rect(x, y, w, linha), rec.oficina ? "Só na mesa de oficina (no bunker)" : rec.bancada ? "Só perto de uma bancada" : rec.fogo ? "Só perto de uma fogueira acesa" : "Em qualquer lugar", _texto);
-            y += linha;
+            int quantos = _pedidos.Count;
+            _quadradosDosPedidos.Clear();
+            if (quantos > 0)
+            {
+                int porLinha = quantos <= 5 ? quantos : Mathf.CeilToInt(quantos / 2f);
+                float vao = 8 * u, lado = Mathf.Min(56 * u, (w - (porLinha - 1) * vao) / porLinha), passoY = lado + 20 * u;
+                for (int i = 0; i < quantos; i++)
+                {
+                    int col = i % porLinha, lin = i / porLinha;
+                    var p = _pedidos[i];
+                    var q = new Rect(x + col * (lado + vao), y + lin * passoY, lado, lado);
+                    _quadradosDosPedidos.Add(q);
+                    QuadradoDoPedido(q, p.icone, p.fundo, p.numero, p.ok, p.nome, p.topo, p.dica, mouse);
+                }
+                y += Mathf.CeilToInt(quantos / (float)porLinha) * passoY + 6 * u;
+            }
+
+            // onde e a habilidade, com a marca (verde: já dá; vermelha: falta)
+            bool lugarOk = rec.oficina ? Bancada.PertoDaOficina(inventario.transform.position)
+                         : rec.bancada ? Bancada.Perto(inventario.transform.position)
+                         : !rec.fogo || InventarioJogador.FogoPerto(inventario.transform.position);
+            string lugar = rec.oficina ? "Na mesa de oficina (no bunker)" : rec.bancada ? "Perto de uma bancada" : rec.fogo ? "Perto de uma fogueira acesa" : "Em qualquer lugar";
+            LinhaComMarca(new Rect(x, y, w, 22 * u), lugar, lugarOk, null);
+            y += 24 * u;
             if (rec.habilidade >= 0)
             {
-                GUI.Label(new Rect(x, y, w, linha), $"Habilidade: {Habilidades.Nome((Habilidade)rec.habilidade)}{(rec.nivel > 1 ? $" (nível {rec.nivel})" : "")} ({Habilidades.Nome(Habilidades.RamoDe((Habilidade)rec.habilidade))})", _texto);
-                y += linha;
+                var h = (Habilidade)rec.habilidade;
+                bool sabe = Habilidades.Pontos(rede, h) >= rec.nivel;
+                string texto = $"{Habilidades.Nome(h)}{(rec.nivel > 1 ? $", nível {rec.nivel}" : "")} ({Habilidades.Nome(Habilidades.RamoDe(h))})";
+                var linha = new Rect(x, y, w, 22 * u);
+                LinhaComMarca(linha, texto, sabe, IconeDaHabilidade(h, !sabe));
+                if (linha.Contains(mouse) && !sabe) _dicaTexto = "Aprenda na aba HABILIDADES (K)";
             }
-            y += 4 * u;
-            if (!inventario.PodeCriar(rec, out var falta))
+        }
+
+        // os quadrados dos detalhes da receita (refeitos a cada desenho)
+        readonly List<(Texture icone, Color fundo, string numero, bool ok, string nome, string topo, string dica)> _pedidos =
+            new List<(Texture, Color, string, bool, string, string, string)>();
+        readonly GUIContent _conteudoDaReceita = new GUIContent();
+        readonly List<Rect> _quadradosDosPedidos = new List<Rect>();
+
+        /// <summary>Para o teste: o meio do quadrado <paramref name="i"/> dos detalhes da receita (já desenhados); (-1, -1): não há.</summary>
+        public Vector2 PontoDoPedidoDeTeste(int i) => i >= 0 && i < _quadradosDosPedidos.Count ? _quadradosDosPedidos[i].center : new Vector2(-1f, -1f);
+        // as miniaturas de cada linha da lista das receitas
+        readonly List<(Texture icone, Color fundo, string texto, bool ok, string dica)> _miudos = new List<(Texture, Color, string, bool, string)>();
+        GUIStyle _numeroDoPedido, _nomeDoPedido, _topoDoPedido;
+        // o número do que falta e do que dá: mais fortes que o Bom e o Ruim do texto (ficam numa faixa escura)
+        static readonly Color NumeroFalta = new Color(1f, 0.36f, 0.3f), NumeroDa = new Color(0.46f, 0.95f, 0.42f);
+
+        /// <summary>O mouse da tela (o de teste, se houver: <see cref="MouseDeTeste"/>).</summary>
+        Vector2 MouseNaTela => MouseDeTeste.x >= 0f ? MouseDeTeste : _ultimoMouse;
+
+        // um quadrado do que a receita pede: o fundo e o ícone como na grade, o "tem/precisa" grande no canto de baixo
+        // (vermelho falta, verde dá), a moldura vermelha no que falta, a faixa de cima ("NÃO GASTA", a ferramenta) e o nome
+        // curto embaixo; o mouse em cima mostra a dica com o nome inteiro
+        void QuadradoDoPedido(Rect r, Texture icone, Color fundo, string numero, bool ok, string nome, string topo, string dica, Vector2 mouse)
+        {
+            float u = _u;
+            if (_numeroDoPedido == null || _numeroDoPedido.fontSize != Mathf.RoundToInt(15 * u))
             {
-                var f = new GUIStyle(_texto);
-                PorCor(f, Ruim);
-                GUI.Label(new Rect(x, y, w, 40 * u), falta, f);
+                _numeroDoPedido = new GUIStyle(_titulo) { fontSize = Mathf.RoundToInt(15 * u), alignment = TextAnchor.MiddleCenter, wordWrap = false };
+                _nomeDoPedido = new GUIStyle(_pequeno) { fontSize = Mathf.RoundToInt(11 * u), alignment = TextAnchor.UpperCenter, wordWrap = false, clipping = TextClipping.Overflow };
+                _topoDoPedido = new GUIStyle(_pequeno) { fontSize = Mathf.RoundToInt(9 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = false };
             }
+            bool sob = r.Contains(mouse);
+            Ret(r, fundo);
+            if (sob) Ret(r, new Color(1f, 1f, 1f, 0.08f));
+            if (icone != null) GUI.DrawTexture(Encolher(r, 4 * u), icone, ScaleMode.ScaleToFit);
+            if (topo != null)
+            {
+                var faixa = new Rect(r.x, r.y, r.width, 13 * u);
+                Ret(faixa, new Color(0f, 0f, 0f, 0.55f));
+                PorCor(_topoDoPedido, CorDoTexto);
+                GUI.Label(faixa, topo, _topoDoPedido);
+            }
+            if (numero != null)
+            {
+                var tamanho = _numeroDoPedido.CalcSize(new GUIContent(numero));
+                var faixa = new Rect(r.xMax - tamanho.x - 8 * u, r.yMax - tamanho.y - 2 * u, tamanho.x + 8 * u, tamanho.y + 2 * u);
+                Ret(faixa, new Color(0f, 0f, 0f, 0.62f));
+                PorCor(_numeroDoPedido, ok ? NumeroDa : NumeroFalta);
+                GUI.Label(faixa, numero, _numeroDoPedido);
+            }
+            // a moldura: vermelha no que falta, verde na ferramenta que tem, a da grade no resto
+            float b = Mathf.Max(1f, Mathf.Round((ok && topo == null ? 1 : 2) * u));
+            Moldura(r, b, !ok ? new Color(NumeroFalta.r, NumeroFalta.g, NumeroFalta.b, 0.9f) : topo != null ? new Color(NumeroDa.r, NumeroDa.g, NumeroDa.b, 0.85f) : new Color(1f, 1f, 1f, 0.14f));
+            if (sob) Moldura(r, Mathf.Max(1f, Mathf.Round(u)), new Color(1f, 1f, 1f, 0.35f));
+            PorCor(_nomeDoPedido, TextoApagado);
+            GUI.Label(new Rect(r.x - 3 * u, r.yMax + 2 * u, r.width + 6 * u, 16 * u), Cortar(nome, _nomeDoPedido, r.width + 6 * u), _nomeDoPedido);
+            if (sob) _dicaTexto = dica;
+        }
+
+        // uma linha com a marca na frente (✓ verde ou ✗ vermelha, desenhadas: a letra do jogo não tem esses sinais), o
+        // ícone (a habilidade) e o texto
+        void LinhaComMarca(Rect r, string texto, bool ok, Texture icone)
+        {
+            float u = _u, lado = 14 * u;
+            Marca(new Rect(r.x + 1 * u, r.y + (r.height - lado) / 2f, lado, lado), ok);
+            float x = r.x + lado + 8 * u;
+            if (icone != null)
+            {
+                float li = r.height;
+                GUI.DrawTexture(new Rect(x, r.y, li, li), icone, ScaleMode.ScaleToFit);
+                x += li + 5 * u;
+            }
+            var est = new GUIStyle(_texto) { wordWrap = false, alignment = TextAnchor.MiddleLeft };
+            PorCor(est, ok ? CorDoTexto : Ruim);
+            GUI.Label(new Rect(x, r.y, r.xMax - x, r.height), Cortar(texto, est, r.xMax - x), est);
+        }
+
+        /// <summary>A marca de feito (✓) ou de falta (✗), desenhada com dois traços girados, no quadrado dado.</summary>
+        internal static void Marca(Rect r, bool ok)
+        {
+            if (Event.current == null || Event.current.type != EventType.Repaint) return;
+            var cor = ok ? NumeroDa : NumeroFalta;
+            float e = Mathf.Max(2f, r.width * 0.2f);
+            var antes = GUI.matrix;
+            if (ok)
+            {
+                // o traço curto (descendo para a direita) e o longo (subindo para a direita), juntos embaixo
+                var baixo = new Vector2(r.x + r.width * 0.4f, r.yMax - r.height * 0.18f);
+                Traco(baixo, new Vector2(r.x + r.width * 0.06f, r.y + r.height * 0.5f), e, cor);
+                Traco(baixo, new Vector2(r.xMax - r.width * 0.02f, r.y + r.height * 0.08f), e, cor);
+            }
+            else
+            {
+                Traco(new Vector2(r.x + r.width * 0.12f, r.y + r.height * 0.12f), new Vector2(r.xMax - r.width * 0.12f, r.yMax - r.height * 0.12f), e, cor);
+                Traco(new Vector2(r.xMax - r.width * 0.12f, r.y + r.height * 0.12f), new Vector2(r.x + r.width * 0.12f, r.yMax - r.height * 0.12f), e, cor);
+            }
+            GUI.matrix = antes;
+        }
+
+        // um traço de a até b, com a espessura dada (um retângulo girado)
+        static void Traco(Vector2 a, Vector2 b, float espessura, Color cor)
+        {
+            var antes = GUI.matrix;
+            var d = b - a;
+            float comprimento = d.magnitude + espessura * 0.5f, angulo = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+            var meio = (a + b) / 2f;
+            GUIUtility.RotateAroundPivot(angulo, meio);
+            Ret(new Rect(meio.x - comprimento / 2f, meio.y - espessura / 2f, comprimento, espessura), cor);
+            GUI.matrix = antes;
+        }
+
+        /// <summary>O texto cortado com "…" para caber na largura (no estilo dado).</summary>
+        internal static string Cortar(string s, GUIStyle estilo, float largura)
+        {
+            if (string.IsNullOrEmpty(s) || estilo.CalcSize(new GUIContent(s)).x <= largura) return s;
+            for (int n = s.Length - 1; n > 1; n--)
+            {
+                string t = s.Substring(0, n).TrimEnd() + "…";
+                if (estilo.CalcSize(new GUIContent(t)).x <= largura) return t;
+            }
+            return "…";
         }
 
         // as melhorias postas numa arma ("silenciador de garrafa PET (12 tiros) · mira de ferro ajustada"; a legenda da foto)
@@ -1236,6 +1441,12 @@ namespace ZombieCityCleaner.Player
             var nome = Em(AreaDoNome);
             var foto = Em(AreaDaFoto);
             var det = Em(AreaDosDetalhes);
+            // a receita (11/11/2026): a foto menor e os detalhes maiores, para os quadrados do que ela pede
+            if (_aba == Aba.Criar && _receita >= 0 && _receita < Receitas.Todas.Length && !Vestido(_equipEscolhido) && !RoupaEscolhida(out _) && !ProtecaoEscolhida(out _))
+            {
+                foto = Em(AreaDaFotoDaReceita);
+                det = Em(AreaDosDetalhesDaReceita);
+            }
             Ret(nome, Painel);
             Ret(foto, Painel);
             Ret(det, Painel);

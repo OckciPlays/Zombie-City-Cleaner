@@ -768,6 +768,8 @@ namespace ZombieCityCleaner.Player
             if (d.vida > 0f) GetComponent<VidaJogador>().Curar(d.vida);
             // o peixe cru (07/11/2026, a pedido: "pode fazer mal"): 40% de chance de cair mal (o enjoo, VidaJogador.Enjoo.cs)
             if (Itens.EhPeixeCru(item) && Random.value < VidaJogador.ChanceDoPeixeCru) GetComponent<VidaJogador>().EnjoarDoPeixeCru();
+            // a carne de caça crua (12/11/2026, a fauna): a mesma chance
+            else if (item == Item.CarneCrua && Random.value < VidaJogador.ChanceDoPeixeCru) GetComponent<VidaJogador>().EnjoarDaCarneCrua();
         }
 
         [Rpc(SendTo.Server)]
@@ -1589,7 +1591,7 @@ namespace ZombieCityCleaner.Player
             if (s >= 0) return iconesDaSinuca != null && s < iconesDaSinuca.Length ? iconesDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
             // (as melhorias das armas de sucata, 10/11/2026: do Resources/MelhoriasDaSucata, se o prefab ainda não tem)
-            if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length && iconesDeLoot[l] != null ? iconesDeLoot[l] : PecasDasMelhorias.IconeDo(item) ?? PecasDaProtecao.IconeDo(item) ?? ItensDoFogo.IconeDo(item) ?? ItensDasArmadilhas.IconeDo(item);
+            if (l >= 0) return iconesDeLoot != null && l < iconesDeLoot.Length && iconesDeLoot[l] != null ? iconesDeLoot[l] : PecasDasMelhorias.IconeDo(item) ?? PecasDaProtecao.IconeDo(item) ?? ItensDoFogo.IconeDo(item) ?? ItensDasArmadilhas.IconeDo(item) ?? ItensDaCaca.IconeDo(item);
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return iconesDePeca != null && p < iconesDePeca.Length ? iconesDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);
@@ -1605,7 +1607,7 @@ namespace ZombieCityCleaner.Player
             int s = Itens.IndiceDaSinuca(item);
             if (s >= 0) return fotosDaSinuca != null && s < fotosDaSinuca.Length ? fotosDaSinuca[s] : null;
             int l = Itens.IndiceDoLoot(item);
-            if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length && fotosDeLoot[l] != null ? fotosDeLoot[l] : PecasDasMelhorias.FotoDo(item) ?? PecasDaProtecao.FotoDo(item) ?? ItensDoFogo.FotoDo(item) ?? ItensDasArmadilhas.FotoDo(item);
+            if (l >= 0) return fotosDeLoot != null && l < fotosDeLoot.Length && fotosDeLoot[l] != null ? fotosDeLoot[l] : PecasDasMelhorias.FotoDo(item) ?? PecasDaProtecao.FotoDo(item) ?? ItensDoFogo.FotoDo(item) ?? ItensDasArmadilhas.FotoDo(item) ?? ItensDaCaca.FotoDo(item);
             int p = Itens.IndiceDaPeca(item);
             if (p >= 0) return fotosDePeca != null && p < fotosDePeca.Length ? fotosDePeca[p] : null;
             int c = Itens.IndiceDaMunicao(item);

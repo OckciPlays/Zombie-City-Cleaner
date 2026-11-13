@@ -1,12 +1,12 @@
 # Os ícones das habilidades (10/11/2026, a pedido: "uma imagem em cada nó", como no Dungeons & Developers): a aba
-# HABILIDADES (tecla K) tem 74 nós; cada um ganha um PNG de 256 x 256 com um objeto (ou uma cena pequena) em 3D
+# HABILIDADES (tecla K) tem 79 nós; cada um ganha um PNG de 256 x 256 com um objeto (ou uma cena pequena) em 3D
 # low-poly, nas cores da Paleta.png, visto de 3/4 pela mesma câmera, com a luz quente na frente e um contorno de luz
 # na cor da área (Combate laranja, Resistência verde, Sobrevivência roxo). O fundo é escuro, neutro, com vinheta.
 # A moldura e o brilho de "aprendida" são da tela do jogo, não do ícone.
 #
 # Como rodar (Blender 5.x, em segundo plano):
 #   blender -b --factory-startup --disable-autoexec --python Blender/icones_habilidades.py -- --saida <pasta> [g1 a2 ...]
-#   (sem ids, faz os 74 em ~1 min, no EEVEE; os PNG saem como Hab_<id>.png, opacos, com o fundo já pintado)
+#   (sem ids, faz os 79 em ~1 min, no EEVEE; os PNG saem como Hab_<id>.png, opacos, com o fundo já pintado)
 # As folhas de conferência (uma por área, na posição da árvore, com o nome embaixo; e a prova em 64 x 64), com o
 # Python do sistema e o Pillow:
 #   python Blender/icones_habilidades.py folhas --saida <pasta>
@@ -1721,6 +1721,135 @@ def ic_q5():  # Mestre pescador: o dourado
         faisca((x, -0.25, z), t, cor="amarelo", forca=3.0)
 
 
+# SOBREVIVÊNCIA: o Atleta (o vigor)
+
+def ic_v1():  # Pulmão forte: a bexiga cheia de ar, quase estourando
+    bexiga = mat("vermelho", rugo=0.3, espec=0.8)
+    revolucao([(0.0, -0.56), (0.07, -0.53), (0.27, -0.38), (0.44, -0.14), (0.5, 0.1), (0.47, 0.34), (0.36, 0.52),
+               (0.19, 0.63), (0.0, 0.66)], bexiga, lados=14)
+    cilindro(0.04, 0.08, (0, 0, -0.59), m=bexiga, lados=8, r2=0.07)
+    toro(0.06, 0.03, (0, 0, -0.64), m=mat("vermelho_escuro", rugo=0.5), seg=10, lados=4)
+    tubo([(0, 0, -0.66), (0.06, -0.02, -0.78), (-0.05, -0.03, -0.9), (0.05, -0.03, -1.02), (0.0, -0.02, -1.12)],
+         0.014, mat("branco", rugo=0.6), lados=4)
+    # o brilho do plástico esticado
+    esfera(1.0, (-0.2, -0.45, 0.28), mat("branco", rugo=0.2, brilho=1.2), sub=1, escala=(0.05, 0.03, 0.11),
+           giro=(0, -35, 0))
+    # os riscos de cheio: a bexiga empurrando o ar para fora
+    ar = mat("azul_claro", brilho=1.1)
+    for a in (150, 180, 210, 330, 0, 30):
+        c, sn = math.cos(math.radians(a)), math.sin(math.radians(a))
+        perfil([(0.62 * c - 0.03 * sn, 0.08 + 0.62 * sn + 0.03 * c), (0.62 * c + 0.03 * sn, 0.08 + 0.62 * sn - 0.03 * c),
+                (0.8 * c + 0.03 * sn, 0.08 + 0.8 * sn - 0.03 * c), (0.8 * c - 0.03 * sn, 0.08 + 0.8 * sn + 0.03 * c)],
+               0.04, ar, centro=(0, -0.1, 0))
+
+
+def _tenis(cor="azul", faixa="branco"):
+    """O tênis de corrida de lado (o bico para +X): o solado branco, o cabedal, a faixa, o cadarço e a boca."""
+    # o solado: a sola escura embaixo e a entressola branca, grossa no calcanhar e subindo no bico
+    perfil([(-0.64, -0.34), (0.42, -0.34), (0.6, -0.29), (0.72, -0.2), (0.62, -0.24), (0.4, -0.29), (-0.64, -0.29)],
+           0.38, mat("carvao", rugo=0.8))
+    perfil([(-0.66, -0.3), (0.42, -0.3), (0.6, -0.25), (0.74, -0.14), (0.74, -0.09), (0.3, -0.16), (-0.68, -0.12),
+            (-0.7, -0.22)], 0.4, mat("branco_sujo", rugo=0.7), chanfro=0.025)
+    # o cabedal: o calcanhar alto, a boca, a língua subindo e o bico redondo
+    cabedal = [(-0.68, -0.13), (0.73, -0.11), (0.72, -0.02), (0.62, 0.07), (0.42, 0.15), (0.16, 0.26), (-0.04, 0.37),
+               (-0.1, 0.46), (-0.2, 0.36), (-0.4, 0.34), (-0.56, 0.44), (-0.65, 0.38), (-0.71, 0.14)]
+    perfil(cabedal, 0.36, mat(cor, rugo=0.55), chanfro=0.035)
+    # a faixa do lado (de frente para a câmera) e o calcanhar reforçado
+    risco = [(-0.5, -0.07), (0.24, -0.02), (0.46, 0.09), (0.22, 0.1), (-0.46, 0.06)]
+    perfil(risco, 0.02, mat(faixa, rugo=0.5), centro=(0, -0.19, 0))
+    perfil([(-0.71, -0.1), (-0.56, -0.1), (-0.54, 0.34), (-0.65, 0.38), (-0.71, 0.14)], 0.02, mat(faixa, rugo=0.6),
+           centro=(0, -0.19, 0))
+    # a boca do tênis
+    esfera(1.0, (-0.38, 0.0, 0.36), mat("carvao", rugo=0.9), sub=2, escala=(0.17, 0.13, 0.04))
+    # o cadarço, atravessando o peito do pé
+    for x in (-0.02, 0.12, 0.26, 0.4):
+        z = 0.37 - (x + 0.04) * 0.53 + 0.02
+        caixa((0.05, 0.3, 0.03), (x, 0.0, z), giro=(0, 28, 0), m=mat("branco", rugo=0.6))
+
+
+def ic_v2():  # Passada leve: o tênis de corrida inclinado, com os riscos de velocidade atrás
+    with grupo(giro=(0, 10, 0), pos=(0.12, 0, 0)):
+        _tenis(cor="vermelho")
+    vento = mat("azul_claro", brilho=1.1)
+    for z, x0, comp in ((0.32, -0.78, 0.5), (0.08, -0.82, 0.68), (-0.16, -0.8, 0.44)):
+        perfil([(x0 - comp, z - 0.025), (x0, z - 0.045), (x0, z + 0.045), (x0 - comp, z + 0.025)], 0.05, vento)
+
+
+def ic_v3():  # Nadador: o braço na braçada saindo da água, a touca e os respingos
+    agua = mat("azul_escuro", rugo=0.9, espec=0.0)
+    cilindro(0.85, 0.06, (0, 0, -0.48), m=agua, lados=20)
+    claro = mat("azul_claro", rugo=0.2, brilho=0.7)
+    for r in (0.34, 0.5):
+        toro(r, 0.018, (-0.42, 0, -0.44), m=claro, seg=22, lados=4)
+    # a cabeça na água, virada para respirar do lado do braço: a touca amarela e os óculos
+    esfera(0.25, (-0.42, 0.0, -0.4), mat("amarelo", rugo=0.4), sub=2, escala=(1.0, 1.0, 0.9))
+    for ang in (-36, -84):
+        c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+        cilindro(0.065, 0.06, (-0.42 + 0.23 * c, 0.23 * s, -0.37), giro=(0, 90, ang), m=mat("preto", rugo=0.5), lados=8)
+        cilindro(0.045, 0.02, (-0.42 + 0.265 * c, 0.265 * s, -0.37), giro=(0, 90, ang),
+                 m=mat("azul_claro", rugo=0.1, brilho=0.6), lados=8)
+    # o braço: o ombro saindo da água, o cotovelo lá em cima e a mão entrando na frente
+    pele = mat("pele", rugo=0.7)
+    tubo([(-0.12, -0.04, -0.46), (-0.08, -0.05, -0.1), (0.0, -0.05, 0.22), (0.08, -0.05, 0.36)], 0.12, pele, lados=8,
+         r_fim=0.1)
+    tubo([(0.08, -0.05, 0.36), (0.26, -0.05, 0.3), (0.42, -0.05, 0.16), (0.5, -0.05, 0.06)], 0.1, pele, lados=8,
+         r_fim=0.085)
+    esfera(1.0, (0.6, -0.05, -0.06), pele, sub=2, escala=(0.19, 0.06, 0.12), giro=(0, 52, 0))
+    esfera(1.0, (0.5, -0.07, 0.02), pele, sub=1, escala=(0.07, 0.04, 0.035), giro=(0, 20, 0))
+    # a coroa de água onde a mão entra, os respingos e a espuma
+    for k in range(7):
+        a = math.radians(360 * k / 7 + 10)
+        cilindro(0.035, 0.18, (0.66 + 0.1 * math.cos(a), 0.1 * math.sin(a), -0.38),
+                 giro=(-28 * math.sin(a), 28 * math.cos(a), 0), m=mat("branco", rugo=0.5, brilho=0.4), lados=5, r2=0.0)
+    gotas = mat("azul_claro", rugo=0.15, brilho=0.8)
+    for x, z, r in ((0.62, -0.28, 0.05), (0.74, -0.18, 0.035), (0.5, -0.3, 0.035), (-0.02, -0.28, 0.04),
+                    (0.1, -0.2, 0.03), (-0.18, -0.24, 0.03), (0.8, -0.32, 0.025)):
+        esfera(r, (x, -0.1, z), gotas, sub=1)
+    espuma = mat("branco", rugo=0.6, brilho=0.3)
+    for x, y in ((0.58, -0.08), (-0.1, -0.06), (0.48, -0.12)):
+        esfera(1.0, (x, y, -0.44), espuma, sub=1, escala=(0.11, 0.08, 0.04))
+
+
+def ic_v4():  # Fôlego de volta: a garrafinha de água sobre a toalha dobrada, com a seta girando em volta
+    # a toalha dobrada, com a listra
+    toalha = mat("branco_sujo", rugo=0.9)
+    caixa((0.95, 0.6, 0.12), (0.0, 0.0, -0.66), m=toalha, chanfro=0.05)
+    caixa((0.92, 0.58, 0.1), (0.0, 0.0, -0.55), giro=(0, 0, 4), m=toalha, chanfro=0.045)
+    cilindro(0.08, 0.58, (0.46, 0.0, -0.6), giro=(90, 0, 0), m=toalha, lados=8)
+    caixa((0.1, 0.6, 0.025), (-0.3, 0.0, -0.495), giro=(0, 0, 4), m=mat("roxo", rugo=0.7))
+    # a garrafa de esporte: o corpo azul com a cintura, o rótulo, a tampa e o bico
+    revolucao([(0.0, -0.5), (0.25, -0.5), (0.27, -0.45), (0.27, -0.12), (0.22, -0.02), (0.22, 0.06), (0.27, 0.16),
+               (0.27, 0.34), (0.2, 0.44), (0.0, 0.45)], mat("azul", rugo=0.3, espec=0.7), lados=14)
+    cilindro(0.275, 0.14, (0, 0, -0.3), m=mat("branco", rugo=0.6), lados=14)
+    cilindro(0.17, 0.1, (0, 0, 0.49), m=mat("branco", rugo=0.5), lados=12)
+    cilindro(0.07, 0.12, (0, 0, 0.6), m=mat("cinza_claro", rugo=0.5), lados=8, r2=0.05)
+    gotas = mat("azul_claro", rugo=0.15, brilho=0.5)
+    for x, z, r in ((-0.16, 0.24, 0.035), (-0.2, 0.0, 0.03), (-0.1, -0.12, 0.025)):
+        esfera(r, (x, -0.24, z), gotas, sub=1)
+    # a seta circular: o vigor voltando
+    seta = mat("verde", brilho=1.3)
+    perfil(arco_faixa(0.74, 0.65, 120, 400, 26), 0.05, seta, centro=(0, 0.25, 0.0))
+    a = math.radians(120)
+    perfil([(-0.13, 0.0), (0.13, 0.0), (0.0, -0.2)], 0.06, seta, centro=(0.695 * math.cos(a), 0.25, 0.695 * math.sin(a)),
+           giro=(0, -30, 0))
+
+
+def ic_v5():  # Maratonista: a medalha de ouro com a fita (a ponta do ramo)
+    # a fita em V, uma metade de cada cor, com a listra branca no meio
+    for s, cor in ((-1, "vermelho"), (1, "azul")):
+        lado = [(s * 0.02, 0.44), (s * 0.25, 0.44), (s * 0.54, 0.9), (s * 0.29, 0.9)]
+        perfil(lado, 0.04, mat(cor, rugo=0.6), centro=(0, 0.1, 0))
+        meio = [(s * 0.12, 0.44), (s * 0.155, 0.44), (s * 0.432, 0.9), (s * 0.397, 0.9)]
+        perfil(meio, 0.05, mat("branco", rugo=0.6), centro=(0, 0.1, 0))
+    ouro = mat("dourado", metal=0.45, rugo=0.35)
+    toro(0.08, 0.03, (0, 0.05, 0.44), giro=(90, 0, 0), m=ouro, seg=10, lados=4)
+    cilindro(0.47, 0.1, (0, 0, -0.06), giro=(90, 0, 0), m=ouro, lados=22, chanfro=0.02)
+    toro(0.41, 0.03, (0, -0.055, -0.06), giro=(90, 0, 0), m=mat("amarelo", metal=0.5, rugo=0.3), seg=26, lados=4)
+    perfil(estrela(5, 0.27, 0.11), 0.05, mat("amarelo", metal=0.4, rugo=0.3, brilho=0.45), centro=(0, -0.07, -0.06))
+    for (x, z, t) in ((0.56, 0.3, 0.16), (-0.56, -0.4, 0.12), (0.5, -0.56, 0.09)):
+        faisca((x, -0.25, z), t, cor="amarelo", forca=3.0)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # a lista dos nós (a ordem do enum Habilidade): (id, enum, área, ramo, coluna, fileira, nome, função)
 
@@ -1802,6 +1931,11 @@ def _nos():
         ("q3", "PeixeGrande", S, "Pesca", 4, 3, "Peixe grande"),
         ("q4", "NoiteDePesca", S, "Pesca", 4, 4, "Noite de pesca"),
         ("q5", "MestrePescador", S, "Pesca", 4, 5, "Mestre pescador"),
+        ("v1", "PulmaoForte", S, "Atleta", 5, 1, "Pulmão forte"),
+        ("v2", "PassadaLeve", S, "Atleta", 5, 2, "Passada leve"),
+        ("v3", "Nadador", S, "Atleta", 5, 3, "Nadador"),
+        ("v4", "Recuperacao", S, "Atleta", 5, 4, "Fôlego de volta"),
+        ("v5", "Maratonista", S, "Atleta", 5, 5, "Maratonista"),
     ]
     return [n + (f.get("ic_" + n[0]),) for n in lista]
 

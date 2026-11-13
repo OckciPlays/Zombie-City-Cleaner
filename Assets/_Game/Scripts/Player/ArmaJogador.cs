@@ -677,7 +677,7 @@ namespace ZombieCityCleaner.Player
                 else if (_recarregar.WasPressedThisFrame()) _fumo.JogarFora();
             }
             // a mão vazia soca (segurando o botão, um soco atrás do outro)
-            else if (NaMao == Item.Nada && !bot && !semAtaque && Time.time >= _proximoTiro && _atirar.IsPressed())
+            else if (NaMao == Item.Nada && !bot && !semAtaque && Time.time >= _proximoTiro && (_atirar.IsPressed() || CliqueDoTeste()))
                 StartCoroutine(Socar());
             // o lampião e o molotov (11/11/2026, a etapa 4: ArmaJogador.Fogo.cs): o clique balança o lampião ou arremessa a garrafa
             else if (Itens.EhFogoDeMao(NaMao))
@@ -690,8 +690,8 @@ namespace ZombieCityCleaner.Player
                 if (_atirar.WasPressedThisFrame()) AvisarDoBraco();
             }
             // a arma branca golpeia (segurando o botão, um golpe atrás do outro)
-            else if (Itens.EhBranca(NaMao) && !bot && !semAtaque && Time.time >= _proximoTiro && _atirar.IsPressed())
-                StartCoroutine(GolpearComBranca());
+            else if (Itens.EhBranca(NaMao) && !bot && !semAtaque && Time.time >= _proximoTiro && (_atirar.IsPressed() || CliqueDoTeste()))
+                StartCoroutine(GolpearComBranca());   // (o clique do teste também, 12/11/2026: o vigor do golpe)
             if (_alvo != null && !bot && !Usando && _interagir.WasPressedThisFrame()) ApertouE();
         }
 
@@ -726,14 +726,16 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         IEnumerator Socar()
         {
-            _proximoTiro = Time.time + intervaloDoSoco * PartesDoCorpo.LentidaoDoGolpe(Corpo);
+            // o vigor (12/11/2026): o soco gasta pouco; sem vigor, ele sai fraco e lento
+            bool forte = VigorDoJogador.Local == null || VigorDoJogador.Local.Golpe(Item.Nada);
+            _proximoTiro = Time.time + intervaloDoSoco * PartesDoCorpo.LentidaoDoGolpe(Corpo) * (forte ? 1f : VigorDoJogador.LentidaoSemVigor);
             bool direito = _socoDireito;
             _socoDireito = !_socoDireito;
             Acao(direito ? FireId : DryFireId);
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.45f, false);
             rede.AnunciarSoco();
             yield return new WaitForSeconds(SomDoSoco.Impacto);
-            Golpear(alcanceDoSoco, raioDoSoco, danoDoSoco, false, false, 0f);   // o punho não tem fio: não explode a cabeça
+            Golpear(alcanceDoSoco, raioDoSoco, danoDoSoco * (forte ? 1f : VigorDoJogador.DanoSemVigor), false, false, 0f);   // o punho não tem fio: não explode a cabeça
         }
 
         /// <summary>
@@ -747,12 +749,15 @@ namespace ZombieCityCleaner.Player
         IEnumerator GolpearComBranca()
         {
             var b = Itens.Branca(NaMao);
-            _proximoTiro = Time.time + b.intervalo * PartesDoCorpo.LentidaoDoGolpe(Corpo);   // (o braço quebrado com a tala: mais lento)
+            // o vigor (12/11/2026, a pedido: "golpe com armas brancas gastam stamina a depender do peso da arma (faca gasta
+            // menos, machado gasta mais)"): sem o bastante, o golpe sai fraco e lento
+            bool forte = VigorDoJogador.Local == null || VigorDoJogador.Local.Golpe(NaMao);
+            _proximoTiro = Time.time + b.intervalo * PartesDoCorpo.LentidaoDoGolpe(Corpo) * (forte ? 1f : VigorDoJogador.LentidaoSemVigor);   // (o braço quebrado com a tala: mais lento)
             Acao(FireId);
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.55f, false);
             rede.AnunciarSoco();
             yield return new WaitForSeconds(b.impacto);
-            Golpear(b.alcance, b.raio, b.dano * (1f + 0.05f * Habilidades.Pontos(rede, Habilidade.BracoForte)), true, b.porRegiao, b.corte);
+            Golpear(b.alcance, b.raio, b.dano * (1f + 0.05f * Habilidades.Pontos(rede, Habilidade.BracoForte)) * (forte ? 1f : VigorDoJogador.DanoSemVigor), true, b.porRegiao, b.corte);
         }
 
         // o golpe: na cabeça (todas as armas, o soco também), o dano vale 3 vezes no zumbi, e o golpe que mata só explode a
@@ -772,6 +777,7 @@ namespace ZombieCityCleaner.Player
                 if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa e os passageiros: o próprio veículo)
                 // uma esfera que já começa encostada não tem ponto: o mais perto do olho, no colisor
                 Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(cam.position) : hit.point;
+                if (GolpeNoBicho(hit, ponto, dano, faca, cam)) return;   // um bicho (12/11/2026, a fauna: ArmaJogador.Fauna.cs)
                 var hitbox = hit.collider.GetComponent<Hitbox>();
                 // um sobrevivente: o golpe na cabeça vale mais (sem matar na hora), nos membros vale metade
                 var parte = hitbox == null ? hit.collider.GetComponent<Sobreviventes.ParteDoSobrevivente>() : null;
@@ -902,6 +908,7 @@ namespace ZombieCityCleaner.Player
             var impactos = new JogadorRede.Impacto[d.chumbos];
             _carne.Clear();
             _gente.Clear();
+            _bichos.Clear();
             _jogadores.Clear();
             for (int k = 0; k < d.chumbos; k++)
             {
@@ -912,11 +919,23 @@ namespace ZombieCityCleaner.Player
                 var mira = rede.EmTerceiraPessoa && EfeitosDoCorpo.Local != null ? cam.rotation * EfeitosDoCorpo.Local.DesvioDaMira : cam.rotation;
                 Vector3 direcao = mira * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
                 impactos[k] = Disparar(cam.position, direcao, d);
+                // o galão e o rastro da cerca de fogo (12/11/2026): o galão é um gatilho que o raio atravessa, e o rastro
+                // não tem colisor (a bala para no chão em cima dele)
+                var cercas = Loot.ConstrucoesNoMundo.Instancia;
+                if (cercas != null)
+                {
+                    var imp = impactos[k];
+                    bool parou = imp.tipo != JogadorRede.TipoDeAcerto.Nada;
+                    cercas.ConferirTiroNasCercas(cam.position, direcao, parou ? Vector3.Distance(cam.position, imp.ponto) : d.alcance, imp.ponto,
+                                                 imp.tipo == JogadorRede.TipoDeAcerto.Cenario);
+                }
             }
             _chumboDoCentro = false;
             MandarAcertos(d);
             MandarAcertosNaGente(d);
+            MandarAcertosNosBichos(d);
             MandarAcertosNosJogadores(d);
+            Loot.ConstrucoesNoMundo.Instancia?.MandarTirosNasCercas();
             rede.AnunciarTiro(Atual, impactos);
         }
 
@@ -1147,6 +1166,13 @@ namespace ZombieCityCleaner.Player
                 // o olho fica bem no topo da cápsula do próprio jogador: o tiro para baixo (na cabeça de um zumbi perto,
                 // por exemplo) batia nela, a distância zero, e soltava faíscas em cima da cabeça
                 if (hit.collider == _corpo) continue;
+                // um bicho (12/11/2026, a fauna): o sangue aqui, e o acerto vai ao anfitrião no fim do disparo
+                if (TiroNoBicho(hit))
+                {
+                    impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
+                    parou = true;
+                    break;
+                }
                 var hitbox = hit.collider.GetComponent<Hitbox>();
                 if (hitbox != null && hitbox == encostada) continue;
                 // um sobrevivente: o sangue aqui, a marca na mira, e o acerto vai ao anfitrião no fim do disparo

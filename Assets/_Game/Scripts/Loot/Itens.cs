@@ -60,6 +60,11 @@ namespace ZombieCityCleaner.Loot
         TabuasBarricada = 127,
         // a sinuca (era do 80 ao 85 até o merge com o saque, em 31/10/2026)
         CaixaDeBolas = 128, CaixaDeBolasVazia, TacoMadeira, TacoEscuro, TacoPreto, TacoVermelho,
+        // a caça (12/11/2026, a fauna: Fauna/FaunaDoMundo.cs): a carcaça carneada com a faca dá a carne crua (assa na
+        // fogueira), o couro (a armadura de couro vem depois) e a gordura
+        CarneCrua = 134, CarneAssada, Couro, Gordura,
+        // o bagre (12/11/2026, a etapa 3 da fauna: os peixes americanos): do fundo do lago, mais à noite
+        Bagre = 138,
         // as melhorias das armas de sucata (10/11/2026, a etapa 2 do Armeiro de sucata; a ordem do Combat.PecaDaMelhoria)
         SilenciadorPET = 140, SilenciadorFiltro, MiraDeFerro, MiraDePonto, Luneta, CarregadorLongo, CanoReforcado1, CanoReforcado2, CanoReforcado3,
         // a proteção de sucata (11/11/2026, a etapa 3 da Resistência; a ordem do Player.LugarDaProtecao): vestem-se no grupo PROTEÇÃO
@@ -208,8 +213,14 @@ namespace ZombieCityCleaner.Loot
         public static string ModeloFP(int modelo) => modelo == Punhos ? "Maos" : modelo == TacoFP ? "Taco" : modelo == MacoFP ? "Maco"
             : modelo == CigarroFP ? "Cigarro" : Modelos[modelo];
         /// <summary>
-        /// O nome do FBX dos braços (Jogador_FP_&lt;nome&gt;.fbx) e dos objetos dentro dele: o do modelo, ou "Cigarro" no fumo. As
-        /// armas de sucata usam os braços da real (com a malha delas no lugar da arma).
+        /// O FBX dos braços de um modelo (Jogador_FP_&lt;nome&gt;.fbx): o do <see cref="ArquivoFP"/>, menos o rifle de sucata
+        /// com os braços próprios (11/11/2026, <see cref="Armas.BracosFP"/>: os objetos dentro dele têm os nomes da sniper).
+        /// </summary>
+        public static string ArquivoDosBracosFP(int modelo) => modelo >= 0 && modelo < Armas.Quantas ? Armas.BracosFP((TipoDeArma)modelo) : ArquivoFP(modelo);
+        /// <summary>
+        /// O nome dos objetos dentro do FBX dos braços (FP_Bracos_&lt;nome&gt;, Boca_FP_&lt;nome&gt;) e, quase sempre, do FBX
+        /// (<see cref="ArquivoDosBracosFP"/>): o do modelo, ou "Cigarro" no fumo. As armas de sucata usam os braços da real
+        /// (com a malha delas no lugar da arma).
         /// </summary>
         public static string ArquivoFP(int modelo) => modelo == MacoFP || modelo == CigarroFP ? "Cigarro"
             : modelo >= 0 && modelo < Armas.Quantas ? Armas.Modelos[(int)Armas.Real((TipoDeArma)modelo)] : ModeloFP(modelo);
@@ -331,11 +342,12 @@ namespace ZombieCityCleaner.Loot
             Remedio(Item.Calmante, "Calmante", "calmante", "o calmante", "calmantes",
                     "Acalma a mente aos poucos, por umas 5 h, e passa a crise de pânico. Dois seguidos dão sono; três, você apaga.", 6, 0f),
             // a pesca (06/11/2026, a árvore de habilidades): os peixes (comem-se assim mesmo) e a pólvora, no fim da lista
-            // (os modelos saem do Blender/loot.py)
-            Comer(Item.PeixePequeno, "PeixePequeno", "lambari", "o lambari", "lambaris", "Um peixinho do lago. Mata um pouco a fome.", 4, 15f, 2f),
-            Comer(Item.PeixeMedio, "PeixeMedio", "tilápia", "a tilápia", "tilápias", "Um peixe do lago. Mata bem a fome.", 3, 30f, 3f),
-            Comer(Item.PeixeGrande, "PeixeGrande", "tucunaré", "o tucunaré", "tucunarés", "Um peixe grande do lago: a fome de quase um dia.", 2, 50f, 5f),
-            Comer(Item.PeixeDourado, "PeixeDourado", "dourado", "o dourado", "dourados", "Raro, do fundo do lago. Os comerciantes pagam bem.", 1, 45f, 5f),
+            // (os modelos saem do Blender/loot.py). Desde 12/11/2026 (a etapa 3 da fauna), os peixes americanos: os mesmos
+            // números e os mesmos modelos (o Pedro troca depois), com os nomes novos
+            Comer(Item.PeixePequeno, "PeixePequeno", "perca-sol", "a perca-sol", "percas-sol", "Um peixinho do lago. Mata um pouco a fome.", 4, 15f, 2f),
+            Comer(Item.PeixeMedio, "PeixeMedio", "truta-arco-íris", "a truta-arco-íris", "trutas-arco-íris", "Um peixe do lago. Mata bem a fome.", 3, 30f, 3f),
+            Comer(Item.PeixeGrande, "PeixeGrande", "black bass", "o black bass", "black bass", "Um peixe grande do lago: a fome de quase um dia.", 2, 50f, 5f),
+            Comer(Item.PeixeDourado, "PeixeDourado", "truta-dourada", "a truta-dourada", "trutas-douradas", "Rara, do fundo do lago. Os comerciantes pagam bem.", 1, 45f, 5f),
             Comer(Item.PeixeAssado, "PeixeAssado", "peixe assado", "o peixe assado", "peixes assados", "Assado na fogueira: mata a fome sem fazer mal.", 6, 20f, 0f),
             Material(Item.Polvora, "Polvora", "pólvora", "a pólvora", "latas de pólvora", "Na mesa de oficina, com o Armeiro: vira munição.", 5),
             // a sucata (09/11/2026, o Armeiro de sucata: o modelo é o Item_Sucata do Loot_Sucata.fbx, o Blender/sucata_itens.py)
@@ -396,6 +408,19 @@ namespace ZombieCityCleaner.Loot
             // lista, para os índices dos outros não mudarem)
             Material(Item.TabuasBarricada, "Tabuas", "tábuas para barricada", "as tábuas para barricada", "feixes de tábuas para barricada",
                      "Tábuas cortadas na medida e um punhado de pregos. Mire uma porta ou uma janela de casa e segure E: pregadas, ela não abre.", 1, TipoDeLoot.Construcao),
+            // a caça (12/11/2026, a fauna; no fim da lista, para os índices dos outros não mudarem). Os modelos são provisórios,
+            // caixinhas feitas no Play com o ícone e a foto desenhados delas (Loot/ItensDaCaca.cs), até o Pedro trocar; sem o
+            // nome do modelo, o item ficava sem tamanho e não cabia na mochila
+            Comer(Item.CarneCrua, "CarneCrua", "carne crua", "a carne crua", "carnes cruas",
+                  "Carne de caça, fresca. Crua pode fazer mal: asse na fogueira.", 4, 18f, 0f),
+            Comer(Item.CarneAssada, "CarneAssada", "carne assada", "a carne assada", "carnes assadas",
+                  "Carne de caça assada na fogueira: sustenta e não faz mal.", 4, 35f, -3f),
+            Material(Item.Couro, "Couro", "couro", "o couro", "couros",
+                     "Couro de caça, tirado com a faca. Vai virar a armadura de couro (em breve).", 4),
+            Material(Item.Gordura, "Gordura", "gordura", "a gordura", "gorduras",
+                     "Gordura de caça. Guarde: vai servir para receitas (em breve).", 6),
+            // o bagre (12/11/2026, a etapa 3 da fauna; o modelo provisório, do Loot/ItensDaCaca.cs)
+            Comer(Item.Bagre, "Bagre", "bagre", "o bagre", "bagres", "Do fundo do lago, mais à noite. Mata bem a fome.", 3, 32f, 3f),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -676,7 +701,7 @@ namespace ZombieCityCleaner.Loot
         public static bool EhConsumivel(Item i) => Loot(i)?.verbo != null;
 
         /// <summary>Um peixe do lago, cru (07/11/2026: comido assim, pode fazer mal; assado na fogueira, não).</summary>
-        public static bool EhPeixeCru(Item i) => i >= Item.PeixePequeno && i <= Item.PeixeDourado;
+        public static bool EhPeixeCru(Item i) => (i >= Item.PeixePequeno && i <= Item.PeixeDourado) || i == Item.Bagre;
         /// <summary>O que se veste: as 3 mochilas (o coldre saiu do jogo).</summary>
         public static bool EhEquipamento(Item i) => EhMochila(i);
         public static bool EhMochila(Item i) => i >= Item.MochilaPequena && i <= Item.MochilaGrande;

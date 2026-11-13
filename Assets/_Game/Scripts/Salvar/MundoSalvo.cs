@@ -58,6 +58,11 @@ namespace ZombieCityCleaner.Salvar
         /// <summary>Os painéis de metal desmontados (09/11/2026, a sucata; o número do PaineisDeSucata).</summary>
         public List<int> paineisDesmontados = new List<int>();
         public List<int> sustos = new List<int>();
+        /// <summary>A população da fauna nas regiões caçadas (12/11/2026; as que não estão cheias: Fauna/FaunaDoMundo.Povoamento.cs).</summary>
+        public List<Fauna.NivelDaFauna> fauna = new List<Fauna.NivelDaFauna>();
+        /// <summary>As tocas dos castores e as árvores que eles roeram (12/11/2026, a etapa 3 da fauna: FaunaDoMundo.Castores.cs).</summary>
+        public List<Fauna.TocaDoCastor> tocasDosCastores = new List<Fauna.TocaDoCastor>();
+        public List<Fauna.ArvoreRoida> arvoresRoidas = new List<Fauna.ArvoreRoida>();
         public long armasNaParede, pentesNaParede;
         public List<PosicaoSalva> posicoes = new List<PosicaoSalva>();
         /// <summary>Os grupos de sobreviventes de cada cidade (quem morreu continua morto).</summary>

@@ -66,24 +66,37 @@ namespace ZombieCityCleaner.Loot
             return l;
         }
 
-        // até que ponto da linha o fogo já correu (o índice; o fogo leva CorridaDoFogo segundos do pavio até a ponta)
-        int PontoAceso(Construcao c)
+        // o trecho do rastro que o fogo já pegou (os índices): ele corre do ponto onde pegou para os dois lados, levando
+        // CorridaDoFogo segundos de ponta a ponta. O ponto é o pavio (0), ou onde o tiro pegou (12/11/2026: guardado no
+        // Construcao.largura, que a cerca não usa)
+        (int de, int ate) TrechoAceso(Construcao c)
         {
             float inicio = c.valor - A.SegundosDaCercaDe(c.nivel);
             float p = Mathf.Clamp01((Agora - inicio) / A.CorridaDoFogo);
-            return Mathf.Clamp(Mathf.RoundToInt(p * (AmostrasDaLinha - 1)), 1, AmostrasDaLinha - 1);
+            int n = AmostrasDaLinha - 1, s = InicioDoFogo(c), r = Mathf.RoundToInt(p * n);
+            int de = Mathf.Max(0, s - r), ate = Mathf.Min(n, s + r);
+            if (ate == de)
+            {
+                if (ate < n) ate++;
+                else de--;
+            }
+            return (de, ate);
         }
+
+        static int InicioDoFogo(Construcao c) => Mathf.Clamp(Mathf.RoundToInt(c.largura), 0, AmostrasDaLinha - 1);
 
         bool CercaAcesa(Construcao c) => c.tipo == Item.CercaFogo && c.valor > 0f && c.valor > Agora;
 
         // ------------------------------------------------------------------ no anfitrião
 
-        void AcenderACerca(int k, Construcao c)
+        // acende a cerca: pelo pavio (o índice 0), ou pelo ponto do rastro onde o tiro pegou
+        void AcenderACerca(int k, Construcao c, int inicio = 0)
         {
             c.valor = Agora + A.SegundosDaCercaDe(c.nivel);
+            c.largura = Mathf.Clamp(inicio, 0, AmostrasDaLinha - 1);
             _lista[k] = c;
             var linha = LinhaDaCerca(c);
-            ArmadilhaRpc(c.id, EfeitoAcendeu, linha[0] + Vector3.up * 0.2f);
+            ArmadilhaRpc(c.id, EfeitoAcendeu, linha[InicioDoFogo(c)] + Vector3.up * 0.2f);
         }
 
         /// <summary>Só no anfitrião (o teste): acende a cerca (como o E com a tocha acesa).</summary>
@@ -121,18 +134,18 @@ namespace ZombieCityCleaner.Loot
                     continue;
                 }
                 var linha = LinhaDaCerca(c);
-                int ate = PontoAceso(c);
+                var (de, ate) = TrechoAceso(c);
                 var dono = DonoNaPartida(c.dono);
                 float fator = A.FatorDeDano(c.nivel);
-                zm?.FogoNaLinha(linha, ate, A.LarguraDaQueima, passo, FogoDoJogador.DanoNosZumbis * fator, dono,
+                zm?.FogoNaLinha(linha, de, ate, A.LarguraDaQueima, passo, FogoDoJogador.DanoNosZumbis * fator, dono,
                                 dono != null ? FogoDoJogador.SegundosQueimandoDe(dono) : FogoDoJogador.SegundosQueimando);
                 if (!porSegundo) continue;
                 // os moradores e os jogadores na linha: um golpe por segundo (o morador sai andando sozinho)
                 foreach (var s in Sobrevivente.Todos)
-                    if (s != null && s.AlvoValido && NaLinha(linha, ate, s.transform.position, A.LarguraDaQueima, out var ponto))
+                    if (s != null && s.AlvoValido && NaLinha(linha, de, ate, s.transform.position, A.LarguraDaQueima, out var ponto))
                         s.LevarGolpe(FogoDoJogador.DanoNosMoradores * fator, ponto);
                 foreach (var j in JogadorRede.Todos)
-                    if (j != null && j.IsSpawned && j.Vida != null && NaLinha(linha, ate, j.transform.position, A.LarguraDaQueima, out var ponto))
+                    if (j != null && j.IsSpawned && j.Vida != null && NaLinha(linha, de, ate, j.transform.position, A.LarguraDaQueima, out var ponto))
                         j.Vida.Dano(FogoDoJogador.DanoNosJogadores, ponto, "Queimou-se.");
                 // a chuva, fora de um teto: ela queima mais depressa (como a área do molotov)
                 if (ChoveNoFogo && !World.Tempo.SobTeto(c.pos))
@@ -154,9 +167,9 @@ namespace ZombieCityCleaner.Loot
             {
                 if (o.id == c.id || !CercaAcesa(o)) continue;
                 var outra = LinhaDaCerca(o);
-                int ate = PontoAceso(o);
+                var (de, ate) = TrechoAceso(o);
                 foreach (var p in linha)
-                    if (NaLinha(outra, ate, p, 0.5f, out _)) return true;
+                    if (NaLinha(outra, de, ate, p, 0.5f, out _)) return true;
             }
             return false;
         }
@@ -171,22 +184,25 @@ namespace ZombieCityCleaner.Loot
             {
                 if (!CercaAcesa(c)) continue;
                 var linha = LinhaDaCerca(c);
-                int ate = PontoAceso(c);
+                var (de, ate) = TrechoAceso(c);
                 for (int k = 0; k < A.PontosQueSeguram; k++)
                 {
                     int i = Mathf.RoundToInt(k * (AmostrasDaLinha - 1) / (float)(A.PontosQueSeguram - 1));
-                    if (i > ate) break;
+                    if (i < de || i > ate) continue;
                     saida.Add((c.id * 8 + k, linha[i], c.dono));
                 }
             }
         }
 
         /// <summary>O ponto está a menos de <paramref name="largura"/> da linha (no plano, até o índice), na altura dela? O ponto mais perto.</summary>
-        internal static bool NaLinha(Vector3[] linha, int ate, Vector3 p, float largura, out Vector3 perto)
+        internal static bool NaLinha(Vector3[] linha, int ate, Vector3 p, float largura, out Vector3 perto) => NaLinha(linha, 0, ate, p, largura, out perto);
+
+        /// <summary>Como o outro, só no trecho de <paramref name="de"/> até <paramref name="ate"/> (o fogo que pegou no meio do rastro, 12/11/2026).</summary>
+        internal static bool NaLinha(Vector3[] linha, int de, int ate, Vector3 p, float largura, out Vector3 perto)
         {
             perto = default;
             float melhor = float.MaxValue;
-            for (int i = 0; i < ate && i + 1 < linha.Length; i++)
+            for (int i = Mathf.Max(0, de); i < ate && i + 1 < linha.Length; i++)
             {
                 Vector3 a = linha[i], b = linha[i + 1];
                 Vector2 ab = new Vector2(b.x - a.x, b.z - a.z), ap = new Vector2(p.x - a.x, p.z - a.z);
@@ -279,6 +295,8 @@ namespace ZombieCityCleaner.Loot
             foreach (var c in _lista)
             {
                 if (c.tipo != Item.CercaFogo || !_objetos.TryGetValue(c.id, out var o) || o == null) continue;
+                // o galão que estourou com o tiro some (12/11/2026; o rastro e as chamas são filhos, com as malhas deles)
+                if (GalaoEstourou(c) && o.TryGetComponent<MeshRenderer>(out var galao) && galao.enabled) galao.enabled = false;
                 var fogo = o.GetComponentInChildren<LinhaDeFogo>(true);
                 bool acesa = CercaAcesa(c);
                 if (!acesa)
@@ -288,10 +306,10 @@ namespace ZombieCityCleaner.Loot
                 }
                 if (fogo == null) fogo = MontarALinhaDeFogo(o, c);
                 if (!fogo.gameObject.activeSelf) fogo.gameObject.SetActive(true);
-                int ate = PontoAceso(c);
+                var (de, ate) = TrechoAceso(c);
                 for (int i = 0; i < fogo.chamas.Length; i++)
                 {
-                    bool viva = fogo.indices[i] <= ate;
+                    bool viva = fogo.indices[i] >= de && fogo.indices[i] <= ate;
                     if (fogo.chamas[i].activeSelf != viva) fogo.chamas[i].SetActive(viva);
                 }
             }

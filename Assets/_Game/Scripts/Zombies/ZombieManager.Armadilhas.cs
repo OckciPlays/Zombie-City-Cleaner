@@ -38,13 +38,13 @@ namespace ZombieCityCleaner.Zombies
         /// Só no anfitrião: os zumbis a menos de <paramref name="largura"/> da linha (os pontos até o índice) queimam pelo passo
         /// (s) e pegam fogo, como na área do molotov.
         /// </summary>
-        internal void FogoNaLinha(Vector3[] linha, int ate, float largura, float passo, float danoPorSegundo, JogadorRede dono, float segundosQueimando)
+        internal void FogoNaLinha(Vector3[] linha, int de, int ate, float largura, float passo, float danoPorSegundo, JogadorRede dono, float segundosQueimando)
         {
             _naArea.Clear();
             foreach (var z in Ativos)
             {
                 if (z == null || z.Morto) continue;
-                if (ConstrucoesNoMundo.NaLinha(linha, ate, z.transform.position, largura, out _)) _naArea.Add(z);
+                if (ConstrucoesNoMundo.NaLinha(linha, de, ate, z.transform.position, largura, out _)) _naArea.Add(z);
             }
             foreach (var z in _naArea)
             {

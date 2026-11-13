@@ -51,7 +51,9 @@ namespace ZombieCityCleaner.Sobreviventes
             new[] { Item.Comida, Item.Feijao, Item.Milho, Item.Sopa, Item.Carne, Item.Salgadinho, Item.Chocolate, Item.BarraDeEnergia,
                     Item.Agua, Item.CopoDeAgua, Item.Leite, Item.Suco, Item.RefrigeranteLata, Item.RefrigeranteGarrafa, Item.Energetico, Item.GarrafaTermica,
                     // (06/11/2026) no fim: os peixes da pesca
-                    Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado, Item.PeixeAssado },
+                    Item.PeixePequeno, Item.PeixeMedio, Item.PeixeGrande, Item.PeixeDourado, Item.PeixeAssado,
+                    // (12/11/2026, a fauna) no fim: o bagre
+                    Item.Bagre },
             // (09/11/2026, a sucata, 2ª leva) no fim (o save guarda o estoque pelo índice): as de sucata. As reais ficam na lista
             // (o comerciante ainda compra), mas não vêm no estoque nem são repostas (SoCompra)
             new[] { Item.Pistola, Item.Espingarda, Item.Submetralhadora, Item.Rifle, Item.Sniper, Item.Faca, Item.Machado, Item.Bastao, Item.Lanca,
@@ -110,7 +112,7 @@ namespace ZombieCityCleaner.Sobreviventes
             [Item.Bastao] = 15, [Item.Lanca] = 25, [Item.Tocha] = 10, [Item.CopoDeAgua] = 1, [Item.Fogueira] = 12, [Item.Cama] = 30,
             [Item.Barricada] = 25,
             // (06/11/2026) os peixes e a pólvora
-            [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14, [Item.PeixeAssado] = 5,
+            [Item.PeixePequeno] = 3, [Item.PeixeMedio] = 7, [Item.PeixeGrande] = 12, [Item.PeixeDourado] = 60, [Item.Polvora] = 14, [Item.PeixeAssado] = 5, [Item.Bagre] = 8,
             // (09/11/2026) as armas de sucata, as munições delas e a sucata
             [Item.PistolaSucata] = 150, [Item.RifleSucata] = 300, [Item.SubmetralhadoraSucata] = 300, [Item.MunicaoPrego] = 12,
             [Item.MunicaoParafuso] = 18, [Item.Sucata] = 3,

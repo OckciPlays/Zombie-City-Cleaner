@@ -252,8 +252,9 @@ namespace ZombieCityCleaner.Loot
             // as melhorias das armas de sucata (10/11/2026) vêm do Resources/MelhoriasDaSucata (as cenas ainda não têm)
             // (e a proteção de sucata, 11/11/2026: do Resources/ProtecaoDeSucata)
             // (e o fogo, 11/11/2026: do Resources/ItensDoFogo; e as armadilhas, do Resources/ItensDasArmadilhas)
+            // (e a caça, 12/11/2026: as caixinhas feitas na hora, ItensDaCaca)
             return m != null ? m : Combat.PecasDasMelhorias.MalhaDoItem(item) ?? Player.PecasDaProtecao.MalhaDoItem(item) ?? Player.ItensDoFogo.MalhaDoItem(item)
-                ?? ItensDasArmadilhas.MalhaDoItem(item);
+                ?? ItensDasArmadilhas.MalhaDoItem(item) ?? ItensDaCaca.MalhaDoItem(item);
         }
 
         /// <summary>A malha do item como ele fica no chão (null: sem modelo).</summary>

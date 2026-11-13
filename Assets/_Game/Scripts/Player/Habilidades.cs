@@ -18,6 +18,8 @@ namespace ZombieCityCleaner.Player
         Guerreiro, ArmeiroDeSucata, Assassino, Ladrao,
         Fogo, Saude, FomeESede, Recursos, ProtecaoDeSucata,
         Craft, Armadilhas, Sortudo, Pesca,
+        // 12/11/2026: o vigor (a stamina), na Sobrevivência
+        Atleta,
     }
 
     /// <summary>
@@ -53,6 +55,9 @@ namespace ZombieCityCleaner.Player
         OlhoBom, Garimpeiro, Abutre, PeDeCoelho, Faro,
         // Sobrevivência: a Pesca
         Paciencia, IscaFina, PeixeGrande, NoiteDePesca, MestrePescador,
+        // Sobrevivência: o Atleta (12/11/2026, a pedido: "devemos criar uma parte de skills na sobrevivência onde aumentamos
+        // a estamina"; o VigorDoJogador)
+        PulmaoForte, PassadaLeve, Nadador, Recuperacao, Maratonista,
     }
 
     /// <summary>
@@ -140,7 +145,7 @@ namespace ZombieCityCleaner.Player
     public static class Habilidades
     {
         public const int NivelMaximo = 40;
-        public const int Quantas = 74;
+        public const int Quantas = 79;
         public const int Fileiras = 5;
 
         /// <summary>Os pontos que a fileira pede, gastos nas fileiras de cima da mesma área (o índice é a fileira, 1 a 5).</summary>
@@ -197,17 +202,17 @@ namespace ZombieCityCleaner.Player
         public static string Descricao(Habilidade h) => Efeito(h, Maximo(h));
 
         /// <summary>Quantas colunas a página da área tem.</summary>
-        public static int Colunas(AreaDaHabilidade a) => a == AreaDaHabilidade.Sobrevivencia ? 5 : 6;
+        public static int Colunas(AreaDaHabilidade a) => 6;   // (a Sobrevivência tinha 5 até o Atleta, 12/11/2026)
         /// <summary>Os ramos da área, na ordem das colunas.</summary>
         public static RamoDaHabilidade[] Ramos(AreaDaHabilidade a) => a == AreaDaHabilidade.Combate ? RamosDoCombate
             : a == AreaDaHabilidade.Resistencia ? RamosDaResistencia : RamosDaSobrevivencia;
         static readonly RamoDaHabilidade[] RamosDoCombate = { RamoDaHabilidade.Guerreiro, RamoDaHabilidade.ArmeiroDeSucata, RamoDaHabilidade.Assassino, RamoDaHabilidade.Ladrao };
         static readonly RamoDaHabilidade[] RamosDaResistencia = { RamoDaHabilidade.Fogo, RamoDaHabilidade.Saude, RamoDaHabilidade.FomeESede, RamoDaHabilidade.Recursos, RamoDaHabilidade.ProtecaoDeSucata };
-        static readonly RamoDaHabilidade[] RamosDaSobrevivencia = { RamoDaHabilidade.Craft, RamoDaHabilidade.Armadilhas, RamoDaHabilidade.Sortudo, RamoDaHabilidade.Pesca };
+        static readonly RamoDaHabilidade[] RamosDaSobrevivencia = { RamoDaHabilidade.Craft, RamoDaHabilidade.Armadilhas, RamoDaHabilidade.Sortudo, RamoDaHabilidade.Pesca, RamoDaHabilidade.Atleta };
 
         /// <summary>Os ramos novos da árvore de 09/11/2026 (o selo "novo"; as Armadilhas inteiras desde 11/11/2026, a etapa 5b).</summary>
         public static bool RamoNovo(RamoDaHabilidade r) => r == RamoDaHabilidade.ArmeiroDeSucata || r == RamoDaHabilidade.Fogo
-                                                         || r == RamoDaHabilidade.ProtecaoDeSucata || r == RamoDaHabilidade.Armadilhas;
+                                                         || r == RamoDaHabilidade.ProtecaoDeSucata || r == RamoDaHabilidade.Armadilhas || r == RamoDaHabilidade.Atleta;
 
         /// <summary>As colunas que o ramo ocupa (a primeira e a última).</summary>
         public static void ColunasDoRamo(RamoDaHabilidade r, out float de, out float ate)
@@ -228,6 +233,7 @@ namespace ZombieCityCleaner.Player
             RamoDaHabilidade.Guerreiro => "G", RamoDaHabilidade.ArmeiroDeSucata => "A", RamoDaHabilidade.Assassino => "†", RamoDaHabilidade.Ladrao => "L",
             RamoDaHabilidade.Fogo => "▲", RamoDaHabilidade.Saude => "+", RamoDaHabilidade.FomeESede => "F", RamoDaHabilidade.Recursos => "R",
             RamoDaHabilidade.ProtecaoDeSucata => "P", RamoDaHabilidade.Craft => "C", RamoDaHabilidade.Armadilhas => "A", RamoDaHabilidade.Sortudo => "♣",
+            RamoDaHabilidade.Atleta => "»",
             _ => "P",
         };
 
@@ -335,6 +341,7 @@ namespace ZombieCityCleaner.Player
             RamoDaHabilidade.Fogo => "Fogo", RamoDaHabilidade.Saude => "Saúde", RamoDaHabilidade.FomeESede => "Fome e sede",
             RamoDaHabilidade.Recursos => "Recursos", RamoDaHabilidade.ProtecaoDeSucata => "Proteção de sucata",
             RamoDaHabilidade.Craft => "Craft", RamoDaHabilidade.Armadilhas => "Armadilhas e defesas", RamoDaHabilidade.Sortudo => "Sortudo",
+            RamoDaHabilidade.Atleta => "Atleta",
             _ => "Pesca",
         };
 
@@ -371,7 +378,7 @@ namespace ZombieCityCleaner.Player
         const RamoDaHabilidade Gue = RamoDaHabilidade.Guerreiro, Arm = RamoDaHabilidade.ArmeiroDeSucata, Ass = RamoDaHabilidade.Assassino,
             Lad = RamoDaHabilidade.Ladrao, Fog = RamoDaHabilidade.Fogo, Sau = RamoDaHabilidade.Saude, Fom = RamoDaHabilidade.FomeESede,
             Rec = RamoDaHabilidade.Recursos, Pro = RamoDaHabilidade.ProtecaoDeSucata, Cra = RamoDaHabilidade.Craft,
-            Arma = RamoDaHabilidade.Armadilhas, Sor = RamoDaHabilidade.Sortudo, Pes = RamoDaHabilidade.Pesca;
+            Arma = RamoDaHabilidade.Armadilhas, Sor = RamoDaHabilidade.Sortudo, Pes = RamoDaHabilidade.Pesca, Atl = RamoDaHabilidade.Atleta;
 
         // a ordem é a do enum Habilidade: (o ramo, a coluna, a fileira, os níveis, o nome, o efeito, o que pede)
         static readonly No[] Nos =
@@ -476,10 +483,16 @@ namespace ZombieCityCleaner.Player
             // a Pesca
             E(Pes, 4, 1, 2, "Paciência", k => $"O peixe morde {20 * k}% mais rápido."),
             E(Pes, 4, 2, 2, "Isca fina", k => $"{20 * k}% de chance de não gastar a isca.", Habilidade.Paciencia),
-            E(Pes, 4, 3, 2, "Peixe grande", k => k == 1 ? "Um pouco mais de tucunarés e tilápias, e menos lambaris."
-                : "Mais tucunarés e tilápias, e menos lambaris.", Habilidade.IscaFina),
+            E(Pes, 4, 3, 2, "Peixe grande", k => k == 1 ? "Um pouco mais de black bass e trutas, e menos percas-sol."
+                : "Mais black bass e trutas, e menos percas-sol.", Habilidade.IscaFina),
             E(Pes, 4, 4, 1, "Noite de pesca", _ => "A noite e a chuva ajudam a pescar (sem ela, atrapalham).", Habilidade.PeixeGrande),
-            E(Pes, 4, 5, 1, "Mestre pescador", _ => "Às vezes (6%) morde o dourado, raro e caro.", Habilidade.NoiteDePesca),
+            E(Pes, 4, 5, 1, "Mestre pescador", _ => "Às vezes (6%) morde a truta-dourada, rara e cara.", Habilidade.NoiteDePesca),
+            // o Atleta (12/11/2026): o vigor
+            E(Atl, 5, 1, 2, "Pulmão forte", k => $"+{VigorDoJogador.PulmaoPorPonto * 100f * k:0}% de vigor."),
+            E(Atl, 5, 2, 2, "Passada leve", k => $"Correr gasta {VigorDoJogador.PassadaPorPonto * 100f * k:0}% menos vigor.", Habilidade.PulmaoForte),
+            E(Atl, 5, 3, 2, "Nadador", k => $"Nadar gasta {VigorDoJogador.NadadorPorPonto * 100f * k:0}% menos vigor.", Habilidade.PassadaLeve),
+            E(Atl, 5, 4, 2, "Fôlego de volta", k => $"O vigor volta {VigorDoJogador.RecuperacaoPorPonto * 100f * k:0}% mais rápido.", Habilidade.Nadador),
+            E(Atl, 5, 5, 1, "Maratonista", _ => $"O golpe e o pulo gastam {VigorDoJogador.MaratonistaNoGolpe * 100f:0}% menos vigor, e a roupa molhada pesa a metade.", Habilidade.Recuperacao),
         };
 
         // ------------------------------------------------------------------ o XP de cada ação (o anfitrião dá)

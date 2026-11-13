@@ -140,6 +140,21 @@ namespace ZombieCityCleaner.Player
             _presoFeito = 0f;
         }
         InventarioJogador _inventario;
+        VigorDoJogador _vigor;
+
+        /// <summary>O vigor do dono (12/11/2026): criado na primeira vez que ele anda.</summary>
+        VigorDoJogador Vigor
+        {
+            get
+            {
+                if (_vigor == null)
+                {
+                    _vigor = GetComponent<VigorDoJogador>();
+                    if (_vigor == null) _vigor = gameObject.AddComponent<VigorDoJogador>();
+                }
+                return _vigor;
+            }
+        }
         PuloDaJanela _janela;
         Vector3 _velocidade;
         float _yaw, _pitch, _coice;
@@ -321,6 +336,7 @@ namespace ZombieCityCleaner.Player
                 Vector2 bruto = _olhar.ReadValue<Vector2>();
                 olhar = _olhar.activeControl != null && _olhar.activeControl.device is Gamepad ? bruto * (sensibilidadeControle * dt) : bruto * sensibilidadeMouse;
                 olhar *= MultiplicadorDoOlhar;
+                if (_vigor != null && _vigor.Letargico) olhar *= VigorDoJogador.CameraLetargica;   // (exausto ou sonolento, 12/11/2026)
                 mover = _mover.ReadValue<Vector2>();
                 correr = _correr.IsPressed();
                 pular = _pular.WasPressedThisFrame();
@@ -397,12 +413,18 @@ namespace ZombieCityCleaner.Player
                 pular = false;
             }
             CameraDoAbaixar(dt);
+            // o vigor (12/11/2026): esgotado, não corre; sem o bastante, não pula
+            var vigor = Vigor;
+            if (correr && !vigor.PodeCorrer) correr = false;
+            if (pular && _controle.isGrounded && !vigor.Pular()) pular = false;
             // de frente para uma janela livre, o pulo é por ela (o PuloDaJanela leva o jogador daqui em diante)
             if (pular && _controle.isGrounded && _janela != null && _janela.Tentar()) return;
             // a água funda (06/11/2026): ele nada
             if (Nadar(mover, correr, pesado, controla, dt)) return;
             Correndo = correr && mover.y > 0.1f && !rede.Mirando.Value && !Agachado;
+            vigor.Passo(dt, Correndo, false, false, mover.sqrMagnitude < 0.01f);
             float alvo = Agachado ? velocidadeAgachado : rede.Mirando.Value ? velocidadeMirando : Correndo ? velocidadeCorrendo : velocidadeAndando;
+            if (vigor.Letargico) alvo *= VigorDoJogador.LentidaoLetargica;   // (exausto ou sonolento: letárgico)
             if (pesado) alvo *= Habilidades.Tem(rede, Habilidade.Borracheiro) ? 0.8f : InventarioJogador.LentidaoDoPneu;   // (o Borracheiro)
             alvo *= Protecao.FatorDaVelocidade(_inventario);   // (o colete de chapa pesa, 11/11/2026)
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
@@ -429,6 +451,9 @@ namespace ZombieCityCleaner.Player
         // nadando: boia com os olhos rentes à água, anda devagar para onde olha (no plano), o Espaço sobe e o C mergulha;
         // o correr para a frente nada rápido, com fôlego. Entra com a água acima do peito (1,25 m nos pés) e sai abaixo de
         // 1,05 m. Devolve se nadou.
+        /// <summary>Sem vigor na água funda, ele afunda a tanto (m/s; 12/11/2026).</summary>
+        const float AfundandoSemVigor = 0.35f;
+
         bool Nadar(Vector2 mover, bool correr, bool pesado, bool controla, float dt)
         {
             bool agua = Agua.Nivel(transform.position, out float nivel);
@@ -449,14 +474,20 @@ namespace ZombieCityCleaner.Player
                 if (teclado.spaceKey.isPressed) sobe += 1f;
                 if (teclado.leftCtrlKey.isPressed || teclado.cKey.isPressed) sobe -= 1f;
             }
-            // o nado rápido gasta o fôlego (o anfitrião conta): com pouco, ele não arranca; acabando, volta ao normal
-            int folego = rede != null && rede.Vida != null ? rede.Vida.Folego.Value : 100;
-            NadandoRapido = correr && mover.y > 0.1f && !pesado && folego > (NadandoRapido ? 2 : 15);
-            float vel = (NadandoRapido ? velocidadeNadandoRapido : velocidadeNadando) * (pesado ? 0.5f : 1f) * PesoNaAgua();
+            // nadar gasta o vigor (12/11/2026, a pedido: "nadar perde stamina e você pode se afogar se chegar a 0"): boiando
+            // parado, devagar; nadando, mais; o nado rápido, muito (esgotado, ele volta ao normal). Sem vigor nenhum, ele não se
+            // segura em cima: afunda devagar (o Espaço não sobe), e embaixo da água é o fôlego (o afogamento, do anfitrião)
+            var vigor = Vigor;
+            NadandoRapido = correr && mover.y > 0.1f && !pesado && vigor.PodeCorrer;
+            vigor.Passo(dt, false, true, NadandoRapido, mover.sqrMagnitude < 0.01f && sobe == 0f);
+            bool semVigor = vigor.Vigor <= 0.5f;
+            if (semVigor && sobe > 0f) sobe = 0f;
+            float vel = (NadandoRapido ? velocidadeNadandoRapido : velocidadeNadando) * (pesado ? 0.5f : 1f) * PesoNaAgua() * (semVigor ? 0.6f : 1f);
             Vector3 quer = (transform.right * mover.x + transform.forward * mover.y) * vel;
             Vector3 horizontal = Vector3.Lerp(new Vector3(_velocidade.x, 0f, _velocidade.z), quer, 1f - Mathf.Exp(-3f * dt));
             float alvoY = nivel - alturaBoiando;
             float vy = sobe < 0f ? -velocidadeMergulho
+                     : semVigor ? -AfundandoSemVigor
                      : sobe > 0f && transform.position.y < alvoY ? velocidadeMergulho * 1.2f
                      : Mathf.Clamp((alvoY - transform.position.y) * 2.5f, -1.2f, 1.2f);
             _velocidade = new Vector3(horizontal.x, Mathf.Lerp(_velocidade.y, vy, 1f - Mathf.Exp(-4f * dt)), horizontal.z);

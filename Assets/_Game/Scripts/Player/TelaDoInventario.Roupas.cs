@@ -83,7 +83,12 @@ namespace ZombieCityCleaner.Player
                     GUI.color = antes;
                 }
                 GUI.Label(new Rect(a.x - 10 * u, a.yMax + 1 * u, a.width + 20 * u, 16 * u), Itens.NomeDoLugar(l), _centro);
-                if (a.Contains(mouse) && !_arrastando) _dicaTexto = vestida ? Maiuscula(Itens.Nome(item)) : Itens.DicaDoLugar(l) + ": vazio";
+                if (a.Contains(mouse) && !_arrastando)
+                {
+                    // (a roupa molhada, 12/11/2026)
+                    int molhada = inventario != null ? inventario.Molhado.Value.De(l) : 0;
+                    _dicaTexto = vestida ? Maiuscula(Itens.Nome(item)) + (molhada > 0 ? $" (molhada: {molhada}%)" : "") : Itens.DicaDoLugar(l) + ": vazio";
+                }
             }
         }
 

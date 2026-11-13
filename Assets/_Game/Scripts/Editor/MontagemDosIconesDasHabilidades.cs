@@ -20,7 +20,7 @@ namespace ZombieCityCleaner.EditorTools
         public const string Pasta = "Assets/_Game/Art/UI/Habilidades/Resources";
 
         // a letra de cada ramo no id do Blender (na ordem de RamoDaHabilidade)
-        static readonly string[] Letras = { "g", "a", "s", "l", "f", "h", "n", "u", "p", "k", "t", "o", "q" };
+        static readonly string[] Letras = { "g", "a", "s", "l", "f", "h", "n", "u", "p", "k", "t", "o", "q", "v" };   // (o "v": o Atleta, 12/11/2026)
 
         /// <summary>O id do nó no Blender (g1, a10, q5...): a letra do ramo e o lugar dele no ramo (na ordem do enum).</summary>
         public static string Id(Habilidade h)

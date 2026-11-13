@@ -207,7 +207,14 @@ namespace ZombieCityCleaner.Player
         }
 
         // uma cópia do material do retrato com a textura (e o deslocamento da variação da cor) de outro material
-        Material Copia(Material retrato, Material de)
+        Material Copia(Material retrato, Material de) => CopiaDoMaterial(retrato, de, _materiais);
+
+        /// <summary>
+        /// Uma cópia do material do retrato (a luz fixa) com a textura e o deslocamento da variação da cor de outro material;
+        /// as roupas, a cópia do material delas no modo do retrato. Guardada em <paramref name="materiais"/> (para destruir
+        /// depois). Também a imagem da aba CORPO (<see cref="ImagemDoCorpo"/>, 11/11/2026).
+        /// </summary>
+        internal static Material CopiaDoMaterial(Material retrato, Material de, List<Material> materiais)
         {
             // as roupas (o shader delas, com as cores por peça): a cópia do material delas na luz fixa do retrato
             if (de != null && de.shader != null && de.shader.name == "ZombieCityCleaner/Roupas")
@@ -217,7 +224,7 @@ namespace ZombieCityCleaner.Player
                 foreach (var p in new[] { "_Ambiente", "_Luz" })
                     if (retrato.HasProperty(p)) roupa.SetFloat(p, retrato.GetFloat(p));
                 if (retrato.HasProperty("_DirecaoDaLuz")) roupa.SetVector("_DirecaoDaLuz", retrato.GetVector("_DirecaoDaLuz"));
-                _materiais.Add(roupa);
+                materiais.Add(roupa);
                 return roupa;
             }
             var m = new Material(retrato);
@@ -227,12 +234,12 @@ namespace ZombieCityCleaner.Player
                 m.mainTextureOffset = de.mainTextureOffset;
                 m.mainTextureScale = de.mainTextureScale;
             }
-            _materiais.Add(m);
+            materiais.Add(m);
             return m;
         }
 
         // a cópia foi feita do corpo animado: volta cada osso para a pose de repouso do prefab
-        static void Repouso(Transform referencia, Transform copia)
+        internal static void Repouso(Transform referencia, Transform copia)
         {
             var ossos = new Dictionary<string, Transform>();
             foreach (var t in copia.GetComponentsInChildren<Transform>(true)) ossos[t.name] = t;

@@ -264,6 +264,26 @@ namespace ZombieCityCleaner.Player
             return new Rect(x0 + 35f * s, y0 - 1f * s, 16f * s, 16f * s);
         }
 
+        /// <summary>O termômetro da febre no retângulo dado (a imagem da aba CORPO, 11/11/2026); sem febre, nada.</summary>
+        public static void Termometro(Rect r, in EstadoDoCorpo e)
+        {
+            if (e.Infeccao >= 2 && (Event.current == null || Event.current.type == EventType.Repaint)) Imagem(r, IconesDoCorpo.Termometro, CorDoTermometro(e), 1f);
+        }
+
+        /// <summary>A cor da parte na silhueta (a da vida; a inutilizada, cinza): a imagem da aba CORPO usa a mesma.</summary>
+        public static Color CorDaParte(in EstadoDoCorpo e, ParteDoCorpo p) => e.Inutil(p) ? Inutilizada : PecasDoMotor.CorDoEstado(e.Vida(p));
+
+        /// <summary>O verde-amarelado da infecção, pulsando devagar (o contorno da parte de onde ela veio).</summary>
+        public static Color CorDaInfeccaoAgora
+        {
+            get
+            {
+                var c = CorDaInfeccao;
+                c.a = 0.65f + 0.35f * Mathf.Sin(Time.time * 2.5f);
+                return c;
+            }
+        }
+
         static Color CorDoTermometro(in EstadoDoCorpo e)
         {
             if (!e.ComFebre) return CorDaFebreAliviada;
@@ -318,6 +338,18 @@ namespace ZombieCityCleaner.Player
         {
             var r = RetanguloDaParte(area, p);
             float lado = 12f * s;
+            IconesEm(r.center, Vector2.up, new Vector2(r.center.x, r.yMax - 0.225f * lado), lado, e, p, alfa);
+        }
+
+        /// <summary>
+        /// Os ícones do estado da parte (a gota ou a faixa, com o selo da ferida protegida ou limpa; a tala ou o osso; o
+        /// micróbio), empilhados em volta de <paramref name="centro"/> ao longo de <paramref name="eixo"/> (para baixo, na
+        /// silhueta), e o anel da entorse em <paramref name="ponta"/>. A imagem do personagem da aba CORPO (11/11/2026) usa
+        /// com o eixo do membro.
+        /// </summary>
+        public static void IconesEm(Vector2 centro, Vector2 eixo, Vector2 ponta, float lado, in EstadoDoCorpo e, ParteDoCorpo p, float alfa)
+        {
+            if (Event.current != null && Event.current.type != EventType.Repaint) return;
             int n = 0;
             var lesao = e.LesaoDe(p);
             bool tala = e.Tala(p);
@@ -354,24 +386,23 @@ namespace ZombieCityCleaner.Player
             // a ferida protegida (o escudinho) ou limpa pelo spray (a gotinha azul): no canto do 1º ícone (a gota ou a faixa)
             var selo = !e.Ferida(p) ? null : e.Protegida(p) ? IconesDoCorpo.Escudo : e.Limpa(p) ? IconesDoCorpo.Gotinha : null;
             var corDoSelo = e.Protegida(p) ? CorDoEscudo : CorDaLimpeza;
-            float y = r.center.y - (n - 1) * lado * 0.55f;
             for (int i = 0; i < n; i++)
             {
-                var ri = new Rect(r.center.x - lado / 2f, y - lado / 2f, lado, lado);
+                var meio = centro + eixo * ((i - (n - 1) * 0.5f) * lado * 1.1f);
+                var ri = new Rect(meio.x - lado / 2f, meio.y - lado / 2f, lado, lado);
                 Imagem(ri, _icones[i], _coresDosIcones[i], alfa);
                 // a fratura exposta: a gotinha junto do osso
                 if (exposta && _icones[i] == IconesDoCorpo.Osso)
                     Imagem(new Rect(ri.xMax - lado * 0.35f, ri.y - lado * 0.2f, lado * 0.55f, lado * 0.55f), IconesDoCorpo.Gota, CorDaGota, alfa);
                 if (i == 0 && selo != null && (_icones[0] == IconesDoCorpo.Gota || _icones[0] == IconesDoCorpo.Faixa))
                     Imagem(new Rect(ri.xMax - lado * 0.3f, ri.y - lado * 0.25f, lado * 0.6f, lado * 0.6f), selo, corDoSelo, alfa);
-                y += lado * 1.1f;
                 _icones[i] = null;
             }
             // a entorse sem a tala: o anel na ponta do membro
             if (lesao == Lesao.Entorse && !tala)
             {
                 float l = lado * 0.9f;
-                Imagem(new Rect(r.center.x - l / 2f, r.yMax - l * 0.75f, l, l), IconesDoCorpo.Entorse, CorDaEntorse, alfa);
+                Imagem(new Rect(ponta.x - l / 2f, ponta.y - l / 2f, l, l), IconesDoCorpo.Entorse, CorDaEntorse, alfa);
             }
         }
 

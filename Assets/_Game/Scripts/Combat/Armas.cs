@@ -157,6 +157,21 @@ namespace ZombieCityCleaner.Combat
         /// <summary>Uma arma de sucata (09/11/2026).</summary>
         public static bool DeSucata(TipoDeArma t) => Dados(t).equivalente != null;
 
+        /// <summary>
+        /// O rifle de sucata com os braços de primeira pessoa próprios (11/11/2026): o Jogador_FP_Sucata_Rifle.fbx, com as
+        /// animações da sniper e a pegada no punho e na tábua dele (o Blender/Armas/pegada_fogo.py; o punho dele fica 11 cm
+        /// abaixo do da Mosin). false volta aos braços da sniper (rodar Zombie City Cleaner > Armas > Montar os braços do
+        /// rifle de sucata depois de mudar).
+        /// </summary>
+        public static readonly bool RifleDeSucataComBracosProprios = true;
+        /// <summary>
+        /// O nome dos braços de primeira pessoa de uma arma (Jogador_FP_&lt;nome&gt;.fbx e .overrideController): os da real,
+        /// menos o rifle de sucata com os braços próprios (<see cref="RifleDeSucataComBracosProprios"/>). Os objetos dentro do
+        /// FBX dele têm os nomes da sniper (FP_Bracos_Sniper, Boca_FP_Sniper).
+        /// </summary>
+        public static string BracosFP(TipoDeArma t) =>
+            t == TipoDeArma.RifleSucata && RifleDeSucataComBracosProprios ? Modelos[(int)t] : Modelos[(int)Real(t)];
+
         // ------------------------------------------------------------------ as armas de sucata (09/11/2026)
 
         // Os números das de sucata a partir da real equivalente (a pedido: o dano ~75%, as primeiras do jogo, fabricadas):

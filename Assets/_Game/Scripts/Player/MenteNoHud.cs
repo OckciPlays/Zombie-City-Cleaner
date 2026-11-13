@@ -29,7 +29,7 @@ namespace ZombieCityCleaner.Player
                               Acalmando = new Color(0.6f, 0.92f, 0.86f);
 
         // a ordem do porquê (o mais forte primeiro) e o nome de cada um
-        static readonly MotivoDaMente[] OrdemDoQueAbala =
+        internal static readonly MotivoDaMente[] OrdemDoQueAbala =
         {
             MotivoDaMente.AmigoCaiu, MotivoDaMente.Susto, MotivoDaMente.Zumbis, MotivoDaMente.Matou, MotivoDaMente.Escuro,
             MotivoDaMente.Tensao, MotivoDaMente.Golpe, MotivoDaMente.Dor, MotivoDaMente.Sangue, MotivoDaMente.Febre,
@@ -60,15 +60,31 @@ namespace ZombieCityCleaner.Player
 
         public static Color CorDa(float mente) => Faixa(mente) switch { 0 => Calmo, 1 => Abalado, 2 => Apavorado, _ => Colapso };
 
-        void Awake() => _vida = GetComponent<VidaJogador>();
+        TelaDoInventario _tela;
 
-        /// <summary>Onde fica o cérebro (à direita das barras da fome e da sede).</summary>
-        public static Rect Area(float u) => new Rect(176f * u, Screen.height - 138f * u, 52f * u, 41f * u);
+        void Awake()
+        {
+            _vida = GetComponent<VidaJogador>();
+            _tela = GetComponent<TelaDoInventario>();
+        }
+
+        /// <summary>
+        /// Onde fica o cérebro: o primeiro dos medidores redondos, em cima do monitor cardíaco (12/11/2026; antes, à direita
+        /// das barras da fome e da sede), no meio da altura do quadrado (ele é mais largo que alto).
+        /// </summary>
+        public static Rect Area(float u)
+        {
+            var m = EstadosNoHud.AreaDoMedidor(0, u);
+            float h = m.width * IconesDaMente.Altura / IconesDaMente.Largura;
+            return new Rect(m.x, m.y + (m.height - h) / 2f, m.width, h);
+        }
 
         void OnGUI()
         {
             if (_vida == null || !_vida.IsSpawned || !_vida.IsOwner || _vida.Caido.Value) return;
             if (MenuOnline.Aberto || MenuOnline.Cinema || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
+            // com a mochila aberta, os medidores saem (a tela cobre o canto; 12/11/2026: o cérebro ficava por cima dela)
+            if (_tela != null && _tela.Aberta) return;
             float u = Screen.height / 720f;
             float mente = _vida.Sanidade.Value;
             int faixa = Faixa(mente);
@@ -101,11 +117,18 @@ namespace ZombieCityCleaner.Player
                 GUI.DrawTexture(r, IconesDaMente.Rachaduras);
             }
             GUI.color = antes;
-            Porque(u, mente, faixa, cor);
+            // a linha do porquê saiu do HUD (12/11/2026: os símbolos dos estados dizem); ela vira a dica do cérebro, com o
+            // mouse solto em cima
+            Porque(u, mente, faixa, cor, false);
+            var medidor = EstadosNoHud.AreaDoMedidor(0, u);
+            if (EstadosNoHud.MouseSolto && medidor.Contains(Event.current.mousePosition))
+                EstadosNoHud.Dica(medidor, $"Mente: {Mathf.RoundToInt(mente)}%", string.IsNullOrEmpty(_linha) ? "Calma." : _linha, u);
+            // os símbolos dos estados, no canto de baixo à direita (com a mochila aberta, eles vão para a aba CORPO)
+            EstadosNoHud.NoHud(_vida, u);
         }
 
-        // a linha do porquê, em cima das barras (refeita só quando o motivo ou a faixa mudam)
-        void Porque(float u, float mente, int faixa, Color cor)
+        // a linha do porquê (refeita só quando o motivo ou a faixa mudam); desde 12/11/2026 só a dica do cérebro, sem desenhar
+        void Porque(float u, float mente, int faixa, Color cor, bool desenhar = true)
         {
             uint m = _vida.MotivosDaMente.Value;
             bool cheia = mente >= VidaJogador.MenteMaxima - 0.5f;
@@ -132,7 +155,7 @@ namespace ZombieCityCleaner.Player
                     if (estilo.CalcSize(_conteudo).x <= largura) break;
                 }
             }
-            if (string.IsNullOrEmpty(_linha)) return;
+            if (string.IsNullOrEmpty(_linha) || !desenhar) return;
             var corDaLinha = _acalmando ? Acalmando : cor;
             var r = new Rect(20f * u, Screen.height - 156f * u, largura, 16f * u);
             estilo.normal.textColor = new Color(0f, 0f, 0f, 0.75f);

@@ -8,11 +8,13 @@ namespace ZombieCityCleaner.Player
 {
     /// <summary>
     /// A aba CORPO da tela do inventário (05/11/2026, o sistema de vida por membro; H abre direto nela).
-    /// - No lugar da grade, a silhueta grande (<c>CorpoNoHud.DesenharSilhueta</c>,
-    ///   a mesma do HUD) e as 6 etiquetas, como as do capô: o nome, a vida da parte, a barra e o estado em palavras
-    ///   ("sangrando", "enfaixado: fecha em 2 dias", "fratura com tala: sara em 14 h", "inutilizado"). Clicar numa parte (ou
-    ///   na etiqueta) escolhe; de novo, volta ao automático (o curativo vai onde mais precisa). Embaixo, a vida geral, o
-    ///   analgésico, a barra do curativo que está sendo feito (com o botão de parar) e o aviso.
+    /// - No lugar da grade, a imagem do personagem (11/11/2026, a pedido: o personagem de verdade, vestido, numa foto parada
+    ///   com cada parte tingida pela vida dela: <see cref="ImagemDoCorpo"/>; sem ela, a silhueta do HUD,
+    ///   <c>CorpoNoHud.DesenharSilhueta</c>) e as 6 etiquetas, como as do capô: o nome, a vida da parte, a barra e o estado em
+    ///   palavras ("sangrando", "enfaixado: fecha em 2 dias", "fratura com tala: sara em 14 h", "inutilizado"). Clicar numa
+    ///   parte (ou na etiqueta) escolhe; de novo, volta ao automático (o curativo vai onde mais precisa). Embaixo, o
+    ///   analgésico, a barra do curativo que está sendo feito (com o botão de parar) e o aviso (a barra da vida geral saiu
+    ///   a pedido, 11/11/2026).
     /// - À direita, no lugar dos detalhes, a parte escolhida e a coluna "CURATIVOS NA MOCHILA" (a atadura, as bandagens, o
     ///   spray, o kit médico, a tala, os comprimidos, o xarope e o antibiótico; só os que estão na mochila, que os 9 não cabem
     ///   a 720p): a quantidade (o spray, os usos) e o que o clique faz, ou, apagado, por que não serve
@@ -30,6 +32,8 @@ namespace ZombieCityCleaner.Player
         static readonly Rect AbaCorpo = new Rect(560, 14, 104, 36);
         static readonly Rect AreaDoCorpo = new Rect(GradeX, 58, GradeMaxW, 486);
         static readonly Rect SilhuetaGrande = new Rect(500, 66, 158, 310);
+        // a imagem do personagem (11/11/2026), entre as etiquetas e até a linha da infecção (a vida geral saiu)
+        static readonly Rect AreaDaImagemDoCorpo = new Rect(496, 60, 166, 358);
         static readonly Rect BotaoParar = new Rect(GradeX + GradeMaxW - 96, 458, 90, 30);
         const float EtiquetaW = 150f, EtiquetaH = 96f, PassoDaEtiqueta = 106f;
         const float CurativosY = 230f, PassoDoCurativo = 56f;
@@ -121,7 +125,136 @@ namespace ZombieCityCleaner.Player
                     parte = (ParteDoCorpo)p;
                     return true;
                 }
+            if (ImagemDoCorpoPronta(out var r)) return _imagemDoCorpo.ParteEm(m - r.position, out parte);
             return CorpoNoHud.ParteEm(Em(SilhuetaGrande), m, out parte);
+        }
+
+        // ------------------------------------------------------------------ a imagem do personagem (11/11/2026)
+
+        ImagemDoCorpo _imagemDoCorpo;
+        readonly Color[] _coresDasPartes = new Color[PartesDoCorpo.Quantas];
+        readonly bool[] _partesFortes = new bool[PartesDoCorpo.Quantas], _partesInuteis = new bool[PartesDoCorpo.Quantas];
+
+        // o tamanho da imagem na tela (em pixels) e o lugar dela (no meio da área, em cima)
+        static Vector2Int TamanhoDaImagemDoCorpo(float u) =>
+            new Vector2Int(Mathf.RoundToInt(AreaDaImagemDoCorpo.width * u), Mathf.RoundToInt(AreaDaImagemDoCorpo.height * u));
+
+        Rect RetanguloDaImagemDoCorpo()
+        {
+            var t = TamanhoDaImagemDoCorpo(_u);
+            var a = Em(AreaDaImagemDoCorpo);
+            return new Rect(Mathf.Round(a.center.x - t.x / 2f), Mathf.Round(a.y), t.x, t.y);
+        }
+
+        /// <summary>A imagem está feita e é do tamanho da tela de agora (o retângulo dela na tela).</summary>
+        bool ImagemDoCorpoPronta(out Rect r)
+        {
+            r = default;
+            if (_imagemDoCorpo == null || !_imagemDoCorpo.Pronta) return false;
+            r = RetanguloDaImagemDoCorpo();
+            return _imagemDoCorpo.Largura == (int)r.width && _imagemDoCorpo.Altura == (int)r.height;
+        }
+
+        // no Update, com a aba aberta: a foto é feita de novo quando o personagem, a roupa, a proteção ou a tela mudam (não
+        // no OnGUI: a câmera desenha fora dele). Não deu, a aba usa a silhueta até algo mudar
+        void AtualizarImagemDoCorpo()
+        {
+            if (_aba != Aba.Corpo || materialDoRetrato == null || inventario == null) return;
+            float u = Escala();
+            var t = TamanhoDaImagemDoCorpo(u);
+            long chave = ImagemDoCorpo.ChaveDe(rede, inventario, t.x, t.y);
+            _imagemDoCorpo ??= new ImagemDoCorpo();
+            if (chave == _imagemDoCorpo.Chave) return;
+            _imagemDoCorpo.Gerar(rede, inventario, materialDoRetrato, t.x, t.y, u);
+        }
+
+        // a imagem colorida pela vida das partes, a infectada, a do mouse e a escolhida (os contornos) e os ícones
+        void DesenharImagemDoCorpo(Rect r, in EstadoDoCorpo e, ParteDoCorpo sob, ParteDoCorpo realce, float brilho, bool pulsando)
+        {
+            var img = _imagemDoCorpo;
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+            {
+                var pp = (ParteDoCorpo)p;
+                _coresDasPartes[p] = CorpoNoHud.CorDaParte(e, pp);
+                _partesInuteis[p] = e.Inutil(pp);
+                // a parte sã fica com o tom fraco: o que chama a atenção é o machucado
+                _partesFortes[p] = e.Inutil(pp) || e.Vida(pp) < 100;
+            }
+            img.Pintar(_coresDasPartes, _partesFortes, _partesInuteis);
+            if (img.Imagem == null) return;
+            GUI.DrawTexture(r, img.Imagem, ScaleMode.StretchToFill, true);
+            // a parte de onde veio a infecção: o contorno verde-amarelado, pulsando devagar
+            var infectada = e.Infectado ? e.OrigemDaInfeccao : PartesDoCorpo.Sortear;
+            if (PartesDoCorpo.Valida(infectada) && !(infectada == realce && brilho > 0f)) ContornoDaParte(r, infectada, CorpoNoHud.CorDaInfeccaoAgora);
+            // o mouse: um brilho e o contorno claro; a escolhida (ou a do curativo, pulsando): o contorno amarelo, por cima
+            if (PartesDoCorpo.Valida(sob))
+            {
+                MascaraDaParte(r, sob, new Color(1f, 1f, 1f, 0.16f));
+                ContornoDaParte(r, sob, new Color(1f, 1f, 1f, 0.9f));
+            }
+            if (PartesDoCorpo.Valida(realce) && brilho > 0f)
+            {
+                if (pulsando) MascaraDaParte(r, realce, new Color(1f, 1f, 1f, 0.3f * brilho));
+                ContornoDaParte(r, realce, new Color(Destaque.r, Destaque.g, Destaque.b, brilho));
+            }
+            // os ícones do estado em cima da parte (ao longo do membro) e o termômetro da febre ao lado da cabeça
+            float lado = Mathf.Round(20f * _u);
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+            {
+                var pp = (ParteDoCorpo)p;
+                if (img.TemParte(pp)) CorpoNoHud.IconesEm(r.position + img.Centro(pp), img.Eixo(pp), r.position + img.Ponta(pp), lado, e, pp, 1f);
+            }
+            if (img.TemParte(ParteDoCorpo.Cabeca))
+            {
+                var c = img.Caixa(ParteDoCorpo.Cabeca);
+                CorpoNoHud.Termometro(new Rect(r.x + c.xMax + 3f * _u, r.y + c.y, 18f * _u, 18f * _u), e);
+            }
+        }
+
+        void MascaraDaParte(Rect r, ParteDoCorpo p, Color cor)
+        {
+            var t = _imagemDoCorpo.Mascara(p, out var c);
+            if (t == null) return;
+            var antes = GUI.color;
+            GUI.color = cor;
+            GUI.DrawTexture(new Rect(r.x + c.x, r.y + c.y, c.width, c.height), t, ScaleMode.StretchToFill, true);
+            GUI.color = antes;
+        }
+
+        void ContornoDaParte(Rect r, ParteDoCorpo p, Color cor)
+        {
+            var t = _imagemDoCorpo.Contorno(p, out var c);
+            if (t == null) return;
+            var antes = GUI.color;
+            GUI.color = cor;
+            GUI.DrawTexture(new Rect(r.x + c.x, r.y + c.y, c.width, c.height), t, ScaleMode.StretchToFill, true);
+            GUI.color = antes;
+        }
+
+        /// <summary>Para o teste: o meio da parte na imagem, em pixels da tela (a tela aberta na aba CORPO e já desenhada).</summary>
+        public Vector2 PontoDaParteDeTeste(ParteDoCorpo p)
+        {
+            if (!ImagemDoCorpoPronta(out var r) || !_imagemDoCorpo.TemParte(p)) return new Vector2(-1f, -1f);
+            var meio = _imagemDoCorpo.Centro(p);
+            if (_imagemDoCorpo.ParteEm(meio, out var achada) && achada == p) return r.position + meio;
+            var c = _imagemDoCorpo.Caixa(p);
+            return r.position + c.center;
+        }
+
+        /// <summary>Para o teste: escolhe a parte (Sortear: o automático).</summary>
+        public void EscolherParteDeTeste(ParteDoCorpo p) => _parteEscolhida = p;
+
+        /// <summary>Para o teste: o tamanho da imagem e a caixa de cada parte ("" sem ela).</summary>
+        public string ResumoDaImagemDoCorpo()
+        {
+            if (_imagemDoCorpo == null || !_imagemDoCorpo.Pronta) return "";
+            var sb = new System.Text.StringBuilder($"{_imagemDoCorpo.Largura}x{_imagemDoCorpo.Altura}");
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+            {
+                var pp = (ParteDoCorpo)p;
+                sb.Append($" {pp}:{(_imagemDoCorpo.TemParte(pp) ? _imagemDoCorpo.Caixa(pp).ToString() : "-")}");
+            }
+            return sb.ToString();
         }
 
         bool CurativoEm(Vector2 m, out int linha)
@@ -426,33 +559,29 @@ namespace ZombieCityCleaner.Player
                 realce = t.Parte;
                 brilho = 0.55f + 0.45f * Mathf.Sin(Time.unscaledTime * 6f);
             }
-            CorpoNoHud.DesenharSilhueta(area, e, realce, brilho);
-            if (PartesDoCorpo.Valida(sob))
+            // a imagem do personagem (11/11/2026); sem ela (não deu), a silhueta do HUD
+            if (ImagemDoCorpoPronta(out var ri)) DesenharImagemDoCorpo(ri, e, sob, realce, brilho, brilho < 1f);
+            else if (_imagemDoCorpo != null && _imagemDoCorpo.Chave != -1)
             {
-                var rs = CorpoNoHud.RetanguloDaParte(area, sob);
-                if (sob == ParteDoCorpo.Cabeca)
+                CorpoNoHud.DesenharSilhueta(area, e, realce, brilho);
+                if (PartesDoCorpo.Valida(sob))
                 {
-                    var antes = GUI.color;
-                    GUI.color = new Color(1f, 1f, 1f, 0.15f);
-                    GUI.DrawTexture(rs, Circulo());
-                    GUI.color = antes;
+                    var rs = CorpoNoHud.RetanguloDaParte(area, sob);
+                    if (sob == ParteDoCorpo.Cabeca)
+                    {
+                        var antes = GUI.color;
+                        GUI.color = new Color(1f, 1f, 1f, 0.15f);
+                        GUI.DrawTexture(rs, Circulo());
+                        GUI.color = antes;
+                    }
+                    else Ret(rs, new Color(1f, 1f, 1f, 0.15f));
                 }
-                else Ret(rs, new Color(1f, 1f, 1f, 0.15f));
-                _dicaTexto = "Clique: escolher   ·   botão direito: os curativos";
             }
+            if (PartesDoCorpo.Valida(sob)) _dicaTexto = "Clique: escolher   ·   botão direito: os curativos";
             for (int p = 0; p < PartesDoCorpo.Quantas; p++) EtiquetaDaParte(e, (ParteDoCorpo)p, (ParteDoCorpo)p == sob);
 
-            // embaixo: a vida geral (um pouco mais alta que antes: a linha da infecção entrou embaixo dela)
-            float x = GradeX + 6f, w = GradeMaxW - 12f, y = 384f;
-            GUI.Label(Em(new Rect(x, y, 200, 20)), "VIDA GERAL", _titulo);
-            float fracao = vida.vidaMaxima > 0f ? Mathf.Clamp01(vida.Vida.Value / vida.vidaMaxima) : 0f;
-            var num = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleRight };
-            PorCor(num, fracao > 0.35f ? CorDoTexto : Ruim);
-            GUI.Label(Em(new Rect(x, y, w, 20)), $"{Mathf.CeilToInt(vida.Vida.Value)} / {Mathf.RoundToInt(vida.vidaMaxima)}", num);
-            var barra = Em(new Rect(x, y + 24f, w, 8f));
-            Ret(barra, new Color(0f, 0f, 0f, 0.5f));
-            Ret(new Rect(barra.x, barra.y, barra.width * fracao, barra.height),
-                fracao > 0.35f ? new Color(0.78f, 0.74f, 0.62f, 0.9f) : new Color(0.85f, 0.25f, 0.2f, 0.95f));
+            // embaixo (a barra da VIDA GERAL saiu a pedido, 11/11/2026: as partes já dizem)
+            float x = GradeX + 6f, w = GradeMaxW - 12f;
 
             // o analgésico, a dor ou o sangue
             string linha = null;
@@ -472,23 +601,26 @@ namespace ZombieCityCleaner.Player
                 linha = "Com dor: o analgésico tira a dor (a mira treme menos e o osso sara mais rápido).";
                 cor = Ruim;
             }
-            // a etapa 2: a infecção do corpo inteiro, em cima (a mais grave)
-            string infeccao = LinhaDaInfeccao(e);
-            float yDaLinha = 424f;
-            if (infeccao != null || linha != null)
+            // os símbolos dos estados (12/11/2026, a pedido: "passar o mouse em cima já explicaria o que é o problema (quando
+            // abrir o tab, também estaria ali o problema, na parte do corpo do personagem)"): a fileira dos rostos, no lugar
+            // das linhas da infecção e do sangue; o mouse em cima diz o nome e o porquê (a infecção com a dose e a chance; a
+            // lesão com a dor ou o analgésico)
+            var fileira = Em(new Rect(x, 418f, w, 38f));
+            if (EstadosNoHud.Fileira(vida, fileira, 34f * u, 6f * u, mouse, out var estadoSob))
+            {
+                string porque = estadoSob.porque;
+                if (estadoSob.id == EstadoDoJogador.Infeccao || estadoSob.id == EstadoDoJogador.Febre || estadoSob.id == EstadoDoJogador.Sepse)
+                    porque = LinhaDaInfeccao(e) ?? porque;
+                else if ((estadoSob.id == EstadoDoJogador.Fratura || estadoSob.id == EstadoDoJogador.FraturaExposta || estadoSob.id == EstadoDoJogador.Entorse)
+                         && linha != null && !e.AlgumSangrando)
+                    porque += " " + linha;
+                _dicaTexto = EstadosNoHud.TextoDaDica(estadoSob.nome, porque);
+            }
+            else if (EstadosNoHud.Atuais(vida).Count == 0)
             {
                 var est = new GUIStyle(_pequeno) { wordWrap = false };
-                if (infeccao != null)
-                {
-                    PorCor(est, Ruim);
-                    GUI.Label(Em(new Rect(x, yDaLinha, w, 18f)), infeccao, est);
-                    yDaLinha += 18f;
-                }
-                if (linha != null)
-                {
-                    PorCor(est, cor);
-                    GUI.Label(Em(new Rect(x, yDaLinha, w, 18f)), linha, est);
-                }
+                PorCor(est, linha != null ? cor : TextoApagado);
+                GUI.Label(Em(new Rect(x, 428f, w, 18f)), linha ?? "Nenhum problema agora.", est);
             }
 
             // o curativo de agora (a barra, como a do arrombar) e o botão de parar; sem ele, as dicas

@@ -1136,6 +1136,8 @@ cartas".
   - a boca do cano é o vazio `Boca_FP_<Arma>`;
   - clipes: `Idle`, `Walk` e `Run`, em loop, mais `Fire` (na espingarda, com a bomba), `DryFire`, `Reload` (na espingarda, um cartucho) e `Sacar` (a arma sobe de baixo da tela). Os itens têm `Idle`, `Walk`, `Run`, `Sacar` e `Usar` (comer ou beber, no lugar do `Fire`).
   - **Correndo,** a pistola fica baixa e deitada; as armas longas (e a sniper, que usa as animações do rifle), com o cano um pouco para cima, atravessadas no meio de baixo da tela, inteiras e com a mão esquerda à mostra. Antes, o cano ia para baixo e para a esquerda, e só uma ponta da arma aparecia no meio, embaixo (o "pedaço da arma na frente da câmera" correndo).
+  - **A pegada e os pulsos das armas de fogo** (a pedido: os pulsos torcidos e as mãos abertas que não seguravam). A primeira tentativa (11/11/2026, as `PEGADAS` calculadas para os 5 FBX) foi **reprovada pelo Pedro**. Em 12/11/2026 a pegada foi refeita pelas referências dele (as pegadas de verdade de cada arma), com revisores, no script unificado `Blender/Armas/pegada_fogo.py` (um motor por arma: `fogo_pistola`, `fogo_rifle`, `fogo_sniper` e `fogo_espingarda`), e conferida pelo `pegada_fogo_conferir.py` (compara dois FBX, mede os pulsos e fotografa). Foram trocados 5 FBX: `Jogador_FP_Pistola` (serve também à pistola de sucata), `_Rifle`, `_Sniper`, `_Sucata_Rifle` e `_Espingarda`. **A submetralhadora ficou com o original** (e a de sucata, que usa os braços dela). Os mesmos 7 clipes com os mesmos quadros (24 qps), os mesmos ossos, malha e pesos; a arma e a `Boca_FP_` no mesmo lugar (até 0,002 mm): só a pegada, os dedos, os pulsos e os ombros mudaram. Os ombros (`upper_arm`) foram levados de propósito para fora da tela, até 54 a 73 cm do original em alguns quadros. A pistola: de duas mãos, a direita no punho e a esquerda envolvendo-a por baixo. O rifle: a esquerda fechada por baixo do guarda-mão; a direita no punho, escondida atrás da arma. A sniper: a direita rolada por cima do pescoço da coronha, o cotovelo baixo ao lado do rosto, a esquerda na ponta da madeira, o ferrolho puxado pelos dedos no tempo do original; no `Run`, a pegada da direita fica 3 cm mais à frente, girada no plano da palma, e o cotovelo mais baixo (sem isso, a mão sumia na borda de baixo). A espingarda: a esquerda por baixo da telha, polegar ao longo; a direita no pescoço, fora da tela. Conferido no Play (12/11, as fotos original × novo de cada arma, parada, mirando, no tiro, na recarga, andando, com a jaqueta e com a mulher): as mãos de apoio aparecem e seguram. **Em aberto:** na passagem de andar para correr (a árvore do `Speed` mistura o `Walk` e o `Run` osso a osso), a mão direita da sniper e do rifle de sucata se afasta uns 3 a 4 cm da coronha, para o lado e para baixo, no meio da mistura (~0,3 s no jogo); o `MaoNaArma` só segura a esquerda. No rifle, a direita fica a menos de 5 mm. Trocar só o `.fbx` (o `.meta` guarda a importação, `MontagemDasArmas.ImportarFP`); o prefab do jogador tem instâncias dos FBX e pega as animações novas sozinho. Para gerar de novo: `blender -b --factory-startup --disable-autoexec --python Blender/Armas/pegada_fogo.py -- <Arma> <saida.fbx> original=<pasta dos FBX originais>`; sem `original=`, ele lê os de Assets, e agora para com um aviso, para não aplicar a pegada duas vezes (os originais estão no histórico do git).
+  - **O rifle de sucata tem braços próprios** (11/11/2026): o `Jogador_FP_Sucata_Rifle.fbx` são as animações da sniper com a pegada na geometria dele (o punho de pistola fica 11 cm abaixo do pescoço da Mosin; nos braços da sniper, a direita ficava no alto, por cima da caixa da culatra, e a esquerda entrava 14 mm na tábua). Os objetos dentro dele têm os nomes da sniper (`FP_Rig_Sniper`, `FP_Bracos_Sniper`, `Boca_FP_Sniper`). Quem escolhe é o `Armas.RifleDeSucataComBracosProprios` (`Armas.BracosFP`: o nome do FBX e do override; `Itens.ArquivoDosBracosFP` dá o FBX e o `Itens.ArquivoFP` continua o nome dos objetos); `false` volta aos da sniper. Depois de mudar: **Zombie City Cleaner > Armas > Montar os braços do rifle de sucata** (`MontagemDaSucata.MontarBracosDoRifle`: importa o FBX, faz o `Jogador_FP_Sucata_Rifle.overrideController` pela `MontagemDasArmas.PrepararBracosProprios` e refaz o prefab do jogador pela `MontagemDaRede.MontarPrefab`, sem mexer nas cenas). Desde 12/11/2026 (a pegada refeita), o FBX dele sai do mesmo motor da sniper, na geometria dele: a esquerda fechada na frente da tábua, a direita por cima da tábua, com os dedos do outro lado (no punho de pistola ela ficaria toda abaixo da tela; **falta o Pedro decidir**). Trocar o FBX não pede a montagem de novo (o override já existe). A pele da mão direita chega a entrar uns 16 mm na tábua (medido no Blender).
 - **`Jogador_FP.controller`** (refeito pela montagem das armas, com os clipes da pistola):
   - a base é uma árvore pelo `Speed` (0, 2,0 e 4,2);
   - a camada "Ações" tem os estados `Fire`, `DryFire`, `Reload` e `Sacar`, que o código toca do começo (`ArmaJogador.Acao`). No automático, um tiro recomeça o anterior. Cada um volta sozinho ao estado vazio;
@@ -1591,8 +1593,22 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
 - **A fabricação (`Loot/Receitas`, a aba Criar):** a bandagem (×2), o kit médico, a corda, a fogueira, a cama, a vara de
   pesca, a isca (×5), a tocha e o bastão com pregos, em qualquer lugar; a barricada, a mochila pequena, o kit de reparo e a
   lança, só na bancada. Uma receita gasta itens e pode pedir uma ferramenta que não gasta (a `Ferramenta`). Na aba, cada
-  linha mostra o que sai, o que gasta (verde o que tem, vermelho o que falta), a ferramenta e a bancada, e o botão Criar; os
-  detalhes, quanto tem de cada. O anfitrião confere tudo (`InventarioJogador.CriarRpc`, `PodeCriar`) e o que não cabe cai aos
+  linha mostra o que sai, o que gasta, a ferramenta e a bancada, e o botão Criar; os detalhes, quanto tem de cada.
+  - **Refeita a pedido (11/11/2026: o resumo encavalava na linha de baixo e o combustível passava por baixo do "falta"):**
+    a receita escolhida tem a foto menor (`AreaDaFotoDaReceita`, 124 de altura) e os detalhes maiores
+    (`AreaDosDetalhesDaReceita`, de 238 a 572): o resumo com a altura medida (`CalcHeight`; mais de 3 linhas, na letra
+    pequena); o que ela pede em quadrados como os da grade (`QuadradoDoPedido`: o fundo da espécie, o ícone, o
+    "tem/precisa" grande no canto de baixo, `NumeroFalta` vermelho ou `NumeroDa` verde, 5/2 quando sobra, a moldura
+    vermelha no que falta, o nome curto embaixo cortado com "…" e a dica do mouse com o nome inteiro): os itens
+    (`GastaDe`), o combustível (o ícone do álcool, ou o do galão quando só há gasolina; "cargas/precisa"; a dica "1 álcool
+    ou 0,5 L de gasolina") e a ferramenta (a faixa "NÃO GASTA" em cima, a moldura verde se tem e vermelha se não); até 5
+    numa fileira (56 de lado; com mais, duas fileiras). Embaixo, onde e a habilidade (`LinhaComMarca`: o ✓ verde ou o ✗
+    vermelho desenhados com dois traços, `Marca`, porque a letra do jogo não tem os sinais; a habilidade com o ícone do nó,
+    `IconeDaHabilidade`, e a dica "Aprenda na aba HABILIDADES (K)"). A frase do "Falta ..." saiu (os quadrados já dizem).
+    Na lista, cada linha tem as mesmas miniaturas (20 de lado, com o fundo da espécie e o número na regra de cor; a
+    ferramenta e a habilidade com a moldura da cor; onde, em texto) e a dica do mouse em cada uma. Cabe em 1280×720,
+    1920×1080 e 2560×1440. Para o teste: `EscolherReceitaDeTeste(indice)`, `PontoDoPedidoDeTeste(i)` e o `MouseDeTeste`
+    (agora vale na tela toda, não só na aba HABILIDADES). O anfitrião confere tudo (`InventarioJogador.CriarRpc`, `PodeCriar`) e o que não cabe cai aos
   pés (`Entregar`); a mochila feita é vestida se ele estiver sem nenhuma.
   - **A bancada** (`Loot/Bancada`, um `Interagivel`): o móvel "Bancada" do bunker da Demo_Cidade (embaixo do painel de armas)
     ganha o colisor e o componente na montagem (`MontagemDoSaque.BancadasNaCena`, chamada pela `MontarItensNoMundo`); vale a
@@ -4059,7 +4075,9 @@ o comerciante, as armas reais raras e as melhorias ficam para a 2ª leva e as et
   da arma antiga da real, com a paleta dos itens (`Art/Paleta.png`, 16 × 16; o material `Materials/Pistola.mat`, não a
   `Armas_Paleta_Cor`). As `ArmasNovas.SucataPistola`, `SucataRifle` e `SucataSubmetralhadora` têm o `equivalente` (o modelo
   da real): os braços de primeira pessoa são uma instância do `Jogador_FP_<real>.fbx` com a malha `Malhas/FP_Bracos_Sucata_*`
-  (as peças presas aos ossos `gun`, `slide` e `mag`, pelo mesmo encaixe da real) e o controlador da real; a boca do cano
+  (as peças presas aos ossos `gun`, `slide` e `mag`, pelo mesmo encaixe da real) e o controlador da real (o rifle de
+  sucata, desde 11/11/2026, o `Jogador_FP_Sucata_Rifle.fbx` e o override dele: veja "A pegada e os pulsos das armas de
+  fogo", em "Primeira pessoa"); a boca do cano
   vai para a da sucata. No corpo, o FBX do personagem só tem as reais: a `ArmasNovas.CopiasDeSucataNoCorpo` copia o
   `Arma_<real>` (com a boca e a peça do corpo) e as peças que mexem, com o nome da de sucata, e o `NoCorpo` põe as malhas
   `Malhas/TP_Sucata_*`. A malha solta é `Malhas/Arma_Sucata_*` (o chão, as costas, o cós). A sucata e as munições vêm do
@@ -4667,6 +4685,31 @@ Nenhuma cena nem o prefab do jogador mudaram: as malhas vêm do `Resources/Itens
   vídeo, não o código); reaberto, o aviso "Scene Backup Detected" guardou o backup em `Assets/_Recovery/0 (3).unity` (no
   `.gitignore`), e a cena Mundo não mudou.
 
+## A fauna dos EUA (12/11/2026, a pedido; as etapas 1 a 4 de 5; `Docs/19-Fauna.md`)
+
+`Scripts/Fauna/`: 19 espécies (só o veado no mundo por enquanto), o gerenciador no anfitrião (`FaunaDoMundo`, um
+MonoBehaviour criado pelo `VigiaDaFauna`), a mensagem "ZCC.Fauna" de 13 bytes por bicho para os clientes (a
+`VersaoDaRede` 22), a mente (o rebanho, o alerta, a fuga, a investida do alfa, o ferido sangrando), os sentidos (faro com
+o vento, ouvido, visão, os zumbis) e o povoamento por região de 512 m (cai com a caça até 15% e volta em ~1 dia; no save).
+A caça: o tiro e o golpe (`ArmaJogador.Fauna.cs`), a carcaça com a faca na mão (segure E), a carne crua, a assada (na
+fogueira), o couro e a gordura (`Loot/ItensDaCaca.cs`: modelos provisórios feitos no Play). Os cervos vêm do Blender
+(`Blender/Fauna/familia.py`, o menu Zombie City Cleaner > Fauna > Montar os cervos); o resto são caixas, até o Pedro
+trocar os modelos. A camada 14 é a Fauna. O F1 tem a aba Fauna (pôr um grupo distraído, a fila de todos, matar, ferir).
+**A etapa 2** (os predadores): o `Especies.Papel` (presa, matilha, urso) escolhe a mente; a matilha (`Bicho.Matilha.cs`)
+espreita, caça as presas e come na carcaça (o `Bicho.Restante`), e à noite cerca quem está ferido ou sozinho e morde um de
+cada vez (o fogo segura na beira; matar o alfa desfaz a matilha); o urso (`Bicho.Urso.cs`) avisa de pé, às vezes finge e
+ataca com a patada e o empurrão (`JogadorRede.EmpurraoDoBicho`). Os sons provisórios são gerados em código
+(`Fauna/SomDosBichos.cs`) e vão pela mensagem "ZCC.FaunaSom". **A etapa 3** (a água): os peixes americanos (os mesmos
+números) e o bagre (o item 138); o `Especies.Meio` (terra, água, anfíbio, ar) e a altura de cada um (`Bicho.Agua.cs`); o
+salmão no raso, o urso pescando (`Bicho.Pesca.cs`), o castor com a toca e as árvores roídas (`Bicho.Castor.cs`,
+`FaunaDoMundo.Castores.cs`, no save e na mensagem "ZCC.FaunaCasas"; a árvore cai por `MundoDaPartida.DerrubarPeloCastor`),
+o alce (a mãe com o filhote investe), os patos e os gansos (decolam e pousam; o ninho; o V no céu) e a águia mergulhando.
+**A etapa 4** (a noite e os detalhes, `Bicho.Noite.cs` e `FaunaDoMundo.Noite.cs`): o sapo, a cascavel (o veneno:
+`Player/VidaJogador.Veneno.cs`), o guaxinim nas lixeiras, o gambá (o cheiro chama os zumbis: o `Fedor` em
+`Player/JogadorRede.Fauna.cs` e `ZombieManager.Cheiro`), o urubu nos restos (os corpos dos zumbis agora ficam:
+`Zombies/RestosDosCorpos.cs`), o esquilo no tronco, o peru dormindo nas árvores, os vaga-lumes (`Fauna/VagaLumes.cs`) e
+os olhos na lanterna (`Fauna/Bicho.Olhos.cs`); os símbolos Envenenado e Fedendo. A `VersaoDaRede` é 25.
+
 ## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
 
 O pedido: "a vida não se regenera mais sozinha ... cada membro do jogador terá uma vida", com o sangramento, as bandagens,
@@ -4723,9 +4766,42 @@ de cada curativo, a bandagem e a tala modeladas) estão no fim desta seção.
   MovimentoPrimeiraPessoa a cada quadro, sem editar o arquivo; o mancar e a mira tremendo na câmera, só na primeira pessoa),
   `Tratamento` (a barra de tempo do curativo, os sons do `Combat/SomDosCurativos`, cancela com o golpe, correr, o carro e a
   troca de item; no fim, o `InventarioJogador.TratarRpc`, que confere de novo e só então gasta), `CorpoNoHud` (a silhueta
-  embaixo à esquerda, só com algo errado) e a aba **CORPO** da mochila (`TelaDoInventario.Corpo.cs`, a tecla H). O
+  embaixo à esquerda, só com algo errado) e a aba **CORPO** da mochila (`TelaDoInventario.Corpo.cs`, a tecla H; veja abaixo). O
   `ArmaJogador` não deixa mirar nem atirar com arma de duas mãos com um braço quebrado ou inutilizado. Em todas as máquinas,
   `CurativosNoCorpo` (a faixa e a tala nos ossos, as gotas de sangue de quem sangra; também no retrato da mochila).
+- **A aba CORPO com o personagem de verdade (11/11/2026, a pedido: "ser o nosso personagem real ali", em 2D, sem repetir o
+  retrato 3D; e sem a barra da VIDA GERAL, que saiu):** no lugar do boneco de retângulos, uma foto parada do personagem
+  (`Player/ImagemDoCorpo.cs`), entre as etiquetas (`AreaDaImagemDoCorpo`, 166 × 358 a 720p, do tamanho exato em pixels):
+  - **A foto** (`Gerar`, no `Update` da tela com a aba aberta, `AtualizarImagemDoCorpo`; nunca no OnGUI): uma cópia do
+    corpo como a do retrato (vestida com `VestirComo`, a pose de repouso do prefab, sem o equipamento, os curativos e o que
+    está na mão), com a proteção de sucata vestida (as peças do `PecasDaProtecao`), de frente, os braços abertos uns 22° e
+    as pernas um pouco afastadas (`Posar`); 60 m ao lado do retrato, 500 m embaixo da cidade. Cada malha que entra (o
+    `NPC_Corpo`, as `Roupa_*` e a proteção) é congelada na pose (`BakeMesh`, com a forma da mulher) num MeshRenderer com o
+    material do retrato (`RetratoDoJogador.CopiaDoMaterial`, agora estático: a luz fixa e as cores das peças pelo
+    MaterialPropertyBlock) e desenhada uma vez por uma câmera ortográfica (`cam.aspect` posto à mão: sem ele, a projeção
+    da máscara saía com o aspecto da tela) numa RenderTexture com antisserrilhado 4×, lida para a CPU; a cópia some no
+    mesmo quadro. É refeita só quando a chave muda (`ChaveDe`: o corpo do personagem, a `Vestimenta.Versao`, as peças da
+    proteção e o tamanho da tela). Não deu (sem o material do retrato, uma exceção), a aba volta para a silhueta do HUD.
+  - **A máscara das partes:** as mesmas malhas são rasterizadas na CPU com o teste de profundidade, e cada pixel fica com
+    a parte do osso que mais pesa no vértice mais perto (`OssoDaParte`: a cabeça e o pescoço; o tronco, o quadril e os
+    ombros; os braços até os dedos; as pernas até os pés; os outros ossos sobem até um destes). Acompanha a roupa, a
+    forma do corpo e a proteção. A borda que aparece e ficou sem parte pega a do vizinho.
+  - **A cor** (`Pintar`, refeita só quando a cor de alguma parte muda): o personagem quase sem cor (30% da cor da roupa) e o
+    tom da vida da parte por cima com a luz da foto (`CorpoNoHud.CorDaParte`: verde, amarelo, vermelho; a sã com o tom
+    fraco, 36%, a machucada forte, 62%; a inutilizada cinza com riscas), e uma costura escura entre as partes.
+  - **Por cima:** a máscara e o contorno de cada parte (feitos na primeira vez que pedem): o mouse em cima, um brilho e o
+    contorno claro; a escolhida, o contorno amarelo (o curativo sendo feito pulsa); a parte de onde veio a infecção, o
+    contorno verde-amarelado. Os ícones do estado (`CorpoNoHud.IconesEm`, o mesmo desenho da silhueta: a gota ou a faixa
+    com o selo da ferida protegida ou limpa, a tala ou o osso, o micróbio) empilham ao longo do membro (do ombro à mão, do
+    quadril ao pé), e o anel da entorse vai no pulso ou no tornozelo; o termômetro da febre, ao lado da cabeça
+    (`CorpoNoHud.Termometro`).
+  - **O resto não mudou:** clicar escolhe (de novo, o automático), o botão direito dá os curativos da parte, as etiquetas,
+    a coluna dos curativos à direita, a barra do curativo e o aviso. A parte embaixo do mouse vem da máscara
+    (`ImagemDoCorpo.ParteEm`, com 3 pixels de folga). Para o teste: `PontoDaParteDeTeste`, `EscolherParteDeTeste` e
+    `ResumoDaImagemDoCorpo`.
+  - **Conferido no Play pelo MCP (11/11/2026):** homem (camiseta e calça do começo) e mulher (jaqueta de couro, jeans, boné,
+    o colete de chapa, as braçadeiras e as caneleiras), em 1280×720, 1920×1080 e 2560×1440 (a foto refeita na troca de
+    tela, de roupa e de corpo; o tempo dela não foi medido). O boneco de retângulos ficou só como reserva (o personagem lê bem: as partes não se misturam).
 - **O saque:** a bandagem de pano rende 1 (eram 2); a tala (2 madeiras e 1 pano; incomum no banheiro; nos mortos e nos
   comerciantes); as pilhas achadas da atadura, da bandagem, da gaze e dos comprimidos maiores; o limite por jogador na
   farmácia do Dia 0.

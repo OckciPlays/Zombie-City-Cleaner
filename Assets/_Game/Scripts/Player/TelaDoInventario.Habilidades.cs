@@ -629,7 +629,7 @@ namespace ZombieCityCleaner.Player
             $"Curativo: {Habilidades.XpDoCurativo} (no amigo, {Habilidades.XpDoCurativoNoAmigo}) · infecção curada: {Habilidades.XpDaInfeccaoCurada}",
             "Criar um item: 1 a 6 · saque das casas: 1 a 4",
             $"Ligação direta num carro novo: {Habilidades.XpDaLigacaoDireta}",
-            $"Pescar: {Habilidades.XpDaPesca} (o dourado, {Habilidades.XpDoDourado}) · cortar uma árvore: {Habilidades.XpDaArvore}",
+            $"Pescar: {Habilidades.XpDaPesca} (a truta-dourada, {Habilidades.XpDoDourado}) · cortar uma árvore: {Habilidades.XpDaArvore}",
         };
 
         // ------------------------------------------------------------------ o clique

@@ -276,6 +276,9 @@ namespace ZombieCityCleaner.Zombies
 
         /// <summary>Os alvos que não são jogadores (os sobreviventes se põem aqui no anfitrião, e saem ao morrer ou sumir).</summary>
         public static readonly List<IOutroAlvoDeZumbi> OutrosAlvos = new List<IOutroAlvoDeZumbi>();
+
+        /// <summary>Um barulho no anfitrião (o ponto e o alcance, m): a fauna ouve (12/11/2026).</summary>
+        public static event System.Action<Vector3, float> AoBarulho;
         /// <summary>Os sobreviventes deste quadro, como os jogadores (<see cref="Jogadores"/>).</summary>
         internal readonly Alvo[] Npcs = new Alvo[32];
         internal int QuantosNpcs;
@@ -427,6 +430,8 @@ namespace ZombieCityCleaner.Zombies
             var m = Instancia;
             if (m == null || !m.IsSpawned || !m.IsServer) return;
             float agora = Time.time;
+            // os bichos também ouvem (a fauna, 12/11/2026: Fauna/FaunaDoMundo.Sentidos.cs), com o alcance do barulho
+            AoBarulho?.Invoke(ponto, raio < 0f ? m.ajustes.barulhoDoTiro : raio);
             // de dia e ao amanhecer, o tiro só tira da sombra quem está bem perto (5 m; à noite, 12 m)
             float direto = m.ProtegerDoSol ? m.ajustes.tiroAmeacaDeDia : m.ajustes.tiroChamaDireto;
             if (raio < 0f) raio = m.ajustes.barulhoDoTiro;

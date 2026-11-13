@@ -115,6 +115,7 @@ namespace ZombieCityCleaner.Loot
             Fogo(Item.PeixeAssado, 2, P(Item.PeixeMedio)),
             Fogo(Item.PeixeAssado, 3, P(Item.PeixeGrande)),
             Fogo(Item.PeixeAssado, 3, P(Item.PeixeDourado)),
+            Fogo(Item.PeixeAssado, 2, P(Item.Bagre)),
             R(Item.KitMedico, 1, false, Item.Nada, P(Item.Atadura), P(Item.Gaze, 2), P(Item.Desinfetante), P(Item.Comprimidos)),
             // a bandagem antisséptica (05/11/2026, a etapa 2): 1 álcool (o Desinfetante) e 3 bandagens de pano, ou 3
             // ataduras, dão 3 (o índice da receita vai pela rede: a VersaoDaRede 2 já cobre esta mudança)
@@ -188,6 +189,8 @@ namespace ZombieCityCleaner.Loot
             // as tábuas para barricada (11/11/2026, a etapa 5b; no fim, para os índices das outras não mudarem): pregadas numa
             // porta ou numa janela das casas (os números no Player/ArmadilhasDoJogador.cs)
             H(Player.Habilidade.BarricadaDeTabuas, Item.TabuasBarricada, 1, false, Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 6)),
+            // a carne de caça assada na fogueira acesa (12/11/2026, a fauna; no fim, para os índices das outras não mudarem)
+            Fogo(Item.CarneAssada, 1, P(Item.CarneCrua)),
         };
 
         // a receita do fogo (11/11/2026): a da habilidade, com 1 combustível

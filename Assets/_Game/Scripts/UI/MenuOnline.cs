@@ -401,9 +401,10 @@ namespace ZombieCityCleaner.UI
                 _continuar = true;
                 _personagens = null;
             }
+            // (12/11/2026: sem mundo, o porquê: o Dia 0 não salva, o mundo entra aqui quando o abrigo abre)
             GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0
                 ? $"{mundos[0].nome} · {mundos[0].Resumo()}"
-                : "nenhum mundo salvo ainda", _detalhe);
+                : "nenhum mundo salvo ainda (o Dia 0 não salva)", _detalhe);
             y += 76 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Configurações", true, u)) _opcoes = true;
             y += 56 * u;
@@ -693,7 +694,9 @@ namespace ZombieCityCleaner.UI
             }
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
             if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Configurações", _botao)) _opcoes = true;
-            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), "Sair da partida", _botao))
+            // (12/11/2026: no Dia 0 nada é salvo, e o botão avisa)
+            bool noDiaZero = MundoDaPartida.Instancia != null && MundoDaPartida.Instancia.NoDiaZero;
+            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), noDiaZero ? "Sair (o Dia 0 não é salvo)" : "Sair da partida", _botao))
             {
                 _pausa = false;
                 // nos modos automático e ao sair, salva antes (o anfitrião sai um instante depois, para todos gravarem)

@@ -56,6 +56,19 @@ namespace ZombieCityCleaner.Player
         /// <summary>Os pontos de fogo que seguram os zumbis ao longo da linha.</summary>
         public const int PontosQueSeguram = 5;
 
+        // o tiro na cerca (12/11/2026, a pedido: "Atirar no tanque, ou no fio de combustível e fazer pegar fogo"; o
+        // Loot/ConstrucoesNoMundo.TiroNaCerca.cs)
+        /// <summary>O galão que leva um tiro estoura: até esta distância (m) o estouro pega (os zumbis pegam fogo; os jogadores e os moradores se queimam).</summary>
+        public const float RaioDoEstouro = 3f;
+        /// <summary>O estouro nos jogadores: no meio e na beira do raio (cai com a distância); nos moradores, isto vezes.</summary>
+        public const float EstouroNoMeio = 40f, EstouroNaBeira = 10f, EstouroNosMoradores = 1.5f;
+        /// <summary>O estouro nos zumbis: como estes segundos dentro do fogo do molotov, de uma vez (e eles pegam fogo).</summary>
+        public const float EstouroNosZumbis = 3f;
+        /// <summary>O combustível espalhado pelo estouro: uma área de fogo no chão, como a do molotov (o raio em m e o tempo em s).</summary>
+        public const float RaioDoFogoDoGalao = 2.2f, SegundosDoFogoDoGalao = 15f;
+        /// <summary>O tiro que bate no chão a menos disto (m) do rastro acende a cerca ali (o fogo corre para os dois lados).</summary>
+        public const float TiroNoRastro = 0.3f;
+
         // ------------------------------------------------------------------ o Armadilheiro (t5)
 
         /// <summary>Por nível do Armadilheiro: os usos (e a vida, e o tempo da cerca) e o dano das armadilhas do dono.</summary>

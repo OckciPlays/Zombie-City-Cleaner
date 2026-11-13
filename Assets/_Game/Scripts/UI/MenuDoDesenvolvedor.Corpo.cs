@@ -33,7 +33,9 @@ namespace ZombieCityCleaner.UI
                    // a mente (06/11/2026, a sanidade): o valor e o susto
                    CorpoMente = 13, CorpoSusto = 14,
                    // a etapa 3 da mente: o cansaço, o vício e dormir aqui
-                   CorpoCansaco = 15, CorpoVicio = 16, CorpoDormir = 17;
+                   CorpoCansaco = 15, CorpoVicio = 16, CorpoDormir = 17,
+                   // 12/11/2026: a roupa molhada e a cerca de fogo na frente (para o tiro no galão e no rastro)
+                   CorpoMolhar = 18, CorpoSecar = 19, CorpoCerca = 20;
 
         static readonly int[] MentesDeTeste = { 100, 70, 40, 15, 0 };
         static readonly string[] EfeitosDaMente = { "Crise", "Vulto", "Falsos", "Amigos", "Fuga", "Desmaio" };
@@ -92,7 +94,7 @@ namespace ZombieCityCleaner.UI
             if (!VidaJogador.CorpoAnda) texto += "\nO corpo não anda agora (o Dia 0, ou o mundo carregando): os golpes só tiram da vida geral, e a queda não machuca";
             _conteudoDoCorpo.text = texto;
             float alturaDoTexto = _texto.CalcHeight(_conteudoDoCorpo, w);
-            const int linhas = 14;
+            const int linhas = 15;
             const float rotuloDaInfeccao = 20f;   // a linha do rótulo "Infecção" (menor que um botão)
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + linhas * passo * u + rotuloDaInfeccao * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
@@ -185,6 +187,16 @@ namespace ZombieCityCleaner.UI
             for (int k = 0; k < TestesDoSono.Length; k++)
                 if (GUI.Button(new Rect(x + k * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), TestesDoSono[k], _botao))
                     TesteDoCorpoRpc(k == 0 ? CorpoCansaco : k == 1 ? CorpoCansaco : k == 2 ? CorpoDormir : CorpoVicio, parte, (byte)(k == 0 ? 90 : 100));
+            y += passo * u;
+            // 12/11/2026: molhar e secar a roupa (no anfitrião), zerar o vigor (no dono) e a cerca de fogo a 4 m (para atirar)
+            if (GUI.Button(new Rect(x, y, quartoDoSono, alto * u), "Molhar", _botao)) TesteDoCorpoRpc(CorpoMolhar, parte, 0);
+            if (GUI.Button(new Rect(x + (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Secar", _botao)) TesteDoCorpoRpc(CorpoSecar, parte, 0);
+            if (GUI.Button(new Rect(x + 2 * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Vigor 0", _botao))
+            {
+                if (VigorDoJogador.Local != null) VigorDoJogador.Local.PorDeTeste(0f);
+                else Avisar("Ande um pouco primeiro (o vigor nasce com o movimento).");
+            }
+            if (GUI.Button(new Rect(x + 3 * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Cerca fogo", _botao)) TesteDoCorpoRpc(CorpoCerca, parte, 0);
             return area;
         }
 
@@ -323,6 +335,18 @@ namespace ZombieCityCleaner.UI
                     if (!corpoAnda) aviso = semCorpo;
                     break;
                 }
+                case CorpoMolhar:
+                case CorpoSecar:
+                    GetComponent<InventarioJogador>()?.MolharDeTeste(acao == CorpoMolhar ? 100f : 0f);
+                    aviso = acao == CorpoMolhar ? "A roupa toda encharcada." : "A roupa toda seca.";
+                    break;
+                case CorpoCerca:
+                    if (Loot.ConstrucoesNoMundo.Instancia != null)
+                    {
+                        Loot.ConstrucoesNoMundo.Instancia.CercaDeTeste(transform.position + transform.forward * 4f, transform.eulerAngles.y + 90f, 0UL);
+                        aviso = "Uma cerca de fogo apagada a 4 m: atire no galão (estoura) ou no rastro (acende ali).";
+                    }
+                    break;
                 case CorpoMordida:
                     // o Dano com a mordida só abre a ferida em 20% das vezes: aqui ela sempre abre
                     vida.AbrirFeridaDeTeste(parte, TipoDeGolpe.Mordida);

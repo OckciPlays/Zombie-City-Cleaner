@@ -203,9 +203,11 @@ namespace ZombieCityCleaner.Player
             var r = Roupas.Value;
             var antes = r.Peca(dados.lugar);
             ulong coresAntes = r.Cores(dados.lugar);
+            byte molhadaAntes = MolhadoDe(dados.lugar);
             r.Por(dados.lugar, it.item, it.cores);
+            PorMolhado(dados.lugar, it.desgaste);   // (a roupa molhada leva o molhado junto, 12/11/2026)
             // a que estava no lugar vai para a célula da que foi vestida (as duas ocupam uma)
-            if (antes != Item.Nada) Mochila[k] = new ItemNaMochila { id = NovoId(), item = antes, x = it.x, y = it.y, cores = coresAntes };
+            if (antes != Item.Nada) Mochila[k] = new ItemNaMochila { id = NovoId(), item = antes, x = it.x, y = it.y, cores = coresAntes, desgaste = molhadaAntes };
             else Mochila.RemoveAt(k);
             Roupas.Value = r;
         }
@@ -245,8 +247,9 @@ namespace ZombieCityCleaner.Player
                 AvisoRpc($"Sem espaço {(MochilaVestida.Value != Item.Nada ? "na mochila" : "nos bolsos")} para {Itens.NomeComArtigo(item)}");
                 return;
             }
-            Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)cx, y = (byte)cy, girado = girado, cores = r.Cores(l) });
+            Mochila.Add(new ItemNaMochila { id = NovoId(), item = item, x = (byte)cx, y = (byte)cy, girado = girado, cores = r.Cores(l), desgaste = MolhadoDe(l) });
             r.Por(l, Item.Nada, 0);
+            PorMolhado(l, 0f);
             Roupas.Value = r;
         }
 
@@ -258,8 +261,9 @@ namespace ZombieCityCleaner.Player
             var item = r.Peca(l);
             if (item == Item.Nada) return;
             if ((ponto - transform.position).sqrMagnitude > 4f * 4f) ponto = transform.position;
-            ItensNoMundo.Instancia.Criar(item, ponto, giro, 0, 0, r.Cores(l));
+            ItensNoMundo.Instancia.Criar(item, ponto, giro, 0, MolhadoDe(l), r.Cores(l));
             r.Por(l, Item.Nada, 0);
+            PorMolhado(l, 0f);
             Roupas.Value = r;
         }
     }

@@ -469,6 +469,11 @@ namespace ZombieCityCleaner.Player
         /// de cima do sobrado, o 1º andar do prédio); de 7 a 11 m, a fratura exposta ou a fratura (o morro do bunker, o poço
         /// do elevador); de 11 a 16 m, a exposta e mais uma fratura; de 16 m para cima, a morte. Pedro gosta das curas e das
         /// lesões por chance: as faixas se misturam nas bordas.
+        /// <para>12/11/2026 (a pedido: "se for uma queda muito alta, o personagem deve morrer não pela fratura e sim pelo dano
+        /// alto"): de 11 a 16 m o dano sobe sem salto até passar da vida (de 50 a 115, com um pouco de sorte para os dois
+        /// lados), então de uns 14 m para cima a queda já pode matar pelo dano; a fratura continua só no membro (ela não mata).
+        /// A morte pelas partes é a soma de sempre: a cabeça ou o tronco a 0 matam na hora, um braço ou uma perna a 0 ficam
+        /// inutilizados (manca, sem arma longa), e dois membros a 0 pelo machucado somam a vida toda.</para>
         /// </summary>
         public void Cair(float h)
         {
@@ -509,7 +514,7 @@ namespace ZombieCityCleaner.Player
             else
             {
                 float t = (h - 11f) / 5f;
-                dano = Mathf.Lerp(50f, 90f, t);
+                dano = Mathf.Lerp(50f, 115f, t) + Random.Range(-8f, 8f);
                 lesao = Lesao.Exposta;
                 mais = true;
             }

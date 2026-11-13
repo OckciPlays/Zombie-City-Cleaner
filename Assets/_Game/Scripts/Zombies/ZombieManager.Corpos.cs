@@ -109,20 +109,28 @@ namespace ZombieCityCleaner.Zombies
 
         void AtualizarCorpos(float agora, float dt)
         {
+            RestosDosCorpos.Atualizar(agora, dt);
             if (_corpos == null) return;
             foreach (var lista in _corpos)
                 foreach (var c in lista)
                 {
                     if (!c.emUso || c.vivo) continue;
                     float t = agora - c.caiuEm;
-                    if (t > tempoDoCorpo + 2.5f) c.Guardar();
-                    else if (t > tempoDoCorpo) c.Afundar(0.25f * dt);
+                    if (t > tempoDoCorpo)
+                    {
+                        // (12/11/2026, a fauna) em vez de afundar, vira o resto parado: os últimos 20 ficam uns minutos, e os
+                        // urubus descem neles (RestosDosCorpos.cs)
+                        var quadril = c.partes != null && c.partes.Length > 0 && c.partes[0] != null ? c.partes[0].position : c.transform.position;
+                        RestosDosCorpos.Criar(c.pele, quadril);
+                        c.Guardar();
+                    }
                     else if (t > tempoAteAssentar) c.Assentar();
                 }
         }
 
         void GuardarCorpos()
         {
+            RestosDosCorpos.Limpar();
             if (_corpos == null) return;
             foreach (var lista in _corpos)
                 foreach (var c in lista) c.Guardar();

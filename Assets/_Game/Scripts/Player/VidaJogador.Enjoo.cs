@@ -12,13 +12,22 @@ namespace ZombieCityCleaner.Player
         public const float ChanceDoPeixeCru = 0.4f, SegundosDoEnjoo = 45f, VidaDoEnjoo = 12f;
 
         float _enjooFalta, _enjooPerda;
+        string _causaDoEnjoo = "Passou mal com o peixe cru.";
 
         /// <summary>Só no anfitrião: o peixe cru caiu mal (um enjoo novo recomeça o tempo).</summary>
-        public void EnjoarDoPeixeCru()
+        public void EnjoarDoPeixeCru() =>
+            Enjoar("O peixe cru caiu mal: enjoo (asse na fogueira da próxima vez)", "Passou mal com o peixe cru.");
+
+        /// <summary>Só no anfitrião: a carne de caça crua caiu mal (a fauna, 12/11/2026; a mesma chance do peixe cru).</summary>
+        public void EnjoarDaCarneCrua() =>
+            Enjoar("A carne crua caiu mal: enjoo (asse na fogueira da próxima vez)", "Passou mal com a carne crua.");
+
+        void Enjoar(string aviso, string causa)
         {
             if (!IsServer || Caido.Value) return;
             _enjooFalta = SegundosDoEnjoo;
-            AvisarAoDono("O peixe cru caiu mal: enjoo (asse na fogueira da próxima vez)");
+            _causaDoEnjoo = causa;
+            AvisarAoDono(aviso);
         }
 
         // no anfitrião, a cada quadro: a vida sai de 1 em 1, até o enjoo passar
@@ -35,7 +44,7 @@ namespace ZombieCityCleaner.Player
             if (_enjooPerda < 1f) return;
             float d = Mathf.Floor(_enjooPerda);
             _enjooPerda -= d;
-            Perder(d, "Passou mal com o peixe cru.");
+            Perder(d, _causaDoEnjoo);
         }
     }
 }

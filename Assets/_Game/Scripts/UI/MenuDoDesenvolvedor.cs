@@ -285,7 +285,7 @@ namespace ZombieCityCleaner.UI
             // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
             // (e os sobreviventes, 02/11/2026, na terceira aba; o corpo, 05/11/2026, na quarta: as quatro numa faixa logo
             // acima do painel, que a Area também cobre)
-            var zumbis = _abaDasHabilidades ? PainelDasHabilidades(u, oco) : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
+            var zumbis = _abaDaFauna ? PainelDaFauna(u, oco) : _abaDasHabilidades ? PainelDasHabilidades(u, oco) : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
                        : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
             AbasDoCanto(u, zumbis);
             Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));

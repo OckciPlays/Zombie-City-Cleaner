@@ -32,7 +32,7 @@ namespace ZombieCityCleaner.Player
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
             var item = (Item)peixe;
-            bool ehPeixe = item >= Item.PeixePequeno && item <= Item.PeixeDourado;
+            bool ehPeixe = (item >= Item.PeixePequeno && item <= Item.PeixeDourado) || item == Item.Bagre;
             if (item != Item.Nada && !ehPeixe) return;
             if (Quantos(Item.VaraDePesca) <= 0 || Quantos(Item.Isca) <= 0) return;
             if (Time.time - _ultimaPesca < 3f || !AguaPerto(transform.position)) return;

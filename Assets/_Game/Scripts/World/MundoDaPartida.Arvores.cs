@@ -136,6 +136,19 @@ namespace ZombieCityCleaner.World
             TombouRpc(chave, caiLongeDe, j.OwnerClientId);
         }
 
+        /// <summary>
+        /// Só no anfitrião: o castor roeu a árvore até cair (a etapa 3 da fauna, 12/11/2026): ela entra nas cortadas (o
+        /// save) e cai como a do machado, sem toras e sem aviso. Falso se ela já caiu.
+        /// </summary>
+        public bool DerrubarPeloCastor(long chave, Vector3 deOnde)
+        {
+            if (!IsServer || _arvoresCortadas == null || _arvoresCortadas.Contains(chave)) return false;
+            _arvoresCortadas.Add(chave);
+            _ladosCortados.Remove(chave);
+            TombouRpc(chave, deOnde, ulong.MaxValue);
+            return true;
+        }
+
         // anfitrião → todos: a árvore cai (para longe de 'deQuem'), e os entalhes somem
         [Rpc(SendTo.Everyone)]
         void TombouRpc(long chave, Vector3 deQuem, ulong quem)

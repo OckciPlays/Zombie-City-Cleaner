@@ -41,6 +41,7 @@ namespace ZombieCityCleaner.EditorTools
             PrepararModelos();
             FazerIcones();
             MontagemDasArmas.ImportarIcones();
+            MontagemDasArmas.PrepararBracosProprios((int)TipoDeArma.RifleSucata);
             AssetDatabase.SaveAssets();
             MontagemDaRede.MontarPrefab();
             AssetDatabase.SaveAssets();
@@ -49,6 +50,29 @@ namespace ZombieCityCleaner.EditorTools
             AssetDatabase.SaveAssets();
             NaCenaDoMundo();
             Debug.Log("Armas de sucata montadas: as malhas, os ícones, o prefab do jogador e o dos sobreviventes e as malhas da cena Mundo.");
+        }
+
+        /// <summary>
+        /// Só os braços de primeira pessoa do rifle de sucata (11/11/2026): com <see cref="Armas.RifleDeSucataComBracosProprios"/>,
+        /// os próprios (o <c>Jogador_FP_Sucata_Rifle.fbx</c>, as animações da sniper com a pegada no punho e na tábua dele, e o
+        /// override dele); sem, os da sniper. Refaz o prefab do jogador (<see cref="MontagemDaRede.MontarPrefab"/>), sem mexer nas
+        /// cenas.
+        /// </summary>
+        [MenuItem("Zombie City Cleaner/Armas/Montar os braços do rifle de sucata")]
+        public static void MontarBracosDoRifle()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("Saia do Play antes de montar os braços do rifle de sucata.");
+                return;
+            }
+            int rifle = (int)TipoDeArma.RifleSucata;
+            MontagemDasArmas.PrepararBracosProprios(rifle);
+            AssetDatabase.SaveAssets();
+            MontagemDaRede.MontarPrefab();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset("Assets/_Game/Prefabs/Jogador.prefab", ImportAssetOptions.ForceUpdate);
+            Debug.Log($"Braços do rifle de sucata montados: {MontagemDasArmas.FbxFP(rifle)} ({MontagemDasArmas.ControladorFPDa(rifle)}), no prefab do jogador.");
         }
 
         /// <summary>A importação e as malhas: as três armas, a sucata e as duas munições.</summary>
