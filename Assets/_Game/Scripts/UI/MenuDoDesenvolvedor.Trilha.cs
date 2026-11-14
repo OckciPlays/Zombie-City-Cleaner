@@ -107,7 +107,7 @@ namespace ZombieCityCleaner.UI
         // o quadro "REGRAS" ao lado do painel da trilha (só texto): embaixo dos zumbis não cabe mais nada na tela
         Rect QuadroDasRegras(float u, Rect painel, MaestroDaTrilha m)
         {
-            float largura = Mathf.Min(170 * u, Screen.width - painel.xMax - 12 * u);
+            float largura = Mathf.Min(170 * u, Screen.width - painel.xMax - 12 * u - _barraDaColuna);   // (e a barra da coluna, 13/11/2026)
             if (largura < 110 * u) return new Rect(painel.xMax, painel.y, 0f, 0f);
             var area = new Rect(painel.xMax + 8 * u, painel.y, largura, painel.height);
             if (_textoDasRegras == null || !Mathf.Approximately(_uDasRegras, u))

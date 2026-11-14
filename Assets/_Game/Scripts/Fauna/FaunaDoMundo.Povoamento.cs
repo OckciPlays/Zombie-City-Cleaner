@@ -101,12 +101,18 @@ namespace ZombieCityCleaner.Fauna
             if (!TemMapa) return;
             foreach (var g in Pessoas)
             {
+                MoradoresDosLugares(g.pes, agora);   // (a etapa 5) os moradores das cavernas, das tocas e dos brejos, em casa
                 foreach (var e in NoMundo)
                 {
                     var d = Especies.De(e);
                     if (GruposPerto(e, g.pes, RaioDoPovo) >= d.gruposPorJogador) continue;
                     if (Random.value > d.raridade) continue;   // os raros (os predadores) demoram a aparecer
-                    if (!NasceAgora(d)) continue;   // (a etapa 4) os da noite só nascem à noite
+                    bool soNaCidade = false;
+                    if (!NasceAgora(d))
+                    {
+                        if (!d.deDiaNaCidade) continue;   // (a etapa 4) os da noite só nascem à noite
+                        soNaCidade = true;                // (13/11) o guaxinim da cidade anda de dia também
+                    }
                     // (a etapa 3) os da água: no lago (o raso, a toca, o céu dele), se ele estiver no anel
                     if (LugarNaAgua(e, g.pes, NascerMin, NascerMax, out var naAgua, out bool achou))
                     {
@@ -118,6 +124,7 @@ namespace ZombieCityCleaner.Fauna
                         float ang = Random.Range(0f, Mathf.PI * 2f), dist = Random.Range(NascerMin, NascerMax);
                         Vector3 p = g.pes + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * dist;
                         if (!LugarBom(p, e) || MaisPerto(p) < NascerMin) continue;
+                        if (soNaCidade && !NaCidade(p)) continue;
                         if (Random.value > Nivel(p)) break;   // a região caçada demais: menos chance (e tenta de novo depois)
                         NascerGrupo(e, p, false);
                         break;
@@ -166,18 +173,22 @@ namespace ZombieCityCleaner.Fauna
         /// <summary>O grupo do F1 chega distraído por estes segundos (a 18 m, o veado fugiria na hora: ele foge a 40 m).</summary>
         const float SegundosDistraido = 10f;
 
+        /// <summary>O grupo que o último NascerGrupo fez (a etapa 5: o lugar dele).</summary>
+        Grupo _ultimoGrupo;
+
         internal int NascerGrupo(Especie e, Vector3 centro, bool teste)
         {
             var d = Especies.De(e);
             int n = Random.Range(d.grupoMin, d.grupoMax + 1);
             var g = new Grupo { especie = e, pasto = centro, trocarPastoEm = Time.time + Random.Range(10f, 40f) };
             Grupos.Add(g);
+            _ultimoGrupo = g;
             var variantes = Composicao(e, n, teste);
             float raio = Mathf.Clamp(2f + n * 0.8f, 2f, 9f) * Mathf.Max(0.3f, d.altura);
             // (a etapa 3) os da água ficam na água; o castor, na toca; os gansos, às vezes com o ninho na margem
             bool daAgua = e == Especie.Salmao || e == Especie.Pato || e == Especie.Ganso || e == Especie.Castor;
             if (daAgua) raio = Mathf.Max(raio, 2.5f);
-            if (e == Especie.Castor) { g.temToca = true; g.toca = centro; }
+            if (e == Especie.Castor) { g.temToca = true; g.toca = centro; RepresaDoGrupo(g); }
             if (e == Especie.Ganso && (teste || Random.value < 0.5f) && MargemNaDirecao(centro, 1.5f, out var ninho))
             {
                 g.temNinho = true;

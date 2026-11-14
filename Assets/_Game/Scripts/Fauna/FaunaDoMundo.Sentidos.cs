@@ -132,6 +132,9 @@ namespace ZombieCityCleaner.Fauna
             var pb = b.Dados.papel;
             var po = o.Dados.papel;
             if (po == Papel.Presa) return false;
+            // (13/11) o peixe não nota o urso parado na água (o urso pescando espera imóvel): só o que se mexe o espanta.
+            // Antes o salmão fugia de todo urso a 6 m, e a patada nunca o alcançava
+            if (b.Dados.corpo == Corpo.Peixe && po == Papel.Urso && o.Velocidade < 0.4f) return false;
             if (pb == Papel.Presa) return true;
             if (pb == Papel.Matilha && po == Papel.Urso) return true;
             return b.Especie == Especie.Coiote && o.Especie == Especie.Lobo;

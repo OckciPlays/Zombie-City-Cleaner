@@ -164,7 +164,7 @@ namespace ZombieCityCleaner.UI
             for (int i = 0; i < lugares.Count; i++)
             {
                 var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
-                if (!GUI.Button(r, lugares[i].nome, _botao)) continue;
+                if (!GUI.Button(r, lugares[i].nome, BotaoQueCabe(lugares[i].nome, r.width))) continue;   // (os nomes compridos com a letra menor, 13/11/2026)
                 if (i == 0)
                 {
                     var ponto = PontosDeNascimento.Ponto(OwnerClientId);

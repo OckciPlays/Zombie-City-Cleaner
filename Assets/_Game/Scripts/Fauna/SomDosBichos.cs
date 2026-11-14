@@ -11,6 +11,8 @@ namespace ZombieCityCleaner.Fauna
         Respingo, Grasnado, Ganso, Grito, Estalo, Mugido,
         // a etapa 4 (a noite): o sapo, o chocalho, o esquilo, o peru, a lata do lixo, o espirro do gambá e o urubu
         Coaxar, Chocalho, Chiado, GluGlu, Lata, Espirro, Urubu,
+        // 13/11: o guaxinim no lixo da cidade (a sacola mexida, o remexer na lata e a tampa da caçamba)
+        Sacola, Remexer, Cacamba,
     }
 
     /// <summary>
@@ -38,6 +40,9 @@ namespace ZombieCityCleaner.Fauna
             SomDoBicho.Chocalho => 25f,
             SomDoBicho.GluGlu => 120f,
             SomDoBicho.Lata => 60f,
+            SomDoBicho.Sacola => 22f,
+            SomDoBicho.Remexer => 30f,
+            SomDoBicho.Cacamba => 80f,
             _ => 70f,
         };
 
@@ -97,6 +102,9 @@ namespace ZombieCityCleaner.Fauna
                 SomDoBicho.Chiado => Chiado(r),
                 SomDoBicho.GluGlu => GluGlu(r),
                 SomDoBicho.Lata => Lata(r),
+                SomDoBicho.Sacola => Sacola(r),
+                SomDoBicho.Remexer => Remexer(r),
+                SomDoBicho.Cacamba => Cacamba(r),
                 SomDoBicho.Espirro => Bufo(r, 0.7f, 0.5f, 2200f),
                 SomDoBicho.Urubu => Bufo(r, 0.5f, 0.35f, 1400f),
                 _ => Patada(r),
@@ -460,6 +468,68 @@ namespace ZombieCityCleaner.Fauna
                 fase += 2f * Mathf.PI * f * (1f + 0.15f * gorgo) / Taxa;
                 float env = Mathf.Clamp01(t / 0.02f) * Mathf.Clamp01((dur - t) / 0.2f);
                 d[i] = (Mathf.Sin(fase) + 0.4f * Mathf.Sin(2f * fase)) * gorgo * env;
+            }
+            return d;
+        }
+
+        // a sacola plástica mexida: os estalos finos e o chiado do plástico, em rajadas (13/11)
+        static float[] Sacola(System.Random r)
+        {
+            int n = (int)(0.9f * Taxa);
+            var d = new float[n];
+            float antes = 0f;
+            for (int k = 0; k < 6; k++)
+            {
+                int i0 = (int)((0.05f + 0.13f * k + (float)r.NextDouble() * 0.05f) * Taxa);
+                float dur = 0.06f + (float)r.NextDouble() * 0.1f;
+                for (int i = 0; i < (int)(dur * Taxa) && i0 + i < n; i++)
+                {
+                    float t = i / (float)Taxa;
+                    float ruido = Ruido(r);
+                    float agudo = ruido - antes;   // o chiado do plástico (só os agudos)
+                    antes = ruido;
+                    float estalo = r.NextDouble() < 0.004 ? Ruido(r) * 3f : 0f;
+                    d[i0 + i] += (agudo * 0.6f + estalo) * Mathf.Sin(Mathf.PI * t / dur);
+                }
+            }
+            return d;
+        }
+
+        // o remexer na lata: os tinidos curtos de latinhas e vidros batendo (13/11)
+        static float[] Remexer(System.Random r)
+        {
+            int n = (int)(0.8f * Taxa);
+            var d = new float[n];
+            for (int k = 0; k < 5; k++)
+            {
+                int i0 = (int)((float)r.NextDouble() * 0.65f * Taxa);
+                float f = 1800f + (float)r.NextDouble() * 2600f;
+                float forca = 0.4f + (float)r.NextDouble() * 0.6f;
+                for (int i = 0; i < (int)(0.12f * Taxa) && i0 + i < n; i++)
+                {
+                    float t = i / (float)Taxa;
+                    d[i0 + i] += (Mathf.Sin(2f * Mathf.PI * f * t) + 0.5f * Mathf.Sin(2f * Mathf.PI * f * 1.7f * t) + Ruido(r) * 0.4f) * Mathf.Exp(-t * 45f) * forca;
+                }
+            }
+            return d;
+        }
+
+        // a tampa da caçamba batendo: o golpe grave do metal grande e o eco (13/11)
+        static float[] Cacamba(System.Random r)
+        {
+            int n = (int)(1.3f * Taxa);
+            var d = new float[n];
+            float[] quando = { 0f, 0.22f };
+            for (int k = 0; k < quando.Length; k++)
+            {
+                int i0 = (int)(quando[k] * Taxa);
+                float forca = k == 0 ? 1f : 0.35f;
+                for (int i = 0; i + i0 < n; i++)
+                {
+                    float t = i / (float)Taxa;
+                    float metal = Mathf.Sin(2f * Mathf.PI * 180f * t) + 0.7f * Mathf.Sin(2f * Mathf.PI * 410f * t) + 0.4f * Mathf.Sin(2f * Mathf.PI * 760f * t);
+                    d[i0 + i] += (metal * 0.6f + Ruido(r) * 0.5f * Mathf.Exp(-t * 60f)) * Mathf.Exp(-t * 5f) * forca;
+                }
             }
             return d;
         }

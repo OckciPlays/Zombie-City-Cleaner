@@ -1531,6 +1531,45 @@ namespace ZombieCityCleaner.Vehicles
                 _corpo.linearVelocity *= dano >= 100f ? 0.9f : 0.96f;
             }
             if (_pessoasAtropeladas.Count > 32) _pessoasAtropeladas.Clear();
+
+            // os bichos (a fauna, a etapa 5, 13/11/2026): o acerto pela velocidade, como nos zumbis. O carro passa pelos pequenos
+            // e pelos médios (a colisão com aquele bicho é ignorada: antes, até um coelho segurava o carro como um muro); o grande
+            // (o veado, o urso, o lobo) amassa a frente (o radiador, como numa batida); o alce, enorme, segura o carro de verdade
+            n = Physics.OverlapBoxNonAlloc(centro, meia, _encostados, transform.rotation, 1 << Fauna.ModelosDosBichos.Camada, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < n; i++)
+            {
+                var parte = _encostados[i].GetComponentInParent<Fauna.ParteDoBicho>();
+                var b = parte != null ? parte.bicho : _encostados[i].GetComponentInParent<Fauna.Bicho>();
+                if (b == null) continue;
+                int chave = b.Id * 256 + b.Geracao;
+                if (_bichosAtropelados.TryGetValue(chave, out float ate) && Time.time < ate) continue;
+                _bichosAtropelados[chave] = Time.time + 1.2f;
+                float rapidez = Mathf.Abs(v);
+                float tamanho = b.Dados.comprimento * b.Escala;
+                if (tamanho < 2.4f) IgnorarBicho(b);
+                if (b.Morto) continue;
+                float dano = Mathf.Max(1f, (rapidez * 3.6f - KmhSemDano) * DanoPorKmh);
+                Vector3 ponto = b.transform.position + Vector3.up * b.Altura * 0.6f;
+                motorista.AcertarBicho(b, dano, ponto, false, false);
+                bool grande = b.Dados.pontos >= 90f;
+                if (grande && !moto) BateuRpc(new Vector3(0f, 0.6f, 2f), desgaste.batidaQueEstraga + rapidez * 0.45f * Mathf.Clamp(b.Dados.pontos / 120f, 0.75f, 3f));
+                Efeitos.Som(Efeitos.SocoCarne, ponto, grande ? 1f : 0.6f, true, grande ? 35f : 20f);
+                Sangue.Respingo(ponto, transform.forward * Mathf.Sign(v));
+                _corpo.linearVelocity *= grande ? 0.82f : 0.97f;
+            }
+            if (_bichosAtropelados.Count > 32) _bichosAtropelados.Clear();
+        }
+
+        readonly Dictionary<int, float> _bichosAtropelados = new Dictionary<int, float>();
+        Collider[] _meusColisores;
+
+        // o carro passa pelo bicho (a colisão entre os dois fica ignorada)
+        void IgnorarBicho(Fauna.Bicho b)
+        {
+            if (_meusColisores == null) _meusColisores = GetComponentsInChildren<Collider>(true);
+            foreach (var cb in b.GetComponentsInChildren<Collider>(true))
+                foreach (var cc in _meusColisores)
+                    if (cc != null && cb != null) Physics.IgnoreCollision(cc, cb, true);
         }
 
         // ------------------------------------------------------------------------------------------ o capô e as peças

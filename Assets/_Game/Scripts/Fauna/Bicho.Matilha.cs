@@ -128,6 +128,7 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             _olhar = Mathf.MoveTowards(_olhar, 0f, 40f * dt);
+            if (Coiote && CuidarDoCovil(f, agora)) return;   // (a etapa 5: os coiotes descansam na toca de dia)
             Pastar(f, agora);
         }
 
@@ -169,9 +170,9 @@ namespace ZombieCityCleaner.Fauna
             }
             if (!g.correndo)
             {
-                // a espreita: chegam devagar, de cabeça baixa, até uns 32 m (a presa só estranha quem passa bem perto);
-                // aí a matilha toda dispara
-                if (d > 32f && presa.Estado != EstadoDoBicho.Fugindo)
+                // a espreita: chegam devagar, de cabeça baixa, até uns 22 m (a presa só estranha quem passa bem perto);
+                // aí a matilha toda dispara (desde 13/11 os bichos correm mais devagar: o disparo é mais perto e dura mais)
+                if (d > 22f && presa.Estado != EstadoDoBicho.Fugindo)
                 {
                     Estado = EstadoDoBicho.Alerta;
                     Ir(alvo, Dados.trotar * 0.6f);
@@ -180,7 +181,7 @@ namespace ZombieCityCleaner.Fauna
                 }
                 g.correndo = true;
                 g.cacaDesde = agora;
-                g.cacaAte = agora + Random.Range(20f, 32f);
+                g.cacaAte = agora + Random.Range(26f, 38f);
             }
             Estado = EstadoDoBicho.Investindo;
             if (_folego <= 0f) _folego = Random.Range(0.8f, 0.97f);   // cada um corre do seu jeito (a sorte da presa)
@@ -234,6 +235,13 @@ namespace ZombieCityCleaner.Fauna
             {
                 // largou: de dia, com o alvo no carro ou caído, sem matilha; volta para longe
                 f.LargarAlvo(g, agora, j != null ? j.transform.position : transform.position, false);
+                return;
+            }
+            if (Vector3.Distance(Plano(transform.position), Plano(j.transform.position)) < 15f && ForaDoAlcance(j, agora) && PerdeuAPaciencia(agora))
+            {
+                // (13/11) o alvo ficou lá em cima tempo demais (a paciência conta de perto, a até 15 m): a matilha desiste
+                _semAlcanceDesde = -1f;
+                f.LargarAlvo(g, agora, j.transform.position, false);
                 return;
             }
             Vector3 c = j.transform.position;
@@ -299,6 +307,13 @@ namespace ZombieCityCleaner.Fauna
             }
             Estado = EstadoDoBicho.Investindo;
             Olhar(alvo);
+            if (d < 2.5f && !FaunaDoMundo.Alcanca(this, j))
+            {
+                // (13/11) lá em cima: pula, não alcança e volta para a roda
+                _mordeu = true;
+                Ir(transform.position - (alvo - transform.position).normalized * 5f, Dados.trotar);
+                return;
+            }
             if (d < 1.5f + Dados.comprimento * Escala * 0.3f)
             {
                 _mordeu = true;

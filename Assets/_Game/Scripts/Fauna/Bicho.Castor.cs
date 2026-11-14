@@ -8,14 +8,32 @@ namespace ZombieCityCleaner.Fauna
     /// FaunaDoMundo.Castores.cs) e nada em volta dela. De tempo em tempo, um adulto vai roer uma árvore da beira: rói de
     /// cabeça baixa até ela cair (o tempo é da árvore, somando os castores; ela cai pelo sistema do machado e fica o toco
     /// roído em ponta de lápis) e arrasta um galho até a toca, que cresce. Assustado (gente, zumbi, predador, o tiro), corre
-    /// para a água, bate a cauda (o estalo) e mergulha por uns segundos.
+    /// para a água, bate a cauda (o estalo) e mergulha por uns segundos. No riacho (13/11/2026), a família tem a represa:
+    /// mais da metade dos galhos vai para ela, e de tempo em tempo um adulto vai remendá-la (com o barro e os gravetos), de
+    /// cabeça baixa por uns segundos.
     /// </summary>
     public sealed partial class Bicho
     {
-        bool _roendo, _fugindoParaAgua;
+        bool _roendo, _fugindoParaAgua, _paraRepresa;
         long _arvore;
-        Vector3 _peDaArvore, _aguaDaFuga;
-        float _raioDaArvore, _proximaRoida;
+        Vector3 _peDaArvore, _aguaDaFuga, _pontoDaRepresa;
+        float _raioDaArvore, _proximaRoida, _proximoReparo, _remendandoAte;
+
+        /// <summary>Um ponto na face de cima da represa (contra a correnteza), em algum lugar da largura.</summary>
+        Vector3 PontoNaRepresa(Grupo g)
+        {
+            var giro = Quaternion.Euler(0f, g.represaGiro, 0f);
+            Vector3 atravessa = giro * Vector3.right, correnteza = giro * Vector3.forward;
+            return g.represa + atravessa * Random.Range(-0.4f, 0.4f) * g.represaLargura - correnteza * 1.1f;
+        }
+
+        /// <summary>O galho vai para a represa (mais da metade das vezes) ou para a toca.</summary>
+        void LevarGalho(Grupo g)
+        {
+            Carregando = true;
+            _paraRepresa = g != null && g.temRepresa && Random.value < 0.6f;
+            if (_paraRepresa) _pontoDaRepresa = PontoNaRepresa(g);
+        }
 
         void PensarCastor(FaunaDoMundo f, float agora, float dt)
         {
@@ -43,19 +61,49 @@ namespace ZombieCityCleaner.Fauna
                 Ir(toca + LugarNoGrupo * 0.5f, Dados.trotar);
                 return;
             }
+            if (agora < _remendandoAte)
+            {
+                // remendando a represa: de cabeça baixa, o barro e os gravetos
+                Estado = EstadoDoBicho.Pastando;
+                _temDestino = false;
+                _velAlvo = 0f;
+                return;
+            }
             if (Carregando)
             {
-                // o galho até a toca: ela cresce um pouco
+                // o galho até a toca (ela cresce um pouco) ou até a represa (13/11)
                 Estado = EstadoDoBicho.Andando;
-                float d = Vector3.Distance(Plano(p), Plano(toca));
-                if (d < 2.6f)
+                Vector3 para = _paraRepresa && Grupo != null && Grupo.temRepresa ? _pontoDaRepresa : toca;
+                float d = Vector3.Distance(Plano(p), Plano(para));
+                if (d < (_paraRepresa ? 1.4f : 2.6f))
                 {
                     Carregando = false;
-                    f.CrescerToca(toca, 0.012f);
+                    if (_paraRepresa)
+                    {
+                        f.CrescerRepresa(para, 0.02f);
+                        _remendandoAte = agora + Random.Range(4f, 9f);
+                    }
+                    else f.CrescerToca(toca, 0.012f);
                     return;
                 }
-                Ir(toca, FaunaDoMundo.FunduraEm(p) > 0.3f ? Dados.trotar : Dados.andar);
+                Ir(para, FaunaDoMundo.FunduraEm(p) > 0.3f ? Dados.trotar : Dados.andar);
                 return;
+            }
+            // (13/11) o reparo da represa: de tempo em tempo, um adulto vai lá e remenda
+            if (Grupo != null && Grupo.temRepresa && Variante != Variante.Filhote && agora > _proximoReparo)
+            {
+                if (_proximoReparo <= 0f) { _proximoReparo = agora + Random.Range(10f, 40f); }
+                else
+                {
+                    _proximoReparo = agora + Random.Range(45f, 120f) * (FaunaDoMundo.CastorRapido ? 0.15f : 1f);
+                    if (Random.value < 0.6f)
+                    {
+                        _pontoDaRepresa = PontoNaRepresa(Grupo);
+                        _paraRepresa = true;
+                        Carregando = true;   // (o barro e os gravetos da margem)
+                        return;
+                    }
+                }
             }
             if (_roendo)
             {
@@ -63,7 +111,7 @@ namespace ZombieCityCleaner.Fauna
                 {
                     // caiu (por este ou por outro castor): leva um galho
                     _roendo = false;
-                    Carregando = true;
+                    LevarGalho(Grupo);
                     return;
                 }
                 Vector3 lado = Plano(p - _peDaArvore);
@@ -83,7 +131,7 @@ namespace ZombieCityCleaner.Fauna
                 if (f.Roer(_arvore, _peDaArvore, Mathf.Max(0.1f, dt), p))
                 {
                     _roendo = false;
-                    Carregando = true;
+                    LevarGalho(Grupo);
                 }
                 return;
             }
@@ -105,6 +153,7 @@ namespace ZombieCityCleaner.Fauna
             _perigo = de;
             _perigoAte = agora + 10f;
             _roendo = false;
+            _remendandoAte = 0f;
             if (Carregando) Carregando = false;
             Vector3 p = transform.position;
             if (FaunaDoMundo.FunduraEm(p) > 0.55f) { Mergulhar(agora); return; }

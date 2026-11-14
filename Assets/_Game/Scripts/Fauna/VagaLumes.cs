@@ -13,6 +13,30 @@ namespace ZombieCityCleaner.Fauna
     /// </summary>
     public sealed class VagaLumes : MonoBehaviour
     {
+        /// <summary>Os vaga-lumes desta máquina (o sapo do anfitrião caça os daqui: a etapa 5).</summary>
+        public static VagaLumes Instancia { get; private set; }
+
+        void OnEnable() => Instancia = this;
+        void OnDisable() { if (Instancia == this) Instancia = null; }
+
+        /// <summary>(a etapa 5) O vaga-lume vivo mais perto do ponto, a até 'raio' m.</summary>
+        public bool MaisPerto(Vector3 p, float raio, out Vector3 pos)
+        {
+            pos = default;
+            if (_todos == null) return false;
+            float melhor = raio * raio;
+            bool achou = false;
+            for (int i = 0; i < _todos.Length; i++)
+            {
+                if (_todos[i].vivo <= 0f) continue;
+                float d = (_todos[i].pos - p).sqrMagnitude;
+                if (d >= melhor) continue;
+                melhor = d;
+                pos = _todos[i].pos;
+                achou = true;
+            }
+            return achou;
+        }
         public const int Quantos = 70;
         const float Perto = 4f, Longe = 40f;
 
@@ -138,15 +162,25 @@ namespace ZombieCityCleaner.Fauna
 
         bool Nascer(ref VagaLume v, Vector3 c, bool temMapa)
         {
+            // (a etapa 5) perto de um brejo (a até 80 m), dois terços nascem dentro dele: lá eles se juntam
+            int brejo = temMapa ? FaunaDoMundo.LugarPerto(TipoDeLugarDoBicho.Brejo, c, 80f) : -1;
             for (int k = 0; k < 4; k++)
             {
                 Vector2 r = Random.insideUnitCircle.normalized * Random.Range(Perto, Longe);
                 var p = new Vector3(c.x + r.x, 0f, c.z + r.y);
+                bool noBrejo = false;
+                if (brejo >= 0 && Random.value < 0.67f)
+                {
+                    var b = FaunaDoMundo.Lugares[brejo];
+                    Vector2 q = Random.insideUnitCircle * b.raio;
+                    p = new Vector3(b.pos.x + q.x, 0f, b.pos.z + q.y);
+                    noBrejo = true;
+                }
                 if (temMapa)
                 {
                     if (FaunaDoMundo.AguaEm(p.x, p.z, out _) > 0.05f) continue;
                     var m = FaunaDoMundo.ManchaEm(p.x, p.z);
-                    if (m != Mancha.Campo && m != Mancha.Rebrota && m != Mancha.Beira && m != Mancha.Mista && m != Mancha.Lavoura && m != Mancha.Outono) continue;
+                    if (!noBrejo && m != Mancha.Campo && m != Mancha.Rebrota && m != Mancha.Beira && m != Mancha.Mista && m != Mancha.Lavoura && m != Mancha.Outono) continue;
                     p.y = FaunaDoMundo.AlturaDoMapa(p.x, p.z) + Random.Range(0.3f, 2f);
                 }
                 else p.y = c.y + Random.Range(-1f, 0.5f);
@@ -171,14 +205,16 @@ namespace ZombieCityCleaner.Fauna
             if (f == null) return;
             foreach (var b in f.Ativos)
             {
-                if (b == null || b.Morto || b.Especie != Especie.Sapo) continue;
+                // (a etapa 5) cada sapo come um vaga-lume e espera 1 minuto para o próximo
+                if (b == null || b.Morto || b.Especie != Especie.Sapo || Time.time < b.ProximoVagaLume) continue;
                 Vector3 boca = b.transform.position + Vector3.up * 0.1f;
                 for (int i = 0; i < Quantos; i++)
                 {
                     ref var v = ref _todos[i];
-                    if (v.vivo <= 0f || (v.pos - boca).sqrMagnitude > 1.3f * 1.3f || Random.value > 0.3f) continue;
+                    if (v.vivo <= 0f || (v.pos - boca).sqrMagnitude > 1.3f * 1.3f || Random.value > 0.6f) continue;
                     b.Lingua(v.pos);
                     v.vivo = 0f;
+                    b.ProximoVagaLume = Time.time + 60f;
                     break;
                 }
             }

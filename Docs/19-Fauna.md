@@ -9,7 +9,9 @@ carcaça, carnear com a faca, assar na fogueira) e os peixes americanos. O plano
    águia (a seção da etapa 3, abaixo);
 4. **a noite e os detalhes** (feita, 12/11/2026): o sapo, a cascavel, o guaxinim no lixo, o gambá (o cheiro chama os
    zumbis), o urubu nos restos, o esquilo, o peru, os vaga-lumes e os olhos na lanterna (a seção da etapa 4, abaixo);
-5. o futuro: domar filhotes (só os ganchos), o veado parado no farol, a batida do carro.
+5. **o futuro, a caça ao ver e os lugares** (feita, 13/11/2026): a cobra caça o sapo, o urso caça o salmão (e come sentado,
+   com os filhotes), o sapo come o vaga-lume; as cavernas dos ursos, as tocas dos coiotes e os brejos; o veado no farol,
+   o atropelamento dos bichos e o filhote órfão (o gancho de domar) (a seção da etapa 5, abaixo).
 
 As decisões do Pedro: a população cai com a caça, **nunca a zero**, e volta sozinha ("não quero que morram para sempre");
 os zumbis não atacam os bichos, e os bichos fogem dos zumbis; os bichos não morrem de fome; o ambiente não favorece o
@@ -229,10 +231,190 @@ depois dos testes: o ganso macho do ninho nascia no lago com o bando (a ~50 m do
 percebiam; agora nasce do lado do ninho e vigia quem chega a 9 m dele. E as aves não têm mais os olhos na lanterna (como
 na vida real, quase não brilham).
 
+## As velocidades mais lentas (13/11/2026, a pedido)
+
+O Pedro testou: "os animais estão extremamente rápidos ... para pelo menos acompanharmos". Eles corriam na velocidade
+de verdade (o veado a 12 m/s, o lobo e o coiote a 15), três vezes o jogador (que anda a 2,0 e corre a 4,2 m/s). Agora
+a corrida fica perto da do jogador: a presa ainda escapa um pouco, e o predador ainda alcança quem foge a pé.
+
+| Bicho | Andar | Trotar | Correr (antes) |
+|---|---|---|---|
+| Veado, alce | 1,3–1,4 | 2,6–2,8 | 6 (12–13) |
+| Lobo / coiote | 1,5 / 1,4 | 3 / 2,8 | 6,8 / 6,4 (15) |
+| Urso-negro / urso-pardo | 1,2 / 1,3 | 2,6 / 2,8 | 5,8 / 6 (13–14) |
+| Coelho | 0,8 | 2,2 | 5,5 (12) |
+| Peru | 1 | 2,5 | 5 (7) |
+| Guaxinim, esquilo | 0,9–1 | 2–2,2 | 4,5 (6) |
+| Salmão | 0,6 | 1,5 | 3 (4) |
+| Voando: pato, ganso, urubu, águia | — | — | 7, 7,5, 6, 9 (12, 13, 10, 15) |
+
+O castor, o sapo, a cascavel e o gambá não mudaram. As passadas da animação usam como referência o maior entre a
+corrida e 3,2 vezes o trote (`Bicho.cs`): sem isso, o trote já saía galopando. A matilha agora só dispara a 22 m da presa
+(era 32) e a corrida dura de 26 a 38 s (era de 20 a 32), senão a caçada quase nunca dava certo. **Ainda não foi visto no
+Play.** Os próximos ajustes do Pedro: o nascimento dos bichos.
+
+## Os ajustes do teste do Pedro no Lakewood (13/11/2026, a pedido)
+
+O mapa fixo do Gustavo (o Lakewood, 12 × 10 km) já trazia as manchas de cada ponto para os bichos
+(`FaunaDoMundo.Terreno.cs`): a cidade (o quintal e o baldio), a beira da água, a mata (as coníferas e a mista), a rebrota,
+o campo, a lavoura e a serra; cada espécie nasce nas manchas dela. O que faltava, e foi feito:
+
+- **O corpo cai** (`Bicho.Cair`, em `Bicho.Agua.cs`): "quando mato algum pato voando o corpo dele fica lá em cima". O bicho
+  morto no ar (a ave abatida voando, o peru no galho, o esquilo no tronco) cai com a gravidade até o chão; na água, a ave e
+  o peixe boiam (o respingo) e o resto afunda até o meio do corpo. A águia solta o peixe.
+- **O alcance na altura** (`Bicho.Alcance.cs`): "quando estou voando no F2, o urso consegue me bater mesmo estando bem alto"
+  (e um dia haverá lugares altos para subir e se esconder). O golpe só olhava a distância no chão. Agora cada um alcança até
+  uma altura acima dos pés: o urso de pé ~2 vezes a altura dele (2,2 m o negro, 2,6 m o pardo), o lobo e o coiote pulando
+  (1,5 e 1,3 m), o alce e o veado na altura da cabeça, o ganso e a cascavel só nas pernas. Quem está mais alto não leva o
+  golpe. O bicho espera embaixo (o urso de pé, bufando; a matilha rodando) e, depois de 8 a 20 s (sorteado), desiste e vai
+  embora. A investida do alce e do veado para embaixo; o ganso e a cascavel nem tentam.
+- **Os rios** (`FaunaDoMundo.Rios.cs`): os bichos da água sorteavam qualquer água em volta e o reservatório quase sempre
+  ganhava. Agora o salmão sobe os riachos (3 em 4 vezes, nos rios de 4 a 30 m), os patos boiam nos rios também (2 em 5) e
+  **os castores fazem a família nos riachos** (de 4 a 16 m de largura; no máximo 4 tocas nos rios, além das 2 do lago),
+  longe das pontes: **a represa** atravessada no rio, de margem a margem, e a toca uns 10 m acima dela, no remanso. A
+  represa cresce com os dias (8% por dia) e com os galhos: mais da metade dos galhos roídos vai para ela, e de tempo em
+  tempo um adulto vai remendá-la (de cabeça baixa por uns segundos). Ela tem colisor (dá para atravessar o rio por cima) e
+  fica no save, junto da toca (`TocaDoCastor.noRio`, o meio, o giro, a largura e o quanto já foi feita). A água não sobe
+  atrás dela (o rio do mapa é fixo): fica para depois.
+- **O lixo da cidade** (`LixoDaCidade.cs`): antes a lixeira de cada casa existia só para o guaxinim (não era desenhada).
+  Agora a Woodcreek tem o lixo à vista: a lata na frente de cada casa (e de 40% das cabanas), as sacolas pretas e verdes do
+  lado de metade delas, a caçamba atrás das lojas, do posto e da loja de armas (com as sacolas em volta) e uns montes de
+  sacolas em 30% dos lotes vazios. Sai do sorteio de cada lote (o mesmo em todas as máquinas: nada vai pela rede) e é
+  desenhado só até 140 m de quem joga.
+- **O guaxinim na cidade**: mora nos quintais e nos baldios e, na cidade, anda de dia também (`deDiaNaCidade`: cinco anos
+  depois, sem gente, os bichos da cidade ficaram atrevidos); fora dela, só à noite, como antes. Ele derruba a lata (o
+  barulho), rasga as sacolas ou bate a tampa da caçamba, e remexe por 15 a 35 s com o barulho do plástico e das latinhas. O
+  barulho chama os zumbis perto (18 m a lata, 25 m a caçamba, 8 m a sacola). O lixo espalhado fica um dia do jogo; a lata
+  e as sacolas somem ali (o lixo espalhado mostra a lata deitada e os sacos rasgados). Mais guaxinins: até 2 grupos por
+  jogador, de 1 a 3.
+- **O esquilo**: nasce também nos baldios (as árvores dos lotes vazios da cidade) e, de tempo em tempo (de 20 a 60 s, mais
+  ou menos metade das vezes), sobe numa árvore perto por conta própria, sem o chiado do alarme, e desce depois de 6 a 16 s.
+- **Os sons provisórios novos**: a sacola mexida, o remexer (as latinhas) e a tampa da caçamba.
+- **O F1**: "Ir para o riacho" (a margem do riacho mais perto), "Castores no riacho" (a família, a toca e a represa), "Ir
+  para o lixo" (uma lata da Woodcreek) e "Guaxinim no lixo" (um guaxinim a 12 m do lixo mais perto, que vai revirá-lo).
+- **A `VersaoDaRede` foi para 26** (a represa na mensagem das casas e os sons novos).
+- **O sangramento** (achado no teste): cada decisão tirava pelo menos 0,3 s de sangue, e quem investe decide a cada 0,08 s;
+  o urso ferido investindo sangrava quase 4 vezes mais rápido (morria em 12 s em vez de ~40 s). Agora conta o tempo de
+  verdade.
+
+**Os testes no Play (13/11/2026, no Lakewood, `teste_fauna10.cs` e `teste_fauna11.cs`, fotos em `play10` e `play11`):** 0
+erros. A águia abatida a 41 m caiu em 3 s e boiou no reservatório; 7 lobos cercaram o jogador numa plataforma a 4 m, não
+morderam nenhuma vez e desistiram em ~12 s; o urso-pardo ferido veio até embaixo da plataforma, não acertou (a vida ficou em
+100) e foi embora; a família de 4 castores nasceu no riacho com a toca e a represa (a foto mostra a represa de margem a
+margem) e os 4 levaram galhos até ela; o salmão nasceu no riacho; a rua da Woodcreek tem as latas, as sacolas e as caçambas;
+o guaxinim revirou uma lata (o lixo espalhado apareceu e a lata em pé sumiu) e, assustado, subiu numa árvore; o esquilo da
+cidade subiu sozinho até 4,5 m. Depois do teste, a paciência do urso e da matilha passou a contar só de perto (o urso a
+6 m, a matilha a 15 m): antes ela corria enquanto ele ainda vinha. **Isso não foi visto no Play.**
+
+## A etapa 5: a caça ao ver, os lugares e os ganchos (13/11/2026, a pedido)
+
+O pedido: "uma func igual do minecraft (o lobo que vê o esqueleto vai caçar)": a cobra que vê o sapo, o urso que vê o
+salmão (sentado comendo, com os filhotes juntos) e o sapo que vê o vaga-lume (com 1 minuto de espera para cada sapo); e
+"vamos criar umas áreas específicas para os animais? ... cavernas ... ursos, algumas tocas dos coiotes, também criar um
+bioma de pântano para os sapos, cobras, vagalumes". As decisões do Pedro: o pântano vai por cima do mapa (sem mexer no
+terreno do Gustavo) e dá para entrar nas cavernas.
+
+- **A cobra caça o sapo** (`Bicho.Noite.cs`): sente o sapo a até 10 m (o calor e o tremor do chão) e vai atrás, devagar;
+  a 0,8 m, o bote; engole (uns 8 s) e fica de 2 a 4 minutos digerindo, sem caçar. O sapo às vezes percebe a cobra a 1,5 m
+  e pula para longe (35% a cada decisão: a sorte do sapo).
+- **O urso caça o salmão** (`Bicho.Pesca.cs`): olha a água de 3 em 3 a 6 em 6 s e, vendo um salmão a até 35 m, vai pescar,
+  de dia ou de noite (antes, só de dia e no sorteio). Pegou: leva até a margem e **come sentado** (o estado novo
+  `Sentado`, o 7, o último que cabe nos 3 bits da rede; a pose em `AnimacaoDoBicho.cs`: o corpo inclinado, a anca no chão,
+  as patas de trás dobradas), com o peixe nas patas. **Os filhotes** sentam do lado dela e comem junto. De barriga cheia,
+  fica de 2 a 4 minutos sem pescar.
+- **O sapo come o vaga-lume** (`VagaLumes.cs` e `Bicho.Noite.cs`): à noite, o sapo do anfitrião pula atrás do vaga-lume que
+  vê (a até 4 m); a língua pega o que passa a 1,3 m da boca; cada sapo espera 1 minuto para comer outro (em cada máquina).
+- **Os lugares dos bichos** (`FaunaDoMundo.Lugares.cs`, o desenho em `LugaresNaTela.cs`): um sorteio fixo sobre o mapa (a
+  semente da partida), o mesmo em todas as máquinas (nada vai pela rede nem no save), feito aos poucos nos primeiros
+  segundos; no Lakewood, ~8 cavernas, ~12 tocas e ~7 brejos (pela área).
+  - **A caverna**: na serra e na mata, num chão quase plano, longe da água, das estradas, das cidades e das árvores. O
+    relevo do mapa é sólido (não dá para cavar a encosta), então a caverna é um morro de pedras em cima do chão: o piso de
+    pedra (com a rampa na boca), o túnel (3 m de largura, 3 m de altura, 5 m) e o salão (7 x 9 m, 4 m de altura); tudo
+    com colisor (dá para entrar, e para subir nas pedras de fora). **O urso mora nela** (~70% das cavernas, no sorteio de
+    cada uma de 5 em 5 minutos): dorme no salão no meio do dia (das 11h às 17h) e na madrugada (da 1h às 5h), os filhotes
+    junto; no resto do tempo sai e anda por perto (até ~250 m). Quem entra com ele lá dentro leva a surpresa de perto (a
+    mente do urso).
+  - **A toca dos coiotes**: no campo, na rebrota e na lavoura: o monte de terra com o buraco, a terra revirada e uns ossos.
+    A matilha descansa deitada em volta dela de dia (das 8h às 18h) e sai para caçar no fim da tarde.
+  - **O brejo**: os pontos planos da beira da água: as poças de água parada (com os nenúfares), o barro, as moitas de
+    taboa e as árvores mortas (de pé e caídas). As poças são só o desenho (não molham). **Os sapos moram nele** (de dia
+    também), as cascavéis às vezes, e **os vaga-lumes se juntam nele** (perto de um brejo, dois terços nascem dentro dele).
+- **O veado no farol** (`Bicho.Futuro.cs`): à noite, o veado na frente de um carro de farol aceso (a até 45 m, no cone de
+  ~22°) fica parado olhando a luz, de 2,5 a 7 s (7 em 10; os outros correm na hora), e depois dispara.
+- **O atropelamento dos bichos** (`Carro.cs`, `Atropelar`): antes, cada bicho era um muro parado para o carro (até um coelho
+  o segurava) e não levava dano. Agora o bicho leva o acerto pela velocidade (como o zumbi); o carro passa pelos pequenos e
+  pelos médios (a colisão com aquele bicho fica ignorada); o grande (o veado, o urso, o lobo: 90 pontos ou mais) amassa a
+  frente (o radiador, como numa batida) e freia o carro; o alce, enorme, segura o carro de verdade.
+- **O filhote órfão** (o gancho de domar): o último adulto do grupo morreu; o filhote fica perto da carcaça da mãe,
+  chorando de vez em quando, foge de quem chega a 8 m e volta. As espécies que dá para domar (o lobo e os ursos) já
+  estavam marcadas (`domavel`); `Bicho.PodeDomar` é o lugar da habilidade futura (sem nada na tela). O couro já dizia
+  "vai virar a armadura de couro (em breve)".
+- **O F1**: "Caverna", "Toca" e "Brejo" (ir para o lugar mais perto, do lado de fora) e "Os bichos do lugar mais perto" (o
+  urso dormindo no salão, os coiotes na toca, os sapos e a cascavel no brejo). O resumo da fauna conta os lugares.
+- **A `VersaoDaRede` foi para 27** (o estado `Sentado`).
+
+**Os ajustes do primeiro teste do Pedro (13/11/2026, à noite):** "não encontrei os castores spawnados, mesma coisa pra
+caverna dos ursos, não tem ninguém e dos coiotes também. Inclusive, a caverna dos ursos spawnou no meio de uma pista,
+coisa que não pode acontecer com nenhuma dessas novas construções".
+- **Os moradores nascem em casa** (`FaunaDoMundo.MoradoresDosLugares`): quando alguém chega a 230 m de um lugar vazio, os
+  moradores nascem nele: o urso no salão da caverna (75% das cavernas), os coiotes na toca (80%), os sapos no brejo
+  (sempre) e a cascavel nele (50%), e a família de castores na toca do lago ou do riacho (85%). O sorteio é de cada lugar
+  por dia do jogo (a caverna vazia hoje continua vazia até amanhã). Antes eles dependiam do anel de 95 a 190 m e da
+  raridade de cada espécie (o castor, 5% a cada 2,5 s): quem ia direto ao lugar o achava vazio.
+- **O urso fica mais na caverna**: dorme nela das 9h às 18h e das 22h às 6h (sai de manhã cedo e no fim da tarde).
+- **Nenhum lugar perto de estrada**: a área inteira de cada lugar, com folga (a planta da caverna, 25 m; a toca, 20 m; o
+  brejo inteiro, 15 m), longe da beira do asfalto (no Lakewood, pela distância de verdade da estrada), dos lotes, das
+  cidades, das bases militares e dos acampamentos. Antes só uns pontos em volta do meio eram olhados, e a pista passava
+  entre eles. A represa e a toca do riacho ficam a 30 m da estrada (era 14). O sorteio dos lugares mudou (os lugares do
+  mapa são outros).
+- **O brejo não põe nada no rio**: as poças, o barro e as árvores mortas só na terra; as taboas na terra ou no raso (até
+  0,35 m). Na foto do Pedro, uma moita de taboas aparecia no meio do riacho.
+- O tipo dos lugares virou `TipoDeLugarDoBicho` (o mapa do Gustavo já tem um `TipoDeLugar`).
+
+**O teste no Play (13/11/2026, no Lakewood, `teste_fauna13.cs`, fotos em `play13`):** 0 erros. Os 25 lugares (6 cavernas, 12
+tocas e 7 brejos) ficaram todos a mais de 60 m da beira do asfalto. Chegando de longe (a 150 m, sem o F1): o urso-negro
+dormia no salão da caverna (entrando, ele acordou e saiu sem atacar: o negro foge mais); 3 coiotes estavam na toca (e
+fugiram de quem chegou perto); o brejo tinha os sapos e a cascavel, e um sapo comeu o vaga-lume; os castores sumiram com o
+jogador a 600 m e a família estava na toca do riacho na volta; no farol do carro, até 5 veados ficaram parados na luz.
+Duas coisas falharam e foram corrigidas (**ainda não vistas no Play**):
+- **O urso não chegava ao raso** para pescar e dava voltas na margem do reservatório (os 100 s inteiros): o desvio olhava
+  uns 2 m à frente do destino, e na margem funda essa ponta caía na água funda (o urso não entra). Agora o desvio olha só
+  até o destino; e quem não chega ao ponto em 25 s pesca da margem onde está (se a água estiver ao alcance da pata) ou
+  desiste. O filhote, que ficava para trás (144 m), agora segue a mãe que se afasta mais de 12 m.
+- **A cobra não achava os sapos** (estavam a 43 m dela, espalhados no brejo): agora o brejo tem até 3 grupos de sapos,
+  juntos perto do meio de cada grupo, e a cascavel nasce perto de um deles (de 5 a 8 m).
+
+**Os testes no Play que conferiram essas correções (13/11/2026, à noite, `teste_fauna14.cs` a `teste_fauna17.cs`, fotos em
+`play15` e `play17`):** 0 erros. O brejo teve 12 sapos em 3 grupos; a cascavel posta perto deles foi atrás do sapo mais
+perto e o comeu (o sorteio do dia deixou um dos brejos sem cobra: normal). O urso pescando ainda passou dois testes sem
+pegar nada: **o salmão fugia de todo urso a 6 m** (ele é presa, e a presa foge de todo predador), então a patada nunca o
+alcançava. Agora o peixe não nota o urso parado na água (`FaunaDoMundo.Teme`: só o urso que se mexe o espanta); o urso
+pescando entra até 1,1 m de água (até a barriga); a patada pega o salmão a até 3,5 m (45%) e, com o cardume a até 8 m, às
+vezes um que passa perto (12%). Com isso a ursa pegou um salmão em 16 s, levou até a margem, **sentou e comeu** por uns
+25 s com o peixe nas patas, e **o filhote sentou do lado dela** (a 0,7 m) e comeu junto. O filhote não fica mais dando
+voltas na margem quando a mãe está na água: espera na beira, no ponto seco mais perto dela.
+
+**O urso parado e o filhote correndo na água (13/11/2026, à noite, a pedido: "tem alguns bugs que o urso fica parado e o
+filhote corre dentro da água"):**
+- **O urso parado na água**: o desvio barrava todo rumo "fundo demais" para o bicho de terra; o urso que parava de pescar
+  no meio da água (o limite voltava de 1,25 m para 0,45 m) achava todos os rumos fundos, inclusive o da margem, e ficava
+  dando meia-volta parado. Agora (`Bicho.AguaBarra` com a fundura de onde o bicho está) o de terra só não vai para onde fica
+  mais fundo que o limite **e** mais fundo que onde ele já está: quem está na água sempre sai para o raso.
+- **O filhote correndo na água**: a patada na água da mãe pescando usa a pose do ataque (`Investindo`), e o filhote
+  entendia como perigo e corria para trás dela (para dentro da água). Agora a patada de pesca não é perigo, e o "atrás da
+  mãe" que cai na água vira ficar onde está, olhando. O limite de água dos bichos de terra também passou a ser 70% da altura
+  deles (no máximo 0,45 m): o filhote e os pequenos não entram na água acima da barriga.
+- **Os testes** (`teste_fauna18.cs` e `teste_fauna19.cs`): 0 erros. O filhote ficou o tempo todo na beira (água 0,00 m),
+  olhando a mãe pescar; o urso entrou até 1,14 m, pegou o salmão, saiu, comeu sentado na margem e foi embora andando, sem
+  nenhum momento parado na água fora da pesca.
+
 ## O que ficou para depois
 
 - O "derrubar" do urso é o empurrão com o tremor (o jogador não fica caído no chão: não há queda sem morrer no jogo).
 - O veado parado no farol do carro e a batida (a etapa 5).
-- A etapa 5 (a lista no começo).
+- A habilidade de domar o filhote órfão (o gancho está pronto: `Bicho.PodeDomar`) e a armadura de couro.
+- Os modelos de verdade das cavernas, das tocas e dos brejos (hoje, caixas); um pântano de verdade no relevo do Lakewood, se o
+  Gustavo fizer (os bichos passam a usar o dele).
 - Os modelos e os ícones dos peixes americanos (hoje, os dos peixes antigos).
-- A represa do castor (quando houver riacho) e o salmão no rio do Gustavo.
+- A água subindo atrás da represa do castor (o lago dos castores); o rio do mapa hoje é fixo.
+- Os bichos subindo nos lugares altos (o urso-negro sobe em árvore de verdade).

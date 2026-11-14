@@ -50,6 +50,8 @@ namespace ZombieCityCleaner.Fauna
         /// <summary>A vida do adulto (o zumbi tem 100).</summary>
         public float pontos;
         /// <summary>As velocidades (m/s): andando, trotando e correndo.</summary>
+        // (13/11/2026, a pedido: os bichos estavam rápidos demais; o jogador corre a 4,2 m/s) a corrida perto da do jogador:
+        // a presa ainda escapa um pouco e o predador ainda alcança, mas dá para acompanhar
         public float andar, trotar, correr;
         /// <summary>Os sentidos (m): até onde vê quem se mexe, ouve quem corre e sente o cheiro de quem está a favor do vento.</summary>
         public float visao, ouvido, faro;
@@ -63,6 +65,8 @@ namespace ZombieCityCleaner.Fauna
         public Mancha[] habitats;
         /// <summary>Ativo de noite (o guaxinim, o gambá); os outros, de dia e no crepúsculo.</summary>
         public bool noturno;
+        /// <summary>(13/11) Bicho da noite que, na cidade (o quintal, o baldio), anda de dia também (o guaxinim).</summary>
+        public bool deDiaNaCidade;
         /// <summary>Gancho para o futuro: o filhote órfão dá para domar (o lobo e os ursos).</summary>
         public bool domavel;
         /// <summary>Sai no mundo sozinho (a etapa 1: o veado; a 2: os predadores e o coelho); os outros só pelo F1, por enquanto.</summary>
@@ -113,7 +117,7 @@ namespace ZombieCityCleaner.Fauna
 
             var veado = D(Especie.Veado, "veado", "o veado", "veados");
             veado.altura = 0.95f; veado.comprimento = 1.7f; veado.pontos = 120f;
-            veado.andar = 1.3f; veado.trotar = 3.5f; veado.correr = 12f;
+            veado.andar = 1.3f; veado.trotar = 2.6f; veado.correr = 6f;
             veado.visao = 60f; veado.ouvido = 30f; veado.faro = 70f; veado.fuga = 40f;
             veado.grupoMin = 4; veado.grupoMax = 9;
             veado.carne = 4; veado.couro = 1; veado.gordura = 1; veado.segundosParaCarnear = 8f;
@@ -122,7 +126,7 @@ namespace ZombieCityCleaner.Fauna
 
             var alce = D(Especie.Alce, "alce", "o alce", "alces");
             alce.altura = 1.8f; alce.comprimento = 2.8f; alce.pontos = 400f;
-            alce.andar = 1.4f; alce.trotar = 4f; alce.correr = 13f;
+            alce.andar = 1.4f; alce.trotar = 2.8f; alce.correr = 6f;
             alce.visao = 45f; alce.ouvido = 30f; alce.faro = 80f; alce.fuga = 25f;
             alce.grupoMin = 1; alce.grupoMax = 3;
             alce.carne = 10; alce.couro = 2; alce.gordura = 3; alce.segundosParaCarnear = 15f;
@@ -132,7 +136,7 @@ namespace ZombieCityCleaner.Fauna
 
             var lobo = D(Especie.Lobo, "lobo-cinzento", "o lobo", "lobos");
             lobo.vida = Vida.Matilha; lobo.altura = 0.8f; lobo.comprimento = 1.4f; lobo.pontos = 90f;
-            lobo.andar = 1.5f; lobo.trotar = 4f; lobo.correr = 15f;
+            lobo.andar = 1.5f; lobo.trotar = 3f; lobo.correr = 6.8f;
             lobo.visao = 60f; lobo.ouvido = 45f; lobo.faro = 120f; lobo.fuga = 30f;
             lobo.grupoMin = 4; lobo.grupoMax = 7; lobo.carne = 2; lobo.couro = 1; lobo.segundosParaCarnear = 6f;
             lobo.habitats = new[] { Mancha.Coniferas, Mancha.Mista, Mancha.Serra }; lobo.domavel = true;
@@ -141,7 +145,7 @@ namespace ZombieCityCleaner.Fauna
 
             var coiote = D(Especie.Coiote, "coiote", "o coiote", "coiotes");
             coiote.vida = Vida.Matilha; coiote.altura = 0.6f; coiote.comprimento = 1.1f; coiote.pontos = 60f;
-            coiote.andar = 1.4f; coiote.trotar = 3.5f; coiote.correr = 15f;
+            coiote.andar = 1.4f; coiote.trotar = 2.8f; coiote.correr = 6.4f;
             coiote.visao = 50f; coiote.ouvido = 40f; coiote.faro = 100f; coiote.fuga = 40f;
             coiote.grupoMin = 3; coiote.grupoMax = 5; coiote.carne = 1; coiote.couro = 1; coiote.segundosParaCarnear = 5f;
             coiote.habitats = new[] { Mancha.Campo, Mancha.Rebrota, Mancha.Lavoura, Mancha.Baldio };
@@ -150,7 +154,7 @@ namespace ZombieCityCleaner.Fauna
 
             var negro = D(Especie.UrsoNegro, "urso-negro", "o urso-negro", "ursos-negros");
             negro.vida = Vida.Sozinho; negro.altura = 0.95f; negro.comprimento = 1.7f; negro.pontos = 350f;
-            negro.andar = 1.2f; negro.trotar = 3f; negro.correr = 13f;
+            negro.andar = 1.2f; negro.trotar = 2.6f; negro.correr = 5.8f;
             negro.visao = 30f; negro.ouvido = 30f; negro.faro = 150f; negro.fuga = 25f;
             negro.grupoMin = 1; negro.grupoMax = 3; negro.carne = 6; negro.couro = 2; negro.gordura = 4; negro.segundosParaCarnear = 14f;
             negro.habitats = new[] { Mancha.Mista, Mancha.Coniferas, Mancha.Beira }; negro.domavel = true;
@@ -159,7 +163,7 @@ namespace ZombieCityCleaner.Fauna
 
             var pardo = D(Especie.UrsoPardo, "urso-pardo", "o urso-pardo", "ursos-pardos");
             pardo.vida = Vida.Sozinho; pardo.altura = 1.15f; pardo.comprimento = 2.1f; pardo.pontos = 600f;
-            pardo.andar = 1.3f; pardo.trotar = 3.2f; pardo.correr = 14f;
+            pardo.andar = 1.3f; pardo.trotar = 2.8f; pardo.correr = 6f;
             pardo.visao = 30f; pardo.ouvido = 30f; pardo.faro = 160f; pardo.fuga = 15f;
             pardo.grupoMin = 1; pardo.grupoMax = 2; pardo.carne = 9; pardo.couro = 3; pardo.gordura = 5; pardo.segundosParaCarnear = 18f;
             pardo.habitats = new[] { Mancha.Serra, Mancha.Coniferas }; pardo.domavel = true;
@@ -168,7 +172,7 @@ namespace ZombieCityCleaner.Fauna
 
             var coelho = D(Especie.Coelho, "coelho", "o coelho", "coelhos");
             coelho.vida = Vida.Pequeno; coelho.altura = 0.25f; coelho.comprimento = 0.4f; coelho.pontos = 15f;
-            coelho.andar = 0.8f; coelho.trotar = 3f; coelho.correr = 12f;
+            coelho.andar = 0.8f; coelho.trotar = 2.2f; coelho.correr = 5.5f;
             coelho.visao = 30f; coelho.ouvido = 25f; coelho.faro = 20f; coelho.fuga = 18f;
             coelho.grupoMin = 1; coelho.grupoMax = 3; coelho.carne = 1; coelho.segundosParaCarnear = 3f;
             coelho.habitats = new[] { Mancha.Campo, Mancha.Rebrota, Mancha.Lavoura, Mancha.Quintal, Mancha.Baldio };
@@ -186,7 +190,7 @@ namespace ZombieCityCleaner.Fauna
 
             var pato = D(Especie.Pato, "pato", "o pato", "patos");
             pato.corpo = Corpo.Ave; pato.vida = Vida.Pequeno; pato.altura = 0.35f; pato.comprimento = 0.5f; pato.pontos = 10f;
-            pato.andar = 0.6f; pato.trotar = 1.2f; pato.correr = 12f;
+            pato.andar = 0.6f; pato.trotar = 1.2f; pato.correr = 7f;
             pato.visao = 40f; pato.ouvido = 25f; pato.faro = 10f; pato.fuga = 25f;
             pato.grupoMin = 4; pato.grupoMax = 8; pato.carne = 1; pato.segundosParaCarnear = 3f; pato.habitats = Lago;
             pato.meio = Meio.Anfibio; pato.noMundo = true; pato.raridade = 0.2f; pato.gruposPorJogador = 2;
@@ -194,7 +198,7 @@ namespace ZombieCityCleaner.Fauna
 
             var ganso = D(Especie.Ganso, "ganso", "o ganso", "gansos");
             ganso.corpo = Corpo.Ave; ganso.vida = Vida.Pequeno; ganso.altura = 0.6f; ganso.comprimento = 0.8f; ganso.pontos = 15f;
-            ganso.andar = 0.7f; ganso.trotar = 1.5f; ganso.correr = 13f;
+            ganso.andar = 0.7f; ganso.trotar = 1.5f; ganso.correr = 7.5f;
             ganso.visao = 40f; ganso.ouvido = 25f; ganso.faro = 10f; ganso.fuga = 18f;
             ganso.grupoMin = 4; ganso.grupoMax = 10; ganso.carne = 2; ganso.segundosParaCarnear = 4f;
             ganso.habitats = new[] { Mancha.Beira, Mancha.Campo };
@@ -203,7 +207,7 @@ namespace ZombieCityCleaner.Fauna
 
             var aguia = D(Especie.Aguia, "águia-careca", "a águia", "águias");
             aguia.corpo = Corpo.Ave; aguia.vida = Vida.Sozinho; aguia.altura = 0.8f; aguia.comprimento = 0.9f; aguia.pontos = 30f;
-            aguia.andar = 0.6f; aguia.trotar = 1.2f; aguia.correr = 15f;
+            aguia.andar = 0.6f; aguia.trotar = 1.2f; aguia.correr = 9f;
             aguia.visao = 80f; aguia.ouvido = 30f; aguia.faro = 0f; aguia.fuga = 30f;
             aguia.carne = 1; aguia.segundosParaCarnear = 4f; aguia.habitats = new[] { Mancha.Beira, Mancha.Serra };
             aguia.meio = Meio.Ar; aguia.noMundo = true; aguia.raridade = 0.03f;
@@ -211,7 +215,7 @@ namespace ZombieCityCleaner.Fauna
 
             var urubu = D(Especie.Urubu, "urubu", "o urubu", "urubus");
             urubu.corpo = Corpo.Ave; urubu.vida = Vida.Pequeno; urubu.altura = 0.6f; urubu.comprimento = 0.7f; urubu.pontos = 20f;
-            urubu.andar = 0.5f; urubu.trotar = 1.0f; urubu.correr = 10f;
+            urubu.andar = 0.5f; urubu.trotar = 1f; urubu.correr = 6f;
             urubu.visao = 60f; urubu.ouvido = 20f; urubu.faro = 200f; urubu.fuga = 12f;
             urubu.grupoMin = 3; urubu.grupoMax = 8; urubu.carne = 1; urubu.segundosParaCarnear = 3f;
             urubu.habitats = new[] { Mancha.Campo, Mancha.Baldio, Mancha.Rebrota };
@@ -235,11 +239,11 @@ namespace ZombieCityCleaner.Fauna
 
             var guaxinim = D(Especie.Guaxinim, "guaxinim", "o guaxinim", "guaxinins");
             guaxinim.vida = Vida.Pequeno; guaxinim.altura = 0.3f; guaxinim.comprimento = 0.65f; guaxinim.pontos = 25f;
-            guaxinim.andar = 0.9f; guaxinim.trotar = 2.2f; guaxinim.correr = 6f;
+            guaxinim.andar = 0.9f; guaxinim.trotar = 2f; guaxinim.correr = 4.5f;
             guaxinim.visao = 20f; guaxinim.ouvido = 20f; guaxinim.faro = 30f; guaxinim.fuga = 10f;
-            guaxinim.grupoMin = 1; guaxinim.grupoMax = 2; guaxinim.carne = 1; guaxinim.couro = 1; guaxinim.segundosParaCarnear = 4f;
-            guaxinim.habitats = new[] { Mancha.Quintal, Mancha.Baldio, Mancha.Beira }; guaxinim.noturno = true;
-            guaxinim.noMundo = true; guaxinim.raridade = 0.12f;
+            guaxinim.grupoMin = 1; guaxinim.grupoMax = 3; guaxinim.carne = 1; guaxinim.couro = 1; guaxinim.segundosParaCarnear = 4f;
+            guaxinim.habitats = new[] { Mancha.Quintal, Mancha.Baldio, Mancha.Beira }; guaxinim.noturno = true; guaxinim.deDiaNaCidade = true;
+            guaxinim.noMundo = true; guaxinim.raridade = 0.2f; guaxinim.gruposPorJogador = 2;
             Por(guaxinim);
 
             var gamba = D(Especie.Gamba, "gambá", "o gambá", "gambás");
@@ -253,15 +257,15 @@ namespace ZombieCityCleaner.Fauna
 
             var esquilo = D(Especie.Esquilo, "esquilo", "o esquilo", "esquilos");
             esquilo.vida = Vida.Pequeno; esquilo.altura = 0.12f; esquilo.comprimento = 0.25f; esquilo.pontos = 8f;
-            esquilo.andar = 1.0f; esquilo.trotar = 2.5f; esquilo.correr = 6f;
+            esquilo.andar = 1f; esquilo.trotar = 2.2f; esquilo.correr = 4.5f;
             esquilo.visao = 20f; esquilo.ouvido = 15f; esquilo.faro = 10f; esquilo.fuga = 8f;
-            esquilo.grupoMin = 1; esquilo.grupoMax = 2; esquilo.habitats = new[] { Mancha.Mista, Mancha.Outono, Mancha.Quintal };
-            esquilo.noMundo = true; esquilo.raridade = 0.3f; esquilo.gruposPorJogador = 2;
+            esquilo.grupoMin = 1; esquilo.grupoMax = 2; esquilo.habitats = new[] { Mancha.Mista, Mancha.Outono, Mancha.Quintal, Mancha.Baldio };
+            esquilo.noMundo = true; esquilo.raridade = 0.4f; esquilo.gruposPorJogador = 2;
             Por(esquilo);
 
             var peru = D(Especie.Peru, "peru selvagem", "o peru", "perus");
             peru.corpo = Corpo.Ave; peru.altura = 0.8f; peru.comprimento = 1.0f; peru.pontos = 30f;
-            peru.andar = 1.0f; peru.trotar = 3f; peru.correr = 7f;
+            peru.andar = 1f; peru.trotar = 2.5f; peru.correr = 5f;
             peru.visao = 45f; peru.ouvido = 25f; peru.faro = 10f; peru.fuga = 25f;
             peru.grupoMin = 4; peru.grupoMax = 10; peru.carne = 2; peru.segundosParaCarnear = 4f;
             peru.habitats = new[] { Mancha.Campo, Mancha.Rebrota, Mancha.Mista };
@@ -270,7 +274,7 @@ namespace ZombieCityCleaner.Fauna
 
             var salmao = D(Especie.Salmao, "salmão", "o salmão", "salmões");
             salmao.corpo = Corpo.Peixe; salmao.vida = Vida.Pequeno; salmao.altura = 0.15f; salmao.comprimento = 0.7f; salmao.pontos = 5f;
-            salmao.andar = 0.6f; salmao.trotar = 1.5f; salmao.correr = 4f;
+            salmao.andar = 0.6f; salmao.trotar = 1.5f; salmao.correr = 3f;
             salmao.visao = 6f; salmao.ouvido = 6f; salmao.fuga = 4f; salmao.grupoMin = 3; salmao.grupoMax = 8;
             salmao.habitats = Lago;
             salmao.meio = Meio.Agua; salmao.noMundo = true; salmao.raridade = 0.3f; salmao.gruposPorJogador = 2;

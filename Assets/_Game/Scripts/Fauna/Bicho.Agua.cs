@@ -50,6 +50,37 @@ namespace ZombieCityCleaner.Fauna
             Velocidade = Dados.correr;
         }
 
+        // ------------------------------------------------------------------ a queda do corpo (13/11/2026, a pedido)
+
+        float _quedaVel;
+
+        /// <summary>
+        /// No anfitrião, a cada quadro, o bicho morto (13/11/2026, a pedido: "quando mato algum pato voando o corpo dele fica
+        /// lá em cima"): o corpo no ar (a ave abatida voando, o peru no galho, o esquilo no tronco) cai com a gravidade até o
+        /// chão; na água, a ave e o peixe boiam e o resto afunda até o meio do corpo. A posição vai pela mensagem de sempre.
+        /// </summary>
+        internal void Cair(float dt)
+        {
+            _altitude = _altitudeAlvo = 0f;
+            Carregando = false;   // a águia solta o peixe
+            Vector3 p = transform.position;
+            float chao = Chao(p, out float fundura, out float nivel);
+            float pouso = chao;
+            if (fundura > 0.01f)
+                pouso = Dados.corpo == Corpo.Ave || Dados.meio == Meio.Agua ? nivel - 0.04f : Mathf.Max(chao, nivel - Altura * 0.5f);
+            if (p.y <= pouso + 0.005f)
+            {
+                _quedaVel = 0f;
+                if (pouso - p.y > 0.005f && pouso - p.y < 3f) { p.y = pouso; transform.position = p; }
+                return;
+            }
+            _quedaVel = Mathf.Min(_quedaVel + 9.81f * dt, 40f);
+            p.y = Mathf.Max(pouso, p.y - _quedaVel * dt);
+            transform.position = p;
+            if (p.y <= pouso + 0.005f && _quedaVel > 6f && fundura > 0.01f) Tocar(SomDoBicho.Respingo);   // caiu na água
+            if (p.y <= pouso + 0.005f) _quedaVel = 0f;
+        }
+
         // ------------------------------------------------------------------ a altura (a cada quadro, no anfitrião)
 
         float AlturaDe(Vector3 p, float dt, float agora)
@@ -90,12 +121,21 @@ namespace ZombieCityCleaner.Fauna
         }
 
         /// <summary>A água adiante barra o caminho? (o peixe não sai da água; o bicho de terra não entra no fundo)</summary>
-        bool AguaBarra(float fundura)
+        // (13/11, a pedido: "o urso fica parado e o filhote corre dentro da água") 'aqui': a fundura onde o bicho está. O de
+        // terra só não vai para onde fica MAIS fundo que o limite e mais fundo que aqui: quem já está na água (o urso que
+        // parou de pescar) sempre pode sair para o raso (antes, todo rumo era "fundo demais" e ele ficava parado). O limite
+        // é 70% da altura do bicho (o filhote e os pequenos não entram na água acima da barriga), no máximo 0,45 m; o urso
+        // pescando, até 1,25 m
+        bool AguaBarra(float fundura, float aqui = 0f)
         {
             switch (Dados.meio)
             {
                 case Meio.Agua: return fundura < 0.5f;
-                case Meio.Terra: return fundura > (_podeMolhar ? 1.0f : 0.45f);
+                case Meio.Terra:
+                {
+                    float limite = _podeMolhar ? 1.25f : Mathf.Min(0.45f, Altura * 0.7f);
+                    return fundura > limite && fundura > aqui + 0.03f;
+                }
                 default: return false;
             }
         }
@@ -248,7 +288,7 @@ namespace ZombieCityCleaner.Fauna
         bool GuardarNinho(FaunaDoMundo f, Grupo g, float agora)
         {
             var j = _alvo;
-            bool perto = j != null && j.AlvoValido && Vector3.Distance(Plano(j.transform.position), Plano(g.ninho)) < 9f;
+            bool perto = j != null && j.AlvoValido && FaunaDoMundo.Alcanca(this, j) && Vector3.Distance(Plano(j.transform.position), Plano(g.ninho)) < 9f;
             // ele vigia o ninho: vê quem chega perto dele mesmo sem os sentidos (o mais perto do ninho)
             if (!perto && Estado != EstadoDoBicho.Investindo)
             {
@@ -257,13 +297,13 @@ namespace ZombieCityCleaner.Fauna
                 {
                     if (!gente.valido) continue;
                     float dg = Vector3.Distance(Plano(gente.pes), Plano(g.ninho));
-                    if (dg < melhor) { melhor = dg; j = gente.j; }
+                    if (dg < melhor && FaunaDoMundo.Alcanca(this, gente.j)) { melhor = dg; j = gente.j; }
                 }
                 if (j != null && melhor < 9f) { _alvo = j; perto = true; }
             }
             if (Estado == EstadoDoBicho.Investindo)
             {
-                if (j == null || !j.AlvoValido || Vector3.Distance(Plano(j.transform.position), Plano(g.ninho)) > 15f || agora > _fimDoAtaque)
+                if (j == null || !j.AlvoValido || !FaunaDoMundo.Alcanca(this, j) || Vector3.Distance(Plano(j.transform.position), Plano(g.ninho)) > 15f || agora > _fimDoAtaque)
                 {
                     Estado = EstadoDoBicho.Andando;
                     _altitudeAlvo = 0f;

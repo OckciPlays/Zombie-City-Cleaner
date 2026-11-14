@@ -5,7 +5,8 @@ using ZombieCityCleaner.World;
 namespace ZombieCityCleaner.Fauna
 {
     /// <summary>O que o bicho está fazendo (vai pela rede em 3 bits).</summary>
-    public enum EstadoDoBicho : byte { Pastando, Andando, Alerta, Fugindo, Investindo, Morto, Deitado }
+    // (a etapa 5, 13/11/2026) Sentado: o urso comendo o salmão na margem (o 7 é o último que cabe nos 3 bits da rede)
+    public enum EstadoDoBicho : byte { Pastando, Andando, Alerta, Fugindo, Investindo, Morto, Deitado, Sentado }
 
     /// <summary>
     /// Um bicho no mundo. No anfitrião ele pensa (Bicho.Mente.cs) e anda; nos outros, é uma cópia que segue o que chega
@@ -90,6 +91,7 @@ namespace ZombieCityCleaner.Fauna
             {
                 EstadoDoBicho.Morto => AnimacaoDoBicho.Pose.Morto,
                 EstadoDoBicho.Deitado => AnimacaoDoBicho.Pose.Deitado,
+                EstadoDoBicho.Sentado => AnimacaoDoBicho.Pose.Sentado,
                 EstadoDoBicho.Alerta => AnimacaoDoBicho.Pose.Alerta,
                 EstadoDoBicho.Investindo => Velocidade < 0.5f ? AnimacaoDoBicho.Pose.Atacando : AnimacaoDoBicho.Pose.Correndo,
                 EstadoDoBicho.Pastando => Velocidade < 0.25f ? AnimacaoDoBicho.Pose.Comendo : AnimacaoDoBicho.Pose.Andando,
@@ -101,8 +103,11 @@ namespace ZombieCityCleaner.Fauna
             if (!Morto && Dados.corpo == Corpo.Ave && AcimaDaSuperficie() > 0.7f && Estado != EstadoDoBicho.Deitado) pose = AnimacaoDoBicho.Pose.Voando;
             else if (!Morto && Dados.corpo == Corpo.Quadrupede && Nadando()) pose = AnimacaoDoBicho.Pose.Nadando;
             else if (!Morto && (Especie == Especie.Esquilo || Especie == Especie.Guaxinim) && AcimaDaSuperficie() > 0.6f) pose = AnimacaoDoBicho.Pose.Alerta;
+            else if (!Morto && Dados.papel == Papel.Urso && Estado == EstadoDoBicho.Investindo && Velocidade < 0.5f && AlguemEmCima()) pose = AnimacaoDoBicho.Pose.Alerta;
             Olhos(dt);   // (a etapa 4) os olhos que brilham na lanterna
-            _animacao.Atualizar(pose, Velocidade / Mathf.Max(0.3f, Escala), Dados.correr, _olhar, dt);
+            // a referência das passadas: o trote fica perto de 30% dela e o galope acima de 60% (desde 13/11 a corrida
+            // é mais lenta e o trote é ~40% dela; sem isso, o trote já saía galopando)
+            _animacao.Atualizar(pose, Velocidade / Mathf.Max(0.3f, Escala), Mathf.Max(Dados.correr, Dados.trotar * 3.2f), _olhar, dt);
             MostrarCarga();
             Inclinar(dt);
             RastroDeSangue();

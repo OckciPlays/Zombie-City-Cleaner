@@ -26,7 +26,10 @@ namespace ZombieCityCleaner.Fauna
         Vector3 _peDoTronco;
         float _raioDoTronco;
         Bicho _engolindo;
-        float _engolirEm;
+        float _engolirEm, _proximaSubida, _digerindoAte;
+        /// <summary>(a etapa 5) Nesta máquina: quando o sapo pode comer outro vaga-lume (1 minuto depois do último).</summary>
+        public float ProximoVagaLume { get; set; }
+        TipoDeLixo _lixoDeAgora;
 
         static bool ENoite => CicloDoDia.Noite > 0.55f;
 
@@ -49,14 +52,20 @@ namespace ZombieCityCleaner.Fauna
 
         // ------------------------------------------------------------------ subir na árvore (o esquilo, o guaxinim)
 
-        /// <summary>Corre para o tronco mais perto e sobe (de 3 a 6 m) por um tempo. Falso: sem árvore perto.</summary>
-        bool Trepar(FaunaDoMundo f, float agora)
+        bool _subidaCalma;
+
+        /// <summary>
+        /// Corre para o tronco mais perto e sobe (de 3 a 6 m) por um tempo. Falso: sem árvore perto. 'calmo' (13/11): o esquilo
+        /// que sobe por conta própria (sem o chiado do alarme e por menos tempo).
+        /// </summary>
+        bool Trepar(FaunaDoMundo f, float agora, bool calmo = false)
         {
             if (!_trepando)
             {
                 if (!FaunaDoMundo.ArvoreMaisPerto(transform.position, 25f, out _peDoTronco, out _raioDoTronco)) return false;
                 _trepando = true;
                 _trepadoAte = 0f;
+                _subidaCalma = calmo;
             }
             Vector3 p = transform.position;
             Vector3 lado = Plano(p - _peDoTronco);
@@ -72,15 +81,15 @@ namespace ZombieCityCleaner.Fauna
                 }
                 // chegou: encosta no tronco e sobe, de frente para ele
                 transform.SetPositionAndRotation(new Vector3(junto.x, p.y, junto.z), Quaternion.LookRotation(-lado));
-                _altitudeAlvo = Random.Range(3f, 6f);
-                _trepadoAte = agora + Random.Range(18f, 35f);
-                if (Especie == Especie.Esquilo) Tocar(SomDoBicho.Chiado);
+                _altitudeAlvo = _subidaCalma ? Random.Range(2f, 5f) : Random.Range(3f, 6f);
+                _trepadoAte = agora + (_subidaCalma ? Random.Range(6f, 16f) : Random.Range(18f, 35f));
+                if (Especie == Especie.Esquilo && !_subidaCalma) Tocar(SomDoBicho.Chiado);
             }
             Estado = EstadoDoBicho.Alerta;
             _temDestino = false;
             _velAlvo = 0f;
             Velocidade = 0f;
-            if (Especie == Especie.Esquilo && Random.value < 0.25f) Tocar(SomDoBicho.Chiado);
+            if (Especie == Especie.Esquilo && Random.value < (_subidaCalma ? 0.05f : 0.25f)) Tocar(SomDoBicho.Chiado);
             if (agora > _trepadoAte)
             {
                 _altitudeAlvo = 0f;
@@ -115,6 +124,26 @@ namespace ZombieCityCleaner.Fauna
                 }
             }
             if (Estado == EstadoDoBicho.Fugindo && _temDestino) return;
+            // (a etapa 5) a cobra perto: às vezes ele percebe e pula para longe (a sorte do sapo)
+            var cobra = f.PresaPerto(this, Especie.Cascavel, 1.5f);
+            if (cobra != null && Random.value < 0.35f)
+            {
+                Estado = EstadoDoBicho.Fugindo;
+                Ir(p + Plano(p - cobra.transform.position).normalized * Random.Range(2f, 4f), Dados.trotar);
+                return;
+            }
+            // (a etapa 5) à noite, o vaga-lume que ele vê (a até 4 m): pula atrás dele; come com a língua (VagaLumes.cs) e
+            // espera 1 minuto para comer outro
+            if (ENoite && Time.time >= ProximoVagaLume && VagaLumes.Instancia != null && VagaLumes.Instancia.MaisPerto(p + Vector3.up * 0.3f, 4f, out var luz))
+            {
+                Vector3 chao = new Vector3(luz.x, p.y, luz.z);
+                if (Vector3.Distance(Plano(p), Plano(chao)) > 0.9f)
+                {
+                    Estado = EstadoDoBicho.Andando;
+                    Ir(chao - Plano(chao - p).normalized * 0.6f, Dados.trotar);
+                    return;
+                }
+            }
             // o coro: coaxa de tempo em tempo à noite (calado, não)
             if (ENoite && agora > _calarAte && agora > _proximoCoaxar)
             {
@@ -165,7 +194,7 @@ namespace ZombieCityCleaner.Fauna
                         _proximoSom = 0f;
                         Tocar(SomDoBicho.Chocalho);
                     }
-                    if (d < 1.6f && agora > _proximoBote)
+                    if (d < 1.6f && agora > _proximoBote && FaunaDoMundo.Alcanca(this, quem))
                     {
                         _proximoBote = agora + 3f;
                         Estado = EstadoDoBicho.Investindo;
@@ -174,14 +203,31 @@ namespace ZombieCityCleaner.Fauna
                     return;
                 }
             }
-            // o sapo perto: o bote e engole
-            var sapo = f.PresaPerto(this, Especie.Sapo, 2f);
-            if (sapo != null)
+            // (a etapa 5, 13/11/2026, a pedido: "toda vez que uma cobra ver um sapo, ela vai caçar o sapo") a cobra sente o
+            // sapo a até 10 m (o calor e o tremor do chão) e vai atrás, devagar; a 0,8 m, o bote; engole (uns 8 s) e fica de 2
+            // a 4 minutos digerindo, sem caçar
+            if (agora > _digerindoAte)
             {
-                f.Matar(sapo, null, false);
-                _engolindo = sapo;
-                _engolirEm = agora + 3f;
-                return;
+                var sapo = f.PresaPerto(this, Especie.Sapo, 10f);
+                if (sapo != null)
+                {
+                    Vector3 ps = sapo.transform.position;
+                    float ds = Vector3.Distance(Plano(p), Plano(ps));
+                    if (ds < 0.8f)
+                    {
+                        Estado = EstadoDoBicho.Investindo;
+                        _proximoSom = 0f;
+                        Tocar(SomDoBicho.Mordida);
+                        f.Matar(sapo, null, false);
+                        _engolindo = sapo;
+                        _engolirEm = agora + 8f;
+                        _digerindoAte = agora + Random.Range(120f, 240f);
+                        return;
+                    }
+                    Estado = EstadoDoBicho.Andando;
+                    Ir(ps, ds > 3f ? Dados.trotar : Dados.andar);
+                    return;
+                }
             }
             // enrolada; às vezes rasteja um pouco
             Estado = EstadoDoBicho.Pastando;
@@ -205,29 +251,33 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             if (Estado == EstadoDoBicho.Fugindo && agora < _fugaAte) { Fugir(agora, false); return; }
-            // revirando a lixeira
+            // revirando o lixo: de cabeça baixa, remexendo (a sacola, as latinhas), com barulho de vez em quando
             if (agora < _reviraAte)
             {
                 Estado = EstadoDoBicho.Pastando;
                 _temDestino = false;
                 _velAlvo = 0f;
+                if (Random.value < 0.4f) Tocar(_lixoDeAgora == TipoDeLixo.Sacolas ? SomDoBicho.Sacola : Random.value < 0.5f ? SomDoBicho.Sacola : SomDoBicho.Remexer);
                 return;
             }
-            // à noite, a lixeira mais perto (a até 60 m) que ninguém revirou faz pouco
-            if (ENoite && f.LixeiraPerto(p, 60f, out var lixeira))
+            // à noite (e, na cidade, de dia também: 13/11), o lixo mais perto (a até 60 m) que ninguém revirou faz pouco
+            if ((ENoite || FaunaDoMundo.NaCidade(p)) && f.LixeiraPerto(p, 60f, out var lixeira, out var tipo))
             {
                 float d = Vector3.Distance(Plano(p), Plano(lixeira));
-                if (d > 1.2f)
+                if (d > (tipo == TipoDeLixo.Cacamba ? 1.6f : 1.2f))
                 {
                     Estado = EstadoDoBicho.Andando;
                     Ir(lixeira, d > 15f ? Dados.trotar : Dados.andar);
                     return;
                 }
-                // derruba e revira: a lata cai (o barulho) e o lixo fica espalhado
-                f.ReviraLixeira(lixeira);
+                // derruba a lata (o barulho), rasga a sacola ou bate a tampa da caçamba; o lixo fica espalhado
+                var ponto = tipo == TipoDeLixo.Cacamba ? lixeira + Quaternion.LookRotation(Plano(p - lixeira).sqrMagnitude > 0.01f ? Plano(p - lixeira) : Vector3.forward) * Vector3.right * 1.6f : lixeira;
+                f.ReviraLixeira(ponto, (byte)tipo);
+                f.BarulhoNoLixo(lixeira, tipo);
+                _lixoDeAgora = tipo;
                 _proximoSom = 0f;
-                Tocar(SomDoBicho.Lata);
-                _reviraAte = agora + Random.Range(15f, 30f);
+                Tocar(tipo == TipoDeLixo.Lata ? SomDoBicho.Lata : tipo == TipoDeLixo.Cacamba ? SomDoBicho.Cacamba : SomDoBicho.Sacola);
+                _reviraAte = agora + Random.Range(15f, 35f);
                 return;
             }
             Pastar(f, agora);
@@ -359,6 +409,13 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             if (Estado == EstadoDoBicho.Fugindo && agora < _fugaAte) { Fugir(agora, false); return; }
+            // (13/11) de vez em quando sobe numa árvore perto, sem susto, e desce depois
+            if (agora > _proximaSubida)
+            {
+                bool primeira = _proximaSubida <= 0f;
+                _proximaSubida = agora + Random.Range(20f, 60f);
+                if (!primeira && Random.value < 0.55f && FaunaDoMundo.ArvoreMaisPerto(transform.position, 14f, out _, out _) && Trepar(f, agora, true)) return;
+            }
             // no chão: corre um pouco e para (fuça)
             Estado = EstadoDoBicho.Pastando;
             if (!_temDestino && Random.value < 0.2f * Mathf.Max(0.3f, dt))

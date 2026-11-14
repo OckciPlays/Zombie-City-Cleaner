@@ -5318,7 +5318,7 @@ Nenhuma cena nem o prefab do jogador mudaram: as malhas vêm do `Resources/Itens
   vídeo, não o código); reaberto, o aviso "Scene Backup Detected" guardou o backup em `Assets/_Recovery/0 (3).unity` (no
   `.gitignore`), e a cena Mundo não mudou.
 
-## A fauna dos EUA (12/11/2026, a pedido; as etapas 1 a 4 de 5; `Docs/19-Fauna.md`)
+## A fauna dos EUA (12/11/2026, a pedido; as 5 etapas; `Docs/19-Fauna.md`)
 
 `Scripts/Fauna/`: 19 espécies (só o veado no mundo por enquanto), o gerenciador no anfitrião (`FaunaDoMundo`, um
 MonoBehaviour criado pelo `VigiaDaFauna`), a mensagem "ZCC.Fauna" de 13 bytes por bicho para os clientes (a
@@ -5342,6 +5342,18 @@ o alce (a mãe com o filhote investe), os patos e os gansos (decolam e pousam; o
 `Player/JogadorRede.Fauna.cs` e `ZombieManager.Cheiro`), o urubu nos restos (os corpos dos zumbis agora ficam:
 `Zombies/RestosDosCorpos.cs`), o esquilo no tronco, o peru dormindo nas árvores, os vaga-lumes (`Fauna/VagaLumes.cs`) e
 os olhos na lanterna (`Fauna/Bicho.Olhos.cs`); os símbolos Envenenado e Fedendo. A `VersaoDaRede` é 25.
+Desde 13/11 os bichos correm perto da velocidade do jogador (o veado a 6 m/s, o lobo a 6,8; a tabela no doc), a
+pedido: "estão extremamente rápidos".
+Os ajustes de 13/11 no Lakewood (a seção no doc): o corpo morto no ar cai (`Bicho.Cair`); o golpe tem alcance na
+altura (`Bicho.Alcance.cs`: quem está no alto não apanha, e o bicho desiste depois de 8 a 20 s); os castores fazem a
+família nos riachos com a represa (`FaunaDoMundo.Rios.cs`, no save junto da toca), o salmão sobe os riachos e os patos
+boiam nos rios; o lixo da Woodcreek à vista (`LixoDaCidade.cs`: a lata, as sacolas e a caçamba), que o guaxinim
+revira (na cidade, de dia também; o barulho chama os zumbis perto); o esquilo sobe nas árvores sozinho. O sangramento
+dos bichos conta o tempo de verdade (quem investia sangrava 4 vezes mais rápido).
+**A etapa 5** (13/11): a caça ao ver (a cobra e o sapo, o urso e o salmão, comendo sentado com os filhotes, o sapo e o
+vaga-lume com 1 minuto de espera); os lugares dos bichos (`FaunaDoMundo.Lugares.cs`, `LugaresNaTela.cs`: as cavernas
+dos ursos, de entrar, as tocas dos coiotes e os brejos, num sorteio fixo, sem rede e sem save); o veado no farol, o
+atropelamento dos bichos (`Carro.Atropelar`) e o filhote órfão (`Bicho.Futuro.cs`, o gancho de domar). A `VersaoDaRede` é 27.
 
 ## O corpo e os ferimentos (05/11/2026, a pedido; as etapas 1, 2 e 3 do sistema de vida; `Docs/16-Corpo-e-Ferimentos.md`)
 

@@ -61,6 +61,27 @@ namespace ZombieCityCleaner.Fauna
         /// Uma caixa solta, sem colisor (a etapa 3: o galho na boca do castor, o peixe nas garras da águia, a toca, o toco
         /// roído e o ninho): o meio e o tamanho no espaço do pai, a cor e o giro.
         /// </summary>
+        static Mesh _cilindro;
+
+        /// <summary>(13/11) Um cilindro solto (a lata de lixo da cidade): o meio, o raio e a altura, na cor dada.</summary>
+        public static Transform CilindroSolto(Transform pai, Vector3 meio, float raio, float alto, Color cor)
+        {
+            if (_cilindro == null)
+            {
+                var tmp = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                _cilindro = tmp.GetComponent<MeshFilter>().sharedMesh;
+                Object.Destroy(tmp);
+            }
+            var go = new GameObject("Cilindro");
+            go.transform.SetParent(pai, false);
+            go.transform.localPosition = meio;
+            go.transform.localScale = new Vector3(raio * 2f, alto * 0.5f, raio * 2f);
+            go.AddComponent<MeshFilter>().sharedMesh = _cilindro;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = Material(cor);
+            return go.transform;
+        }
+
         public static Transform CaixaSolta(Transform pai, Vector3 meio, Vector3 tamanho, Color cor, Vector3 giro = default)
         {
             var go = new GameObject("Caixa");

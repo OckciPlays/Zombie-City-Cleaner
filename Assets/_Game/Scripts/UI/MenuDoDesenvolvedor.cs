@@ -158,6 +158,7 @@ namespace ZombieCityCleaner.UI
             _botao.onNormal.textColor = _botao.onHover.textColor = _botao.onActive.textColor = new Color(0.98f, 0.85f, 0.45f);
             _botao.onNormal.background = _botao.active.background;
             _campo = new GUIStyle(GUI.skin.textField) { fontSize = Mathf.RoundToInt(14 * u), alignment = TextAnchor.MiddleCenter };
+            _botoesQueCabem.Clear();   // as letras menores do BotaoQueCabe (MenuDoDesenvolvedor.Colunas.cs)
         }
 
         void OnGUI()
@@ -174,6 +175,9 @@ namespace ZombieCityCleaner.UI
             bool semAnfitriao = !IsServer && !LiberadoNoAnfitriao.Value;
             var area = new Rect(12 * u, 40 * u, 300 * u, (semAnfitriao ? 394 : 340) * u);
             Area = area;
+            // (13/11/2026) o menu em quatro colunas, cada uma rolando sozinha quando passa do fim da tela
+            // (MenuDoDesenvolvedor.Colunas.cs); esta é a primeira: o menu e, embaixo, o vídeo
+            AbrirColuna(0, area.x, area.y, u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -263,36 +267,34 @@ namespace ZombieCityCleaner.UI
             if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
             // gravar um vídeo jogando (03/11/2026), embaixo
             var video = PainelDoVideo(u, area);
-            Area = Rect.MinMaxRect(area.xMin, area.yMin, area.xMax, video.yMax);
+            var coluna = FecharColuna(Rect.MinMaxRect(area.xMin, area.yMin, Mathf.Max(area.xMax, video.xMax), video.yMax), area);
 
-            // na cena Mundo, o painel do mundo ao lado (a tela do inventário não pega cliques nos dois)
-            // (no Dia 0, o painel dele no lugar)
-            var mundo = PainelDoDiaZero(u, area);
-            if (mundo.width <= 0f) mundo = PainelDoMundo(u, area);
-            // ou, na cena do Lakewood (o mapa fixo), o painel dele
-            if (mundo.width <= 0f) mundo = PainelDeLakewood(u, area);
-            if (mundo.width > 0f) Area = Rect.MinMaxRect(area.xMin, area.yMin, mundo.xMax, Mathf.Max(Area.yMax, mundo.yMax));
-            // o Oco de teste, ao lado do último painel
-            var oco = PainelDoOco(u, mundo.width > 0f ? mundo : area);
-            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, oco.xMax, Mathf.Max(Area.yMax, oco.yMax));
-            // o carro (o desgaste e a gasolina), embaixo do Oco
+            // a segunda coluna: na cena Mundo, o painel do mundo (a tela do inventário não pega cliques nele); no Dia 0, o
+            // painel dele no lugar; ou, na cena do Lakewood (o mapa fixo), o painel dele
+            AbrirColuna(1, coluna.xMax + 8 * u, area.y, u);
+            var mundo = PainelDoDiaZero(u, coluna);
+            if (mundo.width <= 0f) mundo = PainelDoMundo(u, coluna);
+            if (mundo.width <= 0f) mundo = PainelDeLakewood(u, coluna);
+            coluna = FecharColuna(mundo, coluna);
+
+            // a terceira: o Oco de teste e, embaixo dele, o carro (o desgaste e a gasolina) e o save (02/11/2026)
+            AbrirColuna(2, coluna.xMax + 8 * u, area.y, u);
+            var oco = PainelDoOco(u, coluna);
             var carro = PainelDoCarro(u, oco);
-            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Area.xMax, Mathf.Max(Area.yMax, carro.yMax));
-            // o save (02/11/2026), embaixo do carro
             var save = PainelDoSave(u, carro);
-            if (save.width > 0f) Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Area.xMax, Mathf.Max(Area.yMax, save.yMax));
-            // os zumbis (teste: criar um na frente, a pedra do sol) ou o clima (02/11/2026: a chuva, os raios e o tornado),
-            // ao lado, nas abas do canto (embaixo do Oco ou do carro, o clima ficava fora da tela)
-            // (e os sobreviventes, 02/11/2026, na terceira aba; o corpo, 05/11/2026, na quarta: as quatro numa faixa logo
-            // acima do painel, que a Area também cobre)
-            var zumbis = _abaDoBunker ? PainelDoBunker(u, oco) : _abaDaFauna ? PainelDaFauna(u, oco) : _abaDasHabilidades ? PainelDasHabilidades(u, oco)
-                       : _abaDoCorpo ? PainelDoCorpo(u, oco) : _abaDosSobreviventes ? PainelDosSobreviventes(u, oco)
-                       : _abaDoClima ? PainelDoClima(u, oco) : PainelDosZumbis(u, oco);
-            AbasDoCanto(u, zumbis);
-            Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), zumbis.xMax, Mathf.Max(Area.yMax, zumbis.yMax));
-            // a trilha sonora (teste), embaixo dos zumbis
+            coluna = FecharColuna(Rect.MinMaxRect(oco.xMin, oco.yMin, Mathf.Max(oco.xMax, carro.xMax), save.width > 0f ? save.yMax : carro.yMax), coluna);
+
+            // a quarta: os zumbis (teste: criar um na frente, a pedra do sol), o clima (02/11/2026: a chuva, os raios e o
+            // tornado), os sobreviventes, o corpo, as habilidades, a fauna ou o bunker, pelas abas do canto, e, embaixo, a
+            // trilha sonora (teste); as abas ficam numa faixa logo acima do painel, fora da rolagem (a Area também a cobre)
+            AbrirColuna(3, coluna.xMax + 8 * u, area.y, u);
+            var zumbis = _abaDoBunker ? PainelDoBunker(u, coluna) : _abaDaFauna ? PainelDaFauna(u, coluna) : _abaDasHabilidades ? PainelDasHabilidades(u, coluna)
+                       : _abaDoCorpo ? PainelDoCorpo(u, coluna) : _abaDosSobreviventes ? PainelDosSobreviventes(u, coluna)
+                       : _abaDoClima ? PainelDoClima(u, coluna) : PainelDosZumbis(u, coluna);
             var trilha = PainelDaTrilha(u, zumbis);
-            Area = Rect.MinMaxRect(Area.xMin, Area.yMin, Mathf.Max(Area.xMax, trilha.xMax), Mathf.Max(Area.yMax, trilha.yMax));
+            FecharColuna(Rect.MinMaxRect(zumbis.xMin, zumbis.yMin, Mathf.Max(zumbis.xMax, trilha.xMax), Mathf.Max(zumbis.yMax, trilha.yMax)), coluna);
+            AbasDoCanto(u, zumbis);
+            Area = Rect.MinMaxRect(Area.xMin, Mathf.Min(Area.yMin, zumbis.y - AlturaDasAbas(u)), Mathf.Max(Area.xMax, zumbis.xMax), Area.yMax);
         }
 
         /// <summary>

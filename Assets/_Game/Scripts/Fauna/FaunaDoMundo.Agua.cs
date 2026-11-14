@@ -187,10 +187,16 @@ namespace ZombieCityCleaner.Fauna
             switch (e)
             {
                 case Especie.Salmao:
+                    // (13/11) o salmão sobe os riachos (3 em 4 vezes, se houver um no anel)
+                    if (TemRios && Random.value < 0.75f && PontoNoRio(pes, de, ate, 4f, 30f, out var rio, out var cor, out float larg)
+                        && NaAguaDoRio(rio, cor, larg, 0.5f, 0.6f, 1.8f, out p)) { achou = true; return true; }
                     achou = PontoNaAgua(pes, de, ate, 0.6f, 1.8f, out p);
                     return true;
                 case Especie.Pato:
                 case Especie.Ganso:
+                    // (13/11) os patos boiam nos rios também (2 em 5)
+                    if (e == Especie.Pato && TemRios && Random.value < 0.4f && PontoNoRio(pes, de, ate, 6f, 80f, out var rioP, out var corP, out float largP)
+                        && NaAguaDoRio(rioP, corP, largP, 0.6f, 0.5f, 99f, out p)) { achou = true; return true; }
                     achou = PontoNaAgua(pes, de, ate, 0.5f, 99f, out p);
                     return true;
                 case Especie.Aguia:

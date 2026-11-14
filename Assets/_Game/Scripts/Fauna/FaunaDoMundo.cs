@@ -97,6 +97,14 @@ namespace ZombieCityCleaner.Fauna
             var vaga = new GameObject("Vaga-lumes");
             vaga.transform.SetParent(transform, false);
             vaga.AddComponent<VagaLumes>();
+            // (13/11) o lixo da cidade à vista (a lata, as sacolas, a caçamba), perto de quem joga nesta máquina
+            var lixo = new GameObject("Lixo da cidade");
+            lixo.transform.SetParent(transform, false);
+            lixo.AddComponent<LixoDaCidade>();
+            // (a etapa 5) as cavernas, as tocas dos coiotes e os brejos, perto de quem joga nesta máquina
+            var lugares = new GameObject("Lugares dos bichos");
+            lugares.transform.SetParent(transform, false);
+            lugares.AddComponent<LugaresNaTela>();
         }
 
         void OnDestroy()
@@ -167,6 +175,7 @@ namespace ZombieCityCleaner.Fauna
         void Update()
         {
             float agora = Time.time, dt = Time.deltaTime;
+            AvancarLugares();   // (a etapa 5) os lugares dos bichos, sorteados aos poucos em cada máquina
             AtualizarGente();
             if (!_servidor)
             {
@@ -198,6 +207,7 @@ namespace ZombieCityCleaner.Fauna
                     }
                     if (d < 170f || b.Passagem) b.Andar(dt, agora);   // (o V dos gansos nasce longe e vem)
                 }
+                else if (b.Morto) b.Cair(dt);   // o corpo no ar cai (a ave abatida, o peru no galho)
                 if (d < 140f) b.Animar(dt);
             }
             ArrumarGrupos();
@@ -353,6 +363,14 @@ namespace ZombieCityCleaner.Fauna
             var g = b.Grupo;
             if (g != null && b.Dados.papel == Papel.Matilha && (b.Alfa || g.lider == b))
                 AlfaMorreu(g, Time.time, autor != null ? autor.transform.position : b.transform.position);
+            // (a etapa 5) o último adulto do grupo: os filhotes ficam órfãos, perto da carcaça dele
+            if (g != null && b.Variante != Variante.Filhote)
+            {
+                bool outroAdulto = false;
+                foreach (var m in g.membros) if (m != null && m != b && !m.Morto && m.Variante != Variante.Filhote) { outroAdulto = true; break; }
+                if (!outroAdulto)
+                    foreach (var m in g.membros) if (m != null && !m.Morto && m.Variante == Variante.Filhote) m.FicarOrfao(b);
+            }
             b.Estado = EstadoDoBicho.Morto;
             b.Vida = 0f;
             b.Ferido = false;
@@ -372,6 +390,7 @@ namespace ZombieCityCleaner.Fauna
         internal void Golpear(Bicho b, JogadorRede alvo)
         {
             if (alvo == null || alvo.Vida == null || !alvo.AlvoValido) return;
+            if (!Alcanca(b, alvo)) return;   // (13/11) lá em cima, fora do alcance: o golpe não pega
             float dano = b.Dados.mordida > 0f ? b.Dados.mordida : b.Especie == Especie.Alce ? 35f : 18f;
             dano *= b.Variante == Variante.Filhote ? 0.4f : b.Variante == Variante.Femea ? 0.85f : 1f;
             string causa = (b.Dados.papel == Papel.Matilha ? "Mordido por " : "Atacado por ") + (b.Dados.comArtigo.StartsWith("a ") ? "uma " : "um ") + b.Dados.nome + ".";
@@ -573,6 +592,7 @@ namespace ZombieCityCleaner.Fauna
                 if (contagem[i] > 0) partes.Add($"{contagem[i]} {(contagem[i] == 1 ? Especies.De((Especie)i).nome : Especies.De((Especie)i).plural)}");
             string texto = (partes.Count > 0 ? string.Join(", ", partes) : "nenhum bicho vivo") + (mortos > 0 ? $"; {mortos} carcaça(s)" : "") + ".";
             if (_servidor) texto += $"\nA população desta região: {Nivel(perto) * 100f:0}% (a caça baixa; volta em ~1 dia do jogo).";
+            if (Lugares.Count > 0) texto += $"\nOs lugares: {ResumoDosLugares(perto)}.";
             Bicho mais = null;
             float m = float.MaxValue;
             foreach (var b in _ativos)
@@ -605,6 +625,7 @@ namespace ZombieCityCleaner.Fauna
         {
             EstadoDoBicho.Pastando => "pastando", EstadoDoBicho.Andando => "andando", EstadoDoBicho.Alerta => "em alerta",
             EstadoDoBicho.Fugindo => "fugindo", EstadoDoBicho.Investindo => "investindo", EstadoDoBicho.Morto => "morto",
+            EstadoDoBicho.Sentado => "sentado comendo",
             _ => "deitado",
         };
 

@@ -42,6 +42,7 @@ namespace ZombieCityCleaner.Fauna
                 if (_alvoDoUrso == null || Estado != EstadoDoBicho.Investindo) _alvoDoUrso = quem;
             }
             if (Variante == Variante.Filhote) { PensarFilhoteDeUrso(f, agora); return; }
+            if (Estado == EstadoDoBicho.Sentado && _peixeNaBoca == null) Estado = EstadoDoBicho.Andando;   // (largou o peixe)
 
             switch (Estado)
             {
@@ -136,6 +137,7 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             _olhar = Mathf.MoveTowards(_olhar, 0f, 40f * dt);
+            if (!_pescando && CuidarDaCaverna(f, agora)) return;   // (a etapa 5: o urso dorme na caverna)
             if (Pescar(f, agora)) return;   // (a etapa 3: o urso pescando o salmão)
             Pastar(f, agora);
         }
@@ -234,6 +236,26 @@ namespace ZombieCityCleaner.Fauna
             Vector3 pj = j.transform.position;
             float d = Vector3.Distance(Plano(transform.position), Plano(pj));
             Olhar(pj);
+            // (13/11) lá em cima, fora do alcance: vem correndo como sempre e, perto (a até 6 m), espera embaixo, de pé e
+            // bufando; a paciência só conta dali (com o tempo, desiste e vai embora)
+            if (d < 6f && ForaDoAlcance(j, agora))
+            {
+                if (PerdeuAPaciencia(agora))
+                {
+                    _semAlcanceDesde = -1f;
+                    Acalmar();
+                    Afastar(pj, 50f);
+                    _decidiu = true;
+                    _vaiEmbora = true;
+                    return;
+                }
+                _fimDoAtaque = Mathf.Max(_fimDoAtaque, agora + 2f);
+                if (d > 2.5f) { Ir(pj, Dados.trotar); return; }
+                _temDestino = false;
+                _velAlvo = 0f;
+                if (Random.value < 0.1f) Tocar(SomDoBicho.BufoDoUrso);
+                return;
+            }
             if (_falso)
             {
                 // o falso ataque: para a 3–5 m e volta a avisar
@@ -297,10 +319,12 @@ namespace ZombieCityCleaner.Fauna
                 else Pastar(f, agora);
                 return;
             }
-            if (temPerigo || mae.Estado == EstadoDoBicho.Investindo || mae.Estado == EstadoDoBicho.Alerta)
+            // (13/11) a patada na água da mãe pescando usa a pose do ataque: não é perigo (o filhote corria para dentro da água)
+            if (temPerigo || (!mae._pescando && (mae.Estado == EstadoDoBicho.Investindo || mae.Estado == EstadoDoBicho.Alerta)))
             {
                 Vector3 de = temPerigo ? perigo : mae.transform.position + mae.transform.forward * 10f;
                 Vector3 atras = mae.transform.position + Plano(mae.transform.position - de).normalized * 3f + LugarNoGrupo * 0.3f;
+                if (FaunaDoMundo.FunduraEm(atras) > 0.15f) atras = transform.position;   // (atrás dela é água: fica onde está, olhando)
                 Estado = EstadoDoBicho.Andando;
                 float dist = Vector3.Distance(Plano(transform.position), Plano(atras));
                 if (dist > 0.8f) Ir(atras, dist > 6f ? Dados.correr * 0.6f : Dados.trotar);
@@ -308,7 +332,57 @@ namespace ZombieCityCleaner.Fauna
                 Olhar(de);
                 return;
             }
+            // (5a) a mãe sentada comendo o salmão: o filhote senta do lado dela e come junto
+            if (mae.ComendoOSalmao)
+            {
+                Vector3 frente = mae.transform.forward, ladoDela = mae.transform.right * (LugarNoGrupo.x >= 0f ? 1f : -1f);
+                Vector3 lugar = mae.transform.position + frente * mae.Dados.comprimento * mae.Escala * 0.4f + ladoDela * 0.85f;
+                float dl = Vector3.Distance(Plano(transform.position), Plano(lugar));
+                if (dl > 0.6f)
+                {
+                    Estado = EstadoDoBicho.Andando;
+                    Ir(lugar, dl > 6f ? Dados.trotar : Dados.andar);
+                    return;
+                }
+                _temDestino = false;
+                _velAlvo = 0f;
+                Estado = EstadoDoBicho.Sentado;
+                Vector3 peixe = mae.transform.position + frente * mae.Dados.comprimento * mae.Escala * 0.2f;
+                Vector3 para = Plano(peixe - transform.position);
+                if (para.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(para);
+                return;
+            }
+            if (Estado == EstadoDoBicho.Sentado) Estado = EstadoDoBicho.Pastando;
             if (Estado == EstadoDoBicho.Deitado && agora < _deitadoAte) return;
+            // (13/11) a mãe longe (pescando, indo para a caverna): o filhote vai atrás dela
+            float ateAMae = Vector3.Distance(Plano(transform.position), Plano(mae.transform.position));
+            if (ateAMae > 12f)
+            {
+                Vector3 junto = mae.transform.position + LugarNoGrupo.normalized * 3f;
+                if (FaunaDoMundo.FunduraEm(junto) > 0.25f)
+                {
+                    // a mãe na água (pescando): o filhote espera na beira, no ponto seco mais perto dela
+                    Vector3 seco = transform.position;
+                    for (int k = 1; k <= 16; k++)
+                    {
+                        Vector3 q = Vector3.Lerp(transform.position, mae.transform.position, k / 16f);
+                        if (FaunaDoMundo.FunduraEm(q) > 0.15f) break;
+                        seco = q;
+                    }
+                    junto = seco;
+                }
+                if (Vector3.Distance(Plano(transform.position), Plano(junto)) > 1.5f)
+                {
+                    Estado = EstadoDoBicho.Andando;
+                    Ir(junto, ateAMae > 30f ? Dados.trotar : Dados.andar * 1.3f);
+                    return;
+                }
+                Estado = EstadoDoBicho.Alerta;   // na beira, olhando a mãe
+                _temDestino = false;
+                _velAlvo = 0f;
+                Olhar(mae.transform.position);
+                return;
+            }
             Pastar(f, agora);
         }
 

@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.UI
             var f = FaunaDoMundo.Instancia;
             _conteudoDaFauna.text = f != null ? f.Resumo(transform.position) : "A fauna liga com o mundo gerado pronto.";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDaFauna, w);
-            int linhas = (BotoesDaFauna.Length + 1) / 2 + 9;
+            int linhas = (BotoesDaFauna.Length + 1) / 2 + 13;
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
@@ -94,7 +94,39 @@ namespace ZombieCityCleaner.UI
             // a etapa 4: os urubus no resto mais perto (o corpo de um zumbi, a carcaça)
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "Urubus no corpo mais perto", _botao)) TesteDaFaunaRpc(13, 0);
+            // 13/11: os castores no riacho (a represa) e o guaxinim no lixo da cidade
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para o riacho", _botao))
+            {
+                if (FaunaDoMundo.LugarNoRiacho(GetComponent<JogadorRede>(), out var margem, out float giro))
+                    GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(margem + Vector3.up * 0.1f, giro);
+                else Avisar("Sem riacho neste mapa (só no Lakewood).");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Castores no riacho", _botao)) TesteDaFaunaRpc(14, 0);
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para o lixo", _botao))
+            {
+                if (FaunaDoMundo.LugarNoLixo(GetComponent<JogadorRede>(), out var onde, out float giro))
+                    GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(onde + Vector3.up * 0.1f, giro);
+                else Avisar("Sem lixo à vista neste mapa (só na Woodcreek, no Lakewood).");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim no lixo", _botao)) TesteDaFaunaRpc(15, 0);
+            // a etapa 5: os lugares dos bichos (a caverna, a toca dos coiotes, o brejo)
+            y += passo * u;
+            float terco = (w - 12 * u) / 3f;
+            if (GUI.Button(new Rect(x, y, terco, alto * u), "Caverna", _botao)) IrParaOLugar(TipoDeLugarDoBicho.Caverna);
+            if (GUI.Button(new Rect(x + terco + 6 * u, y, terco, alto * u), "Toca", _botao)) IrParaOLugar(TipoDeLugarDoBicho.Covil);
+            if (GUI.Button(new Rect(x + 2 * (terco + 6 * u), y, terco, alto * u), "Brejo", _botao)) IrParaOLugar(TipoDeLugarDoBicho.Brejo);
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, w, alto * u), "Os bichos do lugar mais perto", _botao)) TesteDaFaunaRpc(16, 0);
             return area;
+        }
+
+        void IrParaOLugar(TipoDeLugarDoBicho tipo)
+        {
+            if (FaunaDoMundo.LugarDeTeste(GetComponent<JogadorRede>(), tipo, out var onde, out float giro))
+                GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(onde + Vector3.up * 0.1f, giro);
+            else Avisar(FaunaDoMundo.Lugares.Count == 0 ? "Os lugares dos bichos ainda não ficaram prontos (ou este mapa não tem)." : "Nenhum lugar desse tipo neste mapa.");
         }
 
         [Rpc(SendTo.Server)]
@@ -146,6 +178,15 @@ namespace ZombieCityCleaner.UI
                     break;
                 case 13:
                     aviso = f != null ? f.UrubusDeTeste(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 14:
+                    aviso = f != null ? f.CastoresNoRiacho(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 15:
+                    aviso = f != null ? f.GuaxinimNoLixo(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 16:
+                    aviso = f != null ? f.BichosDoLugar(j) : "Sem a fauna neste mundo.";
                     break;
                 case 12:
                     FaunaDoMundo.CastorRapido = !FaunaDoMundo.CastorRapido;

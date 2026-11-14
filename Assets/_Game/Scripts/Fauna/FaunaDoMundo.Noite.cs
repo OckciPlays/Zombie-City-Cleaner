@@ -43,14 +43,21 @@ namespace ZombieCityCleaner.Fauna
 
         /// <summary>Quanto o lixo espalhado fica (s reais: um dia do jogo).</summary>
         const float LixoDura = 24f * 60f;
-        readonly List<(Vector3 pos, float ate)> _lixos = new List<(Vector3, float)>();
+        readonly List<(Vector3 pos, float ate, byte tipo)> _lixos = new List<(Vector3, float, byte)>();
+
+        /// <summary>(13/11) Onde há lixo espalhado na tela desta máquina (a lata e as sacolas de LixoDaCidade somem ali).</summary>
+        internal static List<Vector3> LixoNaTela => CasasDosBichos.LixoNaTela;
 
         /// <summary>A lixeira da cidade mais perto (a até 'raio' m) que não está revirada agora.</summary>
-        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira)
+        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira) => LixeiraPerto(p, raio, out lixeira, out _);
+
+        /// <summary>A lixeira mais perto e de onde ela é (no Lakewood: a lata, as sacolas ou a caçamba de LixoDaCidade).</summary>
+        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo)
         {
             lixeira = default;
+            tipo = TipoDeLixo.Lata;
             var d = DadosDoMapa;
-            if (d == null) return LixeiraDoLakewood(p, raio, out lixeira);
+            if (d == null) return LixeiraDoLakewood(p, raio, out lixeira, out tipo);
             if (d.Objetos == null) return false;
             float melhor = raio * raio;
             bool achou = false;
@@ -68,28 +75,32 @@ namespace ZombieCityCleaner.Fauna
             return achou;
         }
 
-        // no Lakewood (a parte 2 do "O jogo do mundo sorteado no Lakewood"): a lata de lixo na frente de cada casa, na beira do
-        // lote do lado da rua (ela não é desenhada: o guaxinim espalha o lixo ali)
-        bool LixeiraDoLakewood(Vector3 p, float raio, out Vector3 lixeira)
+        // no Lakewood: o lixo da cidade (13/11, LixoDaCidade.cs): a lata na frente de cada casa, as sacolas e a caçamba das lojas
+        bool LixeiraDoLakewood(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo)
         {
             lixeira = default;
-            var chao = ChaoDoLakewood;
-            if (chao == null) return false;
+            tipo = TipoDeLixo.Lata;
             float melhor = raio * raio;
             bool achou = false;
-            foreach (var l in chao.Lotes)
+            foreach (var l in LixoDaCidade.Pontos)
             {
-                if (l.Plano == null || l.Lote.tipo != UsoDoLote.Casa) continue;
-                var q = l.Lote.NoMapa(l.Lote.largura * 0.35f, -l.Lote.fundo * 0.5f + 0.8f);
-                float dd = (q - new Vector2(p.x, p.z)).sqrMagnitude;
-                if (dd >= melhor) continue;
-                var c = new Vector3(q.x, chao.Altura(q.x, q.y), q.y);
-                if (Revirada(c)) continue;
+                float dx = l.pos.x - p.x, dz = l.pos.z - p.z, dd = dx * dx + dz * dz;
+                if (dd >= melhor || Revirada(l.pos)) continue;
                 melhor = dd;
-                lixeira = c;
+                lixeira = l.pos;
+                tipo = l.tipo;
                 achou = true;
             }
             return achou;
+        }
+
+        /// <summary>
+        /// (13/11) O barulho do guaxinim no lixo: os zumbis perto ouvem e vêm ver (a lata caindo e a tampa da caçamba se ouvem
+        /// mais longe que a sacola).
+        /// </summary>
+        internal void BarulhoNoLixo(Vector3 p, TipoDeLixo tipo)
+        {
+            ZombieManager.Cheiro(p, tipo == TipoDeLixo.Cacamba ? 25f : tipo == TipoDeLixo.Lata ? 18f : 8f);
         }
 
         bool Revirada(Vector3 c)
@@ -100,12 +111,12 @@ namespace ZombieCityCleaner.Fauna
         }
 
         /// <summary>O guaxinim derrubou e revirou a lixeira: o lixo fica espalhado (um dia do jogo).</summary>
-        internal void ReviraLixeira(Vector3 c)
+        internal void ReviraLixeira(Vector3 c, byte tipo = 0)
         {
             float agora = Time.time;
             _lixos.RemoveAll(l => l.ate < agora);
             if (Revirada(c)) return;
-            _lixos.Add((c, agora + LixoDura));
+            _lixos.Add((c, agora + LixoDura, tipo));
             if (_lixos.Count > 30) _lixos.RemoveAt(0);
         }
 
@@ -141,6 +152,13 @@ namespace ZombieCityCleaner.Fauna
         /// <summary>O bicho da noite não nasce de dia; o que sobrou some de dia, quando ninguém está a 60 m.</summary>
         static bool NasceAgora(DadosDaEspecie d) => !d.noturno || CicloDoDia.Noite > 0.5f;
 
+        /// <summary>(13/11) O ponto é da cidade (o quintal ou o baldio).</summary>
+        internal static bool NaCidade(Vector3 p)
+        {
+            var m = ManchaEm(p.x, p.z);
+            return m == Mancha.Quintal || m == Mancha.Baldio;
+        }
+
         void SumirDeDia()
         {
             if (CicloDoDia.Noite > 0.3f) return;
@@ -148,6 +166,8 @@ namespace ZombieCityCleaner.Fauna
             {
                 var b = _ativos[i];
                 if (b.Morto || b.Exposto || !b.Dados.noturno || MaisPerto(b.transform.position) < 60f) continue;
+                if (b.Dados.deDiaNaCidade && NaCidade(b.transform.position)) continue;   // (13/11) o guaxinim da cidade fica
+                if ((b.Especie == Especie.Sapo || b.Especie == Especie.Cascavel) && NoBrejo(b.transform.position)) continue;   // (a etapa 5) o brejo
                 Remover(b);
             }
         }
@@ -221,6 +241,49 @@ namespace ZombieCityCleaner.Fauna
             foreach (var g in Grupos) if (g.temResto && (g.resto - p).sqrMagnitude < 20f * 20f) return true;
             return false;
         }
+
+        /// <summary>
+        /// O F1, em cada máquina (13/11): o lixo da cidade mais perto (a lata de uma casa da Woodcreek): o jogador a uns 7 m dela,
+        /// do lado da rua, de frente para ela.
+        /// </summary>
+        public static bool LugarNoLixo(JogadorRede j, out Vector3 onde, out float giro)
+        {
+            onde = default;
+            giro = 0f;
+            if (j == null) return false;
+            Vector3 eu = j.transform.position;
+            float m = float.MaxValue;
+            bool achou = false;
+            foreach (var l in LixoDaCidade.Pontos)
+            {
+                if (l.tipo != TipoDeLixo.Lata) continue;
+                float d = (l.pos - eu).sqrMagnitude;
+                if (d >= m) continue;
+                m = d;
+                Vector3 frente = Quaternion.Euler(0f, l.giro, 0f) * Vector3.back;   // a frente do lote (a rua)
+                onde = l.pos + frente * 7f;
+                onde.y = AlturaDoMapa(onde.x, onde.z, l.pos.y);
+                giro = Quaternion.LookRotation(-frente).eulerAngles.y;
+                achou = true;
+            }
+            return achou;
+        }
+
+        /// <summary>O F1 (no anfitrião, 13/11): um guaxinim a uns 12 m do lixo mais perto (a até 150 m), que vai revirá-lo.</summary>
+        public string GuaxinimNoLixo(JogadorRede j)
+        {
+            if (!_servidor || j == null) return "Só o anfitrião.";
+            Vector3 eu = j.transform.position;
+            if (!LixeiraPerto(eu, 150f, out var lixo, out var tipo)) return "Sem lixo perto (o lixo à vista é da Woodcreek, no Lakewood: use \"Ir para o lixo\").";
+            Vector3 de = Plano3(lixo - eu);
+            Vector3 p = lixo + (de.sqrMagnitude > 0.01f ? de.normalized : Vector3.forward) * 12f;
+            p.y = AlturaDoMapa(p.x, p.z, lixo.y);
+            int n = NascerGrupo(Especie.Guaxinim, p, true);
+            string qual = tipo == TipoDeLixo.Lata ? "a lata" : tipo == TipoDeLixo.Sacolas ? "as sacolas" : "a caçamba";
+            return n > 0 ? $"{n} guaxinim(ns) a 12 m do lixo ({qual}); em ~10 s vão revirar." : "Não deu para pôr o guaxinim.";
+        }
+
+        static Vector3 Plano3(Vector3 v) => new Vector3(v.x, 0f, v.z);
 
         /// <summary>O F1: urubus agora no resto mais perto (o corpo de um zumbi ou uma carcaça), sem esperar.</summary>
         public string UrubusDeTeste(JogadorRede j)

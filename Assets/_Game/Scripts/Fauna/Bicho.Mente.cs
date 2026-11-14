@@ -44,6 +44,14 @@ namespace ZombieCityCleaner.Fauna
         // ---------------------------------------------------- a água (a etapa 3: Bicho.Agua.cs)
         /// <summary>O ninho dos gansos (na margem): a fêmea choca e o macho guarda.</summary>
         public bool temNinho;
+        // (13/11) a represa do riacho: o meio (y na água), o giro da correnteza e a largura do rio
+        public bool temRepresa;
+        // (a etapa 5) o lugar do grupo (a caverna dos ursos, a toca dos coiotes, o brejo): o ponto e o índice em FaunaDoMundo.Lugares
+        public bool temLugar;
+        public Vector3 lugar;
+        public int lugarIndice = -1;
+        public Vector3 represa;
+        public float represaGiro, represaLargura;
         public Vector3 ninho;
         /// <summary>O resto em que os urubus descem (o corpo do zumbi, ou a carcaça: 'restoBicho').</summary>
         public bool temResto;
@@ -147,7 +155,10 @@ namespace ZombieCityCleaner.Fauna
                 if (agora > _paraDeSangrar) _sangrando = 0f;
                 else
                 {
-                    Vida -= _sangrando * Mathf.Max(0.3f, agora - _ultimaDecisao);
+                    // (13/11) o tempo de verdade desde a decisão anterior: o mínimo de 0,3 s fazia quem investe (que decide
+                    // a cada 0,08 s) sangrar quase 4 vezes mais rápido (o urso ferido morria em 12 s em vez de ~40 s)
+                    float passou = _ultimaDecisao > 0f ? Mathf.Clamp(agora - _ultimaDecisao, 0f, 3.5f) : 0.3f;
+                    Vida -= _sangrando * passou;
                     if (Vida <= 0f)
                     {
                         f.Matar(this, null);
@@ -157,6 +168,9 @@ namespace ZombieCityCleaner.Fauna
             }
             float dt = Mathf.Clamp(agora - _ultimaDecisao, 0f, 3f);
             _ultimaDecisao = agora;
+            // (a etapa 5) o filhote órfão fica perto da mãe morta; o veado para no farol do carro
+            if (PensarOrfao(f, agora)) return;
+            if (NoFarol(agora)) return;
             switch (Especie)
             {
                 case Especie.Salmao: PensarPeixe(f, agora, dt); return;
@@ -302,7 +316,7 @@ namespace ZombieCityCleaner.Fauna
                 {
                     // o líder muda o pasto: um lugar na mesma mancha de mata, a 15–35 m
                     Grupo.trocarPastoEm = agora + Random.Range(25f, 70f);
-                    Grupo.pasto = f.NovoPasto(Grupo.pasto, Especie);
+                    Grupo.pasto = PertoDoLugar(Grupo, f.NovoPasto(Grupo.pasto, Especie));   // (a etapa 5: perto da caverna, da toca)
                 }
                 lugar = Grupo.pasto + LugarNoGrupo;
                 if (Variante == Variante.Filhote)
@@ -465,6 +479,14 @@ namespace ZombieCityCleaner.Fauna
             Vector3 alvo = _alvo.transform.position;
             float d = Vector3.Distance(Plano(transform.position), Plano(alvo));
             Olhar(alvo);
+            if (d < 5f && !FaunaDoMundo.Alcanca(this, _alvo))
+            {
+                // (13/11) lá em cima, fora do alcance: para e encara (a investida acaba)
+                Estado = EstadoDoBicho.Alerta;
+                _temDestino = false;
+                _velAlvo = 0f;
+                return;
+            }
             if (d < 1.9f + 0.5f * Escala)
             {
                 // a cabeçada com a galhada: o dano no tronco e o empurrão
@@ -535,7 +557,7 @@ namespace ZombieCityCleaner.Fauna
             if (velAlvo > 0.05f && agora >= _proximaSondagem)
             {
                 _proximaSondagem = agora + (velAlvo > 4f ? 0.1f : 0.25f);
-                _desvio = Desviar(p, dir, velAlvo);
+                _desvio = Desviar(p, dir, velAlvo, dist + 0.5f);
             }
             if (velAlvo > 0.05f) dir = Quaternion.Euler(0f, _desvio, 0f) * dir;
             // a aceleração (a fuga arranca rápido) e a freada
@@ -553,13 +575,15 @@ namespace ZombieCityCleaner.Fauna
         }
 
         // o primeiro rumo livre (de árvore, parede, carro, gente, água funda e da borda do mapa) perto do desejado
-        float Desviar(Vector3 p, Vector3 dir, float vel)
+        // (13/11) 'ate': até onde olhar (o destino perto: o urso que vai ao raso não via a água funda além dele e dava voltas)
+        float Desviar(Vector3 p, Vector3 dir, float vel, float ate = 999f)
         {
             float raio = Mathf.Max(0.12f, Dados.altura * Escala * 0.22f);
-            float olhar = 1.4f + vel * 0.45f + Dados.comprimento * Escala * 0.5f;
+            float olhar = Mathf.Min(1.4f + vel * 0.45f + Dados.comprimento * Escala * 0.5f, Mathf.Max(0.6f, ate));
             Vector3 origem = p + Vector3.up * Mathf.Max(0.25f, Dados.altura * Escala * 0.6f);
             bool temMapa = FaunaDoMundo.TemMapa;
             bool voando = Voando || Dados.meio == Meio.Ar;
+            float aqui = temMapa && !voando ? FaunaDoMundo.AguaEm(p.x, p.z, out _) : 0f;   // (13/11: quem está na água sai para o raso)
             for (int i = 0; i < Desvios.Length; i++)
             {
                 Vector3 d = Quaternion.Euler(0f, _desvio * 0.5f + Desvios[i], 0f) * dir;
@@ -568,7 +592,7 @@ namespace ZombieCityCleaner.Fauna
                 Vector3 adiante = p + d * olhar;
                 if (temMapa)
                 {
-                    if (!voando && AguaBarra(FaunaDoMundo.AguaEm(adiante.x, adiante.z, out _))) continue;
+                    if (!voando && AguaBarra(FaunaDoMundo.AguaEm(adiante.x, adiante.z, out _), aqui)) continue;
                     if (!FaunaDoMundo.DentroDoMapa(adiante.x, adiante.z, 30f)) continue;
                 }
                 return _desvio * 0.5f + Desvios[i];

@@ -7,12 +7,18 @@ using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Fauna
 {
-    /// <summary>A toca dos castores (no save do mundo): o lugar, o tamanho que os galhos deram e quando foi feita.</summary>
+    /// <summary>
+    /// A toca dos castores (no save do mundo): o lugar, o tamanho que os galhos deram e quando foi feita. A do riacho
+    /// (13/11/2026) tem a represa: o meio dela (rx, ry, rz; y é a água), o giro da correnteza, a largura do rio e o quanto
+    /// os galhos já fizeram (0 a 1). Os saves antigos vêm sem ela (noRio falso).
+    /// </summary>
     [System.Serializable]
     public struct TocaDoCastor
     {
         public float x, z, tamanho;
         public double criadaNaHora;
+        public bool noRio;
+        public float rx, ry, rz, giro, largura, represa;
     }
 
     /// <summary>Uma árvore que o castor derrubou (no save do mundo): o toco roído em ponta de lápis.</summary>
@@ -113,7 +119,9 @@ namespace ZombieCityCleaner.Fauna
                 float d = Vector2.Distance(new Vector2(c.x, c.z), new Vector2(pes.x, pes.z));
                 if (d >= de && d <= ate) { p = c; return true; }
             }
-            if (_tocas.Count >= MaxTocas) return false;
+            // (13/11) no Lakewood, os riachos primeiro: a toca com a represa (FaunaDoMundo.Rios.cs)
+            if (TemRios && Random.value < 0.75f && TocaNoRio(pes, de, ate, out p)) return true;
+            if (_tocas.Count - CountNoRio() >= MaxTocas) return false;
             if (!PontoNaAgua(pes, de, ate, 0.35f, 0.9f, out p)) return false;
             // longe da outra toca
             foreach (var t in _tocas) if (Vector2.Distance(new Vector2(t.x, t.z), new Vector2(p.x, p.z)) < 60f) return false;
@@ -200,9 +208,10 @@ namespace ZombieCityCleaner.Fauna
 
         struct Casa
         {
-            public byte tipo;   // 0 a toca, 1 o toco roído, 2 o ninho
+            public byte tipo;   // 0 a toca, 1 o toco roído, 2 o ninho, 3 o lixo espalhado, 4 a represa (13/11)
             public Vector3 pos;
-            public float tamanho;
+            public float tamanho;   // (no lixo: de onde ele veio, a lata, as sacolas ou a caçamba)
+            public float giro, largura;   // (a represa: o giro da correnteza e a largura do rio)
         }
 
         readonly List<Casa> _casasPerto = new List<Casa>();
@@ -222,13 +231,15 @@ namespace ZombieCityCleaner.Fauna
                     if (g.j.IsOwner) Casas.Mostrar(_casasPerto);
                     continue;
                 }
-                using var w = new FastBufferWriter(2 + _casasPerto.Count * 17, Allocator.Temp);
+                using var w = new FastBufferWriter(2 + _casasPerto.Count * 25, Allocator.Temp);
                 w.WriteValueSafe((ushort)_casasPerto.Count);
                 foreach (var c in _casasPerto)
                 {
                     w.WriteValueSafe(c.tipo);
                     w.WriteValueSafe(c.pos);
                     w.WriteValueSafe(c.tamanho);
+                    w.WriteValueSafe(c.giro);
+                    w.WriteValueSafe(c.largura);
                 }
                 nm.CustomMessagingManager.SendNamedMessage(NomeDasCasas, g.j.OwnerClientId, w, NetworkDelivery.Unreliable);
             }
@@ -241,6 +252,10 @@ namespace ZombieCityCleaner.Fauna
             {
                 var p = new Vector3(t.x, NivelEm(t.x, t.z), t.z);
                 if ((p - perto).sqrMagnitude < r2 && saida.Count < 60) saida.Add(new Casa { tipo = 0, pos = p, tamanho = TamanhoDaToca(t) });
+                // (13/11) a represa do riacho
+                var rp = new Vector3(t.rx, t.ry, t.rz);
+                if (t.noRio && (rp - perto).sqrMagnitude < r2 && saida.Count < 60)
+                    saida.Add(new Casa { tipo = 4, pos = rp, tamanho = TamanhoDaRepresa(t), giro = t.giro, largura = t.largura });
             }
             foreach (var r in _roidas)
             {
@@ -257,7 +272,7 @@ namespace ZombieCityCleaner.Fauna
             foreach (var l in _lixos)
             {
                 if (l.ate < agora || (l.pos - perto).sqrMagnitude > r2 || saida.Count >= 60) continue;
-                saida.Add(new Casa { tipo = 3, pos = l.pos, tamanho = 1f });
+                saida.Add(new Casa { tipo = 3, pos = l.pos, tamanho = l.tipo });
             }
         }
 
@@ -270,7 +285,9 @@ namespace ZombieCityCleaner.Fauna
                 r.ReadValueSafe(out byte tipo);
                 r.ReadValueSafe(out Vector3 pos);
                 r.ReadValueSafe(out float tamanho);
-                _casasPerto.Add(new Casa { tipo = tipo, pos = pos, tamanho = tamanho });
+                r.ReadValueSafe(out float giro);
+                r.ReadValueSafe(out float largura);
+                _casasPerto.Add(new Casa { tipo = tipo, pos = pos, tamanho = tamanho, giro = giro, largura = largura });
             }
             Casas.Mostrar(_casasPerto);
         }
@@ -286,16 +303,22 @@ namespace ZombieCityCleaner.Fauna
 
             static long Chave(Casa c) => ((long)c.tipo << 56) ^ ((long)Mathf.RoundToInt(c.pos.x * 2f) << 28) ^ (long)(uint)Mathf.RoundToInt(c.pos.z * 2f);
 
+            /// <summary>Onde há lixo espalhado na tela agora (as lixeiras e as sacolas de LixoDaCidade somem ali).</summary>
+            public static readonly List<Vector3> LixoNaTela = new List<Vector3>();
+
             public void Mostrar(List<Casa> casas)
             {
                 _vistas.Clear();
+                LixoNaTela.Clear();
+                foreach (var c in casas) if (c.tipo == 3) LixoNaTela.Add(c.pos);
                 foreach (var c in casas)
                 {
                     long k = Chave(c);
                     _vistas.Add(k);
                     if (_feitas.TryGetValue(k, out var f) && f.go != null && Mathf.Abs(f.tamanho - c.tamanho) < 0.04f) continue;
                     if (f.go != null) Destroy(f.go);
-                    var go = c.tipo == 0 ? Toca(c.pos, c.tamanho) : c.tipo == 1 ? TocoRoido(c.pos, c.tamanho) : c.tipo == 2 ? Ninho(c.pos) : Lixo(c.pos);
+                    var go = c.tipo == 0 ? Toca(c.pos, c.tamanho) : c.tipo == 1 ? TocoRoido(c.pos, c.tamanho) : c.tipo == 2 ? Ninho(c.pos)
+                           : c.tipo == 4 ? Represa(c.pos, c.tamanho, c.giro, c.largura) : Lixo(c.pos, Mathf.RoundToInt(c.tamanho));
                     go.transform.SetParent(transform, true);
                     _feitas[k] = (go, c.tamanho);
                 }
@@ -350,13 +373,42 @@ namespace ZombieCityCleaner.Fauna
                 return go;
             }
 
-            // o lixo espalhado: a lata deitada, os sacos rasgados e os papéis em volta da lixeira
-            static GameObject Lixo(Vector3 p)
+            // a represa (13/11): o barro e os galhos atravessados no riacho, de margem a margem; cresce de ~0,4 m a ~1,1 m acima
+            // da água. Dá para andar por cima (o colisor).
+            static GameObject Represa(Vector3 p, float tamanho, float giro, float largura)
+            {
+                var go = new GameObject("Represa dos castores");
+                go.transform.SetPositionAndRotation(p, Quaternion.Euler(0f, giro, 0f));
+                var r = new System.Random(Mathf.RoundToInt(p.x * 11f + p.z * 5f));
+                float comp = largura + 3f, alto = 0.35f + 0.75f * tamanho, fundo = 1.8f, grosso = 1.2f + 1.2f * tamanho;
+                // o corpo de barro: a parede (x atravessa o rio; z é a correnteza)
+                ModelosDosBichos.CaixaSolta(go.transform, new Vector3(0f, (alto - fundo) * 0.5f, 0f), new Vector3(comp, alto + fundo, grosso), Barro);
+                ModelosDosBichos.CaixaSolta(go.transform, new Vector3(0f, alto - 0.12f, -grosso * 0.15f), new Vector3(comp * 0.96f, 0.25f, grosso * 0.6f), new Color(0.3f, 0.24f, 0.17f));
+                // os galhos: por cima e encostados, mais quanto maior
+                int n = 30 + Mathf.RoundToInt(70 * tamanho);
+                for (int i = 0; i < n; i++)
+                {
+                    float x = ((float)r.NextDouble() * 2f - 1f) * comp * 0.5f;
+                    float y = alto * (0.3f + 0.75f * (float)r.NextDouble());
+                    float z = ((float)r.NextDouble() * 2f - 1f) * grosso * 0.55f;
+                    float c = 0.8f + (float)r.NextDouble() * 1.8f;
+                    var g = new Vector3((float)r.NextDouble() * 50f - 25f, (float)r.NextDouble() * 180f, (float)r.NextDouble() * 30f - 15f);
+                    ModelosDosBichos.CaixaSolta(go.transform, new Vector3(x, y, z), new Vector3(0.07f, 0.07f, c), r.NextDouble() < 0.5 ? Galho : GalhoClaro, g);
+                }
+                var col = go.AddComponent<BoxCollider>();
+                col.center = new Vector3(0f, (alto - fundo) * 0.5f, 0f);
+                col.size = new Vector3(comp, alto + fundo, grosso);
+                return go;
+            }
+
+            // o lixo espalhado: a lata deitada (ou só as sacolas rasgadas), os sacos e os papéis em volta (13/11: o tipo é de
+            // onde ele veio: 0 a lata, 1 as sacolas, 2 a caçamba)
+            static GameObject Lixo(Vector3 p, int tipo = 0)
             {
                 var go = new GameObject("Lixo espalhado");
                 go.transform.position = p;
                 var r = new System.Random(Mathf.RoundToInt(p.x * 7f + p.z * 3f));
-                ModelosDosBichos.CaixaSolta(go.transform, new Vector3(0.6f, 0.22f, 0.1f), new Vector3(0.45f, 0.45f, 0.75f), new Color(0.25f, 0.32f, 0.28f), new Vector3(0f, 30f, 90f));
+                if (tipo == 0) ModelosDosBichos.CaixaSolta(go.transform, new Vector3(0.6f, 0.22f, 0.1f), new Vector3(0.45f, 0.45f, 0.75f), new Color(0.25f, 0.32f, 0.28f), new Vector3(0f, 30f, 90f));
                 for (int i = 0; i < 3; i++)
                     ModelosDosBichos.CaixaSolta(go.transform, new Vector3((float)r.NextDouble() * 2f - 1f, 0.1f, (float)r.NextDouble() * 2f - 1f) * 1.2f + Vector3.up * 0.1f,
                         new Vector3(0.35f, 0.2f, 0.3f), new Color(0.08f, 0.08f, 0.09f), new Vector3(0f, (float)r.NextDouble() * 360f, 15f));
