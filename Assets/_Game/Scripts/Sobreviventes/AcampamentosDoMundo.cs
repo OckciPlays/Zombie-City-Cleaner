@@ -70,6 +70,7 @@ namespace ZombieCityCleaner.Sobreviventes
 
         public override void OnDestroy()
         {
+            SoltarAsAncoras();
             ApagarConstrucoes();
             TirarAsZonas();
             if (Instancia == this) Instancia = null;
@@ -91,6 +92,7 @@ namespace ZombieCityCleaner.Sobreviventes
         public override void OnNetworkDespawn()
         {
             TirarAsZonas();
+            SoltarAsAncoras();
             _estados.Clear();
             ApagarConstrucoes();
         }

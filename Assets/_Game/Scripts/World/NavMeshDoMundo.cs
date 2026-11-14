@@ -23,6 +23,13 @@ namespace ZombieCityCleaner.World
     /// do fundo do lago, onde a água passa de <see cref="AguaQueOsZumbisEntram"/> (<see cref="TirarAAgua"/>). Atrás de quem
     /// nada, eles vão até a beira e esperam ali; e ninguém nasce dentro dela.
     /// </para>
+    /// <para>
+    /// As âncoras (13/11/2026, a pedido: "os NPCs da comunidade estavam sem reagir"): além das áreas dos jogadores, um lugar
+    /// pode pedir uma área parada em cima dele (<see cref="Ancorar"/> e <see cref="Soltar"/>), com o chão com colisão em
+    /// volta (os chãos leem <see cref="Ancoras"/>). O acampamento pede a dele quando alguém chega perto: as pessoas dele
+    /// aparecem a uns 80 m do meio, e a área em volta de quem chegava (60 m para cada lado) não cobria a maior parte do
+    /// acampamento; quem nascia fora do NavMesh ficava com o agente desligado, parado e sem pensar.
+    /// </para>
     /// </summary>
     public class NavMeshDoMundo : MonoBehaviour
     {
@@ -46,10 +53,37 @@ namespace ZombieCityCleaner.World
             public NavMeshData Dados;
             public NavMeshDataInstance Instancia;
             public Vector3 Centro, Pedido;
+            /// <summary>O tamanho da área (a de cada jogador, ou a da âncora).</summary>
+            public Vector3 Tamanho;
             public Bounds Limites;
             public AsyncOperation Montando;
-            public bool Montada, Suja;
+            public bool Montada, Suja, Ancora;
             public float MontadaEm;
+        }
+
+        // as âncoras: o dono (o estado de um acampamento), o meio e o lado da área
+        static readonly Dictionary<object, (Vector3 centro, float lado)> _ancoras = new Dictionary<object, (Vector3, float)>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ZerarAsAncoras() => _ancoras.Clear();
+
+        /// <summary>No anfitrião: uma área de NavMesh parada em cima do ponto (um quadrado de 'lado' m), até <see cref="Soltar"/>.</summary>
+        public static void Ancorar(object dono, Vector3 centro, float lado)
+        {
+            if (dono != null) _ancoras[dono] = (centro, Mathf.Max(10f, lado));
+        }
+
+        /// <summary>A área da âncora sai.</summary>
+        public static void Soltar(object dono)
+        {
+            if (dono != null) _ancoras.Remove(dono);
+        }
+
+        /// <summary>O meio de cada âncora e o raio em volta dele que precisa do chão com colisão (os chãos pedem a colisão ali).</summary>
+        public static void Ancoras(List<(Vector3 centro, float raio)> saida)
+        {
+            saida.Clear();
+            foreach (var (centro, lado) in _ancoras.Values) saida.Add((centro, lado * 0.72f + 4f));
         }
 
         /// <summary>
@@ -64,10 +98,11 @@ namespace ZombieCityCleaner.World
 
         public static NavMeshDoMundo Instancia { get; private set; }
 
-        readonly Dictionary<JogadorRede, Area> _areas = new Dictionary<JogadorRede, Area>();
+        // as áreas: a de cada jogador (o dono é o JogadorRede) e a de cada âncora (o dono dela)
+        readonly Dictionary<object, Area> _areas = new Dictionary<object, Area>();
         readonly List<NavMeshBuildSource> _fontes = new List<NavMeshBuildSource>();
         readonly List<NavMeshBuildMarkup> _marcas = new List<NavMeshBuildMarkup>();
-        readonly List<JogadorRede> _sairam = new List<JogadorRede>();
+        readonly List<object> _sairam = new List<object>();
         readonly System.Diagnostics.Stopwatch _relogio = new System.Diagnostics.Stopwatch();
 
         /// <summary>As montagens feitas e o maior tempo de uma (a coleta das fontes, na thread principal; ms).</summary>
@@ -106,13 +141,19 @@ namespace ZombieCityCleaner.World
         /// <summary>Já tem NavMesh perto do ponto (até 2 m).</summary>
         public static bool TemEm(Vector3 ponto) => NavMesh.SamplePosition(ponto, out _, 2f, NavMesh.AllAreas);
 
-        /// <summary>As áreas em volta de todos os jogadores estão montadas (e nenhuma esperando para ser refeita).</summary>
+        /// <summary>As áreas em volta de todos os jogadores estão montadas (e nenhuma esperando para ser refeita; as âncoras não contam).</summary>
         public bool Pronto
         {
             get
             {
-                foreach (var a in _areas.Values) if (!a.Montada || a.Suja || (a.Montando != null && !a.Montando.isDone)) return false;
-                return _areas.Count > 0;
+                int jogadores = 0;
+                foreach (var a in _areas.Values)
+                {
+                    if (a.Ancora) continue;
+                    jogadores++;
+                    if (!a.Montada || a.Suja || (a.Montando != null && !a.Montando.isDone)) return false;
+                }
+                return jogadores > 0;
             }
         }
 
@@ -142,31 +183,45 @@ namespace ZombieCityCleaner.World
                 if (_areas.Count > 0) Limpar();
                 return;
             }
-            // uma área por jogador (sai com ele)
+            // uma área por jogador (sai com ele) e uma por âncora (sai quando ela é solta)
             _sairam.Clear();
-            foreach (var j in _areas.Keys) if (j == null || !JogadorRede.Todos.Contains(j)) _sairam.Add(j);
-            foreach (var j in _sairam)
+            foreach (var kv in _areas)
             {
-                Tirar(_areas[j]);
-                _areas.Remove(j);
+                bool fica = kv.Value.Ancora ? _ancoras.ContainsKey(kv.Key)
+                    : kv.Key is JogadorRede jr && jr != null && JogadorRede.Todos.Contains(jr);
+                if (!fica) _sairam.Add(kv.Key);
+            }
+            foreach (var dono in _sairam)
+            {
+                Tirar(_areas[dono]);
+                _areas.Remove(dono);
             }
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null) continue;
                 var p = j.transform.position;
                 if (!_areas.TryGetValue(j, out var a)) _areas[j] = a = new Area { Centro = p, Pedido = p };
+                a.Tamanho = tamanhoDaArea;
                 // enquanto a área espera para ser refeita, o pedido segue o jogador: a área suja era refeita no meio de antes,
                 // e com ele a uns metros dali o chão da beira do círculo ficava sem colisão (fora do raio dela em volta
                 // dele), e a área não se refazia mais (os andares dos prédios ficavam fora do NavMesh)
                 if (!a.Montada || a.Suja || Horizontal(p - a.Centro) >= refazerA) a.Pedido = p;
             }
+            foreach (var kv in _ancoras)
+            {
+                var (centro, lado) = kv.Value;
+                if (!_areas.TryGetValue(kv.Key, out var a)) _areas[kv.Key] = a = new Area { Centro = centro, Ancora = true };
+                a.Pedido = centro;
+                a.Tamanho = new Vector3(lado, tamanhoDaArea.y, lado);
+            }
             // monta (uma por quadro) a que precisa, com o chão e as casas prontos em volta
             foreach (var a in _areas.Values)
             {
                 if (a.Montando != null && !a.Montando.isDone) continue;
-                bool precisa = !a.Montada || Horizontal(a.Pedido - a.Centro) >= refazerA || (a.Suja && Time.unscaledTime - a.MontadaEm >= 1f);
+                float mover = a.Ancora ? 1f : refazerA;
+                bool precisa = !a.Montada || Horizontal(a.Pedido - a.Centro) >= mover || (a.Suja && Time.unscaledTime - a.MontadaEm >= 1f);
                 if (!precisa) continue;
-                float raio = Mathf.Max(tamanhoDaArea.x, tamanhoDaArea.z) * 0.7f;
+                float raio = Mathf.Max(a.Tamanho.x, a.Tamanho.z) * 0.7f;
                 if (!chao.Pronto(a.Pedido, raio)) continue;
                 Montar(a, a.Pedido, chao);
                 break;
@@ -180,7 +235,7 @@ namespace ZombieCityCleaner.World
             // 'acima' para cima
             float chao = chaoDoMundo.Altura(centro.x, centro.z);
             float y0 = Mathf.Min(centro.y, chao) - abaixo, y1 = Mathf.Max(centro.y, chao) + acima;
-            var limites = new Bounds(new Vector3(centro.x, (y0 + y1) * 0.5f, centro.z), new Vector3(tamanhoDaArea.x, y1 - y0, tamanhoDaArea.z));
+            var limites = new Bounds(new Vector3(centro.x, (y0 + y1) * 0.5f, centro.z), new Vector3(a.Tamanho.x, y1 - y0, a.Tamanho.z));
             a.Limites = limites;
             a.Suja = false;
             a.MontadaEm = Time.unscaledTime;
