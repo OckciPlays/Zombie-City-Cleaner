@@ -139,6 +139,7 @@ namespace ZombieCityCleaner.World
         readonly Dictionary<Vector2Int, Bloco> _blocos = new Dictionary<Vector2Int, Bloco>();
         readonly Dictionary<object, Pedido> _pedidos = new Dictionary<object, Pedido>();
         readonly List<Bloco> _sobra = new List<Bloco>();
+        readonly List<(Vector3 centro, float raio)> _ancoras = new List<(Vector3, float)>();
         readonly System.Diagnostics.Stopwatch _relogio = new System.Diagnostics.Stopwatch();
         DadosDoMundo _dados;
         Transform _raiz;
@@ -325,6 +326,9 @@ namespace ZombieCityCleaner.World
                     var v = corpo != null && !corpo.isKinematic ? corpo.linearVelocity : Vector3.zero;
                     Querer(c.transform.position + v * 0.75f, raioDosCarros + v.magnitude * 0.75f, true, agora);
                 }
+                // (13/11/2026) as âncoras do NavMesh (o acampamento com gente: NavMeshDoMundo.Ancorar), com a colisão em volta
+                NavMeshDoMundo.Ancoras(_ancoras);
+                foreach (var (centro, raio) in _ancoras) Querer(centro, raio, true, agora);
             }
             foreach (var p in _pedidos.Values) Querer(p.Ponto, Mathf.Max(p.Raio, 1f), p.Colisao, agora);
 

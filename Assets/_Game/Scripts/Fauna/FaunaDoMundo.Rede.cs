@@ -2,17 +2,23 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
-using ZombieCityCleaner.UI;
 
 namespace ZombieCityCleaner.Fauna
 {
     /// <summary>
     /// Os bichos na rede, como os zumbis (ZombieManager.Rede.cs): o anfitrião manda a cada cliente um pacote só com os
-    /// bichos perto dele: os de até 30 m a cada 0,1 s, os de até 90 m a cada 0,3 s e os de até a distância de visão (no
-    /// mínimo 120 m) a cada 0,6 s. Cada bicho vai em 13 bytes: o Id, a geração, a espécie e a variante, a posição em
-    /// centímetros a partir do jogador que recebe, o giro, o estado (com os bits do ferido, do carneado e do alfa) e a
-    /// velocidade. As mensagens não são confiáveis: o próximo pacote cobre o que se perdeu. No cliente, cada bicho vira uma
-    /// cópia que some sem notícias por 2 s.
+    /// bichos perto dele: os de até 30 m a cada 0,1 s, os de até 90 m a cada 0,3 s, os de até 170 m a cada 0,6 s e os de
+    /// até <see cref="AlcanceDaRede"/> a cada 0,8 s. Cada bicho vai em 13 bytes: o Id, a geração, a espécie e a variante, a
+    /// posição em centímetros a partir do jogador que recebe, o giro, o estado (com os bits do ferido, do carneado e do alfa)
+    /// e a velocidade. As mensagens não são confiáveis: o próximo pacote cobre o que se perdeu. No cliente, cada bicho vira
+    /// uma cópia que some sem notícias por 2 s.
+    /// <para>
+    /// O alcance (13/11/2026, a pedido: "não está aparecendo os animais para os outros jogadores", no Lakewood): antes, só os
+    /// bichos até a distância de visão do cliente (no máximo 120 m, a da neblina do mundo sorteado). Os bichos nascem de 95 a
+    /// 190 m de todos e ficam até 270 m; no Lakewood, sem a neblina, o anfitrião via quase todos (medido: 52 de 57 entre 120
+    /// e 300 m) e os amigos quase nenhum. Agora vão todos os que existem em volta de cada um, até 300 m (cabe nos
+    /// centímetros de um short, ±327 m).
+    /// </para>
     /// </summary>
     public sealed partial class FaunaDoMundo
     {
@@ -20,6 +26,8 @@ namespace ZombieCityCleaner.Fauna
         const int PorPacote = 90;
         const int BytesPorBicho = 13;
         const float IntervaloDeEnvio = 0.1f, TempoParaSumir = 2f;
+        /// <summary>Até onde os bichos vão para cada cliente (m): todos os que existem em volta dele (eles somem a 270 m de todos).</summary>
+        public const float AlcanceDaRede = 300f;
         const byte BitFerido = 0x08, BitCarneado = 0x10, BitAlfa = 0x20, BitCarregando = 0x40;
 
         float _proximoEnvio;
@@ -39,13 +47,12 @@ namespace ZombieCityCleaner.Fauna
             {
                 ulong cliente = g.j.OwnerClientId;
                 if (cliente == NetworkManager.ServerClientId) continue;   // o anfitrião vê os bichos de verdade
-                float visao = Mathf.Max(120f, Graficos.Metros(g.j.Visao.Value) + 30f);
                 _envio.Clear();
                 foreach (var b in _ativos)
                 {
                     float d = Vector3.Distance(g.pes, b.transform.position);
-                    if (d > visao) continue;
-                    int divisor = d < 30f ? 1 : d < 90f ? 3 : 6;
+                    if (d > AlcanceDaRede) continue;
+                    int divisor = d < 30f ? 1 : d < 90f ? 3 : d < 170f ? 6 : 8;
                     if ((_tick + b.Id) % divisor == 0) _envio.Add(b);
                 }
                 if (_envio.Count > 0) Mandar(nm, cliente, tempo, g.pes);

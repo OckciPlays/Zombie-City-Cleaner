@@ -945,6 +945,30 @@ com dois jogadores.
 sorteado); o bunker e os moradores; e a imagem `Lakewood_Mapa.png` ainda não mostra o acampamento (a próxima Imagem do mapa
 já mostra). As chaves das árvores (o bloco e a ordem) mudaram nos blocos da base e do acampamento: não há saves de antes.
 
+### Os consertos depois do primeiro teste com dois jogadores (13/11/2026)
+
+A pedido ("achei alguns bugs": os animais não aparecem para os outros jogadores, "perto da comunidade eu caí do mapa" e
+"os NPCs da comunidade estavam sem reagir"); conferidos no Play pelo MCP, com um jogador (o anfitrião), esperando o teste
+com dois:
+
+- **Os bichos nos amigos:** o anfitrião só mandava a cada cliente os bichos até a distância de visão dele (no máximo
+  120 m, a da neblina do mundo sorteado). Os bichos nascem de 95 a 190 m de todos e ficam até 270 m; no Lakewood, sem a
+  neblina, o anfitrião via quase todos (medido: 52 de 57 entre 120 e 300 m) e os amigos, quase nenhum. Agora vão todos os
+  que existem em volta de cada um, até 300 m (`FaunaDoMundo.AlcanceDaRede`; os de 170 a 300 m a cada 0,8 s). Vale também
+  no mundo sorteado.
+- **Os NPCs da comunidade parados:** as pessoas aparecem a uns 80 m do meio do acampamento, e o NavMesh em volta de quem
+  chegava (60 m para cada lado) não cobria a maior parte dele: medido a 75 m, 11 de 13 nasciam fora do NavMesh, com o
+  agente desligado (parados, sem olhar, falar nem atirar), até o jogador andar mais 35 m. Agora o acampamento pede uma
+  área de NavMesh só dele (uma "âncora", `NavMeshDoMundo.Ancorar`), com o chão com colisão embaixo, quando alguém chega a
+  120 m; a 75 m, os 16 da partida de teste já estavam todos andando. E um comerciante ficava preso para sempre: no
+  acampamento grande, a terceira barraca caía em cima da primeira banca da esquerda (o corredor do comerciante sem
+  NavMesh); ela foi para o meio entre a barraca de trás e as bancas (a `PlantaDoAcampamento`, também no mundo sorteado).
+- **A queda perto da comunidade:** não se repetiu aqui. O chão em volta do acampamento (180 × 180 m, de 3 em 3 m) tem a
+  colisão inteira e na altura certa (a maior diferença, 7 cm), e quem passa a pé pelo chão já voltava para cima. O que
+  faltava: o carro que um amigo dirige é simulado na máquina dele, e só o anfitrião segurava os carros que passavam pelo
+  chão; agora cada máquina segura os que ela simula. Cada volta para cima fica no log (o `Player.log` da build), com o lugar
+  e o que faltava no chão ali, para achar onde ele falha se acontecer de novo.
+
 ## As ferramentas do Editor (menu Zombie City Cleaner > Lakewood)
 
 1. **Refazer o esboço do mapa**: grava o esboço em código no asset (sem mexer no lago, nas ilhas e na cobertura).

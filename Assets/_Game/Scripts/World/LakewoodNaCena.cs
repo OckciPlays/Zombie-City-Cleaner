@@ -103,6 +103,9 @@ namespace ZombieCityCleaner.World
         Transform _paiDosPinheiros;
         float _raioDosObjetos = -1f;
         GramaDensa _grama;
+        // as âncoras do NavMesh (o meio e o raio que precisa da colisão), lidas a cada revisão no anfitrião
+        readonly List<(Vector3 centro, float raio)> _ancorasDoNavMesh = new List<(Vector3, float)>();
+        readonly List<(Vector2 meio, float raio)> _ancoras = new List<(Vector2, float)>();
         Vector3 _ondeJuntou = Vector3.one * 1e9f;
         float _juntouEm;
 
@@ -443,7 +446,9 @@ namespace ZombieCityCleaner.World
             foreach (var carro in Carro.Todos)
                 if (carro != null) pontos.Add(new Vector2(carro.transform.position.x, carro.transform.position.z));
             var rede = Unity.Netcode.NetworkManager.Singleton;
+            _ancoras.Clear();
             if (rede != null && rede.IsServer)
+            {
                 foreach (var j in ZombieCityCleaner.Player.JogadorRede.Todos)
                 {
                     if (j == null || j == ZombieCityCleaner.Player.JogadorRede.Local) continue;
@@ -457,6 +462,21 @@ namespace ZombieCityCleaner.World
                         if (DistanciaAoBloco(p, chave) > raio) { bj.PassoQuerido = 2f; bj.QuerColisao = true; }
                     }
                 }
+                // (13/11/2026) as âncoras do NavMesh (o acampamento com gente): a colisão em volta delas, para a área de lá
+                // poder ser montada (NavMeshDoMundo.Ancorar)
+                NavMeshDoMundo.Ancoras(_ancorasDoNavMesh);
+                foreach (var (centro, raioDaAncora) in _ancorasDoNavMesh)
+                {
+                    var q = new Vector2(centro.x, centro.z);
+                    _ancoras.Add((q, raioDaAncora));
+                    foreach (var chave in BlocosEm(q, raioDaAncora))
+                    {
+                        if (!_blocos.TryGetValue(chave, out var bj)) bj = Novo(chave);
+                        bj.VistoEm = Time.time;
+                        if (DistanciaAoBloco(p, chave) > raio) { bj.PassoQuerido = 2f; bj.QuerColisao = true; }
+                    }
+                }
+            }
 
             foreach (var chave in BlocosEm(p, raio))
             {
@@ -466,6 +486,7 @@ namespace ZombieCityCleaner.World
                 b.PassoQuerido = d < 120f ? 2f : d < 220f ? 4f : d < 360f ? 8f : 16f;
                 bool colisao = false;
                 foreach (var q in pontos) colisao |= DistanciaAoBloco(q, chave) < raioDeColisao;
+                foreach (var (q, raioDaAncora) in _ancoras) colisao |= DistanciaAoBloco(q, chave) < raioDaAncora;
                 if (colisao) b.PassoQuerido = 2f;
                 b.QuerColisao = colisao;
                 if (d < raioPlantas && b.MontandoPlantas == null && b.Plantas == null)
@@ -575,7 +596,9 @@ namespace ZombieCityCleaner.World
         }
 
         // quem passou pelo chão (a colisão ainda não estava pronta, depois de um "ir para") volta para cima: o jogador
-        // desta máquina (a pé, sem voar) e, no anfitrião, os carros
+        // desta máquina (a pé, sem voar) e os carros que esta máquina simula (13/11/2026: antes, só os do anfitrião; o carro
+        // que um amigo dirige é simulado na máquina dele, e caía sem volta). Cada volta fica no log (o Player.log da build),
+        // com o lugar: a pedido ("perto da comunidade eu caí do mapa"), para achar onde o chão falha.
         void Segurar()
         {
             var rede = NetworkManager.Singleton;
@@ -588,15 +611,18 @@ namespace ZombieCityCleaner.World
                 var mov = meu.GetComponent<MovimentoPrimeiraPessoa>();
                 var passageiro = meu.GetComponent<PassageiroDoCarro>();
                 if (p.y < h - 2.5f && mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro))
+                {
+                    Debug.LogWarning($"[Lakewood] O jogador passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima. {QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto"}.");
                     mov.Teleportar(new Vector3(p.x, h + 0.5f, p.z), meu.transform.eulerAngles.y);
+                }
             }
-            if (!rede.IsServer) return;
             foreach (var carro in Carro.Todos)
             {
-                if (carro == null || !carro.IsSpawned) continue;
+                if (carro == null || !carro.IsSpawned || !carro.IsOwner) continue;
                 var p = carro.transform.position;
                 float h = Chao.Altura(p.x, p.z);
                 if (p.y > h - 3f) continue;
+                Debug.LogWarning($"[Lakewood] O carro {carro.name} passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima. {QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto"}.");
                 var corpo = carro.GetComponent<Rigidbody>();
                 var ponto = new Vector3(p.x, h + 1f, p.z);
                 corpo.linearVelocity = Vector3.zero;

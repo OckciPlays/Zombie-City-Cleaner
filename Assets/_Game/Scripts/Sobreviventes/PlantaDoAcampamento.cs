@@ -170,7 +170,15 @@ namespace ZombieCityCleaner.Sobreviventes
             float xBarraca = Mathf.Min(H - 3f, Mathf.Max(meiaCasa + 3f, H * 0.7f));
             Barracas.Add((new Vector3(-xBarraca, 0f, -H * 0.62f), 90f));
             Barracas.Add((new Vector3(xBarraca, 0f, -H * 0.62f), 270f));
-            if (a.Grande) Barracas.Add((new Vector3(-xBarraca, 0f, -H * 0.3f), 90f));
+            if (a.Grande)
+            {
+                // (13/11/2026) a terceira barraca, longe das bancas: em -0,3 H ela caía em cima da primeira banca da esquerda
+                // (o acampamento do Lakewood), e o comerciante ficava preso entre ela e o balcão, fora do NavMesh e parado.
+                // Se ela encosta numa banca, vai para o meio entre a de trás e a fila das bancas; se ainda não couber, fica de fora
+                var terceira = new Vector3(-xBarraca, 0f, -H * 0.3f);
+                if (EncostaNumaBanca(terceira)) terceira.z = (-H * 0.62f + zPrimeira) * 0.5f;
+                if (!EncostaNumaBanca(terceira) && Mathf.Abs(terceira.z + H * 0.62f) >= 3.6f) Barracas.Add((terceira, 90f));
+            }
 
             // os guardas: no portão (dentro, de frente para fora) e, no grande, nos cantos da frente e de trás
             Guardas.Add(new Posto { pos = new Vector3(-3.2f, 0f, H - 2f), ronda = new Vector3(-8f, 0f, H - 2f), giro = 0f });
@@ -211,6 +219,18 @@ namespace ZombieCityCleaner.Sobreviventes
                 if (perto) continue;
                 Coisas.Add((r.NextDouble() < 0.55 ? CoisaSolta.Barril : CoisaSolta.Caixas, pos, (float)r.NextDouble() * 360f));
             }
+        }
+
+        // a barraca deitada (90°: 3,2 m em x e 2,4 m em z) encosta na banca (o balcão, o comerciante atrás e as caixas atrás
+        // dele: uns 2,6 m em x e 2,7 m em z), com 1 m de folga para o corredor do comerciante
+        bool EncostaNumaBanca(Vector3 barraca)
+        {
+            foreach (var b in Bancas)
+            {
+                var meio = b.balcao + (b.comerciante - b.balcao) * 0.82f;
+                if (Mathf.Abs(barraca.x - meio.x) < 1.6f + 1.3f + 1f && Mathf.Abs(barraca.z - meio.z) < 1.2f + 1.35f + 1f) return true;
+            }
+            return false;
         }
 
         public enum CoisaSolta : byte { Toco, Barril, Caixas }

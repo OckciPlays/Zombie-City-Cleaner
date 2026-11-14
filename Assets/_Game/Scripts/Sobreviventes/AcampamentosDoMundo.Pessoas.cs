@@ -5,6 +5,7 @@ using UnityEngine.AI;
 using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Loot;
 using ZombieCityCleaner.Player;
+using ZombieCityCleaner.World;
 
 namespace ZombieCityCleaner.Sobreviventes
 {
@@ -29,9 +30,23 @@ namespace ZombieCityCleaner.Sobreviventes
                 var p = Planta(a);
                 var e = _estados[a];
                 float perto = GrupoDeSobreviventes.PertoDeUmJogador(p.Mundo(Vector3.zero));
+                // (13/11/2026, a pedido: "os NPCs da comunidade estavam sem reagir") o NavMesh em cima do acampamento inteiro,
+                // pedido 40 m antes de as pessoas aparecerem: a área em volta de quem chegava (60 m para cada lado) não cobria
+                // a maior parte dele, e quem nascia fora do NavMesh ficava parado, com o agente desligado, sem pensar
+                if (perto < p.Lugar.Raio + chegarPerto + 40f) NavMeshDoMundo.Ancorar(e, p.Mundo(Vector3.zero), LadoDoNavMesh(p));
+                else if (perto > p.Lugar.Raio + sairLonge) NavMeshDoMundo.Soltar(e);
                 if (e.grupo == null && perto < p.Lugar.Raio + chegarPerto) Povoar(a, p, e, prefab);
                 else if (e.grupo != null && perto > p.Lugar.Raio + sairLonge) Recolher(a, e);
             }
+        }
+
+        // o lado da área do NavMesh do acampamento: a cerca (2 × a meia) e uns metros de fora, na frente do portão
+        static float LadoDoNavMesh(PlantaDoAcampamento p) => 2f * p.Meia + 16f;
+
+        // as âncoras saem (o fim da partida)
+        void SoltarAsAncoras()
+        {
+            foreach (var e in _estados) NavMeshDoMundo.Soltar(e);
         }
 
         void Povoar(int a, PlantaDoAcampamento p, Estado e, GameObject prefab)

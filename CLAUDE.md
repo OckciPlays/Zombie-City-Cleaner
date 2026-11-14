@@ -1316,6 +1316,16 @@ que os dois mapas cumprem, sem cópia:
   Com o save carregando, a casa da partida não põe os veículos nem as armas (voltam do save).
 - **Testar o save pelo MCP:** um `MundoSalvo` com um id próprio, e no fim o `Salvamento.Atual = null` antes do
   `MundoSalvo.Apagar` (sair do Play com o save ligado salva de novo, pelo `OnApplicationQuit`).
+- **Os consertos depois do primeiro teste com dois jogadores** (13/11/2026; o `Plano_Lakewood.md`, a seção deles):
+  - os bichos vão para cada cliente até `FaunaDoMundo.AlcanceDaRede` (300 m; antes, a visão dele, no máximo 120 m:
+    no Lakewood, sem a neblina, os amigos quase não viam bichos);
+  - **as âncoras do NavMesh** (`NavMeshDoMundo.Ancorar`/`Soltar`/`Ancoras`): uma área parada em cima de um lugar, além das
+    dos jogadores, com o chão com colisão em volta (o `LakewoodNaCena.Revisar` e o `TerrenoDoMundo.Revisar` pedem a
+    colisão nas âncoras, no anfitrião). O `AcampamentosDoMundo` ancora o acampamento quando alguém chega a 120 m do meio
+    (as pessoas aparecem a 80 m) e solta a 155 m; o `Pronto` do NavMesh não conta as âncoras;
+  - a `PlantaDoAcampamento` tira a terceira barraca (a do acampamento grande) de cima das bancas (`EncostaNumaBanca`);
+  - o `LakewoodNaCena.Segurar` segura os carros que esta máquina simula (`IsOwner`: o do amigo que dirige é dele) e
+    escreve no log cada volta para cima (o jogador ou o carro, o lugar e o que faltava no chão).
 
 ### A Woodcreek (a Etapa 6, 11 e 12/11/2026; o `Plano_Lakewood.md`, "A Woodcreek"; as 6 partes feitas com o usuário fora, esperando o teste)
 
