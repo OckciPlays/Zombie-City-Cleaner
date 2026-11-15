@@ -39,6 +39,7 @@ namespace ZombieCityCleaner.Zombies
             TipoDeZumbi.Corredor => A.corredor.vida,
             TipoDeZumbi.Long => A.cuspidor.vida,
             TipoDeZumbi.Brutamonte => A.brutamonte.vida,
+            TipoDeZumbi.Chefe => VidaDoChefe,   // (Zumbi.Chefes.cs)
             _ => A.vidaDoCorpo,
         };
 
@@ -47,6 +48,7 @@ namespace ZombieCityCleaner.Zombies
             TipoDeZumbi.Corredor => A.corredor.vidaDoMembro,
             TipoDeZumbi.Long => A.cuspidor.vidaDoMembro,
             TipoDeZumbi.Brutamonte => 9999f,   // o casco: não perde braço nem perna
+            TipoDeZumbi.Chefe => 9999f,        // (os chefes também não: as hitboxes deles não têm membro)
             _ => A.vidaDoMembro,
         };
 
@@ -55,6 +57,7 @@ namespace ZombieCityCleaner.Zombies
             TipoDeZumbi.Corredor => A.corredor.velocidadePerseguindo,
             TipoDeZumbi.Long => A.cuspidor.velocidade,
             TipoDeZumbi.Brutamonte => A.brutamonte.velocidade,
+            TipoDeZumbi.Chefe => VelocidadeBaseDoChefe,
             _ => A.velocidadePerseguindo,
         };
 
@@ -64,20 +67,27 @@ namespace ZombieCityCleaner.Zombies
         float TempoParaPetrificar => tipo == TipoDeZumbi.Corredor ? A.corredor.tempoParaPetrificar : A.tempoParaPetrificar;
 
         /// <summary>O Brutamonte não reage ao sol nem à luz (cego e surdo, com o casco).</summary>
-        bool ImuneALuz => tipo == TipoDeZumbi.Brutamonte;
+        bool ImuneALuz => tipo == TipoDeZumbi.Brutamonte || tipo == TipoDeZumbi.Chefe;   // (os chefes também, 15/11/2026)
 
         /// <summary>A vida que sobra, de 0 a 1 (a barra do Brutamonte). No anfitrião, a de verdade; nas cópias, a que chega.</summary>
         public float FracaoDaVida => Copia ? _fracaoRecebida : Mathf.Clamp01(1f - _danoNoCorpo / Mathf.Max(1f, VidaDoCorpo));
         float _fracaoRecebida = 1f;
 
         /// <summary>Perto de alguém até esta distância, o especial fica no nível Perto (o olho e o papo são hitboxes).</summary>
-        internal bool SempreDePerto(float d) => tipo == TipoDeZumbi.Brutamonte ? d < 75f : tipo == TipoDeZumbi.Long ? d < 50f : false;
+        internal bool SempreDePerto(float d) => tipo switch
+        {
+            TipoDeZumbi.Brutamonte => d < 75f,
+            TipoDeZumbi.Long => d < 50f,
+            TipoDeZumbi.Chefe => d < 120f,   // (os chefes: grandes, vistos e acertados de longe; as hitboxes só existem no Perto)
+            _ => false,
+        };
 
         /// <summary>O byte do especial na rede (o 18º de cada zumbi).</summary>
         internal byte EspecialNaRede => tipo switch
         {
             TipoDeZumbi.Brutamonte => BrutamonteNaRede,
             TipoDeZumbi.Long => LongNaRede,
+            TipoDeZumbi.Chefe => ChefeNaRede,   // a ação e o contador (Zumbi.Chefes.cs)
             _ => (byte)0,
         };
 
@@ -85,6 +95,7 @@ namespace ZombieCityCleaner.Zombies
         {
             if (tipo == TipoDeZumbi.Brutamonte) ReceberBrutamonte(valor, comEfeito);
             else if (tipo == TipoDeZumbi.Long) ReceberLong(valor, comEfeito);
+            else if (tipo == TipoDeZumbi.Chefe) ReceberChefe(valor, comEfeito);
         }
 
         // ------------------------------------------------------------------ preparar e zerar
@@ -109,14 +120,20 @@ namespace ZombieCityCleaner.Zombies
                     agente.acceleration = 5f;
                     PrepararLong();
                     break;
+                case TipoDeZumbi.Chefe:
+                    PrepararChefe();   // (Zumbi.Chefes.cs)
+                    break;
             }
         }
 
         void ZerarEspecial()
         {
             _fracaoRecebida = 1f;
+            _frenesiAte = 0f;   // (o frenesi do Condutor: Zumbi.Chefes.cs)
+            _chamadoAte = 0f;   // (o chamado do grito)
             if (tipo == TipoDeZumbi.Brutamonte) ZerarBrutamonte();
             else if (tipo == TipoDeZumbi.Long) ZerarLong();
+            else if (tipo == TipoDeZumbi.Chefe) ZerarChefe();
         }
 
         // ------------------------------------------------------------------ a cada quadro
@@ -127,11 +144,17 @@ namespace ZombieCityCleaner.Zombies
             if (Morto) return;
             if (tipo == TipoDeZumbi.Brutamonte) BrutamonteNoQuadro(agora, dt);
             else if (tipo == TipoDeZumbi.Long) LongNoQuadro(agora, dt);
+            else if (tipo == TipoDeZumbi.Chefe) ChefeNoQuadro(agora, dt);
         }
 
         /// <summary>Em todas as máquinas, depois da animação: o olho e as pálpebras do Brutamonte, o papo do Long.</summary>
         void EspecialDepoisDaAnimacao(float dt)
         {
+            if (tipo == TipoDeZumbi.Chefe)
+            {
+                ChefeDepoisDaAnimacao(dt);   // (também morto: o corpo afunda)
+                return;
+            }
             if (Morto || !animador.enabled) return;
             if (tipo == TipoDeZumbi.Brutamonte) OlhoDepoisDaAnimacao(dt);
             else if (tipo == TipoDeZumbi.Long) PapoDepoisDaAnimacao(dt);
@@ -183,6 +206,7 @@ namespace ZombieCityCleaner.Zombies
         {
             TipoDeZumbi.Brutamonte when FaseBruto == FaseDoBruto.Avancando => 1.8f,
             TipoDeZumbi.Corredor when Velocidade > 3.8f => Mathf.Min(1.3f, Velocidade / 3.8f),
+            TipoDeZumbi.Chefe => RitmoDoChefe,
             _ => 1f,
         };
 

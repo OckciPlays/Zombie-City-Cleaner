@@ -106,6 +106,13 @@ namespace ZombieCityCleaner.Zombies
                 else if (_saiuDaTerra.BrutamonteProcurando && _saiuDaTerra.TravarSeOlhoVe()) _saiuDaTerra = null;
             }
             if (!_temEnterrado || QuantosJogadores == 0) return;
+            // (15/11/2026: um Brutamonte de pé, o da horda do Condutor: o enterrado espera embaixo, sem roncar à toa; antes ele
+            // roncava, não saía, e sumia)
+            if (VivosDoTipo(TipoDeZumbi.Brutamonte) > 0)
+            {
+                _acordaEm = -1f;
+                return;
+            }
             if (_acordaEm >= 0f)
             {
                 if (agora >= _acordaEm) Despertar(agora);

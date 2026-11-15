@@ -89,7 +89,7 @@ namespace ZombieCityCleaner.Zombies
             if (!IsServer || !IsSpawned) return 0;
             int n = 0;
             foreach (var z in _ativos)
-                if (!z.Morto && !z.Petrificado && (z.transform.position - centro).sqrMagnitude < raio * raio)
+                if (!z.Morto && !z.Petrificado && !z.EhChefe && (z.transform.position - centro).sqrMagnitude < raio * raio)
                 {
                     z.PetrificarJa();
                     n++;

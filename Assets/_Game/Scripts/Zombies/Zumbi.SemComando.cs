@@ -38,7 +38,7 @@ namespace ZombieCityCleaner.Zombies
         {
             if (!semCabeca || arremesso || _semComando || _m == null) return false;
             if (Pedra >= 0.5f || _boneco != null || Deitado || FaseDoEquilibrio != Fase.Nenhuma || _pernas != 0) return false;
-            if (tipo == TipoDeZumbi.Brutamonte || tipo == TipoDeZumbi.Long || !NoNavMesh) return false;
+            if (tipo == TipoDeZumbi.Brutamonte || tipo == TipoDeZumbi.Long || tipo == TipoDeZumbi.Chefe || !NoNavMesh) return false;
             return Random.value < _m.ajustes.chanceDeAndarSemCabeca;
         }
 

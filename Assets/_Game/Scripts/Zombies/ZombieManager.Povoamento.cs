@@ -291,7 +291,7 @@ namespace ZombieCityCleaner.Zombies
             for (int i = _ativos.Count - 1; i >= 0; i--)
             {
                 var z = _ativos[i];
-                if (z.Morto || z.Engajado || PertoDeAlguem(z.transform.position, r2)) continue;
+                if (z.Morto || z.Engajado || z.EhChefe || PertoDeAlguem(z.transform.position, r2)) continue;   // (o chefe vai embora pela regra dele: ZombieManager.Chefes.cs)
                 Devolver(z);
             }
             float c = celulaDoPovoamento, rc = (distanciaDeRecolher + c) * (distanciaDeRecolher + c);

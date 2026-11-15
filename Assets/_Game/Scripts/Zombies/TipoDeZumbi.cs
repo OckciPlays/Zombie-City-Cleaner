@@ -4,9 +4,17 @@ namespace ZombieCityCleaner.Zombies
 {
     /// <summary>
     /// O tipo do zumbi (01/11/2026, a pedido: os especiais). O Oco é o de sempre; os especiais têm um comportamento próprio
-    /// por cima (Zumbi.Corredor.cs, Zumbi.Long.cs, Zumbi.Brutamonte.cs) e os números deles em <see cref="AjustesDeZumbi"/>.
+    /// por cima (Zumbi.Corredor.cs, Zumbi.Long.cs, Zumbi.Brutamonte.cs; os chefes, 15/11/2026, em Zumbi.Chefes.cs) e os
+    /// números deles em <see cref="AjustesDeZumbi"/>.
     /// </summary>
-    public enum TipoDeZumbi : byte { Oco, Corredor, Long, Brutamonte }
+    public enum TipoDeZumbi : byte { Oco, Corredor, Long, Brutamonte, Chefe }
+
+    /// <summary>
+    /// Os chefes do BUNKER: Outbreak (15/11/2026, a pedido; TipoDeZumbi.Chefe, o comportamento em Zumbi.Chefes.cs): fusões de
+    /// vários Ocos, feitas no Blender (D:\teste blender\Chefes). O Blindado se divide nos Agregados A e B ao morrer; o
+    /// Alongado vira o Longo.
+    /// </summary>
+    public enum QualChefe : byte { Blindado, AgregadoA, AgregadoB, Alongado, Longo, Condutor }
 
     /// <summary>O Corredor: um Oco contaminado há mais tempo; frágil e muito rápido.</summary>
     [System.Serializable]

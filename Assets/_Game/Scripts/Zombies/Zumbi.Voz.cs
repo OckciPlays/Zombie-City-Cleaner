@@ -39,7 +39,7 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         internal int TipoDeAgonia => (Id * 5 + Geracao * 3 + 2) % 4;
 
-        SonsDoOco Sons => _m != null ? _m.Sons : null;
+        SonsDoOco Sons => _m != null && tipo != TipoDeZumbi.Chefe ? _m.Sons : null;   // (os chefes não têm a voz do Oco)
 
         bool TemAgonia()
         {
@@ -82,6 +82,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>O chamado (achou alguém, ou só chamando): os de perto respondem.</summary>
         internal void Chamar()
         {
+            if (tipo == TipoDeZumbi.Chefe) return;
             var s = Sons;
             if (s == null || s.chamado == null || s.chamado.Length == 0)
             {
@@ -94,7 +95,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Ouviu um chamado: responde daqui a pouco; no anfitrião, parado, vira para quem chamou.</summary>
         internal void OuvirChamado(Vector3 de, float quando)
         {
-            if (Morto || Petrificado || _semComando) return;
+            if (Morto || Petrificado || _semComando || tipo == TipoDeZumbi.Chefe) return;
             if (_responderEm < 0f) _responderEm = quando;
             if (!Copia && Atual == Estado.Parado) OlharPara(de);
         }

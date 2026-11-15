@@ -7,7 +7,8 @@ namespace ZombieCityCleaner.UI
     /// <summary>
     /// A barra de vida do Brutamonte (01/11/2026, a pedido: "uma barra de vida para ele no topo"): no alto da tela, o nome e a
     /// vida que sobra, quando ele está a até <see cref="Alcance"/> de quem joga aqui. Some aos poucos quando ele se afasta
-    /// ou morre. Criada pelo ZombieManager em cada máquina.
+    /// ou morre. Criada pelo ZombieManager em cada máquina. Desde 15/11/2026, também a dos chefes (Zumbi.Chefes.cs: o nome
+    /// de cada um; o mais perto ganha a barra).
     /// </summary>
     public class BarraDoChefe : MonoBehaviour
     {
@@ -49,7 +50,7 @@ namespace ZombieCityCleaner.UI
             float menor = Alcance;
             foreach (var z in _m.Visiveis())
             {
-                if (z == null || z.tipo != TipoDeZumbi.Brutamonte || z.Morto) continue;
+                if (z == null || (z.tipo != TipoDeZumbi.Brutamonte && !z.EhChefe) || z.Morto) continue;
                 float d = Vector3.Distance(olho, z.transform.position);
                 if (d < menor)
                 {
@@ -69,10 +70,11 @@ namespace ZombieCityCleaner.UI
             float largura = 520f * u, altura = 12f * u;
             var barra = new Rect((Screen.width - largura) / 2f, 52f * u, largura, altura);
             var cor = GUI.color;
+            string titulo = _chefe != null && _chefe.EhChefe ? _chefe.NomeDoChefe.ToUpperInvariant() : "O BRUTAMONTE";
             GUI.color = new Color(0f, 0f, 0f, 0.85f * _alfa);
-            GUI.Label(new Rect(barra.x + 2, barra.y - 26 * u + 2, barra.width, 22 * u), "O BRUTAMONTE", _nome);
+            GUI.Label(new Rect(barra.x + 2, barra.y - 26 * u + 2, barra.width, 22 * u), titulo, _nome);
             GUI.color = new Color(0.93f, 0.88f, 0.82f, _alfa);
-            GUI.Label(new Rect(barra.x, barra.y - 26 * u, barra.width, 22 * u), "O BRUTAMONTE", _nome);
+            GUI.Label(new Rect(barra.x, barra.y - 26 * u, barra.width, 22 * u), titulo, _nome);
             Ret(new Rect(barra.x - 2 * u, barra.y - 2 * u, barra.width + 4 * u, barra.height + 4 * u), new Color(Fundo.r, Fundo.g, Fundo.b, Fundo.a * _alfa));
             Ret(new Rect(barra.x, barra.y, barra.width * _perdidaVista, barra.height), new Color(Perdida.r, Perdida.g, Perdida.b, Perdida.a * _alfa));
             Ret(new Rect(barra.x, barra.y, barra.width * _vidaVista, barra.height), new Color(Vida.r, Vida.g, Vida.b, _alfa));

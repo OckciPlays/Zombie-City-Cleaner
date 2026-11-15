@@ -101,7 +101,7 @@ namespace ZombieCityCleaner.Zombies
         /// 20 s depois de travar ou de levar tiro; Zumbi.Brutamonte.cs), em todas as fases, não só no avanço.
         /// </summary>
         internal bool Caca(IAlvoDeZumbi quem) =>
-            quem != null && ReferenceEquals(tipo == TipoDeZumbi.Brutamonte ? _travadoEm : _alvo, quem) && Engajado;
+            quem != null && ReferenceEquals(tipo == TipoDeZumbi.Brutamonte ? _travadoEm : tipo == TipoDeZumbi.Chefe ? _alvoDoChefe : _alvo, quem) && Engajado;
         internal float mortoEm;
 
         ZombieManager _m;
@@ -129,7 +129,8 @@ namespace ZombieCityCleaner.Zombies
             NivelAtual = n;
             bool perto = n == Nivel.Perto;
             AtualizarAnimador();
-            animador.cullingMode = perto ? AnimatorCullingMode.CullUpdateTransforms : AnimatorCullingMode.CullCompletely;
+            // (o chefe, perto, anima sempre: a mão que agarra e as que golpeiam são os ossos, mesmo fora da tela)
+            animador.cullingMode = perto ? (EhChefe ? AnimatorCullingMode.AlwaysAnimate : AnimatorCullingMode.CullUpdateTransforms) : AnimatorCullingMode.CullCompletely;
             capsula.gameObject.layer = perto ? CamadaSoBloqueio : CamadaZumbi;
             AtualizarColisores();
             // na cena de vídeo, todos fazem sombra: vistos de longe, sem ela, eles pareciam flutuar
@@ -155,13 +156,13 @@ namespace ZombieCityCleaner.Zombies
         void AtualizarAnimador()
         {
             bool longe = NivelAtual == Nivel.Longe;
-            animador.enabled = (!longe || _visivel) && !Morto && !Petrificado;
+            animador.enabled = (!longe || _visivel) && (!Morto || EhChefe) && !Petrificado;   // (o chefe morto deita pela animação)
             if (!animador.enabled) return;
             AplicarPernasNoAnimador();
             if (longe)
             {
                 _velAnimacao = 0f;
-                animador.SetFloat(SpeedId, 0f);
+                animador.SetFloat(EhChefe ? VelocidadeDoChefeId : SpeedId, 0f);
             }
         }
 
@@ -190,7 +191,7 @@ namespace ZombieCityCleaner.Zombies
         // é desenhado (até a distância de visão)
         void AtualizarRenderers()
         {
-            bool ligado = _visivel && !Morto && _boneco == null;
+            bool ligado = _visivel && (!Morto || (EhChefe && !_afundou)) && _boneco == null;   // (o chefe morto fica até afundar)
             foreach (var r in renderers) r.enabled = ligado;
         }
 
@@ -205,6 +206,11 @@ namespace ZombieCityCleaner.Zombies
 
         void Animar(float dt)
         {
+            if (EhChefe)
+            {
+                AnimarChefe(dt);   // a "Velocidade" do controlador dele (Zumbi.Chefes.cs)
+                return;
+            }
             float alvo = Atual == Estado.Atacando || Morto ? 0f : Velocidade;
             _velAnimacao = Mathf.Lerp(_velAnimacao, alvo, 1f - Mathf.Exp(-8f * dt));
             if (animador.enabled) animador.SetFloat(SpeedId, _velAnimacao);
@@ -214,6 +220,7 @@ namespace ZombieCityCleaner.Zombies
         void MostrarGolpe()
         {
             _ataqueAte = Time.time + 0.9f;
+            if (EhChefe) return;   // (o chefe golpeia pela ação dele)
             if (animador.isActiveAndEnabled && _pernas < 3 && !Petrificado) animador.SetTrigger(AtacarId);
             var s = Sons;
             if (s != null) Falar(s.golpe, Fala.Golpe, 1f, 1f, false);   // o rosnado do golpe (Zumbi.Voz.cs)
@@ -222,6 +229,11 @@ namespace ZombieCityCleaner.Zombies
         void MostrarReacao()
         {
             _dorAte = Time.time + 0.6f;
+            if (EhChefe)
+            {
+                ReacaoDoChefe();   // o clipe Dano, só entre as ações (Zumbi.Chefes.cs)
+                return;
+            }
             if (animador.isActiveAndEnabled && _pernas < 3 && !Petrificado) animador.SetTrigger(TiroId);
             SomDaReacao();
         }
@@ -368,7 +380,7 @@ namespace ZombieCityCleaner.Zombies
 
         void AplicarPernasNoAnimador()
         {
-            if (!animador.isActiveAndEnabled) return;
+            if (EhChefe || !animador.isActiveAndEnabled) return;   // (o controlador do chefe não tem as pernas nem a camada das ações)
             int pernas = PernasNoAnimador;
             animador.SetInteger(PernasId, pernas);
             animador.SetLayerWeight(CamadaAcoes, _pernas >= 3 ? 0f : 1f);
@@ -392,6 +404,11 @@ namespace ZombieCityCleaner.Zombies
         /// </summary>
         void MostrarMorte(bool comEfeito)
         {
+            if (EhChefe)
+            {
+                MostrarMorteDoChefe(comEfeito);   // a animação da morte, sem o corpo com física (Zumbi.Chefes.cs)
+                return;
+            }
             if (comEfeito && _m != null)
             {
                 Vector3 direcao = Quaternion.Euler(0f, DirecaoDaMorte, 0f) * Vector3.forward;
@@ -417,6 +434,7 @@ namespace ZombieCityCleaner.Zombies
 
         internal void Gemer(float tom)
         {
+            if (EhChefe) return;   // (os chefes: os sons deles, Zumbi.Chefes.cs)
             // o Oco tem a voz própria (Zumbi.Voz.cs); sem ela, a voz antiga, em trechos
             var sons = Sons;
             if (sons != null && sons.voz != null && sons.voz.Length > 0)
@@ -569,6 +587,11 @@ namespace ZombieCityCleaner.Zombies
             if (tipo == TipoDeZumbi.Brutamonte)
             {
                 PensarBrutamonte(agora);   // cego e surdo: só o olho (Zumbi.Brutamonte.cs)
+                return;
+            }
+            if (tipo == TipoDeZumbi.Chefe)
+            {
+                PensarChefe(agora);   // o alvo, a perseguição e os golpes de cada chefe (Zumbi.Chefes.cs)
                 return;
             }
             var a = _m.ajustes;
@@ -735,6 +758,11 @@ namespace ZombieCityCleaner.Zombies
         internal void Investigar(Vector3 ponto, float agora)
         {
             if (!NoNavMesh || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte || _semComando) return;   // o Brutamonte é surdo; o sem cabeça também
+            if (tipo == TipoDeZumbi.Chefe)
+            {
+                OuvirChefe(ponto, agora);   // sem alvo, vai ver (Zumbi.Chefes.cs)
+                return;
+            }
             _alvo = null;
             // o barulho de dentro de um acampamento: vai só até a beira dele (02/11/2026)
             if (ZombieManager.ZonaSeguraEm(ponto, out var zona))
@@ -752,6 +780,11 @@ namespace ZombieCityCleaner.Zombies
         internal void ComecarPerseguicao(IAlvoDeZumbi jogador, float agora)
         {
             if (jogador == null || Morto || Petrificado || tipo == TipoDeZumbi.Brutamonte || _semComando) return;   // o Brutamonte só vê pelo olho; o sem cabeça, nada
+            if (tipo == TipoDeZumbi.Chefe)
+            {
+                PegarAlvoDoChefe(jogador, agora);   // o alvo fica no campo dele (fora do cerco dos Ocos: Zumbi.Chefes.cs)
+                return;
+            }
             if (tipo == TipoDeZumbi.Long)
             {
                 _alvo = jogador;   // o Long não persegue: fica longe e cospe
@@ -780,12 +813,13 @@ namespace ZombieCityCleaner.Zombies
             Vector3 pos = _alvo.transform.position;
             Vector3 delta = pos - transform.position;
             float d = delta.magnitude;
-            if (d > a.distanciaDeDesistir || DesisteDoSol(pos) || ZombieManager.NaZonaSegura(pos))
+            // (chamado pelo grito do Condutor, não desiste pela distância: Zumbi.Chefes.cs)
+            if ((d > a.distanciaDeDesistir && !ChamadoPeloGrito) || DesisteDoSol(pos) || ZombieManager.NaZonaSegura(pos))
             {
                 Desistir(agora);
                 return;
             }
-            if (d < 3f || _m.Enxerga(transform.position + Vector3.up * AlturaDoOlho, pos + Vector3.up * 1.3f))
+            if (d < 3f || ChamadoPeloGrito || _m.Enxerga(transform.position + Vector3.up * AlturaDoOlho, pos + Vector3.up * 1.3f))
             {
                 _ultimoVisto = agora;
                 _ultimaPosicao = pos;
@@ -890,6 +924,11 @@ namespace ZombieCityCleaner.Zombies
                 LevarTiroNoBrutamonte(regiao, dano, ponto, direcao, autor, agora);   // o casco e o olho (Zumbi.Brutamonte.cs)
                 return;
             }
+            if (tipo == TipoDeZumbi.Chefe)
+            {
+                LevarTiroNoChefe(regiao, dano, ponto, direcao, autor, agora);   // a cabeça, o ponto fraco, o casco (Zumbi.Chefes.cs)
+                return;
+            }
             var a = _m.ajustes;
             var faseAntes = FaseDoEquilibrio;
             // a estátua: o carro (acima de 3 m/s) e a espingarda de perto (o arremesso) a quebram de uma vez
@@ -967,6 +1006,7 @@ namespace ZombieCityCleaner.Zombies
             _parteDaMorte = semCabeca ? CorpoDeZumbi.ParteCabeca : ParteMaisPerto(ponto);
             direcao.y = 0f;
             DirecaoDaMorte = direcao.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(direcao).eulerAngles.y : transform.eulerAngles.y + 180f;
+            if (EhChefe) AntesDaMorteDoChefe();   // solta quem ele segura (Zumbi.Chefes.cs)
             Atual = Estado.Morto;
             mortoEm = agora;
             _alvo = null;
@@ -979,6 +1019,7 @@ namespace ZombieCityCleaner.Zombies
             }
             Velocidade = 0f;
             _m.ContarMorte();
+            if (EhChefe) DepoisDaMorteDoChefe();   // o Blindado se divide, o Alongado vira o Longo
         }
 
         // ------------------------------------------------------------------ cópia (nos outros jogadores)
@@ -1037,8 +1078,15 @@ namespace ZombieCityCleaner.Zombies
             bool golpeou = !primeira && golpes != (Golpes & 3), reagiu = !primeira && reacoes != (Reacoes & 3);
             // os membros antes da morte: o corpo que cai já sai cortado
             if (cortes != Cortes && Atual != Estado.Morto) MudarCortes(cortes, !primeira, -transform.forward);
-            // sem uma perna: a fase do equilíbrio e a inclinação (Zumbi.Equilibrio.cs)
-            if (Atual != Estado.Morto) ReceberEquilibrio(equilibrio, !primeira);
+            // sem uma perna: a fase do equilíbrio e a inclinação (Zumbi.Equilibrio.cs); no chefe, o frenesi, e no byte da pedra,
+            // a vida (Zumbi.Chefes.cs)
+            if (EhChefe)
+            {
+                ReceberExtraDoChefe(equilibrio);
+                _fracaoRecebida = pedra / 255f;
+                pedra = 0;
+            }
+            else if (Atual != Estado.Morto) ReceberEquilibrio(equilibrio, !primeira);
             // o especial: a fase e a vida do Brutamonte, o cuspe e o grito do Long (Zumbi.Especiais.cs)
             if (Atual != Estado.Morto) ReceberEspecial(especial, !primeira);
             bool morreu = estado == Estado.Morto && Atual != Estado.Morto;

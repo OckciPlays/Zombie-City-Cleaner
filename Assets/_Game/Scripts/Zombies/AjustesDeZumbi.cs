@@ -167,5 +167,7 @@ namespace ZombieCityCleaner.Zombies
         [Tooltip("O Long (o cuspidor).")]
         public AjustesDoLong cuspidor = new AjustesDoLong();
         public AjustesDoBrutamonte brutamonte = new AjustesDoBrutamonte();
+        [Tooltip("Os chefes (15/11/2026): o Blindado, os Agregados, o Alongado, o Longo e o Condutor (AjustesDosChefes.cs).")]
+        public AjustesDosChefes chefes = new AjustesDosChefes();
     }
 }

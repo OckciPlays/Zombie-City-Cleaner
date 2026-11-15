@@ -242,7 +242,12 @@ namespace ZombieCityCleaner.Player
             ulong dono = rede != null && rede.Chave.Value != 0 ? rede.Chave.Value : OwnerClientId;
             var ponto = Loot.ConstrucoesNoMundo.CamaDe(dono, out var cama) ? cama : PontosDeNascimento.Ponto(OwnerClientId);
             GetComponent<PassageiroDoCarro>().Soltar();
-            GetComponent<MovimentoPrimeiraPessoa>().Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
+            var movimento = GetComponent<MovimentoPrimeiraPessoa>();
+            // renasce livre (15/11/2026): sem a gosma do Long e do Longo (antes ele voltava ainda preso, até segurar E) e fora
+            // da mão de um chefe
+            movimento.SoltarDaGosma();
+            movimento.SoltarDoChefe(Vector3.zero);
+            movimento.Teleportar(ponto.position, ponto.rotation.eulerAngles.y);
         }
 
         void Update()
@@ -265,6 +270,7 @@ namespace ZombieCityCleaner.Player
                 AtualizarFolego(Time.deltaTime);   // a água (06/11/2026): o fôlego e o afogamento
                 if (_inventario != null) _inventario.AtualizarOMolhado(Time.deltaTime, MotivosDaMente.Value, SentadoNaAgua);   // a roupa molhada (12/11/2026)
                 AtualizarEnjoo(Time.deltaTime);   // o peixe cru que caiu mal (07/11/2026)
+                CorrerVeneno(Time.deltaTime);   // o veneno (a cascavel, o ácido do Longo) também sem a fauna (15/11/2026; uma vez por quadro)
             }
         }
 

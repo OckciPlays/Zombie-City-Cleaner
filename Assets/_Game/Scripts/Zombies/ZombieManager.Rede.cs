@@ -137,8 +137,9 @@ namespace ZombieCityCleaner.Zombies
                                              : (byte)Mathf.Clamp(Mathf.RoundToInt(z.Velocidade * 40f), 0, 255));
                     w.WriteValueSafe(z.InfoDaMorte);
                     w.WriteValueSafe(z.Cortes);
-                    w.WriteValueSafe((byte)Mathf.RoundToInt(z.Pedra * 255f));
-                    w.WriteValueSafe(z.EquilibrioNaRede);
+                    // (no chefe, 15/11/2026: a vida no lugar da pedra e o frenesi no do equilíbrio; Zumbi.Chefes.cs)
+                    w.WriteValueSafe(z.PedraNaRede);
+                    w.WriteValueSafe(z.ExtraNaRede);
                     // o modelo, com o "te caça" no bit de cima: o mesmo zumbi vai com 1 para quem ele caça e 0 para os outros
                     w.WriteValueSafe((byte)(z.modelo | (z.Caca(receptor) ? BitDaCaca : 0)));
                     w.WriteValueSafe(z.EspecialNaRede);

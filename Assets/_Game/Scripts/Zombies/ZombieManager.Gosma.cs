@@ -21,13 +21,16 @@ namespace ZombieCityCleaner.Zombies
         {
             public Vector3 de, para;
             public float chega;
+            public bool acido;   // (o ácido do Longo, 15/11/2026: a mesma gosma, que também corrói e envenena)
         }
 
         class Poca
         {
             public Vector3 ponto;
             public float raio, ate;
+            public bool acido;
             public readonly HashSet<ulong> atingidos = new HashSet<ulong>();
+            public readonly Dictionary<ulong, float> queima = new Dictionary<ulong, float>();   // (o ácido: a próxima queima de cada um)
         }
 
         const float RaioDoAcertoEmCheio = 1.0f;
@@ -45,6 +48,18 @@ namespace ZombieCityCleaner.Zombies
         {
             float voo = Mathf.Clamp(Vector3.Distance(de, para) / Mathf.Max(4f, ajustes.cuspidor.velocidadeDaGosma), 0.25f, 2.5f);
             _cuspidas.Add(new Cuspida { de = de, para = para, chega = Time.time + voo });
+            GosmaRpc(de, para, voo);
+        }
+
+        /// <summary>
+        /// O ácido do Longo (anfitrião, 15/11/2026): a gosma do Long (o mesmo voo, a mesma poça, o mesmo preso em cheio), que
+        /// também corrói e envenena: em cheio, o dano e o veneno; na poça, a queima nas pernas a cada segundo
+        /// (ZombieManager.Chefes.cs).
+        /// </summary>
+        internal void LancarAcido(Vector3 de, Vector3 para, Zumbi quem)
+        {
+            float voo = Mathf.Clamp(Vector3.Distance(de, para) / Mathf.Max(4f, ajustes.cuspidor.velocidadeDaGosma), 0.25f, 2.5f);
+            _cuspidas.Add(new Cuspida { de = de, para = para, chega = Time.time + voo, acido = true });
             GosmaRpc(de, para, voo);
         }
 
@@ -108,7 +123,7 @@ namespace ZombieCityCleaner.Zombies
                 _cuspidas.RemoveAt(i);
                 Vector3 ponto = c.para;
                 if (Physics.Raycast(ponto + Vector3.up * 1.5f, Vector3.down, out var hit, 4f, 1, QueryTriggerInteraction.Ignore)) ponto = hit.point;
-                NovaPoca(ponto, ajustes.cuspidor.raioDaPoca, true);
+                NovaPoca(ponto, ajustes.cuspidor.raioDaPoca, true, c.acido);
             }
             if (agora < _proximaPoca) return;
             _proximaPoca = agora + 0.25f;
@@ -121,13 +136,14 @@ namespace ZombieCityCleaner.Zombies
                     continue;
                 }
                 NaPoca(p, false);
+                if (p.acido) AcidoNaPoca(p, agora);   // (ZombieManager.Chefes.cs)
             }
         }
 
-        void NovaPoca(Vector3 ponto, float raio, bool cuspe)
+        void NovaPoca(Vector3 ponto, float raio, bool cuspe, bool acido = false)
         {
             var c = ajustes.cuspidor;
-            var p = new Poca { ponto = ponto, raio = raio, ate = Time.time + c.tempoDaPoca };
+            var p = new Poca { ponto = ponto, raio = raio, ate = Time.time + c.tempoDaPoca, acido = acido };
             _pocas.Add(p);
             PocaRpc(ponto, raio, c.tempoDaPoca);
             // em cheio: quem estava bem onde caiu fica preso
@@ -137,7 +153,10 @@ namespace ZombieCityCleaner.Zombies
                     ref readonly var j = ref Jogadores[k];
                     Vector3 d = j.pes - ponto;
                     if (Mathf.Abs(d.y) < 1.6f && new Vector2(d.x, d.z).sqrMagnitude < RaioDoAcertoEmCheio * RaioDoAcertoEmCheio)
+                    {
                         j.jogador.PrenderNaGosma(c.tempoParaSoltar);
+                        if (acido) AcidoEmCheio(j.jogador, ponto, p);   // (o ácido do Longo: o dano e o veneno)
+                    }
                 }
             NaPoca(p, true);
             // as luzes na poça

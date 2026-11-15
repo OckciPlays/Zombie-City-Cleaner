@@ -32,7 +32,8 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>A lentidão da pedra (a velocidade e a animação).</summary>
         // (e os pregos, 11/11/2026, a etapa 5a: quem pisou no tapete anda mais devagar uns segundos, Zumbi.Armadilhas.cs; todas
         // as contas da velocidade passam por aqui)
-        float FatorDaPedra => (_m != null ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, Pedra) : 1f) * FatorDosPregos;
+        // (e o frenesi do grito do Condutor, 15/11/2026: Zumbi.Chefes.cs)
+        float FatorDaPedra => (_m != null ? Mathf.Lerp(1f, _m.ajustes.lentidaoNaPedra, Pedra) : 1f) * FatorDosPregos * FatorDoFrenesi;
 
         float _pedraVista, _proximoSol, _soltarEm = -1f, _quebrandoAte, _proximaSombra, _proximaAgonia, _longeDesde, _soltouEm = -100f;
         bool _noSol, _comPedra;
@@ -160,7 +161,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Chegou perto de alguém depois de um tempo longe: de dia e no sol, já está de pedra (ninguém viu subir).</summary>
         void ChegouDeLonge()
         {
-            if (Morto || Petrificado || _m == null || Time.time - _longeDesde < 3f || !_m.NoSol(transform.position)) return;
+            if (Morto || Petrificado || ImuneALuz || _m == null || Time.time - _longeDesde < 3f || !_m.NoSol(transform.position)) return;
             Pedra = 1f;
             _pedraVista = 1f;
             Petrificar(true);
@@ -169,7 +170,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>A cada quadro, no anfitrião, para todos os vivos (também os de longe: o relógio de soltar à noite).</summary>
         internal void SolNoServidor(float agora, float dt)
         {
-            if (Morto || _m == null || tipo == TipoDeZumbi.Brutamonte) return;   // o casco do Brutamonte não liga para o sol
+            if (Morto || _m == null || ImuneALuz) return;   // o casco do Brutamonte não liga para o sol (nem os chefes)
             if (VigiarSemComando(agora)) return;   // o sem cabeça: o relógio dele, até desligar (Zumbi.SemComando.cs)
             var a = _m.ajustes;
             if (!_m.EDia)

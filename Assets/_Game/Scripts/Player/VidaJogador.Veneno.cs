@@ -19,6 +19,10 @@ namespace ZombieCityCleaner.Player
 
         ParteDoCorpo _parteDoVeneno = ParteDoCorpo.PernaE;
         float _venenoPorSegundo, _venenoJunto, _proximaDorDoVeneno;
+        // (15/11/2026: o ácido do Longo também envenena, VidaJogador.Acido.cs; e o veneno corre também sem a fauna, pelo
+        // Update daqui: um quadro conta uma vez só)
+        bool _venenoDoAcido;
+        int _quadroDoVeneno = -1;
 
         /// <summary>
         /// Só no anfitrião: a picada da cascavel na parte (o golpe já tirou a vida dele). Verdadeiro se veio o veneno (a
@@ -33,6 +37,7 @@ namespace ZombieCityCleaner.Player
                 return false;
             }
             _parteDoVeneno = parte;
+            _venenoDoAcido = false;
             _venenoPorSegundo = Random.Range(25f, 40f) / SegundosDoVeneno;
             Veneno.Value = SegundosDoVeneno;
             _proximaDorDoVeneno = Time.time + 20f;
@@ -44,7 +49,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>No anfitrião, a cada quadro (a fauna chama): o veneno tira a vida do membro picado, de 1 em 1.</summary>
         public void CorrerVeneno(float dt)
         {
-            if (!IsServer || !IsSpawned || Veneno.Value <= 0f) return;
+            if (!IsServer || !IsSpawned || Veneno.Value <= 0f || _quadroDoVeneno == Time.frameCount) return;
+            _quadroDoVeneno = Time.frameCount;
             if (Caido.Value)
             {
                 Veneno.Value = 0f;
@@ -57,14 +63,14 @@ namespace ZombieCityCleaner.Player
                 float d = Mathf.Floor(_venenoJunto);
                 _venenoJunto -= d;
                 PorNaParte(_parteDoVeneno, EmPorcento(d));
-                ConferirAVida("Veneno de cascavel.");
+                ConferirAVida(_venenoDoAcido ? CausaDoAcido : "Veneno de cascavel.");
             }
             if (Time.time > _proximaDorDoVeneno)
             {
                 _proximaDorDoVeneno = Time.time + 30f;
                 AbalarAgora(1.5f, MotivoDaMente.Dor);
             }
-            if (Veneno.Value <= 0f) AvisarAoDono("O veneno da cascavel passou.");
+            if (Veneno.Value <= 0f) AvisarAoDono(_venenoDoAcido ? "O veneno do ácido passou." : "O veneno da cascavel passou.");
         }
     }
 }

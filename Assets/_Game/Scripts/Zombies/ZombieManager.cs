@@ -145,6 +145,7 @@ namespace ZombieCityCleaner.Zombies
         public override void OnNetworkSpawn()
         {
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
+            IncluirOsChefes();   // os chefes no fim da lista dos modelos (ZombieManager.Chefes.cs)
             PrepararCorpos();
             if (GetComponent<UI.BarraDoChefe>() == null) gameObject.AddComponent<UI.BarraDoChefe>();   // a barra do Brutamonte
             // (03/11/2026: a corrotina da partida anterior seguia rodando junto com a nova; agora só uma de cada)
@@ -189,6 +190,7 @@ namespace ZombieCityCleaner.Zombies
             _grupos.Clear();
             EsquecerOLongDaFogueira();   // ZombieManager.LongNaFogueira.cs
             EsquecerOEnterrado();   // ZombieManager.Enterrado.cs
+            EsquecerOsChefes();   // ZombieManager.Chefes.cs
         }
 
         void Update()
@@ -214,6 +216,7 @@ namespace ZombieCityCleaner.Zombies
                 }
                 PovoarEmVolta(agora);   // o mundo gerado (ZombieManager.Povoamento.cs)
                 EspeciaisNoServidor(agora);   // o Long e o Brutamonte aparecem (ZombieManager.Especiais.cs)
+                ChefesNoServidor(agora);   // os chefes: os que nascem da morte de outro, o que aparece e o que vai embora (ZombieManager.Chefes.cs)
                 BrutamonteEnterradoNoServidor(agora);   // o Brutamonte sai da terra perto de quem passa (ZombieManager.Enterrado.cs)
                 LongNaFogueira(agora);   // o Long que vem apagar a fogueira (ZombieManager.LongNaFogueira.cs)
                 GosmaNoServidor(agora);   // a gosma do Long (ZombieManager.Gosma.cs)
@@ -390,7 +393,10 @@ namespace ZombieCityCleaner.Zombies
             if (m == null || !m.IsSpawned || !m.IsServer || id < 0 || id >= MaxZumbis) return;
             var z = m._porId[id];
             if (z == null || z.Geracao != geracao || z.Morto) return;
-            if ((z.transform.position + Vector3.up * 0.9f - ponto).sqrMagnitude > 3.5f * 3.5f) return;
+            // (os chefes, de 3 a 9 m de altura, com os braços que esticam: o meio do corpo e a altura dele, 15/11/2026)
+            float tolerancia = z.EhChefe ? z.alturaDoChefe * 0.5f + 8f : 3.5f;
+            Vector3 meio = z.transform.position + Vector3.up * (z.EhChefe ? z.alturaDoChefe * 0.5f : 0.9f);
+            if ((meio - ponto).sqrMagnitude > tolerancia * tolerancia) return;
             // a direção do tiro (do olho de quem atirou ao ponto) empurra o corpo, se ele cair
             Vector3 direcao = autor != null ? ponto - (autor.transform.position + Vector3.up * 1.6f) : -z.transform.forward;
             // o limite (é co-op, mas um número absurdo não passa): o maior acerto é o carro muito rápido (500 a 110 km/h)
@@ -404,12 +410,12 @@ namespace ZombieCityCleaner.Zombies
         static int XpDoZumbi(Zumbi z) => z.Petrificado ? Habilidades.XpDaEstatua : z.tipo switch
         {
             TipoDeZumbi.Corredor => Habilidades.XpDoCorredor, TipoDeZumbi.Long => Habilidades.XpDoLong,
-            TipoDeZumbi.Brutamonte => Habilidades.XpDoBrutamonte, _ => Habilidades.XpDoOco,
+            TipoDeZumbi.Brutamonte => Habilidades.XpDoBrutamonte, TipoDeZumbi.Chefe => z.XpDoChefe, _ => Habilidades.XpDoOco,
         };
 
         static string NomeNoXp(Zumbi z) => z.Petrificado ? "estátua" : z.tipo switch
         {
-            TipoDeZumbi.Corredor => "Corredor", TipoDeZumbi.Long => "Long", TipoDeZumbi.Brutamonte => "Brutamonte", _ => "Oco",
+            TipoDeZumbi.Corredor => "Corredor", TipoDeZumbi.Long => "Long", TipoDeZumbi.Brutamonte => "Brutamonte", TipoDeZumbi.Chefe => z.NomeDoChefe, _ => "Oco",
         };
 
         internal void Golpear(IAlvoDeZumbi alvo, float dano, Vector3 de)
@@ -747,7 +753,7 @@ namespace ZombieCityCleaner.Zombies
                 return z;
             }
             if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
-            return Instantiate(modelos[modelo], _vivos);
+            return CriarDoModelo(modelo);
         }
 
         void GuardarNoPool(Zumbi z)
@@ -766,10 +772,12 @@ namespace ZombieCityCleaner.Zombies
             for (int m = 0; m < modelos.Length; m++)
             {
                 if (modelos[m] == null) continue;
-                for (int k = Pool(m).Count; k < aquecerPorModelo; k++)
+                // (os chefes, 15/11/2026: um de cada; são raros e pesados, de 10 a 20 mil triângulos)
+                int quantos = modelos[m].tipo == TipoDeZumbi.Chefe ? 1 : aquecerPorModelo;
+                for (int k = Pool(m).Count; k < quantos; k++)
                 {
                     while (!PodeAquecer) yield return null;
-                    GuardarNoPool(Instantiate(modelos[m], _vivos));
+                    GuardarNoPool(CriarDoModelo(m));
                     if (EsperarOProximoQuadro()) yield return null;
                 }
             }

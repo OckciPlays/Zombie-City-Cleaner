@@ -1253,7 +1253,9 @@ namespace ZombieCityCleaner.Player
         // um acerto num zumbi: sangue aqui na hora e a marca na mira; o acerto vai para o anfitrião no fim do disparo
         // o Oco de pedra (o sol): o tiro solta faíscas e poeira, não sangue (os outros veem um impacto "outro")
         // a pedra do sol, e o casco do Brutamonte (fora do olho): o acerto faz poeira e faíscas, sem sangue
-        static bool DePedra(Hitbox hitbox) => hitbox.zumbi != null && (hitbox.zumbi.Pedra >= 0.5f || (hitbox.zumbi.tipo == TipoDeZumbi.Brutamonte && hitbox.regiao != RegiaoDoCorpo.Olho));
+        // (e o Blindado agachado absorvendo, 15/11/2026: Zumbi.Chefes.cs)
+        static bool DePedra(Hitbox hitbox) => hitbox.zumbi != null && (hitbox.zumbi.Pedra >= 0.5f || (hitbox.zumbi.tipo == TipoDeZumbi.Brutamonte && hitbox.regiao != RegiaoDoCorpo.Olho)
+                                                                     || hitbox.zumbi.Absorvendo);
         static JogadorRede.TipoDeAcerto TipoNoZumbi(Hitbox hitbox) => DePedra(hitbox) ? JogadorRede.TipoDeAcerto.Outro : JogadorRede.TipoDeAcerto.Carne;
 
         void Carne(Hitbox hitbox, Vector3 ponto, Vector3 normal, float distancia)
@@ -1360,6 +1362,8 @@ namespace ZombieCityCleaner.Player
             _dica = null;
             // sentado num carro ou numa moto (08/11/2026, as mãos livres): o E é de quem senta (sair), não das coisas em volta
             if (rede != null && rede.Passageiro != null && rede.Passageiro.NoCarro) return;
+            // na mão de um chefe (15/11/2026): nada de E (entrar no carro ou no caiaque dali escapava da mão e deixava a cápsula ligada)
+            if (movimento != null && movimento.NaMaoDoChefe) return;
             int n = Physics.RaycastNonAlloc(cam.position, cam.forward, _acertos, alcanceDaMao, ~0, QueryTriggerInteraction.Collide);
             // em ordem de distância (o RaycastNonAlloc não ordena)
             for (int i = 1; i < n; i++)

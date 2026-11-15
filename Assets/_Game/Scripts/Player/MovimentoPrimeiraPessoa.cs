@@ -9,7 +9,7 @@ namespace ZombieCityCleaner.Player
     /// o controle. Usa as ações do projeto (Player/Move, Look, Jump, Sprint). Só fica ligado no dono.
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
-    public class MovimentoPrimeiraPessoa : MonoBehaviour
+    public partial class MovimentoPrimeiraPessoa : MonoBehaviour
     {
         public JogadorRede rede;
         [Tooltip("Pivô da câmera, na altura dos olhos.")]
@@ -139,6 +139,13 @@ namespace ZombieCityCleaner.Player
             _presoPrecisa = Mathf.Max(0.3f, tempoParaSoltar);
             _presoFeito = 0f;
         }
+
+        /// <summary>Solta da gosma na hora (15/11/2026: quem morria preso renascia ainda preso; VidaJogador.VoltarRpc).</summary>
+        public void SoltarDaGosma()
+        {
+            PresoNaGosma = false;
+            _presoFeito = 0f;
+        }
         InventarioJogador _inventario;
         VigorDoJogador _vigor;
 
@@ -184,6 +191,7 @@ namespace ZombieCityCleaner.Player
             Nadando = NadandoRapido = false;
             _naAgua = 0f;
             _mexeuNaCabeca = false;
+            LargarDoChefe(false);   // (desligado na mão de um chefe: quem desligou cuida da cápsula; MovimentoPrimeiraPessoa.Chefes.cs)
             if (_controle == null || cabeca == null) return;
             if (Agachado) Levantar(true);
             if (_abaixado > 0f)
@@ -387,6 +395,8 @@ namespace ZombieCityCleaner.Player
                 Correndo = false;
                 return;
             }
+            // na mão de um chefe (15/11/2026): vai com ela até ser solto (MovimentoPrimeiraPessoa.Chefes.cs); o olhar e a arma seguem
+            if (SeguradoPeloChefe(dt)) return;
             // preso na gosma: se debate (segurando E) até soltar
             if (PresoNaGosma)
             {

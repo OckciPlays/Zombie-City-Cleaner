@@ -329,6 +329,7 @@ namespace ZombieCityCleaner.Zombies
             }
             // as barricadas no caminho caem
             Loot.ConstrucoesNoMundo.Instancia?.QuebrarBarricadasPerto(transform.position + _direcaoDoAvanco * 0.6f, 1.6f, this);   // (e as estacas, 11/11/2026: ele leva o dano delas)
+            if (Morto) return;   // (15/11/2026: as estacas o mataram agora; o resto o tirava de Morto)
             if (!chegou) return;
             Velocidade = 0f;
             if (_bateuNaParede)

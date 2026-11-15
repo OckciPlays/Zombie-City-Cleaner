@@ -31,6 +31,7 @@ namespace ZombieCityCleaner.Zombies
                 if (z == null || z.Morto) continue;
                 float d2 = (z.transform.position - ponto).sqrMagnitude;
                 if (z.tipo == TipoDeZumbi.Brutamonte && z.FaseBruto == Zumbi.FaseDoBruto.Emergindo && d2 < 14f * 14f) brutoSaindo = true;
+                if (z.ChefeSurgindo && d2 < 25f * 25f) brutoSaindo = true;   // (um chefe saindo do corpo de outro, 15/11/2026)
                 if (d2 <= perto2 && !z.Petrificado) perto++;
                 switch (z.Atual)
                 {

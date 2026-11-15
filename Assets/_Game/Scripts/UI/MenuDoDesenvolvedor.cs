@@ -288,7 +288,7 @@ namespace ZombieCityCleaner.UI
             // tornado), os sobreviventes, o corpo, as habilidades, a fauna ou o bunker, pelas abas do canto, e, embaixo, a
             // trilha sonora (teste); as abas ficam numa faixa logo acima do painel, fora da rolagem (a Area também a cobre)
             AbrirColuna(3, coluna.xMax + 8 * u, area.y, u);
-            var zumbis = _abaDoBunker ? PainelDoBunker(u, coluna) : _abaDaFauna ? PainelDaFauna(u, coluna) : _abaDasHabilidades ? PainelDasHabilidades(u, coluna)
+            var zumbis = _abaDosChefes ? PainelDosChefes(u, coluna) : _abaDoBunker ? PainelDoBunker(u, coluna) : _abaDaFauna ? PainelDaFauna(u, coluna) : _abaDasHabilidades ? PainelDasHabilidades(u, coluna)
                        : _abaDoCorpo ? PainelDoCorpo(u, coluna) : _abaDosSobreviventes ? PainelDosSobreviventes(u, coluna)
                        : _abaDoClima ? PainelDoClima(u, coluna) : PainelDosZumbis(u, coluna);
             var trilha = PainelDaTrilha(u, zumbis);

@@ -138,7 +138,7 @@ namespace ZombieCityCleaner.Player
 
             // a fauna (12/11/2026): o veneno da cascavel e o cheiro do gambá
             if (v.Veneno.Value > 0f)
-                Por(saida, EstadoDoJogador.Envenenado, "Envenenado", "A picada da cascavel: o membro perde vida aos poucos, com dor e enjoo. O curativo não cura: passa sozinho em uns minutos.");
+                Por(saida, EstadoDoJogador.Envenenado, "Envenenado", "A picada da cascavel ou o ácido do Longo: o membro perde vida aos poucos, com dor. O curativo não cura: passa sozinho.");
             var rede = v.GetComponent<JogadorRede>();
             if (rede != null && rede.Fedor.Value > 0f)
                 Por(saida, EstadoDoJogador.Fedendo, "Fedendo", "O cheiro do gambá: os zumbis sentem de longe. Passa sozinho; na água sai bem mais rápido.");
