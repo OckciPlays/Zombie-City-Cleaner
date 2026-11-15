@@ -5,10 +5,10 @@ namespace ZombieCityCleaner.Fauna
 {
     /// <summary>
     /// O corpo de um bicho na cena: as juntas que a animação mexe (<see cref="AnimacaoDoBicho"/>) e os colisores que o tiro
-    /// acha (<see cref="ParteDoBicho"/>). Sai do modelo pronto (o Resources/Fauna/&lt;Especie&gt;_&lt;Variante&gt;, hoje só o
-    /// veado, do Blender/Fauna/familia.py) ou das caixas (os modelos básicos de todos os bichos, a pedido do Pedro em
-    /// 12/11/2026: "pode ser feito em quadrados bem básicos, apenas para diferenciar um pouco ... depois eu vou trocar todos
-    /// por outros modelos").
+    /// acha (<see cref="ParteDoBicho"/>). Sai do modelo pronto (o Resources/Fauna/Tripo/&lt;Nome&gt;: os 24 animais do Tripo do
+    /// Gustavo, desde 14/11/2026; e o Resources/Fauna/Cervo_Filhote, do Blender/Fauna/familia.py) ou das caixas (os modelos
+    /// básicos, a pedido do Pedro em 12/11/2026: "pode ser feito em quadrados bem básicos, apenas para diferenciar um pouco
+    /// ... depois eu vou trocar todos por outros modelos"; hoje o ganso, o esquilo, a cascavel e o salmão).
     /// </summary>
     public sealed class ModeloDoBicho
     {
@@ -26,6 +26,9 @@ namespace ZombieCityCleaner.Fauna
         public readonly List<Transform> asas = new List<Transform>();
         /// <summary>Os gomos da cobra (e o corpo do peixe), do primeiro ao último.</summary>
         public readonly List<Transform> gomos = new List<Transform>();
+        /// <summary>(14/11) A boca (presa na cabeça, nos eixos do bicho: a carga do castor e o salmão do urso) e a barriga
+        /// (presa no corpo: o peixe nas garras da águia). Só nos modelos prontos com as medidas; nas caixas, nulas.</summary>
+        public Transform boca, barriga;
         /// <summary>A altura do lombo (m), para a mira e os sentidos.</summary>
         public float altura;
         /// <summary>O comprimento (m).</summary>
@@ -103,11 +106,11 @@ namespace ZombieCityCleaner.Fauna
             return m;
         }
 
-        // ------------------------------------------------------------------ o modelo pronto (o veado)
+        // ------------------------------------------------------------------ o modelo pronto (os animais do Tripo e o filhote de veado)
 
         static ModeloDoBicho DoModeloPronto(Especie e, Variante v, Transform pai)
         {
-            string nome = NomeDoPronto(e, v);
+            var (nome, escala) = NomeDoPronto(e, v);
             if (nome == null) return null;
             if (!_prontos.TryGetValue(nome, out var prefab))
             {
@@ -116,7 +119,8 @@ namespace ZombieCityCleaner.Fauna
             }
             if (prefab == null) return null;
             var go = Object.Instantiate(prefab, pai, false);
-            go.name = nome;
+            go.name = prefab.name;
+            if (!Mathf.Approximately(escala, 1f)) go.transform.localScale = Vector3.one * escala;
             var m = new ModeloDoBicho { raiz = go.transform };
             var ossos = new Dictionary<string, Transform>();
             foreach (var t in go.GetComponentsInChildren<Transform>(true)) ossos[t.name] = t;
@@ -127,10 +131,28 @@ namespace ZombieCityCleaner.Fauna
             foreach (var (cima, baixo, tras) in new[] { ("Braco.L", "Antebraco.L", false), ("Braco.R", "Antebraco.R", false),
                                                          ("Coxa.L", "Perna.L", true), ("Coxa.R", "Perna.R", true) })
                 if (O(cima) != null) m.pernas.Add(new ModeloDoBicho.Perna { cima = O(cima), baixo = O(baixo), traseira = tras });
-            foreach (var n in new[] { "Cauda_1", "Cauda_2" }) if (O(n) != null) m.cauda.Add(O(n));
+            for (int i = 1; i <= 8 && O("Cauda_" + i) != null; i++) m.cauda.Add(O("Cauda_" + i));
             foreach (var n in new[] { "Orelha.L", "Orelha.R" }) if (O(n) != null) m.orelhas.Add(O(n));
+            foreach (var n in new[] { "Asa.L", "Asa.R" }) if (O(n) != null) m.asas.Add(O(n));   // a esquerda primeiro (a AnimacaoDoBicho.Ave)
             if (O("Pescoco_2") != null) m.gomos.Add(O("Pescoco_2"));   // o pescoço de cima acompanha o de baixo
             var d = Especies.De(e);
+            // os animais do Tripo: as medidas do modelo (do Blender) dão os colisores, a boca e a altura
+            var med = go.GetComponent<MedidasDoModelo>();
+            if (med != null)
+            {
+                m.altura = med.altura * escala;
+                m.comprimento = med.comprimento * escala;
+                Caixote(go.transform, med.corpoTamanho, med.corpoCentro).gameObject.AddComponent<ParteDoBicho>();
+                if (m.cabeca != null)
+                {
+                    var cab = Caixote(go.transform, med.cabecaTamanho, med.cabecaCentro);
+                    cab.transform.SetParent(m.cabeca, true);
+                    cab.gameObject.AddComponent<ParteDoBicho>().cabeca = true;
+                    m.boca = Ponto("Boca", go.transform, med.boca, m.cabeca);
+                }
+                m.barriga = Ponto("Barriga", go.transform, med.corpoCentro - Vector3.up * med.corpoTamanho.y * 0.5f, m.corpo != null ? m.corpo : go.transform);
+                return m;
+            }
             float k = Especies.Escala(e, v);
             m.altura = d.altura * k;
             m.comprimento = d.comprimento * k;
@@ -147,11 +169,47 @@ namespace ZombieCityCleaner.Fauna
             return m;
         }
 
-        static string NomeDoPronto(Especie e, Variante v) => e switch
+        /// <summary>
+        /// O prefab de cada espécie e variante (no Resources/Fauna) e a escala dele: os animais do Tripo do Gustavo
+        /// (14/11/2026) já vêm no tamanho de cada variante; o lobo e o urso adultos usam o do macho, o coiote é um só
+        /// (a fêmea e o filhote menores, pelo <see cref="Especies.Escala"/>) e os pequenos também (o filhote menor). O filhote
+        /// de veado continua o do Blender/Fauna/familia.py; o ganso, o esquilo, a cascavel e o salmão, de caixas (null).
+        /// </summary>
+        static (string nome, float escala) NomeDoPronto(Especie e, Variante v)
         {
-            Especie.Veado => v switch { Variante.Femea => "Cervo_Femea", Variante.Filhote => "Cervo_Filhote", _ => "Cervo_Macho" },
-            _ => null,
-        };
+            float Rel(Variante doModelo) => Especies.Escala(e, v) / Especies.Escala(e, doModelo);
+            string Tres(string n) => "Tripo/" + n + (v == Variante.Femea ? "_Femea" : v == Variante.Filhote ? "_Filhote" : "_Macho");
+            switch (e)
+            {
+                case Especie.Veado:
+                    return v == Variante.Filhote ? ("Cervo_Filhote", 1f) : (v == Variante.Macho ? "Tripo/Cervo_Macho" : "Tripo/Cervo_Femea", 1f);
+                case Especie.Alce: return (Tres("Alce"), 1f);
+                case Especie.Lobo: return (Tres("Lobo"), 1f);
+                case Especie.UrsoNegro: return (Tres("UrsoNegro"), 1f);
+                case Especie.UrsoPardo: return (Tres("UrsoPardo"), 1f);
+                case Especie.Coiote: return ("Tripo/Coiote", Rel(Variante.Macho));
+                case Especie.Coelho: return ("Tripo/Coelho", Rel(Variante.Adulto));
+                case Especie.Castor: return ("Tripo/Castor", Rel(Variante.Adulto));
+                case Especie.Guaxinim: return ("Tripo/Guaxinim", Rel(Variante.Adulto));
+                case Especie.Gamba: return ("Tripo/Gamba", Rel(Variante.Adulto));
+                case Especie.Pato: return ("Tripo/Pato", Rel(Variante.Adulto));
+                case Especie.Aguia: return ("Tripo/Aguia", Rel(Variante.Adulto));
+                case Especie.Urubu: return ("Tripo/Urubu", Rel(Variante.Adulto));
+                case Especie.Peru: return ("Tripo/Peru", Rel(Variante.Adulto));
+                case Especie.Sapo: return ("Tripo/Sapo", Rel(Variante.Adulto));
+                default: return (null, 1f);
+            }
+        }
+
+        /// <summary>Um ponto preso num osso, nos eixos do bicho: posto no espaço da raiz e passado para o osso.</summary>
+        static Transform Ponto(string nome, Transform raiz, Vector3 local, Transform pai)
+        {
+            var t = new GameObject(nome).transform;
+            t.SetParent(raiz, false);
+            t.localPosition = local;
+            t.SetParent(pai, true);
+            return t;
+        }
 
         static BoxCollider Caixote(Transform pai, Vector3 tamanho, Vector3 local)
         {

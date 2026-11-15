@@ -11,13 +11,46 @@ namespace ZombieCityCleaner.Fauna
     /// Desde a etapa 5 (13/11/2026, a pedido: "toda vez que um urso ver um salmão, vai caçar o salmão"), o urso olha a água
     /// de tempo em tempo e, vendo um salmão a até 35 m, vai pescar, de dia ou de noite; pegou, come sentado na margem, e os
     /// filhotes sentam do lado e comem junto. De barriga cheia, fica de 2 a 4 minutos sem pescar.
+    /// Desde 14/11/2026 (a pedido: "sem filhotes ele come. Com filhotes ele dá a comida"): sozinho, o urso deita de barriga
+    /// na margem e come com o peixe entre as patas; a mãe com filhotes perto larga o salmão no chão na frente deles e deita
+    /// do lado, olhando, e os filhotes deitam em volta do peixe e comem (se nenhum chegar em 25 s, ela mesma come).
     /// </summary>
     public sealed partial class Bicho
     {
-        bool _pescando, _temPontoDePesca, _temMargem;
-        Bicho _salmao, _peixeNaBoca;
-        float _pescaAte, _proximaPesca, _proximaTentativa, _trocarPonto, _comerAte, _patadaNaAguaAte, _chegarAte;
-        Vector3 _pontoDePesca, _margem;
+        bool _pescando, _temPontoDePesca, _temMargem, _largouOPeixe;
+        Bicho _salmao, _peixeNaBoca, _levadoPor;
+        float _pescaAte, _proximaPesca, _proximaTentativa, _trocarPonto, _comerAte, _patadaNaAguaAte, _chegarAte, _filhoteDesde, _esperarFilhotesAte;
+        Vector3 _pontoDePesca, _margem, _ondeLargou;
+
+        /// <summary>(14/11) O salmão na boca (ou nas patas) de um urso: não cai como os outros corpos.</summary>
+        internal bool Levado => _levadoPor != null && _levadoPor._peixeNaBoca == this;
+
+        /// <summary>(14/11) O salmão que a mãe largou para os filhotes (null: não largou).</summary>
+        internal Bicho PeixeDosFilhotes => _largouOPeixe ? _peixeNaBoca : null;
+
+        /// <summary>(14/11) Um filhote chegou no peixe: começa a contar o tempo de comer.</summary>
+        internal void FilhoteChegou(float agora)
+        {
+            if (_filhoteDesde < 0f) _filhoteDesde = agora;
+        }
+
+        bool FilhotesPerto(float raio)
+        {
+            if (Grupo == null) return false;
+            foreach (var b in Grupo.membros)
+                if (b != null && b != this && !b.Morto && b.Variante == Variante.Filhote && Vector3.Distance(b.transform.position, transform.position) < raio)
+                    return true;
+            return false;
+        }
+
+        // o ponto do chão embaixo da boca (no modelo pronto, a boca de verdade)
+        Vector3 ChaoDaBoca(float aFrente)
+        {
+            Vector3 b = Modelo != null && Modelo.boca != null ? Modelo.boca.position : transform.position + transform.forward * Dados.comprimento * Escala * 0.45f;
+            Vector3 q = b + transform.forward * aFrente;
+            q.y = Chao(q, out _) + 0.02f;
+            return q;
+        }
 
         /// <summary>O F1: este urso vai pescar agora (o cardume mais perto).</summary>
         internal void PescarAgora(FaunaDoMundo f)
@@ -29,6 +62,28 @@ namespace ZombieCityCleaner.Fauna
             _pescaAte = Time.time + 120f;
             _temPontoDePesca = false;
             _proximaTentativa = Time.time + 3f;
+        }
+
+        /// <summary>
+        /// (14/11) O F1: pega agora o salmão mais perto (a até 60 m) e leva para comer na margem (sozinho, come deitado;
+        /// com filhotes, larga o peixe para eles). Sem notar ninguém por 90 s, como na pesca do F1.
+        /// </summary>
+        internal bool PegarSalmaoAgora(FaunaDoMundo f)
+        {
+            if (Variante == Variante.Filhote) return false;
+            if (_peixeNaBoca != null) return true;
+            var s = f.SalmaoPerto(transform.position, 60f);
+            if (s == null) return false;
+            f.Matar(s, null, false);
+            _peixeNaBoca = s;
+            s._levadoPor = this;
+            _pescando = true;
+            _pescaAte = Time.time + 120f;
+            _temMargem = false;
+            _largouOPeixe = false;
+            _comerAte = 0f;
+            Distrair(Time.time + 90f);
+            return true;
         }
 
         /// <summary>No ramo calmo do urso: pescar (ou começar a pescar). Falso: não está pescando.</summary>
@@ -52,23 +107,42 @@ namespace ZombieCityCleaner.Fauna
             {
                 // pegou: leva até a margem e come
                 if (!_temMargem) _temMargem = FaunaDoMundo.PontoNaMargem(p, 40f, 1f, 5f, out _margem);
-                if (_temMargem && Vector3.Distance(Plano(p), Plano(_margem)) > 1.5f)
+                if (!_largouOPeixe && _comerAte <= 0f && _temMargem && Vector3.Distance(Plano(p), Plano(_margem)) > 1.5f)
                 {
                     Estado = EstadoDoBicho.Andando;
                     Ir(_margem, Dados.andar * 1.5f);
                     return true;
                 }
-                // (5a) sentado na margem, comendo; os filhotes vêm comer junto (PensarFilhoteDeUrso)
-                Estado = EstadoDoBicho.Sentado;
                 _temDestino = false;
                 _velAlvo = 0f;
                 _podeMolhar = false;
-                if (_comerAte <= 0f) _comerAte = agora + Random.Range(18f, 32f);
-                if (agora > _comerAte)
+                // (14/11) com filhotes perto, a mãe larga o peixe na frente deles e deita do lado, olhando (os filhotes vêm
+                // comer: PensarFilhoteDeUrso); sozinho, ou se nenhum filhote chegou em 25 s, deita e come entre as patas
+                if (!_largouOPeixe && _comerAte <= 0f && FilhotesPerto(40f))
+                {
+                    _largouOPeixe = true;
+                    _filhoteDesde = -1f;
+                    _esperarFilhotesAte = agora + 25f;
+                    _ondeLargou = ChaoDaBoca(0.3f);
+                }
+                if (_largouOPeixe && ((_filhoteDesde < 0f && agora > _esperarFilhotesAte) || !FilhotesPerto(40f))) _largouOPeixe = false;
+                if (_largouOPeixe)
+                {
+                    Estado = EstadoDoBicho.Deitado;
+                    Olhar(_ondeLargou);
+                    if (_comerAte <= 0f && _filhoteDesde >= 0f) _comerAte = agora + Random.Range(25f, 40f);
+                }
+                else
+                {
+                    Estado = EstadoDoBicho.DeitadoComendo;
+                    if (_comerAte <= 0f) _comerAte = agora + Random.Range(18f, 32f);
+                }
+                if (_comerAte > 0f && agora > _comerAte)
                 {
                     f.Sumir(_peixeNaBoca);
                     _peixeNaBoca = null;
                     _comerAte = 0f;
+                    _largouOPeixe = false;
                     PararDePescar(agora);
                     Estado = EstadoDoBicho.Andando;
                     _proximaPesca = agora + Random.Range(120f, 240f);   // barriga cheia
@@ -134,7 +208,9 @@ namespace ZombieCityCleaner.Fauna
                 {
                     f.Matar(perto, null, false);
                     _peixeNaBoca = perto;
+                    perto._levadoPor = this;
                     _temMargem = false;
+                    _largouOPeixe = false;
                 }
             }
             return true;
@@ -156,6 +232,7 @@ namespace ZombieCityCleaner.Fauna
             _podeMolhar = false;
             _peixeNaBoca = null;
             _comerAte = 0f;
+            _largouOPeixe = false;
         }
 
         // o ponto no raso (de 0,3 a 0,9 m) entre o urso e o cardume, o mais perto do cardume
@@ -181,21 +258,26 @@ namespace ZombieCityCleaner.Fauna
             return false;
         }
 
-        /// <summary>A mãe ursa está sentada comendo o salmão (o filhote vem comer junto).</summary>
-        internal bool ComendoOSalmao => _peixeNaBoca != null && Estado == EstadoDoBicho.Sentado;
-
-        // o salmão na boca: segue a cabeça do urso (as cópias recebem a posição dele pela rede); sentado, fica nas patas
+        // o salmão na boca: segue a cabeça do urso (as cópias recebem a posição dele pela rede); (14/11) largado para os
+        // filhotes, fica no chão onde a mãe largou; comendo deitado, no chão embaixo da boca (entre as patas)
         void Levar(Bicho peixe)
         {
             if (peixe == null) return;
-            if (Estado == EstadoDoBicho.Sentado)
+            if (_largouOPeixe)
             {
-                Vector3 patas = transform.position + transform.forward * Dados.comprimento * Escala * 0.2f + Vector3.up * Altura * 0.55f;
-                peixe.transform.SetPositionAndRotation(patas, Quaternion.LookRotation(transform.right));
+                peixe.transform.SetPositionAndRotation(_ondeLargou, Quaternion.LookRotation(transform.right));
                 return;
             }
-            Vector3 boca = Modelo != null && Modelo.cabeca != null ? Modelo.cabeca.position : transform.position + transform.forward * Dados.comprimento * Escala * 0.5f + Vector3.up * Altura;
-            peixe.transform.SetPositionAndRotation(boca + transform.forward * 0.25f - Vector3.up * 0.1f, Quaternion.LookRotation(transform.right));
+            if (Estado == EstadoDoBicho.DeitadoComendo)
+            {
+                peixe.transform.SetPositionAndRotation(ChaoDaBoca(0.05f), Quaternion.LookRotation(transform.right));
+                return;
+            }
+            // (14/11) nos modelos prontos, a boca de verdade; nas caixas, um pouco à frente e abaixo da cabeça
+            Vector3 boca = Modelo != null && Modelo.boca != null ? Modelo.boca.position
+                : (Modelo != null && Modelo.cabeca != null ? Modelo.cabeca.position : transform.position + transform.forward * Dados.comprimento * Escala * 0.5f + Vector3.up * Altura)
+                  + transform.forward * 0.25f - Vector3.up * 0.1f;
+            peixe.transform.SetPositionAndRotation(boca, Quaternion.LookRotation(transform.right));
         }
     }
 }

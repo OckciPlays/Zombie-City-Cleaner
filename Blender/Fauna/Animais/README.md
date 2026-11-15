@@ -2,8 +2,14 @@
 
 Os 24 animais feitos no Tripo, montados no Blender pelo `Docs/20-Fauna-Modelos-e-Animacoes.md` (da develop):
 o tamanho de verdade, olhando para -Y (a convenção dos cervos do `Blender/Fauna`), o esqueleto com os nomes do Docs/20
-e as ações de cada espécie. **Ainda não foram para a Unity**: o export, os prefabs e o `ModelosDosBichos` ficam para
-depois da revisão.
+e as ações de cada espécie. **Na Unity desde 14/11/2026** (a pedido do Pedro: "pode ir para a unity"): o
+`exportar_unity.py` exporta cada bicho para `Assets/_Game/Art/Fauna/Tripo/` (o FBX com as ações como takes, a textura e o
+`Medidas.json`), e o menu da Unity **Zombie City Cleaner > Fauna > Montar os animais do Tripo** monta os prefabs. A
+animação no jogo ainda é a do código; as ações daqui entram na fase 2. O passo a passo e o que foi testado estão no
+`Docs/20-Fauna-Modelos-e-Animacoes.md` (seção 6) e no `Docs/19-Fauna.md`.
+
+- `exportar_unity.py`: `blender -b --factory-startup Animais.blend --python exportar_unity.py -- <saída> [<Nome> ...]`
+  (com a Unity fechada; não salva o `.blend`).
 
 - `Animais.blend`: os 24 bichos em fileiras, com 442 ações (cada uma uma faixa de NLA muda; a ativa é a de parado). Para
   ver uma ação, selecione o esqueleto e escolha a ação no Action Editor. As texturas ficam em `Texturas/` (caminhos

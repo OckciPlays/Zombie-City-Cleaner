@@ -6,10 +6,13 @@ animação: o contrato com o código, o que cada bicho faz e as poses que cada u
 
 ## 1. Como está hoje
 
-- **Os modelos:** só os três cervos (o macho, a fêmea e o filhote) vêm do Blender (`Blender/Fauna/familia.py`, `cervo.py`,
-  `formas.py`, `malhas.py`; o menu da Unity **Zombie City Cleaner > Fauna > Montar os cervos**, `Editor/MontagemDaFauna.cs`,
-  transforma os FBX em prefabs). Todos os outros bichos são **caixas provisórias** montadas no código
-  (`ModelosDosBichos.DasCaixas`), a pedido do Pedro: "depois eu vou trocar todos por outros modelos".
+- **Os modelos (desde 14/11/2026):** os 24 animais do Tripo do Gustavo (`Blender/Fauna/Animais/Animais.blend`), pelo
+  `Blender/Fauna/Animais/exportar_unity.py` (os FBX, as texturas e o `Medidas.json` em `Assets/_Game/Art/Fauna/Tripo/`)
+  e pelo menu **Zombie City Cleaner > Fauna > Montar os animais do Tripo** (`Editor/MontagemDosAnimais.cs`: os prefabs em
+  `Art/Fauna/Resources/Fauna/Tripo/`). O filhote de veado ainda é o do Blender antigo (`Blender/Fauna/familia.py`, o menu
+  **Montar os cervos**); o ganso, o esquilo, a cascavel e o salmão ainda são **caixas provisórias**
+  (`ModelosDosBichos.DasCaixas`). O que foi feito e testado está em `Docs/19-Fauna.md` ("Os animais do Tripo do Gustavo
+  na Unity").
 - **A animação é procedural** (`Fauna/AnimacaoDoBicho.cs`): não há Animator nem clipes. A cada quadro o código gira os
   ossos (o corpo, o pescoço, a cabeça, as pernas, a cauda, as orelhas, as asas, os gomos) a partir da pose de repouso, pela
   velocidade e pelo estado do bicho. Por isso um modelo novo **com os ossos nos nomes certos** já sai andando, correndo,
@@ -24,8 +27,9 @@ animação: o contrato com o código, o que cada bicho faz e as poses que cada u
 ## 2. O contrato do modelo (o que o código espera)
 
 - **O prefab:** em `Assets/_Game/Art/Fauna/Resources/Fauna/<Nome>.prefab` (o código carrega com
-  `Resources.Load("Fauna/<Nome>")`). O nome de cada espécie e variante sai de `ModelosDosBichos.NomeDoPronto` (hoje só
-  `Cervo_Macho`, `Cervo_Femea`, `Cervo_Filhote`); cada bicho novo ganha uma linha ali. Sem o prefab, o bicho sai de caixas.
+  `Resources.Load("Fauna/<Nome>")`; os do Tripo em `Fauna/Tripo/<Nome>`). O nome e a escala de cada espécie e variante
+  saem de `ModelosDosBichos.NomeDoPronto` (a escala só quando um modelo serve a outra variante, como o coiote); cada bicho
+  novo ganha uma linha ali. Sem o prefab, o bicho sai de caixas.
 - **A orientação e a escala:** a frente em **+Z**, o alto em **+Y**, em **metros**, o pivô **no chão, entre as patas**. O
   código não escala o prefab: o adulto vem no tamanho real (a tabela da seção 3), e a fêmea e o filhote são prefabs à
   parte (como os cervos) ou o mesmo modelo menor (a escala de cada variante: `Especies.Escala`, a fêmea de 0,87 a 0,92 e o
@@ -50,13 +54,16 @@ animação: o contrato com o código, o que cada bicho faz e as poses que cada u
   fechadas. Os giros são no espaço do bicho: "levantar" em volta do eixo da direita (+ = a ponta para baixo e para trás),
   "virar" em volta do alto e "rolar" em volta da frente.
 - **Os colisores:** o código põe dois (`ParteDoBicho`): a caixa do corpo na raiz e a caixa da cabeça presa no osso
-  `Cabeca` (o tiro na cabeça vale mais). Os tamanhos hoje são os do cervo; cada bicho novo precisa dos dele (é só me passar
-  o tamanho do corpo e da cabeça, ou o Claude do Gustavo ajusta em `DoModeloPronto`). O código põe todo o modelo na camada
-  **14 (Fauna)**.
+  `Cabeca` (o tiro na cabeça vale mais). Desde 14/11 eles saem das medidas do modelo (`Fauna/MedidasDoModelo` no prefab,
+  vindo do `Medidas.json` do export): o corpo pelos vértices do tronco e a cabeça pelos da cabeça e da mandíbula. Sem as
+  medidas (o filhote de veado antigo), valem os tamanhos do cervo. O código põe todo o modelo na camada **14 (Fauna)**.
+- **As asas e a cauda:** as asas que a animação bate são o `Asa.L` e o `Asa.R` (o `Asa_2` e o `Asa_3` acompanham); a
+  cauda pega `Cauda_1` … `Cauda_n`, quantos houver.
 - **O material:** um só, URP Lit fosco, com uma textura pequena pintada, sem filtro e sem mipmap (cada face pega a sua cor:
   o estilo facetado do veado). Os olhos que brilham são duas esferas que o código acende na frente do osso da cabeça.
 - **A carga:** o salmão na boca do urso e o galho na boca do castor ficam presos no osso `Cabeca` (um pouco à frente e
-  abaixo dele: a boca); o peixe da águia fica no corpo (nas garras). O urso sentado segura o peixe nas patas da frente.
+  abaixo dele: a boca); o peixe da águia fica no corpo (nas garras). O urso come deitado, com o peixe no chão entre as
+  patas da frente (14/11).
 - **O orçamento** (do plano aprovado): os grandes com ~3.000 triângulos (o Oco tem ~5.000), os médios com ~1.500, os
   pequenos de 300 a 800. Os vaga-lumes são partículas (não precisam de modelo).
 
@@ -108,8 +115,9 @@ a cobra e o peixe não).
 - **Ursos:** andam fuçando o chão; galopam no ataque; no aviso **ficam de pé nas patas de trás**, bufando e batendo os
   dentes; às vezes fazem o **falso ataque** (correm e param a 3–5 m); atacam com a **patada** (forte, com o empurrão que
   derruba); **pescam**: de pé no raso, de cabeça baixa olhando a água, e de tempo em tempo **a patada na água** (o
-  respingo); pegando o salmão, **levam na boca** até a margem e **comem sentados**, com o peixe nas patas; **os filhotes
-  sentam do lado e comem junto**; dormem **deitados na caverna** (dia e noite, com os filhotes); **esperam de pé embaixo**
+  respingo); pegando o salmão, **levam na boca** até a margem; **sozinho, come deitado**, com o peixe entre as patas; **a
+  mãe com filhotes larga o peixe para eles** e deita do lado, olhando, e **os filhotes deitam em volta do peixe e
+  comem** (14/11, a pedido do Pedro); dormem **deitados na caverna** (dia e noite, com os filhotes); **esperam de pé embaixo**
   de quem subiu num lugar alto (não alcançam) e depois desistem; nadam. O filhote órfão fica perto da mãe morta e chora.
 - **Coelho:** pasta; foge em **zigue-zague**; o guincho quando é pego.
 - **Castor:** nada (só a cabeça fora) e **mergulha**; assustado, **bate a cauda na água** (o estalo) e some embaixo d'água;
@@ -136,7 +144,7 @@ a cobra e o peixe não).
 ## 5. Como o jogo escolhe a pose (e o que vai pela rede)
 
 - **O estado de cada bicho** (`EstadoDoBicho`, em `Bicho.cs`): Pastando, Andando, Alerta, Fugindo, Investindo, Morto,
-  Deitado, Sentado. **Vai pela rede em 3 bits** (o anfitrião pensa; os clientes recebem a posição, o giro, o estado, a
+  Deitado, DeitadoComendo (o urso e os filhotes comendo o salmão; até 14/11, Sentado). **Vai pela rede em 3 bits** (o anfitrião pensa; os clientes recebem a posição, o giro, o estado, a
   velocidade e os bits de ferido, carneado, alfa e carregando). Os 8 valores já estão todos usados: um estado novo pede
   mudar a mensagem "ZCC.Fauna" (`FaunaDoMundo.Rede.cs`) e a `VersaoDaRede`.
 - **A pose sai do estado, da velocidade e da posição** (`Bicho.Animar`), em todas as máquinas:
@@ -148,7 +156,7 @@ a cobra e o peixe não).
   | Alerta | Alerta (o urso e os trepadores ficam de pé; o lobo e o coiote, de cabeça baixa: a espreita) |
   | Correndo | Fugindo, ou Investindo em movimento |
   | Atacando | Investindo parado (a cabeçada, o bote, a patada; a patada na água do urso pescando também) |
-  | Deitado / Morto / Sentado | os estados de mesmo nome |
+  | Deitado / Morto / DeitadoComendo | os estados de mesmo nome |
   | Nadando | o quadrúpede onde não dá pé (pela fundura da água na posição) |
   | Voando | a ave acima de 0,7 m do chão ou da água |
 
@@ -162,14 +170,15 @@ a cobra e o peixe não).
 
 ## 6. Para ligar um modelo novo no jogo
 
-1. No Blender: o modelo no tamanho real, os ossos na convenção da seção 2, a pose de repouso neutra, na mesma orientação
-   dos cervos (em `cervo.py` o focinho fica para +X) e com o mesmo preset de exportação (`Blender/Fauna/familia.py`:
-   `axis_forward="-Z"`, `axis_up="Y"`, `apply_scale_options="FBX_SCALE_ALL"`, sem leaf bones, `primary_bone_axis="Y"`,
-   `secondary_bone_axis="X"`, sem animação assada); o FBX em `Assets/_Game/Art/Fauna/`. Conferir no prefab que a frente do
-   bicho ficou em +Z da Unity. Os cervos têm mais ossos (a pelve, a coluna, as canelas): só os da tabela são mexidos pela
-   animação, e os outros podem existir à vontade.
-2. Na Unity: o prefab em `Art/Fauna/Resources/Fauna/<Nome>.prefab` (o menu de montar os cervos é o modelo a seguir).
-3. No código: o nome em `ModelosDosBichos.NomeDoPronto` e os tamanhos dos dois colisores em `DoModeloPronto`.
+1. No Blender: o bicho no `Animais.blend` (a malha `<Nome>`, o esqueleto `<Nome>_Esqueleto` e as ações como faixas de
+   NLA `<Nome>_<Ação>`), no tamanho real, os ossos na convenção da seção 2, olhando para -Y. O export (com a Unity
+   fechada: os dois juntos não cabem na memória do PC do Pedro):
+   `blender -b --factory-startup Animais.blend --python exportar_unity.py -- <repo>/Assets/_Game/Art/Fauna/Tripo [<Nome> ...]`
+   (sem nomes, todos). Ele usa o preset dos cervos (`axis_forward="-Z"`, `axis_up="Y"`, `FBX_SCALE_ALL`, sem leaf bones)
+   e atualiza o `Medidas.json`.
+2. Na Unity: o menu **Zombie City Cleaner > Fauna > Montar os animais do Tripo** (lê o `Medidas.json`, monta os prefabs
+   e escreve no Console se algum osso ficou longe do lugar do Blender).
+3. No código: a linha do bicho em `ModelosDosBichos.NomeDoPronto` (os colisores e a altura já vêm das medidas).
 4. Testar pelo F1 (o menu do desenvolvedor, a aba Fauna): **"Fila de todos"** põe um de cada espécie parado em fila na
    frente do jogador (para ver os modelos lado a lado), e os botões de cada espécie põem um grupo a 18 m (para ver a
    animação: andar, fugir, comer). "Matar o mais perto" mostra a pose de morto e a carcaça.

@@ -5335,9 +5335,12 @@ MonoBehaviour criado pelo `VigiaDaFauna`), a mensagem "ZCC.Fauna" de 13 bytes po
 `VersaoDaRede` 22), a mente (o rebanho, o alerta, a fuga, a investida do alfa, o ferido sangrando), os sentidos (faro com
 o vento, ouvido, visão, os zumbis) e o povoamento por região de 512 m (cai com a caça até 15% e volta em ~1 dia; no save).
 A caça: o tiro e o golpe (`ArmaJogador.Fauna.cs`), a carcaça com a faca na mão (segure E), a carne crua, a assada (na
-fogueira), o couro e a gordura (`Loot/ItensDaCaca.cs`: modelos provisórios feitos no Play). Os cervos vêm do Blender
-(`Blender/Fauna/familia.py`, o menu Zombie City Cleaner > Fauna > Montar os cervos); o resto são caixas, até o Pedro
-trocar os modelos. A camada 14 é a Fauna. O F1 tem a aba Fauna (pôr um grupo distraído, a fila de todos, matar, ferir).
+fogueira), o couro e a gordura (`Loot/ItensDaCaca.cs`: modelos provisórios feitos no Play). Desde 14/11 os modelos são
+os 24 animais do Tripo do Gustavo (`Blender/Fauna/Animais/exportar_unity.py` exporta do `Animais.blend` para
+`Art/Fauna/Tripo/`; o menu Zombie City Cleaner > Fauna > Montar os animais do Tripo monta os prefabs em
+`Art/Fauna/Resources/Fauna/Tripo/`, com as medidas dos colisores no `Fauna/MedidasDoModelo`); o filhote de veado ainda é
+o do `Blender/Fauna/familia.py` e o ganso, o esquilo, a cascavel e o salmão, caixas. A animação continua a do código (as
+ações do Gustavo estão nos FBX, sem importar, até a fase 2). A camada 14 é a Fauna. O F1 tem a aba Fauna (pôr um grupo distraído, a fila de todos, matar, ferir).
 **A etapa 2** (os predadores): o `Especies.Papel` (presa, matilha, urso) escolhe a mente; a matilha (`Bicho.Matilha.cs`)
 espreita, caça as presas e come na carcaça (o `Bicho.Restante`), e à noite cerca quem está ferido ou sozinho e morde um de
 cada vez (o fogo segura na beira; matar o alfa desfaz a matilha); o urso (`Bicho.Urso.cs`) avisa de pé, às vezes finge e
@@ -5360,7 +5363,8 @@ família nos riachos com a represa (`FaunaDoMundo.Rios.cs`, no save junto da toc
 boiam nos rios; o lixo da Woodcreek à vista (`LixoDaCidade.cs`: a lata, as sacolas e a caçamba), que o guaxinim
 revira (na cidade, de dia também; o barulho chama os zumbis perto); o esquilo sobe nas árvores sozinho. O sangramento
 dos bichos conta o tempo de verdade (quem investia sangrava 4 vezes mais rápido).
-**A etapa 5** (13/11): a caça ao ver (a cobra e o sapo, o urso e o salmão, comendo sentado com os filhotes, o sapo e o
+**A etapa 5** (13/11): a caça ao ver (a cobra e o sapo, o urso e o salmão: desde 14/11 ele come deitado e, com filhotes,
+larga o peixe para eles, que deitam em volta e comem; o estado 7 é o `DeitadoComendo`, antes `Sentado`; o sapo e o
 vaga-lume com 1 minuto de espera); os lugares dos bichos (`FaunaDoMundo.Lugares.cs`, `LugaresNaTela.cs`: as cavernas
 dos ursos, de entrar, as tocas dos coiotes e os brejos, num sorteio fixo, sem rede e sem save); o veado no farol, o
 atropelamento dos bichos (`Carro.Atropelar`) e o filhote órfão (`Bicho.Futuro.cs`, o gancho de domar). A `VersaoDaRede` é 27.

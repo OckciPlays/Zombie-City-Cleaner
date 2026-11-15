@@ -207,7 +207,7 @@ namespace ZombieCityCleaner.Fauna
                     }
                     if (d < 170f || b.Passagem) b.Andar(dt, agora);   // (o V dos gansos nasce longe e vem)
                 }
-                else if (b.Morto) b.Cair(dt);   // o corpo no ar cai (a ave abatida, o peru no galho)
+                else if (b.Morto && !b.Levado) b.Cair(dt);   // o corpo no ar cai (a ave abatida, o peru no galho; 14/11: não o salmão do urso)
                 if (d < 140f) b.Animar(dt);
             }
             ArrumarGrupos();
@@ -518,8 +518,9 @@ namespace ZombieCityCleaner.Fauna
         }
 
         /// <summary>
-        /// A fila do F1: um de cada espécie (e os três cervos), lado a lado a ~9 m na frente do jogador, de lado e parados
-        /// (não pensam nem andam), para ver os modelos. Tirar todos limpa.
+        /// A fila do F1: um de cada espécie e variante (14/11: os animais do Tripo), lado a lado na frente do jogador, os
+        /// grandes a ~11 m e os pequenos a ~6 m, de lado e parados (não pensam nem andam), para ver os modelos. Tirar todos
+        /// limpa.
         /// </summary>
         public string FilaDeTodos(JogadorRede j)
         {
@@ -528,25 +529,44 @@ namespace ZombieCityCleaner.Fauna
             frente.y = 0f;
             frente = frente.sqrMagnitude > 0.01f ? frente.normalized : Vector3.forward;
             Vector3 lado = Vector3.Cross(Vector3.up, frente);
-            var lista = new List<(Especie e, Variante v)> { (Especie.Veado, Variante.Macho), (Especie.Veado, Variante.Femea), (Especie.Veado, Variante.Filhote) };
+            var grandes = new List<(Especie e, Variante v)>();
+            var pequenos = new List<(Especie e, Variante v)>();
             for (int i = 0; i < Especies.Quantas; i++)
-                if ((Especie)i != Especie.Veado) lista.Add(((Especie)i, (Especie)i == Especie.Alce ? Variante.Macho : Variante.Adulto));
-            float total = 0f;
-            foreach (var (e, v) in lista) total += Mathf.Max(0.4f, Especies.De(e).comprimento * Especies.Escala(e, v)) + 0.6f;
-            float x = -total * 0.5f, giro = Quaternion.LookRotation(lado).eulerAngles.y;
-            int n = 0;
-            foreach (var (e, v) in lista)
             {
-                float largura = Mathf.Max(0.4f, Especies.De(e).comprimento * Especies.Escala(e, v)) + 0.6f;
-                var b = Nascer(e, v, j.transform.position + frente * 9f + lado * (x + largura * 0.5f), giro, null);
-                x += largura;
-                if (b == null) continue;
-                b.Exposto = true;
-                b.Estado = EstadoDoBicho.Andando;
-                n++;
+                var e = (Especie)i;
+                foreach (var v in VariantesDaFila(e)) (Especies.De(e).altura >= 0.55f ? grandes : pequenos).Add((e, v));
             }
-            return $"{n} bichos parados em fila a uns 9 m na frente ({total:0} m de ponta a ponta).";
+            float giro = Quaternion.LookRotation(lado).eulerAngles.y, maior = 0f;
+            int n = 0;
+            foreach (var (lista, distancia) in new[] { (grandes, 11f), (pequenos, 6f) })
+            {
+                float total = 0f;
+                foreach (var (e, v) in lista) total += Mathf.Max(0.4f, Especies.De(e).comprimento * Especies.Escala(e, v)) + 0.6f;
+                maior = Mathf.Max(maior, total);
+                float x = -total * 0.5f;
+                foreach (var (e, v) in lista)
+                {
+                    float largura = Mathf.Max(0.4f, Especies.De(e).comprimento * Especies.Escala(e, v)) + 0.6f;
+                    var b = Nascer(e, v, j.transform.position + frente * distancia + lado * (x + largura * 0.5f), giro, null);
+                    x += largura;
+                    if (b == null) continue;
+                    b.Exposto = true;
+                    b.Estado = EstadoDoBicho.Andando;
+                    n++;
+                }
+            }
+            return $"{n} bichos parados em duas fileiras (os grandes a uns 11 m, os pequenos a uns 6 m; {maior:0} m de ponta a ponta).";
         }
+
+        /// <summary>As variantes que nascem no jogo (a fila do F1 mostra todas).</summary>
+        static Variante[] VariantesDaFila(Especie e) => e switch
+        {
+            Especie.Veado or Especie.Alce or Especie.UrsoNegro or Especie.UrsoPardo => new[] { Variante.Macho, Variante.Femea, Variante.Filhote },
+            Especie.Lobo => new[] { Variante.Macho, Variante.Femea, Variante.Adulto, Variante.Filhote },
+            Especie.Coiote => new[] { Variante.Macho, Variante.Adulto },
+            Especie.Ganso => new[] { Variante.Macho, Variante.Femea },
+            _ => new[] { Variante.Adulto },
+        };
 
         public string MatarOMaisPerto(JogadorRede j, bool so_ferir)
         {
@@ -625,7 +645,7 @@ namespace ZombieCityCleaner.Fauna
         {
             EstadoDoBicho.Pastando => "pastando", EstadoDoBicho.Andando => "andando", EstadoDoBicho.Alerta => "em alerta",
             EstadoDoBicho.Fugindo => "fugindo", EstadoDoBicho.Investindo => "investindo", EstadoDoBicho.Morto => "morto",
-            EstadoDoBicho.Sentado => "sentado comendo",
+            EstadoDoBicho.DeitadoComendo => "deitado comendo",
             _ => "deitado",
         };
 

@@ -141,5 +141,25 @@ namespace ZombieCityCleaner.Fauna
                 }
             return $"{peixes} salmões no raso e um urso-pardo indo pescar (sem notar você por 2 min).";
         }
+
+        /// <summary>
+        /// (14/11) O F1: o urso adulto mais perto (a até 80 m) pega um salmão agora e vai comer na margem: sozinho, come
+        /// deitado; a mãe com filhotes larga o peixe para eles (a pesca de verdade depende da sorte da patada).
+        /// </summary>
+        public string UrsoPegaOSalmao(JogadorRede j)
+        {
+            if (!_servidor || j == null) return "Só o anfitrião.";
+            Bicho urso = null;
+            float m = 80f;
+            foreach (var b in _ativos)
+            {
+                if (b == null || b.Morto || b.Dados.papel != Papel.Urso || b.Variante == Variante.Filhote) continue;
+                float d = Vector3.Distance(b.transform.position, j.transform.position);
+                if (d < m) { m = d; urso = b; }
+            }
+            if (urso == null) return "Nenhum urso adulto a até 80 m (use \"Urso pescando\" antes).";
+            if (!urso.PegarSalmaoAgora(this)) return "Nenhum salmão a até 60 m do urso.";
+            return $"Pegou um salmão ({urso.Dados.NomeDaVariante(urso.Variante)}): vai comer na margem.";
+        }
     }
 }

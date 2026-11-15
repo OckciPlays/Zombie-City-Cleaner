@@ -9,8 +9,8 @@ carcaça, carnear com a faca, assar na fogueira) e os peixes americanos. O plano
    águia (a seção da etapa 3, abaixo);
 4. **a noite e os detalhes** (feita, 12/11/2026): o sapo, a cascavel, o guaxinim no lixo, o gambá (o cheiro chama os
    zumbis), o urubu nos restos, o esquilo, o peru, os vaga-lumes e os olhos na lanterna (a seção da etapa 4, abaixo);
-5. **o futuro, a caça ao ver e os lugares** (feita, 13/11/2026): a cobra caça o sapo, o urso caça o salmão (e come sentado,
-   com os filhotes), o sapo come o vaga-lume; as cavernas dos ursos, as tocas dos coiotes e os brejos; o veado no farol,
+5. **o futuro, a caça ao ver e os lugares** (feita, 13/11/2026): a cobra caça o sapo, o urso caça o salmão (e come deitado;
+   desde 14/11, a mãe dá o peixe aos filhotes), o sapo come o vaga-lume; as cavernas dos ursos, as tocas dos coiotes e os brejos; o veado no farol,
    o atropelamento dos bichos e o filhote órfão (o gancho de domar) (a seção da etapa 5, abaixo).
 
 As decisões do Pedro: a população cai com a caça, **nunca a zero**, e volta sozinha ("não quero que morram para sempre");
@@ -408,6 +408,63 @@ filhote corre dentro da água"):**
   olhando a mãe pescar; o urso entrou até 1,14 m, pegou o salmão, saiu, comeu sentado na margem e foi embora andando, sem
   nenhum momento parado na água fora da pesca.
 
+## Os animais do Tripo do Gustavo na Unity (14/11/2026, a pedido: "pode ir para a unity")
+
+Os 24 animais do Gustavo (`Blender/Fauna/Animais/Animais.blend`: o Tripo com o esqueleto e as ações dele) substituem as
+caixas e os cervos antigos. Ficaram de fora, por enquanto: o ganso, o esquilo, a cascavel e o salmão (continuam de caixas)
+e o filhote de veado (continua o `Cervo_Filhote` do `familia.py`, até o Gustavo fazer o novo).
+
+- **O export** (`Blender/Fauna/Animais/exportar_unity.py`, num Blender sem janela, com o `.blend` antes do `--python`):
+  cada bicho sai sozinho na origem, na pose de repouso, com o preset dos cervos (a frente em +Z e o alto em +Y na Unity),
+  para `Assets/_Game/Art/Fauna/Tripo/<Nome>.fbx`, com a textura `<Nome>_Cor.jpg` ao lado. As ações do Gustavo vão no FBX
+  como takes (uma por faixa de NLA, com o nome da ação), mas a Unity ainda não importa os clipes (a importação de animação
+  está desligada até a fase 2). O `Medidas.json` traz de cada bicho as caixas do corpo (os vértices do tronco: o quadril, a
+  pelve, a coluna, o peito e as omoplatas) e da cabeça (a cabeça e a mandíbula, sem as orelhas e a galhada), a boca, a
+  altura (a do lombo da tabela do Gustavo; nas aves, no sapo e no coelho, o alto da cabeça) e o comprimento.
+- **Os prefabs** (`Editor/MontagemDosAnimais.cs`, o menu **Zombie City Cleaner > Fauna > Montar os animais do Tripo**):
+  `Art/Fauna/Resources/Fauna/Tripo/<Nome>.prefab`, um material URP Lit por bicho (a textura com filtro e mipmap, no máximo
+  1024), sem o Animator e com o `Fauna/MedidasDoModelo` (as medidas acima). A montagem confere os ossos contra o Blender.
+- **O código** (`ModelosDosBichos.NomeDoPronto` e `DoModeloPronto`): cada variante usa o modelo dela; o lobo adulto e o
+  urso adulto usam o do macho; o coiote é um modelo só (a fêmea e o filhote menores, pelo `Especies.Escala`), e os pequenos
+  também (o filhote do castor a 0,5). Com as medidas, os colisores saem do modelo, e a altura (a mira, os sentidos, o
+  passo da animação) é a dele. A cauda pega todos os ossos (`Cauda_1` … `Cauda_n`), e as asas são o `Asa.L` e o `Asa.R`.
+  A carga ganhou dois pontos nos eixos do bicho: a **boca** (presa na cabeça: o galho do castor e o salmão do urso) e a
+  **barriga** (presa no corpo: o peixe da águia). O pulo do sapo sobe pelo alto do bicho (o osso do FBX tem outros eixos).
+  A fila do F1 mostra todas as variantes, em duas fileiras (os grandes a ~11 m, os pequenos a ~6 m).
+- **Do jeito que vieram:** a águia e o urubu vêm do Tripo de asas abertas no repouso (o pato e o peru, fechadas):
+  servem no voo, e pousados ficam de asas meio abertas até as ações do Gustavo entrarem. O filhote de urso do Gustavo é
+  maior que o do jogo (0,48 e 0,58 m no lombo, contra 0,38 e 0,46): valem os tamanhos dele.
+- **Os testes** (`D:\Zombiegame\Trabalho-Claude\fauna_tripo`, `teste_tripo1.cs`, fotos em `play1`): 0 erros no Play
+  do Lakewood. A fila com as 32 variantes (uma foto de cada), os bichos andando e pastando (o veado, o lobo, o urso, o
+  alce, o coelho, o pato na água, o sapo e o guaxinim) e o veado morto deitado de lado. No editor, os tiros de lado, de
+  frente e por trás nas 27 combinações com modelo do Tripo acertam a cabeça e o corpo certos (0 falhas). Não testado: os
+  olhos na lanterna, o voo das aves com os modelos novos, o galho na boca do castor e o salmão na boca do urso (os pontos
+  foram conferidos pelas medidas).
+
+### O urso comendo o salmão: sozinho come, com filhotes dá (14/11/2026, a pedido)
+
+O Pedro, no teste: "O urso está realizando uma movimentação como se fosse dar alimento para o filhote, porém esse urso
+não tem filhote ... sem filhotes ele come. Com filhotes ele dá a comida. E está um pouco bugada essa animação, ele fica no
+alto, estranha e quando há filhotes, eles não vêm comer quando o urso fica nessa posição".
+
+- **O salmão no chão:** desde que os corpos no ar caem (`Bicho.Cair`, 13/11), o salmão morto na boca do urso também caía a
+  cada quadro, e ficava no chão na frente do urso (parecia que ele oferecia). Agora o peixe levado por um urso
+  (`Bicho.Levado`) não cai.
+- **Sozinho, ele come:** na margem, o urso deita de barriga, com as patas da frente esticadas e o salmão no chão embaixo da
+  boca, e come puxando o peixe (de 18 a 32 s). O estado 7 da rede (era `Sentado`) virou `DeitadoComendo`, com a pose nova
+  em `AnimacaoDoBicho` (o deitado com as pernas da frente para a frente, as de trás para trás e a cabeça puxando): o mesmo
+  valor, então a `VersaoDaRede` não mudou. A pose sentada saiu (no modelo do Gustavo ela levantava o urso nas patas de trás).
+- **Com filhotes, ela dá:** a mãe com filhotes a até 40 m larga o salmão no chão, na frente dela, e deita ali, olhando;
+  cada filhote deita num lado do peixe, de frente para ele, e come (de 25 a 40 s depois que o primeiro chega). Se nenhum
+  filhote chegar em 25 s (ou se eles somem), ela mesma come.
+- **Conferido no editor** (um laboratório de poses: os modelos montados abaixo do mapa, a animação rodada e fotografada,
+  `D:\Zombiegame\Trabalho-Claude\fauna_tripo\poses2`) e no Play (`teste_urso_come.cs`, fotos em `play2` a `play4`): 0
+  erros. Sozinho, o urso-pardo levou o salmão na boca até a margem (o peixe a 0,77 m do chão, sem cair), deitou e comeu com o peixe no chão a 11 cm da boca; em 26 s o peixe acabou. Com o filhote, a mãe largou o peixe e deitou; o
+  filhote veio, deitou no peixe e comeu, e o peixe acabou em ~30 s. Num teste antes do ajuste, o filhote parava de pé
+  ao lado (o `Andar` chega a ~0,5 m do ponto, e o filhote pedia 0,4 m) e a mãe comeu sozinha depois de 25 s: o plano B
+  também ficou conferido. A pesca de verdade depende da sorte da patada (numa das vezes, a mãe pescou 100 s sem pegar
+  nada); para testar, o F1 ganhou **"O urso mais perto pega um salmão"** (`FaunaDoMundo.UrsoPegaOSalmao`).
+
 ## O que ficou para depois
 
 - O "derrubar" do urso é o empurrão com o tremor (o jogador não fica caído no chão: não há queda sem morrer no jogo).
@@ -418,3 +475,6 @@ filhote corre dentro da água"):**
 - Os modelos e os ícones dos peixes americanos (hoje, os dos peixes antigos).
 - A água subindo atrás da represa do castor (o lago dos castores); o rio do mapa hoje é fixo.
 - Os bichos subindo nos lugares altos (o urso-negro sobe em árvore de verdade).
+- A fase 2 dos modelos do Gustavo: tocar as ações dele (o uivo, a patada, o pulo do sapo, as aves pousando de asas
+  fechadas) pelo estado do bicho, o que pede o byte do "gesto" na mensagem da fauna; e os modelos que faltam (o ganso, o
+  esquilo, a cascavel, o salmão e o filhote de veado novo).

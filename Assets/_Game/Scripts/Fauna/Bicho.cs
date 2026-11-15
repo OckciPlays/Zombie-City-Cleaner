@@ -5,8 +5,9 @@ using ZombieCityCleaner.World;
 namespace ZombieCityCleaner.Fauna
 {
     /// <summary>O que o bicho está fazendo (vai pela rede em 3 bits).</summary>
-    // (a etapa 5, 13/11/2026) Sentado: o urso comendo o salmão na margem (o 7 é o último que cabe nos 3 bits da rede)
-    public enum EstadoDoBicho : byte { Pastando, Andando, Alerta, Fugindo, Investindo, Morto, Deitado, Sentado }
+    // (a etapa 5, 13/11/2026) o 7: o urso comendo o salmão na margem (o último que cabe nos 3 bits da rede); era Sentado e
+    // desde 14/11 é DeitadoComendo (deitado de barriga, o peixe entre as patas; os filhotes também comem assim)
+    public enum EstadoDoBicho : byte { Pastando, Andando, Alerta, Fugindo, Investindo, Morto, Deitado, DeitadoComendo }
 
     /// <summary>
     /// Um bicho no mundo. No anfitrião ele pensa (Bicho.Mente.cs) e anda; nos outros, é uma cópia que segue o que chega
@@ -91,7 +92,7 @@ namespace ZombieCityCleaner.Fauna
             {
                 EstadoDoBicho.Morto => AnimacaoDoBicho.Pose.Morto,
                 EstadoDoBicho.Deitado => AnimacaoDoBicho.Pose.Deitado,
-                EstadoDoBicho.Sentado => AnimacaoDoBicho.Pose.Sentado,
+                EstadoDoBicho.DeitadoComendo => AnimacaoDoBicho.Pose.DeitadoComendo,
                 EstadoDoBicho.Alerta => AnimacaoDoBicho.Pose.Alerta,
                 EstadoDoBicho.Investindo => Velocidade < 0.5f ? AnimacaoDoBicho.Pose.Atacando : AnimacaoDoBicho.Pose.Correndo,
                 EstadoDoBicho.Pastando => Velocidade < 0.25f ? AnimacaoDoBicho.Pose.Comendo : AnimacaoDoBicho.Pose.Andando,
@@ -136,8 +137,13 @@ namespace ZombieCityCleaner.Fauna
             if (!Carregando && _carga == null) return;
             if (_carga == null && Modelo != null)
             {
-                if (Especie == Especie.Aguia && Modelo.corpo != null)
+                // (14/11) nos modelos prontos, na barriga e na boca (nos eixos do bicho); nas caixas, no corpo e na cabeça
+                if (Especie == Especie.Aguia && Modelo.barriga != null)
+                    _carga = ModelosDosBichos.CaixaSolta(Modelo.barriga, new Vector3(0f, -0.03f, 0.02f), new Vector3(0.07f, 0.06f, 0.3f), new Color(0.55f, 0.58f, 0.6f));
+                else if (Especie == Especie.Aguia && Modelo.corpo != null)
                     _carga = ModelosDosBichos.CaixaSolta(Modelo.corpo, new Vector3(0f, -0.14f, 0.02f), new Vector3(0.07f, 0.06f, 0.3f), new Color(0.55f, 0.58f, 0.6f));
+                else if (Modelo.boca != null)
+                    _carga = ModelosDosBichos.CaixaSolta(Modelo.boca, Vector3.zero, new Vector3(0.9f, 0.05f, 0.05f), new Color(0.4f, 0.3f, 0.2f), new Vector3(0f, 0f, 8f));
                 else
                 {
                     var onde = Modelo.cabeca != null ? Modelo.cabeca : Modelo.raiz;

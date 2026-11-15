@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.Fauna
     /// </summary>
     public sealed class AnimacaoDoBicho
     {
-        public enum Pose : byte { Parado, Comendo, Alerta, Andando, Correndo, Atacando, Morto, Deitado, Nadando, Voando, Sentado }
+        public enum Pose : byte { Parado, Comendo, Alerta, Andando, Correndo, Atacando, Morto, Deitado, Nadando, Voando, DeitadoComendo }
 
         struct Junta
         {
@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.Fauna
         Junta _raiz, _corpo, _pescoco, _cabeca;
         readonly List<(Junta cima, Junta baixo, bool tras)> _pernas = new List<(Junta, Junta, bool)>();
         readonly List<Junta> _cauda = new List<Junta>(), _orelhas = new List<Junta>(), _asas = new List<Junta>(), _gomos = new List<Junta>();
-        float _fase, _tempo, _comer, _alerta, _morto, _deitado, _voar, _ataque, _andar, _correr, _orelhaAte, _orelhaGiro, _empe, _nadar, _sentado;
+        float _fase, _tempo, _comer, _alerta, _morto, _deitado, _voar, _ataque, _andar, _correr, _orelhaAte, _orelhaGiro, _empe, _nadar, _comendoDeitado;
 
         public AnimacaoDoBicho(Transform bicho, ModeloDoBicho m, Especie e)
         {
@@ -92,12 +92,13 @@ namespace ZombieCityCleaner.Fauna
             _comer = Chegar(_comer, pose == Pose.Comendo ? 1f : 0f, 1.6f, dt);
             _alerta = Chegar(_alerta, pose == Pose.Alerta ? 1f : 0f, 3f, dt);
             _morto = Chegar(_morto, pose == Pose.Morto ? 1f : 0f, pose == Pose.Morto ? 1.8f : 4f, dt);
-            _deitado = Chegar(_deitado, pose == Pose.Deitado ? 1f : 0f, 0.8f, dt);
+            _deitado = Chegar(_deitado, pose == Pose.Deitado || pose == Pose.DeitadoComendo ? 1f : 0f, 0.8f, dt);
             _voar = Chegar(_voar, pose == Pose.Voando ? 1f : 0f, 2f, dt);
             _empe = Chegar(_empe, (_urso || _trepador) && pose == Pose.Alerta && velocidade < 0.5f ? 1f : 0f, 2.2f, dt);
             _nadar = Chegar(_nadar, pose == Pose.Nadando ? 1f : 0f, 3f, dt);
-            _sentado = Chegar(_sentado, pose == Pose.Sentado ? 1f : 0f, 1.5f, dt);
-            if (pose == Pose.Sentado) _comer = Chegar(_comer, 0.6f, 1.6f, dt);   // (sentado, comendo o que tem nas patas)
+            // (14/11) deitado de barriga, comendo o que tem entre as patas (o urso e o salmão; antes, sentado)
+            _comendoDeitado = Chegar(_comendoDeitado, pose == Pose.DeitadoComendo ? 1f : 0f, 1.2f, dt);
+            if (pose == Pose.DeitadoComendo) _comer = Chegar(_comer, 0.5f, 1.6f, dt);
             _ataque = pose == Pose.Atacando ? Mathf.Repeat(_ataque + dt * 1.6f, 1f) : Chegar(_ataque, 0f, 3f, dt);
             if (pose == Pose.Morto) velocidade = 0f;
 
@@ -113,6 +114,10 @@ namespace ZombieCityCleaner.Fauna
         }
 
         // ------------------------------------------------------------------ os quadrúpedes
+
+        // deitado comendo (14/11): os giros das pernas (somados aos do deitado): as da frente esticadas para a frente,
+        // segurando o peixe, e as de trás esticadas para trás
+        const float PernaDaFrente = -70f, JoelhoDaFrente = 20f, PernaDeTras = 55f, JoelhoDeTras = -30f;
 
         // a fase de cada perna (a dianteira esquerda, a direita, a traseira esquerda, a direita) no andar, no trote e no galope
         static readonly float[] FaseDoAndar = { 0.25f, 0.75f, 0f, 0.5f };
@@ -161,9 +166,9 @@ namespace ZombieCityCleaner.Fauna
                 // o gambá no aviso bate as patas da frente no chão
                 if (_bateAsPatas && !tras) balanco += Mathf.Max(0f, Mathf.Sin(_tempo * 14f + i * Mathf.PI)) * 22f * _alerta;
                 // de pé (o urso), as de trás ficam a prumo e as da frente penduradas
-                // sentado (a etapa 5): as de trás dobradas para a frente, no chão; as da frente a prumo, segurando
-                Por(cima.t != null ? cima : default, balanco + (tras ? -6f : 4f) * _morto + (tras ? 70f : 25f) * _empe + (tras ? 95f : 34f) * _sentado);
-                if (baixo.Valida) Por(baixo, (tras ? -dobra : dobra) + (tras ? -14f : 18f) * _morto + 10f * _deitado + (tras ? -115f : 12f) * _sentado);
+                // deitado comendo (14/11): as da frente esticadas para a frente, segurando; as de trás esticadas para trás
+                Por(cima.t != null ? cima : default, balanco + (tras ? -6f : 4f) * _morto + (tras ? 70f : 25f) * _empe + (tras ? PernaDeTras : PernaDaFrente) * _comendoDeitado);
+                if (baixo.Valida) Por(baixo, (tras ? -dobra : dobra) + (tras ? -14f : 18f) * _morto + 10f * _deitado + (tras ? JoelhoDeTras : JoelhoDaFrente) * _comendoDeitado);
             }
 
             // o pescoço e a cabeça: comendo (para baixo), alerta (para cima), correndo (esticado), o ataque (a cabeçada)
@@ -172,8 +177,9 @@ namespace ZombieCityCleaner.Fauna
             float alertaPescoco = _predador ? 16f : -14f, alertaCabeca = _predador ? 4f : -6f;
             // (nadando, a cabeça vai para cima, fora da água: abaixo)
             float pescoco = 55f * _comer + alertaPescoco * _alerta + 14f * galope + 30f * Mathf.Sin(_ataque * Mathf.PI) + 20f * _morto + 25f * _deitado
-                            + 40f * _empe - 10f * _sentado;
-            float cabeca = 22f * _comer + alertaCabeca * _alerta + mastigar + aceno + 20f * Mathf.Sin(_ataque * Mathf.PI) + 15f * _morto + 20f * _empe - 14f * _nadar;
+                            + 40f * _empe;
+            float cabeca = 22f * _comer + alertaCabeca * _alerta + mastigar + aceno + 20f * Mathf.Sin(_ataque * Mathf.PI) + 15f * _morto + 20f * _empe - 14f * _nadar
+                           + Mathf.Sin(_tempo * 3.5f + _sorte) * 7f * _comendoDeitado;   // (deitado comendo: puxa o peixe)
             pescoco -= 22f * _nadar;
             float virar = olhar * (1f - _comer) * (1f - _morto);
             Por(_pescoco, pescoco, virar * 0.45f);
@@ -241,7 +247,7 @@ namespace ZombieCityCleaner.Fauna
             // pulando: o corpo sobe num arco e as pernas de trás esticam
             _fase = v > 0.05f ? Mathf.Repeat(_fase + dt * 2.2f, 1f) : Chegar(_fase, 0f, 2f, dt);
             float pulo = v > 0.05f ? Mathf.Sin(_fase * Mathf.PI) : 0f;
-            if (_corpo.Valida) _corpo.t.localPosition = _corpo.posicao + Vector3.up * pulo * 0.06f;
+            if (_corpo.Valida) _corpo.t.localPosition = _corpo.posicao + _corpo.t.parent.InverseTransformVector(_bicho.up * pulo * Mathf.Max(0.04f, _altura));
             for (int i = 0; i < _pernas.Count; i++)
                 if (_pernas[i].tras) Por(_pernas[i].cima, -50f * pulo);
             float papo = Mathf.Max(0f, Mathf.Sin(_tempo * 3f + _sorte));
@@ -254,16 +260,6 @@ namespace ZombieCityCleaner.Fauna
         {
             if (!_raiz.Valida) return;
             float t = _morto;
-            if (_sentado > 0.001f && _empe <= 0.001f && t <= 0f && _tipo == Corpo.Quadrupede)
-            {
-                // sentado (a etapa 5): o corpo inclinado para cima em volta do quadril, a anca baixa (no chão)
-                float s = Mathf.SmoothStep(0f, 1f, _sentado);
-                var gira = Quaternion.AngleAxis(-36f * s, Vector3.right);
-                Vector3 pivo = new Vector3(0f, _altura * 0.25f, -_comprimento * 0.42f);
-                _raiz.t.localRotation = gira * _raiz.repouso;
-                _raiz.t.localPosition = _raiz.posicao + (pivo - gira * pivo) - Vector3.up * _altura * 0.22f * s;
-                return;
-            }
             if (_empe > 0.001f && t <= 0f && _tipo == Corpo.Quadrupede)
             {
                 // de pé nas patas de trás: gira o corpo para cima em volta do quadril (o nariz para o alto)

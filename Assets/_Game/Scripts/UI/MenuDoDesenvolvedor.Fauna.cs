@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.UI
     /// Blender), a fila de todos parados (para ver os modelos), matar ou ferir o mais perto, tirar todos, a faca na mochila
     /// (para carnear), a carne crua e os nomes e os estados em cima dos bichos. A etapa 2: a caça na frente (os lobos atrás
     /// dos veados, os coiotes atrás dos coelhos) e a matilha mais perto cercando quem pediu (vale de dia). A etapa 3: ir para
-    /// a margem do lago, o V dos gansos agora, o urso pescando o salmão e os castores roendo depressa. Os pedidos vão para o anfitrião.
+    /// a margem do lago, o V dos gansos agora, o urso pescando o salmão (e, desde 14/11, pegando um na hora) e os castores roendo depressa. Os pedidos vão para o anfitrião.
     /// </summary>
     public partial class MenuDoDesenvolvedor
     {
@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.UI
             var f = FaunaDoMundo.Instancia;
             _conteudoDaFauna.text = f != null ? f.Resumo(transform.position) : "A fauna liga com o mundo gerado pronto.";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDaFauna, w);
-            int linhas = (BotoesDaFauna.Length + 1) / 2 + 13;
+            int linhas = (BotoesDaFauna.Length + 1) / 2 + 14;
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
@@ -91,6 +91,9 @@ namespace ZombieCityCleaner.UI
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Urso pescando", _botao)) TesteDaFaunaRpc(11, 0);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), FaunaDoMundo.CastorRapido ? "Castor normal" : "Castor rói rápido", _botao)) TesteDaFaunaRpc(12, 0);
+            // 14/11: o urso pega o salmão na hora (sozinho, come deitado; com filhotes, dá o peixe a eles)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, w, alto * u), "O urso mais perto pega um salmão", _botao)) TesteDaFaunaRpc(17, 0);
             // a etapa 4: os urubus no resto mais perto (o corpo de um zumbi, a carcaça)
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "Urubus no corpo mais perto", _botao)) TesteDaFaunaRpc(13, 0);
@@ -187,6 +190,9 @@ namespace ZombieCityCleaner.UI
                     break;
                 case 16:
                     aviso = f != null ? f.BichosDoLugar(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 17:
+                    aviso = f != null ? f.UrsoPegaOSalmao(j) : "Sem a fauna neste mundo.";
                     break;
                 case 12:
                     FaunaDoMundo.CastorRapido = !FaunaDoMundo.CastorRapido;
