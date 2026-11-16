@@ -769,7 +769,7 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// Quando ele atirou ou golpeou por último (Time.time, em todas as máquinas; 15/11/2026: sentado num veículo, a arma
-        /// levanta do colo por um tempo depois disso, PassageiroDoCarro.GarupaComAMao).
+        /// levanta do colo por um tempo depois disso, PassageiroDoCarro.BracosComArma).
         /// </summary>
         public float UltimoAtaque { get; private set; } = -99f;
 

@@ -4509,6 +4509,56 @@ jogador atrás ligado a lanterna".
     `CorpoDoDono(true)` logo antes do `Render` (na caçamba o corpo do dono volta a ser só sombra a cada quadro).
   - **Não conferido:** dois jogadores; o motorista no carro (as mãos no volante também passam pelo `DoisOssos` novo; as
     pernas são da animação).
+- **A arma sentado, refeita (16/11/2026, a pedido: "as mãos ficam parcialmente dentro do abdômen, a pistola fica muito
+  próxima do colo, os braços apresentam ângulos artificiais"; referências: GTA V, GTA IV e Days Gone):**
+  `Player/PassageiroDoCarro.ArmaSentado.cs` (a classe virou `partial`), no lugar do `GarupaComAMao` e do `MaoNaFrente`.
+  - **O diagnóstico:** sem Animator nem Animation Rigging na moto e na caçamba (o pacote não está no projeto; o IK de dois
+    ossos do código faz o papel do Two Bone IK). A arma do corpo (`Arma_<modelo>` no `weapon.R`, a boca
+    `Boca_<modelo>`) nunca era lida: os dedos apontavam para a mira e a arma ficava torta. Descansando, a mão ia para a
+    coxa (o colo), a esquerda ficava 6 cm ao lado e 5 cm atrás dela (dentro da barriga), e a subida era em linha reta pela
+    barriga. O piloto não podia empunhar nada.
+  - **O rig** (`AlvosDosBracos`, refeito a cada quadro em todas as máquinas): a empunhadura (WeaponGripPoint), o pulso e o
+    giro de cada mão (RightHandTarget, LeftHandTarget) e o cotovelo (RightElbowHint, LeftElbowHint); `AlvosDaArma`
+    os mostra para os testes, e os gizmos desenham com o jogador selecionado. A mão direita é posta pela arma
+    (`EmpunhaduraDe`: o eixo do `Arma_<modelo>` mais alinhado com a boca é o cano; dos outros, o que vai para a boca é o
+    alto): o cano na mira e a arma em pé. A esquerda abraça a pegada por baixo e pela esquerda. Parte do giro da mão vai
+    no antebraço (até 80°). Os outros itens (a faca, a comida) vão só na direita.
+  - **O garupa, os passageiros e a caçamba:** descansando, as duas mãos com a arma na altura do umbigo e 30 cm à frente
+    do peito (na moto, 20 cm à frente e 17 cm para a direita, ao lado do piloto), o cano para a frente e para baixo;
+    mirando para a frente, na frente do peito com as duas mãos (na moto, pelo lado direito do piloto, como antes); de
+    lado (35° a 65°), a esquerda solta e a direita estica (o garupa do GTA IV). O tronco vira até 60°.
+  - **O piloto da moto atira:** com uma pistola ou uma submetralhadora (`ArmaDoPiloto`) e o motor ligado
+    (`PilotoArmado`: as mãos livres, `PodeAtacar`). Sem mirar, as duas mãos no guidão e a arma guardada; mirando ou
+    atirando, a direita sai do guidão (por cima dele) e estica, a esquerda fica e o tronco vira até 40°. A arma do corpo
+    aparece com a mão fora do guidão (`AcertarNaMao`). Na primeira pessoa, os braços de primeira pessoa não aparecem
+    (`ArmaNoCorpo`, a `cameraBracos` desligada como no capô e na sinuca): ele vê o braço do próprio corpo, e o clarão sai
+    da arma do corpo (`ArmaJogador.Atirar`). Com a arma na mão, o clique na ignição avisa "Guarde a arma para mexer na
+    chave".
+  - **As transições:** sacar e guardar 0,25 s (`_sacada`), levantar 0,2 s e baixar 0,5 s (`_levantada`), a mão num arco
+    pela frente do corpo, e o coice (a mira sobe 7° e volta em 0,15 s). As pernas e o quadril não mudam.
+  - O `ArmaJogador`, ao ser desligado mirando, solta a mira (`Mirando`): os outros viam a arma levantada.
+  - **Conferido no Play** (16/11, as fotos em `D:\teste blender\A Moto\renders\v5\arma_sentado.png`; o tiro simulado com
+    `AnunciarTiro` e o lado com `GiroDeTeste` 80°): a garupa da Fat Boy e da cross (descansando ao lado do piloto, as
+    duas mãos na frente do peito, uma mão de lado com o tronco virado), o piloto da Fat Boy (as mãos no guidão com a arma
+    guardada; mirando, a direita esticada e a esquerda no guidão), o passageiro da caminhonete e a caçamba. Depois do
+    teste: no banco do carro os joelhos ficam altos e a arma descansando sumia entre as coxas; ela fica logo abaixo do
+    peito, por cima dos joelhos. Nenhum erro no Console.
+  - **A arma do garupa na cara do piloto (16/11/2026, a pedido: "quando eu mirava com a arma, ela ultrapassava a cara do
+    jogador que estava pilotando"; testar também com a SMG):** medido no Play, do olho do piloto (Fat Boy (0; 1,46;
+    −0,21), cross (0; 1,71; −0,07), no espaço da moto), mirando para a frente e para a frente-esquerda a arma chegava a
+    0–7 cm do olho (as duas armas, as duas motos). `ForaDaCabecaDoPiloto`: nenhum ponto da arma, da coronha (−0,28 m da
+    pegada; a da SMG, medida, vai a −0,27) até a boca (+0,30; a SMG a +0,29), chega a menos de 0,42 m do olho; ela vai
+    para o lado (o direito; mirando para a esquerda a partir de −35°, o esquerdo, com histerese) e, trocando de lado,
+    passa por trás da cabeça (perto do peito do garupa e mais baixa). Empurrada, a mão esquerda solta (uma mão, como o
+    garupa do GTA IV). Medido de novo pelos vértices da malha (a caixa de uma arma girada engana), de −50° a 45°: a arma
+    fica a 0,33–0,50 m do olho do piloto, e o ponto dela mais perto do centro da visão dele a 60° ou mais (a visão vai a
+    ~51° para os lados): olhando para a frente, ele não vê a arma do garupa. Fotos em
+    `D:\teste blender\A Moto\renders\v5\arma_garupa_e_piloto.png`. Nenhum erro no Console.
+  - **A lanterna do garupa:** conferida de novo: sai do peito dele (0,44 m do olho do piloto na Fat Boy, 0,51 na cross),
+    sem sombra, com a força de sempre; da visão do piloto, sem a sombra da moto.
+  - **Não conferido:** o piloto com o motor ligado atirando de verdade (o clique, a primeira pessoa com o braço do
+    corpo, o clarão) e o garupa em primeira pessoa (os braços de primeira pessoa e os do corpo juntos na tela, que já
+    era assim); dois jogadores.
 - **Não feito:** o Lakewood (as vagas do terreiro, `VagasEmA`, têm 4 lugares) e a Demo_Cidade não têm a caminhonete; o
   som do motor é o do carro (o laço de 4 cilindros).
 

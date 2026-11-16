@@ -205,6 +205,9 @@ namespace ZombieCityCleaner.Player
             Recarregando = false;
             Usando = false;
             SairDaLuneta();
+            // desligada mirando (no veículo, as mãos deixando de estar livres), a mira solta: senão os outros o viam com a arma
+            // levantada até ela voltar (16/11/2026)
+            if (rede != null && rede.IsSpawned && rede.IsOwner && rede.Mirando.Value) rede.Mirando.Value = false;
         }
 
         void SairDaLuneta()
@@ -881,7 +884,8 @@ namespace ZombieCityCleaner.Player
             Municao--;
             Acao(FireId);
             // na terceira pessoa, o clarão é o da arma do corpo, na camada de todo mundo
-            if (rede.EmTerceiraPessoa) Efeitos.Clarao(rede.bocasCorpo[(int)Atual], 0);
+            // (e no piloto da moto, que vê a arma do próprio corpo, sem os braços de primeira pessoa: 16/11/2026)
+            if (rede.EmTerceiraPessoa || (rede.Passageiro != null && rede.Passageiro.ArmaNoCorpo)) Efeitos.Clarao(rede.bocasCorpo[(int)Atual], 0);
             else
             {
                 // os braços ficam perto da origem (BracosNaOrigem): o clarão deles ilumina os braços, e a luz no mundo vai
