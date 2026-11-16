@@ -27,6 +27,8 @@ namespace ZombieCityCleaner.Loot
         Vela = 64, Bateria, Radiador, Pneu, Macaco, ChaveDaPerua, ChaveDoCupe,
         // as chaves das motos (06/11/2026, a pedido: cada moto com a sua chave)
         ChaveDaFatBoy = 71, ChaveDaCross = 72,
+        // a chave da caminhonete (15/11/2026, a pedido: o primeiro carro, "precisará da chave")
+        ChaveDaCaminhonete = 73,
         // os remédios
         Remedio = 80, Comprimidos, KitMedico, Atadura, Gaze, Desinfetante, SprayAntisseptico, Antibiotico, Bandagem,
         // a tala (05/11/2026, o sistema de vida por membro: imobiliza o braço ou a perna quebrados)
@@ -563,6 +565,7 @@ namespace ZombieCityCleaner.Loot
             // laranja (a cross)
             new DadosDaPeca { modelo = "ChaveDaFatBoy", nome = "chave da Fat Boy", nomeComArtigo = "a chave da Fat Boy", resumo = "Liga a Fat Boy direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
             new DadosDaPeca { modelo = "ChaveDaCross", nome = "chave da moto cross", nomeComArtigo = "a chave da moto cross", resumo = "Liga a moto cross direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
+            new DadosDaPeca { modelo = "ChaveDaCaminhonete", nome = "chave da caminhonete", nomeComArtigo = "a chave da caminhonete", resumo = "Liga a caminhonete direto, sem a ligação direta.", funcao = "Chave", tamanho = new(1, 1) },
         };
         public static int QuantasPecas => _pecas.Length;
 
@@ -593,11 +596,11 @@ namespace ZombieCityCleaner.Loot
         public static Item DaSinuca(int k) => (Item)((int)Item.CaixaDeBolas + k);
         public static string ModeloDaSinuca(int k) => _sinuca[k].modelo;
         /// <summary>Uma peça do carro (as 3 do motor, o pneu, o macaco e as chaves da perua, do cupê e das motos), feita pelo pecas.py.</summary>
-        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.ChaveDaCross;
+        public static bool EhPeca(Item i) => i >= Item.Vela && i <= Item.ChaveDaCaminhonete;
         /// <summary>Uma peça com o estado (0 a 100%) no qtd: todas menos o macaco e as chaves.</summary>
         public static bool ComEstado(Item i) => EhPeca(i) && i != Item.Macaco && !EhChave(i);
         /// <summary>Uma chave de veículo (a da perua, a do cupê e as das motos; cada veículo novo terá a sua, no Carro.chaveDoVeiculo).</summary>
-        public static bool EhChave(Item i) => i == Item.ChaveDaPerua || i == Item.ChaveDoCupe || i == Item.ChaveDaFatBoy || i == Item.ChaveDaCross;
+        public static bool EhChave(Item i) => i == Item.ChaveDaPerua || i == Item.ChaveDoCupe || i == Item.ChaveDaFatBoy || i == Item.ChaveDaCross || i == Item.ChaveDaCaminhonete;
         /// <summary>Uma peça do capô (a vela, a bateria e o radiador; o pneu, não).</summary>
         public static bool EhPecaDoMotor(Item i) => i >= Item.Vela && i <= Item.Radiador;
         /// <summary>O índice da peça (0 a 2 as do motor, a ordem de <see cref="Vehicles.PecasDoMotor"/>; 3 o pneu), ou -1.</summary>

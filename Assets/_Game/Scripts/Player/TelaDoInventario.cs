@@ -1571,7 +1571,7 @@ namespace ZombieCityCleaner.Player
                 else if (Itens.EhChave(item))
                 {
                     Linha("Serve para", item == Item.ChaveDoCupe ? "dar a partida no cupê" : item == Item.ChaveDaFatBoy ? "dar a partida na Fat Boy"
-                        : item == Item.ChaveDaCross ? "dar a partida na moto cross" : "dar a partida na perua");
+                        : item == Item.ChaveDaCross ? "dar a partida na moto cross" : item == Item.ChaveDaCaminhonete ? "dar a partida na caminhonete" : "dar a partida na perua");
                     Linha("Sem ela", "só com a ligação direta");
                 }
                 else if (item == Item.Pneu)

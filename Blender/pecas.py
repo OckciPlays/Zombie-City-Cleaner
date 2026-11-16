@@ -22,6 +22,8 @@
 # - ChaveDoCupe (04/11/2026, a pedido): a mesma chave, com o chaveiro vermelho e um emblema prateado na cabeça.
 # - ChaveDaFatBoy e ChaveDaCross (06/11/2026, a pedido: cada moto com a sua chave): a mesma chave, com o chaveiro de couro
 #   marrom-escuro e o emblema (a Fat Boy) e o laranja vivo (a cross).
+# - ChaveDaCaminhonete (15/11/2026, a pedido: o primeiro carro, a caminhonete, "precisará da chave"): a mesma chave, com o
+#   chaveiro verde-escuro (o da pintura dela) e o emblema prateado.
 # Os ícones têm a proporção das células da peça no inventário (Itens.cs): a vela 1 x 1, a bateria 2 x 2, o radiador 3 x 2,
 # o pneu 3 x 3, o macaco 3 x 1 e as chaves 1 x 1.
 
@@ -33,12 +35,13 @@ from mathutils import Vector
 
 import equipamentos as eq
 
-NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco", "ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross"]
+NOMES = ["Vela", "Bateria", "Radiador", "Pneu", "Macaco", "ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross",
+         "ChaveDaCaminhonete"]
 # as células de cada uma no inventário (o ícone tem esta proporção, 128 px por célula)
 CELULAS = {"Vela": (1, 1), "Bateria": (2, 2), "Radiador": (3, 2), "Pneu": (3, 3), "Macaco": (3, 1), "ChaveDaPerua": (1, 1),
-           "ChaveDoCupe": (1, 1), "ChaveDaFatBoy": (1, 1), "ChaveDaCross": (1, 1)}
+           "ChaveDoCupe": (1, 1), "ChaveDaFatBoy": (1, 1), "ChaveDaCross": (1, 1), "ChaveDaCaminhonete": (1, 1)}
 # as chaves (para as câmeras dos ícones e das fotos)
-CHAVES = ("ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross")
+CHAVES = ("ChaveDaPerua", "ChaveDoCupe", "ChaveDaFatBoy", "ChaveDaCross", "ChaveDaCaminhonete")
 
 # as cores novas, (linha da imagem, coluna) na Paleta.png
 eq.CORES.update({
@@ -51,6 +54,8 @@ eq.CORES.update({
     "macaco": (8, 7),
     # os chaveiros das motos (06/11/2026): o de couro marrom-escuro da Fat Boy e o laranja vivo da cross
     "couro_chaveiro": (8, 4), "laranja_vivo": (11, 8),
+    # o chaveiro da caminhonete (15/11/2026): o verde-escuro da pintura dela
+    "verde_caminhonete": (6, 2),
 })
 
 _caixa = eq._caixa
@@ -204,8 +209,14 @@ def _chave_da_cross():
     return _chave("laranja_vivo", False)
 
 
+def _chave_da_caminhonete():
+    # a chave da caminhonete (15/11/2026): o chaveiro verde-escuro (o da pintura dela) e o emblema prateado
+    return _chave("verde_caminhonete", True)
+
+
 MODELOS = {"Vela": _vela, "Bateria": _bateria, "Radiador": _radiador, "Pneu": _pneu, "Macaco": _macaco, "ChaveDaPerua": _chave,
-           "ChaveDoCupe": _chave_do_cupe, "ChaveDaFatBoy": _chave_da_fatboy, "ChaveDaCross": _chave_da_cross}
+           "ChaveDoCupe": _chave_do_cupe, "ChaveDaFatBoy": _chave_da_fatboy, "ChaveDaCross": _chave_da_cross,
+           "ChaveDaCaminhonete": _chave_da_caminhonete}
 
 
 def _cena():

@@ -46,6 +46,11 @@ namespace ZombieCityCleaner.Salvar
         public bool motos;
         /// <summary>O caiaque já foi posto no lago (06/11/2026). Falso num save de antes dele: ao carregar, ele aparece uma vez.</summary>
         public bool caiaque;
+        /// <summary>
+        /// A caminhonete e a chave dela já foram postas no mundo (15/11/2026: o carro da família no mundo novo). Falso num
+        /// save de antes dela: ao carregar, ela aparece uma vez numa vaga livre da garagem (ou no pátio) e a chave no chão da sala.
+        /// </summary>
+        public bool caminhonete;
         /// <summary>Onde os caiaques ficaram (06/11/2026).</summary>
         public List<CaiaqueSalvo> caiaques = new List<CaiaqueSalvo>();
         public string criadoEm, salvoEm;

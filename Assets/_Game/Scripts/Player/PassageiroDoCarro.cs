@@ -52,6 +52,8 @@ namespace ZombieCityCleaner.Player
         public bool NoCarro => _fase != Fase.Fora;
         /// <summary>Para os testes automáticos no Play (o motorista "aperta" o WASD sem o teclado); null no jogo.</summary>
         public static Vector2? DirecaoDeTeste;
+        /// <summary>Para os testes automáticos no Play: o giro do olhar sentado (graus), no lugar do mouse; null no jogo.</summary>
+        public static float? GiroDeTeste;
 
         enum Fase { Fora, Entrando, Dentro, Saindo }
         Fase _fase;
@@ -155,6 +157,47 @@ namespace ZombieCityCleaner.Player
                 if (_ossos.TryGetValue(nome, out var osso) && doPrefab.TryGetValue(nome, out var repouso))
                     _repouso.Add((osso, repouso.localPosition, repouso.localRotation));
             if (doPrefab.TryGetValue("hips", out var quadril)) _quadrilNaRaiz = prefab.InverseTransformPoint(quadril.position);
+            // as dobradiças (16/11/2026): no repouso, o joelho aponta para a frente e o cotovelo para trás
+            _dobradica.Clear();
+            _palma.Clear();
+            foreach (var l in new[] { ".L", ".R" })
+            {
+                GuardarDobradica(doPrefab, "thigh" + l, "shin" + l, "foot" + l, corpoDoPrefab.forward);
+                GuardarDobradica(doPrefab, "upper_arm" + l, "forearm" + l, null, -corpoDoPrefab.forward);
+                // a palma, no repouso, olha para a coxa (para dentro)
+                if (_ossos.TryGetValue("hand" + l, out var mao) && doPrefab.TryGetValue("hand" + l, out var maoDoPrefab))
+                    _palma[mao] = Quaternion.Inverse(maoDoPrefab.rotation) * (corpoDoPrefab.right * (l == ".R" ? -1f : 1f));
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------ as juntas
+        // (16/11/2026, a pedido: "não é anatômico, não é correto"). O joelho e o cotovelo são dobradiças: a canela e o
+        // antebraço só dobram em volta de um eixo, o mesmo da coxa e do braço. Antes cada osso girava pelo caminho mais
+        // curto até a direção nova e o joelho torcia (até 98° na perna dobrada da caçamba) e dobrava de lado; a calça e
+        // a manga amassavam. Agora cada osso recebe a direção e o eixo da dobradiça (o do repouso, levado junto), o pé
+        // fica no plano da perna e a palma vira girando o antebraço no próprio eixo (como o rádio gira em volta da ulna).
+
+        /// <summary>O eixo da dobradiça de cada osso dos membros, no espaço do próprio osso (do repouso do prefab).</summary>
+        readonly Dictionary<Transform, Vector3> _dobradica = new Dictionary<Transform, Vector3>();
+        /// <summary>Para onde a palma de cada mão olha, no espaço da mão (do repouso: para a coxa).</summary>
+        readonly Dictionary<Transform, Vector3> _palma = new Dictionary<Transform, Vector3>();
+
+        /// <summary>
+        /// A dobradiça do membro no repouso do prefab: o eixo perpendicular ao membro (do começo até a ponta do segundo osso)
+        /// e ao lado para onde a junta do meio aponta (<paramref name="bojo"/>: o joelho para a frente, o cotovelo para
+        /// trás), guardado no espaço de cada osso (e no do pé, que dobra no mesmo eixo da canela).
+        /// </summary>
+        void GuardarDobradica(Dictionary<string, Transform> doPrefab, string de, string meio, string ponta, Vector3 bojo)
+        {
+            if (!doPrefab.TryGetValue(de, out var a) || !doPrefab.TryGetValue(meio, out var b) || b.childCount == 0) return;
+            Vector3 membro = b.GetChild(0).position - a.position;
+            Vector3 eixo = Vector3.Cross(Vector3.ProjectOnPlane(bojo, membro), membro);
+            if (eixo.sqrMagnitude < 1e-10f) return;
+            eixo.Normalize();
+            if (_ossos.TryGetValue(de, out var vivoA)) _dobradica[vivoA] = Quaternion.Inverse(a.rotation) * eixo;
+            if (_ossos.TryGetValue(meio, out var vivoB)) _dobradica[vivoB] = Quaternion.Inverse(b.rotation) * eixo;
+            if (ponta != null && doPrefab.TryGetValue(ponta, out var c) && _ossos.TryGetValue(ponta, out var vivoC))
+                _dobradica[vivoC] = Quaternion.Inverse(c.rotation) * eixo;
         }
 
         // ------------------------------------------------------------------------------------------ entrar e sair
@@ -305,8 +348,9 @@ namespace ZombieCityCleaner.Player
             transform.SetPositionAndRotation(Vector3.Lerp(_deP, alvoP, k), Quaternion.Slerp(_deR, banco.rotation, k));
             if (_fase == Fase.Dentro || _tempo >= MoverDe)
             {
+                AcertarNaMao();
                 Pose(Carro, Lugar);
-                if (!Carro.moto) CaberNoTeto(Carro);
+                if (!Carro.moto && !Carro.NaCacamba(Lugar)) CaberNoTeto(Carro);   // (na caçamba não há teto)
                 if (Lugar == 0 && !Carro.moto) MaosNoVolante(Carro);   // (em todas as máquinas: os outros veem também)
                 // o passageiro do carro com algo na mão (10/11/2026: ele atira e golpeia, como o garupa da moto): as duas
                 // mãos na frente do peito, por cima da animação de sentado
@@ -345,12 +389,32 @@ namespace ZombieCityCleaner.Player
         bool MaosLivresAgora()
         {
             if (Carro == null || _fase != Fase.Dentro || _terceira) return false;
+            // na moto, a arma grande fica guardada (15/11/2026, a pedido: "o correto para a moto seria poder utilizar somente
+            // arma pequena ... o resto fica impedido por ser muito grande")
+            if (Carro.moto && GrandeParaAMoto(NaMao)) return false;
             return Lugar != 0;
         }
+
+        Loot.Item NaMao => _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
+
+        /// <summary>
+        /// O que não cabe na garupa da moto (15/11/2026): as armas de fogo longas (o rifle, a espingarda, a sniper e o rifle de
+        /// sucata) e as brancas compridas (o machado, o bastão, a lança, a tocha e o taco). Ficam as pistolas, as submetralhadoras,
+        /// a faca e o que não é arma (a comida, os remédios, a lanterna...).
+        /// </summary>
+        public static bool GrandeParaAMoto(Loot.Item i) =>
+            (Loot.Itens.EhArma(i) && i != Loot.Item.Pistola && i != Loot.Item.PistolaSucata && i != Loot.Item.Submetralhadora && i != Loot.Item.SubmetralhadoraSucata)
+            || (Loot.Itens.EhBranca(i) && i != Loot.Item.Faca) || Loot.Itens.EhTaco(i);
+
+        bool _grandeNaMotoAvisado;
 
         // no dono, a cada quadro: liga ou desliga as mãos (o ArmaJogador e os braços)
         void CuidarDasMaos()
         {
+            // na garupa com uma arma grande na mão: o aviso, uma vez a cada troca
+            bool grande = Carro != null && Carro.moto && Lugar != 0 && _fase == Fase.Dentro && GrandeParaAMoto(NaMao);
+            if (grande && !_grandeNaMotoAvisado) Avisar("Na moto, só armas pequenas: as pistolas, as submetralhadoras e a faca", 3f);
+            _grandeNaMotoAvisado = grande;
             bool livres = MaosLivresAgora();
             if (livres == _maosLivres) return;
             _maosLivres = livres;
@@ -376,7 +440,7 @@ namespace ZombieCityCleaner.Player
             if (_tempo < MoverAte)
             {
                 Pose(c, _lugarSaindo);
-                if (!c.moto) CaberNoTeto(c);
+                if (!c.moto && !c.NaCacamba(_lugarSaindo)) CaberNoTeto(c);
             }
             if (dono)
             {
@@ -695,7 +759,7 @@ namespace ZombieCityCleaner.Player
             if (_fase == Fase.Dentro && !_segurandoChave)
             {
                 Vector2 olhar = LerOlhar();
-                _yaw = Mathf.Clamp(_yaw + olhar.x, -135f, 135f);
+                _yaw = GiroDeTeste ?? Mathf.Clamp(_yaw + olhar.x, -135f, 135f);
                 _pitch = Mathf.Clamp(_pitch - olhar.y, -60f, 75f);
             }
             // o corpo acompanha este olhar (o peito e a cabeça, JogadorRede.LateUpdate): sem isto, ele ficava com o do
@@ -809,6 +873,12 @@ namespace ZombieCityCleaner.Player
                 PoseDaMoto(carro, lugar);
                 return;
             }
+            // na caçamba da caminhonete, sentado no piso (feita aqui, mesmo com as animações de sentado do carro)
+            if (carro != null && carro.NaCacamba(lugar))
+            {
+                PoseDaCacamba(carro, lugar);
+                return;
+            }
             // o personagem com as animações de sentado (o principal em blocos, 28/10/2026): o Animator toca a do lugar
             // (o parâmetro Lugar: 1 o motorista, 2 os outros) e a camada dos braços sai; sem elas, a pose feita aqui
             if (TemLugar(animador))
@@ -884,35 +954,115 @@ namespace ZombieCityCleaner.Player
             Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
             if (_ossos.TryGetValue("spine", out var coluna))
                 coluna.rotation = Quaternion.AngleAxis(piloto ? c.troncoDoPiloto : 5f, direita) * coluna.rotation;
-            Vector3 alvoDaMao = default, mira = default;
-            bool comAMao = !piloto && GarupaComAMao(c, out alvoDaMao, out mira);
+            // as pernas primeiro: a arma de quem vai na garupa pousa na coxa (GarupaComAMao lê onde ela ficou)
             for (int s = 0; s < 2; s++)   // 0 o lado direito, 1 o esquerdo
             {
                 string l = s == 0 ? ".R" : ".L";
                 float lado = s == 0 ? 1f : -1f;
                 int i = lugar * 2 + s;
                 var pe = c.pedaleiras != null && i < c.pedaleiras.Length ? c.pedaleiras[i] : null;
-                if (pe != null)
-                {
-                    // o tornozelo fica acima e atrás do apoio (a sola em cima da pedaleira)
-                    Vector3 tornozelo = pe.position + cima * 0.08f - frente * 0.06f;
-                    DoisOssos("thigh" + l, "shin" + l, tornozelo, frente * 0.8f + cima * 0.45f + direita * (lado * 0.35f));
-                    Mirar("foot" + l, frente * 0.92f - cima * 0.3f + direita * (lado * 0.1f));
-                }
+                if (pe == null) continue;
+                // o tornozelo fica acima e atrás do apoio (a sola em cima da pedaleira)
+                Vector3 tornozelo = pe.position + cima * 0.08f - frente * 0.06f;
+                // o joelho (16/11/2026, a pedido: "não é anatômico, não é correto"; antes ele abria até 34° na cross, de
+                // sapo): para a frente e só por fora do que fica entre as pernas, o tanque (o piloto: a 20 cm do meio da moto,
+                // ou três quartos do caminho até o pé, a canela quase em pé vista de frente) ou os quadris do piloto (a
+                // garupa: a 23 cm)
+                float peFora = Vector3.Dot(tornozelo - transform.position, direita) * lado;
+                float joelhoFora = piloto ? Mathf.Max(0.20f, peFora * 0.75f) : 0.23f;
+                float quadrilFora = _ossos.TryGetValue("thigh" + l, out var coxaDaPerna)
+                    ? Vector3.Dot(coxaDaPerna.position - transform.position, direita) * lado : 0.095f;
+                Vector3 dobra = frente * 0.33f + cima * 0.05f + direita * (lado * (joelhoFora - quadrilFora));
+                DoisOssos("thigh" + l, "shin" + l, tornozelo, dobra);
+                PeNoPlano(l, frente * 0.92f - cima * 0.3f);
+            }
+            Vector3 alvoDaMao = default, mira = default;
+            bool comAMao = !piloto && GarupaComAMao(c, out alvoDaMao, out mira);
+            for (int s = 0; s < 2; s++)
+            {
+                string l = s == 0 ? ".R" : ".L";
+                float lado = s == 0 ? 1f : -1f;
                 if (piloto && c.punhos != null && s < c.punhos.Length && c.punhos[s] != null)
+                {
+                    // as mãos nos punhos, as palmas para baixo (o antebraço gira, não o cotovelo)
                     DoisOssos("upper_arm" + l, "forearm" + l, c.punhos[s].position, -cima * 0.55f + direita * (lado * 0.75f) - frente * 0.3f);
+                    Palma(l, -cima + frente * 0.2f);
+                }
                 else if (comAMao)
                     MaoNaFrente(s, alvoDaMao, mira);   // o garupa com algo na mão (08/11/2026: ele atira e usa itens)
                 else if (_ossos.TryGetValue("thigh" + l, out var coxa) && _ossos.TryGetValue("shin" + l, out var joelho))
                 {
-                    // o garupa: as mãos nas coxas, perto dos joelhos
+                    // o garupa: as mãos nas coxas, perto dos joelhos, as palmas em cima delas
                     Vector3 naCoxa = Vector3.Lerp(coxa.position, joelho.position, 0.6f) + cima * 0.07f + direita * (lado * 0.02f);
                     DoisOssos("upper_arm" + l, "forearm" + l, naCoxa, -frente * 0.6f + direita * (lado * 0.6f) - cima * 0.2f);
+                    Palma(l, -cima);
                 }
             }
             // a mão direita torce o acelerador (07/11/2026; só no dono: o acelerador dele não vai pela rede)
             if (piloto && c.IsOwner && _ossos.TryGetValue("hand.R", out var maoDireita))
                 maoDireita.rotation = Quaternion.AngleAxis(-28f * Mathf.Clamp01(c.AceleradorDoDono), direita) * maoDireita.rotation;
+        }
+
+        // o que está na mão do corpo, sentado (em todas as máquinas): some com quem dirige e, na moto, com a arma grande
+        // (15/11/2026); e muda quando ele troca de item no banco
+        Loot.Item _itemVisto = Loot.Item.Nada;
+        bool _naMaoVisto, _naMaoFeito;
+
+        void AcertarNaMao()
+        {
+            var item = NaMao;
+            bool esconder = Lugar == 0 || (Carro.moto && GrandeParaAMoto(item));
+            if (_naMaoFeito && esconder == _naMaoVisto && item == _itemVisto) return;
+            _naMaoFeito = true;
+            _naMaoVisto = esconder;
+            _itemVisto = item;
+            _rede.EsconderNaMao(esconder);
+        }
+
+        // ------------------------------------------------------------------------------------------ na caçamba
+
+        /// <summary>
+        /// Sentado no piso da caçamba da caminhonete (15/11/2026, a pedido: "na caçamba vão dar para sentar mais duas pessoas
+        /// (dentro da caçamba, encostadas ali dentro)"): o corpo parte do repouso (o Animator fica desligado), o tronco deita
+        /// para trás, encostado na frente da caçamba (<see cref="Carro.encostoNaCacamba"/>). Depois do primeiro teste ("o
+        /// jogador parece um sapo"; "uma perna dobrada e uma perna esticada, acho que ficaria mais interessante"): a perna
+        /// direita esticada no piso (<see cref="Carro.pisoDaCacamba"/>, o calcanhar no chão), a esquerda dobrada, o pé perto do
+        /// quadril e o joelho para cima; a mão direita em cima da coxa esticada e a esquerda com o antebraço no joelho. Com algo
+        /// na mão, a arma descansa em cima da coxa esticada (<see cref="GarupaComAMao"/>), sem atravessar a perna.
+        /// </summary>
+        void PoseDaCacamba(Carro c, int lugar)
+        {
+            var animador = _rede.animadorCorpo;
+            if (_repouso.Count == 0) return;
+            if (animador.enabled) animador.enabled = false;
+            foreach (var (osso, pos, rot) in _repouso) osso.SetLocalPositionAndRotation(pos, rot);
+            Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
+            if (_ossos.TryGetValue("spine", out var coluna))
+                coluna.rotation = Quaternion.AngleAxis(-c.encostoNaCacamba, direita) * coluna.rotation;
+            var banco = c.assentos[lugar];
+            float altura = Mathf.Max(0.05f, banco.localPosition.y - c.pisoDaCacamba);   // o quadril acima do piso
+            // a direita esticada (quase toda: o joelho dobra um pouco), o calcanhar no piso e a ponta do pé para cima
+            Vector3 tornozeloD = banco.position + frente * 0.80f + direita * 0.13f - cima * (altura - 0.06f);
+            DoisOssos("thigh.R", "shin.R", tornozeloD, cima + frente * 0.2f);
+            PeNoPlano(".R", frente * 0.35f + cima * 0.93f);
+            // a esquerda dobrada: o pé no piso, o joelho para cima e um pouco para fora. (16/11/2026: com o pé a 40 cm, o
+            // joelho dobrava 126° e a coxa subia até o peito; a 52 cm dobra uns 105°, a coxa a uns 45°)
+            Vector3 tornozeloE = banco.position + frente * 0.52f - direita * 0.13f - cima * (altura - 0.07f);
+            DoisOssos("thigh.L", "shin.L", tornozeloE, cima * 0.95f - direita * 0.15f);
+            PeNoPlano(".L", frente * 0.95f - cima * 0.1f);
+            // as mãos (com algo na mão, os braços seguram a arma depois desta pose): a direita em cima da coxa esticada, os
+            // cotovelos para trás e para baixo; a esquerda com o antebraço no joelho dobrado, a mão caindo à frente dele
+            if (_ossos.TryGetValue("thigh.R", out var coxaD) && _ossos.TryGetValue("shin.R", out var joelhoD))
+            {
+                DoisOssos("upper_arm.R", "forearm.R", Vector3.Lerp(coxaD.position, joelhoD.position, 0.55f) + cima * 0.08f,
+                          -cima * 0.6f - frente * 0.5f + direita * 0.3f);
+                Palma(".R", -cima);
+            }
+            if (_ossos.TryGetValue("shin.L", out var joelhoE))
+            {
+                DoisOssos("upper_arm.L", "forearm.L", joelhoE.position + frente * 0.08f + cima * 0.02f, -cima * 0.3f - frente * 0.3f - direita * 0.6f);
+                Palma(".L", -cima);
+            }
         }
 
         /// <summary>Até onde os braços com a arma acompanham o giro do olhar sentado, para cada lado (graus; o olhar vai a 135).</summary>
@@ -925,17 +1075,79 @@ namespace ZombieCityCleaner.Player
         /// do peito) e para onde ela aponta: o olhar dele, pelo Pitch e, desde 10/11/2026, pelo giro para os lados
         /// (<see cref="JogadorRede.GiroSentado"/>; antes os outros viam a arma sempre para a frente do veículo).
         /// </summary>
+        /// <remarks>
+        /// Desde 15/11/2026 (a pedido: "precisa de uma animação da arma descansando quando está equipada, seria melhor do que
+        /// apenas o braço esticado"; "quando viramos para o lado para atirar, o braço fica todo bugado ... mais interessante
+        /// ele ter uma animação lateralizando para atirar"; e, da visão do piloto, "a arma fica no rosto do jogador"):
+        ///  - <b>descansando</b>: a arma fica em cima da coxa direita (no meio dela), o cano para a frente, um pouco para baixo e
+        ///    para dentro, as duas mãos nela, os cotovelos para trás e para baixo (depois do primeiro teste: no colo, ela
+        ///    atravessava a perna dobrada da caçamba e a levantada da garupa, e os cotovelos abertos davam o "sapo"). Ela <b>levanta</b> (em ~0,2 s) com quem mira (o botão direito, <see cref="JogadorRede.Mirando"/>) e por
+        ///    <see cref="ArmaLevantadaDepoisDoAtaque"/> depois de cada tiro ou golpe (<see cref="JogadorRede.UltimoAtaque"/>),
+        ///    e desce devagar (0,5 s);
+        ///  - <b>de lado</b>: levantada, o tronco vira junto com o olhar (60% do giro, até 60°), e os braços só fazem o resto;
+        ///  - <b>na garupa da moto</b>, mirando para a frente, a arma passa pelo lado do piloto (por cima do ombro direito
+        ///    dele), mais perto do peito, e não na cabeça dele. A arma grande nem aparece na moto (<see cref="GrandeParaAMoto"/>).
+        /// </remarks>
         bool GarupaComAMao(Carro c, out Vector3 mao, out Vector3 mira)
         {
             mao = mira = default;
-            var item = _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
+            var item = NaMao;
             if (item == Loot.Item.Nada || !_ossos.TryGetValue("chest", out var peito)) return false;
+            if (c.moto && GrandeParaAMoto(item)) return false;
+            float alvo = _rede.Mirando.Value || Time.time - _rede.UltimoAtaque < ArmaLevantadaDepoisDoAtaque ? 1f : 0f;
+            if (Time.frameCount != _levantadaNoQuadro)
+            {
+                _levantadaNoQuadro = Time.frameCount;
+                _levantada = Mathf.MoveTowards(_levantada, alvo, Time.deltaTime / (alvo > _levantada ? 0.2f : 0.5f));
+            }
+            float k = Mathf.SmoothStep(0f, 1f, _levantada);
+            Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
             float giro = Mathf.Clamp(_rede.GiroSentado.Value, -GiroDosBracos, GiroDosBracos);
-            mira = transform.rotation * (Quaternion.Euler(Mathf.Clamp(_rede.Pitch.Value, -50f, 50f), giro, 0f) * Vector3.forward);
+            // levantada, o tronco vira para o lado do olhar (os ombros vão junto; o peito muda de lugar)
+            float tronco = Mathf.Clamp(giro * 0.6f, -60f, 60f) * k;
+            if (Mathf.Abs(tronco) > 0.5f && _ossos.TryGetValue("spine", out var coluna))
+                coluna.rotation = Quaternion.AngleAxis(tronco, cima) * coluna.rotation;
+            Vector3 miraAlta = transform.rotation * (Quaternion.Euler(Mathf.Clamp(_rede.Pitch.Value, -50f, 50f), giro, 0f) * Vector3.forward);
             Vector3 direitaDaMira = transform.rotation * (Quaternion.Euler(0f, giro, 0f) * Vector3.right);
-            mao = peito.position + mira * 0.42f + transform.up * 0.12f + direitaDaMira * 0.06f;
+            float alcance = 0.42f;
+            Vector3 deLado = Vector3.zero;
+            if (c.moto)
+            {
+                // olhando para a frente, a arma vai pelo lado direito do piloto (some de lado, olhando para os lados)
+                float paraAFrente = Mathf.Clamp01(1f - Mathf.Abs(giro) / 60f);
+                alcance = Mathf.Lerp(0.42f, 0.30f, paraAFrente);
+                deLado = direita * (0.22f * paraAFrente);
+            }
+            Vector3 maoAlta = peito.position + miraAlta * alcance + cima * 0.12f + direitaDaMira * 0.06f + deLado;
+            // descansando: a mão em cima da coxa direita, no meio dela (a pose das pernas já foi feita), o cano ao longo da coxa,
+            // um pouco para baixo e para dentro
+            Vector3 maoBaixa, miraBaixa;
+            if (_ossos.TryGetValue("thigh.R", out var coxa) && _ossos.TryGetValue("shin.R", out var joelho))
+            {
+                maoBaixa = Vector3.Lerp(coxa.position, joelho.position, 0.55f) + cima * 0.09f - direita * 0.01f;
+                Vector3 aoLongo = Vector3.ProjectOnPlane(joelho.position - coxa.position, cima);
+                aoLongo = aoLongo.sqrMagnitude > 1e-4f ? aoLongo.normalized : frente;
+                miraBaixa = (aoLongo * 0.85f - cima * 0.3f - direita * 0.25f).normalized;
+            }
+            else
+            {
+                Vector3 quadril = _ossos.TryGetValue("hips", out var q) ? q.position : peito.position - cima * 0.35f;
+                maoBaixa = quadril + frente * 0.30f + cima * 0.06f + direita * 0.10f;
+                miraBaixa = (frente * 0.8f - cima * 0.55f - direita * 0.2f).normalized;
+            }
+            _armaLevantada = k;
+            mao = Vector3.Lerp(maoBaixa, maoAlta, k);
+            mira = Vector3.Slerp(miraBaixa, miraAlta, k).normalized;
             return true;
         }
+
+        /// <summary>Por quanto tempo (s) a arma de quem está sentado fica levantada depois de um tiro ou golpe.</summary>
+        const float ArmaLevantadaDepoisDoAtaque = 1.6f;
+        float _levantada, _armaLevantada;
+        int _levantadaNoQuadro = -1;
+
+        /// <summary>O peito do corpo (para a lanterna de quem vai na moto ou na caçamba sair dele), ou null.</summary>
+        public Transform Peito => _ossos.TryGetValue("chest", out var p) ? p : null;
 
         // um braço (s: 0 o direito, 1 o esquerdo) com a mão na frente do peito, para onde ele olha: a direita segurando e a
         // esquerda apoiando; o cotovelo para baixo e para fora (o lado de quem mira)
@@ -947,7 +1159,10 @@ namespace ZombieCityCleaner.Player
             Vector3 direita = Vector3.Cross(cima, mira);
             direita = direita.sqrMagnitude > 1e-4f ? direita.normalized : transform.right;
             Vector3 mao = s == 0 ? alvoDaMao : alvoDaMao - direita * 0.06f - mira * 0.05f;
-            DoisOssos("upper_arm" + l, "forearm" + l, mao, -cima * 0.7f + direita * (lado * 0.6f));
+            // levantada, os cotovelos para baixo e para fora (de quem mira); descansando, para trás e para baixo, perto do
+            // corpo (abertos, com a arma baixa, era o "sapo")
+            Vector3 dobra = Vector3.Lerp(-cima * 0.6f - transform.forward * 0.6f + direita * (lado * 0.2f), -cima * 0.7f + direita * (lado * 0.6f), _armaLevantada);
+            DoisOssos("upper_arm" + l, "forearm" + l, mao, dobra);
             Mirar("hand" + l, mira);
         }
 
@@ -1119,9 +1334,69 @@ namespace ZombieCityCleaner.Player
             float h = Mathf.Sqrt(Mathf.Max(0f, l1 * l1 - x * x));
             Vector3 p = Vector3.ProjectOnPlane(dobra, dir);
             if (p.sqrMagnitude < 1e-6f) p = Vector3.ProjectOnPlane(transform.forward, dir);
-            Vector3 dobrado = pa + dir * x + p.normalized * h;
-            Mirar(a, dobrado - pa);
-            Mirar(b, pa + dir * d - b.position);
+            p.Normalize();
+            Vector3 dobrado = pa + dir * x + p * h;
+            // a dobradiça: perpendicular ao membro e ao lado para onde a junta do meio aponta (a mesma conta do repouso)
+            Vector3 eixo = Vector3.Cross(p, dir);
+            Orientar(a, dobrado - pa, eixo);
+            Orientar(b, pa + dir * d - b.position, eixo);
+        }
+
+        /// <summary>
+        /// O osso ao longo de <paramref name="aoLongo"/> (no mundo), com o eixo da dobradiça dele em <paramref name="eixo"/>:
+        /// sem torcer em volta do próprio comprimento. Sem dobradiça guardada, só aponta (pelo caminho mais curto).
+        /// </summary>
+        void Orientar(Transform osso, Vector3 aoLongo, Vector3 eixo)
+        {
+            if (aoLongo.sqrMagnitude < 1e-10f) return;
+            Vector3 y = aoLongo.normalized;
+            Vector3 h = Vector3.ProjectOnPlane(eixo, y);
+            if (!_dobradica.TryGetValue(osso, out var local) || h.sqrMagnitude < 1e-8f)
+            {
+                Mirar(osso, y);
+                return;
+            }
+            Vector3 hLocal = Vector3.ProjectOnPlane(local, Vector3.up);   // o osso vai ao longo do eixo Y dele
+            if (hLocal.sqrMagnitude < 1e-8f)
+            {
+                Mirar(osso, y);
+                return;
+            }
+            osso.rotation = Quaternion.LookRotation(h.normalized, y) * Quaternion.Inverse(Quaternion.LookRotation(hLocal.normalized, Vector3.up));
+        }
+
+        /// <summary>
+        /// O pé para <paramref name="direcao"/> (no mundo), dentro do plano da perna: o tornozelo dobra no eixo do joelho
+        /// e não torce (a ponta do pé vai para fora ou para dentro com a perna toda, pelo quadril).
+        /// </summary>
+        void PeNoPlano(string l, Vector3 direcao)
+        {
+            if (!_ossos.TryGetValue("shin" + l, out var canela) || !_ossos.TryGetValue("foot" + l, out var pe)
+                || !_dobradica.TryGetValue(canela, out var local))
+            {
+                Mirar("foot" + l, direcao);
+                return;
+            }
+            Vector3 eixo = canela.rotation * local;
+            Vector3 noPlano = Vector3.ProjectOnPlane(direcao, eixo);
+            if (noPlano.sqrMagnitude < 1e-6f) return;
+            Orientar(pe, noPlano, eixo);
+        }
+
+        /// <summary>
+        /// Gira o antebraço no próprio eixo (a pronação e a supinação, que é onde o braço de verdade gira), no máximo
+        /// <paramref name="maximo"/> graus, para a palma da mão ficar virada para <paramref name="palmaPara"/> (no mundo).
+        /// A mão fica no mesmo lugar (na ponta do antebraço).
+        /// </summary>
+        void Palma(string l, Vector3 palmaPara, float maximo = 90f)
+        {
+            if (!_ossos.TryGetValue("forearm" + l, out var antebraco) || !_ossos.TryGetValue("hand" + l, out var mao)
+                || !_palma.TryGetValue(mao, out var local)) return;
+            Vector3 eixo = antebraco.up;
+            Vector3 agora = Vector3.ProjectOnPlane(mao.rotation * local, eixo), quero = Vector3.ProjectOnPlane(palmaPara, eixo);
+            if (agora.sqrMagnitude < 1e-6f || quero.sqrMagnitude < 1e-6f) return;
+            float giro = Mathf.Clamp(Vector3.SignedAngle(agora, quero, eixo), -maximo, maximo);
+            antebraco.rotation = Quaternion.AngleAxis(giro, eixo) * antebraco.rotation;
         }
 
         void Mirar(string nome, Vector3 direcaoNoMundo)
@@ -1138,6 +1413,12 @@ namespace ZombieCityCleaner.Player
         /// <summary>O olho de quem senta, a partir do quadril (no espaço do veículo): na moto, mais para a frente com o tronco deitado.</summary>
         static Vector3 OlhoDe(Carro c, int lugar)
         {
+            // na caçamba, o tronco deita para trás (encostado): o olho vai junto (15/11/2026)
+            if (c != null && c.NaCacamba(lugar))
+            {
+                float e = -c.encostoNaCacamba * Mathf.Deg2Rad;
+                return new Vector3(0f, 0.70f * Mathf.Cos(e), 0.62f * Mathf.Sin(e) - 0.03f);
+            }
             if (c == null || !c.moto) return OlhoNoQuadril;
             float t = (lugar == 0 ? c.troncoDoPiloto : 5f) * Mathf.Deg2Rad;
             return new Vector3(0f, 0.70f * Mathf.Cos(t), 0.62f * Mathf.Sin(t) - 0.03f);

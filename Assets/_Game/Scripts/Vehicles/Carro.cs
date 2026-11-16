@@ -139,6 +139,16 @@ namespace ZombieCityCleaner.Vehicles
         [Header("As rodas")]
         [Tooltip("Como os pneus começam a partida (%, na ordem das rodas; -1, sem a roda). A família achou o carro com o da frente esquerda furado.")]
         public int[] pneusIniciais = { 0, 80, 70, 75 };
+        // o tamanho de cada veículo (15/11/2026, a caminhonete: as rodas, o chassi e a tração dela são outros). Os valores de
+        // sempre são os da perua e do cupê
+        [Tooltip("O raio da roda inteira (m): o furado e o cubo baixam na mesma proporção (PneusDoCarro.Raio). A perua: 0,30.")]
+        public float raioDaRoda = PneusDoCarro.RaioBom;
+        [Tooltip("A metade da largura do pneu (m), para o tiro achar a roda.")]
+        public float meiaLarguraDaRoda = PneusDoCarro.MeiaLargura;
+        [Tooltip("A força do motor vai para as rodas de trás (a caminhonete); sem isto, para as da frente (a perua e o cupê).")]
+        public bool tracaoTraseira;
+        [Tooltip("O centro de massa (no espaço do carro). A moto põe o dela (centroDaMoto).")]
+        public Vector3 centroDeMassa = new Vector3(0f, 0.38f, 0.12f);
 
         [Header("O porta-malas")]
         [Tooltip("A tampa traseira (a origem na dobradiça, em cima): abre girando em X (a borda de baixo sobe).")]
@@ -156,6 +166,11 @@ namespace ZombieCityCleaner.Vehicles
         [Tooltip("Quanto o lado do macaco sobe (m, na roda) e em quanto tempo (s).")]
         public float alturaDoMacaco = 0.25f;
         public float tempoDoMacaco = 2.2f;
+        [Tooltip("Onde o macaco encosta embaixo do carro, ao lado de cada roda: x (para o meio do carro), a altura da lataria ali " +
+                 "(o macaco estica do chão até ela) e quanto para dentro da roda, no comprimento (m). A perua: 0,78, 0,22 e 0,55.")]
+        public float macacoX = 0.78f, baseDaLataria = 0.22f, macacoDaRoda = 0.55f;
+        [Tooltip("O meio do porta-malas (no espaço do carro): os pedidos de pegar e guardar contam a distância (3 m) daqui.")]
+        public Vector3 pontoDoPortaMalas = new Vector3(0f, 0.9f, -2.3f);
 
         [Header("Direção")]
         [Tooltip("Torque em cada roda da frente (N·m), com o acelerador no fundo e o carro parado.")]
@@ -431,14 +446,12 @@ namespace ZombieCityCleaner.Vehicles
         public Vector3 PontoDoMacaco(int roda)
         {
             var w = rodas[roda].transform.localPosition;
-            return new Vector3(Mathf.Sign(w.x) * MacacoX, BaseDaLataria, w.z - Mathf.Sign(w.z) * 0.55f);
+            return new Vector3(Mathf.Sign(w.x) * macacoX, baseDaLataria, w.z - Mathf.Sign(w.z) * macacoDaRoda);
         }
-        /// <summary>O macaco fica embaixo da soleira (x) e encosta embaixo da carroceria (y; o Y_BASE do carro.py).</summary>
-        public const float MacacoX = 0.78f, BaseDaLataria = 0.22f;
         /// <summary>Acima disto (m/s) o macaco não se apoia.</summary>
         public const float VelocidadeParaOMacaco = 0.4f;
-        /// <summary>Atrás do carro, na altura da tampa: os pedidos do porta-malas contam a distância daqui.</summary>
-        public Vector3 PontoDoPortaMalas => transform.TransformPoint(0f, 0.9f, -2.3f);
+        /// <summary>O meio do porta-malas (atrás do carro, na altura da tampa; na caminhonete, a caçamba): os pedidos dele contam a distância daqui.</summary>
+        public Vector3 PontoDoPortaMalas => transform.TransformPoint(pontoDoPortaMalas);
         /// <summary>A temperatura do motor (0 frio, ~0,45 normal, 1 fervendo).</summary>
         public float Temperatura => _calor.Value / 200f;
         /// <summary>O motor ferveu e ainda não esfriou: apaga e não pega.</summary>
@@ -451,7 +464,7 @@ namespace ZombieCityCleaner.Vehicles
         void Awake()
         {
             _corpo = GetComponent<Rigidbody>();
-            _corpo.centerOfMass = new Vector3(0f, 0.38f, 0.12f);
+            _corpo.centerOfMass = centroDeMassa;
             if (rodas != null && rodas.Length > 0) rodas[0].ConfigureVehicleSubsteps(5f, 12, 15);
             if (volante != null) _volanteRepouso = volante.localRotation;
             if (capo != null) _capoRepouso = capo.localRotation;
@@ -490,7 +503,7 @@ namespace ZombieCityCleaner.Vehicles
                 _olhandoOCapo.Clear();
                 _capoAberto.Value = false;
                 _pneus.Value = PneusDoCarro.Com(moto ? new[] { 100, 100, 100, 100 } : pneusIniciais);
-                _malasAberto.Value = false;
+                _malasAberto.Value = cacamba;   // (Carro.Cacamba.cs) a caçamba não tem tampa para abrir
                 _macaco.Value = macacoInicial;
                 _estepe.Value = estepeInicial < 0 ? PneusDoCarro.Vazio : (byte)Mathf.Clamp(estepeInicial, 0, 100);
                 _macacoEm.Value = PneusDoCarro.Vazio;
@@ -956,7 +969,7 @@ namespace ZombieCityCleaner.Vehicles
             _giro = Mathf.MoveTowards(_giro, alvo, rapidez * dt);
             rodas[0].steerAngle = rodas[1].steerAngle = _giro;
 
-            // acelerador, freio e ré (tração na frente); com o motor desligado, o acelerador não faz nada e não há ré (o
+            // acelerador, freio e ré (tração na frente; na caminhonete, atrás); com o motor desligado, o acelerador não faz nada e não há ré (o
             // freio funciona, e o carro rola devagar até parar)
             bool ligado = MotorLigado;
             float forca = 0f, frear = 0f;
@@ -977,7 +990,7 @@ namespace ZombieCityCleaner.Vehicles
             else frear = Mathf.Abs(v) < 0.4f ? 600f : 90f;   // desligado e engatado: segura parado
             for (int i = 0; i < 4; i++)
             {
-                rodas[i].motorTorque = i < 2 ? forca : 0f;
+                rodas[i].motorTorque = (tracaoTraseira ? i >= 2 : i < 2) ? forca : 0f;
                 rodas[i].brakeTorque = frear + (i >= 2 ? mao * freioDeMao : 0f);
             }
             // freio de mão: a traseira escorrega. O pneu gasto ou furado segura menos (de lado e para a frente)
@@ -1064,7 +1077,7 @@ namespace ZombieCityCleaner.Vehicles
         void PortaMalasRpc(bool abrir, RpcParams parametros = default)
         {
             if (!PertoDoPortaMalas(parametros.Receive.SenderClientId, out _) || (abrir && Velocidade > 1.5f)) return;
-            _malasAberto.Value = abrir;
+            _malasAberto.Value = abrir || cacamba;   // a caçamba (a caminhonete) fica sempre aberta
         }
 
         [Rpc(SendTo.Server)]
@@ -1297,8 +1310,8 @@ namespace ZombieCityCleaner.Vehicles
             if (_miraDoMacaco != null && _miraDoMacaco.enabled != ver) _miraDoMacaco.enabled = ver;
             if (!ver) return;
             Vector3 topo = transform.TransformPoint(PontoDoMacaco(roda));
-            Vector3 chao = topo - Vector3.up * BaseDaLataria;
-            float altura = BaseDaLataria;
+            Vector3 chao = topo - Vector3.up * baseDaLataria;
+            float altura = baseDaLataria;
             if (Physics.Raycast(topo + Vector3.up * 0.05f, Vector3.down, out var hit, 1.5f, 1, QueryTriggerInteraction.Ignore))
             {
                 chao = hit.point;
@@ -1345,7 +1358,7 @@ namespace ZombieCityCleaner.Vehicles
                 {
                     var v = c.rodasVisuais[i];
                     if (v == null || !p.Tem(i)) continue;
-                    if (Cilindro(origem, direcao, v.position, v.right, PneusDoCarro.RaioDoModelo, PneusDoCarro.MeiaLargura, out float t, out var n)
+                    if (Cilindro(origem, direcao, v.position, v.right, c.raioDaRoda, c.meiaLarguraDaRoda, out float t, out var n)
                         && t < melhor && t <= alcance)
                     {
                         melhor = t;
@@ -1430,7 +1443,7 @@ namespace ZombieCityCleaner.Vehicles
             for (int i = 0; i < rodas.Length && i < PneusDoCarro.Quantas; i++)
             {
                 if (rodas[i] == null) continue;
-                rodas[i].radius = p.Raio(i);
+                rodas[i].radius = p.Raio(i, raioDaRoda);
                 _aderencia[i] = p.Aderencia(i);
                 var frente = rodas[i].forwardFriction;
                 frente.stiffness = 1.6f * _aderencia[i];
@@ -1739,7 +1752,7 @@ namespace ZombieCityCleaner.Vehicles
             _volanteVisto = Mathf.MoveTowards(_volanteVisto, -giro * relacaoDoVolante, giroMaximoDoVolanteVisto * dt);
             if (volante != null) volante.localRotation = _volanteRepouso * Quaternion.Euler(0f, 0f, _volanteVisto);
             if (rodasVisuais == null) return;
-            _giroDasRodas += VelocidadeParaFrente * dt / 0.3f * Mathf.Rad2Deg;
+            _giroDasRodas += VelocidadeParaFrente * dt / raioDaRoda * Mathf.Rad2Deg;
             for (int i = 0; i < rodasVisuais.Length && i < rodas.Length; i++)
             {
                 var visual = rodasVisuais[i];

@@ -4356,6 +4356,162 @@ ponto morto, ela acelerando e a Harley):
 
 **Não conferido:** dois jogadores (a garupa e a moto vista por um cliente).
 
+## A caminhonete, o primeiro carro (15/11/2026, a pedido)
+
+O pedido: "uma caminhonete ... essa caminhonete precisa ser boa, pois a gente vai começar o jogo com ela e vai ser o nosso
+primeiro carro", uma picape grande dos anos 90, verde como nas fotos do usuário, **sem o nome do carro no jogo nem nas
+texturas**; o estepe removível na caçamba; 2 lugares na cabine e mais 2 na caçamba ("encostadas ali dentro"); a caçamba
+aberta, sem a lona; a mecânica dos outros carros (capô, peças, partida, chave, pneus e macaco). Depois do primeiro olhar:
+"a roda na caçamba seria mais interessante ser mais lateral ... (encostada em um dos lados)" e "não deixar [os pneus] tão
+realistas/redondos, vai consumir muitos triângulos".
+
+**O modelo** (`Blender/Caminhonete/caminhonete.py`; o editável, as versões, as fotos e o relatório ficam em
+`D:\teste blender\A Caminhonete`): o caminho do cupê (um modelo alto e um leve, as texturas assadas do alto no leve; o
+`rodar.py` faz as etapas num Blender sem janela e o `assar_tudo.sh` assa os 10 passes), reaproveitando a `Malha`, os
+materiais de autoria e o painel da perua nova. 4,99 × 1,94 (2,30 com os retrovisores) × 1,87 m, entre-eixos de 2,98 m,
+rodas de 0,385 m (245/75 aro 16), a cabine simples e a caçamba de 2 m.
+- **A v3 é a do jogo: 8.132 triângulos** com as 4 rodas e o estepe. A roda tem 380: 16 lados chapados no alto e no
+  leve, a mesma silhueta (a v1 e a v2 tinham 760, de 24 lados).
+- Verde-escura metálica quase nova (a sujeira só embaixo, sem ferrugem), dois frisos dourados na porta e na frente da
+  caçamba, a moldura cromada larga da grade e dos faróis retangulares com uma **plaqueta lisa no lugar do emblema**, as setas
+  âmbar, os para-choques cromados (o de trás com o degrau, a placa e o engate), as lanternas de pé nas pontas da caçamba e
+  a terceira luz de freio em cima do vidro corrediço. Rodas de liga de 6 raios.
+- Interior cinza-claro: os dois bancos separados de tecido, o descanso de braço no meio, o painel da perua (o lugar do
+  motorista é o dela 42 cm mais alto e 4 cm para trás: `DY`, `DZ`), o volante de 4 raios.
+- A caçamba com o revestimento preto de nervuras, as caixas das rodas, os furos das estacas e os ganchos. **O estepe** (a
+  roda dela, de pé, o eixo em X) fica do lado direito, ao lado da caixa da roda, logo atrás da cabine, com o alto inclinado 6°
+  para a lateral (`ESTEPE`, `TOMBO_ESTEPE`); na v1 e na v2 ele ficava no meio.
+- As peças: `Cam_Carroceria`, `Cam_Porta_E/D`, `Cam_Roda`, `Cam_Volante`, `Cam_Capo` e `Cam_Tampa` (a tampa da caçamba,
+  a origem na dobradiça de baixo; hoje é só desenho). Os materiais `Cam_Lataria`, `_Interior`, `_Vidro`, `_Farol` e
+  `_Lanterna`.
+
+**No jogo** (`Editor/Caminhonete/MontagemDaCaminhonete.cs`: Zombie City Cleaner > Veículos > Montar a caminhonete (com a
+chave), que também refaz as peças do carro e confere o prefab no Console):
+- `Prefabs/Veiculos/Caminhonete.prefab` é uma cópia do da perua com o tamanho dela: 1.900 kg, as rodas maiores e a
+  suspensão de 22 cm (mais dura), **tração atrás**, 1.750 N·m, 42 m/s no máximo, freios mais fortes, a colisão em 9 caixas (a
+  caçamba aberta em cima), os faróis, as luzes de dentro, o cofre do motor (o de sempre, 15% maior, no fundo do cofre largo
+  dela) e o tanque de 90 L com a tampa do modelo (à direita, atrás da roda).
+- **Os campos novos do `Carro`** (com os valores de sempre, a perua e o cupê não mudam): `raioDaRoda` e `meiaLarguraDaRoda`
+  (o furado e o cubo baixam na proporção: `PneusDoCarro.Raio(i, bom)`; o tiro acha a roda pelo tamanho dela),
+  `tracaoTraseira`, `centroDeMassa`, `macacoX`, `baseDaLataria`, `macacoDaRoda` (o macaco encosta embaixo do chassi) e
+  `pontoDoPortaMalas`.
+- **A caçamba** (`Vehicles/Carro.Cacamba.cs`, `Carro.cacamba`): o porta-malas dela fica sempre aberto (não há tampa; o
+  `PortaMalasDoCarro` não abre nem fecha). Um gatilho em volta da caçamba toda ("Caçamba (mira)") só tem dica mirando o
+  estepe ou o macaco ("[E] Pegar o estepe (85%)", "[E] Guardar o pneu"); fora deles, a mira passa para o que está atrás (a
+  subida, a tampa do tanque, as rodas).
+- **4 lugares:** os 2 da cabine (as portas de sempre) e os 2 da caçamba (`primeiroLugarNaCacamba` = 2), lado a lado à
+  esquerda do estepe, sentados no piso, encostados na frente da caçamba, olhando para trás. Sobe-se pela lateral, atrás da
+  roda (`PortaDoCarro.cacamba`, sem folha: "[E] Subir na caçamba"); desce-se do lado da caçamba. A pose
+  (`PassageiroDoCarro.PoseDaCacamba`) é feita no código, mesmo com as animações de sentado: o tronco deitado
+  `encostoNaCacamba` (14°), os pés no piso (`pisoDaCacamba`) com os joelhos para cima e as mãos nos joelhos; com algo na
+  mão, eles atiram e golpeiam como os passageiros. O teto não conta para eles (`CaberNoTeto`).
+- **A chave:** `Item.ChaveDaCaminhonete` = 73 (`Blender/pecas.py`: o chaveiro verde-escuro e o emblema prateado). O `EhPeca`
+  vai até ela; o F1 cria; o chaveiro na ignição é o verde.
+- **O carro da família** (`MundoDaPartida.caminhonete`): no mundo novo, ela nasce no lugar da perua (a vaga dela no bunker,
+  ou na garagem da casa), com a chave dela no chão da sala, e começa quebrada como a perua (vela queimada, bateria a 30%,
+  radiador a 25%, o pneu da frente esquerda furado, o estepe a 85% e o macaco na caçamba). **A perua não nasce mais no mundo
+  novo** (o prefab continua: o F3, o Lakewood e os saves de antes). No save, `CarroSalvo.qual` = 10
+  (`MundoDaPartida.QualDaCaminhonete`, longe dos números das motos); num save de antes dela (`MundoSalvo.caminhonete`
+  falso), ela aparece uma vez numa vaga livre da garagem (ou no pátio na frente do portão) e a chave no chão da sala.
+- O F3 cria a caminhonete arrumada; a `MontagemDoMundo` liga o `MundoDaPartida.caminhonete` quando o prefab existe.
+- **Depois do primeiro teste do Pedro (15/11/2026):**
+  - "o radiador fica para fora no capô": o cofre estava 15% maior e com o fundo em 0,811, e o alto do radiador (de pé, 0,355
+    m) ficava em 1,22, com o capô por baixo em 1,11 na frente. Agora o cofre tem o tamanho de sempre, o fundo em 0,745 e o
+    meio em z = 1,50: o alto do radiador fica 1,5 cm abaixo do capô;
+  - "está um pouco difícil de entrar na caçamba, pois toda vez aparece a opção de pegar o estepe ou o macaco": a mira dos
+    dois é a caixa da malha sem a folga de 8 cm (`PortaMalasDoCarro.Na`, a 2,4 m), e o gatilho da caçamba, fora deles,
+    oferece "[E] Subir na caçamba" pela subida do lado onde o jogador está.
+
+## As armas de quem vai sentado e a lanterna nos veículos (15/11/2026, a pedido)
+
+O Pedro, jogando com os amigos: "precisa de uma animação da arma descansando quando está equipada, seria melhor do que
+apenas o braço esticado"; da visão do piloto da moto, "a arma fica assim no rosto do jogador, impedindo a visão"; "o correto
+para a moto seria poder utilizar somente arma pequena (as 2 pistolas e as submetralhadoras); o resto fica impedido por ser
+muito grande"; "quando viramos para o lado para atirar, o braço fica todo bugado ... mais interessante ter uma animação
+lateralizando"; e a lanterna "sai pela boca do personagem pela terceira pessoa" e "fica uma sombra bugada da moto quando tem
+jogador atrás ligado a lanterna".
+
+- **A arma descansando** (`PassageiroDoCarro.GarupaComAMao`, em todas as máquinas: os passageiros do carro, o garupa da moto
+  e quem vai na caçamba): a arma fica no colo, perto do joelho direito, o cano para a frente e para baixo, as duas mãos nela.
+  Ela **levanta** em ~0,2 s com quem mira (o botão direito, `JogadorRede.Mirando`) e por 1,6 s depois de cada tiro ou golpe
+  (`JogadorRede.UltimoAtaque`, escrito no `AnunciarTiro`, no `TiroRpc`, no `AnunciarSoco` e no `SocoRpc`), e desce em 0,5 s.
+- **De lado:** levantada, o tronco ("spine") vira com o olhar sentado (60% do giro, até 60°), e os braços só fazem o resto.
+- **Na garupa da moto,** mirando para a frente, a arma passa pelo lado direito do piloto e mais perto do peito (0,30 m em
+  vez de 0,42), e não na cabeça dele; olhando para os lados (a partir de 60°), volta ao normal.
+- **Na moto, só armas pequenas** (`PassageiroDoCarro.GrandeParaAMoto`): as pistolas, as submetralhadoras, a faca e o que não
+  é arma. Com uma arma longa ou uma branca comprida na mão, o garupa fica sem as mãos livres (não atira, não golpeia, os
+  braços de primeira pessoa somem), a arma some do corpo e aparece "Na moto, só armas pequenas...".
+- **O que está na mão do corpo sentado** é acertado a cada quadro (`AcertarNaMao`): some com quem dirige e com a arma grande
+  na moto, e muda quando ele troca de item no banco.
+- **A lanterna** (`LanternaJogador`): na moto e na caçamba sai do peito do corpo sentado (`PassageiroDoCarro.Peito`, 16 cm
+  para a frente), com a força de sempre; na moto, sem sombra. No carro fechado continua mais fraca, mas sai 5 cm acima do
+  olho (antes, 6 cm abaixo: a boca). Nos outros, a luz de quem está sentado aponta também para o lado para onde ele olha.
+- **O teste:** `PassageiroDoCarro.GiroDeTeste` (estático, null no jogo) põe o giro do olhar sentado sem o mouse.
+- **Conferido no Play** (anfitrião sozinho, semente 7, médio):
+  - **O cofre da caminhonete:** no prefab, todo o cofre fica abaixo do capô (o radiador com 1,7 cm de folga, o motor
+    com 1,5).
+  - **A caçamba:** dos dois lados, olhando o piso, a tampa ou a lateral, aparece "[E] Subir na caçamba" (e sobe); olhando
+    o estepe ou o macaco, aparece "Pegar".
+  - **A arma na caçamba:** descansando, a mão direita fica 10 cm acima do quadril e 24 cm à frente, o cano para a frente
+    e para baixo. 0,4 s depois do tiro, sobe à altura do peito apontando para a frente; em 2,5 s volta ao colo.
+  - **Na garupa da Fat Boy:**
+    - a pistola deixa as mãos livres; a tocha, não (os braços somem, o corpo não mostra a tocha);
+    - olhando para a frente e atirando, a mão vai 28 cm para a direita;
+    - olhando 85° para o lado, o peito vira ~51° e a mão aponta para o lado (as fotos de trás mostram o tronco virado).
+  - **A lanterna:**
+    - na garupa, fica no peito, 16 cm à frente, sem sombra e com a força de sempre;
+    - fora da moto, a sombra volta;
+    - na cabine, fica 3 cm acima do olho e 12 cm à frente, com 30% da força.
+  - Nenhum erro no Console.
+- **Não conferido:** dois jogadores (o piloto vendo a arma do garupa, a luz e a arma vistas por um cliente) e o rifle
+  na garupa (sem mochila, ele não cabe nos bolsos: a regra é a mesma da tocha).
+- **O "sapo" (15/11/2026, o segundo teste: "o jogador parece um sapo"; "na moto está pior"; "na caminhonete ... uma perna
+  dobrada e uma perna esticada"; "o braço/arma passa por dentro da perna"):**
+  - **A garupa da Fat Boy:** a perna tem 0,84 m (coxa 0,36, canela 0,48), e o tornozelo do garupa ficava a 0,35 m da raiz
+    da coxa (a pedaleira só 22 cm abaixo do banco), e o joelho subia ao peito. A **Fat Boy v4** (`Blender/Motos/moto.py`,
+    `D:\teste blender\A Moto`) tem as pedaleiras do garupa 11 cm mais baixas e 4 cm para a frente (a 45 cm do chão, ainda
+    acima do escapamento da direita); na montagem, `pes` do garupa (±0,24; 0,466; −0,36). O joelho do garupa dobra mais
+    para fora e menos para cima (`PoseDaMoto`). A cross não mudou (0,55 m).
+  - **A caçamba** (`PoseDaCacamba`): a perna direita esticada no piso (o calcanhar no chão), a esquerda dobrada (o pé perto
+    do quadril, o joelho para cima); a mão direita em cima da coxa esticada, o antebraço esquerdo no joelho.
+  - **A arma descansando** fica em cima da coxa direita (no meio dela, lida depois da pose das pernas: na moto, as pernas
+    agora vêm antes da arma), o cano ao longo da coxa; os cotovelos para trás e para baixo, perto do corpo (abertos, com a
+    arma baixa, davam o sapo). Levantada, como antes.
+  - Conferido no Play (16/11): a Fat Boy v4 montada, mas o joelho do garupa ainda dobrava 118°.
+- **As juntas (16/11/2026, o terceiro teste: "isso não está bom. Não é anatômico, não é correto"):** medido no Play, banco
+  por banco, o IK torcia o joelho (8 a 28° nas motos, **98°** na perna dobrada da caçamba, que dobrava de lado) e o
+  antebraço; cada osso girava pelo caminho mais curto até a direção nova. Agora (`PassageiroDoCarro`, "as juntas"):
+  - **O joelho e o cotovelo são dobradiças.** `LerOssos` guarda, do repouso do prefab, o eixo de cada osso dos membros
+    (`_dobradica`: perpendicular ao membro e ao lado para onde a junta aponta, o joelho para a frente e o cotovelo para
+    trás) e o lado da palma (`_palma`: para a coxa). O `DoisOssos` orienta a coxa e a canela (o braço e o antebraço) pela
+    direção **e** pelo eixo (`Orientar`): a torção medida caiu para ~5° (o resto é da medição).
+  - **O pé** fica no plano da perna (`PeNoPlano`: o tornozelo dobra no eixo do joelho, não torce).
+  - **A palma** vira girando o antebraço no próprio eixo, até 90° (`Palma`: a pronação, onde o braço de verdade gira): para
+    baixo nas coxas (garupa, caçamba) e nos punhos do piloto. A mão com a arma fica na posição neutra (o aperto de mão).
+  - **Os joelhos na moto:** a mira do joelho é a frente e só por fora do que fica entre as pernas: o piloto a 20 cm do meio
+    da moto (ou três quartos do caminho até o pé), o garupa a 23 cm (os quadris do piloto). Na cross o piloto abria 34°.
+  - **As pedaleiras do garupa, de novo:** a perna do personagem (coxa 0,36 + canela 0,48) só tinha 0,44 m até o pé e o
+    joelho dobrava 118°. A **Fat Boy v5** (a pedaleira 16 cm para a frente, em z −0,20, embaixo do fim do banco do
+    piloto; não desce por causa do escapamento) e a **Cross v3** (`PE_GARUPA` (0,18; 0,43; −0,47): 9 cm mais baixa, 4 cm
+    para trás, 1,5 cm para fora, por fora da balança e atrás do calcanhar do piloto); na montagem, os `pes` do garupa.
+    A conta: o joelho dobra uns 99° (Fat Boy) e 103° (cross).
+  - **A caçamba:** o pé da perna dobrada a 52 cm do quadril (era 40: o joelho dobrava 126° e a coxa subia ao peito).
+  - **Sem cabeça nas fotos de teste:** é o dono em primeira pessoa (na moto e no caiaque o pescoço encolhe,
+    `JogadorRede.CorpoSemCabeca`); para fotografar, volte a escala do `neck`/`head` antes do `Render` e devolva depois.
+  - **O teste:** medir no Play (a coxa, o joelho, a canela, a torção) com o repouso do prefab do jogador; o script fica
+    fora do jogo.
+  - **Conferido no Play** (16/11, as motos remontadas com a "Montar as motos"; os prefabs com os `pes` novos): a torção do
+    joelho ~5° em todos os lugares (antes 8 a 98°); o joelho do garupa 99° (Fat Boy, a canela quase em pé) e 103° (cross),
+    antes 118°; a perna dobrada da caçamba 106° (a coxa a 59°, antes 68°); o piloto da cross abre 25° (antes 34°). As
+    fotos (com a cabeça) em `D:\teste blender\A Moto\renders\v5\poses_juntas_novas.png`. Nenhum erro no Console.
+  - **Para fotografar a cabeça do dono** na moto ou na caçamba: `SemOlhar = true` (o `LateUpdate` do `JogadorRede` encolhe
+    o `neck` a cada quadro), o `neck` em escala 1, espere um quadro (a malha só deforma no quadro seguinte) e chame
+    `CorpoDoDono(true)` logo antes do `Render` (na caçamba o corpo do dono volta a ser só sombra a cada quadro).
+  - **Não conferido:** dois jogadores; o motorista no carro (as mãos no volante também passam pelo `DoisOssos` novo; as
+    pernas são da animação).
+- **Não feito:** o Lakewood (as vagas do terreiro, `VagasEmA`, têm 4 lugares) e a Demo_Cidade não têm a caminhonete; o
+  som do motor é o do carro (o laço de 4 cilindros).
+
 ## A mente: a sanidade (06/11/2026, a pedido; as etapas 1, 2 e 3; `Docs/17-A-Mente.md`)
 
 O pedido: um mecanismo de sanidade. Ela cai com o medo e volta com a segurança e a companhia; a 0, o colapso, sem game

@@ -19,9 +19,14 @@ namespace ZombieCityCleaner.Player
     /// O facho tem um cookie gerado por código: o centro forte, o anel do refletor e a borda mais fraca e quente.
     /// Ela não ilumina os braços de primeira pessoa do dono: de tão perto, deixava a arma e as mangas brancas. Só durante o
     /// desenho da câmera dos braços ela fica desligada.
-    /// No carro, ela sai do olho (do peito, ela ficava a 25 cm do volante e estourava o painel de branco), mais fraca
+    /// No carro, ela sai da testa (do peito, ela ficava a 25 cm do volante e estourava o painel de branco), mais fraca
     /// (<see cref="fatorNoCarro"/>), com a sombra começando perto (o painel e o volante fazem sombra) e a mira passando
     /// pela lataria do carro.
+    /// Na moto e na caçamba da caminhonete (15/11/2026, a pedido: "ela sai pela boca do personagem pela terceira pessoa" e
+    /// "fica uma sombra bugada da moto quando tem jogador atrás ligado a lanterna"), ela sai do peito do corpo sentado, com a
+    /// força de sempre, e na moto não faz sombra (a do garupa jogava a sombra do piloto e da moto na frente dele). No carro
+    /// ela saía de 6 cm abaixo do olho, na boca; agora sai 5 cm acima dele. Os outros apontam a dele também para o lado
+    /// para onde ele olha sentado (<see cref="JogadorRede.GiroSentado"/>).
     /// </summary>
     public class LanternaJogador : NetworkBehaviour
     {
@@ -154,9 +159,20 @@ namespace ZombieCityCleaner.Player
             _estavaLigada = ligada;
             luz.enabled = ligada;
             if (!ligada) return;
-            bool noCarro = rede.Passageiro != null && rede.Passageiro.NoCarro;
-            luz.intensity = intensidade * Piscada(Time.time - _ligouEm) * Falha(carga) * (noCarro ? fatorNoCarro : 1f);
-            luz.shadowNearPlane = noCarro ? 0.1f : _sombraPerto;
+            var passageiro = rede.Passageiro;
+            bool noCarro = passageiro != null && passageiro.NoCarro;
+            var veiculo = noCarro ? passageiro.Carro : null;
+            // na moto e na caçamba, ao ar livre: do peito, com a força de sempre; no carro fechado, da testa, mais fraca
+            bool aoArLivre = veiculo != null && (veiculo.moto || veiculo.NaCacamba(passageiro.Lugar));
+            bool fechado = noCarro && !aoArLivre;
+            luz.intensity = intensidade * Piscada(Time.time - _ligouEm) * Falha(carga) * (fechado ? fatorNoCarro : 1f);
+            luz.shadowNearPlane = fechado ? 0.1f : _sombraPerto;
+            // na moto, sem sombra (a do garupa fazia a sombra do piloto e da moto na frente dele); fora dela, a sombra das
+            // opções volta (o bloco dos Gráficos refaz no próximo quadro)
+            bool semSombra = veiculo != null && veiculo.moto;
+            if (semSombra) luz.shadows = LightShadows.None;
+            else if (_semSombraAntes) _versaoDosGraficos = -1;
+            _semSombraAntes = semSombra;
 
             // de onde o jogador olha, e para onde
             Vector3 olho;
@@ -173,7 +189,8 @@ namespace ZombieCityCleaner.Player
             {
                 _pitch = Mathf.LerpAngle(_pitch, rede.Pitch.Value, 1f - Mathf.Exp(-atraso * Time.deltaTime));
                 olho = transform.TransformPoint(0f, AlturaDoOlho, 0f);
-                olhar = transform.rotation * Quaternion.Euler(_pitch, 0f, 0f);
+                // sentado, ele olha também para os lados (o giro do banco)
+                olhar = transform.rotation * Quaternion.Euler(_pitch, noCarro ? rede.GiroSentado.Value : 0f, 0f);
             }
             Vector3 frente = olhar * Vector3.forward;
 
@@ -182,12 +199,16 @@ namespace ZombieCityCleaner.Player
                 ? Mathf.Max(acerto.distance, minimoDaMira) : alcanceDaMira;
             _distancia = Mathf.Lerp(_distancia, alvo, 1f - Mathf.Exp(-18f * Time.deltaTime));
 
-            Vector3 peito = noCarro ? olho + olhar * new Vector3(0f, -0.06f, 0.1f) : transform.TransformPoint(posicaoNoPeito);
+            var ossoDoPeito = aoArLivre ? passageiro.Peito : null;
+            Vector3 peito = ossoDoPeito != null ? ossoDoPeito.position + Vector3.ProjectOnPlane(frente, Vector3.up).normalized * 0.16f + Vector3.up * 0.04f
+                : noCarro ? olho + olhar * new Vector3(0f, 0.05f, 0.12f)
+                : transform.TransformPoint(posicaoNoPeito);
             Vector3 ponto = olho + frente * _distancia;
             luz.transform.SetPositionAndRotation(peito, Quaternion.LookRotation(ponto - peito, olhar * Vector3.up));
         }
 
         float _semCargaDesde = -1f;
+        bool _semSombraAntes;
 
         /// <summary>As pilhas no fim (abaixo de 8%) ou acabando de vez: a luz enfraquece e falha.</summary>
         float Falha(int carga)

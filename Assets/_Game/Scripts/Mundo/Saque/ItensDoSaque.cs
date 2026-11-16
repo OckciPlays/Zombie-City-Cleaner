@@ -53,6 +53,7 @@ namespace ZombieCityCleaner.Mundo
             ("ChaveDoCupe", 70, new Vector3(0.135f, 0.009f, 0.028f), ""),
             ("ChaveDaFatBoy", 71, new Vector3(0.135f, 0.009f, 0.028f), ""),
             ("ChaveDaCross", 72, new Vector3(0.135f, 0.007f, 0.028f), ""),
+            ("ChaveDaCaminhonete", 73, new Vector3(0.135f, 0.007f, 0.028f), ""),
             ("Remedio", 80, new Vector3(0.052f, 0.127f, 0.055f), ""),
             ("Comprimidos", 81, new Vector3(0.06f, 0.11f, 0.01f), ""),
             ("KitMedico", 82, new Vector3(0.202f, 0.163f, 0.087f), ""),

@@ -20,6 +20,8 @@ namespace ZombieCityCleaner.Vehicles
         public int lado = -1;
         [Tooltip("Quanto ela abre (graus).")]
         public float abertura = 62f;
+        [Tooltip("A subida da caçamba (a caminhonete, 15/11/2026): sem folha, \"[E] Subir na caçamba\".")]
+        public bool cacamba;
 
         Quaternion _repouso;
         float _tempo = -1f;
@@ -90,7 +92,9 @@ namespace ZombieCityCleaner.Vehicles
             var p = quem.GetComponent<PassageiroDoCarro>();
             if (p != null && p.Sentado) return null;
             if (carro.MacacoNaRoda >= 0) return "Tire o macaco para entrar no carro";
-            if (quem.Inventario != null && quem.Inventario.CarregandoPneu) return carro.moto ? "Largue o pneu (G) para subir na moto" : "Largue o pneu (G) para entrar no carro";
+            if (quem.Inventario != null && quem.Inventario.CarregandoPneu)
+                return carro.moto ? "Largue o pneu (G) para subir na moto" : cacamba ? "Largue o pneu (G) para subir na caçamba" : "Largue o pneu (G) para entrar no carro";
+            if (cacamba) return "[E] Subir na caçamba";
             // a moto (06/11/2026): o mesmo gatilho serve o piloto e, com ele ocupado, a garupa
             if (carro.moto) return livre == 0 ? "[E] Pilotar a moto" : "[E] Subir na garupa";
             return livre == 0 ? "[E] Dirigir" : livre == lugarDeTras ? "[E] Entrar no banco de trás" : "[E] Entrar no carro";

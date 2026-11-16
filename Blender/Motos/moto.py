@@ -74,8 +74,8 @@ PONTOS = {
     "Mao_Esquerda": (-0.38, 1.133, 0.131),
     "Pe_Piloto_Direito": (0.31, 0.32, 0.22),
     "Pe_Piloto_Esquerdo": (-0.31, 0.32, 0.22),
-    "Pe_Garupa_Direito": (0.24, 0.578, -0.40),
-    "Pe_Garupa_Esquerdo": (-0.24, 0.578, -0.40),
+    "Pe_Garupa_Direito": (0.24, 0.466, -0.20),     # (v5: 16 cm para a frente; a v4 em -0,36)
+    "Pe_Garupa_Esquerdo": (-0.24, 0.466, -0.20),
 }
 
 
@@ -707,10 +707,16 @@ def _pedaleiras(m):
         m.caixa("Borracha", (0.105, 0.014, 0.27), (x, 0.304, 0.205), giro=(-4, 0, 0))
         for z in (0.12, 0.29):
             m.ripa("Preto", (s * 0.255, 0.283, z), (s * 0.095, 0.15, z - 0.02), 0.03, 0.025)
-        # o garupa: o suporte cromado e a pedaleira de borracha com a ponta cromada
-        m.ripa("Cromado", (s * 0.13, 0.578, -0.37), (s * 0.205, 0.565, -0.40), 0.02, 0.025, ref=Y)
-        m.cano("Borracha", [(s * 0.20, 0.562, -0.40), (s * 0.265, 0.562, -0.40)], 0.014, 6, tampas=False)
-        m.cano("Cromado", [(s * 0.265, 0.562, -0.40), (s * 0.28, 0.562, -0.40)], 0.0145, 6)
+        # o garupa: o suporte cromado e a pedaleira de borracha com a ponta cromada. (v4, 15/11/2026: 11 cm mais baixa e 4 cm
+        # para a frente, a pedido: "o jogador parece um sapo"; ela ficava 22 cm abaixo do banco do garupa, e a perna dobrava
+        # tanto que o joelho subia ao peito. Agora fica a 45 cm do chão, ainda acima do escapamento da direita, 41 cm.)
+        # (v5, 16/11/2026, a pedido: "não é anatômico, não é correto": com o pé a 44 cm do quadril, a perna de 84 cm do
+        # personagem ainda dobrava 118° no joelho. Ela não desce mais, por causa do escapamento, e vai 16 cm para a frente,
+        # embaixo do fim do banco do piloto, como na moto de verdade: o joelho dobra uns 97°, o de quem senta numa cadeira)
+        zg = -0.20
+        m.ripa("Cromado", (s * 0.13, 0.578, zg - 0.08), (s * 0.20, 0.452, zg), 0.02, 0.025, ref=Y)
+        m.cano("Borracha", [(s * 0.20, 0.45, zg), (s * 0.265, 0.45, zg)], 0.014, 6, tampas=False)
+        m.cano("Cromado", [(s * 0.265, 0.45, zg), (s * 0.28, 0.45, zg)], 0.0145, 6)
     m.ripa("Cromado", (0.235, 0.26, 0.31), (0.26, 0.335, 0.43), 0.012, 0.012)
     m.caixa("Borracha", (0.055, 0.02, 0.04), (0.27, 0.34, 0.435))
     m.ripa("Cromado", (-0.11, 0.30, 0.27), (-0.26, 0.30, 0.27), 0.014, 0.014, ref=Y)

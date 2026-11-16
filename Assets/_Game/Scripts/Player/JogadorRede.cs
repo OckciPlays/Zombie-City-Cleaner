@@ -767,9 +767,16 @@ namespace ZombieCityCleaner.Player
             return ZombieManager.Instancia.ajustes.barulhoDoTiro * vezes * (abafado ? 1f - 0.15f * Habilidades.Pontos(this, Habilidade.TiroAbafado) : 1f);
         }
 
+        /// <summary>
+        /// Quando ele atirou ou golpeou por último (Time.time, em todas as máquinas; 15/11/2026: sentado num veículo, a arma
+        /// levanta do colo por um tempo depois disso, PassageiroDoCarro.GarupaComAMao).
+        /// </summary>
+        public float UltimoAtaque { get; private set; } = -99f;
+
         /// <summary>Chamado pelo dono ao atirar: o corpo dele (a sombra) e o dos outros mostram o tiro (e de que arma).</summary>
         public void AnunciarTiro(TipoDeArma arma, Impacto[] impactos)
         {
+            UltimoAtaque = Time.time;
             animadorCorpo.SetTrigger(FireId);
             if (IsServer)
             {
@@ -835,6 +842,7 @@ namespace ZombieCityCleaner.Player
         void TiroRpc(byte qual, Impacto[] impactos)
         {
             TirosRecebidos++;
+            UltimoAtaque = Time.time;
             // no anfitrião, o tiro de um amigo chama os zumbis em volta dele (e dispara o alarme do carro em que pegou)
             var arma = (TipoDeArma)Mathf.Min(qual, Armas.Quantas - 1);
             // (o silenciador da arma de sucata, 10/11/2026: o tiro se ouve mais baixo e mais perto; o anfitrião conta o tiro)
@@ -863,6 +871,7 @@ namespace ZombieCityCleaner.Player
         /// <summary>Chamado pelo dono ao socar: o corpo dele (a sombra) e o dos outros mostram o soco, e os outros ouvem o vento.</summary>
         public void AnunciarSoco()
         {
+            UltimoAtaque = Time.time;
             animadorCorpo.SetTrigger(FireId);
             SocoRpc();
         }
@@ -870,6 +879,7 @@ namespace ZombieCityCleaner.Player
         [Rpc(SendTo.NotMe)]
         void SocoRpc()
         {
+            UltimoAtaque = Time.time;
             animadorCorpo.SetTrigger(FireId);
             Efeitos.Som(Efeitos.SocoVento, transform.position + Vector3.up * 1.4f, 0.5f, true, 15f);
         }

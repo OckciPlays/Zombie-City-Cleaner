@@ -18,6 +18,7 @@ namespace ZombieCityCleaner.UI
         static readonly (string nome, string prefab)[] VeiculosDoF3 =
         {
             ("Perua", "Carro"), ("Cupê", "Cupe"), ("Moto cross", "Moto_Cross"), ("Moto Fat Boy", "Moto_FatBoy"),
+            ("Caminhonete", "Caminhonete"),
         };
 
         void BotoesDosVeiculos(float x, float y, float w, float bw, float u)

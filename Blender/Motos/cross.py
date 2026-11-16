@@ -89,7 +89,10 @@ QUADRO_DIRECAO = Matrix.Translation(PIVO) @ Matrix.Rotation(-RAKE, 4, "X")
 BALANCA = V(0, 0.44, -0.195)       # o eixo da balança
 DESCANSO = V(-0.105, 0.365, -0.29)  # a dobradiça do descanso
 PE = V(0.165, 0.385, -0.235)       # o meio da pedaleira direita (a esquerda é o espelho)
-PE_GARUPA = V(0.165, 0.52, -0.43)  # e a do garupa (v2)
+# e a do garupa (v2). Na v3 (16/11/2026, a pedido: "não é anatômico, não é correto"), 9 cm mais baixa, 4 cm para trás e
+# 1,5 cm para fora: com o pé a 44 cm do quadril, a perna de 84 cm do personagem dobrava 118° no joelho e a canela ia
+# para trás. Agora dobra uns 100°; fica por fora da balança e atrás do calcanhar do piloto
+PE_GARUPA = V(0.18, 0.43, -0.47)
 
 # o guidão (metade direita, do meio para a ponta); o punho vai do 4º ao 5º ponto
 GUIDAO = [(0.07, 1.21, 0.29), (0.16, 1.217, 0.278), (0.24, 1.232, 0.252), (0.29, 1.237, 0.238), (0.41, 1.241, 0.206)]
@@ -791,7 +794,7 @@ def _pedaleiras(m):
     # da tampa lateral; ficam abaixo do silencioso e acima da balança
     for s in (-1, 1):
         g = PE_GARUPA
-        m.ripa("Preto", (s * 0.10, 0.68, g.z + 0.03), (s * 0.125, g.y + 0.005, g.z), 0.02, 0.03)
+        m.ripa("Preto", (s * 0.10, 0.68, g.z + 0.03), (s * (g.x - 0.035), g.y + 0.005, g.z), 0.02, 0.03)
         m.caixa("Escuro", (0.08, 0.02, 0.045), (s * g.x, g.y, g.z), chanfro=0.004)
 
 

@@ -66,7 +66,7 @@ namespace ZombieCityCleaner.UI
             ("Outros", new[]
             {
                 Item.MochilaPequena, Item.MochilaMedia, Item.MochilaGrande,
-                Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua, Item.ChaveDoCupe, Item.ChaveDaFatBoy, Item.ChaveDaCross,
+                Item.Vela, Item.Bateria, Item.Radiador, Item.Pneu, Item.Macaco, Item.ChaveDaPerua, Item.ChaveDoCupe, Item.ChaveDaFatBoy, Item.ChaveDaCross, Item.ChaveDaCaminhonete,
                 Item.CaixaDeBolas, Item.TacoMadeira, Item.TacoEscuro, Item.TacoPreto, Item.TacoVermelho,
                 Item.MacoDeCigarros,
             }),

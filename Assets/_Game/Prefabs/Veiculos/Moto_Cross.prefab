@@ -195,7 +195,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2705352436020400726}
+  - {fileID: 8525863168079578006}
   - {fileID: 6056047518538576405}
   m_Father: {fileID: 4790598262502498254}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1379,7 +1379,7 @@ Transform:
   m_GameObject: {fileID: 3500257168340287346}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.165, y: 0.531, z: -0.43}
+  m_LocalPosition: {x: 0.18, y: 0.441, z: -0.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1671,7 +1671,7 @@ Transform:
   m_GameObject: {fileID: 4871350836753883304}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.165, y: 0.531, z: -0.43}
+  m_LocalPosition: {x: -0.18, y: 0.441, z: -0.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1841,6 +1841,7 @@ MonoBehaviour:
   folha: {fileID: 0}
   lado: -1
   abertura: 62
+  cacamba: 0
   lugarDeTras: 1
 --- !u!1 &5414953370263822803
 GameObject:
@@ -1877,6 +1878,59 @@ Transform:
   - {fileID: 8046426094672755696}
   m_Father: {fileID: 3159018395180177707}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5445089549505240201
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8525863168079578006}
+  - component: {fileID: 7918752602521485672}
+  m_Layer: 11
+  m_Name: Corpo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8525863168079578006
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5445089549505240201}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.7, z: -0.25}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6979580215774777125}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &7918752602521485672
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5445089549505240201}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.4, y: 0.62, z: 1.55}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5447606487561163334
 GameObject:
   m_ObjectHideFlags: 0
@@ -2283,59 +2337,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1 &6661162583611754019
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2705352436020400726}
-  - component: {fileID: 2900230536552945460}
-  m_Layer: 11
-  m_Name: Corpo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2705352436020400726
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6661162583611754019}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.7, z: -0.25}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 6979580215774777125}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &2900230536552945460
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6661162583611754019}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.4, y: 0.62, z: 1.55}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &6829707636841336122
 GameObject:
   m_ObjectHideFlags: 0
@@ -2968,16 +2969,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2228558251
+  GlobalObjectIdHash: 3974727794
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
-  m_InScenePlaced: 1
+  m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
+  SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 1
   AutoObjectParentSync: 1
@@ -3059,6 +3060,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.Carro
   ShowTopMostFoldoutHeaderGroup: 1
+  cacamba: 0
+  primeiroLugarNaCacamba: 2
+  pisoDaCacamba: 0.84
+  encostoNaCacamba: 14
   desgaste:
     kmAteCareca: 60
     pisoDoDesgaste: 12
@@ -3144,6 +3149,7 @@ MonoBehaviour:
   - {fileID: 8170473509367414423}
   - {fileID: 6002369743647022658}
   lugaresUsados: 2
+  tetoPorDentro: 0
   farois:
   - {fileID: 2366436616180682281}
   carroceria: {fileID: 5188573241536102187}
@@ -3195,6 +3201,10 @@ MonoBehaviour:
   esquentar: 40
   esfriar: 60
   pneusIniciais: 64000000640000006400000064000000i
+  raioDaRoda: 0.3
+  meiaLarguraDaRoda: 0.105
+  tracaoTraseira: 0
+  centroDeMassa: {x: 0, y: 0.38, z: 0.12}
   tampaTraseira: {fileID: 0}
   aberturaDaTampa: 78
   macacoNoPortaMalas: {fileID: 0}
@@ -3204,6 +3214,10 @@ MonoBehaviour:
   macacoApoiado: {fileID: 0}
   alturaDoMacaco: 0.25
   tempoDoMacaco: 2.2
+  macacoX: 0.78
+  baseDaLataria: 0.22
+  macacoDaRoda: 0.55
+  pontoDoPortaMalas: {x: 0, y: 0.9, z: -2.3}
   torque: 330
   velocidadeMaxima: 30
   fimDasMarchas: 30

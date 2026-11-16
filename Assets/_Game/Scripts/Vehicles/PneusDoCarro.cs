@@ -64,8 +64,15 @@ namespace ZombieCityCleaner.Vehicles
         /// <summary>O nome de cada roda ("a dianteira esquerda").</summary>
         public static readonly string[] Nomes = { "dianteira esquerda", "dianteira direita", "traseira esquerda", "traseira direita" };
 
-        /// <summary>O raio do WheelCollider desta roda (furada, ela baixa; sem ela, o cubo).</summary>
-        public float Raio(int i) => !Tem(i) ? RaioDoCubo : Furado(i) ? RaioFurado : RaioBom;
+        /// <summary>
+        /// O raio do WheelCollider desta roda (furada, ela baixa; sem ela, o cubo), para uma roda inteira de raio
+        /// <paramref name="bom"/> (a caminhonete, 15/11/2026, tem rodas maiores: o furado e o cubo baixam na mesma proporção).
+        /// </summary>
+        public float Raio(int i, float bom = RaioBom)
+        {
+            float k = bom / RaioBom;
+            return !Tem(i) ? RaioDoCubo * k : Furado(i) ? RaioFurado * k : bom;
+        }
 
         /// <summary>O quanto a roda segura (multiplica a rigidez do atrito): o pneu gasto segura menos.</summary>
         public float Aderencia(int i) => !Tem(i) ? 0.22f : Furado(i) ? 0.42f : Mathf.Lerp(0.72f, 1f, Estado(i) / 100f);

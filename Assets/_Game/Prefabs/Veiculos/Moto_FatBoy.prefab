@@ -436,7 +436,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2924503829772119279}
+  - {fileID: 8984786225158643937}
   - {fileID: 7148511265495683903}
   m_Father: {fileID: 4440613240266276618}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -604,7 +604,7 @@ Transform:
   m_GameObject: {fileID: 2275762092409062306}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.24, y: 0.578, z: -0.4}
+  m_LocalPosition: {x: 0.24, y: 0.466, z: -0.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -744,7 +744,7 @@ Transform:
   m_GameObject: {fileID: 2587999832800731502}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.24, y: 0.578, z: -0.4}
+  m_LocalPosition: {x: -0.24, y: 0.466, z: -0.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1035,6 +1035,7 @@ MonoBehaviour:
   folha: {fileID: 0}
   lado: -1
   abertura: 62
+  cacamba: 0
   lugarDeTras: 1
 --- !u!1 &3480386468511125145
 GameObject:
@@ -2147,59 +2148,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1 &7380293048737974545
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2924503829772119279}
-  - component: {fileID: 844349373355322478}
-  m_Layer: 11
-  m_Name: Corpo
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2924503829772119279
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7380293048737974545}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.63, z: -0.25}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2030813801583590376}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &844349373355322478
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7380293048737974545}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.46, y: 0.66, z: 1.75}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &7403656448755706936
 GameObject:
   m_ObjectHideFlags: 0
@@ -2538,16 +2486,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4010476526
+  GlobalObjectIdHash: 3636960031
   InScenePlacedSourceGlobalObjectIdHash: 0
   m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
-  m_InScenePlaced: 1
+  m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
+  SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 1
   AutoObjectParentSync: 1
@@ -2629,6 +2577,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.Vehicles.Carro
   ShowTopMostFoldoutHeaderGroup: 1
+  cacamba: 0
+  primeiroLugarNaCacamba: 2
+  pisoDaCacamba: 0.84
+  encostoNaCacamba: 14
   desgaste:
     kmAteCareca: 60
     pisoDoDesgaste: 12
@@ -2712,6 +2664,7 @@ MonoBehaviour:
   - {fileID: 2811112799166874187}
   - {fileID: 2780865983678736227}
   lugaresUsados: 2
+  tetoPorDentro: 0
   farois:
   - {fileID: 7248658144952976018}
   carroceria: {fileID: 4372109205548095242}
@@ -2763,6 +2716,10 @@ MonoBehaviour:
   esquentar: 40
   esfriar: 60
   pneusIniciais: 64000000640000006400000064000000i
+  raioDaRoda: 0.3
+  meiaLarguraDaRoda: 0.105
+  tracaoTraseira: 0
+  centroDeMassa: {x: 0, y: 0.38, z: 0.12}
   tampaTraseira: {fileID: 0}
   aberturaDaTampa: 78
   macacoNoPortaMalas: {fileID: 0}
@@ -2772,6 +2729,10 @@ MonoBehaviour:
   macacoApoiado: {fileID: 0}
   alturaDoMacaco: 0.25
   tempoDoMacaco: 2.2
+  macacoX: 0.78
+  baseDaLataria: 0.22
+  macacoDaRoda: 0.55
+  pontoDoPortaMalas: {x: 0, y: 0.9, z: -2.3}
   torque: 520
   velocidadeMaxima: 34
   fimDasMarchas: 34
@@ -3221,6 +3182,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8979479473443746230}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8853932019745237350
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8984786225158643937}
+  - component: {fileID: 7267443563492811918}
+  m_Layer: 11
+  m_Name: Corpo
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8984786225158643937
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8853932019745237350}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.63, z: -0.25}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2030813801583590376}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &7267443563492811918
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8853932019745237350}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.46, y: 0.66, z: 1.75}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &8886567726959331033
 GameObject:
   m_ObjectHideFlags: 0

@@ -9,6 +9,10 @@ namespace ZombieCityCleaner.Vehicles
     /// baixo, que tapava o que fica dentro), o que a mira procura. Fechado, E abre a tampa; aberto, E pega o que a mira
     /// aponta lá dentro (o macaco ou o estepe), guarda no lugar vazio o que o jogador leva, ou fecha a tampa.
     /// O macaco e o estepe não têm colisor: a mira é conferida contra a caixa da malha de cada um.
+    /// Na caminhonete (15/11/2026), é a caçamba aberta (<see cref="Carro.cacamba"/>): um gatilho em volta dela, sempre
+    /// aberta. Mirando o estepe ou o macaco (a caixa da malha, sem folga: "está um pouco difícil de entrar na caçamba, pois
+    /// toda vez aparece a opção de pegar o estepe ou o macaco"), pega ou guarda; fora deles, sobe na caçamba pela subida
+    /// do lado onde o jogador está (a <see cref="PortaDoCarro"/> da caçamba).
     /// </summary>
     public class PortaMalasDoCarro : Interagivel
     {
@@ -19,7 +23,7 @@ namespace ZombieCityCleaner.Vehicles
         public override string Dica(ArmaJogador quem)
         {
             if (!Pode(quem)) return null;
-            if (!carro.PortaMalasAberto) return carro.Velocidade > 1.5f ? null : "[E] Abrir o porta-malas";
+            if (!carro.PortaMalasAberto) return carro.Velocidade > 1.5f || carro.cacamba ? null : "[E] Abrir o porta-malas";
             var inv = quem.Inventario;
             int alvo = Alvo(quem);
             if (alvo == Macaco)
@@ -34,6 +38,13 @@ namespace ZombieCityCleaner.Vehicles
                     ? $"[E] Pegar o estepe ({e}%){(inv.PneuVaiParaAsMaos ? " nas mãos (pesado)" : "")}" : motivo;
                 if (AcharPneu(inv, out int estado, out _)) return $"[E] Guardar o pneu ({estado}%)";
             }
+            // a caçamba (a caminhonete) não fecha: fora do estepe e do macaco, a subida (sem lugar livre, nada, e a mira passa
+            // para o que está atrás)
+            if (carro.cacamba)
+            {
+                var subida = Subida(quem);
+                return subida != null ? subida.Dica(quem) : null;
+            }
             return "[E] Fechar o porta-malas";
         }
 
@@ -42,7 +53,7 @@ namespace ZombieCityCleaner.Vehicles
             if (!Pode(quem)) return;
             if (!carro.PortaMalasAberto)
             {
-                carro.PedirPortaMalas(true);
+                if (!carro.cacamba) carro.PedirPortaMalas(true);
                 return;
             }
             var inv = quem.Inventario;
@@ -57,7 +68,24 @@ namespace ZombieCityCleaner.Vehicles
                 if (carro.Estepe >= 0) { carro.PedirDoPortaMalas(Estepe); return; }
                 if (AcharPneu(inv, out _, out ushort id)) { carro.PedirGuardar(Estepe, id); return; }
             }
+            if (carro.cacamba)
+            {
+                var subida = Subida(quem);
+                if (subida != null && subida.Dica(quem) != null) subida.Usar(quem);
+                return;
+            }
             carro.PedirPortaMalas(false);
+        }
+
+        // a subida da caçamba do lado onde o jogador está (pelo x dele no espaço do carro)
+        PortaDoCarro Subida(ArmaJogador quem)
+        {
+            if (carro.portas == null) return null;
+            float x = carro.transform.InverseTransformPoint(quem.transform.position).x;
+            PortaDoCarro achada = null;
+            foreach (var p in carro.portas)
+                if (p != null && p.cacamba && (achada == null || Mathf.Sign(p.lado) == Mathf.Sign(x))) achada = p;
+            return achada;
         }
 
         bool Pode(ArmaJogador quem)
@@ -76,12 +104,14 @@ namespace ZombieCityCleaner.Vehicles
             var raio = new Ray(olho.position, olho.forward);
             int alvo = -1;
             float menor = float.MaxValue;
-            if (Na(carro.macacoNoPortaMalas, raio, out float tm) && tm < menor) { menor = tm; alvo = Macaco; }
-            if (Na(carro.estepeNoPortaMalas, raio, out float te) && te < menor) { alvo = Estepe; }
+            // na caçamba, a caixa da malha sem folga e mais perto (antes, a folga de 8 cm tapava a subida)
+            float folga = carro.cacamba ? 0f : 0.08f, alcance = carro.cacamba ? 2.4f : 3f;
+            if (Na(carro.macacoNoPortaMalas, raio, out float tm, folga, alcance) && tm < menor) { menor = tm; alvo = Macaco; }
+            if (Na(carro.estepeNoPortaMalas, raio, out float te, folga, alcance) && te < menor) { alvo = Estepe; }
             return alvo;
         }
 
-        internal static bool Na(MeshRenderer r, Ray raio, out float t)
+        internal static bool Na(MeshRenderer r, Ray raio, out float t, float folga = 0.08f, float alcance = 3f)
         {
             t = 0f;
             if (r == null) return false;
@@ -90,8 +120,8 @@ namespace ZombieCityCleaner.Vehicles
             var tr = r.transform;
             var local = new Ray(tr.InverseTransformPoint(raio.origin), tr.InverseTransformDirection(raio.direction));
             var caixa = mf.sharedMesh.bounds;
-            caixa.Expand(0.08f);
-            return caixa.IntersectRay(local, out t) && t < 3f;
+            caixa.Expand(folga);
+            return caixa.IntersectRay(local, out t) && t < alcance;
         }
 
         /// <summary>

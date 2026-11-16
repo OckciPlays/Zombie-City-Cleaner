@@ -197,7 +197,7 @@ namespace ZombieCityCleaner.Salvar
             foreach (var carro in Carro.Todos)
             {
                 if (carro == null || !carro.IsSpawned) continue;
-                int qual = QualDoCarro(carro);   // 0 a perua, 1 o cupê, 2 em diante as motos
+                int qual = QualDoCarro(carro);   // 0 a perua, 1 o cupê, 2 em diante as motos, 10 a caminhonete
                 if (qual < 0) continue;   // (no Lakewood, os do F3)
                 var s = carro.ParaSalvar();
                 s.qual = qual;
@@ -653,6 +653,12 @@ namespace ZombieCityCleaner.Salvar
             {
                 m.motos = true;
                 Debug.Log("[Save] Um save de antes das motos: as motos apareceram perto da partida, e as chaves no chão da sala.");
+            }
+            // um save de antes da caminhonete (15/11/2026): ela aparece uma vez numa vaga livre, e a chave no chão da sala
+            if (!m.caminhonete && _mundo.PorACaminhonete())
+            {
+                m.caminhonete = true;
+                Debug.Log("[Save] Um save de antes da caminhonete: ela apareceu numa vaga livre (ou no pátio do bunker), e a chave no chão da sala.");
             }
             Debug.Log($"[Save] O mundo \"{m.nome}\" voltou: dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
                       $"{m.carros.Count} carros, {mexidos.Count} carros do mundo mexidos, {pegos.Count} itens do saque pegos, {portas.Count} portas e janelas mexidas, " +

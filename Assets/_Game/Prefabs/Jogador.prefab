@@ -12525,6 +12525,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 98b94654280d7194cb0c34bee6ca32be, type: 3}
   - {fileID: 2800000, guid: 3beec8c7d49ddaa43a5ed83972c1799e, type: 3}
   - {fileID: 2800000, guid: 7e897a0c99d29294690b2be25a8487cc, type: 3}
+  - {fileID: 2800000, guid: 14b17980750423547af2f2bd8f774680, type: 3}
   fotosDePeca:
   - {fileID: 2800000, guid: a45164fa85fc8a94ba7626fbda5bc646, type: 3}
   - {fileID: 2800000, guid: c8b9c48f13e2dd64395cf1e18272db25, type: 3}
@@ -12535,6 +12536,7 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 464f7acd5c963ad41a54d140e738b2a3, type: 3}
   - {fileID: 2800000, guid: fdffacbde64787142a053bb6c3d75fe8, type: 3}
   - {fileID: 2800000, guid: ccb604c097b87e64f8817e77659d3663, type: 3}
+  - {fileID: 2800000, guid: a682e60a6276d4741bd83c94ba6e6f3a, type: 3}
   iconesDaSinuca:
   - {fileID: 2800000, guid: 14442bc80efaf0444be7ab369045494e, type: 3}
   - {fileID: 2800000, guid: 7c5d3b5812ddec54b84f18cd00dd7c79, type: 3}

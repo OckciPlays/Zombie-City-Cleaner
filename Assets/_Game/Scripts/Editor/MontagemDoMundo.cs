@@ -117,6 +117,18 @@ namespace ZombieCityCleaner.EditorTools
                         EditorUtility.SetDirty(lista);
                     }
             }
+            // a caminhonete (15/11/2026, Editor/Caminhonete/MontagemDaCaminhonete), se já foi montada: o carro da família no
+            // começo da partida (no lugar da perua); também na lista da rede
+            var caminhonete = AssetDatabase.LoadAssetAtPath<GameObject>(MontagemDaCaminhonete.Prefab);
+            if (caminhonete != null)
+            {
+                partida.caminhonete = caminhonete;
+                if (lista != null && !lista.PrefabList.Any(p => p.Prefab == caminhonete))
+                {
+                    lista.Add(new NetworkPrefab { Prefab = caminhonete });
+                    EditorUtility.SetDirty(lista);
+                }
+            }
             mundo.AddComponent<TelaDeCarregamento>();
             mundo.AddComponent<MapaDoMundo>();
             mundo.AddComponent<Salvar.Salvamento>();   // o save (02/11/2026)

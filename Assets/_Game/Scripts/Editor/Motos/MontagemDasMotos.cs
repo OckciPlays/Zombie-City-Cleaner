@@ -79,7 +79,9 @@ namespace ZombieCityCleaner.EditorTools
             descanso = new Vector3(-0.13f, 0.155f, 0.10f), peDoDescanso = new Vector3(-0.29f, 0.035f, 0.17f),
             // o quadril: 9 cm acima do assento (o piloto no ponto mais baixo, o garupa no degrau de trás)
             lugarPiloto = new Vector3(0f, 0.765f, -0.30f), lugarGarupa = new Vector3(0f, 0.885f, -0.68f),
-            pes = new[] { new Vector3(0.31f, 0.32f, 0.22f), new Vector3(-0.31f, 0.32f, 0.22f), new Vector3(0.24f, 0.578f, -0.40f), new Vector3(-0.24f, 0.578f, -0.40f) },
+            // (as do garupa desde a v4, 15/11/2026: 11 cm mais baixas e 4 cm para a frente; o joelho subia ao peito. Na v5,
+            // 16/11/2026, mais 16 cm para a frente: o joelho ainda dobrava 118°, agora uns 97°)
+            pes = new[] { new Vector3(0.31f, 0.32f, 0.22f), new Vector3(-0.31f, 0.32f, 0.22f), new Vector3(0.24f, 0.466f, -0.20f), new Vector3(-0.24f, 0.466f, -0.20f) },
             punho = new Vector3(0.355f, 1.128f, 0.146f),
             farol = new Vector3(0f, 0.885f, 0.67f), farolBaixo = 5f,
             ignicaoNaDirecao = false,
@@ -111,7 +113,9 @@ namespace ZombieCityCleaner.EditorTools
             pivo = new Vector3(0f, 1.14f, 0.32154f), rodaNaDirecao = new Vector3(0f, -0.89930f, 0.022f),
             descanso = new Vector3(-0.105f, 0.365f, -0.29f), peDoDescanso = new Vector3(-0.30f, 0.012f, -0.16f),
             lugarPiloto = new Vector3(0f, 1.04f, -0.25f), lugarGarupa = new Vector3(0f, 1.045f, -0.56f),
-            pes = new[] { new Vector3(0.165f, 0.397f, -0.235f), new Vector3(-0.165f, 0.397f, -0.235f), new Vector3(0.165f, 0.531f, -0.43f), new Vector3(-0.165f, 0.531f, -0.43f) },
+            // (as do garupa na v3, 16/11/2026: 9 cm mais baixas, 4 cm para trás e 1,5 cm para fora; o joelho dobrava 118°,
+            // agora uns 100°)
+            pes = new[] { new Vector3(0.165f, 0.397f, -0.235f), new Vector3(-0.165f, 0.397f, -0.235f), new Vector3(0.18f, 0.441f, -0.47f), new Vector3(-0.18f, 0.441f, -0.47f) },
             punho = new Vector3(0.321f, 1.238f, 0.230f),
             farol = new Vector3(0f, 1.09f, 0.46f), farolBaixo = 4f,
             // a ignição em cima da mesa de cima, na frente dos suportes do guidão (vira com o guidão)

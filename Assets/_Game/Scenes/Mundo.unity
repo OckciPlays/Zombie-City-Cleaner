@@ -409,6 +409,7 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 1355c114c98e11d46b2583eebb080cd8, type: 2}
   - {fileID: 4300000, guid: ad3f833081f1abf4291d7c254e050a27, type: 2}
   - {fileID: 4300000, guid: 8bfb03ff40b17a84b93a04127bdc8f50, type: 2}
+  - {fileID: 4300000, guid: f8fe4c948398d00469eccc13b1a69a55, type: 2}
   malhasDaSinuca:
   - {fileID: 4300000, guid: 293272ab3de3e1e4eacc87570df5f724, type: 2}
   - {fileID: 4300000, guid: 98f8d89c81403e1439120223a137c74b, type: 2}
@@ -783,6 +784,10 @@ MonoBehaviour:
     esperaAteACoragem: 30
     tempoDeCoragem: 45
     esperaAteACoragemDeNoiteNaFogueira: 90
+    raioDoLampiao: 4
+    raioDoMolotov: 8
+    distanciaDoPanico: 6
+    velocidadeDoPanico: 4
     zumbisParaOLong: 6
     paradoParaOLong: 60
     recargaDoLongDaFogueira: 180
@@ -842,6 +847,71 @@ MonoBehaviour:
       chanceDeDia: 0.05
       intervaloDoNascimento: 180
       voltaParaATerra: 120
+      tempoSemNinguem: 60
+    chefes:
+      vidaDoBlindado: 5000
+      vidaDoAgregado: 1500
+      vidaDoAlongado: 3500
+      vidaDoLongo: 1000
+      vidaDoCondutor: 4500
+      velocidadeDoBlindado: 1.7
+      velocidadeDoAgregado: 2.3
+      velocidadeDoAlongado: 1.5
+      velocidadeDoLongo: 3.5
+      velocidadeDoCondutor: 1.4
+      multiplicadorNaCabeca: 2
+      multiplicadorNoPontoFraco: 3
+      danoNosMembros: 0.6
+      cascoDoBlindado: 0.55
+      danoAbsorvendo: 0.12
+      maiorAcerto: 150
+      danoParaSoltar: 140
+      alcanceDaVisao: 45
+      sentePerto: 14
+      desisteA: 90
+      tempoSemVer: 14
+      danoDoGolpe: 45
+      raioDoGolpe: 6.5
+      velocidadeDaInvestida: 8.5
+      danoDaInvestida: 50
+      investidaMaxima: 28
+      tontoDoBlindado: 3
+      danoDoAperto: 16
+      arremessoDoBlindado: 11
+      danoParaAbsorver: 260
+      curaAbsorvendo: 0.08
+      alcanceDaMao: 10
+      danoDaMao: 10
+      danoDoGolpeDoAgregado: 24
+      alcanceDoAlongado: 12
+      danoDaVarrida: 30
+      arremessoDoAlongado: 15
+      danoDoArremesso: 22
+      danoDoBote: 32
+      boteMaximo: 7
+      intervaloDoCuspe: {x: 4.5, y: 7}
+      danoDoAcido: 20
+      venenoDoAcido: 45
+      venenoTotalDoAcido: 15
+      queimaNaPoca: 3
+      danoDaVarredura: 38
+      raioDoGrito: 70
+      intervaloDoGrito: 28
+      comunsNoGrito: {x: 12, y: 20}
+      fracaoDeCorredoresNoGrito: 0.3
+      longsNoGrito: {x: 1, y: 3}
+      brutamontesNoGrito: {x: 0, y: 2}
+      hordaMaxima: 40
+      tempoDoChamado: 45
+      raioDoFrenesi: 30
+      fatorDoFrenesi: 1.35
+      tempoDoFrenesi: 15
+      nascerNoMundo: 1
+      intervaloDoNascimento: 480
+      chanceDeNoite: 0.3
+      chanceDeDia: 0.04
+      primeiroDepoisDe: 600
+      voltaSemNinguem: 160
       tempoSemNinguem: 60
 --- !u!1 &717777102
 GameObject:
@@ -5053,8 +5123,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieCityCleaner.World.CicloDoDia
   ShowTopMostFoldoutHeaderGroup: 1
   climaLigado: 1
-  ritmoDeTeste: 1
-  chanceDoTornado: 0.6
+  chanceDoTornadoNoJogo: 0.1
   horaInicial: 21
   minutosPorDia: 24
 --- !u!1 &2005601259
@@ -5271,6 +5340,7 @@ MonoBehaviour:
   - {fileID: 8314695595197481460, guid: 04a9d23f8f173c1429af2555161731ca, type: 3}
   - {fileID: 8393152533273774992, guid: bdcf02673f17ae744889b3ca6afb3333, type: 3}
   chavesDasMotos: 4748y
+  caminhonete: {fileID: 6359797054608079391, guid: 049ce6c540354f4469f01df8b7eb7596, type: 3}
 --- !u!114 &2005601269
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6044,6 +6114,8 @@ MonoBehaviour:
   pertoDeFora: 40
   luzNoSubsolo: 0.15
   neblinaNoSubsolo: 0.2
+  nomeNaTorre: []
+  arquivoDosPapeis: Documentos/Hospital
 --- !u!1 &2056384982
 GameObject:
   m_ObjectHideFlags: 0
