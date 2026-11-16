@@ -39,6 +39,35 @@ namespace ZombieCityCleaner.Mundo
             return _doLakewood;
         }
 
+        static PaineisDeSucata _noMundo;
+        static ChaoDeLakewood _chaoDoMundo;
+
+        /// <summary>
+        /// Os painéis do Lakewood no mundo do jogo (16/11/2026, <see cref="OrigemDeLakewood"/>): os de
+        /// <see cref="DoLakewood"/> (feitos no mapa, com os carros no mapa), na mesma ordem, com as posições no mundo e a grade
+        /// achando o bloco pelo ponto do mundo (os números dos blocos são os mesmos).
+        /// </summary>
+        public static PaineisDeSucata DoLakewoodNoMundo(ChaoDeLakewood chao, ObjetosDaEstrada objetosNoMapa)
+        {
+            if (chao == null) return null;
+            if (ReferenceEquals(chao, _chaoDoMundo)) return _noMundo;
+            var noMapa = DoLakewood(chao, objetosNoMapa);
+            var p = new PaineisDeSucata(chao.Mapa.semente,
+                (x, z) => new Vector2Int(Mathf.FloorToInt((x + OrigemDeLakewood.X) / ChaoDeLakewood.TamanhoDoBloco),
+                                         Mathf.FloorToInt((z + OrigemDeLakewood.Z) / ChaoDeLakewood.TamanhoDoBloco)),
+                chao.BlocosX, chao.BlocosZ);
+            foreach (var q in noMapa.Todos)
+            {
+                var w = q;
+                w.Posicao = OrigemDeLakewood.NoMundo(q.Posicao);
+                p.Todos.Add(w);
+            }
+            p.Indexar();
+            _noMundo = p;
+            _chaoDoMundo = chao;
+            return p;
+        }
+
         static PaineisDeSucata NoLakewood(ChaoDeLakewood chao, ObjetosDaEstrada objetos)
         {
             var p = new PaineisDeSucata(chao.Mapa.semente,

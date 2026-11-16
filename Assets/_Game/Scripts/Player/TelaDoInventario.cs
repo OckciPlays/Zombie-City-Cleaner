@@ -45,7 +45,8 @@ namespace ZombieCityCleaner.Player
         const float GradeX = 336f, GradeY = 58f, GradeMaxW = 486f, GradeMaxH = 336f;
         int Colunas => inventario.Colunas;
         int Linhas => inventario.Linhas;
-        float Celula => Mathf.Min(54f, GradeMaxW / Colunas, GradeMaxH / Linhas);
+        // (16/11/2026: dois Mathf.Min de dois números; o de três criava um array a cada chamada, várias por quadro)
+        float Celula => Mathf.Min(Mathf.Min(54f, GradeMaxW / Colunas), GradeMaxH / Linhas);
         Rect AreaDaGrade => new Rect(GradeX, GradeY, Celula * Colunas, Celula * Linhas);
         // as dicas e o aviso do que foi feito, embaixo da grade
         static readonly Rect AreaDoRodape = new Rect(GradeX, 448, GradeMaxW, 112);

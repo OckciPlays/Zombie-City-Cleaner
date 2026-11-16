@@ -462,7 +462,7 @@ namespace ZombieCityCleaner.World
             var p = new Parte { Objeto = go, Desenho = vis.ParaMesh($"Bunker: {nome}"), Colisao = col.ParaMesh($"Bunker: {nome} (colisão)") };
             go.AddComponent<MeshFilter>().sharedMesh = p.Desenho;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
-            p.Colisor = go.AddComponent<MeshCollider>();
+            p.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             p.Colisor.enabled = false;
             p.Cozimento = Cozinhar(p.Colisao.GetEntityId());
             _partesDaCasca.Add(p);
@@ -701,7 +701,7 @@ namespace ZombieCityCleaner.World
             a.Colisao = b.col.ParaMesh($"Bunker: {Codigos[f]} (colisão)");
             go.AddComponent<MeshFilter>().sharedMesh = a.Desenho;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
-            a.Colisor = go.AddComponent<MeshCollider>();
+            a.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             a.Colisor.enabled = false;
             a.Cozimento = Cozinhar(a.Colisao.GetEntityId());
             // os pisos dos passos: o de cada cômodo (o taco, o carpete) e o concreto no resto

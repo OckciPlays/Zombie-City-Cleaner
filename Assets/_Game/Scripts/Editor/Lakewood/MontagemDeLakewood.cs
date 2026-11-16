@@ -156,10 +156,11 @@ namespace ZombieCityCleaner.EditorTools
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
 
-            // a câmera do menu (some quando o jogador local nasce), olhando o reservatório
+            // a câmera do menu (some quando o jogador local nasce), olhando o reservatório; no mundo do jogo (16/11/2026: a
+            // origem no meio do mapa, OrigemDeLakewood)
             var camera = new GameObject("Câmera do menu") { tag = "MainCamera" };
             var olho = NoChao(partida - frente * 12f, 6f);
-            camera.transform.SetPositionAndRotation(olho, Quaternion.LookRotation(NoChao(partida + frente * 40f, 0f) - olho));
+            camera.transform.SetPositionAndRotation(OrigemDeLakewood.NoMundo(olho), Quaternion.LookRotation(NoChao(partida + frente * 40f, 0f) - olho));
             var cam = camera.AddComponent<Camera>();
             cam.fieldOfView = 70f;
             cam.nearClipPlane = 0.05f;
@@ -175,7 +176,7 @@ namespace ZombieCityCleaner.EditorTools
             foreach (Transform p in pontos)
             {
                 var onde = partida + lado * (2.5f * i - 3.75f);
-                p.SetPositionAndRotation(NoChao(onde, 0.1f), Quaternion.Euler(0f, giro, 0f));
+                p.SetPositionAndRotation(OrigemDeLakewood.NoMundo(NoChao(onde, 0.1f)), Quaternion.Euler(0f, giro, 0f));   // (no mundo)
                 i++;
             }
             MontagemDasArmas.MontarItensNoMundo(cena);
@@ -197,7 +198,7 @@ namespace ZombieCityCleaner.EditorTools
             lakewood.materialDaAgua = AssetDatabase.LoadAssetAtPath<Material>(TexturasDoChao.MaterialDaAgua);
             lakewood.materialDaCidade = AssetDatabase.LoadAssetAtPath<Material>(TexturasDoAbandono.MaterialDoMundo);
             lakewood.materialDeLonge = MaterialDoRelevoDeLonge();
-            lakewood.partida = NoChao(partida, 0f);
+            lakewood.partida = NoChao(partida, 0f);   // (a partida e o lugar do carro ficam no espaço do mapa)
             lakewood.carro = carro;
             lakewood.lugarDoCarro = NoChao(carro2, 0f);
             lakewood.giroDoCarro = giro;

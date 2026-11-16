@@ -198,7 +198,7 @@ namespace ZombieCityCleaner.Player
                 return Mathf.Clamp(dados.Altura(p.x, p.z) + f - p.y, 0f, f);
             }
             var mapa = LakewoodNaCena.Instancia;
-            if (mapa != null && mapa.Chao != null && mapa.Chao.Agua(p.x, p.z, out float nivel)) return Mathf.Max(0f, nivel - p.y);
+            if (mapa != null && mapa.ChaoNoMundo != null && mapa.ChaoNoMundo.Agua(p.x, p.z, out float nivel)) return Mathf.Max(0f, nivel - p.y);
             return 0f;
         }
 

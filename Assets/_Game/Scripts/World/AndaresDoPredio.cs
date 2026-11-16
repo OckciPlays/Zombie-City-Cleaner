@@ -206,7 +206,7 @@ namespace ZombieCityCleaner.World
             a.Colisao = r.Colisao.ParaMesh($"{name}: andar {f} (colisão)");
             go.AddComponent<MeshFilter>().sharedMesh = a.Desenho;
             go.AddComponent<MeshRenderer>().sharedMaterial = _material;
-            a.Colisor = go.AddComponent<MeshCollider>();
+            a.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             a.Colisor.enabled = false;
             a.Cozimento = Cozinhar(a.Colisao.GetEntityId());
             var pisos = go.AddComponent<PisoPorZona>();

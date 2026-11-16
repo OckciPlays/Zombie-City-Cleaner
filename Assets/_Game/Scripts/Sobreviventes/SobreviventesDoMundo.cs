@@ -62,6 +62,22 @@ namespace ZombieCityCleaner.Sobreviventes
         readonly List<GrupoDeSobreviventes> _ativos = new List<GrupoDeSobreviventes>();
         float _proximaConferencia, _proximoPensar, _proximoNascimento;
 
+        // os que ainda vão nascer, um por quadro (16/11/2026, o teste de desempenho: "às vezes dá um pouco de lag"; o grupo
+        // inteiro, de 6 a 8, num quadro só tomava até 0,8 s no Editor: cada um é instanciado, vestido, com as malhas sem as
+        // faces cobertas, e posto na rede). O sorteio é o mesmo de antes, feito todo na hora do Nascer
+        sealed class ANascer
+        {
+            public GrupoDeSobreviventes grupo;
+            public Vector3 pos, olharPara;
+            public IdentidadeDoSobrevivente id;
+            public TipoDeArma arma;
+            public Item branca;
+        }
+        readonly List<ANascer> _aNascer = new List<ANascer>();
+
+        /// <summary>Quantos do grupo ainda vão nascer (um por quadro).</summary>
+        public int ANascerDo(GrupoDeSobreviventes g) => g != null ? g.nascendo : 0;
+
         /// <summary>Os grupos que estão no mundo agora (no anfitrião), para o F1 e os testes.</summary>
         public IReadOnlyList<GrupoDeSobreviventes> Ativos => _ativos;
         /// <summary>O primeiro grupo no mundo agora (ou null).</summary>
@@ -78,6 +94,8 @@ namespace ZombieCityCleaner.Sobreviventes
             if (GetComponent<BasesMilitaresDoMundo>() == null) gameObject.AddComponent<BasesMilitaresDoMundo>();
             // os moradores do bunker (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md), também daqui
             if (GetComponent<Moradores.MoradoresDoBunker>() == null) gameObject.AddComponent<Moradores.MoradoresDoBunker>();
+            // as falas já prontas (16/11/2026: a tabela delas era montada na primeira fala, 9 ms no meio da partida)
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FalasDosSobreviventes).TypeHandle);
         }
 
         public override void OnDestroy()
@@ -91,10 +109,15 @@ namespace ZombieCityCleaner.Sobreviventes
             Instancia = this;
             _cidades.Clear();
             _ativos.Clear();
+            _aNascer.Clear();
             _proximoNascimento = 0f;
         }
 
-        public override void OnNetworkDespawn() => _ativos.Clear();
+        public override void OnNetworkDespawn()
+        {
+            _ativos.Clear();
+            _aNascer.Clear();
+        }
 
         // o mundo do jogo (12/11/2026: o sorteado ou o Lakewood; as cidades, a semente e a altura vêm dele)
         static IMundoDoJogo Mundo => MundoDoJogo.Pronto;
@@ -135,6 +158,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void Update()
         {
             if (!Pronto) return;
+            if (_aNascer.Count > 0) NascerUm();
             float agora = Time.time;
             if (_ativos.Count > 0 && agora >= _proximoPensar)
             {
@@ -149,6 +173,7 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void ConferirOAtivo(GrupoDeSobreviventes g)
         {
+            if (ANascerDo(g) > 0) return;   // (ainda nascendo)
             // quem fugiu e sumiu de vista sai (vivo)
             foreach (var m in g.membros.ToArray())
                 if (m != null && !m.Morto && m.Fugiu) Tirar(m);
@@ -218,6 +243,7 @@ namespace ZombieCityCleaner.Sobreviventes
             quantos = e.quantos;
             var g = new GrupoDeSobreviventes { cidade = cidade, setor = parte, geracao = e.geracao, quantos = quantos };
             bool temSub = false;
+            int fila = 0;
             for (int i = 0; i < quantos; i++)
             {
                 var (arma, branca) = SortearArma(s, i, ref temSub);
@@ -227,23 +253,48 @@ namespace ZombieCityCleaner.Sobreviventes
                 var p = lugar + Quaternion.Euler(0f, i * 47f, 0f) * Vector3.forward * (1.2f + (i % 3) * 0.9f);
                 if (NavMesh.SamplePosition(p, out var hit, 2f, NavMesh.AllAreas)) p = hit.position;
                 else p = lugar;
-                var go = Instantiate(prefab, p, Quaternion.LookRotation(perto - p == Vector3.zero ? Vector3.forward : new Vector3(perto.x - p.x, 0f, perto.z - p.z)));
-                var sob = go.GetComponent<Sobrevivente>();
-                sob.Identidade.Value = new IdentidadeDoSobrevivente
+                // (nasce no Update, um por quadro: NascerUm)
+                _aNascer.Add(new ANascer
                 {
-                    semente = sementeDaRoupa, arma = arma, roupa = roupa, grupo = (ushort)Mathf.Max(0, Chave(cidade, parte)),
-                    papel = i == 0 ? PapelDoSobrevivente.Lider : PapelDoSobrevivente.Busca, indice = (byte)i, branca = branca,
-                };
-                sob.grupo = g;
-                Encher(sob, arma, false, branca);
+                    grupo = g, pos = p, olharPara = perto, arma = arma, branca = branca,
+                    id = new IdentidadeDoSobrevivente
+                    {
+                        semente = sementeDaRoupa, arma = arma, roupa = roupa, grupo = (ushort)Mathf.Max(0, Chave(cidade, parte)),
+                        papel = i == 0 ? PapelDoSobrevivente.Lider : PapelDoSobrevivente.Busca, indice = (byte)i, branca = branca,
+                    },
+                });
+                fila++;
+            }
+            if (fila == 0) return false;
+            g.nascendo = fila;
+            _ativos.Add(g);
+            // o primeiro (o líder, se vivo) já agora
+            NascerUm();
+            Debug.Log($"[Sobreviventes] O grupo da cidade {cidade}, parte {parte} (geração {e.geracao}) apareceu: {fila} de {quantos}, um por quadro, a {Vector3.Distance(lugar, perto):0} m ({_ativos.Count} no mundo).");
+            return true;
+        }
+
+        // o próximo da fila nasce (o Update chama um por quadro); o de um grupo que já saiu é jogado fora
+        void NascerUm()
+        {
+            while (_aNascer.Count > 0)
+            {
+                var a = _aNascer[0];
+                _aNascer.RemoveAt(0);
+                a.grupo.nascendo = Mathf.Max(0, a.grupo.nascendo - 1);
+                if (!_ativos.Contains(a.grupo)) continue;
+                var p = a.pos;
+                var olhar = new Vector3(a.olharPara.x - p.x, 0f, a.olharPara.z - p.z);
+                var go = Instantiate(prefab, p, Quaternion.LookRotation(olhar.sqrMagnitude < 1e-6f ? Vector3.forward : olhar));
+                var sob = go.GetComponent<Sobrevivente>();
+                sob.Identidade.Value = a.id;
+                sob.grupo = a.grupo;
+                Encher(sob, a.arma, false, a.branca);
                 go.GetComponent<NetworkObject>().Spawn(true);
                 if (sob.agente != null && sob.agente.isOnNavMesh) sob.agente.Warp(p);
-                g.membros.Add(sob);
+                a.grupo.membros.Add(sob);
+                return;
             }
-            if (g.membros.Count == 0) return false;
-            _ativos.Add(g);
-            Debug.Log($"[Sobreviventes] O grupo da cidade {cidade}, parte {parte} (geração {e.geracao}) apareceu: {g.membros.Count} de {quantos}, a {Vector3.Distance(lugar, perto):0} m ({_ativos.Count} no mundo).");
-            return true;
         }
 
         // as armas dos civis (03/11/2026, a pedido: "armas brancas, tacos, facas, pistolas, raramente uma submetralhadora";
@@ -439,6 +490,8 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             foreach (var m in g.membros.ToArray()) if (m != null) Tirar(m);
             g.membros.Clear();
+            _aNascer.RemoveAll(a => a.grupo == g);
+            g.nascendo = 0;
             _ativos.Remove(g);
             Debug.Log($"[Sobreviventes] O grupo da cidade {g.cidade}, parte {g.setor} saiu{(g.cidade >= 0 ? $" ({BitsVivos(Estado(g.cidade, g.setor))} vivos)" : "")}.");
         }
@@ -548,7 +601,8 @@ namespace ZombieCityCleaner.Sobreviventes
                 e.diaDaMorte = -1;
             }
             if (!Nascer(cidade, parte, e, p, true)) return "Não achei lugar no NavMesh perto.";
-            return $"Um grupo de {_ativos[_ativos.Count - 1].membros.Count} a uns 20 m" +
+            var novo = _ativos[_ativos.Count - 1];
+            return $"Um grupo de {novo.membros.Count + ANascerDo(novo)} a uns 20 m" +
                    (cidade < 0 ? " (de teste: fora de uma cidade)." : $" (a parte {parte + 1} de {GruposNaCidade(cidade)} da cidade).");
         }
 

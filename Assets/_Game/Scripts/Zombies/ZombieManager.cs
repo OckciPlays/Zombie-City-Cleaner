@@ -132,7 +132,28 @@ namespace ZombieCityCleaner.Zombies
         int _proximoId, _cursor, _gemidosNoSegundo;
         float _proximaVarredura, _proximoGemido, _segundoDosGemidos;
         Coroutine _povoando;
-        Transform _vivos;
+        // os zumbis ficam em grupos, cada um na raiz da cena (16/11/2026: num só, a Unity cuidava de todos os ossos de todos
+        // juntos, numa hierarquia que crescia e era copiada inteira a cada vez; separados, ela divide o trabalho)
+        // (fora da serialização: depois de uma recompilação no Editor, a Unity devolvia um array vazio no lugar do nulo)
+        [System.NonSerialized] Transform[] _paisDosZumbis;
+        [System.NonSerialized] int _proximoGrupo;
+        const int Grupos = 16;
+
+        void CriarOsGrupos()
+        {
+            if (_paisDosZumbis != null && _paisDosZumbis.Length == Grupos && _paisDosZumbis[0] != null) return;
+            _paisDosZumbis = new Transform[Grupos];
+            for (int i = 0; i < Grupos; i++) _paisDosZumbis[i] = new GameObject($"Zumbis vivos ({i + 1})").transform;
+        }
+
+        // o grupo do próximo zumbi criado (um de cada vez, em roda)
+        Transform ProximoGrupo()
+        {
+            CriarOsGrupos();
+            var g = _paisDosZumbis[_proximoGrupo];
+            _proximoGrupo = (_proximoGrupo + 1) % Grupos;
+            return g;
+        }
         bool _info;
 
         void OnEnable() => Instancia = this;
@@ -144,7 +165,9 @@ namespace ZombieCityCleaner.Zombies
 
         public override void OnNetworkSpawn()
         {
-            if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
+            CriarOsGrupos();
+            // a voz carregada agora (16/11/2026: ela não vem pré-carregada, e o primeiro gemido lia o mp3 do disco, 70 ms)
+            if (vozDoZumbi != null && vozDoZumbi.loadState == AudioDataLoadState.Unloaded) vozDoZumbi.LoadAudioData();
             IncluirOsChefes();   // os chefes no fim da lista dos modelos (ZombieManager.Chefes.cs)
             PrepararCorpos();
             if (GetComponent<UI.BarraDoChefe>() == null) gameObject.AddComponent<UI.BarraDoChefe>();   // a barra do Brutamonte
@@ -752,7 +775,6 @@ namespace ZombieCityCleaner.Zombies
                 z.gameObject.SetActive(true);
                 return z;
             }
-            if (_vivos == null) _vivos = new GameObject("Zumbis vivos").transform;
             return CriarDoModelo(modelo);
         }
 

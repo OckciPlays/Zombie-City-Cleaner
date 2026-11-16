@@ -359,11 +359,10 @@ namespace ZombieCityCleaner.Mundo
         public Mesh ParaMesh(string nome, bool espelhar = false)
         {
             var m = new Mesh { name = nome };
-            if (_v.Count > 65000) m.indexFormat = IndexFormat.UInt32;
-            if (!espelhar)
-            {
-                m.SetVertices(_v); m.SetNormals(_n); m.SetUVs(0, _uv); m.SetTriangles(_t, 0);
-            }
+            // (16/11/2026: os canais de uma vez, EscritaDaMalha; o alto, na cor, quando tem)
+            if (_alt.Count > 0) Encher(_v.Count);
+            var alt = _alt.Count > 0 ? _alt : null;
+            if (!espelhar) EscritaDaMalha.Escrever(m, _v, _n, _uv, _t, cor32: alt);
             else
             {
                 var v = new List<Vector3>(_v.Count);
@@ -372,14 +371,8 @@ namespace ZombieCityCleaner.Mundo
                 foreach (var p in _n) n.Add(new Vector3(-p.x, p.y, p.z));
                 var t = new List<int>(_t.Count);
                 for (int i = 0; i < _t.Count; i += 3) { t.Add(_t[i]); t.Add(_t[i + 2]); t.Add(_t[i + 1]); }
-                m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, _uv); m.SetTriangles(t, 0);
+                EscritaDaMalha.Escrever(m, v, n, _uv, t, cor32: alt);
             }
-            if (_alt.Count > 0)
-            {
-                Encher(_v.Count);
-                m.SetColors(_alt);
-            }
-            m.RecalculateBounds();
             return m;
         }
     }

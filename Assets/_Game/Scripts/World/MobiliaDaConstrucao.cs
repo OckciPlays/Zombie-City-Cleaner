@@ -268,10 +268,12 @@ namespace ZombieCityCleaner.World
 
         /// <summary>
         /// Todas as construções, do olho do jogador local: os de longe e os de perto, com 'pecas' móveis de perto e 'malhas'
-        /// malhas de longe no máximo neste quadro.
+        /// malhas de longe no máximo neste quadro, e os de perto só até a hora 'ate' (16/11/2026: pelo menos um por quadro).
         /// </summary>
-        public static void Revisar(Vector3 olho, float raioDeLonge, float raioDePerto, int pecas, int malhas)
+        public static void Revisar(Vector3 olho, float raioDeLonge, float raioDePerto, int pecas, int malhas, double ate = double.MaxValue)
         {
+            _ate = ate;
+            _postosNoQuadro = 0;
             // a qualidade mudou (UI/Graficos): a sombra dos móveis de perto que já estão postos
             if (_versaoDosGraficos != UI.Graficos.Versao)
             {
@@ -283,6 +285,9 @@ namespace ZombieCityCleaner.World
         }
 
         static int _versaoDosGraficos = -1;
+        // a hora em que os de perto param neste quadro, e quantos já foram postos nele
+        static double _ate = double.MaxValue;
+        static int _postosNoQuadro;
         static readonly List<MeshRenderer> _renderers = new List<MeshRenderer>();
 
         // na Média e na Baixa, os móveis de perto não fazem a sombra do sol (os prefabs vêm com ela ligada em tudo)
@@ -335,8 +340,9 @@ namespace ZombieCityCleaner.World
                 _proximo = 0;
             }
             ulong obra = Obra;
-            while (pecas > 0 && _proximo < _pontos.Length)
+            while (pecas > 0 && _proximo < _pontos.Length && (_postosNoQuadro == 0 || Time.realtimeSinceStartupAsDouble < _ate))
             {
+                _postosNoQuadro++;
                 int i = _proximo++;
                 var p = _pontos[i];
                 if (!MobiliaNova.EhNovo(p.tipo))

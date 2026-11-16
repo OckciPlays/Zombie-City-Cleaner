@@ -61,7 +61,7 @@ namespace ZombieCityCleaner.World
             var go = new GameObject("Toco");
             go.transform.SetParent(_paiDosPinheiros, false);
             float r = ArvoresDoMundo.RaioDoTronco(pl);
-            go.transform.SetPositionAndRotation(pl.Posicao, Quaternion.Euler(0f, pl.Giro, 0f));
+            go.transform.SetLocalPositionAndRotation(pl.Posicao, Quaternion.Euler(0f, pl.Giro, 0f));   // (no mapa, embaixo da raiz)
             go.transform.localScale = new Vector3(r, 1f, r);
             go.AddComponent<MeshFilter>().sharedMesh = _malhaDoToco;
             var mr = go.AddComponent<MeshRenderer>();
@@ -111,15 +111,16 @@ namespace ZombieCityCleaner.World
         }
 
         /// <summary>
-        /// No dono, o golpe do machado num pinheiro: a árvore em pé desse colisor (a chave e o pé). Falso se não for um pinheiro
-        /// da mata (a parede, o toco, a obra).
+        /// No dono, o golpe do machado num pinheiro (o ponto no mundo): a árvore em pé desse colisor (a chave e o pé, no mundo).
+        /// Falso se não for um pinheiro da mata (a parede, o toco, a obra).
         /// </summary>
-        public bool TroncoEm(Collider c, Vector3 ponto, out long chave, out Vector3 pe)
+        public bool TroncoEm(Collider c, Vector3 noMundo, out long chave, out Vector3 pe)
         {
             chave = 0;
             pe = default;
             if (c == null || _paiDosPinheiros == null || !c.transform.IsChildOf(_paiDosPinheiros)) return false;
-            var meio = ArvoresDoMundo.BlocoDe(ponto.x, ponto.z);
+            var meio = ArvoresDoMundo.BlocoDe(noMundo.x, noMundo.z);
+            var ponto = OrigemDeLakewood.NoMapa(noMundo);   // (as plantas dos blocos estão no mapa)
             float melhor = float.MaxValue;
             for (int dz = -1; dz <= 1; dz++)
                 for (int dx = -1; dx <= 1; dx++)
@@ -133,13 +134,16 @@ namespace ZombieCityCleaner.World
                         if (d >= melhor) continue;
                         melhor = d;
                         chave = FlorestaDoMundo.Chave(b.Chave.x, b.Chave.y, k);
-                        pe = pl.Posicao;
+                        pe = OrigemDeLakewood.NoMundo(pl.Posicao);
                     }
                 }
             return melhor < 0.6f;
         }
 
-        /// <summary>A árvore cortada cai (se for perto da câmera), para longe de quem cortou: o prefab dela sem a colisão.</summary>
+        /// <summary>
+        /// A árvore cortada cai (se for perto da câmera), para longe de quem cortou: o prefab dela sem a colisão, sem pai (no
+        /// mundo: a planta do <see cref="ArvoresDoMundo"/> já vem no mundo).
+        /// </summary>
         public void Tombar(long chave, Vector3 deQuem)
         {
             if (!ArvoresDoMundo.Planta(chave, out var pl)) return;

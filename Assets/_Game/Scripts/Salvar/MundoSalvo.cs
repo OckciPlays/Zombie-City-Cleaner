@@ -31,6 +31,12 @@ namespace ZombieCityCleaner.Salvar
         /// cada cena mostra só os dela.
         /// </summary>
         public bool lakewood;
+        /// <summary>
+        /// As posições do Lakewood já estão no mundo com a origem no meio do mapa (16/11/2026, <c>OrigemDeLakewood</c>). Um save
+        /// do Lakewood de antes vem com falso: ao ser lido, as posições dele vão para o mundo novo, uma vez
+        /// (<see cref="MigrarAOrigemDoLakewood"/>). As chaves do saque, das portas e dos móveis continuam as mesmas.
+        /// </summary>
+        public bool origemNoMeio;
         public int modo;
         /// <summary>O fogo amigo, escolhido ao criar o mundo (03/11/2026).</summary>
         public bool fogoAmigo;
@@ -145,6 +151,7 @@ namespace ZombieCityCleaner.Salvar
             id = Guid.NewGuid().ToString("N"),
             nome = "Condado de Lakewood",
             lakewood = true,
+            origemNoMeio = true,
             modo = (int)modo,
             criadoEm = DateTime.Now.ToString("s"),
         };
@@ -172,6 +179,46 @@ namespace ZombieCityCleaner.Salvar
         {
             string quando = DateTime.TryParse(salvoEm, out var d) ? d.ToString("dd/MM/yyyy HH:mm") : "";
             return $"dia {dia} · {Mathf.FloorToInt(hora):00}:{Mathf.FloorToInt(hora % 1f * 60f):00} · {NomeDoModo(Modo)} · {quando}";
+        }
+
+        /// <summary>Um save do Lakewood de antes da origem no meio: as posições do mundo de antes (o do mapa) vão para o de agora.</summary>
+        public void MigrarAOrigemDoLakewood()
+        {
+            if (!lakewood || origemNoMeio) return;
+            origemNoMeio = true;
+            float X = ZombieCityCleaner.Mundo.OrigemDeLakewood.X, Z = ZombieCityCleaner.Mundo.OrigemDeLakewood.Z;
+            var d = new Vector3(X, 0f, Z);
+            if (itens != null) foreach (var x in itens) x.apoio -= d;
+            if (construcoes != null) foreach (var x in construcoes) x.pos -= d;
+            if (caiaques != null) foreach (var x in caiaques) x.pos -= d;
+            if (carros != null) foreach (var x in carros) x.pos -= d;
+            if (posicoes != null) foreach (var x in posicoes) x.pos -= d;
+            if (mochilas != null) foreach (var x in mochilas) x.pos -= d;
+            if (marcas != null) foreach (var x in marcas) x.pos -= d;
+            if (tocasDosCastores != null)
+                for (int i = 0; i < tocasDosCastores.Count; i++)
+                {
+                    var t = tocasDosCastores[i];
+                    t.x -= X;
+                    t.z -= Z;
+                    if (t.noRio)
+                    {
+                        t.rx -= X;
+                        t.rz -= Z;
+                    }
+                    tocasDosCastores[i] = t;
+                }
+            if (arvoresRoidas != null)
+                for (int i = 0; i < arvoresRoidas.Count; i++)
+                {
+                    var a = arvoresRoidas[i];
+                    a.x -= X;
+                    a.z -= Z;
+                    arvoresRoidas[i] = a;
+                }
+            // (a fauna por região, de 512 m, volta cheia onde a grade mudou: ela se refaz sozinha em um dia do jogo)
+            fauna?.Clear();
+            Debug.Log($"[Save] O mundo {nome} ({id}) foi para o Lakewood com a origem no meio do mapa: {itens?.Count ?? 0} itens, {construcoes?.Count ?? 0} construções, {carros?.Count ?? 0} carros, {posicoes?.Count ?? 0} jogadores.");
         }
 
         public PosicaoSalva PosicaoDe(ulong chave)
@@ -207,7 +254,12 @@ namespace ZombieCityCleaner.Salvar
         {
             var arquivo = Path.Combine(Pasta, id + ".json");
             if (!File.Exists(arquivo)) return null;
-            try { return JsonUtility.FromJson<MundoSalvo>(File.ReadAllText(arquivo)); }
+            try
+            {
+                var m = JsonUtility.FromJson<MundoSalvo>(File.ReadAllText(arquivo));
+                m?.MigrarAOrigemDoLakewood();
+                return m;
+            }
             catch (Exception e)
             {
                 Debug.LogWarning($"[Save] O mundo {id} não abriu: {e.Message}");

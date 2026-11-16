@@ -49,6 +49,20 @@ namespace ZombieCityCleaner.Sobreviventes
             foreach (var e in _estados) NavMeshDoMundo.Soltar(e);
         }
 
+        // os que ainda vão aparecer, um por quadro (16/11/2026, o teste de desempenho: as 16 pessoas do acampamento grande num
+        // quadro só travavam a chegada; cada uma é instanciada, vestida e posta na rede). O sorteio é feito todo no Povoar
+        readonly List<(GrupoDeSobreviventes grupo, System.Action criar)> _aAparecer = new List<(GrupoDeSobreviventes, System.Action)>();
+
+        // no Update (cada quadro): o próximo da fila aparece
+        void AparecerUm()
+        {
+            if (_aAparecer.Count == 0) return;
+            var (g, criar) = _aAparecer[0];
+            _aAparecer.RemoveAt(0);
+            g.nascendo = Mathf.Max(0, g.nascendo - 1);
+            criar();
+        }
+
         void Povoar(int a, PlantaDoAcampamento p, Estado e, GameObject prefab)
         {
             var g = new GrupoDeSobreviventes { cidade = -1, acampamento = a, quantos = p.Pessoas };
@@ -63,29 +77,35 @@ namespace ZombieCityCleaner.Sobreviventes
                 byte roupa = papel == PapelDoSobrevivente.Guarda ? (byte)(s.Next(2) == 0 ? 1 : 2) : (byte)(s.Next(100) < 55 ? 3 : 0);
                 int sementeDaRoupa = s.Next();
                 if ((e.mortos & (1 << i)) != 0) continue;   // este morreu
-                var (local, giro) = p.LugarDe(i);
-                var pos = NoChao(p.Mundo(local));
-                var go = Instantiate(prefab, pos, Quaternion.Euler(0f, p.GiroNoMundo(giro), 0f));
-                var sob = go.GetComponent<Sobrevivente>();
-                sob.Identidade.Value = new IdentidadeDoSobrevivente
+                int indice = i;
+                g.nascendo++;
+                _aAparecer.Add((g, () =>
                 {
-                    semente = sementeDaRoupa, arma = arma, roupa = roupa, grupo = (ushort)(GrupoBase + a), papel = papel, indice = (byte)i,
-                };
-                sob.grupo = g;
-                sob.acampamento = a;
-                sob.posto = pos;
-                sob.ronda = papel == PapelDoSobrevivente.Guarda ? p.Mundo(p.Guardas[i].ronda) : pos;
-                sob.giroDoPosto = p.GiroNoMundo(giro);
-                // cada um num cômodo (e, no mesmo cômodo, um pouco para o lado)
-                int n = p.Esconderijos.Count, volta = i / n;
-                var lado = new Vector3((volta % 3 - 1) * 0.8f, 0f, (volta / 3 % 3 - 1) * 0.8f);
-                sob.esconderijo = p.Mundo(p.Esconderijos[i % n] + lado);
-                SobreviventesDoMundo.Encher(sob, arma);
-                go.GetComponent<NetworkObject>().Spawn(true);
-                g.membros.Add(sob);
+                    if (e.grupo != g) return;   // (saíram antes de aparecer)
+                    var (local, giro) = p.LugarDe(indice);
+                    var pos = NoChao(p.Mundo(local));
+                    var go = Instantiate(prefab, pos, Quaternion.Euler(0f, p.GiroNoMundo(giro), 0f));
+                    var sob = go.GetComponent<Sobrevivente>();
+                    sob.Identidade.Value = new IdentidadeDoSobrevivente
+                    {
+                        semente = sementeDaRoupa, arma = arma, roupa = roupa, grupo = (ushort)(GrupoBase + a), papel = papel, indice = (byte)indice,
+                    };
+                    sob.grupo = g;
+                    sob.acampamento = a;
+                    sob.posto = pos;
+                    sob.ronda = papel == PapelDoSobrevivente.Guarda ? p.Mundo(p.Guardas[indice].ronda) : pos;
+                    sob.giroDoPosto = p.GiroNoMundo(giro);
+                    // cada um num cômodo (e, no mesmo cômodo, um pouco para o lado)
+                    int n = p.Esconderijos.Count, volta = indice / n;
+                    var lado = new Vector3((volta % 3 - 1) * 0.8f, 0f, (volta / 3 % 3 - 1) * 0.8f);
+                    sob.esconderijo = p.Mundo(p.Esconderijos[indice % n] + lado);
+                    SobreviventesDoMundo.Encher(sob, arma);
+                    go.GetComponent<NetworkObject>().Spawn(true);
+                    g.membros.Add(sob);
+                }));
             }
             e.grupo = g;
-            Debug.Log($"[Acampamentos] As pessoas do {p.Lugar.Nome} apareceram: {g.membros.Count} de {p.Pessoas}{(Hostil(a) ? " (hostil)" : "")}.");
+            Debug.Log($"[Acampamentos] As pessoas do {p.Lugar.Nome} vão aparecer, uma por quadro: {g.nascendo} de {p.Pessoas}{(Hostil(a) ? " (hostil)" : "")}.");
         }
 
         // o ponto do NavMesh no chão perto do lugar (03/11/2026: o NavMesh mais perto podia ser o tampo do balcão da banca, e o
@@ -103,6 +123,9 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void Recolher(int a, Estado e)
         {
+            var g = e.grupo;
+            _aAparecer.RemoveAll(x => x.grupo == g);
+            g.nascendo = 0;
             foreach (var m in e.grupo.membros.ToArray())
             {
                 if (m == null) continue;

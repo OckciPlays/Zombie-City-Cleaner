@@ -70,7 +70,7 @@ namespace ZombieCityCleaner.Zombies
         /// <summary>Uma instância nova do modelo, com o número dele (o dos chefes vem da lista, não do prefab).</summary>
         Zumbi CriarDoModelo(int m)
         {
-            var z = Instantiate(modelos[m], _vivos);
+            var z = Instantiate(modelos[m], ProximoGrupo());
             z.modelo = m;
             return z;
         }

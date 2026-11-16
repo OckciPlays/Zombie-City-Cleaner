@@ -33,6 +33,10 @@ namespace ZombieCityCleaner.World
         [Min(1)] public int pecasPorQuadro = 12;
         [Tooltip("Malhas de longe feitas por quadro.")]
         [Min(1)] public int malhasPorQuadro = 2;
+        [Tooltip("Quanto tempo (ms) os móveis de perto podem tomar por quadro (16/11/2026; pelo menos um por quadro).")]
+        public float msDosMoveisPorQuadro = 1.5f;
+        [Tooltip("Acima desta velocidade (m/s: de carro), os móveis de perto não entram (os de longe mostram os mesmos móveis).")]
+        public float velocidadeDosMoveisDePerto = 9f;
 
         public static MobiliaNovaDoMundo Instancia { get; private set; }
 
@@ -177,8 +181,20 @@ namespace ZombieCityCleaner.World
         {
             Vector3? olho = JogadorRede.Local != null ? JogadorRede.Local.transform.position + Vector3.up * 1.6f
                           : Camera.main != null ? Camera.main.transform.position : (Vector3?)null;
-            if (olho.HasValue) MobiliaDaConstrucao.Revisar(olho.Value, raioDeLonge, raioDePerto, pecasPorQuadro, malhasPorQuadro);
+            if (!olho.HasValue) return;
+            // (16/11/2026: de carro, passando pelas casas, os de perto entravam e saíam sem ninguém abrir nada; a velocidade é
+            // a do olho, suavizada, e um pulo grande, como o "ir para", conta só um quadro)
+            float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+            float v = (olho.Value - _olhoAntes).magnitude / dt;
+            _olhoAntes = olho.Value;
+            _velocidade = v > 80f ? _velocidade : Mathf.Lerp(_velocidade, v, Mathf.Clamp01(dt * 4f));
+            int pecas = _velocidade > velocidadeDosMoveisDePerto ? 0 : pecasPorQuadro;
+            MobiliaDaConstrucao.Revisar(olho.Value, raioDeLonge, raioDePerto, pecas, malhasPorQuadro,
+                                        Time.realtimeSinceStartupAsDouble + msDosMoveisPorQuadro / 1000.0);
         }
+
+        Vector3 _olhoAntes;
+        float _velocidade;
 
         // ------------------------------------------------------------ as partes que abrem
 

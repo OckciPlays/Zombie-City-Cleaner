@@ -153,7 +153,7 @@ namespace ZombieCityCleaner.Fauna
             return LongeDosLugaresDoMapa(m, new Vector3(x, 0f, z), 100f) == false;
         }
 
-        static bool PontoOcupado(IMundoDoJogo m, ChaoDeLakewood chao, float x, float z, float folga)
+        static bool PontoOcupado(IMundoDoJogo m, ChaoNoMundo chao, float x, float z, float folga)
         {
             if (m.CidadeEm(x, z) >= 0) return true;
             if (chao != null)

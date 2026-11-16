@@ -1316,6 +1316,82 @@ que os dois mapas cumprem, sem cópia:
   Com o save carregando, a casa da partida não põe os veículos nem as armas (voltam do save).
 - **Testar o save pelo MCP:** um `MundoSalvo` com um id próprio, e no fim o `Salvamento.Atual = null` antes do
   `MundoSalvo.Apagar` (sair do Play com o save ligado salva de novo, pelo `OnApplicationQuit`).
+- **Os consertos depois do segundo teste com dois jogadores** (16/11/2026; o `Plano_Lakewood.md`, a seção deles):
+  - **o pacote dos bichos** (`FaunaDoMundo.Rede.cs`): 14 bytes por bicho (a conta dava 13 e o `FastBufferWriter` sem
+    poder crescer estourava, e nenhum pacote saía); os escritores dos bichos, dos zumbis e das casas dos castores têm
+    folga (`new FastBufferWriter(tamanho, Allocator.Temp, tamanho + 256)`). Num bug da build, olhar primeiro o
+    `Player.log` (`AppData/LocalLow/DefaultCompany/Zombie City Cleaner`);
+  - **o `AddComponent<MeshCollider>()` num objeto com um MeshFilter cozinha a malha do desenho na hora**: para um colisor
+    que vai receber a malha cozida numa thread, use o `Colisores.NovoVazio(go)`;
+  - **o chão do Lakewood cozinha a colisão numa thread** (`LakewoodNaCena.Receber`: dois por vez, o mais perto primeiro;
+    o bloco não recebe malha nova nem sai enquanto cozinha; `Bloco.ColisaoEmDia` diz se o colisor tem a malha de agora, e
+    o `QueFaltaAosZumbis` espera por ela). O chão em volta da partida continua cozido na hora (`Entregar(..., naHora)`);
+  - **os sobreviventes nascem um por quadro**: o `SobreviventesDoMundo.Nascer` sorteia tudo e põe na fila (`NascerUm`, no
+    Update), o `AcampamentosDoMundo.Povoar` e o `BasesMilitaresDoMundo.Povoar` também (`_aAparecer`);
+    `GrupoDeSobreviventes.nascendo` conta os que faltam (e o `Fugindo` espera por eles);
+  - **o tremor** é a precisão do float a 9,6 km da origem do Lakewood (medido; diminuído pela origem no meio do mapa,
+    abaixo).
+  - **Medir no Play pelo MCP:** o `GC.GetAllocatedBytesForCurrentThread` dá 0 no Mono da Unity (use o Profiler); as
+    quedas de quadro saem do `ProfilerDriver.GetHierarchyFrameDataView` (o quadro do perfil anda um ou dois atrás: ache
+    o de `frameTimeMs` mais perto do tempo medido).
+- **A origem no meio do mapa** (16/11/2026, a pedido, contra o tremor; o `Plano_Lakewood.md`, a seção dela): o Lakewood
+  tem dois espaços.
+  - **O mapa** (de 0 a 12.000 em x e de 0 a 10.000 em z, a origem no canto sudoeste): o asset, o esboço, o relevo, o
+    `ChaoDeLakewood` (o `LakewoodNaCena.ChaoNoMapa`), as plantas, os lotes, as ferramentas do Editor, as imagens, os testes
+    e o F1 do Lakewood (as coordenadas que ele mostra e o `IrParaEmLakewood`).
+  - **O mundo do jogo** = o mapa − (6.000, 0, 5.000) (`Mundo/Lakewood/OrigemDeLakewood.cs`: `X`, `Z`, `Meio`, `NoMundo` e
+    `NoMapa`, de Vector3, Vector2, Rect e Bounds): tudo o que está na cena. O conteúdo fixo (o chão, a água, a usina, as
+    obras, os pinheiros) fica no `_pai` do `LakewoodNaCena`, em −Meio, com as posições locais do mapa (use o
+    `SetLocalPositionAndRotation`/`localPosition` e o `Instantiate(prefab, pai)`); o resto recebe os pontos convertidos.
+  - **O `LakewoodNaCena.ChaoNoMundo`** (o `ChaoNoMundo`: a `Altura`, a `Agua`, o `NoLago`, a `Clareira`, o `LoteEm`, a
+    `EstradaPerto`, a `CoberturaEm`, o `AlturaDoRelevo`... com o ponto do mundo) é o chão dos sistemas do jogo (a água, a
+    queda, a fauna, os zumbis, o machado); o `ChaoNoMapa`, só onde a conta é no mapa (as plantas, a beira, os painéis, o
+    lixo da fauna, que convertem no fim). As interfaces (`IMundoDoJogo`, `IChaoDosZumbis`, `IChaoDaGrama`, `IBeiraDoMapa`)
+    falam no mundo (no `ChaoDeLakewood`, o `IChaoDaGrama` é explícito e converte). O `Chao` público virou `ChaoNoMapa` de
+    propósito, para o compilador apontar cada lugar que lia o chão: código novo escolhe um dos dois.
+  - **As chaves** (os blocos de 64 m, as árvores, os carros, os painéis, as obras, as portas, o saque) continuam as do mapa:
+    a grade acha o bloco pelo ponto do mapa (`ArvoresDoMundo.BlocoDe`, a `BeiraDoMapa`, o
+    `PaineisDeSucata.DoLakewoodNoMundo`), e a `MobiliaNova.ChaveDaObra` soma o `DeslocamentoDasChaves` (o `LakewoodNaCena`
+    põe o `Meio` no Awake e zera no OnDestroy). Os carros abandonados e os painéis são feitos no mapa e entregues numa cópia
+    no mundo, na mesma ordem (o número de cada um).
+  - **O save:** o `MundoSalvo.origemNoMeio` (o `Salvamento` marca); o `MundoSalvo.Ler` passa um save do Lakewood de antes
+    para o mundo novo uma vez (`MigrarAOrigemDoLakewood`). **Um campo novo de posição no save precisa entrar lá.**
+  - O tremor caiu a um terço ou um quarto (a moto na terceira pessoa, de 0,232 para 0,082 px por quadro; o guidão na
+    primeira, de 2,39 para 0,67 px). Uma origem que anda com o jogador resolveria de vez (na rede, cada máquina com a sua).
+- **O que sobrou do teste de desempenho** (16/11/2026; o `Plano_Lakewood.md`, a seção dele):
+  - **As malhas escritas de uma vez:** o `MalhaDoBloco.Para` e o `Mundo/Gerador/EscritaDaMalha.Escrever` (as obras, a
+    hera, as pichações, as marcas e os móveis de longe) põem o formato inteiro dos vértices (`SetVertexBufferParams`) e
+    copiam cada fluxo direto (`SetVertexBufferData`), com os índices em 32 bits. A Unity aceita **até 4 fluxos**: com os
+    dois UVs, eles vão juntos num fluxo de `Vector4`. Os atributos no array do formato seguem a ordem do `VertexAttribute`
+    (a posição, a normal, a cor, os UVs). Código novo que monta uma malha grande usa o `EscritaDaMalha`, não o
+    `SetVertices`/`SetNormals`/`SetColors` em sequência (cada um refazia o formato e copiava os outros: o "CopyChannels").
+  - **Os pinheiros por tempo** (`LakewoodNaCena.msDosPinheirosPorQuadro`, 1,5 ms): o `Bloco.ProximoPinheiro` diz até onde
+    o bloco já virou objeto (o `DesenharPlantas` desenha os cartazes do resto), a reserva (`reservaDePinheiros`, 40 por
+    modelo) nasce no pai desligado `Reserva` (sem o Awake) e vai para o monte do prefab, e o `_paiDosPinheiros` é uma raiz
+    da cena (no lugar do `_pai`, com o `hierarchyCapacity` de 65.536), destruída no `OnDestroy`.
+  - **As obras do Lakewood em etapas** (`ObraNaCena.Etapa`, o `_emCurso`): o `PorAObra` faz uma etapa por quadro e devolve
+    se terminou; a obra que deixa de ser querida no meio é tirada e devolvida. Cada obra é uma raiz da cena (a posição pelo
+    `_paiDasObras.TransformPoint`).
+  - **Os móveis de perto por tempo e só a pé** (`MobiliaNovaDoMundo.msDosMoveisPorQuadro` e `velocidadeDosMoveisDePerto`;
+    o `MobiliaDaConstrucao.Revisar` recebe a hora em que eles param, pelo menos um por quadro).
+  - **Os zumbis em 16 grupos** na raiz (`ZombieManager.ProximoGrupo`). Os campos dos grupos são `[System.NonSerialized]`:
+    **depois de uma recompilação no Editor, a Unity devolve um array vazio no lugar de um array privado nulo** (o
+    `_paisDosZumbis[0]` quebrou a partida com um `IndexOutOfRange`). Campo privado novo que guarda um array ou uma lista
+    que só existe no Play: `[System.NonSerialized]`, ou confira o tamanho.
+  - **A voz dos zumbis** (`vozDoZumbi.LoadAudioData()` no `OnNetworkSpawn`: ela não vem pré-carregada) e **as falas dos
+    sobreviventes** (o construtor estático rodado no `Awake` do `SobreviventesDoMundo`) ficam prontas no começo.
+  - **O `Mathf.Max` e o `Mathf.Min` de três números ou mais criam um array a cada chamada** (o `params float[]`): em
+    código que roda muitas vezes (por quadro, por ponto do chão, por célula), use dois de dois. A grama tinha 74 KB de lixo
+    por revisão por causa dele, e a distância até os lotes e até o terreiro, a cada ponto do chão.
+  - **A grama reaproveita as listas** dos tufos das células (`GramaDensa.PegarLista`/`DevolverLista`, um rascunho por
+    thread), e o `ChaoDeLakewood.Terreno` as listas de trabalho (`[ThreadStatic]`).
+  - **Achar quem pede memória:** com `ProfilerDriver.memoryRecordMode = ProfilerMemoryRecordMode.GCAlloc`, o
+    `HierarchyFrameDataView` no modo `Default` dá a pilha de cada `GC.Alloc` (`GetItemCallstack` e `ResolveMethodInfo`;
+    a linha é a da entrada do método). O `Profiler.GetMonoUsedSizeLong()` em volta de uma chamada mede o que ela pede (as
+    threads somam junto).
+  - Na mesma rota: o lixo por quadro na estrada de 139 para 57 KB, os quadros acima de 50 ms de 19 para 12 (no
+    acampamento, de 9 para 2). O que ficou: a fauna (20 a 26 ms em alguns quadros), a física, a montagem do acampamento e o
+    lixo do OnGUI (11,5 KB por quadro).
 - **Os consertos depois do primeiro teste com dois jogadores** (13/11/2026; o `Plano_Lakewood.md`, a seção deles):
   - os bichos vão para cada cliente até `FaunaDoMundo.AlcanceDaRede` (300 m; antes, a visão dele, no máximo 120 m:
     no Lakewood, sem a neblina, os amigos quase não viam bichos);

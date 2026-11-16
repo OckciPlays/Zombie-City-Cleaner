@@ -955,7 +955,8 @@ com dois:
   120 m, a da neblina do mundo sorteado). Os bichos nascem de 95 a 190 m de todos e ficam até 270 m; no Lakewood, sem a
   neblina, o anfitrião via quase todos (medido: 52 de 57 entre 120 e 300 m) e os amigos, quase nenhum. Agora vão todos os
   que existem em volta de cada um, até 300 m (`FaunaDoMundo.AlcanceDaRede`; os de 170 a 300 m a cada 0,8 s). Vale também
-  no mundo sorteado.
+  no mundo sorteado. **Não era isso** (a build seguinte: "os animais não aparecem para os outros jogadores... nem se eu
+  der spawn"): o pacote nunca saía; veja "Os consertos depois do segundo teste".
 - **Os NPCs da comunidade parados:** as pessoas aparecem a uns 80 m do meio do acampamento, e o NavMesh em volta de quem
   chegava (60 m para cada lado) não cobria a maior parte dele: medido a 75 m, 11 de 13 nasciam fora do NavMesh, com o
   agente desligado (parados, sem olhar, falar nem atirar), até o jogador andar mais 35 m. Agora o acampamento pede uma
@@ -968,6 +969,125 @@ com dois:
   faltava: o carro que um amigo dirige é simulado na máquina dele, e só o anfitrião segurava os carros que passavam pelo
   chão; agora cada máquina segura os que ela simula. Cada volta para cima fica no log (o `Player.log` da build), com o lugar
   e o que faltava no chão ali, para achar onde ele falha se acontecer de novo.
+
+### Os consertos depois do segundo teste com dois jogadores (16/11/2026)
+
+A pedido ("os animais não aparecem para os outros jogadores", "o personagem principal fica meio tremendo em cima da moto,
+e outros objetos ficam meio tremendo também... nos zombies, nas grades do acampamento aliado" e, depois, "um teste de
+performance no mapa para identificar possíveis ofensores, às vezes dá um pouco de lag"). Conferidos no Play pelo MCP, com
+um jogador; os bichos nos amigos esperam o teste com dois.
+
+- **Os bichos nos amigos, de verdade:** o `Player.log` da partida de teste (o anfitrião) tinha 9.485 vezes o
+  `OverflowException` "Writing past the end of the buffer" no `FaunaDoMundo.Mandar`, uns 9 por segundo: a conta do tamanho
+  do pacote dava 13 bytes por bicho e cada um ocupa 14 (o Id é um ushort), e o `FastBufferWriter`, sem poder crescer,
+  estourava no primeiro bicho. Nenhum pacote saía (nem dos bichos criados pelo F1), e o resto do Update do anfitrião (as
+  casas dos castores, o céu e o cheiro) parava junto. Agora a conta tem os 14 bytes e os escritores (o dos bichos, o dos
+  zumbis e o das casas dos castores) têm folga para crescer. **Daqui para a frente, o primeiro lugar a olhar num bug da
+  build é o `Player.log`** (`%USERPROFILE%\AppData\LocalLow\DefaultCompany\Zombie City Cleaner\Player.log`).
+- **O tremor (diminuído depois: veja "A origem no meio do mapa", abaixo):** é a precisão do float longe da origem. O Lakewood
+  tem a origem no canto sudoeste, e a Woodcreek, a casa da partida e o acampamento ficam a uns 9,6 km dela, onde o float
+  só anda de 1 em 1 mm. Medido na moto em círculo, numa plataforma de teste a 9,7 km e a 0,4 km da origem: na terceira
+  pessoa, a moto e o corpo tremem 0,23 px por quadro na tela (0,02 px perto da origem; o corpo em relação à moto, 0,76 mm
+  contra 0,05 mm); na primeira pessoa, o guidão treme 2,4 px (0,15 perto da origem). Na GPU, cada vértice ainda arredonda
+  de novo, então tudo o que está perto da câmera treme quando ela anda (as grades finas, os zumbis). A câmera da moto não
+  bate em nada (a distância fica em 4,2 m) e a ordem das contas está certa (a moto inclina no Update, o corpo e a câmera
+  vão no LateUpdate). Os braços de primeira pessoa a pé já são desenhados perto da origem (`BracosNaOrigem`). Os
+  caminhos: levar a origem do Lakewood para o meio do mapa (a Woodcreek a uns 3,6 km: o tremor cai a um quarto; uns 65
+  arquivos leem as coordenadas do mapa) ou uma origem que anda com o jogador (resolve de vez, mas na rede cada máquina
+  teria a sua: bem mais trabalho).
+- **O teste de desempenho:** a casa da partida, o acampamento parado e 2,5 km da SR-27 a 100 km/h (do sul da Woodcreek até
+  depois do acampamento), com o Profiler gravando e, em cada quadro acima de 30 ms, o que tomou o tempo. Parado, tudo
+  liso (8 a 10 ms, nenhum quadro acima de 33 ms). Os ofensores, todos no anfitrião, ao andar:
+  - **o grupo de sobreviventes nascendo inteiro num quadro** (6 a 8: cada um instanciado, vestido com as malhas sem as
+    faces cobertas e posto na rede; 4 + 6 a 22 ms cada no Editor): um quadro de 0,78 s. Agora o grupo nasce **um por
+    quadro** (o sorteio é o mesmo, todo feito na hora; o grupo guarda quantos ainda vão nascer, e a regra de fugir espera
+    por eles); o mesmo nas pessoas do acampamento (eram 13 a 16 de uma vez, quadros de 112 a 297 ms) e nos militares das
+    bases. Conferido: o grupo de teste do F1 nasce 2/6, 3/5… 8/0, todos com o agente e a roupa;
+  - **a colisão cozida no quadro principal:** o `AddComponent<MeshCollider>()` num objeto que já tem um MeshFilter põe a
+    malha do desenho no colisor e a cozinha na hora; as casas, os andares, o bunker e o hospital cozinhavam a colisão numa
+    thread, mas a do desenho era cozida antes, à toa (57 ms uma casa, 16 ms um andar do hospital). Agora o colisor nasce
+    vazio (`Colisores.NovoVazio`). E o chão do Lakewood (os blocos de 64 m em volta de quem está perto) também cozinha
+    numa thread, dois por vez, o mais perto primeiro (todos juntos tomavam os núcleos, e a física, o culling e as sombras
+    da Unity esperavam); a malha não muda enquanto cozinha, e o NavMesh dos zumbis espera a colisão nova. Na partida, o
+    chão em volta da casa continua cozido na hora;
+  - **o que ficou** (feito depois: veja "O que sobrou do teste de desempenho", abaixo): instanciar os pinheiros e os móveis das casas que entram na
+    vista (20 a 60 ms em alguns quadros), o lixo da memória andando (uns 140 KB por quadro; o maior é a grama densa, uns
+    60 KB, ainda sem a causa achada) e as coletas dele (de 10 a 45 ms no Editor), e um pico de 300 ms copiando a malha do
+    chão, uma vez só.
+
+### A origem no meio do mapa (16/11/2026)
+
+A pedido (o primeiro dos dois caminhos do tremor: "Yes, move the origin"). Conferido no Play pelo MCP, com um jogador, e nos
+31 testes do Lakewood; esperando o teste com dois jogadores.
+
+- **O que mudou:** o mundo do jogo do Lakewood tem a origem no meio do mapa: o ponto (x, z) do mapa fica em
+  (x − 6.000, z − 5.000) no mundo (o `OrigemDeLakewood` do projeto Unity, com o `NoMundo` e o `NoMapa`). A Woodcreek, a casa
+  da partida e o acampamento ficam a uns 3,6 km da origem (eram 9,6 km), onde o float anda de 0,24 mm em 0,24 mm (era 1 mm).
+- **Os números** (o mesmo teste da moto em círculo, na mesma plataforma, agora a 3,7 km da origem): na terceira pessoa, a
+  moto treme 0,082 px por quadro na tela (era 0,232) e o corpo em relação à moto 0,21 mm (era 0,76); na primeira pessoa, o
+  guidão 0,67 px (era 2,39). Um terço a um quarto do de antes. O resto só sai com uma origem que anda com o jogador (na
+  rede, cada máquina com a sua: bem mais trabalho).
+- **Os dois espaços:** os dados (o asset, o esboço, o relevo, as estradas, os lotes, as plantas, os nomes), as ferramentas
+  do Editor, as imagens do mapa, os testes e o F1 (as coordenadas que ele mostra e o "ir para") continuam no mapa (de 0 a
+  12.000 e de 0 a 10.000). Só o que está na cena fica no mundo: o conteúdo fixo (o chão, a água, a usina, as obras, os
+  pinheiros) fica num pai em (−6.000, 0, −5.000), com as posições locais do mapa; o resto (os jogadores, os veículos, os
+  bichos, os zumbis, os sobreviventes, o acampamento, as bases, os carros abandonados, os painéis de sucata) recebe os
+  pontos convertidos. O chão tem as duas versões: a do mapa e a do mundo (as mesmas perguntas, com o ponto do mundo).
+- **As chaves que vão no save** (as obras, as portas, o saque, as árvores cortadas, os carros, os painéis) são as mesmas de
+  antes: os blocos de 64 m são achados pelo ponto do mapa, e a chave das obras soma o deslocamento de volta (o mundo é o
+  mapa menos um número redondo, então a conta dá igual).
+- **O save:** o mundo salvo ganhou a marca `origemNoMeio`. Um save do Lakewood de antes é passado para o mundo novo uma vez,
+  ao abrir (os itens no chão, as construções, os caiaques, os carros, as posições dos jogadores, as mochilas, as marcas, as
+  casas dos castores e as árvores roídas); os bichos dele são sorteados de novo. Conferido com os 4 saves do Lakewood deste
+  computador, lidos sem gravar: o jogador vai, por exemplo, de (9.676; 6.300) para (3.676; 1.300), o mesmo lugar no mapa.
+- **A cena:** a câmera do menu e os quatro pontos de nascer foram movidos para o mundo novo (a ferramenta da casa da partida
+  e a montagem da cena já gravam no mundo).
+- **Conferido no Play:** o jogador nasce no chão da casa da partida, com os veículos, a grama, os pinheiros, os bichos e os
+  zumbis; as obras da Woodcreek no chão certinho; o hospital; o acampamento com as 16 pessoas no NavMesh; nenhum erro no
+  console. O M e o minimapa não foram abertos no teste.
+
+### O que sobrou do teste de desempenho (16/11/2026)
+
+A pedido ("como podemos ajustar esses outros pontos de performance que você comentou?" e, depois do plano, "Do all of them").
+Conferido no Play pelo MCP, com um jogador, e nos 31 testes do Lakewood; esperando o teste com dois jogadores.
+
+- **Os pinheiros** entram por tempo (até 1,5 ms por quadro; antes, até 600 de uma vez, um bloco inteiro): o bloco pode
+  ficar pela metade e continua no quadro seguinte, com os cartazes de longe nos que faltam. No tempo que sobra, uma
+  reserva de 40 pinheiros de cada modelo fica pronta e desligada (eles nascem num pai desligado, sem o Awake). E os
+  pinheiros ficam numa hierarquia só deles, na raiz da cena (antes, junto com o chão e as obras: cada vez que ela crescia,
+  a Unity copiava tudo).
+- **O chão** escreve a malha de uma vez (o formato dos vértices inteiro e os dados direto em cada fluxo; antes, cada
+  canal novo refazia o formato e copiava os outros, o "CopyChannels" de até 300 ms). O mesmo nas obras, na hera, nas
+  pichações e nos móveis de longe: numa malha de 300 mil vértices, de 26 a 224 ms caiu para 4 a 19 ms. E as listas de
+  trabalho do bloco são reaproveitadas na thread (de 397 KB para 270 KB por bloco, quase tudo os dados que ficam).
+- **As casas** entram em cinco etapas, uma por quadro (a casa; a hera e as pichações; os móveis antigos; a mobília nova e
+  as portas; a colisão e o resto), e cada obra é uma raiz da cena. **Os móveis de perto** entram por tempo (1,5 ms por
+  quadro, pelo menos um) e só a pé: acima de 9 m/s (de carro), eles não entram, e os de longe mostram os mesmos móveis.
+- **O que travava na primeira vez:** a voz dos zumbis é carregada no começo (o primeiro gemido lia o mp3, 70 ms), as
+  falas dos sobreviventes ficam prontas no Awake (9 ms na primeira fala) e os zumbis ficam em 16 grupos na raiz da cena (a
+  hierarquia de um só grupo crescia e era copiada inteira, 23 ms).
+- **O lixo da memória:** o maior era o `Mathf.Max` de três números, que na Unity cria um array a cada chamada: a grama o
+  chamava para cada célula (uns 74 KB de lixo por revisão), e a distância até os lotes e até o terreiro da casa da
+  partida, a cada ponto do chão (a altura, a grama, as plantas). Agora são dois `Max` de dois (também na usina e no
+  inventário). E as listas dos tufos de cada célula da grama são reaproveitadas (cada célula nova deixava uns 50 KB).
+- **A medida** (a mesma rota, a SR-27 a 100 km/h e a chegada no acampamento, no Editor, antes e depois):
+
+  | | Antes | Depois |
+  |---|---|---|
+  | Lixo por quadro, na estrada | 139 KB | 57 KB |
+  | Quadros acima de 50 ms, na estrada | 19 | 12 |
+  | Quadros com mais de 1 MB de lixo | 81 | 49 |
+  | 99% dos quadros abaixo de | 21,9 ms | 17,7 ms |
+  | Quadros acima de 50 ms, no acampamento | 9 | 2 |
+  | O pior quadro no acampamento | 266 ms | 70 ms |
+
+  O lixo da grama no quadro principal foi de 44 KB para 1,2 KB por quadro; o maior que sobrou é o das telas desenhadas
+  pelo OnGUI (11,5 KB).
+- **O que ficou** (os próximos, se o usuário quiser): a fauna (de 20 a 26 ms em alguns quadros), a física (de 50 a 130 ms
+  umas 5 vezes na viagem), a montagem do acampamento (de 20 a 40 ms em alguns quadros, ao chegar), um som da fauna que
+  ainda carrega na hora (72 ms, uma vez) e o lixo do OnGUI. No Editor desta máquina (16 GB), as paradas de 1 a 3 s que
+  aparecem nas medidas são a falta de memória (o disco e a placa esperando); numa sessão longa, a Unity caiu por isso
+  (o motivo no `Logs/Editor-prev.log`).
 
 ## As ferramentas do Editor (menu Zombie City Cleaner > Lakewood)
 

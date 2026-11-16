@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.Player
                 return true;
             }
             var mapa = LakewoodNaCena.Instancia;
-            if (mapa != null && mapa.Chao != null && mapa.Chao.Agua(p.x, p.z, out nivel)) return true;
+            if (mapa != null && mapa.ChaoNoMundo != null && mapa.ChaoNoMundo.Agua(p.x, p.z, out nivel)) return true;
             nivel = 0f;
             return false;
         }
@@ -42,7 +42,7 @@ namespace ZombieCityCleaner.Player
             if (mundo != null && mundo.Dados != null) return Mathf.Max(0f, mundo.Dados.FunduraDaAgua(p.x, p.z));
             if (!Nivel(p, out float nivel)) return 0f;
             var mapa = LakewoodNaCena.Instancia;
-            return mapa != null && mapa.Chao != null ? Mathf.Max(0f, nivel - mapa.Chao.Altura(p.x, p.z)) : 1f;
+            return mapa != null && mapa.ChaoNoMundo != null ? Mathf.Max(0f, nivel - mapa.ChaoNoMundo.Altura(p.x, p.z)) : 1f;
         }
 
         /// <summary>Os olhos de quem está com os pés em 'pes' estão embaixo da água?</summary>
