@@ -317,6 +317,26 @@ namespace ZombieCityCleaner.Player
             return olhoNaRaiz;
         }
 
+        /// <summary>
+        /// A arma do corpo escondida no dono (16/11/2026, a pedido: "como se tivesse duas armas na primeira pessoa"): na moto,
+        /// na primeira pessoa, o dono vê o próprio corpo (<see cref="CorpoSemCabeca"/>), e o garupa mirando via a arma do corpo
+        /// na frente do peito e, ao mesmo tempo, a dos braços de primeira pessoa. Com os braços à mostra, a do corpo some; o
+        /// piloto armado (que usa a do corpo, sem os braços: PassageiroDoCarro.ArmaNoCorpo) continua com ela.
+        /// </summary>
+        bool _armaDoCorpoEscondida;
+
+        void EsconderAArmaDoCorpo()
+        {
+            bool esconder = CorpoSemCabeca && !EmTerceiraPessoa && cameraBracos != null && cameraBracos.enabled
+                            && !(Passageiro != null && Passageiro.ArmaNoCorpo);
+            if (esconder == _armaDoCorpoEscondida) return;
+            _armaDoCorpoEscondida = esconder;
+            if (naMaoCorpo == null) return;
+            foreach (var a in naMaoCorpo)
+                if (a != null)
+                    foreach (var r in PecasDaArma.Renderers(a)) r.enabled = CorpoVisivelNoDono && !esconder;
+        }
+
         public void CorpoDoDono(bool visivel)
         {
             if (_corpoDoDonoAplicado && CorpoVisivelNoDono == visivel) return;
@@ -333,7 +353,7 @@ namespace ZombieCityCleaner.Player
                     if (a != null)
                         foreach (var r in PecasDaArma.Renderers(a))
                         {
-                            r.enabled = visivel;
+                            r.enabled = visivel && !_armaDoCorpoEscondida;
                             r.renderingLayerMask = MascaraDoDono;
                         }
             // as peças do fumo, como o que está na mão (o cigarro do corpo fica na frente do rosto)
@@ -656,6 +676,7 @@ namespace ZombieCityCleaner.Player
         {
             if (!IsSpawned) return;
             FogoNoCorpoAgora();   // (11/11/2026, a etapa 4: a chama do lampião no corpo)
+            if (IsOwner) EsconderAArmaDoCorpo();   // (16/11/2026: na moto, uma arma só na primeira pessoa)
             if (IsOwner && Visao.Value != Graficos.Visao) Visao.Value = (byte)Graficos.Visao;   // a escolha dos Gráficos, para o anfitrião
             if (IsOwner && Time.time >= _proximoTeto)
             {

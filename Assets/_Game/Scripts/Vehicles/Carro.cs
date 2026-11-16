@@ -611,6 +611,30 @@ namespace ZombieCityCleaner.Vehicles
             }
         }
 
+        /// <summary>
+        /// O jogador local, sentado, troca para outro lugar vazio do mesmo veículo (16/11/2026, a pedido: Ctrl+1 dirige, Ctrl+2
+        /// é o lado do motorista ou a garupa, Ctrl+3 e Ctrl+4 atrás; "assim não preciso sempre de 2 player para ficar testando").
+        /// </summary>
+        public void PedirTrocarDeLugar(int lugar) => TrocarDeLugarRpc((byte)lugar);
+
+        [Rpc(SendTo.Server)]
+        void TrocarDeLugarRpc(byte lugar, RpcParams parametros = default)
+        {
+            ulong cliente = parametros.Receive.SenderClientId;
+            if (lugar >= Mathf.Min(Lugares, lugaresUsados) || Velocidade > VelocidadeParaSair + 1f) return;
+            var o = _ocupantes.Value;
+            if (o[lugar] != 0) return;
+            int atual = -1;
+            for (int i = 0; i < Lugares; i++) if (o[i] == cliente + 1) atual = i;
+            if (atual < 0) return;
+            o[atual] = 0;
+            o[lugar] = cliente + 1;
+            _ocupantes.Value = o;
+            // quem dirige é o dono do carro (como no entrar e no sair)
+            if (lugar == 0) { if (OwnerClientId != cliente) NetworkObject.ChangeOwnership(cliente); }
+            else if (atual == 0 && OwnerClientId != NetworkManager.ServerClientId) NetworkObject.RemoveOwnership();
+        }
+
         /// <summary>No anfitrião: tira o jogador do carro na hora (caiu, saiu da partida).</summary>
         public static void TirarDeTodos(ulong cliente)
         {

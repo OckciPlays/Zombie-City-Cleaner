@@ -293,6 +293,14 @@ namespace ZombieCityCleaner.Player
             if (_semMaos) _rede.CorpoNoVeiculo(true);
             if (_animadorRemando != null && _animadorRemando.isActiveAndEnabled)
                 _animadorRemando.SetFloat(SpeedId, remando ? Mathf.Max(1.6f, Mathf.Abs(Caiaque.Velocidade)) : 0f);
+            // Ctrl+1 rema, Ctrl+2 vai na frente (16/11/2026)
+            int outro = MenuOnline.Controla ? PassageiroDoCarro.LugarComCtrl(UnityEngine.InputSystem.Keyboard.current) : -1;
+            if (outro >= 0 && outro != Lugar && Time.time - _sentouEm > 0.3f)
+            {
+                if (outro >= Caiaque.Lugares) InventarioJogador.AvisoLocal("O caiaque só tem dois lugares");
+                else if (Caiaque.Ocupante(outro) != 0) InventarioJogador.AvisoLocal("Esse lugar está ocupado");
+                else Caiaque.PedirTrocarDeLugar(outro);
+            }
             // o E sai (não no mesmo instante em que entrou)
             if (MenuOnline.Controla && Time.time - _sentouEm > 0.5f && _interagir.WasPressedThisFrame())
             {

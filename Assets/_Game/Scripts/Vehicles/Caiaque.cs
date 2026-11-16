@@ -206,6 +206,27 @@ namespace ZombieCityCleaner.Vehicles
         [Rpc(SendTo.Server)]
         void SairRpc(RpcParams parametros = default) => Desocupar(parametros.Receive.SenderClientId);
 
+        /// <summary>O jogador local, sentado, troca para o outro lugar vazio (16/11/2026: Ctrl+1 rema, Ctrl+2 na frente).</summary>
+        public void PedirTrocarDeLugar(int lugar)
+        {
+            if (IsSpawned) TrocarDeLugarRpc((byte)lugar);
+        }
+
+        [Rpc(SendTo.Server)]
+        void TrocarDeLugarRpc(byte lugar, RpcParams parametros = default)
+        {
+            ulong c = parametros.Receive.SenderClientId;
+            int atual = LugarDe(c);
+            if (lugar >= Lugares || atual < 0 || atual == lugar || Ocupante(lugar) != 0) return;
+            var o = _ocupantes.Value;
+            if (lugar == 0) { o.a = c + 1; o.b = 0; }
+            else { o.b = c + 1; o.a = 0; }
+            _ocupantes.Value = o;
+            // quem rema é o dono
+            if (lugar == 0) { if (OwnerClientId != c) NetworkObject.ChangeOwnership(c); }
+            else if (OwnerClientId != NetworkManager.ServerClientId) NetworkObject.RemoveOwnership();
+        }
+
         /// <summary>No anfitrião: o cliente sai do caiaque (se estava nele).</summary>
         public void Desocupar(ulong cliente)
         {

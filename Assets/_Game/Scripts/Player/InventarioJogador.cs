@@ -1470,7 +1470,7 @@ namespace ZombieCityCleaner.Player
             var teclado = Keyboard.current;
             var mouse = Mouse.current;
             int escolher = -1;
-            if (teclado != null)
+            if (teclado != null && !teclado.ctrlKey.isPressed)   // (Ctrl+número troca de lugar no veículo, 16/11/2026)
             {
                 if (teclado.digit1Key.wasPressedThisFrame) escolher = 0;
                 else if (teclado.digit2Key.wasPressedThisFrame) escolher = 1;
