@@ -180,6 +180,18 @@ namespace ZombieCityCleaner.Player
         Transform[] OssosDe(int m, Transform raizFP, Transform corpo)
         {
             if (_ossos.TryGetValue(m, out var prontos)) return prontos;
+            // na moto, na primeira pessoa, os braços do corpo podem estar encolhidos (PassageiroDoCarro.BracosDoCorpoEncolhidos):
+            // medidos assim, o braço do corpo media 0,1% do de verdade, e a manga da arma esticava ~1000 vezes (16/11/2026, a
+            // pedido: "quando peguei a smg ela ficou toda bugada com o braço na frente"). Para medir, eles voltam por um instante
+            var passageiro = _rede != null ? _rede.Passageiro : null;
+            bool encolhidos = passageiro != null && passageiro.BracosDoCorpoEncolhidos;
+            if (encolhidos) passageiro.EncolherBracosDoCorpo(false);
+            try { return Medir(m, raizFP, corpo); }
+            finally { if (encolhidos) passageiro.EncolherBracosDoCorpo(true); }
+        }
+
+        Transform[] Medir(int m, Transform raizFP, Transform corpo)
+        {
             var doFP = Mapa(raizFP);
             var doCorpo = Mapa(corpo);
             var ossos = new Transform[Nomes.Length];

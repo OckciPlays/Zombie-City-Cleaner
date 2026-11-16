@@ -4648,6 +4648,16 @@ jogador atrás ligado a lanterna".
     (`ArmaJogador.OrigemDaMira`: o que está entre a câmera e o veículo não leva o tiro). Sem nada na mão, a câmera de trás é
     a de antes. Teste: `PassageiroDoCarro.CameraDeTrasDeTeste`. Conferido no Play (Fat Boy, cross, caminhonete): o peito
     fica 0,55 m ao lado e ~0,5 m abaixo da linha da mira.
+  - **O vídeo de 16/11 (19h45), três problemas:**
+    - "consigo ter um ângulo de mira para dentro do meu próprio corpo": com algo na mão, sentado na primeira pessoa, o
+      olhar vai até 110° para os lados e 40° para baixo (`GiroArmado`, `BaixoArmado`; sem nada na mão, 135° e 75°).
+    - "quando peguei a smg ela ficou toda bugada com o braço na frente": o `RoupasNosBracos` mede uma vez por arma o
+      braço do corpo para esticar a manga de primeira pessoa; a SMG equipada pela primeira vez na moto, na primeira pessoa,
+      foi medida com os braços do corpo encolhidos (0,001) e a manga esticou ~1000 vezes. Agora ele devolve os braços para
+      medir e encolhe de novo (`PassageiroDoCarro.EncolherBracosDoCorpo`, `BracosDoCorpoEncolhidos`).
+    - "na terceira pessoa, trocando de arma (smg - pistola), os braços desaparecem e fica só o tronco": visto no vídeo
+      (depois de trocar da SMG para a pistola, na garupa); **não achado nem corrigido** (no teste aqui os braços
+      voltavam). Não testado, a pedido.
   - **A lanterna do garupa:** conferida de novo: sai do peito dele (0,44 m do olho do piloto na Fat Boy, 0,51 na cross),
     sem sombra, com a força de sempre; da visão do piloto, sem a sombra da moto.
   - **Não conferido:** o piloto com o motor ligado atirando de verdade (o clique, a primeira pessoa com o braço do

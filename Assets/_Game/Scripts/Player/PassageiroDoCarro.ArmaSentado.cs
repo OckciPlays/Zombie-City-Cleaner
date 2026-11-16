@@ -219,6 +219,8 @@ namespace ZombieCityCleaner.Player
         }
 
         bool _bracosDoCorpoEncolhidos;
+        /// <summary>No dono: os braços do corpo estão encolhidos agora (na moto, na primeira pessoa, com os braços de primeira pessoa à vista).</summary>
+        public bool BracosDoCorpoEncolhidos => _bracosDoCorpoEncolhidos;
 
         /// <summary>
         /// No dono, na moto e na primeira pessoa (onde o corpo dele aparece: as mãos no guidão e nas coxas), com os braços de
@@ -231,7 +233,8 @@ namespace ZombieCityCleaner.Player
         void BracosDoCorpoNaPrimeiraPessoa() =>
             EncolherBracosDoCorpo(_rede.IsOwner && Carro != null && Carro.moto && _fase == Fase.Dentro && !_terceira && _maosLivres && !ArmaNoCorpo);
 
-        void EncolherBracosDoCorpo(bool encolher)
+        /// <summary>Encolhe (no ombro) ou devolve os braços do corpo. Quem mede os braços do corpo devolve antes e encolhe depois (<see cref="RoupasNosBracos"/>).</summary>
+        public void EncolherBracosDoCorpo(bool encolher)
         {
             if (encolher == _bracosDoCorpoEncolhidos) return;
             _bracosDoCorpoEncolhidos = encolher;

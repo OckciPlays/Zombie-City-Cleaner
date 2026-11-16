@@ -430,6 +430,8 @@ namespace ZombieCityCleaner.Player
         /// <summary>Para os testes automáticos no Play: a câmera de trás ligada ou não, no lugar do V; null no jogo.</summary>
         public static bool? CameraDeTrasDeTeste;
         float _ombroDaCamera;
+        /// <summary>Com algo na mão, sentado na primeira pessoa: até onde a mira vai para os lados e para baixo (graus).</summary>
+        const float GiroArmado = 110f, BaixoArmado = 40f;
         bool _bracosDoPilotoEscondidos;
 
         Loot.Item NaMao => _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
@@ -839,8 +841,12 @@ namespace ZombieCityCleaner.Player
             if (_fase == Fase.Dentro && !_segurandoChave)
             {
                 Vector2 olhar = LerOlhar();
-                _yaw = GiroDeTeste ?? Mathf.Clamp(_yaw + olhar.x, -135f, 135f);
-                _pitch = Mathf.Clamp(_pitch - olhar.y, -60f, 75f);
+                // com algo na mão (16/11/2026, a pedido: "eu consigo ter um ângulo de mira para dentro do meu próprio corpo,
+                // isso não faz sentido"), a mira vai até 110° para os lados e 40° para baixo: virando mais, o olho (que fica na
+                // frente do pescoço) via o próprio ombro e as costas por dentro, e olhando mais para baixo, mirava as pernas
+                float giroMaximo = _maosLivres ? GiroArmado : 135f, baixoMaximo = _maosLivres ? BaixoArmado : 75f;
+                _yaw = GiroDeTeste ?? Mathf.Clamp(_yaw + olhar.x, -giroMaximo, giroMaximo);
+                _pitch = Mathf.Clamp(_pitch - olhar.y, -60f, baixoMaximo);
             }
             // o corpo acompanha este olhar (o peito e a cabeça, JogadorRede.LateUpdate): sem isto, ele ficava com o do
             // momento de entrar (olhando para a porta, para baixo), e os outros viam a cabeça baixa o tempo todo
