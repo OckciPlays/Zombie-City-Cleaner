@@ -172,6 +172,7 @@ namespace ZombieCityCleaner.Salvar
             else
             {
                 m.lakewood = true;
+                m.origemNoMeio = true;   // (16/11/2026: as posições no mundo com a origem no meio do mapa)
                 m.semente = _lakewood.Semente;
                 if (string.IsNullOrEmpty(m.nome)) m.nome = "Condado de Lakewood";
             }

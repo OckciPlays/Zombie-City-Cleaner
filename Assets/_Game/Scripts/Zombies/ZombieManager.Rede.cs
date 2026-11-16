@@ -117,7 +117,9 @@ namespace ZombieCityCleaner.Zombies
             for (int i = 0; i < lista.Count; i += PorPacote)
             {
                 int n = Mathf.Min(PorPacote, lista.Count - i);
-                using var w = new FastBufferWriter(sizeof(double) + 3 * sizeof(float) + sizeof(ushort) + n * BytesPorZumbi, Allocator.Temp);
+                int tamanho = sizeof(double) + 3 * sizeof(float) + sizeof(ushort) + n * BytesPorZumbi;
+                // (16/11/2026: com folga para crescer; o da fauna, do tamanho exato e com um byte a menos na conta, estourava)
+                using var w = new FastBufferWriter(tamanho, Allocator.Temp, tamanho + 256);
                 w.WriteValueSafe(tempo);
                 w.WriteValueSafe(origem);
                 w.WriteValueSafe((ushort)n);

@@ -495,8 +495,11 @@ namespace ZombieCityCleaner.Mundo
                 alt[j * lado + i] = h;
                 pesos[j * lado + i] = Pesos(x, z, h);
             }
-            var v = new List<Vector3>(n * n * 6 + n * 48);
-            var c = new List<Color32>(v.Capacity);
+            // (16/11/2026: as listas de trabalho reaproveitadas em cada thread; novas, eram uns 120 KB de lixo por bloco)
+            var v = _vDoTerreno ??= new List<Vector3>(8192);
+            var c = _cDoTerreno ??= new List<Color32>(8192);
+            v.Clear();
+            c.Clear();
             Vector3 P(int i, int j) => new Vector3(canto.x + i * passo, alt[j * lado + i], canto.y + j * passo);
             Color32 C(int i, int j) => pesos[j * lado + i];
             void Tri(Vector3 a, Vector3 b, Vector3 d, Color32 ca, Color32 cb, Color32 cd)
@@ -546,6 +549,9 @@ namespace ZombieCityCleaner.Mundo
             }
             return Fechar(v, c, null);
         }
+
+        [ThreadStatic] static List<Vector3> _vDoTerreno;
+        [ThreadStatic] static List<Color32> _cDoTerreno;
 
         // as normais das faces planas, os triângulos em ordem e a caixa
         static MalhaDoBloco Fechar(List<Vector3> v, List<Color32> c, List<Vector2> uv)
@@ -917,10 +923,13 @@ namespace ZombieCityCleaner.Mundo
 
         // ------------------------------------------------------------------ a grama densa
 
+        // (a grama densa está no mundo do jogo: os pontos chegam no mundo e vão para o mapa; OrigemDeLakewood, 16/11/2026)
         int IChaoDaGrama.Semente => Mapa.semente;
-        Rect IChaoDaGrama.Limites => new Rect(0f, 0f, Mapa.largura, Mapa.comprimento);
+        Rect IChaoDaGrama.Limites => OrigemDeLakewood.NoMundo(new Rect(0f, 0f, Mapa.largura, Mapa.comprimento));
         bool IChaoDaGrama.SeguroEmThreads => true;
-        float IChaoDaGrama.Altura(float x, float z) => Altura(x, z);
+        float IChaoDaGrama.Altura(float x, float z) => Altura(x + OrigemDeLakewood.X, z + OrigemDeLakewood.Z);
+        float IChaoDaGrama.Grama(float x, float z) => Grama(x + OrigemDeLakewood.X, z + OrigemDeLakewood.Z);
+        float IChaoDaGrama.Clareira(float x, float z) => Clareira(x + OrigemDeLakewood.X, z + OrigemDeLakewood.Z);
 
         /// <summary>
         /// A densidade da grama densa (0 a 1) num ponto: cheia no campo e nas clareiras, rala sob a mata (o chão de agulhas)

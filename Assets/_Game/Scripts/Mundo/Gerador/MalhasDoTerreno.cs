@@ -16,18 +16,41 @@ namespace ZombieCityCleaner.Mundo
         public Bounds Limites;
         public bool Vazia => Triangulos == null || Triangulos.Length == 0;
 
-        /// <summary>Passa para um Mesh (novo ou reaproveitado). Só na thread principal.</summary>
+        /// <summary>
+        /// Passa para um Mesh (novo ou reaproveitado). Só na thread principal. (16/11/2026: o formato inteiro dos vértices de uma
+        /// vez, um fluxo por canal, e os dados copiados direto; antes, cada SetVertices/SetNormals/SetColors/SetUVs refazia o
+        /// formato e copiava o que já estava, o "CopyChannels" do Profiler, de 10 a 300 ms num quadro andando no Lakewood.)
+        /// </summary>
         public void Para(Mesh m)
         {
             m.Clear();
-            m.indexFormat = Vertices.Length > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16;
-            m.SetVertices(Vertices);
-            m.SetNormals(Normais);
-            if (Cores != null) m.SetColors(Cores);
-            if (Uvs != null) m.SetUVs(0, Uvs);
-            m.SetTriangles(Triangulos, 0, false);
+            int n = Vertices.Length;
+            int canais = 1 + (Normais != null ? 1 : 0) + (Cores != null ? 1 : 0) + (Uvs != null ? 1 : 0);
+            // (o array do formato é reaproveitado pelo número de canais; o conteúdo é escrito de novo a cada vez)
+            var formato = _formatos[canais - 1] ??= new VertexAttributeDescriptor[canais];
+            int c = 0, fluxo = 0;
+            formato[c++] = new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, fluxo++);
+            if (Normais != null) formato[c++] = new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3, fluxo++);
+            if (Cores != null) formato[c++] = new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.UNorm8, 4, fluxo++);
+            if (Uvs != null) formato[c++] = new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2, fluxo++);
+            m.SetVertexBufferParams(n, formato);
+            const MeshUpdateFlags sem = MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices;
+            fluxo = 0;
+            m.SetVertexBufferData(Vertices, 0, 0, n, fluxo++, sem);
+            if (Normais != null) m.SetVertexBufferData(Normais, 0, 0, n, fluxo++, sem);
+            if (Cores != null) m.SetVertexBufferData(Cores, 0, 0, n, fluxo++, sem);
+            if (Uvs != null) m.SetVertexBufferData(Uvs, 0, 0, n, fluxo++, sem);
+            // (os índices sempre em 32 bits: o int[] vai direto, sem converter)
+            int t = Triangulos != null ? Triangulos.Length : 0;
+            m.SetIndexBufferParams(t, IndexFormat.UInt32);
+            if (t > 0) m.SetIndexBufferData(Triangulos, 0, 0, t, sem);
+            m.subMeshCount = 1;
+            m.SetSubMesh(0, new SubMeshDescriptor(0, t) { bounds = Limites, firstVertex = 0, vertexCount = n }, sem);
             m.bounds = Limites;
         }
+
+        // os formatos dos vértices, pelo número de canais (só na thread principal)
+        static readonly VertexAttributeDescriptor[][] _formatos = new VertexAttributeDescriptor[4][];
     }
 
     /// <summary>

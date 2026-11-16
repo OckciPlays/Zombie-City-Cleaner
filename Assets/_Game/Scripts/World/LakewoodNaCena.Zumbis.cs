@@ -18,14 +18,23 @@ namespace ZombieCityCleaner.World
         bool IMundoDoJogo.NoDiaZero => false;
         int IMundoDoJogo.SementeDaPartida => MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Semente != 0
             ? MundoDeLakewood.Instancia.Semente : (mapa != null ? mapa.semente : 1);
-        Rect IMundoDoJogo.Area => mapa != null ? new Rect(0f, 0f, mapa.largura, mapa.comprimento) : default;
-        bool IMundoDoJogo.Dentro(float x, float z, float margem) => mapa != null && x > margem && z > margem && x < mapa.largura - margem && z < mapa.comprimento - margem;
-        bool IMundoDoJogo.NaEstrada(float x, float z) => Chao != null && Chao.EstradaPerto(x, z, 0f, out _, out _, out _, out _);
+        // (16/11/2026, OrigemDeLakewood: as interfaces falam no mundo do jogo; os pontos vão para o mapa aqui)
+        Rect IMundoDoJogo.Area => mapa != null ? OrigemDeLakewood.NoMundo(new Rect(0f, 0f, mapa.largura, mapa.comprimento)) : default;
+
+        bool IMundoDoJogo.Dentro(float x, float z, float margem)
+        {
+            if (mapa == null) return false;
+            x += OrigemDeLakewood.X;
+            z += OrigemDeLakewood.Z;
+            return x > margem && z > margem && x < mapa.largura - margem && z < mapa.comprimento - margem;
+        }
+
+        bool IMundoDoJogo.NaEstrada(float x, float z) => Chao != null && ChaoNoMundo.EstradaPerto(x, z, 0f, out _, out _, out _, out _);
 
         int IChaoDosZumbis.Semente => mapa != null ? mapa.semente : 1;
         bool IChaoDosZumbis.Ligado => Chao != null;
-        float IChaoDosZumbis.Altura(float x, float z) => Chao.Altura(x, z);
-        bool IChaoDosZumbis.NaCidade(float x, float z) => Chao.LoteEm(x, z, 12f) != null;
+        float IChaoDosZumbis.Altura(float x, float z) => ChaoNoMundo.Altura(x, z);
+        bool IChaoDosZumbis.NaCidade(float x, float z) => ChaoNoMundo.LoteEm(x, z, 12f) != null;
 
         bool IChaoDosZumbis.TemHospital
         {
@@ -45,20 +54,21 @@ namespace ZombieCityCleaner.World
 
         float IChaoDosZumbis.FunduraDaAgua(float x, float z, out float nivel)
         {
-            if (!Chao.Agua(x, z, out nivel)) return 0f;
-            return Mathf.Max(0f, nivel - Chao.Altura(x, z));
+            if (!ChaoNoMundo.Agua(x, z, out nivel)) return 0f;
+            return Mathf.Max(0f, nivel - ChaoNoMundo.Altura(x, z));
         }
 
-        // o primeiro bloco ou obra que falta no círculo, ou null
+        // o primeiro bloco ou obra que falta no círculo (o centro no mundo), ou null
         string QueFaltaAosZumbis(Vector3 centro, float raio)
         {
             if (Chao == null) return "sem o chão do Lakewood";
-            var p = new Vector2(centro.x, centro.z);
+            var p = NoMapa2(centro);
             foreach (var chave in BlocosEm(p, raio))
             {
                 if (!_blocos.TryGetValue(chave, out var b)) return $"o bloco ({chave.x}, {chave.y}) não está montado";
                 if (b.Passo <= 0f || b.Passo > 2.01f) return $"o bloco ({chave.x}, {chave.y}) não está no detalhe máximo";
                 if (b.Colisor == null || !b.Colisor.enabled) return $"o bloco ({chave.x}, {chave.y}) está sem a colisão";
+                if (!b.ColisaoEmDia) return $"a colisão do bloco ({chave.x}, {chave.y}) está sendo feita";
             }
             float r2 = raio * raio;
             foreach (var o in _obras)

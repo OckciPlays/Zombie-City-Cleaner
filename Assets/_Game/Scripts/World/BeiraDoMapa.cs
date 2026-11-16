@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using ZombieCityCleaner.Mundo;
 
@@ -53,9 +54,9 @@ namespace ZombieCityCleaner.World
                     return _sorteado;
                 }
                 var l = LakewoodNaCena.Instancia;
-                if (l != null && l.Chao != null)
+                if (l != null && l.ChaoNoMapa != null)
                 {
-                    if (_lakewood == null || _lakewood.Chao != l.Chao) _lakewood = new DoLakewood(l.Chao);
+                    if (_lakewood == null || _lakewood.Chao != l.ChaoNoMapa) _lakewood = new DoLakewood(l.ChaoNoMapa);
                     return _lakewood;
                 }
                 return null;
@@ -77,14 +78,19 @@ namespace ZombieCityCleaner.World
             public float AlturaDoPainel(PainelNoMapa p) => PaineisDeSucata.AlturaDoChao(D, p);
         }
 
+        // (16/11/2026, OrigemDeLakewood: a beira fala no mundo do jogo; os carros e os painéis são feitos no mapa, como
+        // antes, e entregues numa cópia no mundo. A grade dos blocos acha o bloco pelo ponto do mundo: os números dos blocos e
+        // dos carros são os mesmos de antes)
         sealed class DoLakewood : IBeiraDoMapa
         {
             public readonly ChaoDeLakewood Chao;
-            ObjetosDaEstrada _objetos;
+            ObjetosDaEstrada _objetosNoMapa, _objetos;
+            PaineisDeSucata _paineis;
 
             public DoLakewood(ChaoDeLakewood chao) => Chao = chao;
 
-            public ObjetosDaEstrada Objetos => _objetos ??= BeiraDeLakewood.Planejar(Chao);
+            ObjetosDaEstrada ObjetosNoMapa => _objetosNoMapa ??= BeiraDeLakewood.Planejar(Chao);
+            public ObjetosDaEstrada Objetos => _objetos ??= NoMundo(ObjetosNoMapa);
             // a semente da partida (cada partida nova, os carros com outras peças; o save guarda a semente)
             public int Semente => MundoDoJogo.Atual != null ? MundoDoJogo.Atual.SementeDaPartida : Chao.Mapa.semente;
 
@@ -93,22 +99,44 @@ namespace ZombieCityCleaner.World
                 get
                 {
                     var p = Chao.Mapa.partida;
-                    return new Vector3(p.x, Chao.Altura(p.x, p.y), p.y);
+                    return OrigemDeLakewood.NoMundo(new Vector3(p.x, Chao.Altura(p.x, p.y), p.y));
                 }
             }
 
             public Vector2Int BlocoDe(float x, float z) =>
-                new Vector2Int(Mathf.Clamp(Mathf.FloorToInt(x / ChaoDeLakewood.TamanhoDoBloco), 0, Chao.BlocosX - 1),
-                               Mathf.Clamp(Mathf.FloorToInt(z / ChaoDeLakewood.TamanhoDoBloco), 0, Chao.BlocosZ - 1));
+                new Vector2Int(Mathf.Clamp(Mathf.FloorToInt((x + OrigemDeLakewood.X) / ChaoDeLakewood.TamanhoDoBloco), 0, Chao.BlocosX - 1),
+                               Mathf.Clamp(Mathf.FloorToInt((z + OrigemDeLakewood.Z) / ChaoDeLakewood.TamanhoDoBloco), 0, Chao.BlocosZ - 1));
 
-            public Vector2 CentroDoBloco(int bx, int bz) => ChaoDeLakewood.CantoDoBloco(bx, bz) + Vector2.one * (ChaoDeLakewood.TamanhoDoBloco * 0.5f);
+            public Vector2 CentroDoBloco(int bx, int bz) =>
+                OrigemDeLakewood.NoMundo(ChaoDeLakewood.CantoDoBloco(bx, bz) + Vector2.one * (ChaoDeLakewood.TamanhoDoBloco * 0.5f));
 
-            public float Altura(float x, float z) =>
-                Chao.EstradaPerto(x, z, 0f, out _, out float asfalto, out _, out _) ? asfalto : Chao.Altura(x, z);
+            public float Altura(float x, float z)
+            {
+                x += OrigemDeLakewood.X;
+                z += OrigemDeLakewood.Z;
+                return Chao.EstradaPerto(x, z, 0f, out _, out float asfalto, out _, out _) ? asfalto : Chao.Altura(x, z);
+            }
 
             public float AcimaDaEstrada => 0f;
-            public PaineisDeSucata Paineis => PaineisDeSucata.DoLakewood(Chao, Objetos);
+            public PaineisDeSucata Paineis => _paineis ??= PaineisDeSucata.DoLakewoodNoMundo(Chao, ObjetosNoMapa);
             public float AlturaDoPainel(PainelNoMapa p) => Altura(p.Posicao.x, p.Posicao.y);
+
+            // a cópia no mundo dos objetos (os carros e os quebrados), na mesma ordem (o número de cada carro)
+            ObjetosDaEstrada NoMundo(ObjetosDaEstrada m)
+            {
+                var lista = new List<ObjetoDaEstrada>(m.Todos.Count);
+                foreach (var o in m.Todos)
+                    lista.Add(new ObjetoDaEstrada
+                    {
+                        Tipo = o.Tipo, Posicao = OrigemDeLakewood.NoMundo(o.Posicao), Giro = o.Giro, Tombo = o.Tombo, Variante = o.Variante,
+                        NaEstrada = o.NaEstrada, NoTalude = o.NoTalude, EmCima = o.EmCima, NaCalcada = o.NaCalcada, NaGaragem = o.NaGaragem,
+                        Quebrado = o.Quebrado, Linhas = o.Linhas,
+                    });
+                var quebrados = new List<CarroQuebrado>(m.Quebrados.Count);
+                foreach (var q in m.Quebrados)
+                    quebrados.Add(new CarroQuebrado { Indice = q.Indice, Roda = q.Roda, Posicao = OrigemDeLakewood.NoMundo(q.Posicao), Frente = q.Frente, Fora = q.Fora });
+                return ObjetosDaEstrada.DeUmMapa(lista, quebrados, BlocoDe, Chao.BlocosX, Chao.BlocosZ);
+            }
         }
     }
 }

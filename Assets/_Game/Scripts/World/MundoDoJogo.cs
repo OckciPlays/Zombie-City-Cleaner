@@ -65,7 +65,7 @@ namespace ZombieCityCleaner.World
                     return _sorteado;
                 }
                 var l = LakewoodNaCena.Instancia;
-                return l != null && l.Chao != null ? l : null;
+                return l != null && l.ChaoNoMapa != null ? l : null;
             }
         }
 
@@ -86,7 +86,7 @@ namespace ZombieCityCleaner.World
         public static int Chave(IMundoDoJogo m)
         {
             if (m == null) return 0;
-            object dono = m is DoMundoSorteado s ? s.Mundo.Dados : m is LakewoodNaCena l ? l.Chao : m;
+            object dono = m is DoMundoSorteado s ? s.Mundo.Dados : m is LakewoodNaCena l ? l.ChaoNoMapa : m;
             return System.HashCode.Combine(dono, m.SementeDaPartida);
         }
 

@@ -231,7 +231,7 @@ namespace ZombieCityCleaner.Fauna
                     if (g.j.IsOwner) Casas.Mostrar(_casasPerto);
                     continue;
                 }
-                using var w = new FastBufferWriter(2 + _casasPerto.Count * 25, Allocator.Temp);
+                using var w = new FastBufferWriter(2 + _casasPerto.Count * 25, Allocator.Temp, 2 + _casasPerto.Count * 25 + 256);
                 w.WriteValueSafe((ushort)_casasPerto.Count);
                 foreach (var c in _casasPerto)
                 {

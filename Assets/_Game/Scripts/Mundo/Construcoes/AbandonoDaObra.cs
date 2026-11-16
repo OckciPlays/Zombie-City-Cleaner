@@ -550,11 +550,8 @@ namespace ZombieCityCleaner.Mundo
         public Mesh ParaMesh(string nome, bool espelhar = false)
         {
             var m = new Mesh { name = nome };
-            if (_v.Count > 65000) m.indexFormat = IndexFormat.UInt32;
-            if (!espelhar)
-            {
-                m.SetVertices(_v); m.SetNormals(_n); m.SetUVs(0, _uv); m.SetColors(_c); m.SetTriangles(_t, 0);
-            }
+            // (16/11/2026: os canais de uma vez, EscritaDaMalha)
+            if (!espelhar) EscritaDaMalha.Escrever(m, _v, _n, _uv, _t, cor32: _c);
             else
             {
                 var v = new List<Vector3>(_v.Count);
@@ -563,9 +560,8 @@ namespace ZombieCityCleaner.Mundo
                 foreach (var p in _n) n.Add(new Vector3(-p.x, p.y, p.z));
                 var t = new List<int>(_t.Count);
                 for (int i = 0; i < _t.Count; i += 3) { t.Add(_t[i]); t.Add(_t[i + 2]); t.Add(_t[i + 1]); }
-                m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, _uv); m.SetColors(_c); m.SetTriangles(t, 0);
+                EscritaDaMalha.Escrever(m, v, n, _uv, t, cor32: _c);
             }
-            m.RecalculateBounds();
             return m;
         }
     }
@@ -641,11 +637,8 @@ namespace ZombieCityCleaner.Mundo
         public Mesh ParaMesh(string nome, bool espelhar = false)
         {
             var m = new Mesh { name = nome };
-            if (_v.Count > 65000) m.indexFormat = IndexFormat.UInt32;
-            if (!espelhar)
-            {
-                m.SetVertices(_v); m.SetNormals(_n); m.SetUVs(0, _uv); m.SetColors(_c); m.SetTriangles(_t, 0);
-            }
+            // (16/11/2026: os canais de uma vez, EscritaDaMalha)
+            if (!espelhar) EscritaDaMalha.Escrever(m, _v, _n, _uv, _t, cor: _c);
             else
             {
                 var v = new List<Vector3>(_v.Count);
@@ -656,9 +649,8 @@ namespace ZombieCityCleaner.Mundo
                 for (int i = 0; i < _uv.Count; i++) uv.Add(new Vector2(_somaDoU[i] - _uv[i].x, _uv[i].y));
                 var t = new List<int>(_t.Count);
                 for (int i = 0; i < _t.Count; i += 3) { t.Add(_t[i]); t.Add(_t[i + 2]); t.Add(_t[i + 1]); }
-                m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, uv); m.SetColors(_c); m.SetTriangles(t, 0);
+                EscritaDaMalha.Escrever(m, v, n, uv, t, cor: _c);
             }
-            m.RecalculateBounds();
             return m;
         }
     }

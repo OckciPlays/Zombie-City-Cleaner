@@ -93,6 +93,7 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             TirarAsZonas();
             SoltarAsAncoras();
+            _aAparecer.Clear();
             _estados.Clear();
             ApagarConstrucoes();
         }
@@ -138,6 +139,7 @@ namespace ZombieCityCleaner.Sobreviventes
             AtualizarConstrucoes();
             if (!IsServer || Dados == null) return;
             if (!_comecou) Comecar();
+            AparecerUm();   // (as pessoas aparecem uma por quadro: AcampamentosDoMundo.Pessoas.cs)
             float agora = Time.time;
             if (agora >= _proximoPensar)
             {

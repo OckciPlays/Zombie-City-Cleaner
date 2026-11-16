@@ -8,10 +8,19 @@ namespace ZombieCityCleaner.Fauna
     /// <summary>
     /// Os bichos na rede, como os zumbis (ZombieManager.Rede.cs): o anfitrião manda a cada cliente um pacote só com os
     /// bichos perto dele: os de até 30 m a cada 0,1 s, os de até 90 m a cada 0,3 s, os de até 170 m a cada 0,6 s e os de
-    /// até <see cref="AlcanceDaRede"/> a cada 0,8 s. Cada bicho vai em 13 bytes: o Id, a geração, a espécie e a variante, a
-    /// posição em centímetros a partir do jogador que recebe, o giro, o estado (com os bits do ferido, do carneado e do alfa)
-    /// e a velocidade. As mensagens não são confiáveis: o próximo pacote cobre o que se perdeu. No cliente, cada bicho vira
-    /// uma cópia que some sem notícias por 2 s.
+    /// até <see cref="AlcanceDaRede"/> a cada 0,8 s. Cada bicho vai em 14 bytes: o Id (2), a geração, a espécie e a variante,
+    /// a posição em centímetros a partir do jogador que recebe (3 × 2), o giro, o estado (com os bits do ferido, do carneado
+    /// e do alfa) e a velocidade. As mensagens não são confiáveis: o próximo pacote cobre o que se perdeu. No cliente, cada
+    /// bicho vira uma cópia que some sem notícias por 2 s.
+    /// <para>
+    /// O tamanho do pacote (16/11/2026, a pedido: "os animais não aparecem para os outros jogadores... nem se eu der spawn
+    /// deles usando comando"): a conta dava 13 bytes por bicho e cada um ocupa 14 (o Id é um ushort). O buffer, do tamanho
+    /// da conta e sem poder crescer, estourava no primeiro bicho de cada pacote (o OverflowException "Writing past the end
+    /// of the buffer", 9.485 vezes no Player.log da partida de teste, uns 9 por segundo): nenhum pacote saía, e o resto do
+    /// Update do anfitrião (as casas dos castores, o céu e o cheiro) parava junto. Agora a conta tem os 14 bytes e o buffer
+    /// tem folga para crescer; o pacote vai com até 80 bichos (1.142 bytes, longe do limite de 1.300 de uma mensagem sem
+    /// fragmentar).
+    /// </para>
     /// <para>
     /// O alcance (13/11/2026, a pedido: "não está aparecendo os animais para os outros jogadores", no Lakewood): antes, só os
     /// bichos até a distância de visão do cliente (no máximo 120 m, a da neblina do mundo sorteado). Os bichos nascem de 95 a
@@ -23,8 +32,9 @@ namespace ZombieCityCleaner.Fauna
     public sealed partial class FaunaDoMundo
     {
         const string NomeDaMensagem = "ZCC.Fauna";
-        const int PorPacote = 90;
-        const int BytesPorBicho = 13;
+        const int PorPacote = 80;
+        // o Id (ushort), a geração, a espécie, a variante, x, y e z (short), o giro, o estado e a velocidade
+        const int BytesPorBicho = sizeof(ushort) + 3 * sizeof(byte) + 3 * sizeof(short) + 3 * sizeof(byte);
         const float IntervaloDeEnvio = 0.1f, TempoParaSumir = 2f;
         /// <summary>Até onde os bichos vão para cada cliente (m): todos os que existem em volta dele (eles somem a 270 m de todos).</summary>
         public const float AlcanceDaRede = 300f;
@@ -64,7 +74,9 @@ namespace ZombieCityCleaner.Fauna
             for (int i = 0; i < _envio.Count; i += PorPacote)
             {
                 int n = Mathf.Min(PorPacote, _envio.Count - i);
-                using var w = new FastBufferWriter(sizeof(double) + 3 * sizeof(float) + sizeof(ushort) + n * BytesPorBicho, Allocator.Temp);
+                int tamanho = sizeof(double) + 3 * sizeof(float) + sizeof(ushort) + n * BytesPorBicho;
+                // (com folga para crescer: sem o terceiro argumento, o buffer não cresce e um byte a mais estoura a escrita)
+                using var w = new FastBufferWriter(tamanho, Allocator.Temp, tamanho + 256);
                 w.WriteValueSafe(tempo);
                 w.WriteValueSafe(origem);
                 w.WriteValueSafe((ushort)n);

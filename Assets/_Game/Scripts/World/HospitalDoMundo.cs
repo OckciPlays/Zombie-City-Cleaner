@@ -391,7 +391,7 @@ namespace ZombieCityCleaner.World
             var p = new Parte { Objeto = go, Desenho = vis.ParaMesh($"Hospital: {nome}"), Colisao = col.ParaMesh($"Hospital: {nome} (colisão)") };
             go.AddComponent<MeshFilter>().sharedMesh = p.Desenho;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
-            p.Colisor = go.AddComponent<MeshCollider>();
+            p.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             p.Colisor.enabled = false;
             p.Cozimento = Cozinhar(p.Colisao.GetEntityId());
             _partesDaCasca.Add(p);
@@ -496,7 +496,7 @@ namespace ZombieCityCleaner.World
             a.Colisao = h.col.ParaMesh($"Hospital: {Codigos[f]} (colisão)");
             go.AddComponent<MeshFilter>().sharedMesh = a.Desenho;
             go.AddComponent<MeshRenderer>().sharedMaterial = MaterialDasCasas;
-            a.Colisor = go.AddComponent<MeshCollider>();
+            a.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             a.Colisor.enabled = false;
             a.Cozimento = Cozinhar(a.Colisao.GetEntityId());
             if (h.marcas.Quadros > 0 && materialDasMarcas != null) a.Marcas = Marcas(go.transform, h.marcas, Codigos[f]);

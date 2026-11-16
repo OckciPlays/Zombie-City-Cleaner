@@ -28,7 +28,8 @@ namespace ZombieCityCleaner.World
 
         static DadosDoMundo Dados => MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
 
-        static ChaoDeLakewood Chao => Dados == null && LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.Chao : null;
+        // (16/11/2026, OrigemDeLakewood: tudo aqui fala no mundo do jogo; o Lakewood converte os pontos e as plantas)
+        static ChaoDeLakewood Chao => Dados == null && LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.ChaoNoMapa : null;
 
         /// <summary>O mundo da cena tem árvores (o sorteado com a floresta, ou o Lakewood).</summary>
         public static bool Tem => Dados?.Floresta != null || Chao != null;
@@ -36,15 +37,19 @@ namespace ZombieCityCleaner.World
         /// <summary>No Lakewood (os pinheiros do chão dele).</summary>
         public static bool NoLakewood => Chao != null;
 
-        /// <summary>O bloco de 64 m do ponto.</summary>
+        /// <summary>O bloco de 64 m do ponto (do mundo).</summary>
         public static Vector2Int BlocoDe(float x, float z)
         {
             var d = Dados;
             if (d != null) return d.BlocoDe(x, z);
-            return new Vector2Int(Mathf.FloorToInt(x / ChaoDeLakewood.TamanhoDoBloco), Mathf.FloorToInt(z / ChaoDeLakewood.TamanhoDoBloco));
+            return new Vector2Int(Mathf.FloorToInt((x + OrigemDeLakewood.X) / ChaoDeLakewood.TamanhoDoBloco),
+                                  Mathf.FloorToInt((z + OrigemDeLakewood.Z) / ChaoDeLakewood.TamanhoDoBloco));
         }
 
-        /// <summary>As plantas do bloco, na ordem das chaves (no sorteado, também o mato; no Lakewood, só os pinheiros).</summary>
+        /// <summary>
+        /// As plantas do bloco, na ordem das chaves (no sorteado, também o mato; no Lakewood, só os pinheiros), com as posições
+        /// no mundo.
+        /// </summary>
         public static void DoBloco(int bx, int bz, List<PlantaDaFloresta> saida)
         {
             saida.Clear();
@@ -66,6 +71,13 @@ namespace ZombieCityCleaner.World
             {
                 lista = new List<PlantaDaFloresta>(300);
                 chao.Plantas(bx, bz, lista);
+                // (as plantas do chão estão no mapa: guardadas no mundo)
+                for (int k = 0; k < lista.Count; k++)
+                {
+                    var pl = lista[k];
+                    pl.Posicao = OrigemDeLakewood.NoMundo(pl.Posicao);
+                    lista[k] = pl;
+                }
                 if (_doLakewood.Count >= 256) _doLakewood.Clear();
                 _doLakewood[chave] = lista;
             }
@@ -141,8 +153,9 @@ namespace ZombieCityCleaner.World
             if (Dados != null) return FlorestaDoMundo.Instancia != null && FlorestaDoMundo.Instancia.SobAsCopas(p);
             var chao = Chao;
             if (chao == null) return false;
-            if (chao.Mapa.CoberturaEm(p.x, p.z) != Cobertura.Mata || chao.Clareira(p.x, p.z) > 0.35f) return false;
-            return chao.LoteEm(p.x, p.z, 3f) == null && !chao.Agua(p.x, p.z, out _);
+            float x = p.x + OrigemDeLakewood.X, z = p.z + OrigemDeLakewood.Z;   // (do mundo para o mapa)
+            if (chao.Mapa.CoberturaEm(x, z) != Cobertura.Mata || chao.Clareira(x, z) > 0.35f) return false;
+            return chao.LoteEm(x, z, 3f) == null && !chao.Agua(x, z, out _);
         }
 
         /// <summary>

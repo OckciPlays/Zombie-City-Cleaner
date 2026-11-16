@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.Fauna
         {
             get
             {
-                var chao = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.Chao : null;
+                var chao = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.ChaoNoMapa : null;
                 if (chao != _doChao)
                 {
                     _doChao = chao;
@@ -105,6 +105,13 @@ namespace ZombieCityCleaner.Fauna
                         break;
                     }
                 }
+            }
+            // (feitos no mapa, os lotes; o lixo fica no mundo do jogo: OrigemDeLakewood, 16/11/2026)
+            for (int i = 0; i < _pontos.Count; i++)
+            {
+                var p = _pontos[i];
+                p.pos = OrigemDeLakewood.NoMundo(p.pos);
+                _pontos[i] = p;
             }
         }
 

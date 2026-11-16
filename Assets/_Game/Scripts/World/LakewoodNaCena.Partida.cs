@@ -57,7 +57,7 @@ namespace ZombieCityCleaner.World
             desenho.Juntar(casa.vis, Matrix4x4.identity, false, altura: true);
             var go = Objeto("Casa da partida", desenho.ParaMesh("Casa da partida"), materialDaCidade, _pai);
             go.isStatic = false;
-            go.transform.SetPositionAndRotation(lugar.PosicaoDaCasa, lugar.RotacaoDaCasa);
+            go.transform.SetLocalPositionAndRotation(lugar.PosicaoDaCasa, lugar.RotacaoDaCasa);   // (no mapa, embaixo da raiz)
             go.AddComponent<MeshCollider>().sharedMesh = casa.col.ParaMesh("Casa da partida (colisão)");
             CasaDaPartida = go.transform;
 
@@ -83,7 +83,7 @@ namespace ZombieCityCleaner.World
             EcoSoDentro.Criar(go.transform, new Bounds(centro, tamanho));
 
             PorAsMesas(go.transform, p, casa.piso);
-            Debug.Log($"[Lakewood] A casa da partida: {p.molde} de {p.W:F1} × {p.D:F1} m, {_mesas.Count} mesas, em ({lugar.PosicaoDaCasa.x:F0}; {lugar.PosicaoDaCasa.z:F0}), setor {SetorDe(lugar.PosicaoDaCasa)}.");
+            Debug.Log($"[Lakewood] A casa da partida: {p.molde} de {p.W:F1} × {p.D:F1} m, {_mesas.Count} mesas, em ({lugar.PosicaoDaCasa.x:F0}; {lugar.PosicaoDaCasa.z:F0}) no mapa, setor {mapa.NomeDoSetorEm(lugar.PosicaoDaCasa.x, lugar.PosicaoDaCasa.z)}.");
         }
 
         // as mesas nos cômodos do térreo: o comprido delas ao longo do lado maior do cômodo, a 1 m das paredes (as portas e
@@ -147,7 +147,8 @@ namespace ZombieCityCleaner.World
                 for (int i = 0; i < veiculos.Length && i < LugarDaPartida.VagasEmA.Length; i++)
                 {
                     if (veiculos[i] == null) continue;
-                    var pos = lugar.NoMundo(LugarDaPartida.VagasEmA[i], LugarDaPartida.LinhaDosVeiculos, 0.6f);
+                    // (o "NoMundo" do lugar é no mapa; o veículo fica no mundo)
+                    var pos = OrigemDeLakewood.NoMundo(lugar.NoMundo(LugarDaPartida.VagasEmA[i], LugarDaPartida.LinhaDosVeiculos, 0.6f));
                     var go = Instantiate(veiculos[i], pos, Quaternion.Euler(0f, lugar.GiroDosVeiculos, 0f));
                     go.name = veiculos[i].name;
                     var carro = go.GetComponent<Carro>();

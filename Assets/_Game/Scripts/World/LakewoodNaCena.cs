@@ -38,8 +38,13 @@ namespace ZombieCityCleaner.World
         public GameObject[] pinheiros;
         [Tooltip("A malha do tufo e o material da grama densa (o GeradorDeGrama).")] public Mesh malhaDaGrama;
         public Material materialDaGrama;
-        [Tooltip("Quantos pinheiros viram objeto por quadro, mais ou menos (um bloco nunca fica pela metade).")]
-        public int pinheirosPorQuadro = 600;
+        [Tooltip("Quanto tempo (ms) os pinheiros podem tomar por quadro para virar objeto (16/11/2026: antes, até 600 de uma vez; "
+                 + "um bloco pode ficar pela metade, com os cartazes nos que faltam).")]
+        public float msDosPinheirosPorQuadro = 1.5f;
+        [Tooltip("Quantos pinheiros de cada modelo ficam de reserva, já criados e desligados (feitos no tempo que sobra nos quadros).")]
+        public int reservaDePinheiros = 40;
+        // a capacidade da hierarquia dos pinheiros (4 transforms cada; perto de 10 mil na mata da Ultra)
+        const int CapacidadeDosPinheiros = 65536;
         [Header("A hidrelétrica (Etapa 4)")]
         [Tooltip("O material das peças da usina: o abandono pela altura do objeto (AbandonoDosObjetos), com a origem no chão de cada uma.")]
         public Material materialDaUsina;
@@ -63,7 +68,15 @@ namespace ZombieCityCleaner.World
         public float raioDeColisao = 110f;
 
         public static LakewoodNaCena Instancia { get; private set; }
-        public ChaoDeLakewood Chao { get; private set; }
+        /// <summary>
+        /// O chão no espaço do mapa (<see cref="OrigemDeLakewood"/>, 16/11/2026): os dados e as contas do Lakewood. Quem está
+        /// no mundo do jogo (a câmera, os jogadores, os bichos) usa o <see cref="ChaoNoMundo"/>.
+        /// </summary>
+        public ChaoDeLakewood ChaoNoMapa { get; private set; }
+        /// <summary>O chão visto do mundo do jogo: as mesmas perguntas, com os pontos do mundo.</summary>
+        public ChaoNoMundo ChaoNoMundo { get; private set; }
+        // (aqui dentro, tudo é no espaço do mapa; a raiz das peças fica deslocada, e o que vem do mundo é convertido)
+        ChaoDeLakewood Chao => ChaoNoMapa;
         public int Blocos => _blocos.Count;
         public int BlocosComColisao { get; private set; }
         public int PlantasNaVista { get; private set; }
@@ -78,12 +91,17 @@ namespace ZombieCityCleaner.World
             public float Passo = -1f, PassoQuerido, PassoMontando;
             public Task<MalhaDoBloco> Montando;
             public bool QuerColisao;
+            // a colisão cozida em outra thread (16/11/2026): a tarefa, e se o colisor já tem a malha de agora
+            public Task Cozinhando;
+            public bool ColisaoEmDia;
             public Task<(List<PlantaDaFloresta>, Matrix4x4[])> MontandoPlantas;
             public List<PlantaDaFloresta> Plantas;
             // a matriz de cada planta (feita uma vez, na thread: o TRS a cada quadro pesava com a mata cheia)
             public Matrix4x4[] Matrizes;
             // os pinheiros do bloco como objetos (perto da câmera); sem eles, o bloco desenha só os cartazes
             public List<GameObject> Arvores;
+            // a próxima planta que vira objeto (o bloco pela metade: as de antes já são objetos)
+            public int ProximoPinheiro;
             public float VistoEm;
         }
 
@@ -100,7 +118,7 @@ namespace ZombieCityCleaner.World
         Material[] _materiaisDosCartazes;
         // os pinheiros que saíram de perto, guardados para voltar (um monte por prefab), e o pai de todos
         Stack<GameObject>[] _guardados;
-        Transform _paiDosPinheiros;
+        Transform _paiDosPinheiros, _reservaDosPinheiros;
         float _raioDosObjetos = -1f;
         GramaDensa _grama;
         // as âncoras do NavMesh (o meio e o raio que precisa da colisão), lidas a cada revisão no anfitrião
@@ -114,11 +132,16 @@ namespace ZombieCityCleaner.World
         void Awake()
         {
             Instancia = this;
+            // a raiz das peças no lugar do canto do mapa (16/11/2026, OrigemDeLakewood): as peças ficam com as posições locais
+            // no espaço do mapa, e o meio do mapa cai na origem do mundo
             _pai = new GameObject("Lakewood (montado na hora)").transform;
             _pai.SetParent(transform, false);
+            _pai.position = OrigemDeLakewood.NoMundo(Vector3.zero);
+            MobiliaNova.DeslocamentoDasChaves = OrigemDeLakewood.Meio;
             var t0 = Time.realtimeSinceStartup;
             var relevo = new RelevoDeLakewood(mapa);
-            Chao = new ChaoDeLakewood(mapa, relevo);
+            ChaoNoMapa = new ChaoDeLakewood(mapa, relevo);
+            ChaoNoMundo = new ChaoNoMundo(ChaoNoMapa);
             // as alturas do relevo de longe (meio segundo) em outra thread, enquanto o resto monta; o MontarLonge espera
             var chao = Chao;
             var gradeDeLonge = Task.Run(() => chao.AlturaDeLonge(0f, 0f));
@@ -142,7 +165,7 @@ namespace ZombieCityCleaner.World
                 var b = Novo(chave);
                 b.QuerColisao = true;
                 b.PassoQuerido = 2f;
-                Entregar(b, Chao.Terreno(chave.x, chave.y, 2f), 2f);
+                Entregar(b, Chao.Terreno(chave.x, chave.y, 2f), 2f, true);
             }
             // os pinheiros em volta da partida já como objetos (sem eles, os primeiros quadros mostravam os cartazes perto)
             int pinheirosNaPartida = 0;
@@ -157,13 +180,22 @@ namespace ZombieCityCleaner.World
 
         void OnDestroy()
         {
+            // as colisões ainda cozinhando leem as malhas: esperam antes delas serem destruídas
+            foreach (var b in _blocos.Values)
+                if (b.Cozinhando != null && !b.Cozinhando.IsCompleted) b.Cozinhando.Wait(2000);
+            if (_paiDosPinheiros != null) Destroy(_paiDosPinheiros.gameObject);   // (na raiz da cena)
+            foreach (var o in _obras) if (o.Perto != null) Destroy(o.Perto);   // (cada obra também)
             if (Instancia == this) Instancia = null;
             AmbienteDoDia.SemNeblina = false;
             Graficos.TabelaDaFloresta = false;
+            MobiliaNova.DeslocamentoDasChaves = Vector3.zero;
         }
 
-        /// <summary>O nome do setor onde o ponto está ("A1" no canto sudoeste).</summary>
-        public string SetorDe(Vector3 p) => mapa.NomeDoSetorEm(p.x, p.z);
+        /// <summary>O nome do setor onde o ponto do mundo está ("A1" no canto sudoeste).</summary>
+        public string SetorDe(Vector3 noMundo) => mapa.NomeDoSetorEm(noMundo.x + OrigemDeLakewood.X, noMundo.z + OrigemDeLakewood.Z);
+
+        /// <summary>O mapa (os dados, no espaço do mapa).</summary>
+        public MapaDeLakewood Mapa => mapa;
 
         // ------------------------------------------------------------------ o que é montado uma vez
 
@@ -240,7 +272,7 @@ namespace ZombieCityCleaner.World
             GameObject Parado(string nome, Mesh malha, Vector3 onde, Quaternion giro)
             {
                 var go = Objeto(nome, malha, material, pai);
-                go.transform.SetPositionAndRotation(onde, giro);
+                go.transform.SetLocalPositionAndRotation(onde, giro);   // (no espaço do mapa, embaixo da raiz)
                 var caixa = go.AddComponent<BoxCollider>();
                 caixa.center = malha.bounds.center;
                 caixa.size = malha.bounds.size;
@@ -263,7 +295,7 @@ namespace ZombieCityCleaner.World
                     default:
                         if (!desenhos.TryGetValue(p.Desenho, out var malha)) desenhos[p.Desenho] = malha = p.Desenho.ParaMesh(p.Nome);
                         var go = Objeto(p.Nome, malha, material, pai);
-                        go.transform.SetPositionAndRotation(p.Posicao, p.Giro);
+                        go.transform.SetLocalPositionAndRotation(p.Posicao, p.Giro);
                         if (p.Colisao != null)
                         {
                             if (!colisoes.TryGetValue(p.Colisao, out var col)) colisoes[p.Colisao] = col = p.Colisao.ParaMesh(p.Nome + " (colisão)");
@@ -329,7 +361,7 @@ namespace ZombieCityCleaner.World
             {
                 var go = new GameObject("Parede");
                 go.transform.SetParent(borda.transform, false);
-                go.transform.position = centro;
+                go.transform.localPosition = centro;
                 go.AddComponent<BoxCollider>().size = tamanho;
             }
             Parede(new Vector3(-1f, 400f, c * 0.5f), new Vector3(2f, 1200f, c + 4f));
@@ -372,7 +404,8 @@ namespace ZombieCityCleaner.World
         {
             var olho = Camera.main;
             if (olho == null) return;
-            var c = olho.transform.position;
+            // (a câmera está no mundo; as contas daqui, no mapa)
+            var c = OrigemDeLakewood.NoMapa(olho.transform.position);
 
             // a neblina ligada ou não: até onde a câmera vê (o relevo de longe fica sempre, por baixo dos blocos de perto)
             if (_semNeblina != AmbienteDoDia.SemNeblina)
@@ -408,6 +441,9 @@ namespace ZombieCityCleaner.World
             DesenharPlantas(olho, c);
         }
 
+        // um ponto do mundo no plano do mapa (x, z)
+        static Vector2 NoMapa2(Vector3 noMundo) => new Vector2(noMundo.x + OrigemDeLakewood.X, noMundo.z + OrigemDeLakewood.Z);
+
         IEnumerable<Vector2Int> BlocosEm(Vector2 p, float raio)
         {
             float t = ChaoDeLakewood.TamanhoDoBloco;
@@ -437,14 +473,16 @@ namespace ZombieCityCleaner.World
         void Revisar(Vector3 c)
         {
             var p = new Vector2(c.x, c.z);
+            _centroDaRevisao = p;
             float raio = _semNeblina ? raioSemNeblina : raioComNeblina;
             float raioPlantas = _semNeblina ? plantasSemNeblina : plantasComNeblina;
             MostrarAsEstradas(p, raio);
             // quem precisa da colisão: o jogador local (a câmera), os carros perto e, no anfitrião, os outros jogadores (os
             // zumbis em volta deles andam no NavMesh do chão daqui: Plano_Lakewood, Etapa 6, a parte 5)
+            // (os carros, os jogadores e as âncoras estão no mundo: vão para o mapa)
             var pontos = new List<Vector2> { p };
             foreach (var carro in Carro.Todos)
-                if (carro != null) pontos.Add(new Vector2(carro.transform.position.x, carro.transform.position.z));
+                if (carro != null) pontos.Add(NoMapa2(carro.transform.position));
             var rede = Unity.Netcode.NetworkManager.Singleton;
             _ancoras.Clear();
             if (rede != null && rede.IsServer)
@@ -452,7 +490,7 @@ namespace ZombieCityCleaner.World
                 foreach (var j in ZombieCityCleaner.Player.JogadorRede.Todos)
                 {
                     if (j == null || j == ZombieCityCleaner.Player.JogadorRede.Local) continue;
-                    var q = new Vector2(j.transform.position.x, j.transform.position.z);
+                    var q = NoMapa2(j.transform.position);
                     pontos.Add(q);
                     // longe da câmera: os blocos dele, só com a colisão
                     foreach (var chave in BlocosEm(q, raioDeColisao))
@@ -467,7 +505,7 @@ namespace ZombieCityCleaner.World
                 NavMeshDoMundo.Ancoras(_ancorasDoNavMesh);
                 foreach (var (centro, raioDaAncora) in _ancorasDoNavMesh)
                 {
-                    var q = new Vector2(centro.x, centro.z);
+                    var q = NoMapa2(centro);
                     _ancoras.Add((q, raioDaAncora));
                     foreach (var chave in BlocosEm(q, raioDaAncora))
                     {
@@ -505,7 +543,7 @@ namespace ZombieCityCleaner.World
             // os longe saem depois de 3 s
             var sair = new List<Vector2Int>();
             foreach (var kv in _blocos)
-                if (Time.time - kv.Value.VistoEm > 3f && kv.Value.Montando == null) sair.Add(kv.Key);
+                if (Time.time - kv.Value.VistoEm > 3f && kv.Value.Montando == null && kv.Value.Cozinhando == null) sair.Add(kv.Key);
             foreach (var k in sair)
             {
                 var b = _blocos[k];
@@ -551,28 +589,67 @@ namespace ZombieCityCleaner.World
                     b.MontandoPlantas = null;
                     _ondeJuntou = Vector3.one * 1e9f;
                 }
-                if (entregues >= 4 || b.Montando == null || !b.Montando.IsCompleted) continue;
+                // (a malha não muda enquanto a colisão dela é cozida em outra thread: a entrega espera)
+                if (entregues >= 4 || b.Montando == null || !b.Montando.IsCompleted || b.Cozinhando != null) continue;
                 if (b.Montando.IsFaulted) Debug.LogException(b.Montando.Exception);
                 else Entregar(b, b.Montando.Result, b.PassoMontando);
                 b.Montando = null;
                 entregues++;
             }
             // a colisão na malha de 2 m, ou na de 4 m enquanto a de 2 m não chega (sem ela, quem andava rápido passava pelo
-            // chão); um bloco que já tem a malha ganha o colisor quando alguém chega perto
+            // chão); um bloco que já tem a malha ganha o colisor quando alguém chega perto. Desde 16/11/2026 (o teste de
+            // desempenho: "às vezes dá um pouco de lag"), a colisão é cozida em outra thread (Physics.BakeMesh, como a das
+            // obras) e o colisor recebe a malha quando ela fica pronta: cozida aqui, ela tomava até 57 ms de um quadro,
+            // andando de carro. Até lá, o colisor fica com a forma de antes (a malha de 4 m) ou o bloco sem colisão (os
+            // blocos vêm a até 110 m de quem está perto, e o Segurar devolve quem passar pelo chão)
+            // Duas ao mesmo tempo no máximo, a mais perto primeiro: todas juntas tomavam os núcleos, e a física, as sombras e o
+            // culling da Unity (que rodam nos workers dela) esperavam (quadros de até 0,8 s na medida)
+            int cozinhando = 0;
+            Bloco proximo = null;
+            float maisPerto = float.MaxValue;
             foreach (var b in _blocos.Values)
             {
                 bool quer = b.QuerColisao && b.Passo > 0f && b.Passo <= 4.01f;
-                if (quer && b.Colisor == null && b.Objeto != null && entregues < 6)
+                if (b.Cozinhando != null && b.Cozinhando.IsCompleted)
                 {
-                    b.Colisor = b.Objeto.AddComponent<MeshCollider>();
-                    b.Colisor.sharedMesh = b.Malha;
-                    entregues++;
+                    if (b.Cozinhando.IsFaulted) Debug.LogException(b.Cozinhando.Exception);
+                    b.Cozinhando = null;
+                    if (b.Objeto != null && b.Malha != null)
+                    {
+                        if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
+                        b.Colisor.sharedMesh = null;
+                        b.Colisor.sharedMesh = b.Malha;   // (já cozida: o PhysX usa a cozida)
+                        b.ColisaoEmDia = true;
+                    }
                 }
-                if (b.Colisor != null) b.Colisor.enabled = quer;
+                if (b.Cozinhando != null) cozinhando++;
+                else if (quer && !b.ColisaoEmDia && b.Objeto != null && b.Malha != null)
+                {
+                    float d = DistanciaAoBloco(_centroDaRevisao, b.Chave);
+                    if (d < maisPerto)
+                    {
+                        maisPerto = d;
+                        proximo = b;
+                    }
+                }
+                // (um colisor desligado com a malha velha só liga com a nova: ligado, ele cozinharia a malha aqui)
+                if (b.Colisor != null) b.Colisor.enabled = quer && (b.ColisaoEmDia || b.Colisor.enabled);
             }
+            if (proximo != null && cozinhando < CozinhandoAoMesmoTempo) Cozinhar(proximo);
         }
 
-        void Entregar(Bloco b, MalhaDoBloco m, float passo)
+        const int CozinhandoAoMesmoTempo = 2;
+        Vector2 _centroDaRevisao;
+
+        // a colisão do bloco cozida em outra thread (o colisor a recebe no Receber, quando ela fica pronta)
+        static void Cozinhar(Bloco b)
+        {
+            var id = b.Malha.GetEntityId();
+            b.Cozinhando = Task.Run(() => Physics.BakeMesh(id, false));
+        }
+
+        // naHora: a colisão cozida aqui mesmo (o chão em volta da partida, antes de alguém nascer)
+        void Entregar(Bloco b, MalhaDoBloco m, float passo, bool naHora = false)
         {
             if (b.Objeto == null)
             {
@@ -587,12 +664,13 @@ namespace ZombieCityCleaner.World
             }
             m.Para(b.Malha);
             b.Passo = passo;
-            if (passo <= 4.01f && b.QuerColisao)
-            {
-                if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
-                b.Colisor.sharedMesh = null;
-                b.Colisor.sharedMesh = b.Malha;
-            }
+            b.ColisaoEmDia = false;
+            // (fora da partida, a colisão é cozida em outra thread: o Receber começa, a mais perto primeiro)
+            if (passo > 4.01f || !b.QuerColisao || !naHora) return;
+            if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
+            b.Colisor.sharedMesh = null;
+            b.Colisor.sharedMesh = b.Malha;
+            b.ColisaoEmDia = true;
         }
 
         // quem passou pelo chão (a colisão ainda não estava pronta, depois de um "ir para") volta para cima: o jogador
@@ -606,8 +684,8 @@ namespace ZombieCityCleaner.World
             var meu = rede.LocalClient?.PlayerObject;
             if (meu != null)
             {
-                var p = meu.transform.position;
-                float h = Chao.Altura(p.x, p.z);
+                var p = meu.transform.position;   // (no mundo; a altura não muda entre os espaços)
+                float h = ChaoNoMundo.Altura(p.x, p.z);
                 var mov = meu.GetComponent<MovimentoPrimeiraPessoa>();
                 var passageiro = meu.GetComponent<PassageiroDoCarro>();
                 if (p.y < h - 2.5f && mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro))
@@ -620,7 +698,7 @@ namespace ZombieCityCleaner.World
             {
                 if (carro == null || !carro.IsSpawned || !carro.IsOwner) continue;
                 var p = carro.transform.position;
-                float h = Chao.Altura(p.x, p.z);
+                float h = ChaoNoMundo.Altura(p.x, p.z);
                 if (p.y > h - 3f) continue;
                 Debug.LogWarning($"[Lakewood] O carro {carro.name} passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima. {QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto"}.");
                 var corpo = carro.GetComponent<Rigidbody>();
@@ -642,7 +720,7 @@ namespace ZombieCityCleaner.World
             if (rede == null || !rede.IsListening) return;
             _carroPosto = true;
             if (!rede.IsServer) return;
-            var novo = Instantiate(carro, lugarDoCarro + Vector3.up * 0.6f, Quaternion.Euler(0f, giroDoCarro, 0f));
+            var novo = Instantiate(carro, OrigemDeLakewood.NoMundo(lugarDoCarro) + Vector3.up * 0.6f, Quaternion.Euler(0f, giroDoCarro, 0f));
             novo.name = "Carro";
             novo.GetComponent<NetworkObject>().Spawn(true);
         }
@@ -673,8 +751,15 @@ namespace ZombieCityCleaner.World
                 _malhasDosCartazes[k] = filtro != null ? filtro.sharedMesh : null;
                 _materiaisDosCartazes[k] = ultimo.sharedMaterial;
             }
+            // (16/11/2026: os pinheiros numa hierarquia só deles, na raiz da cena, no mesmo lugar do _pai: a Unity cuida de cada
+            // raiz à parte, e numa só, com o chão e as obras, cada vez que ela crescia copiava tudo; a capacidade já vem grande)
             _paiDosPinheiros = new GameObject("Pinheiros").transform;
-            _paiDosPinheiros.SetParent(_pai, false);
+            _paiDosPinheiros.SetPositionAndRotation(_pai.position, _pai.rotation);
+            _paiDosPinheiros.hierarchyCapacity = CapacidadeDosPinheiros;
+            // a reserva: os pinheiros novos nascem aqui dentro (desligados, sem o Awake) e vão para o monte do prefab
+            _reservaDosPinheiros = new GameObject("Reserva").transform;
+            _reservaDosPinheiros.SetParent(_paiDosPinheiros, false);
+            _reservaDosPinheiros.gameObject.SetActive(false);
             if (malhaDaGrama != null && materialDaGrama != null)
             {
                 _grama = gameObject.AddComponent<GramaDensa>();
@@ -692,7 +777,8 @@ namespace ZombieCityCleaner.World
             var l = new List<PlantaDaFloresta>();
             chao.Plantas(ch.x, ch.y, l);
             var m = new Matrix4x4[l.Count];
-            for (int k = 0; k < l.Count; k++) m[k] = Matrix4x4.TRS(l[k].Posicao, Quaternion.Euler(0f, l[k].Giro, 0f), Vector3.one * l[k].Escala);
+            // (as matrizes dos cartazes são desenhadas sem pai: no mundo)
+            for (int k = 0; k < l.Count; k++) m[k] = Matrix4x4.TRS(OrigemDeLakewood.NoMundo(l[k].Posicao), Quaternion.Euler(0f, l[k].Giro, 0f), Vector3.one * l[k].Escala);
             return (l, m);
         }
 
@@ -704,15 +790,25 @@ namespace ZombieCityCleaner.World
         /// <summary>Até onde os pinheiros são objetos (m); depois, só os cartazes.</summary>
         public float RaioDosObjetos => _raioDosObjetos;
 
-        // os pinheiros de um bloco viram objetos (os guardados voltam; faltando, um novo do prefab); devolve quantos
-        int PorOsPinheiros(Bloco b)
+        // os pinheiros de um bloco viram objetos (os guardados voltam; faltando, um novo do prefab), até a hora 'ate'
+        // (16/11/2026: o bloco pode ficar pela metade, e continua no quadro seguinte; os que faltam ficam como cartazes);
+        // devolve quantos foram postos agora
+        int PorOsPinheiros(Bloco b, double ate = double.MaxValue)
         {
-            if (b.Arvores != null || b.Plantas == null || _guardados == null) return 0;
-            b.Arvores = new List<GameObject>(b.Plantas.Count);
-            // (12/11/2026, a parte 3 do "O jogo do mundo sorteado no Lakewood": os cortados viram toco; LakewoodNaCena.Arvores.cs)
-            _cortesDoBloco[b.Chave] = CortadasNoBloco(b);
-            for (int k = 0; k < b.Plantas.Count; k++)
+            if (b.Plantas == null || _guardados == null) return 0;
+            if (b.Arvores == null)
             {
+                b.Arvores = new List<GameObject>(b.Plantas.Count);
+                b.ProximoPinheiro = 0;
+                // (12/11/2026, a parte 3 do "O jogo do mundo sorteado no Lakewood": os cortados viram toco; LakewoodNaCena.Arvores.cs)
+                _cortesDoBloco[b.Chave] = CortadasNoBloco(b);
+            }
+            int postos = 0;
+            while (b.ProximoPinheiro < b.Plantas.Count)
+            {
+                // (a hora é vista a cada 8: ligar um pinheiro custa uns centésimos de ms)
+                if ((postos & 7) == 7 && Time.realtimeSinceStartupAsDouble > ate) break;
+                int k = b.ProximoPinheiro++;
                 var pl = b.Plantas[k];
                 int i = IndiceDoPinheiro(pl.Especie);
                 if (i < 0 || i >= pinheiros.Length || pinheiros[i] == null) continue;
@@ -721,25 +817,55 @@ namespace ZombieCityCleaner.World
                     PorOToco(b, pl);
                     continue;
                 }
-                GameObject go;
-                if (_guardados[i].Count > 0)
-                {
-                    go = _guardados[i].Pop();
-                    go.transform.SetPositionAndRotation(pl.Posicao, Quaternion.Euler(0f, pl.Giro, 0f));
-                    go.transform.localScale = Vector3.one * pl.Escala;
-                    go.SetActive(true);
-                }
-                else
-                {
-                    go = Instantiate(pinheiros[i], pl.Posicao, Quaternion.Euler(0f, pl.Giro, 0f), _paiDosPinheiros);
-                    go.name = pinheiros[i].name;
-                    go.transform.localScale = Vector3.one * pl.Escala;
-                }
+                // (embaixo da raiz deslocada: a posição local é a do mapa)
+                var go = _guardados[i].Count > 0 ? _guardados[i].Pop() : NovoPinheiro(i);
+                go.transform.SetLocalPositionAndRotation(pl.Posicao, Quaternion.Euler(0f, pl.Giro, 0f));
+                go.transform.localScale = Vector3.one * pl.Escala;
+                go.SetActive(true);
                 b.Arvores.Add(go);
+                postos++;
             }
-            _ondeJuntou = Vector3.one * 1e9f;
-            return b.Arvores.Count;
+            // pronto: os cartazes são refeitos sem os dele (no meio, o cartaz e o objeto ficam juntos, no mesmo lugar)
+            if (b.ProximoPinheiro >= b.Plantas.Count) _ondeJuntou = Vector3.one * 1e9f;
+            return postos;
         }
+
+        // o bloco já tem todos os pinheiros como objetos
+        static bool Completo(Bloco b) => b.Arvores != null && b.Plantas != null && b.ProximoPinheiro >= b.Plantas.Count;
+
+        // um pinheiro novo do prefab, desligado e no monte (nasce na reserva, que está desligada: sem o Awake nem o registro
+        // dos LODs, que ficam para quando ele for ligado)
+        GameObject NovoPinheiro(int i)
+        {
+            var go = Instantiate(pinheiros[i], _reservaDosPinheiros);
+            go.name = pinheiros[i].name;
+            go.SetActive(false);
+            go.transform.SetParent(_paiDosPinheiros, false);
+            return go;
+        }
+
+        // no tempo que sobra do quadro: a reserva de cada pinheiro (os montes com menos de reservaDePinheiros ganham um novo)
+        void EncherAReserva(double ate)
+        {
+            if (reservaDePinheiros <= 0) return;
+            int n = pinheiros.Length;
+            for (int volta = 0; volta < 64; volta++)
+            {
+                if (Time.realtimeSinceStartupAsDouble > ate) return;
+                bool fez = false;
+                for (int j = 0; j < n; j++)
+                {
+                    int i = (_proximaReserva + j) % n;
+                    if (pinheiros[i] == null || _guardados[i].Count >= reservaDePinheiros) continue;
+                    _guardados[i].Push(NovoPinheiro(i));
+                    _proximaReserva = (i + 1) % n;
+                    fez = true;
+                    break;
+                }
+                if (!fez) return;
+            }
+        }
+        int _proximaReserva;
 
         // os pinheiros de um bloco saem (desligados e guardados no monte do prefab, para outro bloco)
         void GuardarOsPinheiros(Bloco b)
@@ -777,11 +903,13 @@ namespace ZombieCityCleaner.World
             return Mathf.Clamp(r, 100f, raioPlantas);
         }
 
-        // todo quadro: os blocos perto ganham os pinheiros como objetos (os mais perto primeiro, até uns
-        // pinheirosPorQuadro), e os que ficaram longe os devolvem
+        // todo quadro: os blocos perto ganham os pinheiros como objetos (os mais perto primeiro, por até
+        // msDosPinheirosPorQuadro; 16/11/2026: antes, até 600 de uma vez, e um bloco inteiro), os que ficaram longe os
+        // devolvem, e no tempo que sobra a reserva cresce
         void Pinheiros(Camera olho, Vector3 c)
         {
             if (pinheiros == null || pinheiros.Length == 0 || _guardados == null) return;
+            double ate = Time.realtimeSinceStartupAsDouble + msDosPinheirosPorQuadro / 1000.0;
             float raioPlantas = _semNeblina ? plantasSemNeblina : plantasComNeblina;
             float r = RaioDosObjetosPara(olho, raioPlantas);
             if (_raioDosObjetos < 0f || Mathf.Abs(r - _raioDosObjetos) > 8f) _raioDosObjetos = r;
@@ -794,22 +922,24 @@ namespace ZombieCityCleaner.World
                 if (b.Arvores != null)
                 {
                     if (d > _raioDosObjetos + 40f) GuardarOsPinheiros(b);
-                    else perto += b.Arvores.Count;
+                    else
+                    {
+                        perto += b.Arvores.Count;
+                        if (!Completo(b)) _fila.Add((d, b));
+                    }
                 }
                 else if (b.Plantas != null && d < _raioDosObjetos) _fila.Add((d, b));
             }
             if (_fila.Count > 0)
             {
                 _fila.Sort((a, b2) => a.Item1.CompareTo(b2.Item1));
-                int postos = 0;
                 foreach (var (_, b) in _fila)
                 {
-                    if (postos >= pinheirosPorQuadro) break;
-                    int n = PorOsPinheiros(b);
-                    postos += Mathf.Max(n, 1);
-                    perto += n;
+                    if (Time.realtimeSinceStartupAsDouble > ate) break;
+                    perto += PorOsPinheiros(b, ate);
                 }
             }
+            else EncherAReserva(ate);
             PinheirosPerto = perto;
         }
         readonly List<(float, Bloco)> _fila = new List<(float, Bloco)>();
@@ -836,9 +966,10 @@ namespace ZombieCityCleaner.World
                 var p = new Vector2(c.x, c.z);
                 foreach (var b in _blocos.Values)
                 {
-                    if (b.Arvores != null || b.Plantas == null || b.Matrizes == null || DistanciaAoBloco(p, b.Chave) > raio) continue;
+                    if (Completo(b) || b.Plantas == null || b.Matrizes == null || DistanciaAoBloco(p, b.Chave) > raio) continue;
                     var plantas = b.Plantas;
-                    for (int k = 0; k < plantas.Count; k++)
+                    // (o bloco pela metade: só os que ainda não viraram objeto)
+                    for (int k = b.Arvores != null ? b.ProximoPinheiro : 0; k < plantas.Count; k++)
                     {
                         int i = IndiceDoPinheiro(plantas[k].Especie);
                         if (i < 0 || i >= _listas.Length || CortadaNoBloco(b, k)) continue;
@@ -861,7 +992,7 @@ namespace ZombieCityCleaner.World
                     layer = 0,
                     receiveShadows = true,
                     shadowCastingMode = ShadowCastingMode.Off,
-                    worldBounds = new Bounds(c, Vector3.one * 2000f),
+                    worldBounds = new Bounds(OrigemDeLakewood.NoMundo(c), Vector3.one * 2000f),   // (c no mapa)
                     lightProbeUsage = LightProbeUsage.Off,
                     reflectionProbeUsage = ReflectionProbeUsage.Off,
                 };
