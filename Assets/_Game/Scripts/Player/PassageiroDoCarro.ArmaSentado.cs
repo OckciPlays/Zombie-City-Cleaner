@@ -163,8 +163,11 @@ namespace ZombieCityCleaner.Player
             }
             else if (c.moto)
             {
-                baixa = peito.position - cima * 0.12f + frente * 0.20f + direita * 0.17f;
-                miraBaixa = (frente * 0.8f - cima * 0.55f + direita * 0.15f).normalized;
+                // na garupa, só a direita, ao lado do corpo e por fora do tronco, a esquerda na coxa (16/11/2026, a pedido: "na
+                // terceira pessoa ... os braços desaparecem e ficam apenas o tronco do personagem": com as duas mãos na frente
+                // da barriga, de trás o tronco tapava os braços e a arma)
+                baixa = peito.position - cima * 0.10f + frente * 0.12f + direita * 0.30f;
+                miraBaixa = (frente * 0.85f - cima * 0.45f + direita * 0.12f).normalized;
             }
             else if (c.NaCacamba(lugar))
             {
@@ -203,7 +206,9 @@ namespace ZombieCityCleaner.Player
             // a esquerda: com as duas mãos, abraça a empunhadura por baixo e pela esquerda (a palma para a arma e para cima, os
             // dedos por cima dos da direita); senão fica onde estava (o guidão, a coxa, a animação)
             // (empurrada para longe da cabeça do piloto, a esquerda não alcança: ele atira com uma mão, como o garupa do GTA IV)
-            float duas = duasNaArma ? Mathf.Lerp(1f, duasAlta, k) * Mathf.Clamp01(1f - (empurrao - 0.05f) / 0.10f) : 0f;
+            // (descansando na moto, uma mão só: a arma fica ao lado do corpo)
+            float duasBaixa = c.moto ? 0f : 1f;
+            float duas = duasNaArma ? Mathf.Lerp(duasBaixa, duasAlta, k) * Mathf.Clamp01(1f - (empurrao - 0.05f) / 0.10f) : 0f;
             Vector3 dedos = (direitaDaArma * 0.7f - altoDaArma * 0.55f + mira * 0.15f).normalized;
             Vector3 palmaE = Vector3.ProjectOnPlane(direitaDaArma * 0.6f + altoDaArma * 0.7f, dedos).normalized;
             Vector3 centroDaPalma = a.pegada - direitaDaArma * 0.04f - altoDaArma * 0.02f;

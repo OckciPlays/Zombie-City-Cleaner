@@ -4656,8 +4656,11 @@ jogador atrás ligado a lanterna".
       foi medida com os braços do corpo encolhidos (0,001) e a manga esticou ~1000 vezes. Agora ele devolve os braços para
       medir e encolhe de novo (`PassageiroDoCarro.EncolherBracosDoCorpo`, `BracosDoCorpoEncolhidos`).
     - "na terceira pessoa, trocando de arma (smg - pistola), os braços desaparecem e fica só o tronco": visto no vídeo
-      (depois de trocar da SMG para a pistola, na garupa); **não achado nem corrigido** (no teste aqui os braços
-      voltavam). Não testado, a pedido.
+      (depois de trocar da SMG para a pistola, na garupa). A causa: a arma descansando ficava com as duas mãos na frente
+      da barriga, dentro da silhueta do tronco, e de trás o tronco tapava os braços e a arma (atirando, levantada, eles
+      apareciam). Agora, na moto, o garupa descansa a arma só com a direita, ao lado do corpo e por fora do tronco
+      (0,30 m para a direita do peito), a esquerda na coxa; mirando, as duas mãos como antes. Não testado no Play, a
+      pedido (só compilado).
   - **A lanterna do garupa:** conferida de novo: sai do peito dele (0,44 m do olho do piloto na Fat Boy, 0,51 na cross),
     sem sombra, com a força de sempre; da visão do piloto, sem a sombra da moto.
   - **Não conferido:** o piloto com o motor ligado atirando de verdade (o clique, a primeira pessoa com o braço do
