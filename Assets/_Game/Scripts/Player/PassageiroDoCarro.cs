@@ -71,6 +71,7 @@ namespace ZombieCityCleaner.Player
         MovimentoPrimeiraPessoa _movimento;
         ArmaJogador _arma;
         PassosJogador _passos;
+        VigorDoJogador _vigor;
         bool _ccLigado;
         Transform _cabeca, _camera;
         Vector3 _cabecaLocal;
@@ -161,6 +162,7 @@ namespace ZombieCityCleaner.Player
             _dobradica.Clear();
             _palma.Clear();
             _empunhaduras.Clear();
+            _bracosDoCorpoEncolhidos = false;   // (os ossos novos vêm no tamanho de sempre)
             foreach (var l in new[] { ".L", ".R" })
             {
                 GuardarDobradica(doPrefab, "thigh" + l, "shin" + l, "foot" + l, corpoDoPrefab.forward);
@@ -295,6 +297,7 @@ namespace ZombieCityCleaner.Player
                 _bracosDoPilotoEscondidos = false;
                 if (_rede.cameraBracos != null && !_rede.EmTerceiraPessoa) _rede.cameraBracos.enabled = true;
             }
+            EncolherBracosDoCorpo(false);
             _cabeca.localPosition = _cabecaLocal;
             _camera.localPosition = Vector3.zero;
             _camera.localRotation = Quaternion.identity;
@@ -365,6 +368,11 @@ namespace ZombieCityCleaner.Player
             }
             if (_fase == Fase.Entrando && _tempo >= MoverAte) _fase = Fase.Dentro;
             if (!dono) return;
+            // o vigor volta sentado como parado (16/11/2026, a pedido: "a estamina não recupera quando estou sentado": ele só
+            // voltava no MovimentoPrimeiraPessoa, que fica desligado no veículo; o vigor nasce na primeira vez que ele anda)
+            if (_vigor == null && (_vigor = GetComponent<VigorDoJogador>()) == null) _vigor = gameObject.AddComponent<VigorDoJogador>();
+            _vigor.Passo(dt, false, false, false, true);
+            BracosDoCorpoNaPrimeiraPessoa();
             Comandos();
             if (_fase == Fase.Dentro && _terceira) CameraDeTras(dt);
             else Olhar(k);
@@ -393,7 +401,8 @@ namespace ZombieCityCleaner.Player
 
         bool MaosLivresAgora()
         {
-            if (Carro == null || _fase != Fase.Dentro || _terceira) return false;
+            // (desde 16/11/2026 também na câmera de trás, a pedido: "em terceira pessoa não consigo mirar e nem atirar")
+            if (Carro == null || _fase != Fase.Dentro) return false;
             // na moto, a arma grande fica guardada (15/11/2026, a pedido: "o correto para a moto seria poder utilizar somente
             // arma pequena ... o resto fica impedido por ser muito grande")
             if (Carro.moto && GrandeParaAMoto(NaMao)) return false;
@@ -411,8 +420,16 @@ namespace ZombieCityCleaner.Player
         /// <summary>O que o piloto da moto empunha: as armas de fogo pequenas (as pistolas e as submetralhadoras).</summary>
         public static bool ArmaDoPiloto(Loot.Item i) => Loot.Itens.EhArma(i) && !GrandeParaAMoto(i);
 
-        /// <summary>No dono: o piloto armado vê o braço do próprio corpo com a arma, não os braços de primeira pessoa (o clarão do tiro sai da arma do corpo).</summary>
-        public bool ArmaNoCorpo => _maosLivres && Carro != null && Carro.moto && Lugar == 0;
+        /// <summary>
+        /// No dono: a arma que ele vê é a do corpo, não a dos braços de primeira pessoa (o clarão do tiro sai dela): o piloto
+        /// armado (o braço do próprio corpo) e, desde 16/11/2026, quem atira na câmera de trás.
+        /// </summary>
+        public bool ArmaNoCorpo => _maosLivres && Carro != null && (_terceira || (Carro.moto && Lugar == 0));
+        /// <summary>No dono: sentado, com a câmera de trás (o V). O tiro sai do meio da tela, a partir da altura do corpo (<see cref="ArmaJogador"/>).</summary>
+        public bool NaCameraDeTras => _terceira && _fase == Fase.Dentro && Carro != null;
+        /// <summary>Para os testes automáticos no Play: a câmera de trás ligada ou não, no lugar do V; null no jogo.</summary>
+        public static bool? CameraDeTrasDeTeste;
+        float _ombroDaCamera;
         bool _bracosDoPilotoEscondidos;
 
         Loot.Item NaMao => _rede.Inventario != null ? _rede.Inventario.NaMao : Loot.Item.Nada;
@@ -516,13 +533,34 @@ namespace ZombieCityCleaner.Player
                 Carro.Buzinar(controla && teclado != null && teclado.bKey.isPressed);
                 if (controla && _desvirar.WasPressedThisFrame() && Carro.PodeDesvirar) Carro.Desvirar();
             }
+            if (CameraDeTrasDeTeste.HasValue) _terceira = CameraDeTrasDeTeste.Value;
             if (!controla) return;
             if (teclado != null && teclado.vKey.wasPressedThisFrame) _terceira = !_terceira;
+            // trocar de lugar (16/11/2026): Ctrl+1 dirige, Ctrl+2 o lado do motorista ou a garupa, Ctrl+3 e Ctrl+4 atrás
+            int outro = LugarComCtrl(teclado);
+            if (_fase == Fase.Dentro && outro >= 0 && outro != Lugar)
+            {
+                if (outro >= Mathf.Min(Vehicles.Carro.Lugares, Carro.lugaresUsados)) Avisar(Carro.moto ? "A moto só tem dois lugares" : "Esse lugar não existe aqui");
+                else if (Carro.Ocupado(outro)) Avisar("Esse lugar está ocupado");
+                else if (Carro.Velocidade > Carro.VelocidadeParaSair) Avisar($"Pare {Carro.OVeiculo} para trocar de lugar");
+                else Carro.PedirTrocarDeLugar(outro);
+            }
             if (_fase == Fase.Dentro && _interagir.WasPressedThisFrame())
             {
                 if (Carro.Velocidade > Carro.VelocidadeParaSair) Avisar($"Pare {Carro.OVeiculo} para sair");
                 else Carro.PedirSair();
             }
+        }
+
+        /// <summary>O lugar pedido com Ctrl+1 a Ctrl+4 neste quadro (de 0 a 3), ou -1.</summary>
+        public static int LugarComCtrl(Keyboard teclado)
+        {
+            if (teclado == null || !teclado.ctrlKey.isPressed) return -1;
+            if (teclado.digit1Key.wasPressedThisFrame || teclado.numpad1Key.wasPressedThisFrame) return 0;
+            if (teclado.digit2Key.wasPressedThisFrame || teclado.numpad2Key.wasPressedThisFrame) return 1;
+            if (teclado.digit3Key.wasPressedThisFrame || teclado.numpad3Key.wasPressedThisFrame) return 2;
+            if (teclado.digit4Key.wasPressedThisFrame || teclado.numpad4Key.wasPressedThisFrame) return 3;
+            return -1;
         }
 
         /// <summary>O olhar do motorista (na primeira pessoa) está no miolo da ignição.</summary>
@@ -825,9 +863,13 @@ namespace ZombieCityCleaner.Player
             // a cabeça reta (08/11/2026, a pedido: "ele continua olhando para baixo ... nos dois carros"): a câmera de trás é a
             // mesma escolha da terceira pessoa a pé, e nela o olhar do corpo (o Pitch da rede) nunca mudava: ficava o do
             // momento de entrar (olhando para a porta, para baixo). O olhar da primeira pessoa volta quando ela volta
-            _pitch = 0f;
-            if (_rede.IsOwner && Mathf.Abs(_rede.Pitch.Value) > 0.5f) _rede.Pitch.Value = 0f;
-            ZerarOGiro();
+            // (com algo na mão, o olhar do corpo é o da mira: MirarPelaCameraDeTras)
+            if (!_maosLivres)
+            {
+                _pitch = 0f;
+                if (_rede.IsOwner && Mathf.Abs(_rede.Pitch.Value) > 0.5f) _rede.Pitch.Value = 0f;
+                ZerarOGiro();
+            }
             Vector2 olhar = LerOlhar();
             if (olhar.sqrMagnitude > 0.0001f) _mexeuNaCamera = Time.time;
             _yaw3 += olhar.x;
@@ -840,11 +882,43 @@ namespace ZombieCityCleaner.Player
             // a moto é menor: a câmera fica mais perto e mais baixa
             Vector3 pivo = Carro.transform.position + Vector3.up * (Carro.moto ? 1.3f : 1.4f);
             float distancia = Carro.moto ? 4.2f : 6f;
+            // com algo na mão (16/11/2026), a câmera vai para cima do ombro direito de quem senta, mais perto (como a
+            // terceira pessoa a pé e as referências: GTA V, Days Gone): atrás do corpo, a mira do meio da tela ficava nas costas
+            _ombroDaCamera = Mathf.MoveTowards(_ombroDaCamera, _maosLivres ? 1f : 0f, dt / 0.3f);
+            if (_ombroDaCamera > 0f && Lugar >= 0 && Lugar < Carro.assentos.Length && Carro.assentos[Lugar] != null)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, _ombroDaCamera);
+                Vector3 ombro = Carro.assentos[Lugar].position + Vector3.up * 0.75f + rot * Vector3.right * 0.55f;
+                pivo = Vector3.Lerp(pivo, ombro, k);
+                distancia = Mathf.Lerp(distancia, 2.2f, k);
+            }
             if (Physics.SphereCast(pivo, 0.25f, rot * Vector3.back, out var batida, distancia, MascaraDoCenario, QueryTriggerInteraction.Ignore))
                 distancia = Mathf.Max(0.8f, batida.distance - 0.1f);
             // aproxima na hora (para não atravessar a parede) e afasta devagar
             _distancia3 = distancia < _distancia3 ? distancia : Mathf.Lerp(_distancia3, distancia, 1f - Mathf.Exp(-3f * dt));
             _camera.SetPositionAndRotation(pivo + rot * Vector3.back * _distancia3, rot);
+            if (_maosLivres) MirarPelaCameraDeTras();
+        }
+
+        /// <summary>
+        /// Na câmera de trás, com algo na mão (16/11/2026, a pedido: "em terceira pessoa não consigo mirar e nem atirar, deveria
+        /// dar igual nos prints"; GTA V, GTA IV, Days Gone): o corpo mira para o que está no meio da tela. O giro e o Pitch do
+        /// olhar sentado (pela rede, como na primeira pessoa) vão do peito dele até o ponto que a câmera vê; os braços com a
+        /// arma seguem (<see cref="BracosComArma"/>).
+        /// </summary>
+        void MirarPelaCameraDeTras()
+        {
+            Vector3 de = _camera.position, para = _camera.forward;
+            Vector3 alvo = Physics.Raycast(de, para, out var acerto, 80f, MascaraDoCenario, QueryTriggerInteraction.Ignore) ? acerto.point : de + para * 80f;
+            var peito = Peito;
+            Vector3 origem = peito != null ? peito.position : transform.position + transform.up * 1.2f;
+            Vector3 local = Quaternion.Inverse(transform.rotation) * (alvo - origem);
+            if (local.sqrMagnitude < 1e-4f) return;
+            _yaw = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -135f, 135f);
+            _pitch = Mathf.Clamp(-Mathf.Atan2(local.y, new Vector2(local.x, local.z).magnitude) * Mathf.Rad2Deg, -50f, 60f);
+            if (!_rede.IsOwner) return;
+            if (Mathf.Abs(_rede.Pitch.Value - _pitch) > 0.5f) _rede.Pitch.Value = _pitch;
+            if (Mathf.Abs(_rede.GiroSentado.Value - _yaw) > 1f) _rede.GiroSentado.Value = _yaw;
         }
 
         // o próprio corpo: só sombra na primeira pessoa (como fora do carro), inteiro na câmera de trás (o JogadorRede só
@@ -1053,7 +1127,7 @@ namespace ZombieCityCleaner.Player
             // o piloto da moto (16/11/2026): a arma aparece quando a mão sai do guidão (mirando ou atirando) e some quando
             // ela volta (a arma guardada)
             bool guardadaNoPiloto = Lugar == 0 && !(Carro.moto && ArmaDoPiloto(item) && _armaLevantada > 0.35f);
-            bool esconder = guardadaNoPiloto || (Carro.moto && GrandeParaAMoto(item));
+            bool esconder = guardadaNoPiloto || (Carro.moto && GrandeParaAMoto(item)) || _bracosDoCorpoEncolhidos;
             if (_naMaoFeito && esconder == _naMaoVisto && item == _itemVisto) return;
             _naMaoFeito = true;
             _naMaoVisto = esconder;

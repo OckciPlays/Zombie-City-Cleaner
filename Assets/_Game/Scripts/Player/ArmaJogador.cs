@@ -769,8 +769,9 @@ namespace ZombieCityCleaner.Player
         void Golpear(float alcance, float raio, float dano, bool faca, bool porRegiao, float corte)
         {
             var cam = rede.Olho;
+            Vector3 origem = OrigemDaMira(cam);
             Physics.SyncTransforms();   // as hitboxes andam com a animação
-            int n = Physics.SphereCastNonAlloc(cam.position, raio, cam.forward, _acertos, alcance, MascaraDoTiro, QueryTriggerInteraction.Ignore);
+            int n = Physics.SphereCastNonAlloc(origem, raio, cam.forward, _acertos, alcance, MascaraDoTiro, QueryTriggerInteraction.Ignore);
             System.Array.Sort(_acertos, 0, n, PorDistancia);
             var meuVeiculo = MeuVeiculo;
             for (int i = 0; i < n; i++)
@@ -779,7 +780,7 @@ namespace ZombieCityCleaner.Player
                 if (hit.collider == _corpo) continue;
                 if (meuVeiculo != null && hit.collider.transform.IsChildOf(meuVeiculo)) continue;   // (o garupa e os passageiros: o próprio veículo)
                 // uma esfera que já começa encostada não tem ponto: o mais perto do olho, no colisor
-                Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(cam.position) : hit.point;
+                Vector3 ponto = hit.distance <= 0f ? hit.collider.ClosestPoint(origem) : hit.point;
                 if (GolpeNoBicho(hit, ponto, dano, faca, cam)) return;   // um bicho (12/11/2026, a fauna: ArmaJogador.Fauna.cs)
                 var hitbox = hit.collider.GetComponent<Hitbox>();
                 // um sobrevivente: o golpe na cabeça vale mais (sem matar na hora), nos membros vale metade
@@ -922,7 +923,7 @@ namespace ZombieCityCleaner.Player
                 // (na terceira pessoa a câmera não treme: o tremor do braço e o calafrio entram aqui, no tiro)
                 var mira = rede.EmTerceiraPessoa && EfeitosDoCorpo.Local != null ? cam.rotation * EfeitosDoCorpo.Local.DesvioDaMira : cam.rotation;
                 Vector3 direcao = mira * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
-                impactos[k] = Disparar(cam.position, direcao, d);
+                impactos[k] = Disparar(OrigemDaMira(cam), direcao, d);
                 // o galão e o rastro da cerca de fogo (12/11/2026): o galão é um gatilho que o raio atravessa, e o rastro
                 // não tem colisor (a bala para no chão em cima dele)
                 var cercas = Loot.ConstrucoesNoMundo.Instancia;
@@ -1139,6 +1140,21 @@ namespace ZombieCityCleaner.Player
         }
 
         static bool EhMembro(RegiaoDoCorpo r) => r == RegiaoDoCorpo.Braco || r == RegiaoDoCorpo.Perna;
+
+        /// <summary>
+        /// De onde sai o tiro e o golpe: do olho; sentado com a câmera de trás (16/11/2026, a pedido: atirar na terceira pessoa
+        /// do veículo), da linha do meio da tela, mas a partir da altura do peito (o que está entre a câmera e o veículo não leva
+        /// o tiro, e o golpe alcança de perto como na primeira pessoa).
+        /// </summary>
+        Vector3 OrigemDaMira(Transform cam)
+        {
+            var passageiro = rede != null ? rede.Passageiro : null;
+            if (passageiro == null || !passageiro.NaCameraDeTras) return cam.position;
+            var peito = passageiro.Peito;
+            Vector3 corpo = peito != null ? peito.position : rede.transform.position + Vector3.up * 1.2f;
+            float t = Vector3.Dot(corpo - cam.position, cam.forward);
+            return t > 0f ? cam.position + cam.forward * t : cam.position;
+        }
 
         /// <summary>Um raio (o tiro, ou um chumbo): o efeito aqui, o acerto ao anfitrião e o que os outros devem ver.</summary>
         JogadorRede.Impacto Disparar(Vector3 origem, Vector3 direcao, DadosDaArma d)

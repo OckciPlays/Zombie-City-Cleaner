@@ -94,6 +94,8 @@ namespace ZombieCityCleaner.Player
             // o piloto só tira a mão do guidão para mirar e atirar; os outros, assim que sacam
             float w = piloto ? k : Mathf.SmoothStep(0f, 1f, _sacada);
             if (w <= 0.001f || _itemSentado == Loot.Item.Nada) return false;
+            // no dono, com os braços de primeira pessoa à vista, os do corpo estão encolhidos (BracosDoCorpoNaPrimeiraPessoa)
+            if (_bracosDoCorpoEncolhidos) return true;
 
             Vector3 frente = transform.forward, cima = transform.up, direita = transform.right;
             var e = EmpunhaduraDe(_itemSentado, maoD);
@@ -214,6 +216,27 @@ namespace ZombieCityCleaner.Player
             BracoPara(".R", livreD, dobraLivreD, palmaLivreD, a.maoDireita, a.cotoveloDireito, a.giroDireita, a.pesoDireita);
             BracoPara(".L", livreE, dobraLivreE, palmaLivreE, a.maoEsquerda, a.cotoveloEsquerdo, a.giroEsquerda, a.pesoEsquerda);
             return true;
+        }
+
+        bool _bracosDoCorpoEncolhidos;
+
+        /// <summary>
+        /// No dono, na moto e na primeira pessoa (onde o corpo dele aparece: as mãos no guidão e nas coxas), com os braços de
+        /// primeira pessoa à vista (o garupa com algo na mão): os braços do corpo e o que está na mão dele somem (16/11/2026, a
+        /// pedido: "parece que eu tenho um corpo 'molde' embaixo de mim": ele via a arma e as mãos duas vezes, as dos braços
+        /// de primeira pessoa e as do corpo). O braço encolhe no ombro, como o pescoço do <see cref="JogadorRede.CorpoSemCabeca"/>.
+        /// Os outros continuam vendo o corpo inteiro com a arma. O piloto armado não: ele vê o braço do corpo
+        /// (<see cref="ArmaNoCorpo"/>).
+        /// </summary>
+        void BracosDoCorpoNaPrimeiraPessoa() =>
+            EncolherBracosDoCorpo(_rede.IsOwner && Carro != null && Carro.moto && _fase == Fase.Dentro && !_terceira && _maosLivres && !ArmaNoCorpo);
+
+        void EncolherBracosDoCorpo(bool encolher)
+        {
+            if (encolher == _bracosDoCorpoEncolhidos) return;
+            _bracosDoCorpoEncolhidos = encolher;
+            foreach (var l in new[] { ".L", ".R" })
+                if (_ossos.TryGetValue("upper_arm" + l, out var braco)) braco.localScale = encolher ? Vector3.one * 0.001f : Vector3.one;
         }
 
         /// <summary>A distância mínima (m) de qualquer ponto da arma do garupa ao olho do piloto.</summary>

@@ -4554,6 +4554,24 @@ jogador atrás ligado a lanterna".
     fica a 0,33–0,50 m do olho do piloto, e o ponto dela mais perto do centro da visão dele a 60° ou mais (a visão vai a
     ~51° para os lados): olhando para a frente, ele não vê a arma do garupa. Fotos em
     `D:\teste blender\A Moto\renders\v5\arma_garupa_e_piloto.png`. Nenhum erro no Console.
+  - **O "corpo molde" (16/11/2026, a pedido: "parece que eu tenho um corpo 'molde' embaixo de mim"):** na moto, na
+    primeira pessoa, o corpo do dono aparece (as mãos no guidão e nas coxas, 07/11); com os braços de primeira pessoa à
+    vista (o garupa com algo na mão, ou de mãos vazias, os punhos), o corpo segurava a arma também, e ele via duas armas e
+    dois pares de mãos. `BracosDoCorpoNaPrimeiraPessoa` (no dono, na moto, na primeira pessoa, com as mãos livres e sem
+    ser o piloto armado): os braços do corpo encolhem no ombro (`upper_arm` a 0,001, como o pescoço) e a arma do corpo some
+    (`AcertarNaMao`); voltam ao descer, na câmera de trás e quando o corpo muda. Os outros veem tudo.
+  - **O vigor sentado (16/11/2026, a pedido: "a estamina não recupera quando estou sentado"):** ele só voltava no
+    `MovimentoPrimeiraPessoa`, desligado no veículo; agora o `PassageiroDoCarro` (no dono) chama o `VigorDoJogador.Passo`
+    como parado (cheio em ~10 s). O vigor nasce na primeira vez que ele anda: o passageiro o pega (ou cria) quando precisa.
+  - **Mirar e atirar na câmera de trás (16/11/2026, a pedido: "em terceira pessoa não consigo mirar e nem atirar, deveria
+    dar igual nos prints"):** as mãos livres não exigem mais a primeira pessoa (`MaosLivresAgora`). Na câmera de trás, com
+    algo na mão: a câmera desliza em 0,3 s para cima do ombro direito de quem senta, a 2,2 m (`_ombroDaCamera`; atrás do
+    corpo, a mira do meio da tela ficava nas costas dele); o corpo mira no ponto que a câmera vê (`MirarPelaCameraDeTras`:
+    o giro e o Pitch da rede, do peito até o ponto); os braços de primeira pessoa somem e o clarão sai da arma do corpo
+    (`ArmaNoCorpo`); o tiro e o golpe saem na linha do meio da tela a partir da altura do peito
+    (`ArmaJogador.OrigemDaMira`: o que está entre a câmera e o veículo não leva o tiro). Sem nada na mão, a câmera de trás é
+    a de antes. Teste: `PassageiroDoCarro.CameraDeTrasDeTeste`. Conferido no Play (Fat Boy, cross, caminhonete): o peito
+    fica 0,55 m ao lado e ~0,5 m abaixo da linha da mira.
   - **A lanterna do garupa:** conferida de novo: sai do peito dele (0,44 m do olho do piloto na Fat Boy, 0,51 na cross),
     sem sombra, com a força de sempre; da visão do piloto, sem a sombra da moto.
   - **Não conferido:** o piloto com o motor ligado atirando de verdade (o clique, a primeira pessoa com o braço do
