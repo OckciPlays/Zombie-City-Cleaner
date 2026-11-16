@@ -88,6 +88,7 @@ namespace ZombieCityCleaner.Sobreviventes
             PlantaDaBase.Esquecer();   // (o mundo anterior não fica preso no cache das plantas)
             ApagarConstrucoes();
             _estados.Clear();
+            _aAparecer.Clear();
             _bases.Clear();
             if (d != null) _bases.AddRange(d.BasesMilitares);
             while (_estados.Count < _bases.Count) _estados.Add(new Estado());
@@ -118,6 +119,14 @@ namespace ZombieCityCleaner.Sobreviventes
             if (_dados == null) return;
             AtualizarConstrucoes();
             if (!Servidor) return;
+            // os militares aparecem um por quadro (16/11/2026, o teste de desempenho: todos num quadro só travavam a chegada)
+            if (_aAparecer.Count > 0)
+            {
+                var (g, criar) = _aAparecer[0];
+                _aAparecer.RemoveAt(0);
+                g.nascendo = Mathf.Max(0, g.nascendo - 1);
+                criar();
+            }
             float agora = Time.time;
             if (agora >= _proximoPensar)
             {
@@ -154,6 +163,9 @@ namespace ZombieCityCleaner.Sobreviventes
             }
         }
 
+        // os que ainda vão aparecer (o sorteio é feito todo no Povoar)
+        readonly List<(GrupoDeSobreviventes grupo, System.Action criar)> _aAparecer = new List<(GrupoDeSobreviventes, System.Action)>();
+
         void Povoar(int b, PlantaDaBase p, Estado e, GameObject prefab)
         {
             var g = new GrupoDeSobreviventes { cidade = -1, baseMilitar = b, quantos = p.Militares };
@@ -164,26 +176,32 @@ namespace ZombieCityCleaner.Sobreviventes
                 var arma = r < 50 ? TipoDeArma.Rifle : r < 75 ? TipoDeArma.Espingarda : r < 90 ? TipoDeArma.Sniper : TipoDeArma.Submetralhadora;
                 int sementeDaRoupa = s.Next();
                 if ((e.mortos & (1 << i)) != 0) continue;   // este morreu
-                var posto = p.Postos[i];
-                var pos = NoChao(p.Mundo(posto.pos));
-                var go = Instantiate(prefab, pos, Quaternion.Euler(0f, p.GiroNoMundo(posto.giro), 0f));
-                var sob = go.GetComponent<Sobrevivente>();
-                sob.Identidade.Value = new IdentidadeDoSobrevivente
+                int indice = i;
+                g.nascendo++;
+                _aAparecer.Add((g, () =>
                 {
-                    semente = sementeDaRoupa, arma = arma, roupa = 1, grupo = (ushort)(GrupoBase + b), papel = PapelDoSobrevivente.Militar, indice = (byte)i,
-                };
-                sob.grupo = g;
-                sob.baseMilitar = b;
-                sob.nome = "Militar";
-                sob.posto = pos;
-                sob.ronda = NoChao(p.Mundo(posto.ronda));
-                sob.giroDoPosto = p.GiroNoMundo(posto.giro);
-                SobreviventesDoMundo.Encher(sob, arma, true);
-                go.GetComponent<NetworkObject>().Spawn(true);
-                g.membros.Add(sob);
+                    if (e.grupo != g) return;   // (saíram antes de aparecer)
+                    var posto = p.Postos[indice];
+                    var pos = NoChao(p.Mundo(posto.pos));
+                    var go = Instantiate(prefab, pos, Quaternion.Euler(0f, p.GiroNoMundo(posto.giro), 0f));
+                    var sob = go.GetComponent<Sobrevivente>();
+                    sob.Identidade.Value = new IdentidadeDoSobrevivente
+                    {
+                        semente = sementeDaRoupa, arma = arma, roupa = 1, grupo = (ushort)(GrupoBase + b), papel = PapelDoSobrevivente.Militar, indice = (byte)indice,
+                    };
+                    sob.grupo = g;
+                    sob.baseMilitar = b;
+                    sob.nome = "Militar";
+                    sob.posto = pos;
+                    sob.ronda = NoChao(p.Mundo(posto.ronda));
+                    sob.giroDoPosto = p.GiroNoMundo(posto.giro);
+                    SobreviventesDoMundo.Encher(sob, arma, true);
+                    go.GetComponent<NetworkObject>().Spawn(true);
+                    g.membros.Add(sob);
+                }));
             }
             e.grupo = g;
-            Debug.Log($"[Bases] Os militares da {p.Lugar.Nome} apareceram: {g.membros.Count} de {p.Militares}.");
+            Debug.Log($"[Bases] Os militares da {p.Lugar.Nome} vão aparecer, um por quadro: {g.nascendo} de {p.Militares}.");
         }
 
         // o ponto do NavMesh no chão perto do lugar (sem o NavMesh ainda, longe dos jogadores: o próprio lugar, no chão)
@@ -192,6 +210,9 @@ namespace ZombieCityCleaner.Sobreviventes
 
         void Recolher(Estado e)
         {
+            var g = e.grupo;
+            _aAparecer.RemoveAll(x => x.grupo == g);
+            g.nascendo = 0;
             foreach (var m in e.grupo.membros.ToArray())
             {
                 if (m == null) continue;

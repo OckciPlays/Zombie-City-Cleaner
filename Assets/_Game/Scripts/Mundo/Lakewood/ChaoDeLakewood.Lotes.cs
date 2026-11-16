@@ -47,7 +47,8 @@ namespace ZombieCityCleaner.Mundo
             public float DistanciaDaConstrucao(float x, float z)
             {
                 var l = Lote.NoLote(new Vector2(x, z));
-                float dx = Mathf.Max(Construcao.xMin - l.x, 0f, l.x - Construcao.xMax), dz = Mathf.Max(Construcao.yMin - l.y, 0f, l.y - Construcao.yMax);
+                // (16/11/2026: o Mathf.Max de três números cria um array a cada chamada; dois de dois, nenhum)
+                float dx = Mathf.Max(Mathf.Max(Construcao.xMin - l.x, 0f), l.x - Construcao.xMax), dz = Mathf.Max(Mathf.Max(Construcao.yMin - l.y, 0f), l.y - Construcao.yMax);
                 return Mathf.Sqrt(dx * dx + dz * dz);
             }
 

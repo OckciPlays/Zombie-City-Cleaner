@@ -50,25 +50,27 @@ namespace ZombieCityCleaner.UI
 
         void IrParaEmLakewood(float x, float z)
         {
-            var chao = Lakewood.Chao;
-            var mapa = Lakewood.mapa;
+            var chao = Lakewood.ChaoNoMapa;
+            var mapa = Lakewood.Mapa;
             x = Mathf.Clamp(x, 30f, mapa.largura - 30f);
             z = Mathf.Clamp(z, 30f, mapa.comprimento - 30f);
             float h = chao.Altura(x, z);
             if (chao.Agua(x, z, out float nivel)) h = Mathf.Max(h, nivel);
             GetComponent<PassageiroDoCarro>().Soltar();
-            // se a colisão ainda não estiver pronta, o LakewoodNaCena devolve o jogador à superfície
-            Movimento.Teleportar(new Vector3(x, Movimento.Voando ? Mathf.Max(transform.position.y, h + 0.3f) : h + 0.3f, z), transform.eulerAngles.y);
-            Avisar($"Em x {x:F0}, z {z:F0} (setor {mapa.NomeDoSetorEm(x, z)}).");
+            // se a colisão ainda não estiver pronta, o LakewoodNaCena devolve o jogador à superfície. O x e o z são os do mapa
+            // (os das imagens e do plano: a origem no canto sudoeste); o jogador vai para o ponto do mundo (OrigemDeLakewood)
+            var noMundo = OrigemDeLakewood.NoMundo(new Vector3(x, Movimento.Voando ? Mathf.Max(transform.position.y, h + 0.3f) : h + 0.3f, z));
+            Movimento.Teleportar(noMundo, transform.eulerAngles.y);
+            Avisar($"Em x {x:F0}, z {z:F0} do mapa (setor {mapa.NomeDoSetorEm(x, z)}).");
         }
 
         /// <summary>Os lugares do "ir para": a partida, o meio, a barragem, as cidades, os lugares e as ilhas.</summary>
         List<(string nome, Vector2 ponto)> LugaresDeLakewood()
         {
             if (_lugaresDeLakewood != null) return _lugaresDeLakewood;
-            var d = Lakewood.mapa;
+            var d = Lakewood.Mapa;
             var l = new List<(string, Vector2)> { ("A partida", new Vector2(Lakewood.partida.x, Lakewood.partida.z)), ("O meio do mapa", d.Meio) };
-            if (d.represa.Tem) l.Add((d.represa.nome, d.represa.Meio + Lakewood.Chao.Relevo.Jusante * 120f));
+            if (d.represa.Tem) l.Add((d.represa.nome, d.represa.Meio + Lakewood.ChaoNoMapa.Relevo.Jusante * 120f));
             foreach (var c in d.cidades) l.Add((c.nome, c.centro));
             foreach (var lg in d.lugares) l.Add((lg.nome, lg.ponto));
             foreach (var il in d.ilhas)
@@ -94,7 +96,7 @@ namespace ZombieCityCleaner.UI
             var frente = transform.forward;
             frente.y = 0f;
             var ponto = transform.position + frente.normalized * 4.5f;
-            ponto.y = Lakewood.Chao.Altura(ponto.x, ponto.z) + 0.6f;
+            ponto.y = Lakewood.ChaoNoMundo.Altura(ponto.x, ponto.z) + 0.6f;
             var corpo = escolhido.GetComponent<Rigidbody>();
             corpo.linearVelocity = Vector3.zero;
             corpo.angularVelocity = Vector3.zero;
@@ -107,7 +109,7 @@ namespace ZombieCityCleaner.UI
         Rect PainelDeLakewood(float u, Rect menu)
         {
             var lw = Lakewood;
-            if (lw == null || lw.Chao == null) return default;
+            if (lw == null || lw.ChaoNoMapa == null) return default;
             var lugares = LugaresDeLakewood();
             int linhasDeLugares = (lugares.Count + 1) / 2;
             var area = new Rect(menu.xMax + 8 * u, menu.y, 300 * u, (330 + 32 * linhasDeLugares) * u);
@@ -122,10 +124,11 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(x, y, w, 22 * u), "LAKEWOOD", _titulo);
             y += 26 * u;
             var p = transform.position;
-            float chao = lw.Chao.Altura(p.x, p.z);
-            string agua = lw.Chao.Agua(p.x, p.z, out float nivel) ? $", água {nivel:F1}" : "";
+            var noMapa = OrigemDeLakewood.NoMapa(p);   // (o x e o z que aparecem são os do mapa, os das imagens)
+            float chao = lw.ChaoNoMundo.Altura(p.x, p.z);
+            string agua = lw.ChaoNoMundo.Agua(p.x, p.z, out float nivel) ? $", água {nivel:F1}" : "";
             GUI.Label(new Rect(x, y, w, 72 * u),
-                $"Você: x {p.x:F0}, z {p.z:F0}, altura {p.y:F1} · setor {lw.SetorDe(p)}\nchão {chao:F1}{agua} · {_velocidadeLw:F0} km/h\n" +
+                $"Você: x {noMapa.x:F0}, z {noMapa.z:F0} do mapa, altura {p.y:F1} · setor {lw.SetorDe(p)}\nchão {chao:F1}{agua} · {_velocidadeLw:F0} km/h\n" +
                 $"{lw.Blocos} blocos ({lw.BlocosComColisao} com colisão), {lw.PlantasNaVista} plantas", _texto);
             y += 76 * u;
             float bw = (w - 8 * u) / 2f;
@@ -137,7 +140,7 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y, bw, 26 * u), "Marcar aqui", _botao))
             {
                 _marcaLw = p;
-                Avisar($"Marca em x {p.x:F0}, z {p.z:F0}.");
+                Avisar($"Marca em x {noMapa.x:F0}, z {noMapa.z:F0} do mapa.");
             }
             if (GUI.Button(new Rect(x + bw + 8 * u, y, bw, 26 * u), "Tirar a marca", _botao)) _marcaLw = null;
             y += 30 * u;

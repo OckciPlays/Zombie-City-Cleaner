@@ -32,7 +32,7 @@ namespace ZombieCityCleaner.Fauna
             get
             {
                 var chao = ChaoDoLakewood;
-                return chao != null && chao.Relevo.LinhasDosRios != null && chao.Relevo.LinhasDosRios.Length > 0;
+                return chao != null && chao.NoMapa.Relevo.LinhasDosRios != null && chao.NoMapa.Relevo.LinhasDosRios.Length > 0;
             }
         }
 
@@ -45,8 +45,11 @@ namespace ZombieCityCleaner.Fauna
             p = default;
             correnteza = Vector3.forward;
             largura = 0f;
-            var chao = ChaoDoLakewood;
-            if (chao == null) return false;
+            // (as linhas dos rios estão no mapa: a conta é no mapa, e o ponto escolhido volta para o mundo; OrigemDeLakewood)
+            var vista = ChaoDoLakewood;
+            if (vista == null) return false;
+            var chao = vista.NoMapa;
+            perto = OrigemDeLakewood.NoMapa(perto);
             var rel = chao.Relevo;
             var linhas = rel.LinhasDosRios;
             if (linhas == null) return false;
@@ -78,12 +81,13 @@ namespace ZombieCityCleaner.Fauna
                 if (chao.NoLago(c.x, c.y)) continue;
                 if (chao.EstradaPerto(c.x, c.y, 30f, out _, out _, out _, out _)) continue;   // (13/11: longe das pontes e das estradas)
                 float nivel = rel.NiveisDosRios[pr.rio][pr.i];
-                if (AguaEm(c.x, c.y, out float nivelAqui) > 0.2f) nivel = nivelAqui;
+                var noMundo = OrigemDeLakewood.NoMundo(c);
+                if (AguaEm(noMundo.x, noMundo.y, out float nivelAqui) > 0.2f) nivel = nivelAqui;
                 else continue;
                 Vector2 dir = L[pr.i + 1] - L[pr.i - 1];
                 if (dir.sqrMagnitude < 0.0001f) continue;
                 dir.Normalize();
-                p = new Vector3(c.x, nivel, c.y);
+                p = new Vector3(noMundo.x, nivel, noMundo.y);
                 correnteza = new Vector3(dir.x, 0f, dir.y);
                 largura = MapaDeLakewood.LarguraDoRio(chao.Mapa.rios[pr.rio], rel.FracoesDosRios[pr.rio][pr.i]);
                 return true;

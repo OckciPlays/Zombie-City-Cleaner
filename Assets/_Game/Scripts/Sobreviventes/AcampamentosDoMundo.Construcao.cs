@@ -336,7 +336,7 @@ namespace ZombieCityCleaner.Sobreviventes
             go.AddComponent<MeshRenderer>().sharedMaterial = material;
             var colisao = casa.col.ParaMesh("Casa do acampamento (colisão)");
             c.Malhas.Add(colisao);
-            go.AddComponent<MeshCollider>().sharedMesh = colisao;
+            Colisores.NovoVazio(go).sharedMesh = colisao;   // (sem cozer a malha do desenho antes: Colisores)
             if (nova != null) MobiliaDaConstrucao.Por(go, pontos, nova, planta.semente, -100);
 
             // os pisos (os passos), a caixa de dentro (a neblina de dentro) e o eco

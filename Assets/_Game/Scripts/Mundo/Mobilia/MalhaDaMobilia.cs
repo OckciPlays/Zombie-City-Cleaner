@@ -83,14 +83,9 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>O Mesh (na thread principal).</summary>
         public Mesh ParaMesh(string nome)
         {
-            var m = new Mesh { name = nome, indexFormat = V.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
-            m.SetVertices(V);
-            m.SetNormals(N);
-            m.SetUVs(0, U0);
-            m.SetUVs(1, U1);
-            m.SetColors(C);
-            m.SetTriangles(T, 0);
-            m.RecalculateBounds();
+            // (16/11/2026: os canais de uma vez, EscritaDaMalha)
+            var m = new Mesh { name = nome };
+            EscritaDaMalha.Escrever(m, V, N, U0, T, uv1: U1, cor: C);
             return m;
         }
     }

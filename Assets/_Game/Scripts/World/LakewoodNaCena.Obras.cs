@@ -45,7 +45,12 @@ namespace ZombieCityCleaner.World
             public readonly List<(MeshCollider c, Mesh m, Task t)> Cozinhando = new List<(MeshCollider, Mesh, Task)>();
             public float QueridaEm = -100f;
             public bool Querida, Falhou;
+            // a etapa da obra pronta indo para a cena (16/11/2026: uma por quadro; 0 é a primeira)
+            public int Etapa;
         }
+
+        // a obra que está entrando na cena, em etapas (ela termina antes de outra começar)
+        ObraNaCena _emCurso;
 
         readonly List<ObraNaCena> _obras = new List<ObraNaCena>();
         Transform _paiDasObras;
@@ -72,7 +77,8 @@ namespace ZombieCityCleaner.World
                 ObrasDeLakewood.CaixaDeLonge(l.Plano, longe);
                 // com o material das casas (o abandono), como a obra de verdade: a troca não muda a cor
                 var go = Objeto($"{l.Lote.cidade}: {l.Plano.Nome} (de longe)", longe.ParaMesh($"Obra de longe {l.Indice}"), materialDasCasas != null ? materialDasCasas : materialDaCidade, pai);
-                go.transform.SetPositionAndRotation(l.NoMundo(0f, 0f), l.Rotacao);
+                // (o "NoMundo" do lote é no espaço do mapa: embaixo da raiz deslocada, a posição local)
+                go.transform.SetLocalPositionAndRotation(l.NoMundo(0f, 0f), l.Rotacao);
                 go.isStatic = false;
                 _obras.Add(new ObraNaCena { Lote = l, Plano = l.Plano, Longe = go.GetComponent<MeshRenderer>() });
                 if (!caminhos.TryGetValue(l.Lote.cidade, out var m)) caminhos[l.Lote.cidade] = m = new MalhaDeObra();
@@ -98,7 +104,8 @@ namespace ZombieCityCleaner.World
             h.nomeNaTorre = new[] { "LAKEWOOD", "COUNTY", "HOSPITAL" };
             h.arquivoDosPapeis = "Documentos/Hospital_Lakewood";
             var meio = l.Plano.Meio;
-            h.Fixar(l.NoMundo(meio.x, meio.y, 0.05f + PlantaDoHospital.Embasamento), l.Lote.giro, mapa.semente);
+            // (o hospital fica fora da raiz: no mundo)
+            h.Fixar(OrigemDeLakewood.NoMundo(l.NoMundo(meio.x, meio.y, 0.05f + PlantaDoHospital.Embasamento)), l.Lote.giro, mapa.semente);
             Debug.Log($"[Lakewood] O hospital ({l.Lote.cidade}): em ({l.Lote.meio.x:F0}; {l.Lote.meio.y:F0}), de frente para a {l.Lote.rua}.");
         }
 
@@ -187,8 +194,9 @@ namespace ZombieCityCleaner.World
             if (_obras.Count == 0) return;
             _centros.Clear();
             var cam = Camera.main;
-            if (cam != null) _centros.Add(cam.transform.position);
-            foreach (var j in JogadorRede.Todos) if (j != null) _centros.Add(j.transform.position);
+            // (no mundo: vão para o mapa, o dos lotes)
+            if (cam != null) _centros.Add(OrigemDeLakewood.NoMapa(cam.transform.position));
+            foreach (var j in JogadorRede.Todos) if (j != null) _centros.Add(OrigemDeLakewood.NoMapa(j.transform.position));
             float raio = _semNeblina ? Mathf.Max(raioDasObras, raioDasObrasSemNeblina) : raioDasObras;
             float r2 = raio * raio;
             int montando = 0;
@@ -225,7 +233,6 @@ namespace ZombieCityCleaner.World
                 _proximaObra = Time.time + 0.25f;
                 RevisarAsObras();
             }
-            bool fez = false;
             foreach (var o in _obras)
             {
                 for (int k = o.Cozinhando.Count - 1; k >= 0; k--)
@@ -247,13 +254,26 @@ namespace ZombieCityCleaner.World
                     o.Pronta = o.Montando.Result;
                     o.Montando = null;
                 }
-                // a pronta espera a vez dela (uma por quadro)
                 if (o.Pronta == null) continue;
-                if (!o.Querida) { Devolver(o.Pronta); o.Pronta = null; continue; }
-                if (fez) continue;
-                PorAObra(o);
-                fez = true;
+                // a que deixou de ser querida (ou que saiu da cena no meio das etapas) volta
+                if (!o.Querida || (o.Etapa > 0 && o.Perto == null))
+                {
+                    if (o.Perto != null) TirarAObra(o);
+                    Devolver(o.Pronta);
+                    o.Pronta = null;
+                    o.Etapa = 0;
+                    if (_emCurso == o) _emCurso = null;
+                }
             }
+            // uma etapa por quadro: a da obra que já está entrando, ou a primeira pronta
+            if (_emCurso == null || _emCurso.Pronta == null)
+            {
+                _emCurso = null;
+                foreach (var o in _obras)
+                    if (o.Pronta != null) { _emCurso = o; break; }
+            }
+            if (_emCurso != null && !PorAObra(_emCurso)) return;
+            _emCurso = null;
         }
 
         static void Devolver(ObraPronta p)
@@ -269,23 +289,64 @@ namespace ZombieCityCleaner.World
             p.MaisPichacoes.Clear();
         }
 
-        // a obra pronta na cena (como o PorCasas do mundo sorteado)
-        void PorAObra(ObraNaCena o)
+        // a obra pronta na cena (como o PorCasas do mundo sorteado), em etapas, uma por quadro (16/11/2026: tudo num quadro
+        // dava de 20 a 60 ms numa casa): a casa, a hera e as pichações, os móveis antigos, a mobília nova e as portas, e a
+        // colisão com o resto. A caixa de longe fica até o fim. Devolve se terminou.
+        bool PorAObra(ObraNaCena o)
         {
             var p = o.Pronta;
             var c = p.Casa;
             var l = o.Lote;
-            var go = new GameObject($"{l.Lote.cidade}: {c.Nome} (lote {l.Indice})");
-            go.transform.SetParent(_paiDasObras, false);
-            // a loja de armas tem o chão de fora 15 cm abaixo da porta (a origem dela)
-            float acima = o.Plano.Uso == UsoDoLote.LojaDeArmas ? 0.03f - PlantaDaLojaDeArmas.ChaoDeFora : 0f;
-            go.transform.SetPositionAndRotation(l.NoMundo(o.Plano.Meio.x, o.Plano.Meio.y, acima), Quaternion.Euler(0f, l.Lote.giro + o.Plano.GiroNoLote, 0f));
-            o.Perto = go;
-            var desenho = p.Desenho.ParaMesh(c.Nome);
-            o.Malhas.Add(desenho);
-            go.AddComponent<MeshFilter>().sharedMesh = desenho;
-            var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = materialDasCasas != null ? materialDasCasas : materialDaCidade;
+            var go = o.Perto;
+            switch (o.Etapa)
+            {
+                case 0:
+                {
+                    go = new GameObject($"{l.Lote.cidade}: {c.Nome} (lote {l.Indice})");
+                    // (cada obra na raiz da cena, no lugar que teria embaixo do pai das obras: a Unity cuida de cada raiz à
+                    // parte, e numa só, com o chão e as outras obras, cada uma que entrava aumentava e copiava a de todas)
+                    // a loja de armas tem o chão de fora 15 cm abaixo da porta (a origem dela)
+                    float acima = o.Plano.Uso == UsoDoLote.LojaDeArmas ? 0.03f - PlantaDaLojaDeArmas.ChaoDeFora : 0f;
+                    var local = l.NoMundo(o.Plano.Meio.x, o.Plano.Meio.y, acima);
+                    var giro = Quaternion.Euler(0f, l.Lote.giro + o.Plano.GiroNoLote, 0f);
+                    go.transform.SetPositionAndRotation(_paiDasObras.TransformPoint(local), _paiDasObras.rotation * giro);
+                    o.Perto = go;
+                    var desenho = p.Desenho.ParaMesh(c.Nome);
+                    o.Malhas.Add(desenho);
+                    go.AddComponent<MeshFilter>().sharedMesh = desenho;
+                    var r = go.AddComponent<MeshRenderer>();
+                    r.sharedMaterial = materialDasCasas != null ? materialDasCasas : materialDaCidade;
+                    o.Etapa = 1;
+                    return false;
+                }
+                case 1:
+                    PorOAbandono(o, go, p, c);
+                    o.Etapa = 2;
+                    return false;
+                case 2:
+                    // os móveis da loja de armas (os prefabs da mobília nova, sem a colisão do corpo: a dela está na da obra)
+                    if (p.MoveisDaLoja.Count > 0) MoveisDaLojaDeArmasNaCena(go, p);
+                    Devolver(p);
+                    // os móveis antigos (as lojas, o posto)
+                    MoveisDaConstrucao.Por(go, c.Moveis);
+                    o.Etapa = 3;
+                    return false;
+                case 3:
+                    // a mobília nova (as casas; com o saque) e as portas que abrem
+                    if (MobiliaNovaDoMundo.Instancia != null && c.MobiliaNova != null) MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100);
+                    c.MobiliaNova = null;
+                    if (PortasDoMundo.Instancia != null) PortasDaConstrucao.Por(go, c.Portas, c.Janelas, c.Semente);
+                    o.Etapa = 4;
+                    return false;
+            }
+            PorOResto(o, go, p, c);
+            o.Etapa = 0;
+            return true;
+        }
+
+        // a hera, as pichações e as marcas (a etapa 1)
+        void PorOAbandono(ObraNaCena o, GameObject go, ObraPronta p, MalhasDasCasas.CasaPronta c)
+        {
             if (p.Hera != null && p.Hera.Folhas > 0 && materialDaHera != null)
             {
                 var h = new GameObject("Hera");
@@ -311,18 +372,15 @@ namespace ZombieCityCleaner.World
             // as marcas e as pichações das partes da loja de armas
             for (int k = 0; k < p.Marcas.Count; k++) Junto(go, o, p.Marcas[k], materialDasMarcas, $"{c.Nome} (marcas {k})");
             for (int k = 0; k < p.MaisPichacoes.Count; k++) Junto(go, o, p.MaisPichacoes[k], materialDasPichacoes, $"{c.Nome} (pichações {k})");
-            // os móveis da loja de armas (os prefabs da mobília nova, sem a colisão do corpo: a dela está na da obra)
-            if (p.MoveisDaLoja.Count > 0) MoveisDaLojaDeArmasNaCena(go, p);
-            Devolver(p);
-            // os móveis: os antigos (as lojas, o posto) e a mobília nova (as casas; com o saque), e as portas que abrem
-            MoveisDaConstrucao.Por(go, c.Moveis);
-            if (MobiliaNovaDoMundo.Instancia != null && c.MobiliaNova != null) MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100);
-            c.MobiliaNova = null;
-            if (PortasDoMundo.Instancia != null) PortasDaConstrucao.Por(go, c.Portas, c.Janelas, c.Semente);
+        }
+
+        // a colisão, as caixas, os pisos, a caixa de dentro, o eco e os carros parados (a última etapa)
+        void PorOResto(ObraNaCena o, GameObject go, ObraPronta p, MalhasDasCasas.CasaPronta c)
+        {
             // a colisão cozida em outra thread
             var col = c.Colisao.ParaMesh($"{c.Nome} (colisão)");
             o.Malhas.Add(col);
-            var colisor = go.AddComponent<MeshCollider>();
+            var colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             colisor.enabled = false;
             var id = col.GetEntityId();
             o.Cozinhando.Add((colisor, col, Task.Run(() => Physics.BakeMesh(id, false))));

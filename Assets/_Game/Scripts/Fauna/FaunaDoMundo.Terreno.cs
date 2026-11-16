@@ -16,7 +16,8 @@ namespace ZombieCityCleaner.Fauna
     {
         static IMundoDoJogo Mapa => MundoDoJogo.Atual;
 
-        static ChaoDeLakewood ChaoDoLakewood => DadosDoMapa == null && LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.Chao : null;
+        // (16/11/2026, OrigemDeLakewood: os bichos estão no mundo do jogo; a vista do chão no mundo converte os pontos)
+        static ChaoNoMundo ChaoDoLakewood => DadosDoMapa == null && LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.ChaoNoMundo : null;
 
         /// <summary>O mundo da cena tem o mapa para os bichos (o sorteado com a floresta, ou o Lakewood).</summary>
         internal static bool TemMapa => DadosDoMapa?.Floresta != null || ChaoDoLakewood != null;
@@ -76,14 +77,14 @@ namespace ZombieCityCleaner.Fauna
         /// coníferas, com as manchas de uns 250 m da mata mista e a rebrota nas clareiras; acima de 480 m, a serra), o campo,
         /// a lavoura, a rocha (a serra) e a área urbana de fora dos lotes (o baldio).
         /// </summary>
-        internal static Mancha ManchaDoLakewood(ChaoDeLakewood chao, float x, float z)
+        internal static Mancha ManchaDoLakewood(ChaoNoMundo chao, float x, float z)
         {
             if (chao.Agua(x, z, out _)) return Mancha.Nada;
             var lote = chao.LoteEm(x, z, 2f);
             if (lote != null) return lote.Plano != null ? Mancha.Quintal : Mancha.Baldio;
             if (chao.NaCidadeComLotes(x, z)) return Mancha.Baldio;
             if (chao.Agua(x, z, out _, 35f)) return Mancha.Beira;
-            switch (chao.Mapa.CoberturaEm(x, z))
+            switch (chao.CoberturaEm(x, z))
             {
                 case Cobertura.Campo: return Mancha.Campo;
                 case Cobertura.Lavoura: return Mancha.Lavoura;
@@ -92,8 +93,9 @@ namespace ZombieCityCleaner.Fauna
                 case Cobertura.Agua: return Mancha.Beira;
             }
             if (chao.Clareira(x, z) > 0.45f) return Mancha.Rebrota;
-            if (chao.Relevo.Altura(x, z) > 480f) return Mancha.Serra;
-            float mista = Mathf.PerlinNoise(x * 0.004f + 31.7f, z * 0.004f + 12.3f);
+            if (chao.AlturaDoRelevo(x, z) > 480f) return Mancha.Serra;
+            // (as manchas da mata mista pelo ponto do mapa: as mesmas de antes da origem no meio)
+            float mista = Mathf.PerlinNoise((x + OrigemDeLakewood.X) * 0.004f + 31.7f, (z + OrigemDeLakewood.Z) * 0.004f + 12.3f);
             return mista > 0.58f ? Mancha.Mista : Mancha.Coniferas;
         }
     }

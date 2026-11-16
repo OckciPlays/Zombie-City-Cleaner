@@ -101,7 +101,7 @@ namespace ZombieCityCleaner.UI
             // (12/11/2026) o Lakewood, com a partida começada
             var lakewood = dados == null && LakewoodNaCena.Instancia != null && MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Pronto
                 ? LakewoodNaCena.Instancia : null;
-            object fonte = (object)dados ?? lakewood?.Chao;
+            object fonte = (object)dados ?? lakewood?.ChaoNoMapa;
             if (fonte != _fonte)
             {
                 // outro mundo (ou nenhum): a imagem do anterior sai, e a deste é pintada em outra thread
@@ -122,10 +122,11 @@ namespace ZombieCityCleaner.UI
                 }
                 else if (lakewood != null)
                 {
-                    var mapa = lakewood.mapa;
-                    var relevo = lakewood.Chao.Relevo;
+                    var mapa = lakewood.Mapa;
+                    var relevo = lakewood.ChaoNoMapa.Relevo;
                     int w = resolucao, h = PintorDeLakewood.AlturaPara(mapa, w);
-                    _area = new Rect(0f, 0f, mapa.largura, mapa.comprimento);
+                    // (a imagem é pintada no mapa e posta na área do mundo: OrigemDeLakewood, 16/11/2026)
+                    _area = OrigemDeLakewood.NoMundo(new Rect(0f, 0f, mapa.largura, mapa.comprimento));
                     _largura = w;
                     _altura = h;
                     _pintando = Task.Run(() => ComMipmaps(PintorDeLakewood.Pintar(mapa, relevo, w), w, h));
@@ -202,7 +203,7 @@ namespace ZombieCityCleaner.UI
             {
                 if (r.Cor.a < 0.6f) continue;   // (os nomes dos setores)
                 int nivel = r.Tamanho >= 300f ? 0 : r.Tamanho >= 210f ? 1 : r.Tamanho >= 170f ? 2 : 3;
-                lista.Add(new PintorDoMapa.Rotulo { Ponto = r.Ponto, Texto = r.Texto, Nivel = nivel });
+                lista.Add(new PintorDoMapa.Rotulo { Ponto = OrigemDeLakewood.NoMundo(r.Ponto), Texto = r.Texto, Nivel = nivel });
             }
             return lista;
         }

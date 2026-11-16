@@ -21,7 +21,7 @@ namespace ZombieCityCleaner.World
         public int Semente => _semente.Value;
 
         /// <summary>A partida começou no Lakewood: o objeto na rede, a semente sorteada e o chão montado.</summary>
-        public bool Pronto => IsSpawned && _semente.Value != 0 && LakewoodNaCena.Instancia != null && LakewoodNaCena.Instancia.Chao != null;
+        public bool Pronto => IsSpawned && _semente.Value != 0 && LakewoodNaCena.Instancia != null && LakewoodNaCena.Instancia.ChaoNoMapa != null;
 
         void Awake()
         {

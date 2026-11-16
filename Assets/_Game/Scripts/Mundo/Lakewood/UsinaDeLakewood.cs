@@ -309,7 +309,8 @@ namespace ZombieCityCleaner.Mundo
         // a distância (u, v) de um ponto até o retângulo (0 dentro)
         static float DistanciaDoRetangulo(Rect r, Vector2 p)
         {
-            float du = Mathf.Max(r.xMin - p.x, 0f, p.x - r.xMax), dv = Mathf.Max(r.yMin - p.y, 0f, p.y - r.yMax);
+            // (16/11/2026: o Mathf.Max de três números cria um array a cada chamada; dois de dois, nenhum)
+            float du = Mathf.Max(Mathf.Max(r.xMin - p.x, 0f), p.x - r.xMax), dv = Mathf.Max(Mathf.Max(r.yMin - p.y, 0f), p.y - r.yMax);
             return Mathf.Sqrt(du * du + dv * dv);
         }
 

@@ -342,9 +342,17 @@ namespace ZombieCityCleaner.Mundo
 
         // ------------------------------------------------------------ as chaves (as partes que abrem, pela rede)
 
+        /// <summary>
+        /// O que soma no lugar das obras antes da chave (16/11/2026): no Lakewood, o deslocamento da origem
+        /// (<see cref="OrigemDeLakewood"/>), para as chaves serem as de antes (o saque pego, as portas e os móveis abertos dos
+        /// saves de antes). A conta volta exata: o lugar no mundo é o do mapa menos um número redondo.
+        /// </summary>
+        public static Vector3 DeslocamentoDasChaves;
+
         /// <summary>A chave de uma obra: pelo lugar dela no mundo (o mesmo em todas as máquinas) e o andar.</summary>
         public static ulong ChaveDaObra(Vector3 lugar, int andar)
         {
+            lugar += DeslocamentoDasChaves;
             ulong x = (ulong)(uint)Mathf.RoundToInt(lugar.x * 10f), z = (ulong)(uint)Mathf.RoundToInt(lugar.z * 10f);
             return Sorteio.Misturar((x << 32) ^ z ^ ((ulong)(uint)(andar + 1000) << 48));
         }

@@ -113,7 +113,8 @@ namespace ZombieCityCleaner.World
             lado.y = 0f;
             lado = lado.sqrMagnitude > 0.01f ? lado.normalized : Vector3.forward;
             var onde = pe + lado * 1.2f;
-            var chao = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.Chao : null;
+            // (a planta do ArvoresDoMundo vem no mundo, e o chão é perguntado no mundo)
+            var chao = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.ChaoNoMundo : null;
             onde.y = (chao != null ? chao.Altura(onde.x, onde.z) : pe.y) + 0.05f;
             int toras = Mathf.Clamp(Mathf.RoundToInt(1.5f + planta.Escala * 1.5f), 2, 5);
             Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.Toras, onde, Random.Range(0f, 360f), toras);

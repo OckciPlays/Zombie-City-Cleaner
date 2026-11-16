@@ -14,8 +14,9 @@ namespace ZombieCityCleaner.World
     /// </summary>
     public partial class LakewoodNaCena
     {
+        // (16/11/2026, OrigemDeLakewood: o que sai daqui está no mundo do jogo; os dados, no mapa)
         int IMundoDoJogo.QuantasCidades => mapa != null ? mapa.cidades.Count : 0;
-        Vector2 IMundoDoJogo.MeioDaCidade(int cidade) => mapa.cidades[cidade].centro;
+        Vector2 IMundoDoJogo.MeioDaCidade(int cidade) => OrigemDeLakewood.NoMundo(mapa.cidades[cidade].centro);
 
         bool IMundoDoJogo.CidadeGrande(int cidade) =>
             mapa != null && cidade >= 0 && cidade < mapa.cidades.Count && mapa.cidades[cidade].tipo == TipoDeCidade.Principal;
@@ -49,7 +50,7 @@ namespace ZombieCityCleaner.World
                     _cidadesDoJogo.Add((i, Rect.MinMaxRect(x0, z0, x1, z1), c.contorno));
                 }
             }
-            var p = new Vector2(x, z);
+            var p = new Vector2(x + OrigemDeLakewood.X, z + OrigemDeLakewood.Z);
             foreach (var (indice, caixa, contorno) in _cidadesDoJogo)
                 if (caixa.Contains(p) && Linhas.Dentro(p, contorno)) return indice;
             return -1;
@@ -67,7 +68,7 @@ namespace ZombieCityCleaner.World
                     if (mapa != null)
                         foreach (var l in mapa.lugares)
                             if (l.tipo == TipoDeLugarDoMapa.BaseMilitar)
-                                _bases.Add(new Lugar { Tipo = TipoDeLugar.BaseMilitar, Nome = l.nome, Centro = l.ponto, Raio = l.raio, Giro = l.giro });
+                                _bases.Add(new Lugar { Tipo = TipoDeLugar.BaseMilitar, Nome = l.nome, Centro = OrigemDeLakewood.NoMundo(l.ponto), Raio = l.raio, Giro = l.giro });
                 }
                 return _bases;
             }
@@ -80,17 +81,18 @@ namespace ZombieCityCleaner.World
             float melhor = 600f * 600f;
             Vector2 alvo = default;
             bool achou = false;
+            var centro = OrigemDeLakewood.NoMapa(b.Centro);   // (a base está no mundo; as estradas, no mapa)
             foreach (var e in Chao.Estradas)
                 for (int i = 0; i < e.Pontos.Length; i++)
                 {
-                    float d = (e.Pontos[i] - b.Centro).sqrMagnitude;
+                    float d = (e.Pontos[i] - centro).sqrMagnitude;
                     if (d >= melhor || d < 30f * 30f) continue;
                     melhor = d;
                     alvo = e.Pontos[i];
                     achou = true;
                 }
             if (!achou) return b.Giro;
-            var para = alvo - b.Centro;
+            var para = alvo - centro;
             return Mathf.Atan2(para.x, para.y) * Mathf.Rad2Deg;
         }
 
@@ -114,7 +116,7 @@ namespace ZombieCityCleaner.World
                             _acampamentos.Add(new Acampamento
                             {
                                 Tipo = TipoDeLugar.Acampamento, Nome = cidade >= 0 ? $"Acampamento de {mapa.cidades[cidade].nome}" : "Acampamento",
-                                Centro = l.meio, Raio = Mathf.Min(raio, 45f), Giro = l.giro, Indice = _acampamentos.Count, Cidade = cidade,
+                                Centro = OrigemDeLakewood.NoMundo(l.meio), Raio = Mathf.Min(raio, 45f), Giro = l.giro, Indice = _acampamentos.Count, Cidade = cidade,
                                 Grande = true, Altura = Chao.Lotes[i].Altura, Frente = l.Frente,
                             });
                         }

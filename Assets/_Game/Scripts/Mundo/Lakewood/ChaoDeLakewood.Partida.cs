@@ -101,7 +101,8 @@ namespace ZombieCityCleaner.Mundo
         public float DistanciaDoTerreiro(float x, float z)
         {
             var p = Local(x, z);
-            float da = Mathf.Max(Terreiro.xMin - p.x, 0f, p.x - Terreiro.xMax), dd = Mathf.Max(Terreiro.yMin - p.y, 0f, p.y - Terreiro.yMax);
+            // (16/11/2026: o Mathf.Max de três números cria um array a cada chamada; dois de dois, nenhum)
+            float da = Mathf.Max(Mathf.Max(Terreiro.xMin - p.x, 0f), p.x - Terreiro.xMax), dd = Mathf.Max(Mathf.Max(Terreiro.yMin - p.y, 0f), p.y - Terreiro.yMax);
             return Mathf.Sqrt(da * da + dd * dd);
         }
 

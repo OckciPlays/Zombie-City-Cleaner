@@ -230,7 +230,8 @@ namespace ZombieCityCleaner.EditorTools
                 {
                     float a = LugarDaPartida.PartidasEmA[Mathf.Min(i, LugarDaPartida.PartidasEmA.Length - 1)];
                     Undo.RecordObject(p, "A casa da partida");
-                    p.SetPositionAndRotation(lugar.NoMundo(a, LugarDaPartida.LinhaDaPartida, 0.1f), Quaternion.Euler(0f, lugar.GiroDaCasa, 0f));
+                    // (o "NoMundo" do lugar é no mapa; os pontos ficam no mundo do jogo: OrigemDeLakewood, 16/11/2026)
+                    p.SetPositionAndRotation(OrigemDeLakewood.NoMundo(lugar.NoMundo(a, LugarDaPartida.LinhaDaPartida, 0.1f)), Quaternion.Euler(0f, lugar.GiroDaCasa, 0f));
                     i++;
                 }
             }
@@ -239,10 +240,10 @@ namespace ZombieCityCleaner.EditorTools
             {
                 Undo.RecordObject(camera.transform, "A casa da partida");
                 var olho = lugar.NoMundo(10f, 11f, 4.5f);
-                camera.transform.SetPositionAndRotation(olho, Quaternion.LookRotation(lugar.PosicaoDaCasa + Vector3.up * 2.5f - olho));
+                camera.transform.SetPositionAndRotation(OrigemDeLakewood.NoMundo(olho), Quaternion.LookRotation(lugar.PosicaoDaCasa + Vector3.up * 2.5f - olho));
             }
             Undo.RecordObject(lakewood, "A casa da partida");
-            lakewood.partida = lugar.NoMundo(0f, LugarDaPartida.LinhaDaPartida);
+            lakewood.partida = lugar.NoMundo(0f, LugarDaPartida.LinhaDaPartida);   // (no espaço do mapa)
             lakewood.veiculos = Veiculos.Select(n => AssetDatabase.LoadAssetAtPath<GameObject>(PastaDosVeiculos + n + ".prefab")).ToArray();
             lakewood.mesaDaPartida = AssetDatabase.LoadAssetAtPath<GameObject>(Mesa);
             EditorUtility.SetDirty(lakewood);

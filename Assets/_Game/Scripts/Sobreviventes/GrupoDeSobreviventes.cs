@@ -27,6 +27,8 @@ namespace ZombieCityCleaner.Sobreviventes
         public int baseMilitar = -1;
         /// <summary>Os membros no começo (o que o save guarda: quem morreu sai da máscara).</summary>
         public int quantos;
+        /// <summary>Quantos ainda vão nascer (16/11/2026: o grupo nasce um por quadro, SobreviventesDoMundo.NascerUm).</summary>
+        public int nascendo;
         public readonly List<Sobrevivente> membros = new List<Sobrevivente>();
         public EstadoDoGrupo estado = EstadoDoGrupo.Explorando;
         public IAlvoDeZumbi inimigo;
@@ -36,7 +38,7 @@ namespace ZombieCityCleaner.Sobreviventes
         public bool temDestino;
         float _proximoDestino;
         // (as pessoas do acampamento não fogem: estão em casa; os do carro quebrado não largam o carro; os militares, a base)
-        public bool Fugindo => acampamento < 0 && cena < 0 && baseMilitar < 0 && quantos >= 2 && Vivos == 1;
+        public bool Fugindo => acampamento < 0 && cena < 0 && baseMilitar < 0 && quantos >= 2 && Vivos == 1 && nascendo == 0;
 
         /// <summary>
         /// Contra os jogadores: o grupo de busca e os militares, sempre; o acampamento, depois que alguém feriu um deles; os

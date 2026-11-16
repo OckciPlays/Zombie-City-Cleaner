@@ -83,6 +83,7 @@ namespace ZombieCityCleaner.Mundo
 
             public void Limpar()
             {
+                foreach (var c in Celulas.Values) DevolverLista(c.Matrizes);
                 Celulas.Clear();
                 Montando.Clear();
                 Lista.Clear();
@@ -92,6 +93,31 @@ namespace ZombieCityCleaner.Mundo
         }
 
         readonly Faixa _perto = new Faixa(), _longe = new Faixa { Longe = true };
+
+        // as listas dos tufos das células, reaproveitadas (16/11/2026, o teste de desempenho no Lakewood: cada célula nova
+        // montava a lista dela crescendo aos poucos, numa thread, uns 50 KB de lixo por célula; andando de carro, dezenas de
+        // células por segundo, e a coleta do lixo parava o jogo). A célula que sai devolve a dela; a que nasce pega uma.
+        static readonly Stack<List<Matrix4x4>> _listas = new Stack<List<Matrix4x4>>();
+        static readonly List<Matrix4x4> Vazia = new List<Matrix4x4>(0);
+        [System.ThreadStatic] static List<Matrix4x4> _rascunho;
+
+        static List<Matrix4x4> PegarLista(int capacidade)
+        {
+            List<Matrix4x4> l = null;
+            lock (_listas)
+                if (_listas.Count > 0) l = _listas.Pop();
+            if (l == null) return new List<Matrix4x4>(capacidade);
+            l.Clear();
+            if (l.Capacity < capacidade) l.Capacity = capacidade;
+            return l;
+        }
+
+        static void DevolverLista(List<Matrix4x4> l)
+        {
+            if (l == null || ReferenceEquals(l, Vazia)) return;
+            lock (_listas)
+                if (_listas.Count < 4096) _listas.Push(l);
+        }
         readonly List<long> _prontas = new List<long>();
         readonly List<long> _sobra = new List<long>();
         readonly Vector4[] _dobradores = new Vector4[MaxDobradores];
@@ -211,7 +237,8 @@ namespace ZombieCityCleaner.Mundo
                 float x0 = cx * Celula, z0 = cz * Celula;
                 if (x0 + Celula < limites.xMin || x0 > limites.xMax || z0 + Celula < limites.yMin || z0 > limites.yMax) continue;
                 // a distância da câmera à célula (no plano): a mais perto e a mais longe
-                float dx = Mathf.Max(x0 - c.x, 0f, c.x - x0 - Celula), dz = Mathf.Max(z0 - c.z, 0f, c.z - z0 - Celula);
+                // (16/11/2026: o Mathf.Max de três números cria um array a cada chamada: 74 KB de lixo por quadro andando)
+                float dx = Mathf.Max(Mathf.Max(x0 - c.x, 0f), c.x - x0 - Celula), dz = Mathf.Max(Mathf.Max(z0 - c.z, 0f), c.z - z0 - Celula);
                 if (dx * dx + dz * dz > ate * ate) continue;
                 if (de > 0f)
                 {
@@ -243,7 +270,7 @@ namespace ZombieCityCleaner.Mundo
             foreach (var par in f.Celulas)
             {
                 var caixa = par.Value.Caixa;
-                float dx = Mathf.Max(caixa.min.x - c.x, 0f, c.x - caixa.max.x), dz = Mathf.Max(caixa.min.z - c.z, 0f, c.z - caixa.max.z);
+                float dx = Mathf.Max(Mathf.Max(caixa.min.x - c.x, 0f), c.x - caixa.max.x), dz = Mathf.Max(Mathf.Max(caixa.min.z - c.z, 0f), c.z - caixa.max.z);
                 if (dx * dx + dz * dz > sai * sai) { _sobra.Add(par.Key); continue; }
                 if (dentro > 0f)
                 {
@@ -251,7 +278,11 @@ namespace ZombieCityCleaner.Mundo
                     if (fx * fx + fz * fz < dentro * dentro) _sobra.Add(par.Key);
                 }
             }
-            foreach (var k in _sobra) f.Celulas.Remove(k);
+            foreach (var k in _sobra)
+            {
+                if (f.Celulas.TryGetValue(k, out var saindo)) DevolverLista(saindo.Matrizes);
+                f.Celulas.Remove(k);
+            }
         }
 
         void Desenhar(Faixa f, Camera cam, Vector3 c, float fim, Vector4 some, Vector4 aparece, Vector4 desbota)
@@ -283,7 +314,10 @@ namespace ZombieCityCleaner.Mundo
         // (no anel de longe: outro sorteio, a fração dos candidatos, só onde a grama é cheia e os tufos maiores)
         Cel Montar(IChaoDaGrama chao, int cx, int cz, bool longe = false)
         {
-            var cel = new Cel { Matrizes = new List<Matrix4x4>() };
+            // (os tufos num rascunho da thread e depois numa lista reaproveitada do tamanho certo: sem lixo)
+            var rascunho = _rascunho ??= new List<Matrix4x4>(512);
+            rascunho.Clear();
+            var cel = new Cel();
             var rnd = new System.Random(chao.Semente * 7919 + cx * 1301 + cz * 977 + (longe ? 54321 : 12345));
             float Entre(float a, float b) => a + (float)rnd.NextDouble() * (b - a);
             float x0 = cx * Celula, z0 = cz * Celula;
@@ -302,10 +336,16 @@ namespace ZombieCityCleaner.Mundo
                 float s = Entre(escala.x, escala.y) * Mathf.Lerp(0.8f, 1.1f, clareira) * maior;
                 var pos = new Vector3(x, chao.Altura(x, z) - 0.03f, z);
                 var rot = Quaternion.Euler(Entre(-7f, 7f), Entre(0f, 360f), Entre(-7f, 7f));
-                cel.Matrizes.Add(Matrix4x4.TRS(pos, rot, new Vector3(s, s * Entre(0.9f, 1.1f), s)));
+                rascunho.Add(Matrix4x4.TRS(pos, rot, new Vector3(s, s * Entre(0.9f, 1.1f), s)));
                 min = Vector3.Min(min, pos);
                 max = Vector3.Max(max, pos);
             }
+            if (rascunho.Count > 0)
+            {
+                cel.Matrizes = PegarLista(rascunho.Count);
+                cel.Matrizes.AddRange(rascunho);
+            }
+            else cel.Matrizes = Vazia;
             if (cel.Matrizes.Count > 0)
             {
                 min -= new Vector3(0.6f, 0.1f, 0.6f);

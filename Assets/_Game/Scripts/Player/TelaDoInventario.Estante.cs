@@ -55,7 +55,7 @@ namespace ZombieCityCleaner.Player
         {
             if (f.Especial) return 40f;
             float alturaUtil = AreaDaEstante.height - TituloDaEstanteH - RodapeDaEstanteH - f.Tabuas * TabuaH - (f.Tabuas - 1) * VaoEntreTabuas;
-            return Mathf.Min(40f, AreaDaEstante.width / f.colunas, alturaUtil / f.Grade.y);
+            return Mathf.Min(Mathf.Min(40f, AreaDaEstante.width / f.colunas), alturaUtil / f.Grade.y);   // (sem o array do Min de três)
         }
 
         Vector2 InicioDaEstante(EstantesDoBunker.Forma f, float c) =>
