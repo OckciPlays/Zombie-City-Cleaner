@@ -94,6 +94,9 @@ namespace ZombieCityCleaner.World
             // a colisão cozida em outra thread (16/11/2026): a tarefa, e se o colisor já tem a malha de agora
             public Task Cozinhando;
             public bool ColisaoEmDia;
+            // a colisão feita na hora enquanto a malha do bloco era cozida em outra thread (17/11/2026: GarantirBloco); sai
+            // quando o cozimento chega
+            public Mesh MalhaDaHora;
             public Task<(List<PlantaDaFloresta>, Matrix4x4[])> MontandoPlantas;
             public List<PlantaDaFloresta> Plantas;
             // a matriz de cada planta (feita uma vez, na thread: o TRS a cada quadro pesava com a mata cheia)
@@ -430,6 +433,7 @@ namespace ZombieCityCleaner.World
                 Segurar();
             }
             Receber();
+            GarantirOChao();
             ReceberAsObras();
             PorOCarro();
             Pinheiros(olho, c);
@@ -527,12 +531,7 @@ namespace ZombieCityCleaner.World
                 foreach (var (q, raioDaAncora) in _ancoras) colisao |= DistanciaAoBloco(q, chave) < raioDaAncora;
                 if (colisao) b.PassoQuerido = 2f;
                 b.QuerColisao = colisao;
-                if (d < raioPlantas && b.MontandoPlantas == null && b.Plantas == null)
-                {
-                    var chao = Chao;
-                    var ch = chave;
-                    b.MontandoPlantas = Task.Run(() => PinheirosDoBloco(chao, ch));
-                }
+                if (d < raioPlantas && b.MontandoPlantas == null && b.Plantas == null) _querPlantas.Add((d, b));
                 if (d > raioPlantas + 64f && b.Plantas != null)
                 {
                     GuardarOsPinheiros(b);
@@ -540,6 +539,27 @@ namespace ZombieCityCleaner.World
                     b.Matrizes = null;
                 }
             }
+            // (17/11/2026, a pedido: "alguns chunks ficam sem colisão no chão") as árvores de poucos blocos ao mesmo tempo, as
+            // mais perto primeiro: pedidas todas de uma vez (sem a neblina, umas 180 depois de um "ir para"), elas enchiam a
+            // fila das threads, e a malha e a colisão do chão de perto esperavam atrás delas (num PC de menos núcleos,
+            // segundos: quem chegava num lugar novo caía)
+            if (_querPlantas.Count > 0)
+            {
+                int plantando = 0;
+                foreach (var b in _blocos.Values) if (b.MontandoPlantas != null) plantando++;
+                _querPlantas.Sort((x, y) => x.d.CompareTo(y.d));
+                int maximo = Mathf.Max(2, SystemInfo.processorCount / 2);
+                foreach (var (_, b) in _querPlantas)
+                {
+                    if (plantando >= maximo) break;
+                    var chao = Chao;
+                    var ch = b.Chave;
+                    b.MontandoPlantas = Task.Run(() => PinheirosDoBloco(chao, ch));
+                    plantando++;
+                }
+                _querPlantas.Clear();
+            }
+
             // os longe saem depois de 3 s
             var sair = new List<Vector2Int>();
             foreach (var kv in _blocos)
@@ -576,6 +596,8 @@ namespace ZombieCityCleaner.World
             }
         }
 
+        readonly List<(float d, Bloco b)> _querPlantas = new List<(float, Bloco)>();
+
         // as montagens prontas viram malha (até 4 por quadro)
         void Receber()
         {
@@ -592,6 +614,10 @@ namespace ZombieCityCleaner.World
                 // (a malha não muda enquanto a colisão dela é cozida em outra thread: a entrega espera)
                 if (entregues >= 4 || b.Montando == null || !b.Montando.IsCompleted || b.Cozinhando != null) continue;
                 if (b.Montando.IsFaulted) Debug.LogException(b.Montando.Exception);
+                // (17/11/2026) a que chegou depois de o bloco querer outro detalhe fica de fora (o Revisar pede a certa): entregue,
+                // uma de 8 m pedida de longe desligava a colisão de um bloco que já estava perto de alguém. E a do mesmo detalhe
+                // que o bloco já tem (o GarantirBloco fez na hora) também
+                else if (b.Passo > 0f && (!Mathf.Approximately(b.PassoMontando, b.PassoQuerido) || Mathf.Approximately(b.PassoMontando, b.Passo))) { }
                 else Entregar(b, b.Montando.Result, b.PassoMontando);
                 b.Montando = null;
                 entregues++;
@@ -610,18 +636,7 @@ namespace ZombieCityCleaner.World
             foreach (var b in _blocos.Values)
             {
                 bool quer = b.QuerColisao && b.Passo > 0f && b.Passo <= 4.01f;
-                if (b.Cozinhando != null && b.Cozinhando.IsCompleted)
-                {
-                    if (b.Cozinhando.IsFaulted) Debug.LogException(b.Cozinhando.Exception);
-                    b.Cozinhando = null;
-                    if (b.Objeto != null && b.Malha != null)
-                    {
-                        if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
-                        b.Colisor.sharedMesh = null;
-                        b.Colisor.sharedMesh = b.Malha;   // (já cozida: o PhysX usa a cozida)
-                        b.ColisaoEmDia = true;
-                    }
-                }
+                if (b.Cozinhando != null && b.Cozinhando.IsCompleted) TerminarDeCozinhar(b);
                 if (b.Cozinhando != null) cozinhando++;
                 else if (quer && !b.ColisaoEmDia && b.Objeto != null && b.Malha != null)
                 {
@@ -648,6 +663,33 @@ namespace ZombieCityCleaner.World
             b.Cozinhando = Task.Run(() => Physics.BakeMesh(id, false));
         }
 
+        // o cozimento chegou: o colisor recebe a malha (já cozida: o PhysX usa a cozida)
+        void TerminarDeCozinhar(Bloco b)
+        {
+            if (b.Cozinhando.IsFaulted) Debug.LogException(b.Cozinhando.Exception);
+            b.Cozinhando = null;
+            if (b.Objeto == null || b.Malha == null) return;
+            if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
+            b.Colisor.sharedMesh = null;
+            b.Colisor.sharedMesh = b.Malha;
+            b.ColisaoEmDia = true;
+            if (b.MalhaDaHora != null)
+            {
+                Destroy(b.MalhaDaHora);
+                b.MalhaDaHora = null;
+            }
+        }
+
+        // a colisão cozida aqui, na hora (o chão em volta da partida e o que falta debaixo de alguém)
+        static void CozinharNaHora(Bloco b)
+        {
+            if (b.Colisor == null) b.Colisor = Colisores.NovoVazio(b.Objeto);
+            b.Colisor.sharedMesh = null;
+            b.Colisor.sharedMesh = b.Malha;
+            b.Colisor.enabled = true;
+            b.ColisaoEmDia = true;
+        }
+
         // naHora: a colisão cozida aqui mesmo (o chão em volta da partida, antes de alguém nascer)
         void Entregar(Bloco b, MalhaDoBloco m, float passo, bool naHora = false)
         {
@@ -667,10 +709,125 @@ namespace ZombieCityCleaner.World
             b.ColisaoEmDia = false;
             // (fora da partida, a colisão é cozida em outra thread: o Receber começa, a mais perto primeiro)
             if (passo > 4.01f || !b.QuerColisao || !naHora) return;
-            if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
-            b.Colisor.sharedMesh = null;
-            b.Colisor.sharedMesh = b.Malha;
-            b.ColisaoEmDia = true;
+            CozinharNaHora(b);
+        }
+
+        // ------------------------------------------------------------------ o chão debaixo de quem anda
+
+        // (17/11/2026, a pedido: "alguns chunks ficam sem colisão no chão e os jogadores ficando caindo") o chão de quem esta
+        // máquina simula (o jogador dela, a pé, e os carros e as motos dela) nunca fica sem a colisão: os blocos a menos de
+        // uns 10 m dele (e de onde o veículo vai estar em 1,5 s) ganham a malha de 2 m e a colisão aqui, na hora, se a
+        // montagem e o cozimento (em outras threads, que dividem os núcleos com as árvores, as obras e a grama) ainda não
+        // chegaram. Cada vez fica no log (o Player.log da build), com o motivo, no máximo uma vez a cada 10 s por bloco.
+        readonly Dictionary<Vector2Int, float> _feitoNaHoraEm = new Dictionary<Vector2Int, float>();
+
+        void GarantirOChao()
+        {
+            var rede = NetworkManager.Singleton;
+            if (rede == null || !rede.IsListening || Chao == null) return;
+            var meu = rede.LocalClient?.PlayerObject;
+            if (meu != null)
+            {
+                var mov = meu.GetComponent<MovimentoPrimeiraPessoa>();
+                var passageiro = meu.GetComponent<PassageiroDoCarro>();
+                if (mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro))
+                    GarantirEm(NoMapa2(meu.transform.position), Vector2.zero, 10f, "o jogador");
+            }
+            foreach (var carro in Carro.Todos)
+            {
+                if (carro == null || !carro.IsSpawned || !carro.IsOwner) continue;
+                var corpo = carro.GetComponent<Rigidbody>();
+                var v = corpo != null && !corpo.isKinematic ? corpo.linearVelocity : Vector3.zero;
+                GarantirEm(NoMapa2(carro.transform.position), new Vector2(v.x, v.z) * 1.5f, 14f, $"o veículo {carro.name}");
+            }
+        }
+
+        // os blocos a menos de 'raio' do ponto e do ponto mais 'adiante' (no mapa)
+        void GarantirEm(Vector2 p, Vector2 adiante, float raio, string quem)
+        {
+            GarantirPerto(p, raio, quem);
+            if (adiante.sqrMagnitude > 4f) GarantirPerto(p + adiante, raio, quem);
+        }
+
+        // (sem o BlocosEm: todo quadro, ele criaria lixo)
+        void GarantirPerto(Vector2 p, float raio, string quem)
+        {
+            float t = ChaoDeLakewood.TamanhoDoBloco;
+            int i0 = Mathf.Max(0, Mathf.FloorToInt((p.x - raio) / t)), i1 = Mathf.Min(Chao.BlocosX - 1, Mathf.FloorToInt((p.x + raio) / t));
+            int j0 = Mathf.Max(0, Mathf.FloorToInt((p.y - raio) / t)), j1 = Mathf.Min(Chao.BlocosZ - 1, Mathf.FloorToInt((p.y + raio) / t));
+            for (int j = j0; j <= j1; j++)
+            for (int i = i0; i <= i1; i++)
+            {
+                var chave = new Vector2Int(i, j);
+                if (DistanciaAoBloco(p, chave) <= raio) GarantirBloco(chave, quem, p);
+            }
+        }
+
+        void GarantirBloco(Vector2Int chave, string quem, Vector2 onde)
+        {
+            if (!_blocos.TryGetValue(chave, out var b)) b = Novo(chave);
+            b.VistoEm = Time.time;
+            b.QuerColisao = true;
+            b.PassoQuerido = 2f;
+            bool malhaDePerto = b.Objeto != null && b.Malha != null && b.Passo > 0f && b.Passo <= 4.01f;
+            // com a colisão (a de agora, ou a da malha de antes até a nova ser cozida), nada a fazer
+            if (malhaDePerto && b.Colisor != null && b.Colisor.enabled) return;
+            float t0 = Time.realtimeSinceStartup;
+            string motivo;
+            // (nada daqui espera uma tarefa das threads: com elas cheias, a espera parava o jogo segundos; a malha é feita
+            // aqui mesmo, em uns milissegundos)
+            if (b.Cozinhando != null)
+            {
+                // a malha do bloco está sendo cozida em outra thread e não pode mudar: a colisão vai numa cópia feita agora, até
+                // o cozimento chegar (o TerminarDeCozinhar troca e apaga a cópia)
+                if (b.MalhaDaHora != null && b.Colisor != null && b.Colisor.enabled) return;
+                motivo = "a colisão ainda estava sendo cozida";
+                if (b.MalhaDaHora == null) b.MalhaDaHora = new Mesh { name = "Chão (colisão na hora)" };
+                Chao.Terreno(chave.x, chave.y, b.Passo).Para(b.MalhaDaHora);
+                if (b.Colisor == null) b.Colisor = Colisores.NovoVazio(b.Objeto);
+                b.Colisor.sharedMesh = null;
+                b.Colisor.sharedMesh = b.MalhaDaHora;
+                b.Colisor.enabled = true;
+            }
+            else if (malhaDePerto)
+            {
+                motivo = b.Colisor == null ? $"a malha de {b.Passo:F0} m ainda não tinha a colisão" : $"a colisão da malha de {b.Passo:F0} m estava desligada";
+                CozinharNaHora(b);
+            }
+            else
+            {
+                // (uma montagem que ainda esteja na fila fica de fora quando chegar: o Receber)
+                motivo = b.Objeto == null || b.Passo <= 0f ? "o bloco ainda não tinha a malha de perto" : $"o bloco estava na malha de {b.Passo:F0} m";
+                Entregar(b, Chao.Terreno(chave.x, chave.y, 2f), 2f, naHora: true);
+            }
+            if (!_feitoNaHoraEm.TryGetValue(chave, out float ultima) || Time.time - ultima > 10f)
+            {
+                _feitoNaHoraEm[chave] = Time.time;
+                var noMundo = OrigemDeLakewood.NoMundo(onde);
+                Debug.LogWarning($"[Lakewood] O chão perto de {quem} em ({noMundo.x:F0}, {noMundo.y:F0}) estava sem a colisão: {motivo} (o bloco {chave.x} {chave.y}); feito na hora, em {(Time.realtimeSinceStartup - t0) * 1000f:F0} ms.");
+            }
+        }
+
+        // onde pôr quem passou pelo chão: em cima da colisão de verdade (a do bloco, a da estrada, a do patamar dos lotes), e
+        // não só 0,5 m acima da altura exata do relevo: num canto côncavo (o pé de um talude, a beira de um corte), a malha
+        // de 2 m fica acima dela, e quem voltava ali nascia por baixo da malha e caía de novo (17/11/2026)
+        static readonly RaycastHit[] _batidas = new RaycastHit[24];
+
+        static float AlturaParaVoltar(Vector3 p, float h, Transform ignorar)
+        {
+            int n = Physics.RaycastNonAlloc(new Vector3(p.x, h + 30f, p.z), Vector3.down, _batidas, 60f, ~0, QueryTriggerInteraction.Ignore);
+            float melhor = float.NegativeInfinity;
+            for (int k = 0; k < n; k++)
+            {
+                var col = _batidas[k].collider;
+                // só o que é parado (o chão, a estrada, as obras): os carros, os corpos e o próprio jogador ficam de fora
+                if (col == null || col.attachedRigidbody != null || col is CharacterController) continue;
+                if (ignorar != null && col.transform.IsChildOf(ignorar)) continue;
+                float y = _batidas[k].point.y;
+                // o chão e o que fica rente a ele (a estrada, a calçada, o patamar), não um telhado ou o alto de um tronco
+                if (y <= h + 2.5f && y > melhor) melhor = y;
+            }
+            return melhor > h - 3f ? melhor : h + 0.3f;
         }
 
         // quem passou pelo chão (a colisão ainda não estava pronta, depois de um "ir para") volta para cima: o jogador
@@ -690,8 +847,11 @@ namespace ZombieCityCleaner.World
                 var passageiro = meu.GetComponent<PassageiroDoCarro>();
                 if (p.y < h - 2.5f && mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro))
                 {
-                    Debug.LogWarning($"[Lakewood] O jogador passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima. {QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto"}.");
-                    mov.Teleportar(new Vector3(p.x, h + 0.5f, p.z), meu.transform.eulerAngles.y);
+                    string falta = QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto";
+                    GarantirEm(NoMapa2(p), Vector2.zero, 10f, "o jogador");
+                    float y = AlturaParaVoltar(p, h, meu.transform);
+                    Debug.LogWarning($"[Lakewood] O jogador passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima, a {y + 0.2f:F1}. {falta}.");
+                    mov.Teleportar(new Vector3(p.x, y + 0.2f, p.z), meu.transform.eulerAngles.y);
                 }
             }
             foreach (var carro in Carro.Todos)
@@ -700,9 +860,12 @@ namespace ZombieCityCleaner.World
                 var p = carro.transform.position;
                 float h = ChaoNoMundo.Altura(p.x, p.z);
                 if (p.y > h - 3f) continue;
-                Debug.LogWarning($"[Lakewood] O carro {carro.name} passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima. {QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto"}.");
+                string falta = QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto";
+                GarantirEm(NoMapa2(p), Vector2.zero, 14f, $"o veículo {carro.name}");
+                float y = AlturaParaVoltar(p, h, carro.transform);
+                Debug.LogWarning($"[Lakewood] O carro {carro.name} passou pelo chão em ({p.x:F0}, {p.y:F1}, {p.z:F0}), o chão a {h:F1}: voltou para cima, a {y + 1f:F1}. {falta}.");
                 var corpo = carro.GetComponent<Rigidbody>();
-                var ponto = new Vector3(p.x, h + 1f, p.z);
+                var ponto = new Vector3(p.x, y + 1f, p.z);
                 corpo.linearVelocity = Vector3.zero;
                 corpo.angularVelocity = Vector3.zero;
                 corpo.position = ponto;

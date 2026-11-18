@@ -629,8 +629,10 @@ namespace ZombieCityCleaner.Salvar
             foreach (var c in m.carros) CriarCarro(c);
             if (_mundo == null)
             {
+                // os caiaques do Lakewood (17/11/2026: os do F3 > Veículos; o mapa fixo não põe um sozinho)
+                if (m.caiaques != null) foreach (var k in m.caiaques) Caiaque.Criar(k.pos, k.giro);
                 Debug.Log($"[Save] O Lakewood voltou (a partida {m.semente}): dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
-                          $"{m.carros.Count} veículos, {mexidos.Count} carros do mundo mexidos, {m.arvoresCortadas.Count} árvores cortadas, {pegos.Count} itens do saque pegos, " +
+                          $"{m.carros.Count} veículos, {m.caiaques?.Count ?? 0} caiaques, {mexidos.Count} carros do mundo mexidos, {m.arvoresCortadas.Count} árvores cortadas, {pegos.Count} itens do saque pegos, " +
                           $"{portas.Count} portas e janelas mexidas.");
                 return;
             }

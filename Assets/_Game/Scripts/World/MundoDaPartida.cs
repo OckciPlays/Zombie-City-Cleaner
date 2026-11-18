@@ -370,19 +370,7 @@ namespace ZombieCityCleaner.World
         }
 
         /// <summary>No anfitrião: um caiaque no ponto (o do save, ou o da beira do lago).</summary>
-        public bool CriarCaiaque(Vector3 ponto, Quaternion giro)
-        {
-            var prefab = Resources.Load<GameObject>("Caiaque");
-            if (prefab == null)
-            {
-                Debug.LogWarning("[Caiaque] Sem o prefab Resources/Caiaque: rode Zombie City Cleaner > Veículos > Montar o caiaque.");
-                return false;
-            }
-            var novo = Instantiate(prefab, ponto, giro);
-            novo.name = "Caiaque";
-            novo.GetComponent<NetworkObject>().Spawn(true);
-            return true;
-        }
+        public bool CriarCaiaque(Vector3 ponto, Quaternion giro) => Vehicles.Caiaque.Criar(ponto, giro) != null;
 
         // ------------------------------------------------------------------------------------------ as motos (06/11/2026)
 

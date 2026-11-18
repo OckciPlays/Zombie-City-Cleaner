@@ -1186,6 +1186,15 @@ A pedido: uma cena de floresta pequena e andável para testar a floresta de verd
   do `CriarItemRpc`: a mochila, ou o chão com "No chão" ou sem espaço). Não entram no save. Conferido no Play, hospedando
   pelo `SessaoOnline.HospedarLocal()`: o cupê a 100% com os 40 L e a chave na mochila; a moto com a chave no chão; três
   seguidos, lado a lado a 6 m.
+  - **O caiaque no F3** (17/11/2026, a pedido: "colocar a canoa para conseguir dar spawn no menu do F1 na aba de carros"):
+    o último botão de F3 > Veículos. Ele não é um carro: o `CriarCaiaqueNoAnfitriao` procura a água funda (0,8 m, com as
+    duas pontas a 0,5 m) mais perto de quem pediu, de 4 a 60 m (`AguaDoCaiaqueAte`), à frente primeiro e depois em volta
+    (de 15 em 15°), longe de outro caiaque, e põe ele de lado para quem pediu, no nível da água (o `Caiaque.Criar`, o
+    mesmo do mundo sorteado e do save); sem água, o aviso diz para chegar perto do lago ou de um rio largo. Os caiaques
+    vão no save nos dois mapas (o Lakewood não os trazia de volta: agora traz). No Lakewood não há as estantes do bunker,
+    então o compartimento do caiaque não abre (o TAB sentado abre a mochila normal; antes ela abria e fechava no mesmo
+    quadro). Conferido no Play, hospedando: da casa da partida, o caiaque nasceu no lago a 50 m, boiando no nível, e o
+    jogador sentou no lugar de quem rema.
 - **Os testes** (5 novos no `LakewoodTestes`, são 23): `AsEstradasFormamUmaRedeLigada`,
   `NosCruzamentosAsEstradasFicamNaMesmaAlturaEPlanas`, `AsEstradasRespeitamARampaESoPassamNaAguaPelaPonte`,
   `AsEstradasSoSeEncostamNosCruzamentos` e `AsSaidasChegamNaBeiraDoMapa`.
@@ -1402,6 +1411,26 @@ que os dois mapas cumprem, sem cópia:
   - a `PlantaDoAcampamento` tira a terceira barraca (a do acampamento grande) de cima das bancas (`EncostaNumaBanca`);
   - o `LakewoodNaCena.Segurar` segura os carros que esta máquina simula (`IsOwner`: o do amigo que dirige é dele) e
     escreve no log cada volta para cima (o jogador ou o carro, o lugar e o que faltava no chão).
+- **O chão debaixo de quem anda** (17/11/2026, a pedido: "alguns chunks ficam sem colisão no chão e os jogadores ficando
+  caindo"; o `Plano_Lakewood.md`, "A queda pelo chão"):
+  - `LakewoodNaCena.GarantirOChao` (todo quadro, depois do `Receber`): para o jogador local a pé (não voando, não no carro)
+    e para cada `Carro` com `IsOwner` (com a velocidade × 1,5 s à frente), os blocos a menos de 10 m (14 m nos veículos)
+    passam a querer a colisão no passo 2 (`VistoEm`, `QuerColisao`, `PassoQuerido`) e, se estão sem ela
+    (`GarantirBloco`), ganham na hora, sem esperar nenhuma tarefa das threads: sem malha ou numa de 8/16 m, o
+    `Chao.Terreno(2)` aqui e o `Entregar(naHora)`; com a malha de 2/4 m sem colisor ligado, o `CozinharNaHora`; com o
+    cozimento na thread ainda correndo, uma cópia da malha (`Bloco.MalhaDaHora`, que o `TerminarDeCozinhar` apaga).
+    Cada vez fica no log, no máximo uma vez a cada 10 s por bloco ("O chão perto de ... estava sem a colisão: o motivo
+    ...; feito na hora, em N ms"). Medido: uns 3 ms por bloco (41 na primeira vez).
+  - **Nunca o `Wait()`/`Result` de uma tarefa na thread principal aqui:** com as threads cheias, a tarefa fica na fila
+    global atrás das outras (o `Wait` não a roda no lugar), e o jogo parou 8 s no teste.
+  - O `Receber` deixa de fora a montagem que chegou com outro detalhe que o bloco quer agora, ou com o mesmo que ele já
+    tem (uma de 8 m pedida de longe desligava a colisão de um bloco já perto).
+  - As árvores de cada bloco (`MontandoPlantas`) vão no máximo `processorCount / 2` (pelo menos 2) ao mesmo tempo, as mais
+    perto primeiro (`_querPlantas`): todas de uma vez (umas 180 sem a neblina) enchiam a fila das threads na frente do
+    chão.
+  - O `Segurar` garante o chão do lugar e põe o jogador (ou o carro) em cima da colisão de verdade (`AlturaParaVoltar`:
+    o ponto mais alto até 2,5 m acima da altura exata, só do que é parado: sem corpos, carros e o próprio jogador), e
+    não mais a 0,5 m da altura exata (num canto côncavo, a malha de 2 m fica acima dela e ele caía de novo).
 
 ### A Woodcreek (a Etapa 6, 11 e 12/11/2026; o `Plano_Lakewood.md`, "A Woodcreek"; as 6 partes feitas com o usuário fora, esperando o teste)
 
@@ -2223,6 +2252,17 @@ vão ser só as da hot bar, 1 2 e 3, nas mesmas posições de hoje". O resumo pa
     beber ou usar (na hora, pela mochila: `UsarDaMochila`); pôr ou tirar dos atalhos 1, 2 e 3; reparar (com um kit de
     reparo); desmontar (com o que sai; apagado, com o motivo, se falta a ferramenta); montar no chão (os kits); largar um ou
     todos da pilha. A mochila vestida: "Tirar e largar no chão".
+    - **Largar quantos** (17/11/2026, de um engano: o pedido era "dobrar quantidade de loot", e eu li "dropar"; ficou,
+      por ser útil; `TelaDoInventario.Quantos.cs` e
+      `InventarioJogador.Quantos.cs`): na pilha, "Largar quantos..." entre o "Largar um" e o "Largar todos"; na caixa de
+      munição (que antes só largava inteira), "Largar quantas balas..." e "Largar a caixa (n balas)". Abre um quadro no
+      meio da janela: o número ("22 de 45", começa na metade), a barra (clique ou arraste), os passos -10, -1, +1, +10,
+      Metade e Tudo, a roda do mouse, o teclado (os números, as setas, o Backspace e o Enter), "Cancelar" e "Largar n";
+      o clique fora cancela, e o ESC fecha a tela inteira. Aberto, o resto da tela não recebe o mouse nem as teclas (o G,
+      o R, o H, o K e os atalhos). O pedido (`LargarQuantos` → `LargarQuantosRpc`) tira n da pilha no mesmo lugar da grade e
+      cria no chão uma pilha (ou uma caixa) com n; n do tamanho da pilha larga ela inteira. Conferido no Play, hospedando:
+      45 balas, +10 e Largar deixaram 13 na mochila e uma caixa com 32 no chão; 4 de 10 comprimidos deixaram 6; 99 de 13
+      balas largaram a caixa.
 - **Os itens novos (`Loot/Itens`, `DadosDoLoot` em `_loot`):** a comida (16 a 24: a lata de comida, feijão, carne, milho,
   sopa, salgadinho, chocolate e barra de energia), a bebida (17 e 25 a 31: a garrafa de água, refrigerante em garrafa e em
   lata, energético, copo de água, leite, suco e garrafa térmica), os remédios (80 a 88: remédio, comprimidos, kit médico,
@@ -2443,8 +2483,11 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   achada; o número e o tamanho vêm dos `ItensDoSaque`; `Faltando` diz os nomes que não estão lá), as regras dos móveis
   (`Regra`: o que cada modelo aceita em cima, atrás das portas e das tampas e nas gavetas, e o peso dele; `Aceita`), o peso
   dos cômodos (o quarto e a cozinha 3, o porão, o depósito e o banheiro 2, a sala 1), quantos por moradia (`Quantos`,
-  o triplo da decisão 3 desde 02/11/2026, a pedido: a térrea 3 a 9, o sobrado 6 a 12, o apartamento 3 a 6; com porão, mais
-  0 a 3 no porão, `TentativasNoPorao` vezes a chance de 50%) e o estado das armas
+  o triplo da decisão 3 desde 02/11/2026, a pedido, e o dobro disso desde 17/11/2026, a pedido ("dobrar quantidade de
+  loot"): a térrea 6 a 18, o sobrado 12 a 24, o apartamento 6 a 12; com porão, mais 0 a 6 no porão, `TentativasNoPorao`
+  vezes a chance de 50%; no máximo 12 por cômodo, `PorComodo`, se houver outro com lugar; a farmácia 16 a 28 e o andar
+  do hospital sorteado 10 a 20, `QuantosNaLoja`; os andares do Hospital Principal, `SaqueDoHospital.QuantosNoAndar`, 12 a
+  20, 20 a 32, 18 a 28 e 12 a 20) e o estado das armas
   (o desgaste de 20 a 70%, as épicas e as lendárias de 0 a 30%; o pente até a metade; as brancas de 10 a 60%).
 - **O sorteio** (`SaqueDaObra.Sortear(pontos, semente, saída)`, os pontos e a semente da obra, como o `MobiliaDaConstrucao`):
   para cada moradia, os lugares livres (as peças do conjunto de cada ponto pelo `MobiliaNova.Pecas`, os `LugaresDoSaque` de
@@ -2471,6 +2514,10 @@ igual. Os itens no jogo são a parte 4 (abaixo).
   pistolas, 176 submetralhadoras, 71 espingardas, 53 rifles e 44 snipers. Antes do triplo: 16.827 itens (1,7 por moradia). Com as chances novas (40/30/15/10/5): normal 40,0%, incomum 30,6%, raro 15,5%,
   épico 9,4%, lendário 4,5% (2.274 lendários: 1.743 visões noturnas, 305 rifles e 226 snipers; a visão noturna cabe em quase
   todo lugar e é o segundo item mais achado); 931 pistolas, 485 submetralhadoras e 138 espingardas.
+  Com o dobro (17/11/2026): 9.793 moradias, 100.323 itens (10,24 por moradia: a térrea 12,1, com porão 14,5; o sobrado
+  18,0, com porão 20,2; o apartamento 9,0; no máximo 28; 24 moradias abaixo do mínimo, sem lugar para todos), normal
+  40,1%, incomum 33,5%, raro 14,6%, épico 8,0%, lendário 3,7% (os lugares das de cima acabam antes, e uns descem); o
+  Hospital Principal com 80,7 itens em média (eram uns 41). Os três testes do saque passam (o mapa inteiro em 59 s).
 
 ### O saque nos móveis (o `Plano_Saque.md`, a parte 4, 02/11/2026; esperando o teste do usuário com dois jogadores)
 

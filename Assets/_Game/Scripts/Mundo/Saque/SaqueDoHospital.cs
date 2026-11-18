@@ -7,8 +7,9 @@ namespace ZombieCityCleaner.Mundo
     /// O saque do Hospital Principal (o Plano_Hospital.md da pasta de arte, a parte 7, 08/11/2026), andar por andar, pela
     /// semente do mundo (o mesmo em todas as máquinas e em qualquer thread), nos móveis do <see cref="MoveisDoHospital"/>
     /// com lugares (<see cref="LugaresDoSaque"/>):
-    ///  - <b>quantos</b> (<see cref="QuantosNoAndar"/>): o subsolo de 6 a 10, o térreo de 10 a 16, o 2º de 9 a 14 e o 3º de
-    ///    6 a 10 (uns 30 a 50 no prédio: pouco, como no resto do mapa, num prédio de 7.400 m²);
+    ///  - <b>quantos</b> (<see cref="QuantosNoAndar"/>; o dobro desde 17/11/2026, a pedido: "dobrar quantidade de loot"): o
+    ///    subsolo de 12 a 20, o térreo de 20 a 32, o 2º de 18 a 28 e o 3º de 12 a 20 (uns 60 a 100 no prédio, num prédio de
+    ///    7.400 m²);
     ///  - <b>as raridades</b>: as do hospital sorteado (<see cref="CatalogoDoSaque.ChancesDoHospital"/>: normal 45, incomum 40
     ///    e raro 15, sem épico nem lendário);
     ///  - <b>o que cada móvel guarda</b>, pelo cômodo (<see cref="RegraDe"/>): os remédios e os curativos nos armários, nos
@@ -21,7 +22,7 @@ namespace ZombieCityCleaner.Mundo
     /// </summary>
     public static class SaqueDoHospital
     {
-        public static readonly (int min, int max)[] QuantosNoAndar = { (6, 10), (10, 16), (9, 14), (6, 10) };
+        public static readonly (int min, int max)[] QuantosNoAndar = { (12, 20), (20, 32), (18, 28), (12, 20) };
 
         /// <summary>A "unidade" do saque do hospital (só para o item: a chave vem da obra de cada andar).</summary>
         public const int Unidade = 9000;

@@ -1089,6 +1089,47 @@ Conferido no Play pelo MCP, com um jogador, e nos 31 testes do Lakewood; esperan
   aparecem nas medidas são a falta de memória (o disco e a placa esperando); numa sessão longa, a Unity caiu por isso
   (o motivo no `Logs/Editor-prev.log`).
 
+### A queda pelo chão (17/11/2026)
+
+A pedido: "no mapa alguns chunks ficam sem colisão no chão e os jogadores ficando caindo, não sei pq isso acontece e
+acontece em vários lugares". Feito no `World/LakewoodNaCena.cs` do projeto Unity; conferido no Play pelo MCP, com um
+jogador; esperando o teste com dois.
+
+- **O que foi medido antes de mexer:** uma sonda levou o jogador a 12 lugares do mapa e por 7 km de rotas (parado, a 30 e
+  a 40 m/s, com e sem a neblina) e jogou raios de cima para baixo em volta dele (até 100 m parado, a cada 4 m; andando, em
+  anéis até 70 m à frente, a cada 0,25 s). Com um jogador só, neste PC (16 núcleos), o chão nunca faltou: só 2 pontos sem
+  chão a 30 e 70 m, 0,3 s depois de um teleporte. O `Player.log` da build não tinha nenhuma volta para cima. Então a queda
+  vem de um caso que não acontece aqui: o chão de perto atrasado.
+- **Por que o chão de perto podia atrasar:** a malha de 2 m de cada bloco e o cozimento da colisão (desde 16/11, em outra
+  thread) dividem as threads de trabalho com as árvores, as obras e a grama, numa fila só. As árvores eram pedidas para
+  todos os blocos de uma vez (com a neblina, umas 20; sem ela, umas 180 depois de um "ir para"), e o chão esperava atrás
+  delas: num PC de menos núcleos, segundos. Nesse meio tempo o relevo de longe (desenhado embaixo dos blocos, sem colisão)
+  parece o chão, e quem chegava caía. Também: uma montagem de 8 m pedida de longe, que chegava depois de o bloco já estar
+  perto de alguém, desligava a colisão dele até a de 2 m ser feita e cozida; e a volta para cima punha o jogador 0,5 m
+  acima da altura exata do relevo, que num canto côncavo (o pé de um talude, a beira de um corte) fica embaixo da malha de
+  2 m: ele nascia por baixo dela e caía de novo (o "ficam caindo").
+- **O conserto:**
+  - **O chão garantido:** a cada quadro, os blocos a menos de 10 m do jogador desta máquina (a pé) e a menos de 14 m dos
+    carros e das motos que ela simula (e de onde eles vão estar em 1,5 s) que estiverem sem a colisão ganham a malha de 2 m
+    e a colisão na hora, ali mesmo (uns 3 ms por bloco), sem esperar nada das threads. Cada vez fica no log, com o motivo
+    ("O chão perto de o jogador em (x, z) estava sem a colisão: o bloco ainda não tinha a malha de perto...").
+  - As árvores vão poucas de cada vez (metade dos núcleos, pelo menos 2), as mais perto primeiro.
+  - A montagem que chega atrasada, com outro detalhe, fica de fora.
+  - A volta para cima garante o chão do lugar e põe o jogador (ou o carro) em cima da colisão de verdade (o chão, a estrada,
+    o patamar do lote).
+- **Conferido:**
+  - Com as threads entupidas de propósito (64 tarefas presas por 8 s, como um PC fraco ocupado): até 10 m do jogador,
+    nenhum ponto sem chão em nenhum momento; de 10 a 40 m, o chão voltou quando as threads soltaram. (O teste deixa o quadro
+    principal quase sem CPU, e o jogo para uns segundos nele: isso é do teste. Na primeira versão do conserto, que esperava a
+    tarefa da fila, a parada era do conserto e ele mudou.)
+  - No caso normal: nos teleportes, o chão debaixo foi feito na hora em uns 3 ms por bloco (41 na primeira vez); na rota de
+    4,4 km a 40 m/s, nenhum ponto sem chão até 10 m do jogador e o pior quadro de 76 ms.
+  - O jogador posto 5 m embaixo do chão de um lote da Woodcreek voltou em cima da colisão (4 cm acima, apoiado) e o log
+    registrou o lugar e o motivo.
+- **O que testar com os amigos:** jogar normalmente, ir longe a pé e de carro e voltar; se alguém cair, o `Player.log` da
+  máquina de quem caiu tem as linhas "[Lakewood] O chão perto de..." e "[Lakewood] O jogador passou pelo chão...", com o
+  lugar e o motivo.
+
 ## As ferramentas do Editor (menu Zombie City Cleaner > Lakewood)
 
 1. **Refazer o esboço do mapa**: grava o esboço em código no asset (sem mexer no lago, nas ilhas e na cobertura).

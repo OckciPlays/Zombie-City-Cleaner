@@ -393,26 +393,27 @@ namespace ZombieCityCleaner.Mundo
         public static float PesoDoComodo(string comodo, int unidade) =>
             unidade >= PontoDeMovel.Farmacia && comodo == "banheiro" ? 1f : PesoDoComodo(comodo);
 
-        /// <summary>Num cômodo, no máximo tantos itens (se a moradia tiver outros cômodos com lugar).</summary>
-        public const int PorComodo = 6;
+        /// <summary>Num cômodo, no máximo tantos itens (se a moradia tiver outros cômodos com lugar; 6 até o dobro de 17/11/2026).</summary>
+        public const int PorComodo = 12;
 
         /// <summary>
-        /// Quantos itens uma moradia tem (02/11/2026, a pedido: três vezes os da decisão 3, "achei poucos itens"): a casa
-        /// térrea de 3 a 9, o sobrado de 6 a 12, o apartamento de 3 a 6; com porão, mais 0 a 3, no porão
-        /// (<see cref="TentativasNoPorao"/> vezes a <see cref="ChanceDoPorao"/>). Sem lugar para todos, ficam os que couberam.
+        /// Quantos itens uma moradia tem (02/11/2026, a pedido: três vezes os da decisão 3, "achei poucos itens"; e
+        /// 17/11/2026, a pedido: "dobrar quantidade de loot", o dobro disso): a casa térrea de 6 a 18, o sobrado de 12 a 24, o
+        /// apartamento de 6 a 12; com porão, mais 0 a 6, no porão (<see cref="TentativasNoPorao"/> vezes a
+        /// <see cref="ChanceDoPorao"/>). Sem lugar para todos, ficam os que couberam.
         /// </summary>
-        public static (int min, int max) Quantos(bool apartamento, bool sobrado) => apartamento ? (3, 6) : sobrado ? (6, 12) : (3, 9);
+        public static (int min, int max) Quantos(bool apartamento, bool sobrado) => apartamento ? (6, 12) : sobrado ? (12, 24) : (6, 18);
 
         public const float ChanceDoPorao = 0.5f;
-        public const int TentativasNoPorao = 3;
+        public const int TentativasNoPorao = 6;
 
         // ------------------------------------------------------------------ a farmácia e o hospital (05/11/2026)
 
         /// <summary>
-        /// Quantos itens uma unidade de loja tem: a farmácia de 8 a 14 (mais ou menos o dobro de uma casa), cada andar do
-        /// hospital de 5 a 10 (cada andar é uma obra, com o seu sorteio). Sem porão.
+        /// Quantos itens uma unidade de loja tem (o dobro desde 17/11/2026): a farmácia de 16 a 28 (mais ou menos o dobro de
+        /// uma casa), cada andar do hospital de 10 a 20 (cada andar é uma obra, com o seu sorteio). Sem porão.
         /// </summary>
-        public static (int min, int max) QuantosNaLoja(int unidade) => unidade == PontoDeMovel.Hospital ? (5, 10) : (8, 14);
+        public static (int min, int max) QuantosNaLoja(int unidade) => unidade == PontoDeMovel.Hospital ? (10, 20) : (16, 28);
 
         /// <summary>
         /// As raridades na farmácia (normal 50, incomum 38, raro 12) e no hospital (45, 40 e 15). Sem épico nem lendário:

@@ -174,6 +174,7 @@ namespace ZombieCityCleaner.Player
             _apertou = Origem.Nada;
             _arrastando = false;
             _opcoes.Clear();
+            FecharQuantos();
             if (abrir)
             {
                 _u = Escala();
@@ -210,13 +211,14 @@ namespace ZombieCityCleaner.Player
             {
                 // sentado no caiaque (07/11/2026), o TAB abre com o compartimento dele ao lado
                 var noCaiaque = GetComponent<PassageiroDoCaiaque>();
-                if (!Aberta && noCaiaque != null && noCaiaque.NoCaiaque) AbrirEstante(noCaiaque.Caiaque.Compartimento);
+                // (sem as estantes na cena, como no Lakewood, o compartimento não abre: a tela abria e fechava no mesmo quadro)
+                if (!Aberta && noCaiaque != null && noCaiaque.NoCaiaque && Estantes != null) AbrirEstante(noCaiaque.Caiaque.Compartimento);
                 else Abrir(!Aberta);
             }
-            // H: direto na aba Corpo (05/11/2026; não enquanto digita num campo de texto)
-            else if (teclado != null && teclado.hKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0) TeclaDoCorpo();
+            // H: direto na aba Corpo (05/11/2026; não enquanto digita num campo de texto nem com a escolha de quantos largar)
+            else if (teclado != null && teclado.hKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0 && !QuantosAberto) TeclaDoCorpo();
             // K: direto na aba HABILIDADES (06/11/2026)
-            else if (teclado != null && teclado.kKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0) TeclaDasHabilidades();
+            else if (teclado != null && teclado.kKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0 && !QuantosAberto) TeclaDasHabilidades();
             if (!Aberta) return;
             ConferirEstante();
             if (!Aberta) return;
@@ -235,6 +237,7 @@ namespace ZombieCityCleaner.Player
                 }
             }
             else _quadrosSolto = 0;
+            if (!MenuOnline.Aberto && TeclasDoQuantos(teclado)) return;   // (a escolha de quantos largar fica com as teclas)
             if (teclado == null || MenuOnline.Aberto) return;
             if (teclado.gKey.wasPressedThisFrame && _aba != Aba.Corpo)   // (na aba CORPO o escolhido nem aparece)
             {
@@ -382,6 +385,7 @@ namespace ZombieCityCleaner.Player
         /// </summary>
         public void Processar(Event e)
         {
+            if (ProcessarQuantos(e)) return;   // (a escolha de quantos largar, aberta, fica com o mouse: 17/11/2026)
             var m = e.mousePosition;
             switch (e.type)
             {
@@ -639,10 +643,17 @@ namespace ZombieCityCleaner.Player
             else if (d != null)
                 Opcao($"{Maiuscula(d.verbo)}: {Receitas.Lista(ViraComBonus(d))}" + (inventario.Desmontando ? " (desmontando outro)" : ""),
                       inventario.Desmontando ? null : () => inventario.Desmontar(id));
+            // (17/11/2026, a pedido: "dropar quantidade de loot": a escolha de quantos, TelaDoInventario.Quantos.cs)
             if (Itens.EmPilha(item) && !Itens.EhMunicao(item) && n > 1)
             {
                 Opcao("Largar um", () => inventario.LargarUm(id));
+                Opcao("Largar quantos...", () => AbrirQuantos(id));
                 Opcao($"Largar todos ({n})", () => LargarDoMenu(id));
+            }
+            else if (Itens.EhMunicao(item) && n > 1)
+            {
+                Opcao("Largar quantas balas...", () => AbrirQuantos(id));
+                Opcao($"Largar a caixa ({n} balas)", () => LargarDoMenu(id));
             }
             else Opcao("Largar", () => LargarDoMenu(id));
         }
@@ -760,9 +771,10 @@ namespace ZombieCityCleaner.Player
             if (_estante >= 0 && FormaAberta != null) DesenharEstante(mouse);
             else Detalhes();
             Arrasto(mouse);
-            if (MenuAberto) _dicaTexto = null;
+            if (MenuAberto || QuantosAberto) _dicaTexto = null;
             Dica(mouse);
             DesenharMenu(mouse);
+            DesenharQuantos(mouse);
         }
 
         void Cabecalho(Vector2 mouse)

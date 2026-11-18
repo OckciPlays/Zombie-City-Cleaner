@@ -12,14 +12,21 @@ namespace ZombieCityCleaner.UI
     /// chão), com as peças do motor, os pneus e o estepe a 100%, o macaco no porta-malas e o tanque cheio; a chave do veículo
     /// vai para a mochila (sem espaço, ou com "No chão", fica no chão à frente). Os prefabs vêm da lista da rede (os quatro já
     /// estão nela, para o anfitrião poder criar). Eles não entram no save: o save guarda só a perua e o cupê da partida.
+    /// <para>Desde 17/11/2026 (a pedido: "colocar a canoa para conseguir dar spawn"), o caiaque também: ele não é um carro
+    /// e nasce na água funda mais perto (<see cref="CriarCaiaqueNoAnfitriao"/>); os caiaques vão no save (nos dois mapas).</para>
     /// </summary>
     public partial class MenuDoDesenvolvedor
     {
         static readonly (string nome, string prefab)[] VeiculosDoF3 =
         {
             ("Perua", "Carro"), ("Cupê", "Cupe"), ("Moto cross", "Moto_Cross"), ("Moto Fat Boy", "Moto_FatBoy"),
-            ("Caminhonete", "Caminhonete"),
+            ("Caminhonete", "Caminhonete"), ("Caiaque", PrefabDoCaiaque),
         };
+
+        // (17/11/2026, a pedido: "colocar a canoa para conseguir dar spawn"): o caiaque não é um carro; ele nasce na água
+        const string PrefabDoCaiaque = "Caiaque";
+        /// <summary>Até onde o F3 procura água funda para o caiaque (m).</summary>
+        const float AguaDoCaiaqueAte = 60f;
 
         void BotoesDosVeiculos(float x, float y, float w, float bw, float u)
         {
@@ -30,6 +37,42 @@ namespace ZombieCityCleaner.UI
                 var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
                 if (GUI.Button(r, TelaDoInventario.Maiuscula(VeiculosDoF3[i].nome), _botao)) CriarVeiculoRpc((byte)i, _destino == 1);
             }
+            y += ((VeiculosDoF3.Length + 1) / 2) * 32 * u + 4 * u;
+            GUI.Label(new Rect(x, y, w, 40 * u), $"O caiaque nasce na água funda mais perto (até {AguaDoCaiaqueAte:0} m, à frente primeiro).", _texto);
+        }
+
+        /// <summary>
+        /// No anfitrião: o caiaque na água funda mais perto de quem pediu (à frente primeiro, depois em volta, até
+        /// <see cref="AguaDoCaiaqueAte"/>), de lado para ele, com as duas pontas na água. Devolve o aviso.
+        /// </summary>
+        string CriarCaiaqueNoAnfitriao()
+        {
+            var frente = transform.forward;
+            frente.y = 0f;
+            frente = frente.sqrMagnitude > 1e-4f ? frente.normalized : Vector3.forward;
+            Vector3 origem = transform.position;
+            for (float r = 4f; r <= AguaDoCaiaqueAte; r += 2f)
+            {
+                for (int i = 0; i < 24; i++)
+                {
+                    // 0°, -15°, +15°, -30°, +30°... até 180°
+                    float angulo = ((i + 1) / 2) * 15f * (i % 2 == 1 ? -1f : 1f);
+                    var dir = Quaternion.Euler(0f, angulo, 0f) * frente;
+                    var c = origem + dir * r;
+                    if (!Agua.Nivel(c, out float nivel) || Agua.Fundura(c) < 0.8f) continue;
+                    // de lado para quem pediu: as duas pontas também na água
+                    var lado = Vector3.Cross(Vector3.up, dir);
+                    if (Agua.Fundura(c + lado * 2.6f) < 0.5f || Agua.Fundura(c - lado * 2.6f) < 0.5f) continue;
+                    bool ocupado = false;
+                    foreach (var k in Caiaque.Todos)
+                        if (k != null && (k.transform.position - c).sqrMagnitude < 5f * 5f) ocupado = true;
+                    if (ocupado) continue;
+                    if (Caiaque.Criar(new Vector3(c.x, nivel, c.z), Quaternion.LookRotation(lado)) == null)
+                        return "Caiaque: sem o prefab (Zombie City Cleaner > Veículos > Montar o caiaque)";
+                    return $"Caiaque: na água, a {r:0} m. O E entra (atrás rema; na frente, as mãos livres).";
+                }
+            }
+            return $"Caiaque: sem água funda a até {AguaDoCaiaqueAte:0} m. Chegue perto do lago ou de um rio largo.";
         }
 
         [Rpc(SendTo.Server)]
@@ -49,6 +92,7 @@ namespace ZombieCityCleaner.UI
             criado = null;
             if (!IsServer || qual < 0 || qual >= VeiculosDoF3.Length) return null;
             var (nome, nomeDoPrefab) = VeiculosDoF3[qual];
+            if (nomeDoPrefab == PrefabDoCaiaque) return CriarCaiaqueNoAnfitriao();
             var prefab = PrefabDoVeiculo(nomeDoPrefab);
             if (prefab == null) return $"{nome}: o prefab não está na lista da rede";
             // o lugar: 6 m à frente de quem pediu, de lado para ele (a porta virada para ele), no chão; com outro carro ali, mais

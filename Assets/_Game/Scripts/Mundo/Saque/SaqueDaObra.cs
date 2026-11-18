@@ -33,8 +33,8 @@ namespace ZombieCityCleaner.Mundo
     /// <summary>
     /// O sorteio do saque de uma obra (o Plano_Saque.md da pasta de arte, a parte 3): para cada moradia dela (a casa, ou cada
     /// apartamento; <see cref="PontoDeMovel.unidade"/>), pela semente da obra (a mesma em todas as máquinas, como os móveis):
-    ///  - quantos itens (<see cref="CatalogoDoSaque.Quantos"/>: a térrea de 3 a 9, o sobrado de 6 a 12, o apartamento de 3 a 6;
-    ///    com porão, mais 0 a 3, no porão);
+    ///  - quantos itens (<see cref="CatalogoDoSaque.Quantos"/>: a térrea de 6 a 18, o sobrado de 12 a 24, o apartamento de 6 a
+    ///    12; com porão, mais 0 a 6, no porão; o dobro desde 17/11/2026);
     ///  - para cada um, a raridade (<see cref="CatalogoDoSaque.Chances"/>) e, entre os lugares livres que aceitam um item dela
     ///    (<see cref="CatalogoDoSaque.Aceita"/>) que cabe neles, deitado ou girado 90°: o cômodo (pelo peso dele; no máximo 6
     ///    no mesmo, se a moradia tiver outros com lugar), o móvel (pelo peso dele) e o lugar (<see cref="LugaresDoSaque"/>, nas

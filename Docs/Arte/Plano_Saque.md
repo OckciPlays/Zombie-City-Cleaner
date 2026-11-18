@@ -98,12 +98,14 @@ Os lugares são desenhados no Blender, junto do móvel (como as portas e as gave
 
 | Construção | Itens |
 |---|---|
-| Casa térrea | 1 a 3 (desde 02/11/2026: 3 a 9) |
-| Sobrado | 2 a 4 (desde 02/11/2026: 6 a 12) |
-| Com porão | mais 0 a 1, no porão (desde 02/11/2026: mais 0 a 3) |
-| Apartamento (dos prédios e em cima das lojas) | 1 a 2 (desde 02/11/2026: 3 a 6) |
+| Casa térrea | 1 a 3 (desde 02/11/2026: 3 a 9; desde 17/11/2026: 6 a 18) |
+| Sobrado | 2 a 4 (desde 02/11/2026: 6 a 12; desde 17/11/2026: 12 a 24) |
+| Com porão | mais 0 a 1, no porão (desde 02/11/2026: mais 0 a 3; desde 17/11/2026: mais 0 a 6) |
+| Apartamento (dos prédios e em cima das lojas) | 1 a 2 (desde 02/11/2026: 3 a 6; desde 17/11/2026: 6 a 12) |
 
 **O triplo** (02/11/2026, a pedido, testando a parte 4: "andei em várias casas e achei poucos itens, vamos aumentar para X3"): as quantidades e o máximo por cômodo (de 2 para 6) vezes 3. No Médio 7, 50.415 itens (5,15 por moradia: a térrea 6,1, com porão 7,5; o sobrado 9,0, com porão 10,5; o apartamento 4,5), com as raridades iguais (normal 59,9%, incomum 25,4%, raro 10,1%, épico 3,7%, lendário 0,9%) e só 4 moradias abaixo do mínimo (sem lugar para todos). Os números abaixo são os de antes.
+
+**O dobro** (17/11/2026, a pedido, antes de uma build para os amigos: "dobrar quantidade de loot"): as quantidades do triplo, o máximo por cômodo (de 6 para 12), a farmácia (16 a 28), o andar do hospital sorteado (10 a 20) e os andares do Hospital Principal (o subsolo 12 a 20, o térreo 20 a 32, o 2º 18 a 28 e o 3º 12 a 20) vezes 2. No Médio 7, 100.323 itens (10,24 por moradia: a térrea 12,1, com porão 14,5; o sobrado 18,0, com porão 20,2; o apartamento 9,0; no máximo 28 numa casa), com as raridades quase iguais (normal 40,1%, incomum 33,5%, raro 14,6%, épico 8,0%, lendário 3,7%: com mais itens, os lugares das raridades de cima acabam antes, e uns descem) e 24 moradias abaixo do mínimo (sem lugar para todos). O Hospital Principal ficou com 80,7 itens em média (20 sementes), eram uns 41. Conferido nos testes do Editor (o mapa inteiro, o catálogo e o saque do hospital); não conferido no Play.
 
 Um item é uma pilha (6 pregos contam como 1). No Médio (1.706 casas na semente 7), uns 2,3 itens por casa: uns 4 mil nas casas, mais os dos apartamentos. Desses, uns 40 lendários (o rifle, a sniper e a visão noturna), uns 150 épicos e uns 400 raros, no mapa inteiro.
 
@@ -181,6 +183,7 @@ Uma de cada vez, cada uma aprovada antes da próxima.
      - **Conferido no Play** (o Médio 7, hospedando local): a barra de energia no forno da casa da família (a mira, a dica em verde, o E, a mochila e a lista; de volta à casa, ela não volta), a faca na gaveta do fogão de um sobrado (vai com a gaveta, e a gaveta que ficou aberta na rede volta aberta com a faca dentro), o moletom em cima da cama e a mochila com os filetes. O sorteio de uma construção leva uns 0,45 ms, uma vez, quando alguém chega perto. As fotos em `Imgs/Renders/Saque_Jogo_Forno.png`, `_Gaveta.png`, `_Cama.png` e `_Inventario.png`.
      - **Não conferido:** dois jogadores (o cliente pegando, o outro vendo sumir), a mochila cheia e a pilha que cabe em parte.
      - **O triplo** (02/11/2026, a pedido: "achei poucos itens, vamos aumentar para X3"): a quantidade de cada moradia e o máximo por cômodo vezes 3 (veja "Quantos por casa"); 50.415 itens no Médio 7, 5,15 por moradia. Conferido no teste do Editor do mapa inteiro; não conferido no Play.
+     - **O dobro** (17/11/2026, a pedido: "dobrar quantidade de loot"): as quantidades, o máximo por cômodo, a farmácia e o hospital vezes 2 (veja "Quantos por casa"); 100.323 itens no Médio 7, 10,24 por moradia. Conferido nos testes do Editor; não conferido no Play.
      - **As raridades novas** (02/11/2026, a pedido): normal 40, incomum 30, raro 15, épico 10 e lendário 5 (veja "As raridades"). No Médio 7: 40,0%, 30,6%, 15,5%, 9,4% e 4,5%; 1.743 visões noturnas, 305 rifles, 226 snipers, 485 submetralhadoras, 138 espingardas e 931 pistolas. Conferido no teste do Editor do mapa inteiro.
 5. **As lojas, o hospital e o posto** (a decisão 8).
 

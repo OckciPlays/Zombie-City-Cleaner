@@ -108,6 +108,24 @@ namespace ZombieCityCleaner.Vehicles
         void OnEnable() => Todos.Add(this);
         void OnDisable() => Todos.Remove(this);
 
+        /// <summary>
+        /// No anfitrião: um caiaque no ponto (o prefab Resources/Caiaque; a montagem: Zombie City Cleaner > Veículos >
+        /// Montar o caiaque). O do mundo sorteado, o do save (nos dois mapas) e o do F3 > Veículos. Null sem o prefab.
+        /// </summary>
+        public static Caiaque Criar(Vector3 ponto, Quaternion giro)
+        {
+            var prefab = Resources.Load<GameObject>("Caiaque");
+            if (prefab == null)
+            {
+                Debug.LogWarning("[Caiaque] Sem o prefab Resources/Caiaque: rode Zombie City Cleaner > Veículos > Montar o caiaque.");
+                return null;
+            }
+            var novo = Instantiate(prefab, ponto, giro);
+            novo.name = "Caiaque";
+            novo.GetComponent<NetworkObject>().Spawn(true);
+            return novo.GetComponent<Caiaque>();
+        }
+
         void Awake()
         {
             if (remo != null)
