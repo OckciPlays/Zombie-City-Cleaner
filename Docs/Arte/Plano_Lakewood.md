@@ -1130,6 +1130,35 @@ jogador; esperando o teste com dois.
   máquina de quem caiu tem as linhas "[Lakewood] O chão perto de..." e "[Lakewood] O jogador passou pelo chão...", com o
   lugar e o motivo.
 
+### Os buracos da Woodcreek (18/11/2026)
+
+- **O pedido:** "na última build que joguei caí em uns buracos, gravou algum log?" (antes: "esses buracos eles têm certa
+  colisão, você não cai pro limpo, mas fica entrando no chão e voltando").
+- **O que o `Player.log` da build V14 mostrou:** 41 quedas do jogador e 39 da moto, em dois lugares no mato perto da
+  Woodcreek (uns 300 m a nordeste e 140 m a leste da casa da partida, a uns 100 m da Sawmill Road, fora dos lotes), todas
+  com "o chão em volta estava pronto". O jogador e a moto eram pegos sempre uns 0,8 m depois do limite do `Segurar` (2,5 m
+  e 3 m): caindo pelo nada, não parados num chão mais baixo. A volta para cima não achava chão, punha meio metro acima do
+  chão desenhado, e a pessoa caía de novo, até sair do lugar. A garantia de 17/11 não agia, porque o colisor estava ligado.
+- **A causa (reproduzida no Play, com o jogador indo e voltando a 30 m/s pela rota da moto):** na Unity 6000.6, num
+  `MeshCollider` **desligado** que já tem uma malha, o `sharedMesh = null` seguido do `sharedMesh = malha` não pega: ele
+  fica sem malha, e nenhuma atribuição seguinte, desligado, resolve; ligado depois, ele não colide. O `TerminarDeCozinhar`
+  fazia exatamente isso quando a colisão cozida em outra thread chegava num bloco que tinha saído e voltado para perto (o
+  colisor desligado ainda preso à malha, reescrita de 4 para 2 m). Ele ficava ligado e vazio até a pessoa sair de novo de
+  perto: no teste, numa passada sim e na outra não, a menos de 110 m, por uns 18 s; 474 de 1.844 conferências sem bater.
+  Os testes isolados (num objeto à parte): desligado, só pôr a malha funciona; desligado, tirar e pôr deixa sem malha;
+  ligado, tirar e pôr funciona; e o colisor desligado, com a malha reescrita e cozida, ao ligar monta a forma nova.
+- **O conserto** (`LakewoodNaCena.PorAMalha`): ligado, o null e a malha de novo (para a Unity cozinhar a de agora);
+  desligado, só pôr a malha se ela for outra (ao ligar, a forma sai com o conteúdo de agora); e, se ainda assim ele ficar
+  sem ela, liga, tira e põe. Vale no `TerminarDeCozinhar`, no `CozinharNaHora` e na cópia da hora do `GarantirBloco`.
+  Também: o `GarantirBloco` e o `QueFaltaAosZumbis` não contam um colisor ligado sem malha como chão
+  (`ColideDeVerdade`), e o log diz "o colisor ... estava ligado sem a malha". O chão do mundo sorteado (`TerrenoDoMundo`)
+  e as colisões das obras, dos andares, do bunker e do hospital não tinham o problema (só tiram a malha com o colisor
+  ligado, e põem a nova num colisor desligado e vazio).
+- **Conferido no Play:** na mesma rota, 0 de 1.831 conferências sem bater e nenhum colisor ligado sem malha em 198
+  varreduras de todos os blocos; numa rota pelo primeiro lugar da build, 0 de 1.105. A montagem do chão em 16 threads
+  saiu igual à de uma thread (336 blocos), e a malha bate com a altura nos dois lugares (até 0,1 m, em todos os detalhes).
+  Falta o teste com os amigos na build.
+
 ## As ferramentas do Editor (menu Zombie City Cleaner > Lakewood)
 
 1. **Refazer o esboço do mapa**: grava o esboço em código no asset (sem mexer no lago, nas ilhas e na cobertura).

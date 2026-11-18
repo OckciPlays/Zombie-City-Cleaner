@@ -669,9 +669,9 @@ namespace ZombieCityCleaner.World
             if (b.Cozinhando.IsFaulted) Debug.LogException(b.Cozinhando.Exception);
             b.Cozinhando = null;
             if (b.Objeto == null || b.Malha == null) return;
-            if (b.Colisor == null) b.Colisor = b.Objeto.AddComponent<MeshCollider>();
-            b.Colisor.sharedMesh = null;
-            b.Colisor.sharedMesh = b.Malha;
+            if (b.Colisor == null) b.Colisor = Colisores.NovoVazio(b.Objeto);
+            // (desligado, ele continua desligado: o Receber liga, com a malha dele já nele)
+            PorAMalha(b.Colisor, b.Malha, b.Colisor.enabled);
             b.ColisaoEmDia = true;
             if (b.MalhaDaHora != null)
             {
@@ -684,11 +684,40 @@ namespace ZombieCityCleaner.World
         static void CozinharNaHora(Bloco b)
         {
             if (b.Colisor == null) b.Colisor = Colisores.NovoVazio(b.Objeto);
-            b.Colisor.sharedMesh = null;
-            b.Colisor.sharedMesh = b.Malha;
-            b.Colisor.enabled = true;
+            PorAMalha(b.Colisor, b.Malha, true);
             b.ColisaoEmDia = true;
         }
+
+        /// <summary>
+        /// Põe a malha no colisor de um bloco, valendo (18/11/2026, os "buracos" da Woodcreek: o Player.log da build tinha o
+        /// jogador e a moto caindo dezenas de vezes no mesmo lugar, com o chão "pronto"). Na Unity 6000.6, num MeshCollider
+        /// DESLIGADO que já tem uma malha, o "sharedMesh = null" seguido do "sharedMesh = malha" não pega: ele fica sem malha (e
+        /// nenhuma atribuição seguinte, desligado, resolve) e, ligado depois, não colide. Era o que acontecia quando a colisão
+        /// cozida em outra thread chegava num bloco que tinha saído e voltado para perto: o colisor ligava vazio e ficava assim
+        /// até a pessoa sair de novo de perto (no teste, numa passada sim e na outra não, a menos de 110 m). Ligado, o null e a
+        /// malha de novo fazem a Unity cozinhar a malha de agora; desligado, basta a malha estar nele: ao ligar, a forma é
+        /// montada com o conteúdo de agora (conferido no Editor, com a malha reescrita e erguida 20 m).
+        /// </summary>
+        static void PorAMalha(MeshCollider c, Mesh m, bool ligar)
+        {
+            if (c.enabled)
+            {
+                c.sharedMesh = null;
+                c.sharedMesh = m;
+            }
+            else if (c.sharedMesh != m) c.sharedMesh = m;
+            // (se ainda assim ele ficou sem ela: ligado, o null e a malha pegam)
+            if (c.sharedMesh != m)
+            {
+                c.enabled = true;
+                c.sharedMesh = null;
+                c.sharedMesh = m;
+            }
+            c.enabled = ligar;
+        }
+
+        /// <summary>O colisor do bloco está ligado e com uma malha (ligado sem malha, ele não colide: <see cref="PorAMalha"/>).</summary>
+        static bool ColideDeVerdade(Bloco b) => b.Colisor != null && b.Colisor.enabled && b.Colisor.sharedMesh != null;
 
         // naHora: a colisão cozida aqui mesmo (o chão em volta da partida, antes de alguém nascer)
         void Entregar(Bloco b, MalhaDoBloco m, float passo, bool naHora = false)
@@ -770,8 +799,9 @@ namespace ZombieCityCleaner.World
             b.QuerColisao = true;
             b.PassoQuerido = 2f;
             bool malhaDePerto = b.Objeto != null && b.Malha != null && b.Passo > 0f && b.Passo <= 4.01f;
-            // com a colisão (a de agora, ou a da malha de antes até a nova ser cozida), nada a fazer
-            if (malhaDePerto && b.Colisor != null && b.Colisor.enabled) return;
+            // com a colisão (a de agora, ou a da malha de antes até a nova ser cozida), nada a fazer; ligado sem a malha não
+            // conta (18/11/2026: PorAMalha)
+            if (malhaDePerto && ColideDeVerdade(b)) return;
             float t0 = Time.realtimeSinceStartup;
             string motivo;
             // (nada daqui espera uma tarefa das threads: com elas cheias, a espera parava o jogo segundos; a malha é feita
@@ -780,18 +810,18 @@ namespace ZombieCityCleaner.World
             {
                 // a malha do bloco está sendo cozida em outra thread e não pode mudar: a colisão vai numa cópia feita agora, até
                 // o cozimento chegar (o TerminarDeCozinhar troca e apaga a cópia)
-                if (b.MalhaDaHora != null && b.Colisor != null && b.Colisor.enabled) return;
+                if (b.MalhaDaHora != null && ColideDeVerdade(b) && b.Colisor.sharedMesh == b.MalhaDaHora) return;
                 motivo = "a colisão ainda estava sendo cozida";
                 if (b.MalhaDaHora == null) b.MalhaDaHora = new Mesh { name = "Chão (colisão na hora)" };
                 Chao.Terreno(chave.x, chave.y, b.Passo).Para(b.MalhaDaHora);
                 if (b.Colisor == null) b.Colisor = Colisores.NovoVazio(b.Objeto);
-                b.Colisor.sharedMesh = null;
-                b.Colisor.sharedMesh = b.MalhaDaHora;
-                b.Colisor.enabled = true;
+                PorAMalha(b.Colisor, b.MalhaDaHora, true);
             }
             else if (malhaDePerto)
             {
-                motivo = b.Colisor == null ? $"a malha de {b.Passo:F0} m ainda não tinha a colisão" : $"a colisão da malha de {b.Passo:F0} m estava desligada";
+                motivo = b.Colisor == null ? $"a malha de {b.Passo:F0} m ainda não tinha a colisão"
+                       : !b.Colisor.enabled ? $"a colisão da malha de {b.Passo:F0} m estava desligada"
+                       : $"o colisor da malha de {b.Passo:F0} m estava ligado sem a malha";
                 CozinharNaHora(b);
             }
             else

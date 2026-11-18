@@ -68,6 +68,8 @@ namespace ZombieCityCleaner.World
                 if (!_blocos.TryGetValue(chave, out var b)) return $"o bloco ({chave.x}, {chave.y}) não está montado";
                 if (b.Passo <= 0f || b.Passo > 2.01f) return $"o bloco ({chave.x}, {chave.y}) não está no detalhe máximo";
                 if (b.Colisor == null || !b.Colisor.enabled) return $"o bloco ({chave.x}, {chave.y}) está sem a colisão";
+                // (18/11/2026: ligado sem a malha, ele não colide; PorAMalha)
+                if (!ColideDeVerdade(b)) return $"o colisor do bloco ({chave.x}, {chave.y}) está ligado sem a malha";
                 if (!b.ColisaoEmDia) return $"a colisão do bloco ({chave.x}, {chave.y}) está sendo feita";
             }
             float r2 = raio * raio;

@@ -135,6 +135,12 @@ Jogo de sobrevivência online (até 4 jogadores, cada um é um membro da famíli
     chão a menos de 10 m de quem a máquina simula (e 14 m dos carros, com 1,5 s à frente) é feito na hora quando falta
     (uns 3 ms por bloco, com o motivo no log), as árvores entram poucas de cada vez, a montagem atrasada fica de fora e a
     volta para cima põe em cima da colisão de verdade. Os detalhes no `Plano_Lakewood.md` ("A queda pelo chão").
+    **Os buracos da Woodcreek** (18/11/2026, a pedido: "na última build que joguei caí em uns buracos"; feito, esperando o
+    teste com os amigos): o `Player.log` da build tinha 41 quedas do jogador e 39 da moto em dois lugares, com o chão
+    "pronto". Era um comportamento da Unity 6000.6: num colisor desligado que já tem uma malha, tirar e pôr a malha de novo
+    não pega, e ele liga vazio (no teste, a colisão de um bloco que saía e voltava para perto faltava numa passada sim e
+    na outra não). A malha agora vai para o colisor do jeito que pega, e o chão garantido não conta um colisor sem malha.
+    Os detalhes no `Plano_Lakewood.md` ("Os buracos da Woodcreek").
     **Antes da build** (17/11/2026, a pedido: "dobrar quantidade de loot" e "colocar a canoa para conseguir dar spawn"):
     o saque dobrou (veja "O saque pelo mapa"); o caiaque é o último botão do F3 > Veículos (ele nasce na água funda mais
     perto, até 60 m, e volta com o save também no Lakewood); e, de um engano no pedido ("dropar"), ficou no botão direito

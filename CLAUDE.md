@@ -1411,6 +1411,13 @@ que os dois mapas cumprem, sem cópia:
   - a `PlantaDoAcampamento` tira a terceira barraca (a do acampamento grande) de cima das bancas (`EncostaNumaBanca`);
   - o `LakewoodNaCena.Segurar` segura os carros que esta máquina simula (`IsOwner`: o do amigo que dirige é dele) e
     escreve no log cada volta para cima (o jogador ou o carro, o lugar e o que faltava no chão).
+- **O colisor do chão ligado sem malha** (18/11/2026, os "buracos" da Woodcreek; o `Plano_Lakewood.md`, "Os buracos da
+  Woodcreek"): **na Unity 6000.6, num `MeshCollider` desligado que já tem uma malha, o `sharedMesh = null` seguido do
+  `sharedMesh = malha` não pega** (ele fica sem malha, e nenhuma atribuição seguinte, desligado, resolve; ligado depois,
+  não colide). Ligado, o null e a malha funcionam; desligado, basta a malha estar nele (ao ligar, a forma sai com o
+  conteúdo de agora). O `LakewoodNaCena.PorAMalha` faz isso (com a conferência no fim), e o `ColideDeVerdade` (ligado e
+  com malha) é o que o `GarantirBloco` e o `QueFaltaAosZumbis` contam. Ao escrever um colisor novo, nunca o null num
+  colisor desligado.
 - **O chão debaixo de quem anda** (17/11/2026, a pedido: "alguns chunks ficam sem colisão no chão e os jogadores ficando
   caindo"; o `Plano_Lakewood.md`, "A queda pelo chão"):
   - `LakewoodNaCena.GarantirOChao` (todo quadro, depois do `Receber`): para o jogador local a pé (não voando, não no carro)
