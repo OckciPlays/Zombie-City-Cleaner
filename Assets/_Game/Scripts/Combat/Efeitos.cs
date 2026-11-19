@@ -32,7 +32,7 @@ namespace ZombieCityCleaner.Combat
         public static AudioClip SocoParede;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
-        ParticleSystem _faiscas, _poeira;
+        ParticleSystem _faiscas, _poeira, _lascas;
 
         void Awake()
         {
@@ -90,6 +90,14 @@ namespace ZombieCityCleaner.Combat
             }
             _faiscas = Particulas("Faíscas", new Color(1f, 0.8f, 0.4f), 0.03f, 0.25f, 6f);
             _poeira = Particulas("Poeira", new Color(0.55f, 0.52f, 0.48f), 0.07f, 0.6f, 1.2f);
+            // as lascas do machado na madeira (18/11/2026): pedacinhos claros que pulam do corte e caem
+            _lascas = Particulas("Lascas", new Color(0.78f, 0.62f, 0.42f), 0.035f, 1.1f, 3.4f);
+            var mainDasLascas = _lascas.main;
+            mainDasLascas.gravityModifier = 1.3f;
+            mainDasLascas.startSize = new ParticleSystem.MinMaxCurve(0.02f, 0.05f);
+            mainDasLascas.startSpeed = new ParticleSystem.MinMaxCurve(1.5f, 4.2f);
+            mainDasLascas.startColor = new ParticleSystem.MinMaxGradient(new Color(0.85f, 0.70f, 0.48f), new Color(0.45f, 0.32f, 0.20f));
+            var formaDasLascas = _lascas.shape; formaDasLascas.angle = 50f;
             PrepararOGolpeNoChao();
         }
 
@@ -406,6 +414,14 @@ namespace ZombieCityCleaner.Combat
         }
 
         /// <summary>Marca de tiro no cenário: faíscas e poeira saindo da superfície.</summary>
+        /// <summary>As lascas da madeira saindo do corte (o machado na árvore, 18/11/2026), para o lado da normal.</summary>
+        public static void Lascas(Vector3 ponto, Vector3 normal, int quantas = 14)
+        {
+            if (_instancia == null || _instancia._lascas == null) return;
+            _instancia._lascas.transform.SetPositionAndRotation(ponto + normal * 0.03f, Quaternion.LookRotation(normal));
+            _instancia._lascas.Emit(quantas);
+        }
+
         public static void Impacto(Vector3 ponto, Vector3 normal)
         {
             if (_instancia == null) return;

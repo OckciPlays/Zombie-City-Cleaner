@@ -53,7 +53,6 @@ Material:
     - _VariacaoEscala: 42
     - _VariacaoForca: 0.2
     m_Colors:
-    - _CopaCor: {r: 0.15999997, g: 0.23999995, b: 0.12999997, a: 1}
     - _NeveCor: {r: 0.88, g: 0.9, b: 0.94, a: 1}
     - _RochaInclinacao: {r: 0.8, g: 0.62, b: 0, a: 0}
   m_BuildTextureStacks: []

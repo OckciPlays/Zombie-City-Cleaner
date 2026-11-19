@@ -78,7 +78,9 @@ namespace ZombieCityCleaner.Sobreviventes
         // os braços na roda, por cima da animação (batendo, durante a troca)
         void LateUpdate()
         {
-            if (!IsSpawned || corpo == null || !DaEstrada) return;
+            if (!IsSpawned || corpo == null) return;
+            InclinarOCorpo();   // (18/11/2026) o tronco inclinado espiando pela quina (Sobrevivente.Pose.cs)
+            if (!DaEstrada) return;
             _pesoDaPose = Mathf.MoveTowards(_pesoDaPose, _ajoelhado.Value && !_caido ? 1f : 0f, Time.deltaTime * 3f);
             if (_pesoDaPose <= 0f) return;
             if (_maoD == null) AcharOsBracos();

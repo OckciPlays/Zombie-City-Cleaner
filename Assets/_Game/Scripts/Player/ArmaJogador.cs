@@ -162,10 +162,24 @@ namespace ZombieCityCleaner.Player
         float _pesoDasAcoes;
         // o tiro não pega a cápsula do zumbi de perto (camada Ignore Raycast; quem leva o tiro são as hitboxes) nem os
         // corpos caídos
-        const int MascaraDoTiro = ~((1 << 2) | (1 << CorpoDeZumbi.Camada));
+        // (18/11/2026) o tiro passa pela grade (o alambrado e os portões de grade)
+        const int MascaraDoTiro = ~((1 << 2) | (1 << CorpoDeZumbi.Camada) | (1 << ZombieCityCleaner.Mundo.ModelosDaEstrada.CamadaDaGrade)
+                                    | (1 << JogadorRede.CamadaDaCabeca));
+
+        /// <summary>
+        /// Encostado na proteção sem mirar (ProtecaoDoJogador, 18/11/2026): de onde sai o tiro às cegas (a beira dela: por
+        /// cima da baixa, pela quina da alta). Null: o tiro normal.
+        /// </summary>
+        public Vector3? OrigemAsCegas { get; set; }
+        /// <summary>Atirando às cegas agora (encostado, sem mirar, com a beira de onde sair).</summary>
+        public bool AtirandoAsCegas => OrigemAsCegas.HasValue && rede != null && !rede.Mirando.Value;
+        float _cegaRajadaAte, _cegaPausaAte;
+        /// <summary>Quando foi o último tiro às cegas (a proteção inclina o tronco um pouco logo depois).</summary>
+        public float UltimoTiroAsCegas { get; private set; } = -9f;
         static readonly Collider[] _encostados = new Collider[8];
 
         InputAction _atirar, _recarregar, _mirar, _interagir;
+        MusicaDoJogador _musica;   // (os instrumentos, 18/11/2026)
         CharacterController _corpo;
         Coroutine _recarga;
         float _proximoTiro, _marcaAte;
@@ -596,6 +610,23 @@ namespace ZombieCityCleaner.Player
                 _segurando = null;
                 return;
             }
+            // o salmão preso na ponta da lança (18/11/2026, Player/SalmaoNaLanca.cs): o clique tira e guarda, e não golpeia
+            if (!bot && rede != null && rede.SalmaoNaLanca.Value && NaMao == Item.Lanca)
+            {
+                if (_atirar.WasPressedThisFrame()) rede.PedirTirarSalmao();
+                if (_alvo != null && !Usando && _interagir.WasPressedThisFrame()) ApertouE();
+                return;
+            }
+            // os instrumentos (18/11/2026, Player/MusicaDoJogador.cs): o clique começa e para de tocar; o botão direito, tocando,
+            // troca a música
+            if (!bot && rede != null && MusicaDoJogador.EhInstrumento(NaMao))
+            {
+                _musica ??= rede.GetComponent<MusicaDoJogador>();
+                if (_musica != null && controla && _atirar.WasPressedThisFrame()) _musica.Alternar();
+                if (_musica != null && controla && _mirar.WasPressedThisFrame()) _musica.OutraMusica();
+                if (_alvo != null && !Usando && _interagir.WasPressedThisFrame()) ApertouE();
+                return;
+            }
             // mirando no que usa o clique (o macaco apoiado), o botão esquerdo é dele: não atira nem soca
             if (_alvo != null && !bot && _alvo.UsaClique(this))
             {
@@ -614,6 +645,18 @@ namespace ZombieCityCleaner.Player
                 var d = Dados;
                 bool apertou = bot ? Mathf.Repeat(Time.time, 1.5f) < Time.deltaTime : _atirar.WasPressedThisFrame() || CliqueDoTeste();
                 bool atirar = apertou || (!bot && d.automatica && _atirar.IsPressed());
+                // (18/11/2026, a pedido: "atirar sem mirar, então somente a arma atira, em rajadas aleatórias") às cegas na
+                // proteção, a automática segurada sai em rajadas soltas
+                if (atirar && AtirandoAsCegas && d.automatica)
+                {
+                    float agora = Time.time;
+                    if (apertou || (agora >= _cegaPausaAte && agora > _cegaRajadaAte))
+                    {
+                        _cegaRajadaAte = agora + Random.Range(0.25f, 0.6f);
+                        _cegaPausaAte = _cegaRajadaAte + Random.Range(0.15f, 0.4f);
+                    }
+                    if (agora > _cegaRajadaAte) atirar = false;
+                }
                 bool recarregar = bot ? Municao == 0 : _recarregar.WasPressedThisFrame() || RecargaDoTeste();
                 if (recarregar && !Recarregando && Municao < d.capacidade)
                 {
@@ -842,14 +885,19 @@ namespace ZombieCityCleaner.Player
                     if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
                     return;
                 }
-                Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
-                if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
+                // o machado na madeira (18/11/2026): o pinheiro em pé ou o tronco caído tocam o som da madeira e soltam as
+                // lascas (pelo anfitrião, para todos), sem a batida na parede e sem as faíscas
+                bool madeira = NaMao == Item.Machado && GolpeNaArvore(hit.collider, ponto);
+                if (!madeira)
+                {
+                    Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
+                    if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
+                }
                 // a arma branca numa barricada de tábuas (11/11/2026, a etapa 5b: as tábuas, ou a porta e a janela barricadas do
                 // outro lado): o anfitrião tira metade do dano da arma da vida dela
                 if (faca) Loot.ConstrucoesNoMundo.Instancia?.GolpeNaBarricada(hit.collider, ponto, dano);
                 rede.AnunciarPancada(ponto, false);
                 if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));
-                if (NaMao == Item.Machado) GolpeNaArvore(hit.collider, ponto);   // (o machado corta a árvore, 06/11/2026)
                 return;
             }
         }
@@ -897,7 +945,7 @@ namespace ZombieCityCleaner.Player
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, Melhorias.VolumeDoTiro(MelhoriasNaMao), false);   // (o silenciador, 10/11/2026)
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
-            movimento.Coice(d.coiceGraus * (Corpo.AlgumBracoRuim ? 1.35f : 1f)   // (o braço quebrado segura mal o coice)
+            movimento.Coice(d.coiceGraus * (AtirandoAsCegas ? 0.4f : 1f) * (Corpo.AlgumBracoRuim ? 1.35f : 1f)   // (o braço quebrado segura mal o coice)
                             * (1f - 0.12f * Habilidades.Pontos(rede, Habilidade.MaoFirme)));   // (a Mão firme, 06/11/2026: 12% por ponto)
 
             var cam = rede.Olho;
@@ -908,6 +956,15 @@ namespace ZombieCityCleaner.Player
             // (o rifle de sucata, 09/11/2026, não tem luneta: mirando pela mira de ferro, a dispersão; sem mirar, a de sem luneta;
             // as miras postas nas de sucata, 10/11/2026, espalham menos: o Abertura, no ArmaJogador.Melhorias.cs)
             float abertura = Abertura();
+            // (18/11/2026) às cegas na proteção: da beira dela para onde a câmera aponta, bem aberto
+            bool cego = AtirandoAsCegas;
+            Vector3 origemCega = cego ? OrigemAsCegas.Value : Vector3.zero;
+            Quaternion miraCega = cego ? Quaternion.LookRotation(cam.position + cam.forward * 40f - origemCega) : Quaternion.identity;
+            if (cego)
+            {
+                abertura = abertura * 2.5f + 4f;
+                UltimoTiroAsCegas = Time.time;
+            }
             // as hitboxes andam com a animação: sincroniza a física antes do raio, para acertar onde o zumbi está agora
             Physics.SyncTransforms();
             var impactos = new JogadorRede.Impacto[d.chumbos];
@@ -921,9 +978,9 @@ namespace ZombieCityCleaner.Player
                 _chumboDoCentro = k == 0 && d.chumbos > 1;
                 Vector2 desvio = _chumboDoCentro ? Vector2.zero : Random.insideUnitCircle * abertura;
                 // (na terceira pessoa a câmera não treme: o tremor do braço e o calafrio entram aqui, no tiro)
-                var mira = rede.EmTerceiraPessoa && EfeitosDoCorpo.Local != null ? cam.rotation * EfeitosDoCorpo.Local.DesvioDaMira : cam.rotation;
+                var mira = cego ? miraCega : rede.EmTerceiraPessoa && EfeitosDoCorpo.Local != null ? cam.rotation * EfeitosDoCorpo.Local.DesvioDaMira : cam.rotation;
                 Vector3 direcao = mira * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
-                impactos[k] = Disparar(OrigemDaMira(cam), direcao, d);
+                impactos[k] = Disparar(cego ? origemCega : OrigemDaMira(cam), direcao, d);
                 // o galão e o rastro da cerca de fogo (12/11/2026): o galão é um gatilho que o raio atravessa, e o rastro
                 // não tem colisor (a bala para no chão em cima dele)
                 var cercas = Loot.ConstrucoesNoMundo.Instancia;
@@ -1099,8 +1156,16 @@ namespace ZombieCityCleaner.Player
 
         // o machado na árvore (06/11/2026, a pedido: "o machado cortar árvore"; 07/11/2026, os cortes dos lados): cada golpe
         // vai para o lado do tronco onde pegou, e o anfitrião conta e derruba (MundoDaPartida.Arvores.cs)
-        void GolpeNaArvore(Collider c, Vector3 ponto)
+        // (18/11/2026) devolve se pegou numa árvore (em pé ou caída)
+        bool GolpeNaArvore(Collider c, Vector3 ponto)
         {
+            // a árvore caída no chão (World/LakewoodNaCena.Troncos.cs): o anfitrião conta os golpes e solta as toras
+            var deitado = c != null ? c.GetComponent<World.TroncoDeitado>() : null;
+            if (deitado != null)
+            {
+                World.MundoDeLakewood.Instancia?.PedirGolpeNoTronco(deitado.chave, ponto);
+                return true;
+            }
             var floresta = World.FlorestaDoMundo.Instancia;
             var mundo = World.MundoDaPartida.Instancia;
             long chave;
@@ -1111,9 +1176,9 @@ namespace ZombieCityCleaner.Player
             bool noLakewood = mundo == null && lakewood != null && redeDoLakewood != null;
             if (noLakewood)
             {
-                if (!lakewood.TroncoEm(c, ponto, out chave, out pe)) return;
+                if (!lakewood.TroncoEm(c, ponto, out chave, out pe)) return false;
             }
-            else if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out chave, out pe)) return;
+            else if (floresta == null || mundo == null || !floresta.TroncoEm(c, ponto, out chave, out pe)) return false;
             // o lado do tronco onde o machado pegou (07/11/2026: os cortes dos lados; um dos 4, de 90 em 90° a partir do
             // norte); quem confere e conta é o anfitrião (MundoDaPartida.Arvores.cs)
             Vector3 d = ponto - pe;
@@ -1126,6 +1191,13 @@ namespace ZombieCityCleaner.Player
             int lado = Mathf.RoundToInt(Mathf.Repeat(Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, 360f) / 90f) & 3;
             if (noLakewood) redeDoLakewood.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
             else mundo.PedirGolpeNaArvore(chave, (byte)lado, ponto.y - pe.y);
+            // (no mundo sorteado, o som e as lascas daqui mesmo: só o Lakewood os manda pela rede)
+            if (!noLakewood)
+            {
+                Efeitos.Som(Combat.SomDaMadeira.Golpes, ponto, 1f, true, 45f);
+                Efeitos.Lascas(ponto, -rede.cameraMundo.transform.forward);
+            }
+            return true;
         }
 
         // o Tiro forte (06/11/2026, a árvore de habilidades): +4% por ponto no dano da arma de fogo (o dono conta o dano)
@@ -1487,6 +1559,21 @@ namespace ZombieCityCleaner.Player
                 // mira: um ponto com quatro tracinhos
                 Color cor = new Color(0.95f, 0.93f, 0.85f, 0.85f);
                 float g = 6 * u, l = 7 * u;
+                // (18/11/2026) na terceira pessoa, com algo entre a cabeça e o alvo, a mira vai para onde o tiro bate (laranja),
+                // e o meio da tela fica com um pontinho apagado
+                var bloqueio = CameraTerceiraPessoa.MiraBloqueada;
+                if (bloqueio.HasValue && rede != null && rede.EmTerceiraPessoa && rede.cameraMundo != null && !MaosOcupadas)
+                {
+                    Vector3 sp = rede.cameraMundo.WorldToScreenPoint(bloqueio.Value);
+                    if (sp.z > 0f)
+                    {
+                        Retangulo(cx - t / 2, cy - t / 2, t, t, new Color(0.95f, 0.93f, 0.85f, 0.35f));
+                        float escala = (float)Screen.width / Mathf.Max(1, rede.cameraMundo.pixelWidth);
+                        cx = sp.x * escala;
+                        cy = Screen.height - sp.y * escala;
+                        cor = new Color(1f, 0.55f, 0.2f, 0.95f);
+                    }
+                }
                 Retangulo(cx - t / 2, cy - t / 2, t, t, cor);
                 Retangulo(cx - g - l, cy - t / 2, l, t, cor); Retangulo(cx + g, cy - t / 2, l, t, cor);
                 Retangulo(cx - t / 2, cy - g - l, t, l, cor); Retangulo(cx - t / 2, cy + g, t, l, cor);

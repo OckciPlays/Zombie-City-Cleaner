@@ -27,6 +27,8 @@ namespace ZombieCityCleaner.Sobreviventes
         public int baseMilitar = -1;
         /// <summary>Os membros no começo (o que o save guarda: quem morreu sai da máscara).</summary>
         public int quantos;
+        /// <summary>Uma emboscada (18/11/2026, <see cref="EmboscadasDoMundo"/>): não explora, cada um no seu posto.</summary>
+        public bool emboscada;
         /// <summary>Quantos ainda vão nascer (16/11/2026: o grupo nasce um por quadro, SobreviventesDoMundo.NascerUm).</summary>
         public int nascendo;
         public readonly List<Sobrevivente> membros = new List<Sobrevivente>();
@@ -36,6 +38,21 @@ namespace ZombieCityCleaner.Sobreviventes
         public float viuEm = -99f;
         public Vector3 destino;
         public bool temDestino;
+        /// <summary>O cerco (18/11/2026): quem do grupo está indo pelo lado do alvo, e até quando.</summary>
+        public Sobrevivente flanqueador;
+        public float flancoAte;
+        // as proteções escolhidas (18/11/2026): dois não vão para o mesmo lugar
+        readonly Dictionary<Sobrevivente, Vector3> _protecoes = new Dictionary<Sobrevivente, Vector3>();
+
+        /// <summary>Alguém do grupo (que não 'eu') já escolheu uma proteção a menos de 1,6 m deste ponto.</summary>
+        public bool Reservada(Vector3 p, Sobrevivente eu)
+        {
+            foreach (var kv in _protecoes)
+                if (kv.Key != eu && kv.Key != null && !kv.Key.Morto && (kv.Value - p).sqrMagnitude < 1.6f * 1.6f) return true;
+            return false;
+        }
+
+        public void Reservar(Vector3 p, Sobrevivente eu) => _protecoes[eu] = p;
         float _proximoDestino;
         // (as pessoas do acampamento não fogem: estão em casa; os do carro quebrado não largam o carro; os militares, a base)
         public bool Fugindo => acampamento < 0 && cena < 0 && baseMilitar < 0 && quantos >= 2 && Vivos == 1 && nascendo == 0;
@@ -100,7 +117,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 inimigo = null;
                 temDestino = false;
             }
-            if (acampamento >= 0 || cena >= 0 || baseMilitar >= 0) return;   // o acampamento, o carro quebrado e a base não exploram: cada um no seu posto
+            if (acampamento >= 0 || cena >= 0 || baseMilitar >= 0 || emboscada) return;   // o acampamento, o carro quebrado e a base não exploram: cada um no seu posto
             var lider = Lider;
             if (estado != EstadoDoGrupo.Explorando || lider == null) return;
             bool chegou = temDestino && Vector3.Distance(lider.transform.position, destino) < 2.5f;

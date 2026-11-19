@@ -304,6 +304,14 @@ namespace ZombieCityCleaner.World
                             if (!colisoes.TryGetValue(p.Colisao, out var col)) colisoes[p.Colisao] = col = p.Colisao.ParaMesh(p.Nome + " (colisão)");
                             go.AddComponent<MeshCollider>().sharedMesh = col;
                         }
+                        if (p.ColisaoVazada != null)
+                        {
+                            // (18/11/2026) a grade: num filho, na camada dela (o tiro e a visão passam)
+                            if (!colisoes.TryGetValue(p.ColisaoVazada, out var vazada)) colisoes[p.ColisaoVazada] = vazada = p.ColisaoVazada.ParaMesh(p.Nome + " (grade)");
+                            var grade = new GameObject("Grade") { layer = ModelosDaEstrada.CamadaDaGrade };
+                            grade.transform.SetParent(go.transform, false);
+                            grade.AddComponent<MeshCollider>().sharedMesh = vazada;
+                        }
                         break;
                 }
                 PecasDaUsina++;

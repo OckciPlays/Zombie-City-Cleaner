@@ -55,7 +55,7 @@ namespace ZombieCityCleaner.Player
 
         // o cenário: sem os jogadores, os braços, o retrato, os zumbis e os pedaços deles; a janela, também sem os carros
         // (a do carro não é janela), que só bloqueiam a passagem e o pouso
-        static readonly int Mascara = ~((1 << 2) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
+        static readonly int Mascara = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
                                         | (1 << JogadorRede.CamadaRetrato) | (1 << Zumbi.CamadaZumbi) | (1 << CorpoDeZumbi.Camada));
         static readonly int MascaraDaJanela = Mascara & ~(1 << Carro.CamadaVeiculo);
         static readonly int JanelaId = Animator.StringToHash("Janela");

@@ -30,6 +30,12 @@ namespace ZombieCityCleaner.World
                 int n = CortadasNoBloco(b);
                 _cortesDoBloco.TryGetValue(b.Chave, out int antes);
                 if (n == antes) continue;
+                // (18/11/2026) uma árvore a mais cortada: só ela sai do bloco (LakewoodNaCena.Troncos.cs); o save, refaz tudo
+                if (n > antes && n - antes <= 4 && TirarOsCortados(b))
+                {
+                    _cortesDoBloco[b.Chave] = n;
+                    continue;
+                }
                 GuardarOsPinheiros(b);
                 PorOsPinheiros(b);
             }
@@ -162,8 +168,10 @@ namespace ZombieCityCleaner.World
             Efeitos.Som(Efeitos.SocoParede, pl.Posicao + Vector3.up, 1f, true, 45f);
         }
 
-        // os entalhes do machado em cada pinheiro, em cada máquina: um por lado
+        // os entalhes do machado em cada pinheiro, em cada máquina: um por lado (e a altura do corte de cada um, a do primeiro
+        // golpe daquele lado)
         readonly Dictionary<long, GameObject[]> _entalhes = new Dictionary<long, GameObject[]>();
+        readonly Dictionary<long, float> _alturaDoEntalhe = new Dictionary<long, float>();
 
         /// <summary>O entalhe de um lado (0 a 3) do pinheiro, com a fundura (0 a 1) e a altura do pé (m), a menos de 80 m.</summary>
         public void MarcarEntalhe(long chave, int lado, float fundura, float altura)
@@ -179,33 +187,36 @@ namespace ZombieCityCleaner.World
             }
             lado &= 3;
             var go = marcas[lado];
-            float alturaDoCorte = altura;
+            long chaveDoLado = chave * 4 + lado;
+            if (!_alturaDoEntalhe.TryGetValue(chaveDoLado, out float alturaDoCorte)) _alturaDoEntalhe[chaveDoLado] = alturaDoCorte = altura;
             if (go == null)
             {
                 go = new GameObject("Entalhe");
                 go.transform.position = pl.Posicao;
                 go.AddComponent<MeshFilter>();
                 var r = go.AddComponent<MeshRenderer>();
-                r.sharedMaterials = FlorestaDoMundo.MateriaisDoEntalhe();
+                // (18/11/2026) o corte em cunha de verdade (World/CorteNaMadeira.cs): a boca, a madeira de dentro e as lascas
+                r.sharedMaterials = CorteNaMadeira.Materiais(lado);
                 r.shadowCastingMode = ShadowCastingMode.Off;
                 marcas[lado] = go;
             }
-            else
-            {
-                var m = go.GetComponent<MeshFilter>().sharedMesh;
-                if (m != null) alturaDoCorte = m.bounds.min.y;
-            }
-            // o raio do tronco do pinheiro leve na altura do corte (a cápsula do prefab é um pouco maior que a casca)
-            float raio = ArvoresDoMundo.RaioDoTronco(pl) * 0.8f;
+            // o raio da casca de verdade na altura do corte (LakewoodNaCena.Casca.cs: o tronco de 7 lados do modelo); sem os
+            // anéis, o da tabela (a cápsula é um pouco maior que a casca)
+            float raio = RaioDaCasca(pl, alturaDoCorte, lado * Mathf.PI * 0.5f);
+            if (raio <= 0.01f) raio = ArvoresDoMundo.RaioDoTronco(pl) * 0.8f;
+            var planta = pl;
+            float alturaFixa = alturaDoCorte;
             var filtro = go.GetComponent<MeshFilter>();
             var velha = filtro.sharedMesh;
-            filtro.sharedMesh = FlorestaDoMundo.MalhaDoEntalhe(lado, Mathf.Clamp01(fundura), alturaDoCorte, raio);
+            filtro.sharedMesh = CorteNaMadeira.Malha(lado, Mathf.Clamp01(fundura), alturaDoCorte, raio, (int)(chaveDoLado ^ (chaveDoLado >> 32)),
+                                                     ang => RaioDaCasca(planta, alturaFixa, ang));
             if (velha != null) Destroy(velha);
         }
 
         /// <summary>Os entalhes do pinheiro somem (ele caiu).</summary>
         public void TirarEntalhes(long chave)
         {
+            for (int lado = 0; lado < 4; lado++) _alturaDoEntalhe.Remove(chave * 4 + lado);
             if (!_entalhes.TryGetValue(chave, out var marcas)) return;
             foreach (var go in marcas) ApagarEntalhe(go);
             _entalhes.Remove(chave);
@@ -216,6 +227,7 @@ namespace ZombieCityCleaner.World
             foreach (var marcas in _entalhes.Values)
                 foreach (var go in marcas) ApagarEntalhe(go);
             _entalhes.Clear();
+            _alturaDoEntalhe.Clear();
         }
 
         static void ApagarEntalhe(GameObject go)

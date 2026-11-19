@@ -190,7 +190,7 @@ namespace ZombieCityCleaner.Player
                 _pitch = Mathf.LerpAngle(_pitch, rede.Pitch.Value, 1f - Mathf.Exp(-atraso * Time.deltaTime));
                 olho = transform.TransformPoint(0f, AlturaDoOlho, 0f);
                 // sentado, ele olha também para os lados (o giro do banco)
-                olhar = transform.rotation * Quaternion.Euler(_pitch, noCarro ? rede.GiroSentado.Value : 0f, 0f);
+                olhar = transform.rotation * Quaternion.Euler(_pitch, noCarro || rede.SentadoNoChao.Value ? rede.GiroSentado.Value : 0f, 0f);
             }
             Vector3 frente = olhar * Vector3.forward;
 

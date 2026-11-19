@@ -590,12 +590,27 @@ namespace ZombieCityCleaner.Mundo
                 }
                 foreach (float y in new[] { 0.15f, 0.55f, 0.95f, 1.35f, 1.75f, 2.15f, 2.4f, 2.55f })
                     o.Tubo(new Vector3(a.x, y, a.y), new Vector3(b.x, y, b.y), y > 2.3f ? 0.012f : 0.008f, y > 2.3f ? "Ferrugem" : "Grade");
-                o.CaixaEntre(new Vector3(a.x, 1.2f, a.y), new Vector3(b.x, 1.2f, b.y), 0.05f, 2.4f, "Concreto", colide: true, visual: false);
+                // (18/11/2026) o painel de colisão de cada trecho não entra aqui: é o da grade (TrechosDaCerca), à parte
             }
-            Cerca(new Vector2(patio.xMin, patio.yMin), new Vector2(VaoDaCercaX0, patio.yMin));
-            Cerca(new Vector2(VaoDaCercaX1, patio.yMin), new Vector2(patio.xMax, patio.yMin));
-            Cerca(new Vector2(patio.xMin, patio.yMin), new Vector2(patio.xMin, Z0 - pe + 1f));
-            Cerca(new Vector2(patio.xMax, patio.yMin), new Vector2(patio.xMax, Z0 - pe + 1f));
+            foreach (var (a, b) in TrechosDaCerca()) Cerca(a, b);
+        }
+
+        /// <summary>
+        /// Os trechos da cerca do pátio, de a até b (x e z do bunker). A colisão de cada um, um painel de 5 cm × 2,4 m, vai na
+        /// camada da grade (ModelosDaEstrada.CamadaDaGrade, posto pelo BunkerDoMundo): segura quem anda, mas o tiro e a visão
+        /// passam (18/11/2026; antes ela era parte da colisão do morro, e a cerca tapava o tiro como um muro).
+        /// </summary>
+        public static (Vector2 a, Vector2 b)[] TrechosDaCerca()
+        {
+            var patio = Patio;
+            float pe = Morro * Talude;
+            return new[]
+            {
+                (new Vector2(patio.xMin, patio.yMin), new Vector2(VaoDaCercaX0, patio.yMin)),
+                (new Vector2(VaoDaCercaX1, patio.yMin), new Vector2(patio.xMax, patio.yMin)),
+                (new Vector2(patio.xMin, patio.yMin), new Vector2(patio.xMin, Z0 - pe + 1f)),
+                (new Vector2(patio.xMax, patio.yMin), new Vector2(patio.xMax, Z0 - pe + 1f)),
+            };
         }
     }
 }

@@ -102,7 +102,7 @@ namespace ZombieCityCleaner.UI
             frente = frente.sqrMagnitude > 1e-4f ? frente.normalized : Vector3.forward;
             var lado = Vector3.Cross(Vector3.up, frente);
             var giro = Quaternion.LookRotation(lado);
-            int mascara = ~((1 << 2) | (1 << JogadorRede.CamadaJogador));
+            int mascara = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaJogador));
             Vector3 ponto = transform.position + frente * 6f;
             bool achou = false;
             foreach (float ate in new[] { 6f, 10f, 14f })

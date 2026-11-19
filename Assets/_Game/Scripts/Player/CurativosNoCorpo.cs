@@ -31,7 +31,12 @@ namespace ZombieCityCleaner.Player
         const float ComprimentoDaFaixa = 0.09f;
         const float ComprimentoDoAnel = 0.045f;      // na testa
         const float ComprimentoNoPeito = 0.13f;      // a faixa larga do peito
-        const float FolgaDaFaixa = 0.015f;           // além da medida do membro
+        const float FolgaDaFaixa = 0.007f;           // além da medida do membro (18/11/2026: era 1,5 cm, e a medida pegava a roupa)
+        // (18/11/2026, a pedido: "deveriam ficar mais justas ... e em alguns momentos nem deveriam aparecer se a gente estiver
+        // com roupas por cima") a medida é só a da pele; com a roupa cobrindo o trecho da faixa (pelo menos tantos vértices
+        // dela no osso, ali), a faixa e a tala ficam por baixo dela e não aparecem
+        const int VerticesQueCobrem = 10;
+        const float TrechoCoberto = 0.14f;           // a fração do osso, para cada lado do meio da faixa
         const float LarguraDaRipa = 0.032f, EspessuraDaRipa = 0.008f, FolgaDaRipa = 0.004f;
         const float LarguraDaTira = 0.025f, FolgaDaTira = 0.004f;
         const float GotaACada = 1.5f;                // s
@@ -284,6 +289,9 @@ namespace ZombieCityCleaner.Player
                 lista.Add(s);
             }
             Medir(lista, doRepouso, noCorpo);
+            // debaixo da roupa, não aparecem
+            for (int p = 0; p < PartesDoCorpo.Quantas; p++)
+                if (secoes[p] != null && secoes[p].cobertos >= VerticesQueCobrem) secoes[p] = null;
 
             var c = new Construtor();
             for (int p = 0; p < PartesDoCorpo.Quantas; p++)
@@ -402,6 +410,8 @@ namespace ZombieCityCleaner.Player
             foreach (var pele in _corpo.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 if (pele == null || !pele.enabled || !pele.gameObject.activeInHierarchy) continue;
+                // as peças vestidas (Roupa_<nome>); o corpo (NPC_Corpo) também fica dentro do "Roupas", mas é a pele
+                bool roupa = pele.name.StartsWith(ZombieCityCleaner.Roupas.Vestimenta.PrefixoDasPecas, System.StringComparison.Ordinal);
                 var malha = pele.sharedMesh;
                 if (malha == null || !malha.isReadable) continue;
                 var ossos = pele.bones;
@@ -444,6 +454,12 @@ namespace ZombieCityCleaner.Player
                         float ao = Vector3.Dot(d, s.eixo);
                         float t = ao / s.comprimento;
                         if (t < s.t0 || t > s.t1) continue;
+                        // a roupa não entra na medida: só diz se cobre o trecho da faixa
+                        if (roupa)
+                        {
+                            if (Mathf.Abs(t - s.centro) <= TrechoCoberto) s.cobertos++;
+                            continue;
+                        }
                         d -= s.eixo * ao;
                         s.pontos.Add(new Vector2(Vector3.Dot(d, s.u), Vector3.Dot(d, s.w)));
                     }
@@ -506,7 +522,7 @@ namespace ZombieCityCleaner.Player
         // ------------------------------------------------ os modelos do Blender (a fase 3) ------------------------------------------------
 
         /// <summary>A folga entre a medida do membro e o pano do modelo (m).</summary>
-        const float FolgaDoModelo = 0.006f;
+        const float FolgaDoModelo = 0.003f;   // (18/11/2026: era 6 mm; mais justo, na pele)
         /// <summary>O raio de dentro dos modelos (o Blender/curativos.py): o membro de 5 cm.</summary>
         const float RaioDoModelo = 0.05f;
 
@@ -634,6 +650,8 @@ namespace ZombieCityCleaner.Player
             public Vector3 a, eixo, u, w;
             public float comprimento, t0, t1, centro, raioPadrao;
             public readonly List<Vector2> pontos = new List<Vector2>();
+            /// <summary>Os vértices das roupas vestidas no trecho da faixa (18/11/2026: cobrindo, a peça não aparece).</summary>
+            public int cobertos;
 
             public Vector3 Em(float t, Vector2 q) => a + eixo * (t * comprimento) + u * q.x + w * q.y;
         }

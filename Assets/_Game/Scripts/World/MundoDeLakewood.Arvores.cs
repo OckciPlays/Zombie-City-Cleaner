@@ -22,6 +22,7 @@ namespace ZombieCityCleaner.World
         {
             _arvoresCortadas = new NetworkList<long>();
             _arvoresCortadas.OnListChanged += _ => FlorestaDoMundo.DefinirCortadas(Copia(_arvoresCortadas));
+            IniciarOsTroncos();   // as árvores caídas (18/11/2026, MundoDeLakewood.Troncos.cs)
             IniciarAsOutrasListas();
         }
 
@@ -36,8 +37,17 @@ namespace ZombieCityCleaner.World
         }
 
         // (no spawn: quem entra recebe as cortadas; ao sair, a lista estática do jogo fica vazia)
-        void AoNascerAsArvores() => FlorestaDoMundo.DefinirCortadas(Copia(_arvoresCortadas));
-        void AoSumirAsArvores() => FlorestaDoMundo.DefinirCortadas(new List<long>());
+        void AoNascerAsArvores()
+        {
+            FlorestaDoMundo.DefinirCortadas(Copia(_arvoresCortadas));
+            AoNascerOsTroncos();
+        }
+
+        void AoSumirAsArvores()
+        {
+            FlorestaDoMundo.DefinirCortadas(new List<long>());
+            AoSumirOsTroncos();
+        }
 
         /// <summary>As árvores cortadas (o save).</summary>
         public List<long> ArvoresCortadas() => _arvoresCortadas != null ? Copia(_arvoresCortadas) : new List<long>();
@@ -68,11 +78,14 @@ namespace ZombieCityCleaner.World
                 lados = new byte[4];
                 _ladosCortados[chave] = lados;
             }
-            int precisa = MundoDaPartida.GolpesPorLado(planta.Escala);
+            // (18/11/2026) pela altura do pinheiro: a pequena cai com um golpe de cada lado, a grande com três
+            float alturaDaArvore = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.AlturaDoPinheiro(planta) : 12f;
+            int precisa = alturaDaArvore < 8f ? 1 : alturaDaArvore < 14f ? 2 : 3;
             bool fundo = lados[lado] >= precisa;
             if (!fundo) lados[lado]++;
             byte oposto = lados[(lado + 2) & 3];
             EntalheRpc(chave, lado, lados[lado], oposto, (byte)precisa, Mathf.Clamp(altura, 0.35f, 1.4f), quem, fundo);
+            if (lados[lado] >= precisa && oposto < precisa && !fundo) RangidoRpc(chave);   // o primeiro lado fundo: ela range
             if (lados[lado] < precisa || oposto < precisa) return;
             _ladosCortados.Remove(chave);
             Vector3 deste = Quaternion.Euler(0f, lado * 90f, 0f) * Vector3.forward;
@@ -94,9 +107,16 @@ namespace ZombieCityCleaner.World
         }
 
         [Rpc(SendTo.Everyone)]
+        void RangidoRpc(long chave)
+        {
+            if (ArvoresDoMundo.Planta(chave, out var pl)) Combat.Efeitos.Som(Combat.SomDaMadeira.Estalos, pl.Posicao + Vector3.up * 1f, 0.7f, true, 45f);
+        }
+
+        [Rpc(SendTo.Everyone)]
         void EntalheRpc(long chave, byte lado, byte fundura, byte oposto, byte precisa, float altura, ulong quem, bool jaFundo)
         {
             LakewoodNaCena.Instancia?.MarcarEntalhe(chave, lado, fundura / (float)Mathf.Max(1, (int)precisa), altura);
+            LakewoodNaCena.Instancia?.GolpeNoPinheiro(chave, lado, altura);   // (18/11/2026)
             if (NetworkManager == null || quem != NetworkManager.LocalClientId) return;
             if (fundura >= precisa && oposto >= precisa) return;
             if (jaFundo) InventarioJogador.AvisoLocal("Esse lado já está cortado: corte do lado oposto");
@@ -104,20 +124,15 @@ namespace ZombieCityCleaner.World
             else InventarioJogador.AvisoLocal($"Cortando a árvore: este lado {fundura} de {precisa}" + (oposto == 0 ? " (corte dois lados opostos para ela cair)" : ""));
         }
 
+        // (18/11/2026) a árvore cai inteira e fica deitada (MundoDeLakewood.Troncos.cs): as toras saem dela depois, cortando o
+        // tronco no chão; antes, as toras apareciam no pé na hora
         void Derrubar(long chave, PlantaDaFloresta planta, JogadorRede j, Vector3 caiLongeDe)
         {
             var pe = planta.Posicao;
-            var de = j.transform.position;
             _arvoresCortadas.Add(chave);
-            Vector3 lado = de - pe;
-            lado.y = 0f;
-            lado = lado.sqrMagnitude > 0.01f ? lado.normalized : Vector3.forward;
-            var onde = pe + lado * 1.2f;
-            // (a planta do ArvoresDoMundo vem no mundo, e o chão é perguntado no mundo)
-            var chao = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.ChaoNoMundo : null;
-            onde.y = (chao != null ? chao.Altura(onde.x, onde.z) : pe.y) + 0.05f;
-            int toras = Mathf.Clamp(Mathf.RoundToInt(1.5f + planta.Escala * 1.5f), 2, 5);
-            Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.Toras, onde, Random.Range(0f, 360f), toras);
+            var cena = LakewoodNaCena.Instancia;
+            float altura = cena != null ? cena.AlturaDoPinheiro(planta) : 12f;
+            Cair(chave, pe, pe - caiLongeDe, altura, ArvoresDoMundo.RaioDoTronco(planta), j);
             j.Inventario?.GanharXp(Habilidades.XpDaArvore, "árvore");
             Zombies.ZombieManager.Barulho(pe + Vector3.up * 2f, j, 30f);
             TombouRpc(chave, caiLongeDe, j.OwnerClientId);
@@ -129,6 +144,12 @@ namespace ZombieCityCleaner.World
             if (!IsServer || _arvoresCortadas == null || _arvoresCortadas.Contains(chave)) return false;
             _arvoresCortadas.Add(chave);
             _ladosCortados.Remove(chave);
+            // (18/11/2026) a roída também fica deitada, e dá para cortar em toras
+            if (ArvoresDoMundo.Planta(chave, out var planta))
+            {
+                float altura = LakewoodNaCena.Instancia != null ? LakewoodNaCena.Instancia.AlturaDoPinheiro(planta) : 12f;
+                Cair(chave, planta.Posicao, planta.Posicao - deOnde, altura, ArvoresDoMundo.RaioDoTronco(planta), null);
+            }
             TombouRpc(chave, deOnde, ulong.MaxValue);
             return true;
         }
@@ -140,10 +161,9 @@ namespace ZombieCityCleaner.World
             if (!cortadas.Contains(chave)) cortadas.Add(chave);
             var cena = LakewoodNaCena.Instancia;
             cena?.TirarEntalhes(chave);
-            // (a queda primeiro: a árvore de pé ainda está no bloco, com a cara dela)
-            cena?.Tombar(chave, deQuem);
+            // (18/11/2026) a queda é a árvore deitada da lista (LakewoodNaCena.Troncos.cs), que chega pela rede junto
             FlorestaDoMundo.DefinirCortadas(cortadas);
-            if (NetworkManager != null && quem == NetworkManager.LocalClientId) InventarioJogador.AvisoLocal("A árvore caiu: as toras ficaram no pé dela");
+            if (NetworkManager != null && quem == NetworkManager.LocalClientId) InventarioJogador.AvisoLocal("A árvore caiu: corte o tronco no chão em toras");
         }
     }
 }

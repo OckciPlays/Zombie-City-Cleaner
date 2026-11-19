@@ -18,7 +18,7 @@ namespace ZombieCityCleaner.Player
         const float AcimaDaCabeca = 0.42f;
         // o que tapa a vista: tudo menos os jogadores, os braços, o retrato, os zumbis (7 e 8), os carros, o Ignore Raycast e
         // os gatilhos
-        static readonly int MascaraDaVista = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador)
+        static readonly int MascaraDaVista = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador)
                                                | (1 << JogadorRede.CamadaRetrato) | (1 << Vehicles.Carro.CamadaVeiculo));
 
         JogadorRede _rede;

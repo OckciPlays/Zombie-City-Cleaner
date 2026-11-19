@@ -22,7 +22,7 @@ namespace ZombieCityCleaner.Player
         public float volumeDosOutros = 0.6f;
 
         // o raio do chão não vê os jogadores, os braços, os zumbis, os corpos e o Ignore Raycast
-        const int MascaraDoChao = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
+        const int MascaraDoChao = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
         // o chão de cada colisor: a superfície fixa, ou o PisoPorZona da construção dele (que depende do ponto)
         static readonly Dictionary<Collider, (Superficie fixa, PisoPorZona zonas)> _cache = new Dictionary<Collider, (Superficie, PisoPorZona)>();
 

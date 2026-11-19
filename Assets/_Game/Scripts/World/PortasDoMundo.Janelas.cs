@@ -110,6 +110,30 @@ namespace ZombieCityCleaner.World
             if (!ja && j.Aberta != antes) Efeitos.Som(j.Aberta ? SomDasPortas.Abrir : SomDasPortas.Fechar, j.Meio, 0.55f, true, 20f);
         }
 
+        /// <summary>As janelas vivas (as que abrem) a até 'raio' m de 'ponto' (os sobreviventes atirando da janela, 18/11/2026).</summary>
+        public void JanelasPerto(Vector3 ponto, float raio, List<JanelaDaCasa> saida)
+        {
+            saida.Clear();
+            float r2 = raio * raio;
+            foreach (var j in _janelasVivas.Values)
+                if (j != null && (j.Meio - ponto).sqrMagnitude < r2) saida.Add(j);
+        }
+
+        /// <summary>A janela abre por dentro (não está com a barricada de tábuas).</summary>
+        public static bool PodeAbrirPorDentro(JanelaDaCasa j) => j != null && j.construcao != null && !Barricada(j.chave);
+
+        /// <summary>
+        /// No anfitrião: um sobrevivente abre a janela por dentro, para atirar (18/11/2026): destranca o trinco, se for o
+        /// caso, como o jogador do lado de dentro. Devolve se ela ficou aberta.
+        /// </summary>
+        public bool AbrirPorDentro(JanelaDaCasa j)
+        {
+            if (!PodeAbrirPorDentro(j)) return false;
+            if (j.Aberta) return true;
+            EscreverChave(j.chave, true, JanelaTrancadaAgora(j.construcao, j.indice));
+            return true;
+        }
+
         internal void Esquecer(JanelaDaCasa j)
         {
             if (_janelasVivas.TryGetValue(j.chave, out var v) && v == j) _janelasVivas.Remove(j.chave);

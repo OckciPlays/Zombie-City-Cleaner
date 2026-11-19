@@ -158,7 +158,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 }
                 var modelo = Peca(peca.tipo, peca.variante);
                 desenho.Juntar(modelo.Malha, M);
-                foreach (var cx in modelo.Colisao) Caixa(colisoes, M, cx.Centro, cx.Tamanho, cx.GiroY);
+                foreach (var cx in modelo.Colisao) Caixa(colisoes, M, cx.Centro, cx.Tamanho, cx.GiroY, cx.Vazada);
             }
             for (int k = 0; k < p.Bancas.Count; k++) Banca(p.Bancas[k], k, desenho, colisoes, raiz.transform, c);
             foreach (var (pos, giro) in p.Barracas) Barraca(pos, giro, desenho, colisoes);
@@ -191,9 +191,10 @@ namespace ZombieCityCleaner.Sobreviventes
             return m;
         }
 
-        static void Caixa(Transform pai, Matrix4x4 M, Vector3 centro, Vector3 tamanho, float giroY = 0f)
+        static void Caixa(Transform pai, Matrix4x4 M, Vector3 centro, Vector3 tamanho, float giroY = 0f, bool vazada = false)
         {
-            var go = new GameObject("Caixa");
+            var go = new GameObject(vazada ? "Grade" : "Caixa");
+            if (vazada) go.layer = ModelosDaEstrada.CamadaDaGrade;   // (18/11/2026) o tiro passa pela grade
             go.transform.SetParent(pai, false);
             go.transform.localPosition = M.MultiplyPoint3x4(centro);
             go.transform.localRotation = M.rotation * Quaternion.Euler(0f, giroY, 0f);
@@ -440,7 +441,7 @@ namespace ZombieCityCleaner.Sobreviventes
         }
 
         // os estalos da lenha: estouros curtos de ruído (gerados uma vez)
-        static AudioClip[] Estalos()
+        internal static AudioClip[] Estalos()   // (também as fogueiras dos jogadores, 18/11/2026)
         {
             if (_estalos != null) return _estalos;
             const int taxa = 44100;

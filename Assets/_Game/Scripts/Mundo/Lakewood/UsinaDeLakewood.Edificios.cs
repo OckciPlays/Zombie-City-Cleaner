@@ -472,7 +472,7 @@ namespace ZombieCityCleaner.Mundo
                 Arame(P(t1, 0.15f), P(t0, 2.4f), 0.025f, "Grade");
                 Arame(P(t0, 2.8f), P(t1, 2.8f), 0.02f, "Grade");
                 var meio = (P(t0, 1.3f) + P(t1, 1.3f)) * 0.5f;
-                d.Colide(meio, new Vector3(0.15f, 2.6f, Vector3.Distance(P(t0, 0f), P(t1, 0f))), Mathf.Atan2(dir.x, -dir.y) * Mathf.Rad2Deg);
+                d.ColideVazado(meio, new Vector3(0.15f, 2.6f, Vector3.Distance(P(t0, 0f), P(t1, 0f))), Mathf.Atan2(dir.x, -dir.y) * Mathf.Rad2Deg);
             }
             d.Entre(P(1f, -0.3f), P(1f, 2.55f), 0.09f, 0.09f, "Metal");
         }
@@ -499,7 +499,7 @@ namespace ZombieCityCleaner.Mundo
                 d.Entre(o + cima * 0.5f, b + cima * 0.5f, 0.03f, 0.03f, "Grade");
             }
             Folha(L(Portao.x, y0 + 0.1f, v), Vector3.right * (meio - Portao.x), Vector3.up * 2.2f);
-            d.Colide(L((Portao.x + meio) * 0.5f, y0 + 1.2f, v), new Vector3(meio - Portao.x, 2.3f, 0.15f));
+            d.ColideVazado(L((Portao.x + meio) * 0.5f, y0 + 1.2f, v), new Vector3(meio - Portao.x, 2.3f, 0.15f));
             d.Caixa(L(meio - 0.1f, y0 + 1.2f, v), new Vector3(0.12f, 0.35f, 0.12f), "Cromo");
             float yb = H(meio + 4f, v + 3f);
             Folha(L(meio + 0.3f, yb + 0.06f, v + 0.6f), Vector3.right * (Portao.y - meio - 0.6f), new Vector3(0f, 0f, -2.2f));

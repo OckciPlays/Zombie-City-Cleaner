@@ -38,6 +38,28 @@ namespace ZombieCityCleaner.Player
         public bool Correndo { get; private set; }
 
         /// <summary>
+        /// O que muda o passo que o jogador quer (no plano, m/s), antes de andar: a proteção (ProtecaoDoJogador, 18/11/2026)
+        /// deixa só ao longo dela. Null: nada.
+        /// </summary>
+        public System.Func<Vector3, Vector3> FiltroDoPasso;
+
+        /// <summary>A altura do olho imposta (sentado no chão perto do fogo, 18/11/2026: SentarNoFogo). Null: a de sempre.</summary>
+        [System.NonSerialized] public float? OlhoForcado;
+
+        /// <summary>
+        /// Sentado no chão (18/11/2026, a pedido: "quando sentamos e mexemos o mouse, o boneco se mexe também ... deveria
+        /// ficar sentado, apenas mudando a visão"): o corpo não gira com o olhar; o mouse vira só a cabeça (a câmera), até
+        /// <see cref="GiroSentadoMaximo"/> graus para cada lado, e o giro vai pela rede (<see cref="JogadorRede.GiroSentado"/>)
+        /// para a cabeça dele virar para os outros. Ao levantar, o corpo vira para onde ele olhava.
+        /// </summary>
+        [System.NonSerialized] public bool CorpoParado;
+        public const float GiroSentadoMaximo = 110f;
+        /// <summary>Os testes (pelo MCP): o olhar a mais a cada quadro (graus: x para os lados, y para cima).</summary>
+        public static Vector2 OlharNoTeste;
+        float _giroDaCabeca;
+        bool _olhoVoltando;
+
+        /// <summary>
         /// Nadando (06/11/2026, a pedido: "conseguir nadar"): com a água acima do peito, ele boia com a cabeça de fora; o
         /// Espaço sobe, o C (ou o Ctrl) mergulha; mais devagar, sem correr nem pular. O fôlego é do anfitrião
         /// (VidaJogador.Agua.cs).
@@ -125,7 +147,7 @@ namespace ZombieCityCleaner.Player
         float _alturaEmPe, _olhoEmPe, _abaixado;
         Vector3 _centroEmPe;
         // o que pode tapar o lugar de levantar (sem o Ignore Raycast, os braços, os corpos caídos, o jogador e o retrato)
-        const int MascaraDoTeto = ~((1 << 2) | (1 << 6) | (1 << 8) | (1 << 9) | (1 << 10));
+        const int MascaraDoTeto = ~((1 << 2) | (1 << 16) | (1 << 6) | (1 << 8) | (1 << 9) | (1 << 10));
 
         // preso na gosma do Long (01/11/2026): sem andar, correr nem pular até segurar E o bastante
         float _presoPrecisa, _presoFeito;
@@ -245,6 +267,16 @@ namespace ZombieCityCleaner.Player
         // a câmera desce e sobe aos poucos (só mexe na cabeça quando abaixa: em pé e parado, ela fica como está)
         void CameraDoAbaixar(float dt)
         {
+            // (sentado no chão: o olho desce até a altura imposta; levantando, volta à de em pé ou agachado)
+            if (OlhoForcado.HasValue || _olhoVoltando)
+            {
+                float y = OlhoForcado ?? Mathf.Lerp(_olhoEmPe, olhoAgachado, Mathf.SmoothStep(0f, 1f, _abaixado));
+                var q = cabeca.localPosition;
+                q.y = Mathf.MoveTowards(q.y, y, dt * 2.2f);
+                cabeca.localPosition = q;
+                _olhoVoltando = OlhoForcado.HasValue || Mathf.Abs(q.y - y) > 0.001f;
+                return;
+            }
             float alvo = Agachado ? 1f : 0f;
             if (_abaixado == alvo) return;
             _abaixado = Mathf.MoveTowards(_abaixado, alvo, dt / Mathf.Max(0.01f, tempoDeAbaixar));
@@ -351,12 +383,22 @@ namespace ZombieCityCleaner.Player
                 abaixar = _abaixar != null && _abaixar.WasPressedThisFrame();
             }
 
-            _yaw += olhar.x;
+            olhar += OlharNoTeste;
+            // sentado no chão, o olhar vira só a cabeça; levantando, o corpo vira para onde ela olhava (18/11/2026)
+            if (CorpoParado) _giroDaCabeca = Mathf.Clamp(_giroDaCabeca + olhar.x, -GiroSentadoMaximo, GiroSentadoMaximo);
+            else
+            {
+                _yaw += olhar.x + _giroDaCabeca;
+                _giroDaCabeca = 0f;
+            }
+            if (rede != null && rede.IsSpawned && rede.IsOwner && (rede.Passageiro == null || !rede.Passageiro.NoCarro)
+                && Mathf.Abs(rede.GiroSentado.Value - _giroDaCabeca) > 1f)
+                rede.GiroSentado.Value = _giroDaCabeca;
             _pitch = Mathf.Clamp(_pitch - olhar.y, -pitchMaximo, pitchMaximo);
             _coice = Mathf.Lerp(_coice, 0f, 1f - Mathf.Exp(-10f * dt));
             transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
             float pitchFinal = Mathf.Clamp(_pitch - _coice, -pitchMaximo, pitchMaximo);
-            cabeca.localRotation = Quaternion.Euler(pitchFinal, 0f, 0f);
+            cabeca.localRotation = Quaternion.Euler(pitchFinal, _giroDaCabeca, 0f);
             if (Mathf.Abs(rede.Pitch.Value - pitchFinal) > 0.5f) rede.Pitch.Value = pitchFinal;
             if (_naAgua > 0.001f) cabeca.localRotation *= Quaternion.Euler(0f, 0f, _rolagemAgua * _naAgua);   // (o balanço da braçada)
             if (_tremor > 0.001f)
@@ -438,6 +480,7 @@ namespace ZombieCityCleaner.Player
             if (pesado) alvo *= Habilidades.Tem(rede, Habilidade.Borracheiro) ? 0.8f : InventarioJogador.LentidaoDoPneu;   // (o Borracheiro)
             alvo *= Protecao.FatorDaVelocidade(_inventario);   // (o colete de chapa pesa, 11/11/2026)
             Vector3 desejada = (transform.right * mover.x + transform.forward * mover.y) * alvo;
+            if (FiltroDoPasso != null) desejada = FiltroDoPasso(desejada);   // (encostado na proteção, 18/11/2026)
             Vector3 horizontal = new Vector3(_velocidade.x, 0f, _velocidade.z);
             horizontal = Vector3.Lerp(horizontal, desejada, 1f - Mathf.Exp(-(_controle.isGrounded ? aceleracao : aceleracao * 0.2f) * dt));
             if (_controle.isGrounded)

@@ -277,7 +277,14 @@ namespace ZombieCityCleaner.World
             if (caixas != null)
                 foreach (var c in caixas)
                 {
-                    var bc = go.AddComponent<BoxCollider>();
+                    // (18/11/2026) a grade num filho, na camada dela (o tiro passa), sem mudar a do desenho
+                    var dono = go;
+                    if (c.Vazada)
+                    {
+                        dono = new GameObject("Grade") { layer = ModelosDaEstrada.CamadaDaGrade };
+                        dono.transform.SetParent(go.transform, false);
+                    }
+                    var bc = dono.AddComponent<BoxCollider>();
                     bc.center = c.Centro;
                     bc.size = c.Tamanho;
                 }

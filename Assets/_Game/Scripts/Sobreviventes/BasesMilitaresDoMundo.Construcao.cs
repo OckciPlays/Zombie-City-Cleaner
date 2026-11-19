@@ -124,7 +124,7 @@ namespace ZombieCityCleaner.Sobreviventes
                     {
                         var modelo = Modelo(peca.tipo, peca.variante);
                         desenho.Juntar(modelo.Malha, M);
-                        foreach (var cx in modelo.Colisao) Caixa(colisoes, M, cx.Centro, cx.Tamanho, cx.GiroY);
+                        foreach (var cx in modelo.Colisao) Caixa(colisoes, M, cx.Centro, cx.Tamanho, cx.GiroY, cx.Vazada);
                         break;
                     }
                 }
@@ -158,9 +158,10 @@ namespace ZombieCityCleaner.Sobreviventes
             return m;
         }
 
-        static void Caixa(Transform pai, Matrix4x4 M, Vector3 centro, Vector3 tamanho, float giroY = 0f)
+        static void Caixa(Transform pai, Matrix4x4 M, Vector3 centro, Vector3 tamanho, float giroY = 0f, bool vazada = false)
         {
-            var go = new GameObject("Caixa");
+            var go = new GameObject(vazada ? "Grade" : "Caixa");
+            if (vazada) go.layer = ModelosDaEstrada.CamadaDaGrade;   // (18/11/2026) o tiro passa pela grade
             go.transform.SetParent(pai, false);
             go.transform.localPosition = M.MultiplyPoint3x4(centro);
             go.transform.localRotation = M.rotation * Quaternion.Euler(0f, giroY, 0f);

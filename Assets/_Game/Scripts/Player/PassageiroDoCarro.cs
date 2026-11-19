@@ -35,7 +35,7 @@ namespace ZombieCityCleaner.Player
         const float MoverDe = 0.25f, SairDe = 0.3f;
         const float MoverAte = Carro.FecharEm;
 
-        static readonly int MascaraDoCenario = ~((1 << 2) | (1 << Carro.CamadaVeiculo) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
+        static readonly int MascaraDoCenario = ~((1 << 2) | (1 << 16) | (1 << Carro.CamadaVeiculo) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
                                                  | (1 << JogadorRede.CamadaRetrato) | (1 << Zumbi.CamadaZumbi) | (1 << CorpoDeZumbi.Camada));
 
         static readonly string[] Ossos =
@@ -337,7 +337,12 @@ namespace ZombieCityCleaner.Player
 
         void LateUpdate()
         {
-            if (_fase == Fase.Fora) return;
+            if (_fase == Fase.Fora)
+            {
+                SentadoNoChao();   // (sentado no chão perto do fogo, 18/11/2026: PassageiroDoCarro.NoChao.cs)
+                PoseDoInstrumento();   // (tocando, 18/11/2026: PassageiroDoCarro.Instrumento.cs)
+                return;
+            }
             float dt = Time.deltaTime;
             _tempo += dt;
             bool dono = _rede.IsOwner;

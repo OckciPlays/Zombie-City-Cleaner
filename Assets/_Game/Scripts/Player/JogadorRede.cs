@@ -381,6 +381,10 @@ namespace ZombieCityCleaner.Player
             Fumo = GetComponent<FumoJogador>();
             Inventario = GetComponent<InventarioJogador>();
             Passageiro = GetComponent<PassageiroDoCarro>();
+            if (GetComponent<ProtecaoDoJogador>() == null) gameObject.AddComponent<ProtecaoDoJogador>();   // (a proteção, 18/11/2026)
+            if (GetComponent<SentarNoFogo>() == null) gameObject.AddComponent<SentarNoFogo>();   // (sentar no fogo, 18/11/2026)
+            if (GetComponent<SalmaoNaLanca>() == null) gameObject.AddComponent<SalmaoNaLanca>();   // (o salmão preso na lança, 18/11/2026)
+            if (GetComponent<MusicaDoJogador>() == null) gameObject.AddComponent<MusicaDoJogador>();   // (os instrumentos, 18/11/2026)
 
             bool dono = IsOwner;
             if (dono) Personagem.Value = (byte)Personagens.Escolhido;
@@ -709,6 +713,7 @@ namespace ZombieCityCleaner.Player
             // abaixado: o corpo desce e sobe em ~0,25 s (só no controlador que tem o parâmetro)
             _agachado = Mathf.MoveTowards(_agachado, Agachado.Value ? 1f : 0f, Time.deltaTime / 0.25f);
             if (TemAgachado(animadorCorpo)) animadorCorpo.SetFloat(AgachadoId, _agachado);
+            CorpoParaOTiro();   // (a proteção, 18/11/2026: JogadorRede.Protecao.cs)
         }
 
         static readonly int AgachadoId = Animator.StringToHash("Agachado");
@@ -758,6 +763,7 @@ namespace ZombieCityCleaner.Player
                 osso.localScale = Vector3.one * 0.001f;
             }
             else if (_cabecaEncolhida) CabecaDeVolta();
+            PoseDaProtecao();   // (a proteção, 18/11/2026: JogadorRede.Protecao.cs)
         }
 
         /// <summary>O que o tiro acertou, para os outros mostrarem o efeito certo.</summary>

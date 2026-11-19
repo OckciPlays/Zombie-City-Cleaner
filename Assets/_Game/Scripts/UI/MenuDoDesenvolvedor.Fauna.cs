@@ -37,7 +37,7 @@ namespace ZombieCityCleaner.UI
             var f = FaunaDoMundo.Instancia;
             _conteudoDaFauna.text = f != null ? f.Resumo(transform.position) : "A fauna liga com o mundo gerado pronto.";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDaFauna, w);
-            int linhas = (BotoesDaFauna.Length + 1) / 2 + 14;
+            int linhas = (BotoesDaFauna.Length + 1) / 2 + 17;
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
@@ -122,6 +122,17 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x + 2 * (terco + 6 * u), y, terco, alto * u), "Brejo", _botao)) IrParaOLugar(TipoDeLugarDoBicho.Brejo);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "Os bichos do lugar mais perto", _botao)) TesteDaFaunaRpc(16, 0);
+            // a fogueira (18/11/2026): a fogueira acesa na frente e o que se usa nela (a lenha, o espeto, a panela e a comida)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Fogueira acesa", _botao)) TesteDaFaunaRpc(18, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Itens da fogueira", _botao)) TesteDaFaunaRpc(19, 0);
+            // o salmão preso na lança (18/11/2026): a lança na mochila, e o peixe direto na ponta dela (para ver sem o rio)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Lança na mochila", _botao)) TesteDaFaunaRpc(20, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Salmão na lança", _botao)) TesteDaFaunaRpc(21, 0);
+            // os instrumentos (18/11/2026, a etapa 4 da fogueira: os quatro na mochila, ou aos pés)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, w, alto * u), "Os 4 instrumentos na mochila", _botao)) TesteDaFaunaRpc(22, 0);
             return area;
         }
 
@@ -193,6 +204,32 @@ namespace ZombieCityCleaner.UI
                     break;
                 case 17:
                     aviso = f != null ? f.UrsoPegaOSalmao(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 18:
+                    aviso = ConstrucoesNoMundo.Instancia != null ? ConstrucoesNoMundo.Instancia.FogueiraDeTeste(j) : "Sem as construções neste mundo.";
+                    break;
+                case 19:
+                    aviso = ConstrucoesNoMundo.ItensDaFogueiraDeTeste(GetComponent<InventarioJogador>());
+                    break;
+                case 20:
+                    GetComponent<InventarioJogador>()?.EntregarItem(Item.Lanca, 1);
+                    aviso = "A lança está na mochila (ou aos seus pés): ponha na mão e golpeie um salmão no raso.";
+                    break;
+                case 22:
+                    {
+                        var mochila = GetComponent<InventarioJogador>();
+                        if (mochila != null)
+                            foreach (var instrumento in new[] { Item.Violao, Item.Pandeiro, Item.Gaita, Item.Flauta }) mochila.EntregarItem(instrumento, 1);
+                        aviso = "O violão, o pandeiro, a gaita e a flauta (o que não coube está aos seus pés). Na mão, clique para tocar; botão direito, outra música.";
+                    }
+                    break;
+                case 21:
+                    if (j.Inventario == null || j.Inventario.NaMao != Item.Lanca) aviso = "Ponha a lança na mão antes.";
+                    else
+                    {
+                        j.SalmaoNaLanca.Value = true;
+                        aviso = "Um salmão na ponta da lança (clique para tirar e guardar).";
+                    }
                     break;
                 case 12:
                     FaunaDoMundo.CastorRapido = !FaunaDoMundo.CastorRapido;

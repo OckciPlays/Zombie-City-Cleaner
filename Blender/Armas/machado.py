@@ -44,7 +44,7 @@ GIRO_NO_EIXO = -50.0
 # a mão direita mais alta no cabo, 18 cm da ponta de baixo (a esquerda vai embaixo dela: SEGUNDA_MAO)
 NO_PUNHO = Vector((0.0, 0.18, 0.0))
 ORTHO_CONFERIR = 1.2
-QUADROS_DO_GOLPE = (1, 4, 6, 8, 11, 13)
+QUADROS_DO_GOLPE = (1, 3, 5, 7, 8, 10, 12)
 # o golpe: (quadro, o deslocamento da mão (m, no espaço dos braços: +X para a esquerda, -Y para a frente, +Z para cima),
 # o giro em volta do eixo do olhar (graus) e o giro em volta do eixo esquerda-direita (graus: positivo deita a cabeça
 # para a frente))
@@ -168,69 +168,76 @@ def golpe(rig, idle, prefixo):
 # o pulso do mesmo lado que o da direita), em todos os clipes que o machado usa; ela segue o cabo a cada quadro
 SEGUNDA_MAO = 0.05
 CLIPES_COM_DUAS_MAOS = ("Idle", "Walk", "Run", "Sacar", "Golpe")
-# o lugar novo na tela (08/11/2026, a pedido do Pedro, com a referência "FPP Axe"): o machado na diagonal, do meio de baixo
-# da tela até o lado direito, a cabeça lá em cima com o fio para a esquerda; a mão esquerda fecha a ponta do cabo, embaixo
-# um pouco à esquerda do meio, longe da câmera (o antebraço entra pela borda de baixo), e a direita fecha o cabo logo
-# abaixo da cabeça; as duas na tela, bem afastadas (duas_maos.py). Só vale no machado (o bastão e a lança usam as funções
-# daqui com os números deles).
-IDLE_FP = {"ponto": (-0.018, -0.20, -0.82, 0.42), "mira": (-0.40, 0.65, -0.17), "alto": (-0.6, 0.2, -0.75)}
-MAO_DIREITA = -0.40       # logo abaixo da cabeça (a mão a 2 cm da lâmina)
-MAO_ESQUERDA = -0.018     # na ponta do cabo, o mínimo encostado no gancho
-# o golpe (08/11/2026, a pedido: "pode escorregar"): a preparação levanta o machado para cima e para a direita, com as mãos
-# afastadas como no Idle; na descida, a mão direita escorrega pelo cabo até encostar na esquerda ("direita": o y da pegada
-# direita em cada chave); no acerto (o quadro 8, 7/24 s) os braços vão esticados para a frente, as mãos juntas embaixo no
-# meio da tela e a cabeça do machado perto da mira; na volta, a direita sobe de novo para perto da cabeça. Com
-# ESCORREGA_NO_GOLPE, o machado vai preso à mão esquerda (a que não escorrega: MAO_DA_ARMA).
-ESCORREGA_NO_GOLPE = True
-MAO_DA_ARMA = "L" if ESCORREGA_NO_GOLPE else "R"
-JUNTAS = MAO_ESQUERDA - 0.105     # a direita encostada na esquerda (sem uma entrar na outra)
-# (09/11/2026, a pedido: "ele está fazendo um movimento de lateralização, acho que se fosse só para frente seria um pouco
-# melhor... a gente vai bater com a lâmina dele e não com o cabo") o golpe de cima para baixo, reto para a frente: a
-# preparação levanta o machado (a cabeça acima da tela, um pouco à direita do meio), e a descida é um giro num plano em pé
-# (PLANO_DO_GOLPE: a normal dele, na horizontal), que vai das mãos, embaixo à direita, até o meio da tela; a cabeça desce
-# reta pela tela (o u quase não muda: de +0,08 em cima a -0,03 embaixo). No acerto (o quadro 8), a lâmina passa pelo meio
-# da tela, a uns 0,9 m, com o fio para a frente e para baixo (rolado 10 graus para o meio, para a lâmina aparecer de lado);
-# na volta, o machado vai direto ao Idle, sem subir de novo pela mira. (Antes, a descida ia de cima à direita para baixo à
-# esquerda, com a cabeça de perfil.)
-# (11/11/2026, o Pedro: "dá para ver a lâmina no acerto") no acerto, a cabeça a uns 0,7 m da câmera (antes, 0,97: pequena
-# e quase de costas): as mãos mais baixas e mais perto (a 42 cm, abaixo da tela), o cabo mais em pé, e o machado girado
-# 20 graus em volta do cabo ("rolar"), com o fio de três quartos (o plano da lâmina a uns 43 graus da visada; antes, 28);
-# a descida continua para a frente, no mesmo plano, e as chaves da preparação e da volta vêm menos para trás
-PLANO_DO_GOLPE = (0.926, 0.377, 0.0)
-ACERTO_FP = {"ponto": (-0.018, 0.23, -2.0, 0.42), "mira": (-0.536, 0.0, 0.05), "alto": (-0.444, 0.631, 0.636), "rolar": -20.0}
-GOLPE_FP = [
-    (1, {}),
-    (4, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -38.0), "pivo_y": -0.018, "desloca": (0.001, 0.06, 0.23)}),
-    (6, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -22.0), "pivo_y": -0.018, "desloca": (0.0, 0.04, 0.13),
-         "direita": -0.24}),
-    (8, dict(ACERTO_FP, direita=JUNTAS)),
-    (10, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 18.0), "pivo_y": -0.018, "desloca": (0.0, -0.04, -0.06),
-          "direita": JUNTAS}),
-    # a volta: o machado sai de baixo da mira para a direita, e a direita escorrega de volta para perto da cabeça;
-    # depois, o Idle
-    (12, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 12.0), "pivo_y": -0.018, "desloca": (-0.10, -0.04, 0.06),
-          "direita": -0.20}),
-    (15, {}),
-]
-# o desvio para o mínimo no golpe (na machadada os pulsos descem para o lado do mínimo no acerto, até uns 30 graus); a
-# diagonal do cabo na palma é a da pegada canônica (pegada.DIAGONAL, 09/11/2026)
-LIMITE_ULNAR_GOLPE = 25.0
-# (09/11/2026) os dedos fecham como num cabo 4 mm mais grosso (o cabo é oval: com o raio médio, a segunda falange
-# do indicador entrava uns 5 mm nele; pegada.dedos_no_cabo, pelo duas_maos)
-DEDOS_RAIO_A_MAIS = 0.004
-# (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
-# escolhida fica em diagonais_fp.json)
-DIAGONAIS = {"R": (35,), "L": (20, 35)}
-# (09/11/2026; até 11/11/2026) o Idle como estava: a diagonal e o giro da mão esquerda no cabo fixos nos de antes (o golpe novo, que
-# entra na escolha da esquerda, não muda o Idle)
-GIRO_NO_CABO = {}
-# (11/11/2026) o giro e a diagonal da esquerda escolhidos também pelo golpe (com o machado girado no acerto, os de antes,
-# 228 e 20 graus, torciam o pulso esquerdo 100 graus), e o salto da torção pesando na escolha do cotovelo
-SALTO_NA_TORCAO = 4.0
-# a mão direita, que escorrega pelo cabo no golpe, pode girar nele (o machado não rola: duas_maos.py)
-GIRAR_DIREITA_NO_GOLPE = True
-if not ESCORREGA_NO_GOLPE:
-    GOLPE_FP = [(f, {k: v for k, v in c.items() if k != "direita"}) for f, c in GOLPE_FP]
+# a pegada de uma mão (18/11/2026, a pedido: "o braço esquerdo deve sumir, ficando apenas o braço direito", com as
+# referências de The Forest e Sons of the Forest: a machadinha erguida na mão direita). Com UMA_MAO, o machado é como a
+# faca e a tocha no duas_maos.refazer (só a direita no cabo, PEGADA_Y), o Golpe volta a ser o de uma mão (golpe(), com
+# as CHAVES_DO_GOLPE) e o braço esquerdo sai da tela (depois_dos_bracos). A pegada de duas mãos fica guardada embaixo.
+UMA_MAO = True
+MAO_DA_ARMA = "R"
+if not UMA_MAO:
+    # o lugar novo na tela (08/11/2026, a pedido do Pedro, com a referência "FPP Axe"): o machado na diagonal, do meio de baixo
+    # da tela até o lado direito, a cabeça lá em cima com o fio para a esquerda; a mão esquerda fecha a ponta do cabo, embaixo
+    # um pouco à esquerda do meio, longe da câmera (o antebraço entra pela borda de baixo), e a direita fecha o cabo logo
+    # abaixo da cabeça; as duas na tela, bem afastadas (duas_maos.py). Só vale no machado (o bastão e a lança usam as funções
+    # daqui com os números deles).
+    IDLE_FP = {"ponto": (-0.018, -0.20, -0.82, 0.42), "mira": (-0.40, 0.65, -0.17), "alto": (-0.6, 0.2, -0.75)}
+    MAO_DIREITA = -0.40       # logo abaixo da cabeça (a mão a 2 cm da lâmina)
+    MAO_ESQUERDA = -0.018     # na ponta do cabo, o mínimo encostado no gancho
+    # o golpe (08/11/2026, a pedido: "pode escorregar"): a preparação levanta o machado para cima e para a direita, com as mãos
+    # afastadas como no Idle; na descida, a mão direita escorrega pelo cabo até encostar na esquerda ("direita": o y da pegada
+    # direita em cada chave); no acerto (o quadro 8, 7/24 s) os braços vão esticados para a frente, as mãos juntas embaixo no
+    # meio da tela e a cabeça do machado perto da mira; na volta, a direita sobe de novo para perto da cabeça. Com
+    # ESCORREGA_NO_GOLPE, o machado vai preso à mão esquerda (a que não escorrega: MAO_DA_ARMA).
+    ESCORREGA_NO_GOLPE = True
+    MAO_DA_ARMA = "L" if ESCORREGA_NO_GOLPE else "R"
+    JUNTAS = MAO_ESQUERDA - 0.105     # a direita encostada na esquerda (sem uma entrar na outra)
+    # (09/11/2026, a pedido: "ele está fazendo um movimento de lateralização, acho que se fosse só para frente seria um pouco
+    # melhor... a gente vai bater com a lâmina dele e não com o cabo") o golpe de cima para baixo, reto para a frente: a
+    # preparação levanta o machado (a cabeça acima da tela, um pouco à direita do meio), e a descida é um giro num plano em pé
+    # (PLANO_DO_GOLPE: a normal dele, na horizontal), que vai das mãos, embaixo à direita, até o meio da tela; a cabeça desce
+    # reta pela tela (o u quase não muda: de +0,08 em cima a -0,03 embaixo). No acerto (o quadro 8), a lâmina passa pelo meio
+    # da tela, a uns 0,9 m, com o fio para a frente e para baixo (rolado 10 graus para o meio, para a lâmina aparecer de lado);
+    # na volta, o machado vai direto ao Idle, sem subir de novo pela mira. (Antes, a descida ia de cima à direita para baixo à
+    # esquerda, com a cabeça de perfil.)
+    # (11/11/2026, o Pedro: "dá para ver a lâmina no acerto") no acerto, a cabeça a uns 0,7 m da câmera (antes, 0,97: pequena
+    # e quase de costas): as mãos mais baixas e mais perto (a 42 cm, abaixo da tela), o cabo mais em pé, e o machado girado
+    # 20 graus em volta do cabo ("rolar"), com o fio de três quartos (o plano da lâmina a uns 43 graus da visada; antes, 28);
+    # a descida continua para a frente, no mesmo plano, e as chaves da preparação e da volta vêm menos para trás
+    PLANO_DO_GOLPE = (0.926, 0.377, 0.0)
+    ACERTO_FP = {"ponto": (-0.018, 0.23, -2.0, 0.42), "mira": (-0.536, 0.0, 0.05), "alto": (-0.444, 0.631, 0.636), "rolar": -20.0}
+    GOLPE_FP = [
+        (1, {}),
+        (4, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -38.0), "pivo_y": -0.018, "desloca": (0.001, 0.06, 0.23)}),
+        (6, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, -22.0), "pivo_y": -0.018, "desloca": (0.0, 0.04, 0.13),
+             "direita": -0.24}),
+        (8, dict(ACERTO_FP, direita=JUNTAS)),
+        (10, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 18.0), "pivo_y": -0.018, "desloca": (0.0, -0.04, -0.06),
+              "direita": JUNTAS}),
+        # a volta: o machado sai de baixo da mira para a direita, e a direita escorrega de volta para perto da cabeça;
+        # depois, o Idle
+        (12, {"de": ACERTO_FP, "giro": (PLANO_DO_GOLPE, 12.0), "pivo_y": -0.018, "desloca": (-0.10, -0.04, 0.06),
+              "direita": -0.20}),
+        (15, {}),
+    ]
+    # o desvio para o mínimo no golpe (na machadada os pulsos descem para o lado do mínimo no acerto, até uns 30 graus); a
+    # diagonal do cabo na palma é a da pegada canônica (pegada.DIAGONAL, 09/11/2026)
+    LIMITE_ULNAR_GOLPE = 25.0
+    # (09/11/2026) os dedos fecham como num cabo 4 mm mais grosso (o cabo é oval: com o raio médio, a segunda falange
+    # do indicador entrava uns 5 mm nele; pegada.dedos_no_cabo, pelo duas_maos)
+    DEDOS_RAIO_A_MAIS = 0.004
+    # (09/11/2026) a diagonal do cabo na palma (graus): a melhor para o pulso destas, mão a mão (duas_maos.refazer; a
+    # escolhida fica em diagonais_fp.json)
+    DIAGONAIS = {"R": (35,), "L": (20, 35)}
+    # (09/11/2026; até 11/11/2026) o Idle como estava: a diagonal e o giro da mão esquerda no cabo fixos nos de antes (o golpe novo, que
+    # entra na escolha da esquerda, não muda o Idle)
+    GIRO_NO_CABO = {}
+    # (11/11/2026) o giro e a diagonal da esquerda escolhidos também pelo golpe (com o machado girado no acerto, os de antes,
+    # 228 e 20 graus, torciam o pulso esquerdo 100 graus), e o salto da torção pesando na escolha do cotovelo
+    SALTO_NA_TORCAO = 4.0
+    # a mão direita, que escorrega pelo cabo no golpe, pode girar nele (o machado não rola: duas_maos.py)
+    GIRAR_DIREITA_NO_GOLPE = True
+    if not ESCORREGA_NO_GOLPE:
+        GOLPE_FP = [(f, {k: v for k, v in c.items() if k != "direita"}) for f, c in GOLPE_FP]
 
 
 def _quadro(eixo, outro):
@@ -329,6 +336,55 @@ def segunda_mao(rig, clipes, P, idle):
             bpy.data.objects.remove(o, do_unlink=True)
         print(f"  {acao.name}: a mão esquerda no cabo (quadros {f0}-{f1}), polo {melhor}°")
     faca._usar(rig, idle)
+
+
+def depois_dos_bracos(rig, corpo, boca, clipes, n_verts_arma):
+    """Com UMA_MAO (18/11/2026): o Golpe de uma mão (as CHAVES_DO_GOLPE, a mão direita por IK) e o braço esquerdo fora da
+    tela em todos os clipes (o upper_arm.L encolhido no ombro, que fica atrás da câmera: o braço some inteiro)."""
+    if not UMA_MAO:
+        return
+    idle = next(a for a in clipes if a.name.endswith("|Idle"))
+    prefixo = idle.name.split("|", 1)[0]
+    for a in [a for a in clipes if a.name.endswith("|Golpe")]:
+        clipes.remove(a)
+    # (as chaves de uma mão só aqui: o bastão usa as CHAVES_DO_GOLPE de antes)
+    global CHAVES_DO_GOLPE
+    antes = CHAVES_DO_GOLPE
+    CHAVES_DO_GOLPE = CHAVES_UMA_MAO
+    try:
+        clipes.append(golpe(rig, idle, prefixo))
+    finally:
+        CHAVES_DO_GOLPE = antes
+    pb = rig.pose.bones
+    # em todos os quadros (os clipes vêm assados quadro a quadro: com a chave só no começo e no fim, o braço voltava no meio)
+    for a in clipes:
+        faca._usar(rig, a)
+        f0, f1 = int(a.frame_range[0]), int(a.frame_range[1])
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f)
+            pb["upper_arm.L"].scale = (ESCONDER, ESCONDER, ESCONDER)
+            pb["upper_arm.L"].keyframe_insert("scale", frame=f)
+    faca._usar(rig, idle)
+    print(f"  uma mão: o Golpe de uma mão e o braço esquerdo escondido em {len(clipes)} clipes")
+
+
+# o tamanho do braço esquerdo escondido (quase zero: o zero dá matrizes que não se invertem)
+ESCONDER = 0.001
+# o golpe de uma mão (18/11/2026): com o machado em pé na mão direita (o Idle), a mão sobe e vai para trás com a cabeça
+# do machado deitando para trás (a preparação), desce para a frente e para o meio da tela girando o machado para a frente
+# (o acerto no quadro 8, 7/24 s, com a cabeça na frente da mira) e volta. As chaves como as CHAVES_DO_GOLPE: (quadro, o
+# deslocamento da mão (+X para a esquerda, -Y para a frente, +Z para cima), o giro em volta do eixo do olhar (positivo
+# leva a cabeça para o meio da tela) e o giro em volta do eixo esquerda-direita (positivo deita a cabeça para a frente))
+CHAVES_UMA_MAO = [
+    (1, (0.0, 0.0, 0.0), 0.0, 0.0),
+    (3, (-0.02, 0.05, 0.07), -6.0, -32.0),
+    (5, (0.0, 0.03, 0.08), 0.0, -20.0),
+    (7, (0.04, -0.08, 0.06), 8.0, 24.0),
+    (8, (0.06, -0.14, 0.07), 12.0, 48.0),
+    (10, (0.05, -0.12, 0.01), 10.0, 58.0),
+    (12, (0.03, -0.05, -0.02), 5.0, 25.0),
+    (15, (0.0, 0.0, 0.0), 0.0, 0.0),
+]
 
 
 if __name__ == "__main__" and "--" in sys.argv:

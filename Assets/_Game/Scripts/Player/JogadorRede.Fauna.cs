@@ -14,7 +14,11 @@ namespace ZombieCityCleaner.Player
         public void AcertarBicho(Bicho b, float dano, Vector3 ponto, bool cabeca, bool tiro)
         {
             if (b == null || b.Morto) return;
-            if (IsServer) FaunaDoMundo.Instancia?.Acertar(b.Id, b.Geracao, dano, ponto, cabeca, tiro, this);
+            if (IsServer)
+            {
+                FaunaDoMundo.Instancia?.Acertar(b.Id, b.Geracao, dano, ponto, cabeca, tiro, this);
+                SalmaoNaPontaDaLanca(b.Id, b.Geracao, tiro);   // (o salmão preso na lança, 18/11/2026: JogadorRede.Salmao.cs)
+            }
             else AcertoNoBichoRpc(b.Id, b.Geracao, dano, ponto, cabeca, tiro);
         }
 
@@ -23,6 +27,7 @@ namespace ZombieCityCleaner.Player
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
             FaunaDoMundo.Instancia?.Acertar(id, geracao, Mathf.Clamp(dano, 0f, 1000f), ponto, cabeca, tiro, this);
+            SalmaoNaPontaDaLanca(id, geracao, tiro);
         }
 
         /// <summary>O dono segurou E na carcaça com a faca na mão: o anfitrião dá a carne, o couro e a gordura.</summary>

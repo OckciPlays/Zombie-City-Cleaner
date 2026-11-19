@@ -1,5 +1,6 @@
 using Unity.Netcode;
 using UnityEngine;
+using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Player;
 using ZombieCityCleaner.Sobreviventes;
 
@@ -33,9 +34,9 @@ namespace ZombieCityCleaner.UI
             float x0 = aoLado.xMax + 8 * u, largura = 250 * u;
             float x = x0 + 12 * u, w = largura - 24 * u;
             float meio = (w - 6 * u) / 2f, x2 = x + meio + 6 * u;
-            var area = new Rect(x0, aoLado.y, largura, 8 * u + 28 * u + 58 * u + 30 * u * 2 + 10 * u + 22 * u + 40 * u + 30 * u * 2
+            var area = new Rect(x0, aoLado.y, largura, 8 * u + 28 * u + 58 * u + 30 * u * 3 + 10 * u + 22 * u + 40 * u + 30 * u * 2
                                                      + 10 * u + 22 * u + 40 * u + 30 * u * 2 + 10 * u + 22 * u + 40 * u + 30 * u
-                                                     + 10 * u + 22 * u + 30 * u + 6 * u);
+                                                     + 10 * u + 22 * u + 30 * u + 6 * u + 30 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -50,6 +51,9 @@ namespace ZombieCityCleaner.UI
             y += 58 * u;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Grupo perto", _botao)) TesteDosSobreviventesRpc(0);
             if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Tirar todos", _botao)) TesteDosSobreviventesRpc(1);
+            y += 30 * u;
+            // (18/11/2026) a emboscada agora, em volta (nas janelas e nos telhados; a cidade e o sorteio não contam)
+            if (GUI.Button(new Rect(x, y, w, 26 * u), "Emboscada agora", _botao)) TesteDosSobreviventesRpc(15);
             y += 30 * u;
             var m = SobreviventesDoMundo.Instancia;
             bool ligado = m == null || m.ligado;
@@ -79,6 +83,9 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x2, y, meio, 26 * u), hostil ? "Fazer amigo" : "Fazer hostil", _botao)) TesteDosSobreviventesRpc((byte)(hostil ? 4 : 5));
             y += 30 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), "Repor o estoque agora", _botao)) TesteDosSobreviventesRpc(6);
+            y += 30 * u;
+            // (18/11/2026) para ver a espingarda (chega perto), a sniper (pela luneta) e o rifle (às cegas) na proteção
+            if (GUI.Button(new Rect(x, y, w, 26 * u), "Armar: espingarda, sniper, rifle", _botao)) TesteDosSobreviventesRpc(14);
             GUI.enabled = true;
             y += 40 * u;
 
@@ -183,6 +190,7 @@ namespace ZombieCityCleaner.UI
                     acampamentos?.TirarAsPessoas();
                     CarrosQuebradosDoMundo.Instancia?.TirarAsPessoas();
                     BasesMilitaresDoMundo.Instancia?.TirarAsPessoas();
+                    EmboscadasDoMundo.Instancia?.TirarAsPessoas();
                     aviso = "Os sobreviventes saíram (os dos acampamentos e das bases voltam quando você chegar perto).";
                     break;
                 case 10:
@@ -213,6 +221,24 @@ namespace ZombieCityCleaner.UI
                 case 6:
                     acampamentos?.Repor(true);
                     aviso = "Os estoques foram repostos.";
+                    break;
+                case 15:
+                    var quem = GetComponent<JogadorRede>();
+                    aviso = EmboscadasDoMundo.Instancia != null ? EmboscadasDoMundo.Instancia.ArmarAgora(quem) : "Sem as emboscadas neste mundo.";
+                    break;
+                case 14:
+                    // (18/11/2026) cinco dos que lutam no acampamento mais perto: 2 espingardas, 1 sniper e 2 rifles de verdade
+                    if (acampamentos == null) break;
+                    int ac = acampamentos.MaisPerto(transform.position, out _);
+                    var novas = new[] { TipoDeArma.Espingarda, TipoDeArma.Espingarda, TipoDeArma.Sniper, TipoDeArma.Rifle, TipoDeArma.Rifle };
+                    int n = 0;
+                    foreach (var s in Sobrevivente.Todos)
+                    {
+                        if (n >= novas.Length) break;
+                        if (s == null || s.Morto || s.Acampamento != ac || s.ComBranca || s.Identidade.Value.papel == PapelDoSobrevivente.Comerciante) continue;
+                        s.TrocarAArma(novas[n++]);
+                    }
+                    aviso = n > 0 ? $"{n} do acampamento com armas novas (2 espingardas, 1 sniper, 2 rifles)." : "Ninguém do acampamento apareceu ainda (chegue mais perto dele).";
                     break;
                 case 7:
                 case 9:

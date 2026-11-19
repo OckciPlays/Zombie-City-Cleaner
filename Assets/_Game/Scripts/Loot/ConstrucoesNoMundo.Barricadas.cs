@@ -305,7 +305,7 @@ namespace ZombieCityCleaner.Loot
             Quebradas++;
         }
 
-        static readonly int MascaraDoChaoDasTabuas = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
+        static readonly int MascaraDoChaoDasTabuas = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
 
         /// <summary>Quantas barricadas de tábuas caíram nesta partida (o teste).</summary>
         public int Quebradas { get; private set; }

@@ -227,6 +227,7 @@ namespace ZombieCityCleaner.Sobreviventes
             }
             corpo.animador.SetFloat(SpeedId, _velocidade);
             corpo.animador.SetBool(AimingId, _mirando.Value);
+            PoseNoAnimador();   // (18/11/2026) agachado atrás da proteção baixa (Sobrevivente.Pose.cs)
             Ajoelhar();
             if (!IsServer) return;
             if (agente != null && !agente.enabled && Time.time >= _proximoLigar)

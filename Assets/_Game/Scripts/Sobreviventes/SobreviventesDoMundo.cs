@@ -92,6 +92,8 @@ namespace ZombieCityCleaner.Sobreviventes
             Instancia = this;
             // as bases militares (03/11/2026): no mesmo objeto, posto aqui (sem mexer na cena do Mundo, que é dos dois)
             if (GetComponent<BasesMilitaresDoMundo>() == null) gameObject.AddComponent<BasesMilitaresDoMundo>();
+            // as emboscadas nas cidades grandes (18/11/2026), também daqui
+            if (GetComponent<EmboscadasDoMundo>() == null) gameObject.AddComponent<EmboscadasDoMundo>();
             // os moradores do bunker (06/11/2026, a parte 6 do Plano_NPCs_Bunker.md), também daqui
             if (GetComponent<Moradores.MoradoresDoBunker>() == null) gameObject.AddComponent<Moradores.MoradoresDoBunker>();
             // as falas já prontas (16/11/2026: a tabela delas era montada na primeira fala, 9 ms no meio da partida)
@@ -344,16 +346,14 @@ namespace ZombieCityCleaner.Sobreviventes
         /// </summary>
         public const int ReservaDoCivilMin = 4, ReservaDoCivilMax = 9;
 
-        // o que ele leva: o pente cheio, de 2 a 4 caixas de munição da arma dele (de um a dois pentes cada), comida, água, às vezes remédio e materiais,
-        // uma mochila (quase sempre) e algum dinheiro
         /// <summary>
-        /// O que ele leva (03/11/2026, a pedido: "o loot dos NPC está muito alto"). Os civis (os grupos, o acampamento, o
-        /// carro quebrado): o pente de 40% a 100% e, em 45% deles, uma caixa com 3 a 12 balas; de arma branca, nenhuma; mais
-        /// comida e bebida (de 1 a 3 e de 1 a 2). Os militares (<paramref name="militar"/>; 03/11/2026, à noite, a pedido: "o
-        /// loot dos NPC militares também está alto", 8 mortos deixavam 634 balas): o pente de 50% a 100% e, em 40% deles, uma
-        /// caixa com 30% a 60% de um pente; para lutar, uma reserva de 2 pentes que não fica no saque
-        /// (<see cref="Sobrevivente.reserva"/>); a barra, às vezes o feijão, a água e o remédio, em 10% o antibiótico, e
-        /// raramente o colete tático ou o capacete militar como item.
+        /// O que ele leva. A munição (18/11/2026, a pedido: "vamos fazer eles com munição infinita, porém quando morrer, vão
+        /// dropar poucas munição. Coisa de 10 munição de prego, ou 5 de parafuso"): o pente cheio e nenhuma caixa; a munição
+        /// dele não acaba (o Sobrevivente.Recarregar), e o que fica no chão quando ele morre é o <see cref="PoucaMunicao"/>
+        /// (antes, 03/11/2026: o pente pela metade, às vezes uma caixa e uma reserva). O resto: os civis (os grupos, o
+        /// acampamento, o carro quebrado) levam comida e bebida (de 1 a 3 e de 1 a 2); os militares (<paramref name="militar"/>),
+        /// a barra, às vezes o feijão, a água e o remédio, em 10% o antibiótico, e raramente o colete tático ou o capacete
+        /// militar como item.
         /// </summary>
         internal static void Encher(Sobrevivente sob, TipoDeArma arma, bool militar = false, Item branca = Item.Nada)
         {
@@ -361,20 +361,7 @@ namespace ZombieCityCleaner.Sobreviventes
             sob.mochila.Clear();
             sob.reserva = 0;
             bool deBranca = Itens.EhBranca(branca);
-            if (deBranca) sob.pente = 0;
-            else if (militar)
-            {
-                sob.pente = Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.5f, 1f)));
-                sob.reserva = d.capacidade * 2;
-                if (Random.value < 0.4f) Por(sob, Itens.CaixaDe(d.calibre), Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.3f, 0.6f))));
-            }
-            else
-            {
-                sob.pente = Mathf.Max(1, Mathf.RoundToInt(d.capacidade * Random.Range(0.4f, 1f)));
-                // (a caixa é a do calibre dela: a de prego ou a de parafuso, com as armas de sucata, desde 09/11/2026)
-                if (Random.value < 0.45f) Por(sob, Itens.CaixaDe(d.calibre), Random.Range(3, 13));
-                if (d.capacidade < 6) sob.reserva = Random.Range(ReservaDoCivilMin, ReservaDoCivilMax + 1);
-            }
+            sob.pente = deBranca ? 0 : d.capacidade;
             Item[] comidas = { Item.Comida, Item.Feijao, Item.Carne, Item.Milho, Item.Sopa, Item.Salgadinho, Item.BarraDeEnergia };
             Item[] bebidas = { Item.Agua, Item.RefrigeranteLata, Item.Energetico, Item.Suco };
             Item[] materiais = { Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Pregos, Item.Fios, Item.PecasDeMetal };
@@ -550,13 +537,39 @@ namespace ZombieCityCleaner.Sobreviventes
                 itens.Add(new ItemNaMochila { item = Itens.CaixaDe(Itens.CalibreDaArma(s.ItemDaArma)), qtd = (ushort)Random.Range(6, 15) });
         }
 
+        /// <summary>
+        /// A munição que fica com quem morreu (18/11/2026, a pedido: "coisa de 10 munição de prego, ou 5 de parafuso. pouca
+        /// coisa"): uma caixa pequena do calibre da arma dele, sempre. Prego e 9 mm: de 8 a 12; parafuso e 5,56: de 4 a 6
+        /// (o 5,56, de 6 a 10); a da espingarda, de 2 a 4; a da sniper, de 2 a 3.
+        /// </summary>
+        static void PoucaMunicao(Sobrevivente s, List<ItemNaMochila> itens)
+        {
+            var calibre = Itens.CalibreDaArma(s.ItemDaArma);
+            var dados = Armas.Dados(s.Arma);
+            int qtd = dados.calibre switch
+            {
+                Calibre.Prego or Calibre.Nove => Random.Range(8, 13),
+                Calibre.Parafuso => Random.Range(4, 7),
+                Calibre.Cinco56 => Random.Range(6, 11),
+                Calibre.Doze => Random.Range(2, 5),
+                _ => Random.Range(2, 4),
+            };
+            itens.Add(new ItemNaMochila { item = Itens.CaixaDe(calibre), qtd = (ushort)qtd });
+        }
+
         internal static void LargarAMochila(Sobrevivente s, List<ItemNaMochila> extras)
         {
             var itens = new List<ItemNaMochila>(s.mochila);
             // (a arma do militar cai gasta, de 50% a 85%: passando de 70%, ela engasga às vezes; 03/11/2026)
             bool militar = s.Identidade.Value.papel == PapelDoSobrevivente.Militar;
-            itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)(s.ComBranca ? 1 : Mathf.Max(0, s.pente)),
-                                                desgaste = (byte)(militar ? Random.Range(50, 86) : Random.Range(15, 60)) });
+            // (18/11/2026, a pedido: "reduzir a chance de looting que dropam armas") a arma nem sempre fica: quebrou na queda,
+            // ficou embaixo do corpo. A do militar em 45%, a de fogo dos civis em 30%, a branca em 50%
+            float fica = militar ? 0.45f : s.ComBranca ? 0.5f : 0.3f;
+            // (18/11/2026: a de fogo cai com o pente quase vazio, de 0 a 2 balas; a munição dele era infinita)
+            if (Random.value < fica)
+                itens.Insert(0, new ItemNaMochila { item = s.ItemDaArma, qtd = (ushort)(s.ComBranca ? 1 : Mathf.Clamp(s.pente, 0, Random.Range(0, 3))),
+                                                    desgaste = (byte)(militar ? Random.Range(50, 86) : Random.Range(15, 60)) });
+            if (!s.ComBranca && Itens.EhArma(s.ItemDaArma)) PoucaMunicao(s, itens);
             if (extras != null) itens.AddRange(extras);
             int abutre = Habilidades.Pontos(s.matador, Player.Habilidade.Abutre);   // (o Abutre, 06/11/2026)
             if (abutre > 0) DoAbutre(s, itens, abutre);
@@ -569,14 +582,17 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             var m = Instancia;
             if (m == null || !m.IsServer || autor == null) return;
-            foreach (var g in m._ativos)
-                foreach (var s in g.membros)
-                {
-                    if (s == null || s.Morto || (s.transform.position - ponto).sqrMagnitude > m.ouvidoDoTiro * m.ouvidoDoTiro) continue;
-                    var errado = new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
-                    g.Ver(autor, autor.transform.position + errado, s);
-                    break;   // (um por grupo avisa)
-                }
+            // (18/11/2026) todos os sobreviventes: os grupos de busca, os acampamentos, as bases e os carros quebrados (antes,
+            // só os grupos de busca; dava para matar um acampamento um por um). O grupo que não é hostil não liga
+            var avisados = new HashSet<GrupoDeSobreviventes>();
+            foreach (var s in Sobrevivente.Todos)
+            {
+                if (s == null || s.Morto || s.Grupo == null || avisados.Contains(s.Grupo) || !s.Grupo.Hostil) continue;
+                if ((s.transform.position - ponto).sqrMagnitude > m.ouvidoDoTiro * m.ouvidoDoTiro) continue;
+                var errado = new Vector3(Random.Range(-4f, 4f), 0f, Random.Range(-4f, 4f));
+                s.Grupo.Ver(autor, autor.transform.position + errado, s);
+                avisados.Add(s.Grupo);   // (um por grupo avisa)
+            }
         }
 
         // ------------------------------------------------------------------ o F1 e o save

@@ -11,8 +11,12 @@ namespace ZombieCityCleaner.Loot
     /// </summary>
     public static class ItensDaCaca
     {
-        /// <summary>Os itens com o modelo daqui (a caça; e o bagre da pesca, da etapa 3).</summary>
-        public static readonly Item[] Todos = { Item.CarneCrua, Item.CarneAssada, Item.Couro, Item.Gordura, Item.Bagre };
+        /// <summary>
+        /// Os itens com o modelo daqui (a caça; e o bagre da pesca, da etapa 3; e, em 18/11/2026, os gravetos, o espeto e a
+        /// panela da fogueira).
+        /// </summary>
+        public static readonly Item[] Todos = { Item.CarneCrua, Item.CarneAssada, Item.Couro, Item.Gordura, Item.Bagre, Item.Gravetos, Item.Espeto, Item.Panela, Item.Salmao,
+                                                Item.Violao, Item.Pandeiro, Item.Gaita, Item.Flauta };
 
         struct Caixa
         {
@@ -66,6 +70,98 @@ namespace ZombieCityCleaner.Loot
                 C(0.185f, 0.025f, -0.035f, 0.05f, 0.006f, 0.006f, 2, 0),
                 C(-0.15f, 0.03f, 0f, 0.05f, 0.05f, 0.012f, 5, 14),
             },
+            // os gravetos (18/11/2026): um feixe de galhos finos com a casca e um raminho
+            Item.Gravetos => new[]
+            {
+                C(0f, 0.008f, 0f, 0.36f, 0.016f, 0.016f, 7, 3),
+                C(0.02f, 0.008f, 0.022f, 0.32f, 0.014f, 0.014f, 8, 3),
+                C(-0.015f, 0.022f, 0.01f, 0.34f, 0.014f, 0.014f, 7, 3),
+                C(0.01f, 0.007f, -0.02f, 0.3f, 0.013f, 0.013f, 8, 3),
+                C(0.09f, 0.03f, 0.03f, 0.07f, 0.008f, 0.008f, 7, 3),
+            },
+            // o espeto: o graveto reto, a ponta afiada mais clara (o comprimido no X: no fogo, ele estica)
+            Item.Espeto => new[]
+            {
+                C(-0.03f, 0.008f, 0f, 0.42f, 0.015f, 0.015f, 7, 3),
+                C(0.205f, 0.008f, 0f, 0.05f, 0.009f, 0.009f, 13, 4),
+                C(-0.2f, 0.008f, 0f, 0.04f, 0.017f, 0.017f, 8, 3),
+            },
+            // a panela: o fundo, as quatro paredes, a borda mais clara e o cabo preto (centrada: o corpo e o cabo)
+            Item.Panela => new[]
+            {
+                C(-0.09f, 0.006f, 0f, 0.24f, 0.012f, 0.24f, 1, 3),
+                C(-0.205f, 0.042f, 0f, 0.01f, 0.072f, 0.24f, 1, 3),
+                C(0.025f, 0.042f, 0f, 0.01f, 0.072f, 0.24f, 1, 3),
+                C(-0.09f, 0.042f, 0.115f, 0.24f, 0.072f, 0.01f, 1, 3),
+                C(-0.09f, 0.042f, -0.115f, 0.24f, 0.072f, 0.01f, 1, 3),
+                C(-0.09f, 0.081f, 0.115f, 0.25f, 0.006f, 0.014f, 4, 3),
+                C(-0.09f, 0.081f, -0.115f, 0.25f, 0.006f, 0.014f, 4, 3),
+                C(-0.205f, 0.081f, 0f, 0.014f, 0.006f, 0.25f, 4, 3),
+                C(0.025f, 0.081f, 0f, 0.014f, 0.006f, 0.25f, 4, 3),
+                C(0.035f, 0.012f, 0f, 0.015f, 0.016f, 0.2f, 0, 3),
+                C(0.125f, 0.07f, 0f, 0.17f, 0.016f, 0.032f, 6, 3),
+            },
+            // o salmão (18/11/2026): deitado de lado (o Y é a grossura; o Z, a altura do corpo), prateado, o dorso escuro, a
+            // barriga rosada, a cabeça, a cauda, a nadadeira e o olho
+            Item.Salmao => new[]
+            {
+                C(0f, 0.0225f, 0f, 0.36f, 0.045f, 0.1f, 2, 8),
+                C(0f, 0.0235f, 0.04f, 0.34f, 0.047f, 0.026f, 6, 6),
+                C(0f, 0.0235f, -0.038f, 0.3f, 0.046f, 0.022f, 13, 11),
+                C(0.21f, 0.021f, 0f, 0.07f, 0.042f, 0.08f, 3, 10),
+                C(-0.215f, 0.012f, 0f, 0.07f, 0.012f, 0.11f, 6, 6),
+                C(0.01f, 0.022f, 0.064f, 0.07f, 0.006f, 0.03f, 6, 6),
+                C(0.225f, 0.0435f, 0.012f, 0.014f, 0.004f, 0.014f, 2, 3),
+            },
+            // os instrumentos (18/11/2026): o violão deitado (o bojo, a boca, o cavalete, o braço, a cabeça e as cordas)
+            Item.Violao => new[]
+            {
+                C(-0.25f, 0.05f, 0f, 0.36f, 0.1f, 0.38f, 12, 4),
+                C(0.01f, 0.05f, 0f, 0.24f, 0.1f, 0.3f, 12, 4),
+                C(-0.06f, 0.101f, 0f, 0.09f, 0.004f, 0.09f, 2, 0),
+                C(-0.31f, 0.102f, 0f, 0.03f, 0.006f, 0.14f, 2, 0),
+                C(0.33f, 0.07f, 0f, 0.42f, 0.04f, 0.06f, 1, 14),
+                C(0.6f, 0.065f, 0f, 0.14f, 0.03f, 0.085f, 1, 14),
+                C(0.12f, 0.106f, 0f, 0.84f, 0.003f, 0.04f, 2, 8),
+            },
+            // o pandeiro: a pele, o aro e as platinelas
+            Item.Pandeiro => new[]
+            {
+                C(0f, 0.057f, 0f, 0.24f, 0.006f, 0.24f, 10, 9),
+                C(0.12f, 0.03f, 0f, 0.02f, 0.06f, 0.26f, 12, 4),
+                C(-0.12f, 0.03f, 0f, 0.02f, 0.06f, 0.26f, 12, 4),
+                C(0f, 0.03f, 0.12f, 0.24f, 0.06f, 0.02f, 12, 4),
+                C(0f, 0.03f, -0.12f, 0.24f, 0.06f, 0.02f, 12, 4),
+                C(0.133f, 0.03f, 0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
+                C(0.133f, 0.03f, -0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
+                C(-0.133f, 0.03f, 0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
+                C(-0.133f, 0.03f, -0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
+                C(0.06f, 0.03f, 0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
+                C(-0.06f, 0.03f, 0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
+                C(0.06f, 0.03f, -0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
+                C(-0.06f, 0.03f, -0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
+            },
+            // a gaita: as tampas de metal e o pente escuro com os furos na frente
+            Item.Gaita => new[]
+            {
+                C(0f, 0.0125f, 0f, 0.1f, 0.017f, 0.026f, 2, 3),
+                C(0f, 0.0235f, 0f, 0.104f, 0.005f, 0.028f, 14, 3),
+                C(0f, 0.0025f, 0f, 0.104f, 0.005f, 0.028f, 14, 3),
+            },
+            // a flauta doce: o corpo de madeira clara, a cabeça e o pé, a janela e os furos
+            Item.Flauta => new[]
+            {
+                C(0f, 0.012f, 0f, 0.38f, 0.024f, 0.024f, 13, 4),
+                C(0.21f, 0.014f, 0f, 0.06f, 0.028f, 0.028f, 12, 4),
+                C(-0.205f, 0.013f, 0f, 0.04f, 0.026f, 0.026f, 12, 4),
+                C(0.195f, 0.0285f, 0f, 0.012f, 0.002f, 0.01f, 2, 0),
+                C(0.08f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+                C(0.04f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+                C(0f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+                C(-0.04f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+                C(-0.08f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+                C(-0.12f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
+            },
             _ => null,
         };
 
@@ -75,8 +171,8 @@ namespace ZombieCityCleaner.Loot
             return -1;
         }
 
-        static readonly Mesh[] _malhas = new Mesh[5];
-        static readonly Texture2D[] _icones = new Texture2D[5], _fotos = new Texture2D[5];
+        static readonly Mesh[] _malhas = new Mesh[Todos.Length];
+        static readonly Texture2D[] _icones = new Texture2D[Todos.Length], _fotos = new Texture2D[Todos.Length];
 
         /// <summary>A malha do item (o chão e a mão; null: não é da caça).</summary>
         public static Mesh MalhaDoItem(Item i)
@@ -166,6 +262,22 @@ namespace ZombieCityCleaner.Loot
             (5, 14) => new Color32(0x4a, 0x3b, 0x30, 255),
             (3, 2) => new Color32(0x7a, 0x4a, 0x34, 255),
             (12, 8) => new Color32(0xc8, 0xc2, 0xa8, 255),
+            // (18/11/2026: a madeira dos gravetos e do espeto, e o metal da panela)
+            (7, 3) => new Color32(0x6b, 0x4a, 0x36, 255),
+            (8, 3) => new Color32(0x7e, 0x5b, 0x44, 255),
+            (13, 4) => new Color32(0xb4, 0x9f, 0x73, 255),
+            (1, 3) => new Color32(0x33, 0x36, 0x3b, 255),
+            (4, 3) => new Color32(0x6c, 0x70, 0x75, 255),
+            (0, 3) => new Color32(0x26, 0x28, 0x2c, 255),
+            (6, 3) => new Color32(0x20, 0x22, 0x25, 255),
+            // (o salmão)
+            (2, 8) => new Color32(0x9a, 0x9c, 0x98, 255),
+            (6, 6) => new Color32(0x3e, 0x4a, 0x5a, 255),
+            (13, 11) => new Color32(0xd8, 0x7a, 0x8a, 255),
+            (3, 10) => new Color32(0x6a, 0x6a, 0x64, 255),
+            (2, 3) => new Color32(0x1b, 0x1c, 0x1f, 255),
+            // (os instrumentos)
+            (14, 3) => new Color32(0xa3, 0xa6, 0xa4, 255),
             _ => new Color32(0x80, 0x80, 0x80, 255),
         };
 

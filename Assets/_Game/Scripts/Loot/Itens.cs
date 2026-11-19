@@ -29,6 +29,9 @@ namespace ZombieCityCleaner.Loot
         ChaveDaFatBoy = 71, ChaveDaCross = 72,
         // a chave da caminhonete (15/11/2026, a pedido: o primeiro carro, "precisará da chave")
         ChaveDaCaminhonete = 73,
+        // os instrumentos (18/11/2026, a etapa 4 da fogueira: Player/MusicaDoJogador.cs; os modelos são caixinhas do
+        // Loot/ItensDaCaca.cs)
+        Violao = 74, Pandeiro = 75, Gaita = 76, Flauta = 77,
         // os remédios
         Remedio = 80, Comprimidos, KitMedico, Atadura, Gaze, Desinfetante, SprayAntisseptico, Antibiotico, Bandagem,
         // a tala (05/11/2026, o sistema de vida por membro: imobiliza o braço ou a perna quebrados)
@@ -37,6 +40,11 @@ namespace ZombieCityCleaner.Loot
         BandagemAntisseptica = 90,
         // o calmante (06/11/2026, a mente, a etapa 3: acalma por hora; dois seguidos dão sono, três fazem apagar)
         Calmante = 91,
+        // o assar na fogueira (18/11/2026, a etapa 2 da fogueira: ConstrucoesNoMundo.Assar.cs): o espeto (peixe e carne) e
+        // a panela (as latas); os modelos são caixinhas do Loot/ItensDaCaca.cs
+        Espeto = 92, Panela = 93,
+        // o salmão (18/11/2026, a etapa 3 da fogueira): o da lança, que fica preso nela (Player/SalmaoNaLanca.cs)
+        Salmao = 94,
         // os materiais (a matéria-prima da fabricação)
         Madeira = 96, Toras, Pano, Corda, FitaAdesiva, Ferramenta, PecasDeMetal, Fios, Pregos, Isca, VaraDePesca, KitDeReparo, Roupa,
         // arrombar as portas e as janelas trancadas (02/11/2026, o Plano_Portas.md da pasta de arte)
@@ -67,6 +75,8 @@ namespace ZombieCityCleaner.Loot
         CarneCrua = 134, CarneAssada, Couro, Gordura,
         // o bagre (12/11/2026, a etapa 3 da fauna: os peixes americanos): do fundo do lago, mais à noite
         Bagre = 138,
+        // os gravetos (18/11/2026): a árvore pequena derrubada vira gravetos (o cabo do machado, o fogo)
+        Gravetos = 139,
         // as melhorias das armas de sucata (10/11/2026, a etapa 2 do Armeiro de sucata; a ordem do Combat.PecaDaMelhoria)
         SilenciadorPET = 140, SilenciadorFiltro, MiraDeFerro, MiraDePonto, Luneta, CarregadorLongo, CanoReforcado1, CanoReforcado2, CanoReforcado3,
         // a proteção de sucata (11/11/2026, a etapa 3 da Resistência; a ordem do Player.LugarDaProtecao): vestem-se no grupo PROTEÇÃO
@@ -423,6 +433,25 @@ namespace ZombieCityCleaner.Loot
                      "Gordura de caça. Guarde: vai servir para receitas (em breve).", 6),
             // o bagre (12/11/2026, a etapa 3 da fauna; o modelo provisório, do Loot/ItensDaCaca.cs)
             Comer(Item.Bagre, "Bagre", "bagre", "o bagre", "bagres", "Do fundo do lago, mais à noite. Mata bem a fome.", 3, 32f, 3f),
+            // os gravetos (18/11/2026; no fim da lista: no meio, eles deslocavam os ícones e as malhas de todos os de depois, que
+            // são do índice daqui) e o assar na fogueira (a etapa 2 da fogueira): caixinhas do Loot/ItensDaCaca.cs
+            Material(Item.Gravetos, "Gravetos", "graveto", "o graveto", "gravetos", "Galhos finos de uma árvore pequena. Lenha pequena (+1 min de fogo) e o espeto.", 10),
+            Material(Item.Espeto, "Espeto", "espeto", "o espeto", "espetos",
+                     "Um graveto com a ponta afiada. Com um peixe ou uma carne crua na mão, clique na fogueira acesa: assa ali, e o espeto volta.", 4),
+            Material(Item.Panela, "Panela", "panela", "a panela", "panelas",
+                     "Uma panela velha. Com uma lata na mão, clique na fogueira acesa: a comida quente acalma a cabeça.", 1),
+            // o salmão (18/11/2026, a etapa 3 da fogueira): o do rio, pego com a lança
+            Comer(Item.Salmao, "Salmao", "salmão", "o salmão", "salmões",
+                  "Do rio, na ponta da lança. Cru pode fazer mal: no espeto, rende 3 filés.", 2, 30f, 4f),
+            // os instrumentos (18/11/2026, a etapa 4 da fogueira): vão na mão, como a vara de pesca
+            NaMao(Material(Item.Violao, "Violao", "violão", "o violão", "violões",
+                           "Um violão velho, de nylon. Na mão, clique para tocar; perto de quem já toca, entra na mesma música. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
+            NaMao(Material(Item.Pandeiro, "Pandeiro", "pandeiro", "o pandeiro", "pandeiros",
+                           "Na mão, clique para tocar o ritmo; perto de quem já toca, entra na mesma música. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
+            NaMao(Material(Item.Gaita, "Gaita", "gaita", "a gaita", "gaitas",
+                           "Uma gaita em dó: a melodia da roda. Na mão, clique para tocar. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
+            NaMao(Material(Item.Flauta, "Flauta", "flauta doce", "a flauta doce", "flautas doces",
+                           "Uma flauta doce de madeira: a segunda voz da roda. Na mão, clique para tocar. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -704,7 +733,7 @@ namespace ZombieCityCleaner.Loot
         public static bool EhConsumivel(Item i) => Loot(i)?.verbo != null;
 
         /// <summary>Um peixe do lago, cru (07/11/2026: comido assim, pode fazer mal; assado na fogueira, não).</summary>
-        public static bool EhPeixeCru(Item i) => (i >= Item.PeixePequeno && i <= Item.PeixeDourado) || i == Item.Bagre;
+        public static bool EhPeixeCru(Item i) => (i >= Item.PeixePequeno && i <= Item.PeixeDourado) || i == Item.Bagre || i == Item.Salmao;
         /// <summary>O que se veste: as 3 mochilas (o coldre saiu do jogo).</summary>
         public static bool EhEquipamento(Item i) => EhMochila(i);
         public static bool EhMochila(Item i) => i >= Item.MochilaPequena && i <= Item.MochilaGrande;
@@ -793,6 +822,10 @@ namespace ZombieCityCleaner.Loot
             if (i == Item.TapetePregos) return new UnityEngine.Vector2Int(3, 1);
             if (i == Item.Estacas) return new UnityEngine.Vector2Int(4, 1);
             if (i == Item.TabuasBarricada) return new UnityEngine.Vector2Int(3, 1);   // as tábuas (11/11/2026, a etapa 5b)
+            if (i == Item.Espeto || i == Item.Panela || i == Item.Salmao) return new UnityEngine.Vector2Int(2, 1);   // o assar e o salmão (18/11/2026)
+            if (i == Item.Violao) return new UnityEngine.Vector2Int(4, 2);   // os instrumentos (18/11/2026)
+            if (i == Item.Pandeiro) return new UnityEngine.Vector2Int(2, 2);
+            if (i == Item.Flauta) return new UnityEngine.Vector2Int(2, 1);
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

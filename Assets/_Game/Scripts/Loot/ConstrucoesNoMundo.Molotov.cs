@@ -84,7 +84,7 @@ namespace ZombieCityCleaner.Loot
 
         readonly List<Garrafa> _garrafas = new List<Garrafa>();
         // o que a garrafa não pega: o Ignore Raycast (a cápsula do zumbi de perto), os braços e os corpos caídos
-        static readonly int MascaraDaGarrafa = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << CorpoDeZumbi.Camada));
+        static readonly int MascaraDaGarrafa = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << CorpoDeZumbi.Camada));
         static readonly RaycastHit[] _batidas = new RaycastHit[8];
 
         /// <summary>Só no anfitrião: a garrafa sai da origem com a velocidade (o arremesso de quem é dono).</summary>
@@ -204,7 +204,7 @@ namespace ZombieCityCleaner.Loot
         float _proximoTiqueDoFogo;
         readonly Dictionary<int, GameObject> _areasVistas = new Dictionary<int, GameObject>();
         // o chão embaixo da batida: o cenário (sem os jogadores, os zumbis e os corpos)
-        static readonly int MascaraDoChao = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaJogador) | (1 << CorpoDeZumbi.Camada) | (1 << 7));
+        static readonly int MascaraDoChao = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaJogador) | (1 << CorpoDeZumbi.Camada) | (1 << 7));
 
         /// <summary>Só no anfitrião: as áreas de fogo acesas agora (os zumbis as contam como fogos).</summary>
         internal IReadOnlyList<AreaDeFogo> AreasDeFogo => _areas;

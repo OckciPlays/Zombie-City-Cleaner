@@ -19,6 +19,8 @@ namespace ZombieCityCleaner.Mundo
         public Vector3 Posicao;
         public Quaternion Giro = Quaternion.identity;
         public MalhaDeObra Desenho, Colisao;
+        /// <summary>A colisão da grade (o alambrado e o portão): vai num filho, na camada da grade (o tiro passa). 18/11/2026.</summary>
+        public MalhaDeObra ColisaoVazada;
         public MalhaDoBloco Agua;
         /// <summary>O carro (o índice em <see cref="ModelosDaEstrada.NomesDosCarros"/>).</summary>
         public int Carro = -1;
@@ -482,7 +484,7 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         sealed class Desenho
         {
-            public readonly MalhaDeObra Vis = new MalhaDeObra(2048), Col = new MalhaDeObra(512);
+            public readonly MalhaDeObra Vis = new MalhaDeObra(2048), Col = new MalhaDeObra(512), ColVazada = new MalhaDeObra(128);
             public readonly Vector3 Origem;
             readonly List<Vector3> _p = new List<Vector3>(8), _q = new List<Vector3>(8);
 
@@ -499,6 +501,9 @@ namespace ZombieCityCleaner.Mundo
 
             /// <summary>Só a colisão (a caixa invisível).</summary>
             public void Colide(Vector3 c, Vector3 tam, float giroY = 0f) => Col.Caixa(M(c, Quaternion.Euler(0f, giroY, 0f)), tam, "Concreto");
+
+            /// <summary>Só a colisão, da grade (segura quem anda; o tiro e a visão passam).</summary>
+            public void ColideVazado(Vector3 c, Vector3 tam, float giroY = 0f) => ColVazada.Caixa(M(c, Quaternion.Euler(0f, giroY, 0f)), tam, "Concreto");
 
             /// <summary>Uma caixa de a até b (a linha do meio), com a seção largura × altura.</summary>
             public void Entre(Vector3 a, Vector3 b, float largura, float altura, Cor cor, bool colide = false)
@@ -601,6 +606,7 @@ namespace ZombieCityCleaner.Mundo
             Giro = Rotacao,
             Desenho = d.Vis,
             Colisao = colide && d.Col.Triangulos > 0 ? d.Col : null,
+            ColisaoVazada = colide && d.ColVazada.Triangulos > 0 ? d.ColVazada : null,
         };
 
         // ------------------------------------------------------------------ as malhas

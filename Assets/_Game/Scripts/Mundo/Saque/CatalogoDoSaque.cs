@@ -127,6 +127,12 @@ namespace ZombieCityCleaner.Mundo
             C("Chocolate", I, EspecieDoSaque.Comida | EspecieDoSaque.Lanche),
             // (incomum, e não rara: rara, ela era o único raro da cozinha e da sala, e o raro mais achado do mapa)
             C("BarraDeEnergia", I, EspecieDoSaque.Comida | EspecieDoSaque.Lanche),
+            // a panela (18/11/2026, a etapa 2 da fogueira: esquenta as latas na fogueira): com a comida, nas cozinhas
+            C("Panela", I, EspecieDoSaque.Comida),
+            // os instrumentos (18/11/2026, a etapa 4 da fogueira): o violão com as coisas grandes (o guarda-roupa, o baú, o
+            // depósito), o pandeiro na sala, a gaita e a flauta nas gavetas do quarto e do escritório
+            C("Violao", R, EspecieDoSaque.Mochila), C("Pandeiro", I, EspecieDoSaque.Lanche),
+            C("Gaita", I, EspecieDoSaque.Cabeceira | EspecieDoSaque.Escritorio), C("Flauta", I, EspecieDoSaque.Cabeceira | EspecieDoSaque.Escritorio),
             // a bebida
             C("Agua", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche), C("RefrigeranteGarrafa", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche),
             C("RefrigeranteLata", N, EspecieDoSaque.Bebida | EspecieDoSaque.Lanche), C("Suco", N, EspecieDoSaque.Bebida),

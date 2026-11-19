@@ -30,9 +30,24 @@ namespace ZombieCityCleaner.Mundo
                 if (_porNome != null) return _porNome;
                 var d = new Dictionary<string, Dados>();
                 foreach (var (nome, item, tamanho, lugar) in _itens) d[nome] = new Dados { nome = nome, item = item, tamanho = tamanho, lugar = lugar };
+                foreach (var (nome, item, tamanho, lugar) in _feitosNoPlay) d[nome] = new Dados { nome = nome, item = item, tamanho = tamanho, lugar = lugar };
                 return _porNome = d;
             }
         }
+
+        /// <summary>
+        /// Os itens de modelo feito no Play (caixinhas do Loot/ItensDaCaca.cs), que o Editor não acha para a tabela: a panela
+        /// das cozinhas (18/11/2026, a etapa 2 da fogueira; o número é o do Item.Panela). O tamanho é o da malha, com o cabo.
+        /// </summary>
+        static readonly (string nome, byte item, Vector3 tamanho, string lugar)[] _feitosNoPlay =
+        {
+            ("Panela", 93, new Vector3(0.42f, 0.09f, 0.24f), ""),
+            // os instrumentos (a etapa 4 da fogueira; os números dos Item.Violao, Pandeiro, Gaita e Flauta)
+            ("Violao", 74, new Vector3(1.1f, 0.11f, 0.39f), ""),
+            ("Pandeiro", 75, new Vector3(0.27f, 0.06f, 0.27f), ""),
+            ("Gaita", 76, new Vector3(0.104f, 0.028f, 0.028f), ""),
+            ("Flauta", 77, new Vector3(0.46f, 0.03f, 0.03f), ""),
+        };
 
         public static bool Tem(string nome) => nome != null && PorNome.ContainsKey(nome);
 
@@ -43,7 +58,11 @@ namespace ZombieCityCleaner.Mundo
         /// <summary>Todos, na ordem do número do item.</summary>
         public static IEnumerable<Dados> Todos
         {
-            get { foreach (var (nome, item, tamanho, lugar) in _itens) yield return new Dados { nome = nome, item = item, tamanho = tamanho, lugar = lugar }; }
+            get
+            {
+                foreach (var (nome, item, tamanho, lugar) in _itens) yield return new Dados { nome = nome, item = item, tamanho = tamanho, lugar = lugar };
+                foreach (var (nome, item, tamanho, lugar) in _feitosNoPlay) yield return new Dados { nome = nome, item = item, tamanho = tamanho, lugar = lugar };
+            }
         }
     }
 }

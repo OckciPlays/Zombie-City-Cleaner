@@ -31,7 +31,7 @@ namespace ZombieCityCleaner.Player
         public bool Montando => _kit != 0;
 
         // o chão que a mira procura (sem o jogador, os braços, os zumbis e os corpos)
-        static readonly int MascaraDoChao = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
+        static readonly int MascaraDoChao = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
 
         void Awake()
         {

@@ -39,17 +39,31 @@ namespace ZombieCityCleaner.Player
         /// <summary>A escolha do jogador (o V): a terceira pessoa a pé e a câmera de trás no carro.</summary>
         public static bool Ligada { get; set; }
 
+        /// <summary>Encostado numa proteção sem mirar (ProtecaoDoJogador, 18/11/2026): atrás do ombro, mesmo sem o V.</summary>
+        public static bool NaProtecao { get; set; }
+
         /// <summary>A câmera está atrás do jogador agora (a pé, fora do capô e da luneta).</summary>
         public bool Ativa { get; private set; }
 
         /// <summary>O olho do jogo na terceira pessoa: na cabeça, olhando para o que está no meio da tela.</summary>
         public Transform Mira { get; private set; }
 
+        /// <summary>
+        /// Na terceira pessoa, o que fica entre a cabeça (de onde sai o tiro) e o que está no meio da tela (18/11/2026, a
+        /// pedido: "quando isso ocorrer, deveria trocar a mira e a mira começar a apontar no objeto que está impedindo o
+        /// trajeto"): o ponto onde o tiro vai bater; a mira é desenhada nele (ArmaJogador.OnGUI). Null: o caminho está livre.
+        /// </summary>
+        public static Vector3? MiraBloqueada { get; private set; }
+
+        // ao trocar de câmera, o ponto que a mira marcava: a nova câmera é virada para marcar o mesmo (18/11/2026, a pedido:
+        // "eu mirando no mesmo local, sem alterar em nada a mira, o tiro sai diferente")
+        Vector3? _realinhar;
+
         // o que a câmera atravessa: o próprio jogador e os outros, os braços, o retrato, os zumbis e os pedaços deles
-        static readonly int MascaraDaCamera = ~((1 << 2) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
+        static readonly int MascaraDaCamera = ~((1 << 2) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaDaCabeca)
                                                 | (1 << JogadorRede.CamadaRetrato) | (1 << Zumbi.CamadaZumbi) | (1 << CorpoDeZumbi.Camada));
         // o que a mira pega: o mesmo que o tiro (as hitboxes dos zumbis também), sem os jogadores
-        static readonly int MascaraDaMira = ~((1 << 2) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
+        static readonly int MascaraDaMira = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos)
                                               | (1 << JogadorRede.CamadaRetrato) | (1 << CorpoDeZumbi.Camada));
         static readonly RaycastHit[] _acertos = new RaycastHit[16];
 
@@ -67,6 +81,9 @@ namespace ZombieCityCleaner.Player
             Mira = new GameObject("Mira").transform;
             Mira.SetParent(movimento.cabeca, false);
             _ombro = ombro;
+            // (18/11/2026) nos lugares apertados (dentro das casas), a câmera chega mais perto antes de virar a primeira pessoa:
+            // com 0,55 m ela parecia não trocar
+            pertoDemais = Mathf.Min(pertoDemais, 0.35f);
         }
 
         void Update()
@@ -75,7 +92,11 @@ namespace ZombieCityCleaner.Player
             // no carro, o V é do carro (a mesma escolha)
             if (rede.Passageiro != null && rede.Passageiro.NoCarro) return;
             var teclado = Keyboard.current;
-            if (teclado != null && teclado.vKey.wasPressedThisFrame) Ligada = !Ligada;
+            if (teclado != null && teclado.vKey.wasPressedThisFrame)
+            {
+                _realinhar = PontoMirado();
+                Ligada = !Ligada;
+            }
         }
 
         void LateUpdate()
@@ -90,9 +111,15 @@ namespace ZombieCityCleaner.Player
                 return;
             }
             bool naLuneta = arma.ComArma && rede.Mirando.Value && arma.Dados.fovLuneta > 0f;
-            bool querer = Ligada && !(capo != null && capo.Aberta) && !naLuneta && !ModoVideo.Ligado;
+            bool querer = (Ligada || NaProtecao) && !(capo != null && capo.Aberta) && !naLuneta && !ModoVideo.Ligado;
             if (!_conhecida || querer != _aplicada) Aplicar(querer);
-            if (!querer) return;
+            if (!querer)
+            {
+                MiraBloqueada = null;
+                if (_realinhar.HasValue) Realinhar(false);
+                return;
+            }
+            if (_realinhar.HasValue) Realinhar(true);
 
             float dt = Time.deltaTime;
             Posicionar(dt);
@@ -131,11 +158,7 @@ namespace ZombieCityCleaner.Player
             Vector3 olho = cabeca.position;
             _ombro = Vector3.Lerp(_ombro, rede.Mirando.Value ? ombroMirando : ombro, 1f - Mathf.Exp(-10f * dt));
 
-            Vector3 lado = rot * new Vector3(_ombro.x, _ombro.y, 0f);
-            float l = lado.magnitude;
-            Vector3 noOmbro = olho + lado;
-            if (l > 0.001f && Physics.SphereCast(olho, raio, lado / l, out var aoLado, l, MascaraDaCamera, QueryTriggerInteraction.Ignore))
-                noOmbro = olho + lado / l * Mathf.Max(0f, aoLado.distance - 0.02f);
+            Vector3 noOmbro = NoOmbro(olho, rot);
 
             Vector3 tras = rot * Vector3.back;
             float longe = Mathf.Max(0f, -_ombro.z);
@@ -144,6 +167,17 @@ namespace ZombieCityCleaner.Player
                 d = Mathf.Max(0f, atras.distance - 0.02f);
             _distancia = d < _distancia ? d : Mathf.Lerp(_distancia, d, 1f - Mathf.Exp(-4f * dt));
             rede.cameraMundo.transform.SetPositionAndRotation(noOmbro + tras * _distancia, rot);
+        }
+
+        // o ponto ao lado da cabeça de onde a câmera vai para trás: o ombro, mas sem passar de uma parede ao lado (nos lugares
+        // apertados, ele chega mais perto da cabeça)
+        Vector3 NoOmbro(Vector3 olho, Quaternion rot)
+        {
+            Vector3 lado = rot * new Vector3(_ombro.x, _ombro.y, 0f);
+            float l = lado.magnitude;
+            if (l > 0.001f && Physics.SphereCast(olho, raio, lado / l, out var aoLado, l, MascaraDaCamera, QueryTriggerInteraction.Ignore))
+                return olho + lado / l * Mathf.Max(0f, aoLado.distance - 0.02f);
+            return olho + lado;
         }
 
         // a mira: da cabeça para o primeiro ponto que o raio do meio da tela pega depois dela (o que está entre a câmera e
@@ -167,6 +201,44 @@ namespace ZombieCityCleaner.Player
             Vector3 para = alvo - olho;
             // um alvo colado na cabeça (ou atrás dela) não dá direção: a da câmera
             Mira.rotation = Vector3.Dot(para, frente) > 0.5f ? Quaternion.LookRotation(para, cam.up) : cam.rotation;
+            // o que fica no caminho da cabeça até o alvo (o tiro bate nele): a mira vai para lá
+            MiraBloqueada = null;
+            float ate = para.magnitude;
+            if (ate > 0.3f && Physics.Raycast(olho, para / ate, out var bloqueio, ate - 0.15f, MascaraDaMira, QueryTriggerInteraction.Ignore))
+                MiraBloqueada = bloqueio.point;
+        }
+
+        // o ponto que a mira marca agora (o primeiro que o tiro pega): da Mira na terceira pessoa, da cabeça na primeira
+        Vector3 PontoMirado()
+        {
+            var cabeca = movimento.cabeca;
+            Vector3 olho = cabeca.position;
+            Vector3 dir = Ativa ? Mira.forward : cabeca.forward;
+            return Physics.Raycast(olho, dir, out var h, alcanceDaMira, MascaraDaMira, QueryTriggerInteraction.Ignore) ? h.point : olho + dir * 60f;
+        }
+
+        // vira o olhar para a câmera de agora marcar o mesmo ponto de antes da troca: na terceira pessoa, a linha do meio da
+        // tela sai do ombro (ao lado da cabeça); na primeira, da cabeça
+        void Realinhar(bool terceira)
+        {
+            Vector3 ponto = _realinhar.Value;
+            _realinhar = null;
+            var cabeca = movimento.cabeca;
+            Vector3 olho = cabeca.position;
+            Quaternion rot = cabeca.rotation;
+            if (terceira) _ombro = rede.Mirando.Value ? ombroMirando : ombro;
+            for (int i = 0; i < 3; i++)
+            {
+                // (o mesmo ombro da câmera: com uma parede ao lado, mais perto da cabeça)
+                Vector3 de = terceira ? NoOmbro(olho, rot) : olho;
+                Vector3 d = ponto - de;
+                if (d.sqrMagnitude < 0.25f) return;
+                rot = Quaternion.LookRotation(d.normalized, Vector3.up);
+            }
+            Vector3 f = rot * Vector3.forward;
+            float yaw = Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
+            float pitch = -Mathf.Atan2(f.y, new Vector2(f.x, f.z).magnitude) * Mathf.Rad2Deg;
+            movimento.Olhar(yaw, pitch);
         }
     }
 }

@@ -429,6 +429,16 @@ namespace ZombieCityCleaner.World
             pisoDoMorro.zonas = new[] { new Bounds(new Vector3(Patio.center.x, 0f, Patio.center.y), new Vector3(Patio.width, 1f, Patio.height)) };
             pisoDoMorro.superficies = new[] { Superficie.Concreto };
             pisoDoMorro.resto = Superficie.Grama;
+            // (18/11/2026) a cerca do pátio: um painel por trecho, na camada da grade (segura quem anda; o tiro e a visão passam)
+            foreach (var (a, b) in Bunker.TrechosDaCerca())
+            {
+                var d = b - a;
+                var painel = new GameObject("Grade do pátio") { layer = ModelosDaEstrada.CamadaDaGrade };
+                painel.transform.SetParent(_casca.transform, false);
+                painel.transform.localPosition = new Vector3((a.x + b.x) * 0.5f, 1.2f, (a.y + b.y) * 0.5f);
+                painel.transform.localRotation = Quaternion.LookRotation(new Vector3(d.x, 0f, d.y));
+                painel.AddComponent<BoxCollider>().size = new Vector3(0.05f, 2.4f, d.magnitude);
+            }
             // as arandelas da escada (sempre acesas)
             foreach (var (pos, alcance, forca) in casca.Luzes) Lampada(_casca.transform, pos, alcance, forca);
             Devolver(casca);

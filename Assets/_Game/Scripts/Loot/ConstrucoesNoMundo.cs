@@ -70,6 +70,10 @@ namespace ZombieCityCleaner.Loot
         public Material materialDoFogo;
 
         public const float MinutosPorLenha = 4f;
+        /// <summary>O graveto na fogueira: a lenha pequena (18/11/2026).</summary>
+        public const float MinutosPorGraveto = 1f;
+        /// <summary>O máximo de lenha guardada numa fogueira (s; 18/11/2026: antes a portátil não aceitava mais lenha).</summary>
+        public const float MaximoDeLenha = 40f * 60f;
         public const float DanoPorZumbi = 2.5f;
         /// <summary>Até onde o jogador monta (m, dos pés ao ponto).</summary>
         public const float AlcanceDeMontar = 5f;
@@ -83,7 +87,11 @@ namespace ZombieCityCleaner.Loot
         readonly List<ushort> _sobrando = new List<ushort>();
         float _proximoTique;
 
-        void Awake() => _lista = new NetworkList<Construcao>();
+        void Awake()
+        {
+            _lista = new NetworkList<Construcao>();
+            PrepararAssar();   // (o assar, 18/11/2026: ConstrucoesNoMundo.Assar.cs)
+        }
         void OnEnable() => Instancia = this;
 
         void OnDisable()
@@ -96,11 +104,13 @@ namespace ZombieCityCleaner.Loot
             if (IsServer) _lista.Clear();
             _lista.OnListChanged += AoMudar;
             Atualizar();
+            AssarAoNascer();
         }
 
         public override void OnNetworkDespawn()
         {
             _lista.OnListChanged -= AoMudar;
+            AssarAoSumir();
             foreach (var o in _objetos.Values) if (o != null) Destroy(o);
             _objetos.Clear();
             EsquecerAChuva();
@@ -187,7 +197,7 @@ namespace ZombieCityCleaner.Loot
         }
 
         // o que impede montar: o cenário e as outras construções (não o jogador, os braços, os zumbis e os corpos)
-        static readonly int MascaraDeMontar = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
+        static readonly int MascaraDeMontar = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
 
         /// <summary>O ponto é do chão em que o jogador pisa (não o tampo de uma mesa, um balcão ou outro andar).</summary>
         public static bool NoChao(Vector3 pes, Vector3 ponto) => Mathf.Abs(ponto.y - pes.y) < 0.6f;
@@ -216,6 +226,46 @@ namespace ZombieCityCleaner.Loot
         public void PedirMontar(ushort idDoKit, Vector3 ponto, float giro) => MontarRpc(idDoKit, ponto, giro, World.Tempo.SobTeto(ponto));
 
         public void PedirUsar(ushort id) => UsarRpc(id);
+
+        /// <summary>Mais lenha numa fogueira (o clique na portátil, cujo E recolhe; 18/11/2026).</summary>
+        public void PedirPorLenha(ushort id) => PorLenhaRpc(id);
+
+        [Rpc(SendTo.Server)]
+        void PorLenhaRpc(ushort id, RpcParams parametros = default)
+        {
+            var inventario = InventarioDe(NetworkManager, parametros.Receive.SenderClientId);
+            int k = Indice(id);
+            if (inventario == null || k < 0) return;
+            var c = _lista[k];
+            if (!Itens.EhFogueira(c.tipo) || (inventario.transform.position - c.pos).sqrMagnitude > 4f * 4f) return;
+            PorLenha(k, c, inventario);
+        }
+
+        /// <summary>
+        /// No anfitrião: mais lenha numa fogueira (a de madeira e a portátil; 18/11/2026, a pedido: "seria legal dar para
+        /// adicionar mais madeiras"): a madeira dá 4 min de fogo, o graveto 1, até 40 min guardados; apagada, acende. Na chuva,
+        /// fora de um teto, o fogo não pega e a lenha não se perde.
+        /// </summary>
+        bool PorLenha(int k, Construcao c, InventarioJogador inventario)
+        {
+            if (ChoveNoFogo && Coberta(c) != true)
+            {
+                inventario.AvisarDono("A chuva não deixa o fogo pegar: só debaixo de um teto");
+                return false;
+            }
+            if (c.valor - Agora > MaximoDeLenha - 30f)
+            {
+                inventario.AvisarDono("A fogueira já está cheia de lenha");
+                return false;
+            }
+            float mais;
+            if (inventario.GastarItem(Item.Madeira, 1)) mais = MinutosPorLenha * 60f;
+            else if (inventario.GastarItem(Item.Gravetos, 1)) mais = MinutosPorGraveto * 60f;
+            else return false;
+            c.valor = Mathf.Min(Mathf.Max(c.valor, Agora) + mais, Agora + MaximoDeLenha);
+            _lista[k] = c;
+            return true;
+        }
 
         // ------------------------------------------------------------------ no anfitrião
 
@@ -298,18 +348,15 @@ namespace ZombieCityCleaner.Loot
                         inventario.AcenderTochaNaMao();
                         return;
                     }
-                    // na chuva, fora de um teto, o fogo não pega (nem a lenha nova): a madeira não se perde
-                    if (ChoveNoFogo && Coberta(c) != true)
-                    {
-                        inventario.AvisarDono("A chuva não deixa o fogo pegar: só debaixo de um teto");
-                        return;
-                    }
-                    // mais lenha (ou acender): 1 madeira, mais uns minutos de fogo
-                    if (!inventario.GastarItem(Item.Madeira, 1)) return;
-                    c.valor = Mathf.Max(c.valor, Agora) + MinutosPorLenha * 60f;
-                    _lista[k] = c;
+                    PorLenha(k, c, inventario);   // (mais lenha ou acender: a madeira ou o graveto, 18/11/2026)
                     break;
                 case Item.KitFogueira:
+                    // (18/11/2026, o assar: com comida no fogo, ela fica)
+                    if (TemComidaNoFogo(c.id))
+                    {
+                        inventario.AvisarDono("Tire a comida do fogo antes de recolher a fogueira");
+                        return;
+                    }
                     RecolherAPortatil(k, c, inventario);   // (11/11/2026, a etapa 4: ConstrucoesNoMundo.Molotov.cs)
                     break;
                 case Item.Cama:
@@ -399,13 +446,20 @@ namespace ZombieCityCleaner.Loot
             }
         }
 
+        float _proximoEstalo;
+
         void Update()
         {
             // cada cópia: o fogo das fogueiras acende e apaga pelo relógio
             GarrafasAgora();   // o molotov (11/11/2026, a etapa 4: ConstrucoesNoMundo.Molotov.cs): as garrafas voando e as áreas de fogo
             if (IsServer && IsSpawned) FogoNoServidor();
+            if (IsServer && IsSpawned) AssarNoServidor();   // (o assar, 18/11/2026: o fogo conta para o que está nele)
             ArmadilhasAgora();   // as armadilhas (11/11/2026, a etapa 5a: ConstrucoesNoMundo.Armadilhas.cs): o anfitrião decide, e cada cópia vê
             BarricadasAgora();   // as de tábuas (11/11/2026, a etapa 5b: ConstrucoesNoMundo.Barricadas.cs): a malha danificada e o som de quem mexe
+            var camDoEstalo = Camera.main;
+            Vector3 ouvido = camDoEstalo != null ? camDoEstalo.transform.position : Vector3.zero;
+            float maisPerto = float.MaxValue;
+            Vector3 estalo = default;
             foreach (var c in _lista)
                 if (Itens.EhFogueira(c.tipo) && _objetos.TryGetValue(c.id, out var o) && o != null)
                 {
@@ -414,7 +468,23 @@ namespace ZombieCityCleaner.Loot
                     if (fogo != null && fogo.gameObject.activeSelf != acesa) fogo.gameObject.SetActive(acesa);
                     if (acesa && fogo != null && fogo.TryGetComponent<Light>(out var luz))
                         luz.intensity = 3.6f + 0.9f * Mathf.PerlinNoise(Time.time * 3.1f, c.id) + 0.4f * Mathf.Sin(Time.time * 17f + c.id);
+                    if (!acesa || fogo == null) continue;
+                    // (18/11/2026) mais lenha guardada, o fogo maior (de 75% a 130%, cheio com uns 12 min)
+                    float cheia = Mathf.Clamp01((c.valor - Agora) / (12f * 60f));
+                    fogo.localScale = Vector3.one * Mathf.Lerp(0.75f, 1.3f, cheia);
+                    float d2 = (c.pos - ouvido).sqrMagnitude;
+                    if (d2 < maisPerto)
+                    {
+                        maisPerto = d2;
+                        estalo = c.pos;
+                    }
                 }
+            // o estalo da lenha da fogueira acesa mais perto (até 18 m), como as do acampamento (18/11/2026)
+            if (camDoEstalo != null && maisPerto < 18f * 18f && Time.time >= _proximoEstalo)
+            {
+                _proximoEstalo = Time.time + UnityEngine.Random.Range(0.07f, 0.4f);
+                ZombieCityCleaner.Combat.Efeitos.Som(Sobreviventes.AcampamentosDoMundo.Estalos(), estalo + Vector3.up * 0.3f, UnityEngine.Random.Range(0.18f, 0.45f), true, 20f);
+            }
             InformarTetos();
             if (!IsServer || !IsSpawned || Time.time < _proximoTique) return;
             // o anfitrião, a cada meio segundo: a chuva no fogo e os zumbis nas barricadas
@@ -472,6 +542,8 @@ namespace ZombieCityCleaner.Loot
                 EsquecerAArmadilha(id);
                 EsquecerABarricada(id);
             }
+            // (o assar, 18/11/2026: quem entra pode receber o que assa antes das fogueiras)
+            if (IsSpawned) AtualizarAssando();
         }
 
         GameObject Montar(Construcao c)
@@ -585,6 +657,12 @@ namespace ZombieCityCleaner.Loot
             if (d == null || quem.Inventario == null) return null;
             var c = d.Value;
             int madeira = quem.Inventario.Quantos(Item.Madeira);
+            // (18/11/2026, a etapa 2 da fogueira: com a comida na mão, o clique assa)
+            if (Itens.EhFogueira(c.tipo))
+            {
+                string assar = mundo.DicaDeAssar(c, quem);
+                if (assar != null) return assar + (mundo.Acesa(c) ? DicaDeSentar : "");
+            }
             switch (c.tipo)
             {
                 case Item.Fogueira:
@@ -592,10 +670,17 @@ namespace ZombieCityCleaner.Loot
                     if (acesa && quem.Inventario.TochaDaMaoApagada) return "[E] Reacender a tocha no fogo";
                     if (ConstrucoesNoMundo.ChuvaEm(c.pos))
                         return acesa ? "Fogueira acesa: a chuva está apagando (debaixo de um teto ela fica)" : "Fogueira apagada: na chuva o fogo não pega (só debaixo de um teto)";
-                    if (madeira == 0) return acesa ? "Fogueira acesa (mais lenha: 1 madeira)" : "Fogueira apagada: precisa de 1 madeira";
-                    return acesa ? $"[E] Pôr lenha (1 madeira: +{ConstrucoesNoMundo.MinutosPorLenha:0} min)" : "[E] Acender a fogueira (1 madeira)";
+                    // (18/11/2026: o graveto também, e segurar o E senta)
+                    int gravetos = quem.Inventario.Quantos(Item.Gravetos);
+                    string sentar = acesa ? DicaDeSentar : "";
+                    if (madeira == 0 && gravetos == 0)
+                        return (acesa ? "Fogueira acesa (mais lenha: madeira ou gravetos)" : "Fogueira apagada: precisa de madeira ou de gravetos") + sentar;
+                    return (acesa ? $"[E] Pôr lenha ({Lenha(madeira)})" : $"[E] Acender a fogueira ({Lenha(madeira)})") + sentar;
                 case Item.KitFogueira:
-                    return mundo.DicaDaPortatil(c, quem);   // (11/11/2026, a etapa 4)
+                    // (18/11/2026: o clique põe lenha, e segurar o E senta; o E recolhe, como antes)
+                    bool kitAceso = mundo.Acesa(c);
+                    bool temLenha = madeira > 0 || quem.Inventario.Quantos(Item.Gravetos) > 0;
+                    return mundo.DicaDaPortatil(c, quem) + (temLenha && kitAceso ? $"   ·   [clique] Pôr lenha ({Lenha(madeira)})" : "") + (kitAceso ? DicaDeSentar : "");
                 case Item.Cama:
                     return Minha(c) ? "Sua cama: você volta aqui quando cair   ·   [E] Dormir e salvar   ·   [clique] Recolher" : $"A cama de {NomeDoDono(c.dono)}";
                 case Item.Barricada:
@@ -612,6 +697,9 @@ namespace ZombieCityCleaner.Loot
             }
             return null;
         }
+
+        static string Lenha(int madeira) => madeira > 0 ? $"1 madeira: +{ConstrucoesNoMundo.MinutosPorLenha:0} min" : $"1 graveto: +{ConstrucoesNoMundo.MinutosPorGraveto:0} min";
+        static string DicaDeSentar => SentarNoFogo.Sentado ? "   ·   sentado (andar levanta)" : "   ·   [segure E] Sentar";
 
         // a cama do personagem deste jogador (pela chave dele)
         bool Minha(Construcao c) => c.tipo == Item.Cama && JogadorRede.Local != null && c.dono == JogadorRede.Local.Chave.Value;
@@ -647,6 +735,11 @@ namespace ZombieCityCleaner.Loot
         {
             var d = mundo.Dados(id);
             if (d != null && d.Value.tipo == Item.TabuasBarricada) return mundo.PodeConsertar(d.Value, quem);   // (o conserto: segurar o clique)
+            // (o assar, 18/11/2026: com comida que assa na mão, o clique é da fogueira, e não comer; o anfitrião diz o que falta)
+            if (d != null && Itens.EhFogueira(d.Value.tipo) && quem.Inventario != null && ConstrucoesNoMundo.Assavel(quem.Inventario.NaMao)) return true;
+            // (a portátil, 18/11/2026: o clique põe lenha)
+            if (d != null && d.Value.tipo == Item.KitFogueira && quem.Inventario != null)
+                return mundo.Acesa(d.Value) && (quem.Inventario.Quantos(Item.Madeira) > 0 || quem.Inventario.Quantos(Item.Gravetos) > 0);
             return d != null && Minha(d.Value);
         }
 
@@ -660,6 +753,16 @@ namespace ZombieCityCleaner.Loot
                 quem.SegurarOClique(this, ArmadilhasDoJogador.SegundosDeConsertar);
                 return;
             }
+            if (d != null && Itens.EhFogueira(d.Value.tipo) && quem.Inventario != null && ConstrucoesNoMundo.Assavel(quem.Inventario.NaMao))
+            {
+                mundo.PedirAssar(id);   // (o assar, 18/11/2026)
+                return;
+            }
+            if (d != null && d.Value.tipo == Item.KitFogueira)
+            {
+                mundo.PedirPorLenha(id);   // (18/11/2026)
+                return;
+            }
             mundo.PedirUsar(id);
         }
 
@@ -667,20 +770,38 @@ namespace ZombieCityCleaner.Loot
         // ferramenta); segurar o clique conserta (o nível 2)
         bool _segurandoOClique;
 
+        // segurar o E na fogueira acesa senta perto dela (18/11/2026, SentarNoFogo); o toque curto, a lenha (o Usar)
+        bool _sentando;
+
+        public override bool ToqueUsa(ArmaJogador quem)
+        {
+            var d = mundo.Dados(id);
+            return d != null && Itens.EhFogueira(d.Value.tipo);
+        }
+
         public override float Segurar(ArmaJogador quem)
         {
             var d = mundo.Dados(id);
             _segurandoOClique = false;
+            _sentando = d != null && Itens.EhFogueira(d.Value.tipo) && mundo.Acesa(d.Value) && !SentarNoFogo.Sentado;
+            if (_sentando) return 0.6f;
             return d != null && d.Value.tipo == Item.TabuasBarricada && mundo.PodeDesmontar(d.Value, quem) ? ArmadilhasDoJogador.SegundosDeDesmontar : 0f;
         }
 
         public override void Segurado(ArmaJogador quem)
         {
+            if (_sentando)
+            {
+                _sentando = false;
+                var d = mundo.Dados(id);
+                if (d != null) quem.GetComponent<SentarNoFogo>()?.Sentar(d.Value.pos);
+                return;
+            }
             if (_segurandoOClique) mundo.PedirConsertar(id);
             else mundo.PedirDesmontar(id);
             _segurandoOClique = false;
         }
 
-        public override string Segurando(ArmaJogador quem) => _segurandoOClique ? "Pregando as tábuas soltas" : "Arrancando as tábuas";
+        public override string Segurando(ArmaJogador quem) => _sentando ? "Sentando" : _segurandoOClique ? "Pregando as tábuas soltas" : "Arrancando as tábuas";
     }
 }

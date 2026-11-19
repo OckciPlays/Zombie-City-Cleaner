@@ -21,6 +21,12 @@ namespace ZombieCityCleaner.Player
         Calmante, Sinuca, Descanso,
         // a etapa 4 do ramo Fogo (11/11/2026): o Calor do fogo
         CalorDoFogo,
+        // a fogueira (18/11/2026): sentado no chão perto dela (SentarNoFogo)
+        SentadoNoFogo,
+        // a lata esquentada na panela, na fogueira (18/11/2026, a etapa 2 da fogueira: ConstrucoesNoMundo.Assar.cs)
+        ComidaQuente,
+        // os instrumentos (18/11/2026, a etapa 4 da fogueira: MusicaDoJogador.cs): ouvir alguém tocando perto
+        Musica,
     }
 
     /// <summary>
@@ -183,6 +189,11 @@ namespace ZombieCityCleaner.Player
             // o Calor do fogo (11/11/2026, a etapa 4): perto de um fogo aceso (a fogueira, a tocha, o lampião, o molotov)
             int calor = Habilidades.Pontos(_rede, Habilidade.CalorDoFogo);
             if (calor > 0 && FogoDoJogador.FogoAcesoPerto(pes)) Acalma(ref taxa, ref motivos, MotivoDaMente.CalorDoFogo, FogoDoJogador.CalorPorNivel * calor);
+            // sentado no chão perto da fogueira acesa (18/11/2026, a pedido: "recupera um pouco de sanidade, menor do que dormir")
+            if (_rede != null && _rede.SentadoNoChao.Value && FogueiraAcesaPerto(pes, 4f)) Acalma(ref taxa, ref motivos, MotivoDaMente.SentadoNoFogo, 2.5f);
+            // a música (18/11/2026, a etapa 4 da fogueira): quem toca a até 12 m (ele também), mais com mais gente tocando
+            int musicos = MusicaDoJogador.TocandoPerto(pes, MusicaDoJogador.AlcanceDaMente);
+            if (musicos > 0) Acalma(ref taxa, ref motivos, MotivoDaMente.Musica, 1.5f + musicos);
             if (bunkerAceso) Acalma(ref taxa, ref motivos, MotivoDaMente.Bunker, bunkerFechado ? 5f : 2.5f);
 
             // a etapa 3: o sono, o calmante e o vício (VidaJogador.Sono.cs)

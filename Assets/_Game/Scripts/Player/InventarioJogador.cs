@@ -125,7 +125,7 @@ namespace ZombieCityCleaner.Player
         public event Action<string> Feito;
 
         // o raio de largar não vê o próprio jogador, os braços, os zumbis, os corpos e o Ignore Raycast
-        const int MascaraDoCenario = ~((1 << 2) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
+        const int MascaraDoCenario = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaBracos) | (1 << 7) | (1 << 8) | (1 << JogadorRede.CamadaJogador));
 
         ArmaJogador _arma;
         JogadorRede _rede;
@@ -360,7 +360,8 @@ namespace ZombieCityCleaner.Player
                     : $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
             else if (r.oficina && !Bancada.PertoDaOficina(transform.position)) falta = "Precisa da mesa de oficina (no bunker)";
             else if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
-            else if (r.fogo && !FogoPerto(transform.position)) falta = "Precisa de uma fogueira acesa perto";
+            // (18/11/2026, a etapa 2 da fogueira: o assar é na própria fogueira, no espeto, e não mais pela fabricação)
+            else if (r.fogo) falta = "Asse na própria fogueira: com ele na mão, clique no fogo (precisa de um espeto)";
             else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
             else
             {

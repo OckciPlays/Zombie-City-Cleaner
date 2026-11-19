@@ -72,6 +72,8 @@ namespace ZombieCityCleaner.Salvar
         public List<long> mobiliaAberta = new List<long>();
         /// <summary>As árvores cortadas pelo machado (06/11/2026; a chave da FlorestaDoMundo).</summary>
         public List<long> arvoresCortadas = new List<long>();
+        /// <summary>As árvores caídas no chão, ainda sem virar toras (18/11/2026, o Lakewood).</summary>
+        public List<World.TroncoNoChao> troncosNoChao = new List<World.TroncoNoChao>();
         /// <summary>Os painéis de metal desmontados (09/11/2026, a sucata; o número do PaineisDeSucata).</summary>
         public List<int> paineisDesmontados = new List<int>();
         public List<int> sustos = new List<int>();

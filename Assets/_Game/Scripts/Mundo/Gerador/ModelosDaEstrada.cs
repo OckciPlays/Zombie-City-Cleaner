@@ -20,11 +20,19 @@ namespace ZombieCityCleaner.Mundo
         };
         public const int Carros = 7;
 
-        /// <summary>Uma caixa de colisão no espaço do modelo.</summary>
+        /// <summary>
+        /// A camada da grade (18/11/2026, a pedido: "grades não protegem"): a colisão do alambrado e dos portões de grade fica
+        /// nela. Segura quem anda (gente, zumbi, bicho e carro: a física bate em tudo, e o NavMesh conta com ela), mas o tiro
+        /// (do jogador e dos NPCs) e a visão passam. Antes era a Default, e a grade tapava o tiro como um muro.
+        /// </summary>
+        public const int CamadaDaGrade = 15;
+
+        /// <summary>Uma caixa de colisão no espaço do modelo ('Vazada': a grade, na <see cref="CamadaDaGrade"/>).</summary>
         public struct Caixa
         {
             public Vector3 Centro, Tamanho;
             public float GiroY;
+            public bool Vazada;
         }
 
         /// <summary>As cores das letras: o branco das placas verdes, o verde-escuro da placa de entrada e o vermelho do aviso.</summary>
@@ -60,7 +68,8 @@ namespace ZombieCityCleaner.Mundo
             public void Bloco(Vector3 centro, Vector3 tam, Cor cor, float giroY = 0f, float giroZ = 0f) =>
                 Malha.Caixa(Matrix4x4.TRS(centro, Quaternion.Euler(0f, giroY, giroZ), Vector3.one), tam, cor);
 
-            public void Colide(Vector3 centro, Vector3 tam, float giroY = 0f) => Colisao.Add(new Caixa { Centro = centro, Tamanho = tam, GiroY = giroY });
+            public void Colide(Vector3 centro, Vector3 tam, float giroY = 0f, bool vazada = false) =>
+                Colisao.Add(new Caixa { Centro = centro, Tamanho = tam, GiroY = giroY, Vazada = vazada });
 
             /// <summary>Uma roda: o cilindro deitado no eixo x, centrado em p.</summary>
             public void Roda(Vector3 p, float raio, float largura)
@@ -248,7 +257,7 @@ namespace ZombieCityCleaner.Mundo
             // o arame farpado em cima, inclinado para fora (o -z)
             foreach (float y in new[] { 2.62f, 2.82f, 3.02f })
                 m.Bloco(new Vector3(0f, y, 0.12f + (y - 2.62f) * 0.3f), new Vector3(3f, 0.015f, 0.015f), "Grade");
-            m.Colide(new Vector3(0f, 1.4f, 0f), new Vector3(3f, 2.8f, 0.12f));
+            m.Colide(new Vector3(0f, 1.4f, 0f), new Vector3(3f, 2.8f, 0.12f), vazada: true);   // (o tiro passa: a grade)
             return m;
         }
 

@@ -42,7 +42,7 @@ namespace ZombieCityCleaner.World
         [Tooltip("Quantos workers de jobs a montagem pode usar. Com todos, a física e o desenho esperavam por ela na cidade (as travadas de 30 a 70 ms).")]
         [Min(1)] public int workers = 2;
 
-        const int Camadas = (1 << 0) | (1 << 1);
+        const int Camadas = (1 << 0) | (1 << 1) | (1 << ZombieCityCleaner.Mundo.ModelosDaEstrada.CamadaDaGrade);   // (e a grade, 18/11/2026)
 
         /// <summary>A água até onde os zumbis entram (m): a beira molhada; mais funda, o lago é deles não.</summary>
         public const float AguaQueOsZumbisEntram = 0.3f;

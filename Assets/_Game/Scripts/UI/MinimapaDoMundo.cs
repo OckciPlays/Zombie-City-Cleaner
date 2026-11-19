@@ -103,7 +103,7 @@ namespace ZombieCityCleaner.UI
         {
             var olho = j.Olho;
             Vector3 o = olho.position, dir = olho.forward;
-            int mascara = ~((1 << 2) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaRetrato));
+            int mascara = ~((1 << 2) | (1 << 16) | (1 << JogadorRede.CamadaJogador) | (1 << JogadorRede.CamadaBracos) | (1 << JogadorRede.CamadaRetrato));
             if (Physics.Raycast(o, dir, out var hit, MarcasDoMapa.AlcanceDoPing, mascara, QueryTriggerInteraction.Ignore))
             {
                 ponto = hit.point;

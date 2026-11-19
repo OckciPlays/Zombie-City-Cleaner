@@ -215,6 +215,7 @@ namespace ZombieCityCleaner.Salvar
                 }
 
             m.arvoresCortadas = _mundo != null ? _mundo.ArvoresCortadas() : _lakewood.ArvoresCortadas();   // (06/11/2026)
+            m.troncosNoChao = _lakewood != null ? _lakewood.TroncosNoChao() : new List<World.TroncoNoChao>();   // (18/11/2026)
             m.paineisDesmontados = _mundo != null ? _mundo.PaineisDesmontados() : _lakewood.PaineisDesmontados();   // (09/11/2026, a sucata)
             m.fauna = Fauna.FaunaDoMundo.NiveisParaSalvar();   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.CastoresParaSalvar(out m.tocasDosCastores, out m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
@@ -540,6 +541,7 @@ namespace ZombieCityCleaner.Salvar
             else if (_lakewood != null)
             {
                 _lakewood.RestaurarArvores(m.arvoresCortadas);
+                _lakewood.RestaurarTroncos(m.troncosNoChao);   // as árvores caídas (18/11/2026)
                 _lakewood.RestaurarPaineis(m.paineisDesmontados);
             }
             Fauna.FaunaDoMundo.Restaurar(m.fauna);   // a população das regiões caçadas (12/11/2026)

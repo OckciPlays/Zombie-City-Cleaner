@@ -191,6 +191,11 @@ namespace ZombieCityCleaner.Loot
             H(Player.Habilidade.BarricadaDeTabuas, Item.TabuasBarricada, 1, false, Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 6)),
             // a carne de caça assada na fogueira acesa (12/11/2026, a fauna; no fim, para os índices das outras não mudarem)
             Fogo(Item.CarneAssada, 1, P(Item.CarneCrua)),
+            // o assar na fogueira (18/11/2026, a etapa 2 da fogueira; desde então, as receitas de fogo daqui não se fazem mais:
+            // o peixe e a carne vão no espeto, na própria fogueira): o espeto de 2 gravetos, em qualquer lugar, e a panela de
+            // sucata, na bancada (ela também aparece nas cozinhas)
+            R(Item.Espeto, 1, false, Item.Nada, P(Item.Gravetos, 2)),
+            R(Item.Panela, 1, true, Item.Ferramenta, P(Item.Sucata, 3)),
         };
 
         // a receita do fogo (11/11/2026): a da habilidade, com 1 combustível
