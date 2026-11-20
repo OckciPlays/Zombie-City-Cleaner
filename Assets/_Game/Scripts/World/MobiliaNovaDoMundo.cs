@@ -235,6 +235,8 @@ namespace ZombieCityCleaner.World
                 : parte.tipo == ParteQueAbre.Tipo.Tampa ? (abriu ? "tampa_abrir_" : "tampa_fechar_")
                 : abriu ? "armario_abrir_" : "armario_fechar_";
             var clip = SonsGravados.Um("Portas", prefixo);
+            // (20/11/2026: a tampa fechando gravada tinha ruído e saiu; até achar outra, a porta de armário fechando)
+            if (clip == null && prefixo == "tampa_fechar_") clip = SonsGravados.Um("Portas", "armario_fechar_");
             if (clip != null) Efeitos.Som(clip, parte.transform.position, metal ? 0.75f : 0.6f, true, metal ? 20f : 14f);
         }
 

@@ -207,8 +207,8 @@ namespace ZombieCityCleaner.UI
             ("Corpo: coração, osso, baques, ofegante, zíper, sussurros, vômito", "Corpo/*"),
             ("Bunker: a TV e o rádio", "Bunker/*"), ("Cliques (lanterna e interruptor)", "Interface/*"),
             ("Armadilhas: martelo, latas, estacas", "Armadilhas/*"), ("Galão estourando", "Fogo/estouro_1"),
-            ("Zumbido do raio", "Clima/zumbido"), ("Guaxinim", "Bichos/Guaxinim/*"), ("Peru", "Bichos/GluGlu/*"),
-            ("Urubu", "Bichos/Urubu/*"), ("Dentes do urso", "Bichos/Dentes/*"), ("Água: entrar", "Agua/Agua_Entrar"),
+            ("Zumbido do raio", "Clima/zumbido"),   // (20/11/2026: o guaxinim, o peru e o urubu saíram, com ruído)
+            ("Dentes do urso", "Bichos/Dentes/*"), ("Água: entrar", "Agua/Agua_Entrar"),
             ("Carro: capô, buzina da perua, motor da caminhonete", "Carro/capo_fechar"),
             ("Carro: capô, buzina da perua, motor da caminhonete", "Carro/perua_buzina"),
             ("Carro: capô, buzina da perua, motor da caminhonete", "Carro/motor_c_1_lento"),

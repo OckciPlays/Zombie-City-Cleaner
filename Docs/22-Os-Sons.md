@@ -63,10 +63,16 @@ lista da seção 2 e apague à mão o que ainda existir aí (uma cópia local, o
     vapor;
   - os 21 sons de bicho que têm pasta em `Resources/Bichos` (os geradores deles saíram do `SomDosBichos`; um som com
     pasta e sem arquivo fica calado).
+- **Os sons com ruído (20/11/2026, a pedido: "dá pra perceber a gravação e o ruído ... quando entram no jogo, perde o
+  clima"):** em `Audio/Resources`, saíram `Portas/armario_fechar_2`, `fechar_2`, `tampa_abrir_2` e `tampa_fechar_1`;
+  `Arvore/Estalo_01..03`; `DiaZero/carro_passando`; e as pastas inteiras `Bichos/Guaxinim`, `Bichos/GluGlu` (o peru) e
+  `Bichos/Urubu`. Até achar outros: a tampa do baú fechando usa a porta de armário fechando; o carro que passa no Dia 0
+  usa o motor gravado da perua (`Carro/motor_a_2_1000`); a árvore cai sem os estalos (só o machado e o tombo); o
+  guaxinim, o peru e o urubu ficam mudos.
 
 - **Não volte os sons antigos** dos arquivos que foram trocados com o mesmo nome. A versão nova é a certa:
   `Audio/Carro/Alarme_01..03`, `Audio/Hospital/*`, `Audio/Motos/Cross_Pegar` e `FatBoy_Pegar`,
-  `Audio/Resources/Agua/Agua_Entrar`, `Arvore/Estalo_01..03`, `Clima/chuva*`, `Clima/poca_1..5`, `Clima/zumbido` e
+  `Audio/Resources/Agua/Agua_Entrar`, `Clima/chuva*`, `Clima/poca_1..5`, `Clima/zumbido` e
   `Audio/Trilha/vento/vento_dia_*` e `vento_noite_*` (com as rajadas medidas de novo no `trilha.json` e no
   `TrilhaDoJogo.asset`).
 - **Se um merge der conflito** num desses arquivos, fique com a versão da `develop`. Se a Unity mostrar um som
@@ -95,7 +101,8 @@ Os sons que ainda são feitos em código (não há gravação) ou que não exist
   - não existem: o freio, o pneu cantando (derrapagem) e o cascalho embaixo das rodas;
   - dos que o Pedro mandou, o `car-engine-2` (6,5 s acelerando e voltando) e a moto 75 cc (uma acelerada só) não
     entraram: nenhum dos dois tem um trecho de giro parado para virar o laço do motor.
-- **As portas:** a trancada (forçar), a gazua e o pé de cabra.
+- **As portas e os móveis:** a trancada (forçar), a gazua e o pé de cabra; a tampa do baú fechando (usa a do armário) e
+  mais variações das portas e dos armários fechando (sobrou uma de cada).
 - **O corpo e a mente:** o desmaio; o calafrio e os dentes batendo (quando a voz do personagem não tem); o rasgo, o
   enrolar, o velcro e a cartela dos curativos; o spray do tratamento.
 - **O cigarro:** sacudir o maço, a tragada, o sopro e o peteleco.
@@ -106,5 +113,7 @@ Os sons que ainda são feitos em código (não há gravação) ou que não exist
 - **A sinuca:** a tacada, a tabela, a caçapa e as bolas.
 - **A interface:** o bipe do ping e o das falas dos NPCs.
 - **Os passos:** o carpete (feito em código); não há terra, cascalho, folhas nem metal.
-- **Os bichos:** a mordida, o guincho do coelho, a patada do urso, o espirro do gambá e o guaxinim no lixo (a lata, a
-  sacola, remexer e a tampa da caçamba).
+- **Os bichos:** o guaxinim (o chiado e o lixo: a lata, a sacola, remexer e a tampa da caçamba), o peru e o urubu (os
+  gravados tinham ruído e saíram); a mordida, o guincho do coelho, a patada do urso e o espirro do gambá.
+- **A árvore:** os estalos dela começando a cair (os gravados tinham ruído e saíram).
+- **O Dia 0:** o carro passando (hoje é o motor da perua em laço).

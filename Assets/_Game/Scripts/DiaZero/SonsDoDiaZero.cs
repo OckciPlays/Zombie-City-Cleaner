@@ -14,7 +14,8 @@ namespace ZombieCityCleaner.DiaZero
         public static AudioClip Tosse(bool mulher, int k) => SonsGravados.Um("DiaZero", mulher ? "tosse_mulher_" : "tosse_homem_");   // (20/11/2026, os do sfxjar)
 
         public static AudioClip Cortador => SonsGravados.Um("DiaZero", "cortador");
-        public static AudioClip MotorDoCarro => SonsGravados.Um("DiaZero", "carro_passando");
+        // (20/11/2026: o carro passando gravado tinha ruído e saiu; até achar outro, o motor gravado da perua a 1000 rpm)
+        public static AudioClip MotorDoCarro => SonsGravados.Um("DiaZero", "carro_passando") ?? SonsGravados.Um("Carro", "motor_a_2_");
         public static AudioClip Agua => SonsGravados.Um("DiaZero", "mangueira");   // (20/11/2026: os gravados)
     }
 }
