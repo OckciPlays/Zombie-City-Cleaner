@@ -126,7 +126,7 @@ namespace ZombieCityCleaner.World
             // o ponto anda devagar (a margem muda enquanto se anda), e o volume sobe e desce em ~1,5 s
             a.fonte.transform.position = Vector3.MoveTowards(a.fonte.transform.position, a.ponto, Time.deltaTime * 8f);
             a.volume = Mathf.MoveTowards(a.volume, a.alvo, Time.deltaTime * 0.7f);
-            a.fonte.volume = a.volume * ambiente;
+            a.fonte.volume = a.volume * ambiente * MixerDeSom.Volume(CanalDoSom.Agua);   // (20/11/2026: o canal Água do mixer)
             if (a.volume <= 0f && a.fonte.isPlaying) a.fonte.Pause();
             else if (a.volume > 0f && !a.fonte.isPlaying) a.fonte.UnPause();
         }

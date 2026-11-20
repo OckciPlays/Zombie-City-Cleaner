@@ -598,7 +598,7 @@ namespace ZombieCityCleaner.Vehicles
 
         static void Tocar(AudioSource s, float alvo, float dt)
         {
-            s.volume = Mathf.MoveTowards(s.volume, alvo, dt * 1.5f);
+            s.volume = Mathf.MoveTowards(s.volume, alvo * MixerDeSom.Volume(CanalDoSom.Veiculos), dt * 1.5f);   // (20/11/2026: o canal Veículos)
             if (s.volume > 0.001f && !s.isPlaying) s.Play();
             else if (s.volume <= 0.001f && s.isPlaying) s.Stop();
         }

@@ -300,9 +300,18 @@ namespace ZombieCityCleaner.Combat
         /// Toca um som. Espacial = 3D no ponto, ouvido até o alcance e mais abafado quanto mais longe; senão, sai
         /// "dentro da cabeça" (o próprio tiro).
         /// </summary>
-        public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f)
+        public static void Som(AudioClip clip, Vector3 posicao, float volume = 1f, bool espacial = true, float alcance = 60f) =>
+            Som(clip, posicao, volume, espacial, alcance, MixerDeSom.CanalDe(clip));
+
+        /// <summary>
+        /// O som num canal do mixer (20/11/2026, a aba Som das Configurações: <see cref="MixerDeSom"/>): o volume vezes o
+        /// do canal. Sem o canal (a versão de cima), ele sai do clipe (a pasta em que foi achado ou o nome).
+        /// </summary>
+        public static void Som(AudioClip clip, Vector3 posicao, float volume, bool espacial, float alcance, CanalDoSom canal)
         {
             if (_instancia == null || clip == null) return;
+            volume *= MixerDeSom.Volume(canal);
+            if (volume <= 0.0005f) return;   // (o canal no zero: nem pega uma fonte)
             var cam = Camera.main;
             // a porta do bunker fechada separa quem ouve do som
             if (espacial && cam != null && BunkerRede.Isolado(cam.transform.position, posicao)) return;
@@ -361,6 +370,13 @@ namespace ZombieCityCleaner.Combat
         {
             if (clips == null || clips.Length == 0) return;
             Som(clips[Random.Range(0, clips.Length)], posicao, volume, espacial, alcance);
+        }
+
+        /// <summary>Uma das variações, sorteada, num canal do mixer.</summary>
+        public static void Som(AudioClip[] clips, Vector3 posicao, float volume, bool espacial, float alcance, CanalDoSom canal)
+        {
+            if (clips == null || clips.Length == 0) return;
+            Som(clips[Random.Range(0, clips.Length)], posicao, volume, espacial, alcance, canal);
         }
 
         /// <summary>Clarão do cano: uma luz de um instante e um brilho na boca da arma (na camada informada).</summary>

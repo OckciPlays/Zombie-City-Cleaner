@@ -286,7 +286,7 @@ namespace ZombieCityCleaner.Loot
                 som.minDistance = 1f;
                 som.maxDistance = 14f;
                 som.dopplerLevel = 0f;
-                som.volume = 0.35f;
+                Combat.MixerDeSom.NoCanal(som, Combat.CanalDoSom.Fogo, 0.35f);   // (o canal Fogo do mixer)
                 som.time = UnityEngine.Random.Range(0f, clip.length * 0.9f);
             }
             if (acesa && !som.isPlaying) som.Play();

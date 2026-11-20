@@ -356,6 +356,7 @@ namespace ZombieCityCleaner.World
         static void Laco(AudioSource s, AudioLowPassFilter filtro, float volume, float corte)
         {
             if (s == null || s.clip == null) return;
+            volume *= MixerDeSom.Volume(CanalDoSom.Clima);   // (20/11/2026: o canal Clima do mixer: a chuva, o vento do clima, o tornado)
             s.volume = Mathf.MoveTowards(s.volume, volume, Time.deltaTime * 0.5f);
             if (filtro != null) filtro.cutoffFrequency = Mathf.Lerp(filtro.cutoffFrequency, corte, 1f - Mathf.Exp(-Time.deltaTime * 6f));
             if (s.volume > 0.002f)
@@ -619,14 +620,15 @@ namespace ZombieCityCleaner.World
                 fonte.GetComponent<AudioLowPassFilter>().cutoffFrequency = Mathf.Min(t.corte, Abafamento.Corte(_abafo * 0.9f));
                 fonte.pitch = Random.Range(0.92f, 1.06f);
                 fonte.clip = t.clip;
-                fonte.volume = t.volume * Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(_abafo / 0.8f)) * Mathf.Lerp(1f, 0.15f, Mathf.Clamp01((_abafo - 0.8f) / 0.2f));
+                fonte.volume = t.volume * Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(_abafo / 0.8f)) * Mathf.Lerp(1f, 0.15f, Mathf.Clamp01((_abafo - 0.8f) / 0.2f))
+                               * MixerDeSom.Volume(CanalDoSom.Clima);
                 fonte.Play();
                 // o raio bem perto: o resto abaixa e volta aos poucos (o ouvido atordoado); o zumbido só se houver o som dele
                 if (t.zumbido > 0f && _abafo < 0.9f)
                 {
                     if (_zumbido.clip != null)
                     {
-                        _zumbido.volume = 0.5f * t.zumbido * (1f - 0.6f * _abafo);
+                        _zumbido.volume = 0.5f * t.zumbido * (1f - 0.6f * _abafo) * MixerDeSom.Volume(CanalDoSom.Clima);
                         _zumbido.Play();
                     }
                     _surdo = Mathf.Min(_surdo, Mathf.Lerp(1f, 0.2f, t.zumbido));

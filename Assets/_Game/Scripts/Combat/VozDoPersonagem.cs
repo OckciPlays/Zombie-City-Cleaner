@@ -49,6 +49,7 @@ namespace ZombieCityCleaner.Combat
                 c = Resources.LoadAll<AudioClip>($"Vozes/{Pessoas[pessoa]}/{v}");
                 if (c == null || c.Length == 0) c = Resources.LoadAll<AudioClip>($"Vozes/{Pessoas[pessoa ^ 1]}/{v}");
                 _clips[chave] = c;
+                MixerDeSom.Marcar(c, CanalDoSom.Vozes);   // (20/11/2026: o canal Vozes do mixer)
             }
             return c != null && c.Length > 0 ? c : null;
         }

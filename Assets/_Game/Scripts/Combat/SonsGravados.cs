@@ -28,7 +28,10 @@ namespace ZombieCityCleaner.Combat
         public static AudioClip[] Pasta(string caminho)
         {
             if (!_pastas.TryGetValue(caminho, out var c) || (c != null && c.Length > 0 && c[0] == null))
+            {
                 _pastas[caminho] = c = Resources.LoadAll<AudioClip>(caminho);
+                MixerDeSom.MarcarDaPasta(caminho, c);   // (20/11/2026: o canal do mixer de cada clipe, pela pasta)
+            }
             return c != null && c.Length > 0 ? c : null;
         }
 

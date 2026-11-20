@@ -95,7 +95,7 @@ namespace ZombieCityCleaner.World
             _som.rolloffMode = AudioRolloffMode.Linear;
             _som.minDistance = 1f;
             _som.maxDistance = 11f;
-            _som.volume = 0.16f;
+            MixerDeSom.NoCanal(_som, CanalDoSom.Objetos, 0.16f);   // (20/11/2026: a TV no canal Objetos do mixer)
             _som.playOnAwake = false;
         }
 
@@ -182,7 +182,7 @@ namespace ZombieCityCleaner.World
             _fonte.rolloffMode = AudioRolloffMode.Linear;
             _fonte.minDistance = 1f;
             _fonte.maxDistance = 10f;
-            _fonte.volume = 0.14f;
+            MixerDeSom.NoCanal(_fonte, CanalDoSom.Objetos, 0.14f);   // (20/11/2026: o rádio no canal Objetos do mixer)
             _fonte.playOnAwake = false;
         }
 

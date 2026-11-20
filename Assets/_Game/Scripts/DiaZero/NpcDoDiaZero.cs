@@ -193,7 +193,7 @@ namespace ZombieCityCleaner.DiaZero
                     _proximaTosse = t + Random.Range(7f, 16f);
                     _voz.pitch = Random.Range(0.92f, 1.08f);
                     var tosse = SonsDoDiaZero.Tosse(_mulher, Random.Range(0, 3));   // (20/11/2026: só a gravada; null sem ela)
-                    if (tosse != null) _voz.PlayOneShot(tosse, 0.9f);
+                    if (tosse != null) _voz.PlayOneShot(tosse, 0.9f * Combat.MixerDeSom.Volume(Combat.CanalDoSom.Vozes));   // (20/11/2026: o canal Vozes)
                 }
                 if (t >= _proximaCoceira && t - _tosseDesde > 2f)
                 {
@@ -406,7 +406,7 @@ namespace ZombieCityCleaner.DiaZero
                 som.rolloffMode = AudioRolloffMode.Linear;
                 som.minDistance = 1f;
                 som.maxDistance = 12f;
-                som.volume = 0.35f;
+                Combat.MixerDeSom.NoCanal(som, Combat.CanalDoSom.Objetos, 0.35f);   // (20/11/2026: a mangueira no canal Objetos)
                 if (som.clip != null) som.time = sorte * Mathf.Max(0.1f, som.clip.length);   // (20/11/2026: só a gravada; null sem ela)
                 som.Play();
             }
@@ -455,7 +455,7 @@ namespace ZombieCityCleaner.DiaZero
             _maquina.rolloffMode = AudioRolloffMode.Linear;
             _maquina.minDistance = 2f;
             _maquina.maxDistance = 35f;
-            _maquina.volume = 0.5f;
+            Combat.MixerDeSom.NoCanal(_maquina, Combat.CanalDoSom.Objetos, 0.5f);   // (20/11/2026: o cortador no canal Objetos)
             _maquina.Play();
         }
 

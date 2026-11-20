@@ -8,7 +8,9 @@ namespace ZombieCityCleaner.UI
     /// - o volume geral (o do ouvido, de 0 a 100%);
     /// - por baixo do geral, o volume de cada grupo, de 0 a 100%: a música (a trilha do menu e a do jogo,
     ///   Music/MaestroDaTrilha.Volume), os zumbis (Zombies/ZombieManager.VolumeDosZumbis) e os sons de ambiente
-    ///   (MaestroDaTrilha.VolumeDoAmbiente);
+    ///   (MaestroDaTrilha.VolumeDoAmbiente); desde 20/11/2026 todos na aba Som, com os canais novos do mixer (os animais, as
+    ///   armas, os golpes, os passos, o corpo, o clima, a água, o fogo, os veículos, as vozes, os objetos e os avisos:
+    ///   Combat/MixerDeSom), cada um com o botão de uma amostra;
     /// - o limite de quadros por segundo: VSync (acompanha o monitor), 30, 60, 120, 144 ou sem limite. Com um número, o
     ///   VSync desliga (senão o limite não vale);
     /// - mostrar o FPS no canto de cima, à direita (a média de meio segundo);
@@ -107,7 +109,7 @@ namespace ZombieCityCleaner.UI
         }
 
         static readonly string[] NaoSim = { "Não", "Sim" };
-        static readonly string[] Abas = { "Geral", "Gráficos" };
+        static readonly string[] Abas = { "Geral", "Som", "Gráficos" };   // (20/11/2026: a aba Som, o mixer detalhado)
         static readonly string[] SobreAQualidade =
         {
             "Sombras duras e só perto, sem a sombra nos cantos (SSAO) nem anti-serrilhado, texturas pela metade e o mundo desenhado até 70 m. Para computadores fracos.",
@@ -116,6 +118,9 @@ namespace ZombieCityCleaner.UI
             "Sombras mais longe e mais definidas, anti-serrilhado SMAA com MSAA 4x e mais detalhes ao longe. Pesado.",
         };
         static int _aba;
+
+        /// <summary>Para os testes: a aba aberta (0 Geral, 1 Som, 2 Gráficos).</summary>
+        public static int AbaParaTeste { get => _aba; set => _aba = Mathf.Clamp(value, 0, Abas.Length - 1); }
 
         /// <summary>
         /// O painel das opções, no meio da tela a partir de y (o título fica acima): as abas Geral (o som, o FPS, o F1) e
@@ -160,24 +165,21 @@ namespace ZombieCityCleaner.UI
                 return true;
             }
 
-            if (_aba == 1)
+            if (_aba == 2)
             {
                 AbaDosGraficos(u, x, w, ref y, texto, centro, detalhe, opcao, Barra);
                 return Voltar(u, x, w, y, botao);
             }
-
-            // os volumes: o geral (o do ouvido) e, por baixo dele, cada grupo separado (a pedido em 29/10/2026): a música
-            // (a trilha do menu e a do jogo, com o vento dela), os zumbis (as vozes e a pedra) e o ambiente (os grilos, os
-            // cachorros, o que o vento mexe, os corvos)
-            if (Barra("Volume geral", Volume, out float volume))
+            if (_aba == 1)
             {
-                Volume = volume;
-                AudioListener.volume = volume;
+                AbaDoSom(u, ref y, detalhe);
+                return Voltar(u, x, w, y, botao);
             }
-            if (Barra("Música", Music.MaestroDaTrilha.Volume, out float musica)) Music.MaestroDaTrilha.Volume = musica;
-            if (Barra("Zumbis", Zombies.ZombieManager.VolumeDosZumbis, out float zumbis)) Zombies.ZombieManager.VolumeDosZumbis = zumbis;
-            if (Barra("Sons de ambiente", Music.MaestroDaTrilha.VolumeDoAmbiente, out float ambiente)) Music.MaestroDaTrilha.VolumeDoAmbiente = ambiente;
-            y += 6 * u;
+
+            // os volumes (desde 20/11/2026) ficam todos na aba Som: os de antes (o geral, a música, os zumbis e o ambiente)
+            // e os canais novos do mixer
+            GUI.Label(new Rect(x, y, w, 26 * u), "O volume geral e os de cada som ficam na aba Som.", detalhe);
+            y += 40 * u;
 
             GUI.Label(new Rect(x, y, w, 26 * u), "Limite de FPS", texto);
             int limite = GUI.SelectionGrid(new Rect(x, y + 32 * u, w, 36 * u), Limite, NomesDosLimites, NomesDosLimites.Length, opcao);
@@ -218,6 +220,155 @@ namespace ZombieCityCleaner.UI
             }
             y += 50 * u;
             return Voltar(u, x, w, y, botao);
+        }
+
+        // ------------------------------------------------------------------ a aba Som (o mixer detalhado)
+
+        /// <summary>Uma barra do mixer: o nome, do que ela cuida, o volume (ler e mudar) e a amostra do botão ▶.</summary>
+        class LinhaDoMixer
+        {
+            public string nome, sobre;
+            public System.Func<float> ler;
+            public System.Action<float> mudar;
+            public System.Func<AudioClip[]> amostra;
+            public float intervalo, ate = 2.5f;
+            public int vezes = 1;
+        }
+
+        static (string grupo, LinhaDoMixer[] linhas)[][] _colunas;
+
+        static LinhaDoMixer Canal(string nome, string sobre, Combat.CanalDoSom c, System.Func<AudioClip[]> amostra, int vezes = 1, float intervalo = 0f) =>
+            new LinhaDoMixer
+            {
+                nome = nome, sobre = sobre, ler = () => Combat.MixerDeSom.Volume(c), mudar = v => Combat.MixerDeSom.Mudar(c, v),
+                amostra = amostra, vezes = vezes, intervalo = intervalo,
+            };
+
+        static AudioClip[] Um(AudioClip c) => c != null ? new[] { c } : null;
+
+        // as colunas da aba: os volumes de antes (o geral, a música, o ambiente e os zumbis) e os canais novos
+        static (string grupo, LinhaDoMixer[] linhas)[][] Colunas() => _colunas ??= new[]
+        {
+            new (string grupo, LinhaDoMixer[] linhas)[]
+            {
+                ("GERAL", new[]
+                {
+                    new LinhaDoMixer { nome = "Volume geral", sobre = "tudo o que o jogo toca", ler = () => Volume,
+                        mudar = v => { Volume = v; AudioListener.volume = v; } },
+                    new LinhaDoMixer { nome = "Música", sobre = "a trilha do menu e a do jogo, com o vento dela",
+                        ler = () => Music.MaestroDaTrilha.Volume, mudar = v => Music.MaestroDaTrilha.Volume = v },
+                }),
+                ("O MUNDO", new[]
+                {
+                    new LinhaDoMixer { nome = "Sons de ambiente", sobre = "pássaros, corvos, coruja, grilos, galhos",
+                        ler = () => Music.MaestroDaTrilha.VolumeDoAmbiente, mudar = v => Music.MaestroDaTrilha.VolumeDoAmbiente = v,
+                        amostra = () => Combat.SonsGravados.Pasta("Ambiente/Passaros") },
+                    Canal("Clima", "chuva, trovões, poças, o vento do temporal", Combat.CanalDoSom.Clima,
+                        () => Combat.SonsGravados.Varios("Clima", "trovao_medio_")),
+                    Canal("Água", "o lago, os rios, nadar, o caiaque", Combat.CanalDoSom.Agua,
+                        () => Combat.SonsGravados.Varios("Agua", "Agua_Entrar")),
+                    Canal("Fogo", "fogueiras, tochas, o galão, o isqueiro", Combat.CanalDoSom.Fogo,
+                        () => Um(Resources.Load<AudioClip>("Fogo/fogueira"))),
+                    Canal("Animais", "lobos, coiotes, ursos, veados, aves e os outros", Combat.CanalDoSom.Animais,
+                        () => Combat.SonsGravados.Pasta("Bichos/Uivo")),
+                }),
+            },
+            new (string grupo, LinhaDoMixer[] linhas)[]
+            {
+                ("O PERIGO", new[]
+                {
+                    new LinhaDoMixer { nome = "Zumbis", sobre = "as vozes do Oco e dos outros, a pedra",
+                        ler = () => Zombies.ZombieManager.VolumeDosZumbis, mudar = v => Zombies.ZombieManager.VolumeDosZumbis = v },
+                    Canal("Armas", "tiros, ecos, recarga, cápsulas", Combat.CanalDoSom.Armas,
+                        () => Combat.SonsGravados.Tiros(Combat.TipoDeArma.Pistola)),
+                    Canal("Golpes e lutas", "socos, facas, bastões, quedas", Combat.CanalDoSom.Golpes,
+                        () => Combat.SonsGravados.Golpes("SocoCarne"), 2, 0.45f),
+                }),
+                ("VOCÊ", new[]
+                {
+                    Canal("Passos", "os seus e os dos outros, até na água rasa", Combat.CanalDoSom.Passos,
+                        () => Combat.SonsGravados.Passos(Combat.Superficie.Concreto, false), 4, 0.48f),
+                    Canal("Corpo e mente", "coração, respiração, comer e beber, curativos", Combat.CanalDoSom.Corpo,
+                        () => Combat.SonsGravados.Varios("Corpo", "coracao_"), 3, 0.8f),
+                    Canal("Vozes", "a sua e as dos sobreviventes", Combat.CanalDoSom.Vozes,
+                        () => Resources.LoadAll<AudioClip>("Vozes/Homem1/Susto")),
+                }),
+                ("AS COISAS", new[]
+                {
+                    Canal("Veículos", "motores, buzinas, portas do carro, alarmes, motos", Combat.CanalDoSom.Veiculos,
+                        () => Combat.SonsGravados.Varios("Carro", "buzina")),
+                    Canal("Objetos e casa", "portas, móveis, armadilhas, machado, pesca, TV", Combat.CanalDoSom.Objetos,
+                        () => Combat.SonsGravados.Varios("Portas", "abrir_")),
+                    Canal("Avisos e bipes", "o ping do mapa e as falas", Combat.CanalDoSom.Avisos,
+                        () => Um(MarcasDoMapa.Bipe), 2, 0.5f),
+                }),
+            },
+        };
+
+        /// <summary>
+        /// A aba Som (20/11/2026, a pedido: "Quero um mixer de som bem legal e detalhado ... deixe os que existem hoje também,
+        /// apenas adicione mais"): duas colunas com os grupos; cada barra tem o nome, do que ela cuida, a porcentagem e o ▶
+        /// (uma amostra no volume escolhido). Os volumes são deste computador (PlayerPrefs), gravados ao soltar.
+        /// </summary>
+        static void AbaDoSom(float u, ref float y, GUIStyle detalhe)
+        {
+            float W = Mathf.Min(980 * u, Screen.width - 24 * u), X = (Screen.width - W) / 2f, vao = 30 * u, cw = (W - vao) / 2f;
+            var nome = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, clipping = TextClipping.Clip };
+            Cor(nome, new Color(0.9f, 0.88f, 0.8f));
+            var sobre = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(12 * u), clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft };
+            Cor(sobre, new Color(0.62f, 0.6f, 0.55f));
+            var pct = new GUIStyle(nome) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Normal };
+            var grupo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Bold };
+            Cor(grupo, new Color(0.98f, 0.85f, 0.45f));
+            var tocar = new GUIStyle(GUI.skin.button) { fontSize = Mathf.RoundToInt(11 * u), padding = new RectOffset(0, 0, 0, 0) };
+            var trilho = new GUIStyle { fixedHeight = Mathf.Round(16 * u) };
+            var cursor = new GUIStyle(GUI.skin.horizontalSliderThumb) { fixedHeight = Mathf.Round(16 * u), fixedWidth = Mathf.Round(12 * u) };
+
+            GUI.Label(new Rect(X, y - 6 * u, W, 22 * u), "▶ toca uma amostra no volume escolhido. Os volumes ficam só neste computador.", detalhe);
+            float topo = y + 20 * u, fim = topo;
+            var colunas = Colunas();
+            for (int k = 0; k < colunas.Length; k++)
+            {
+                float cx = X + k * (cw + vao), cy = topo;
+                foreach (var (titulo, linhas) in colunas[k])
+                {
+                    GUI.Label(new Rect(cx, cy, cw, 20 * u), titulo, grupo);
+                    GUI.color = new Color(0.98f, 0.85f, 0.45f, 0.35f);
+                    GUI.DrawTexture(new Rect(cx, cy + 19 * u, cw, 1 * u), Texture2D.whiteTexture);
+                    GUI.color = Color.white;
+                    cy += 24 * u;
+                    foreach (var l in linhas)
+                    {
+                        float valor = l.ler();
+                        // a linha de cima: o nome, do que cuida (cinza), a porcentagem e o ▶
+                        float largNome = nome.CalcSize(new GUIContent(l.nome)).x + 8 * u;
+                        float direita = l.amostra != null ? 30 * u : 0f;
+                        GUI.Label(new Rect(cx, cy, largNome, 22 * u), l.nome, nome);
+                        GUI.Label(new Rect(cx + largNome, cy + 1 * u, cw - largNome - 52 * u - direita, 20 * u), l.sobre, sobre);
+                        GUI.Label(new Rect(cx + cw - 50 * u - direita, cy, 48 * u, 22 * u), $"{Mathf.RoundToInt(valor * 100f)}%", pct);
+                        if (l.amostra != null && GUI.Button(new Rect(cx + cw - 26 * u, cy + 1 * u, 26 * u, 20 * u), "▶", tocar))
+                            AmostraDoMixer.Tocar(l.amostra(), l.ler, l.vezes, l.intervalo, l.ate);
+                        // o trilho: cinza, e amarelo até o cursor
+                        var area = new Rect(cx, cy + 21 * u, cw, 16 * u);
+                        float meio = area.y + area.height / 2f, ate = cursor.fixedWidth / 2f + (cw - cursor.fixedWidth) * valor;
+                        GUI.color = new Color(1f, 1f, 1f, 0.16f);
+                        GUI.DrawTexture(new Rect(cx, meio - 2 * u, cw, 4 * u), Texture2D.whiteTexture);
+                        GUI.color = new Color(0.98f, 0.85f, 0.45f, 0.8f);
+                        GUI.DrawTexture(new Rect(cx, meio - 2 * u, ate, 4 * u), Texture2D.whiteTexture);
+                        GUI.color = Color.white;
+                        float novo = GUI.HorizontalSlider(area, valor, 0f, 1f, trilho, cursor);
+                        if (!Mathf.Approximately(novo, valor))
+                        {
+                            l.mudar(novo);
+                            _gravarEm = Time.unscaledTime + 0.6f;
+                        }
+                        cy += 42 * u;   // (as 9 barras da coluna da direita cabem nas 720 unidades da tela)
+                    }
+                    cy += 4 * u;
+                }
+                fim = Mathf.Max(fim, cy);
+            }
+            y = fim + 6 * u;
         }
 
         static bool Voltar(float u, float x, float w, float y, GUIStyle botao)
@@ -293,6 +444,68 @@ namespace ZombieCityCleaner.UI
                 ? "O 3D em poucas linhas, ampliado sem suavizar; nas PS1, também as cores."
                 : $"O 3D em {UI.Graficos.LinhasPixeladas} linhas{(UI.Graficos.CoresDoPs1 ? ", com as cores do PS1" : "")}. A escala de renderização não vale.", detalhe);
             y += 30 * u;
+        }
+    }
+    /// <summary>
+    /// A amostra do ▶ da aba Som (20/11/2026): toca o clipe (ou alguns, um depois do outro) numa fonte própria, sem posição,
+    /// no volume do canal na hora de cada um; um laço para em poucos segundos, sumindo.
+    /// </summary>
+    public class AmostraDoMixer : MonoBehaviour
+    {
+        static AmostraDoMixer _instancia;
+        AudioSource _fonte;
+        AudioClip[] _clips;
+        System.Func<float> _volume;
+        int _faltam;
+        float _intervalo, _proxima, _paraEm;
+
+        public static void Tocar(AudioClip[] clips, System.Func<float> volume, int vezes, float intervalo, float ate)
+        {
+            if (clips == null || clips.Length == 0) return;
+            if (_instancia == null)
+            {
+                var go = new GameObject("Amostra do mixer");
+                DontDestroyOnLoad(go);
+                _instancia = go.AddComponent<AmostraDoMixer>();
+                _instancia._fonte = go.AddComponent<AudioSource>();
+                _instancia._fonte.playOnAwake = false;
+                _instancia._fonte.spatialBlend = 0f;
+                _instancia._fonte.ignoreListenerPause = true;
+            }
+            var a = _instancia;
+            a._fonte.Stop();
+            a._clips = clips;
+            a._volume = volume;
+            a._faltam = Mathf.Max(1, vezes);
+            a._intervalo = intervalo;
+            a._proxima = Time.unscaledTime;
+            a._paraEm = Time.unscaledTime + Mathf.Max(ate, intervalo * vezes + 0.5f);
+        }
+
+        void Update()
+        {
+            if (_clips == null) return;
+            float agora = Time.unscaledTime;
+            if (_faltam > 0 && agora >= _proxima)
+            {
+                _faltam--;
+                _proxima = agora + _intervalo;
+                var clip = _clips[Random.Range(0, _clips.Length)];
+                if (clip != null)
+                {
+                    _fonte.clip = clip;
+                    _fonte.volume = 0.8f * (_volume != null ? _volume() : 1f);
+                    _fonte.Play();
+                }
+            }
+            // o laço (a fogueira) e o que passar do tempo: some no último meio segundo
+            float resta = _paraEm - agora;
+            if (_fonte.isPlaying && resta < 0.5f) _fonte.volume = Mathf.Max(0f, 0.8f * (_volume != null ? _volume() : 1f) * resta / 0.5f);
+            if (resta <= 0f)
+            {
+                _fonte.Stop();
+                _clips = null;
+            }
         }
     }
 }

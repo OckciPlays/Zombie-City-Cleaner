@@ -605,6 +605,13 @@ namespace ZombieCityCleaner.UI
         /// Para os testes (o MCP no Play): abre a tela dos moradores como o "Escolher os moradores" do Novo mundo, ou, com
         /// <paramref name="fechar"/>, fecha e volta ao menu principal.
         /// </summary>
+        /// <summary>Para os testes (o MCP no Play, 20/11/2026): abre as Configurações na aba (0 Geral, 1 Som, 2 Gráficos), ou fecha.</summary>
+        public void AbrirAsConfiguracoesParaTeste(int aba, bool fechar = false)
+        {
+            _opcoes = !fechar;
+            Opcoes.AbaParaTeste = aba;
+        }
+
         public void AbrirOsMoradoresParaTeste(bool fechar = false)
         {
             if (fechar)

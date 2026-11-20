@@ -74,7 +74,7 @@ namespace ZombieCityCleaner.Fauna
         {
             var c = Clips(s);
             if (c == null || c.Length == 0) return;
-            Efeitos.Som(c, ponto, Volume(s), true, Alcance(s));
+            Efeitos.Som(c, ponto, Volume(s), true, Alcance(s), CanalDoSom.Animais);   // (20/11/2026: o canal Animais do mixer)
         }
 
         static AudioClip[] Clips(SomDoBicho s)

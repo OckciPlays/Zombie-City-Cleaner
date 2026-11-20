@@ -188,7 +188,7 @@ namespace ZombieCityCleaner.Combat
                 if (s.fonte == null) continue;
                 float alvo = _tocando.Contains(s) ? s.alvo : 0f;
                 s.volume = Mathf.MoveTowards(s.volume, alvo, passo);
-                s.fonte.volume = s.volume;
+                s.fonte.volume = s.volume * MixerDeSom.Volume(CanalDoSom.Fogo);   // (20/11/2026: o canal Fogo do mixer)
                 if (alvo <= 0f && s.volume <= 0f && s.fonte.isPlaying) s.fonte.Stop();
             }
         }

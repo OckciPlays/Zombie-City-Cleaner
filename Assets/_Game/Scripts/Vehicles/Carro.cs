@@ -924,7 +924,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (arranque.clip == null) arranque.clip = SomDoCarro.Arranque;
                 bool toca = ArranqueGira;
                 arranque.pitch = Mathf.Lerp(0.72f, 1f, Mathf.InverseLerp(PecasDoMotor.BateriaArranque, 40f, Pecas.Estado(PecasDoMotor.Bateria)));
-                arranque.volume = toca ? 0.6f : 0f;
+                arranque.volume = toca ? 0.6f * MixerDeSom.Volume(CanalDoSom.Veiculos) : 0f;   // (20/11/2026: o canal Veículos)
                 if (toca && !arranque.isPlaying) arranque.Play();
                 else if (!toca && arranque.isPlaying) arranque.Stop();
             }
@@ -1830,7 +1830,7 @@ namespace ZombieCityCleaner.Vehicles
             float alvo = ligado && Time.time > _pegouEm + SomDoCarro.LacoEntra ? 0.35f + rot * 0.45f : 0f;
             _volumeDoMotor = Mathf.MoveTowards(_volumeDoMotor, alvo, dt * (alvo > 0f ? 1.5f : 1.1f));
             if (motor.clip == null) motor.clip = SomDoCarro.Motor;
-            motor.volume = _volumeDoMotor;
+            motor.volume = _volumeDoMotor * MixerDeSom.Volume(CanalDoSom.Veiculos);
             motor.pitch = Mathf.Lerp(motor.pitch, ligado ? 0.75f + rot * 1.7f : 0.4f, 1f - Mathf.Exp(-(ligado ? 6f : 3f) * dt));
             if (_volumeDoMotor > 0.001f && !motor.isPlaying) motor.Play();
             else if (_volumeDoMotor <= 0.001f && motor.isPlaying) motor.Stop();
@@ -1842,7 +1842,7 @@ namespace ZombieCityCleaner.Vehicles
             if (buzina == null) return;
             if (buzina.clip == null) buzina.clip = SomDoCarro.BuzinaDe(chaveDoVeiculo);
             bool tocando = (IsOwner ? _buzinaLocal : _buzina.Value) && Pecas.BateriaAcende;
-            buzina.volume = Mathf.MoveTowards(buzina.volume, tocando ? 0.9f : 0f, dt * 25f);
+            buzina.volume = Mathf.MoveTowards(buzina.volume, tocando ? 0.9f * MixerDeSom.Volume(CanalDoSom.Veiculos) : 0f, dt * 25f);
             if (buzina.volume > 0.001f && !buzina.isPlaying) buzina.Play();
             else if (buzina.volume <= 0.001f && buzina.isPlaying) buzina.Stop();
         }

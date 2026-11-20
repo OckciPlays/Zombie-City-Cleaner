@@ -21,8 +21,14 @@ lista da seção 2 e apague à mão o que ainda existir aí (uma cópia local, o
   o trovão (`World/ClimaNaTela`), a água (`World/SomDaAgua`), o fogo (`Combat/SomDasChamas`), os carros e as motos, o
   Dia 0 (`DiaZero/NpcDoDiaZero`, `NpcsDoDiaZero`), a TV e o rádio do bunker (`World/LazerDoBunker`) e a comida
   chiando no fogo (`Loot/ConstrucoesNoMundo.Assar`) têm as fontes próprias. A música e o vento da trilha seguem o volume
-  da Música (`MaestroDaTrilha.Volume`); os bichos e os galhos do ambiente, o `VolumeDoAmbiente`. Um mixer de som mais
-  detalhado está sendo feito na sessão do menu de criação.
+  da Música (`MaestroDaTrilha.Volume`); os pássaros, os grilos e os galhos do ambiente, o `VolumeDoAmbiente`.
+- **O mixer (20/11/2026):** a aba **Som** das Configurações (`UI/Opcoes.cs`) tem os volumes de antes (geral, música,
+  ambiente, zumbis) e os canais novos do `Combat/MixerDeSom`: Clima, Água, Fogo, Animais, Armas, Golpes e lutas, Passos,
+  Corpo e mente, Vozes, Veículos, Objetos e casa, Avisos e bipes, cada um com o botão ▶ de uma amostra. O `Efeitos.Som`
+  multiplica pelo canal do clipe (pela pasta de Resources em que o `SonsGravados` o achou, ou pelo nome, nos feitos em
+  código); os sistemas com fonte própria multiplicam onde põem o volume, e as fontes paradas usam o
+  `MixerDeSom.NoCanal`. **Som novo:** se ficar numa pasta que já tem canal, entra sozinho; uma pasta nova ganha o canal
+  no `MixerDeSom.DaPasta`; uma fonte própria nova multiplica por `MixerDeSom.Volume(canal)`.
 - **Os pacotes da Asset Store** de onde os sons saíram (Nature Sound FX, Footsteps - Essentials, Nature - Essentials,
   Rain Forest SFX, Animal Sound Effect Pack Lite, Voices - Essentials, Vehicle_Essentials, RegularImpactsSFX, Deadly
   Kombat, FreeWeaponSFX, Weapons of Choice e no9_Game_Sounds) **não estão no git** (quase 1 GB) e não fazem falta: o
