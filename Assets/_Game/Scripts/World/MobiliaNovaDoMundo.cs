@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using ZombieCityCleaner.Combat;
 using ZombieCityCleaner.Mundo;
 using ZombieCityCleaner.Player;
 
@@ -174,7 +175,12 @@ namespace ZombieCityCleaner.World
             _aqui.Clear();
             foreach (var k in _abertas) _aqui.Add(k);
             foreach (var (k, p) in _vivas)
-                if (p != null && p.parte != null) p.parte.Definir(_aqui.Contains(k));
+                if (p != null && p.parte != null)
+                {
+                    bool antes = p.parte.Aberta;
+                    p.parte.Definir(_aqui.Contains(k));
+                    if (p.parte.Aberta != antes) SomDaParte(p.parte);
+                }
         }
 
         void Update()
@@ -208,9 +214,28 @@ namespace ZombieCityCleaner.World
                 if (m != null && aberta) m._aqui.Add(p.chave);
                 else m?._aqui.Remove(p.chave);
                 p.parte?.Definir(aberta);
+                SomDaParte(p.parte);
                 return;
             }
             m.AlternarRpc(p.chave);
+        }
+
+        /// <summary>
+        /// (20/11/2026, a pedido: "da para utilizar em outros lugares, como nos armários, baús, gavetas") o som da parte
+        /// que abriu ou fechou (Resources/Portas, do sfxjar): a porta do armário range e bate de leve, a gaveta corre, a tampa
+        /// do baú range e cai, e o forno e a porta de cofre rangem de metal. Antes, os móveis abriam mudos.
+        /// </summary>
+        static void SomDaParte(ParteQueAbre parte)
+        {
+            if (parte == null) return;
+            bool abriu = parte.Aberta;
+            bool metal = parte.rotulo == "o forno" || parte.rotulo == "a porta de cofre";
+            string prefixo = parte.tipo == ParteQueAbre.Tipo.Gaveta ? "gaveta_"
+                : metal ? (abriu ? "metal_" : "armario_fechar_")
+                : parte.tipo == ParteQueAbre.Tipo.Tampa ? (abriu ? "tampa_abrir_" : "tampa_fechar_")
+                : abriu ? "armario_abrir_" : "armario_fechar_";
+            var clip = SonsGravados.Um("Portas", prefixo);
+            if (clip != null) Efeitos.Som(clip, parte.transform.position, metal ? 0.75f : 0.6f, true, metal ? 20f : 14f);
         }
 
         /// <summary>Quem joga → anfitrião: abre ou fecha a parte.</summary>

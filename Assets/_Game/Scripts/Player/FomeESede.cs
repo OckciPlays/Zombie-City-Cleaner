@@ -63,8 +63,28 @@ namespace ZombieCityCleaner.Player
             Gravar();
         }
 
+        float _proximoRonco = -1f;
+
+        // (20/11/2026, o som que o Pedro mandou) com fome (abaixo de 35), a barriga ronca de vez em quando, e mais seguido
+        // quase vazia; só quem tem fome ouve
+        void Roncar()
+        {
+            float fome = Fome.Value;
+            if (fome >= pouca + 10f)
+            {
+                _proximoRonco = -1f;
+                return;
+            }
+            if (_proximoRonco < 0f) _proximoRonco = Time.time + Random.Range(15f, 40f);
+            if (Time.time < _proximoRonco) return;
+            _proximoRonco = Time.time + (fome < 10f ? Random.Range(25f, 50f) : Random.Range(45f, 100f));
+            var clip = Combat.SonsGravados.Um("Comida", "barriga_");
+            if (clip != null) Combat.Efeitos.Som(clip, transform.position + Vector3.up * 1.1f, fome < 10f ? 0.55f : 0.4f, false);
+        }
+
         void Update()
         {
+            if (IsSpawned && IsOwner) Roncar();
             if (!IsSpawned || !IsServer) return;
             // no Dia 0 e nos 5 anos depois (o mundo ainda não está pronto), a fome e a sede não descem: a vida é normal
             var mundo = World.MundoDaPartida.Instancia;

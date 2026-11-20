@@ -42,6 +42,7 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             if (corpo != null && corpo.animador != null && !_caido) corpo.animador.SetTrigger(FireId);
             Efeitos.Som(Efeitos.SocoVento, transform.position + Vector3.up * 1.4f, 0.6f, true, 18f);
+            if (Random.value < 0.5f) VozLocal(TipoDeVoz.Ataque, 0.9f);   // (19/11/2026: a voz)
         }
 
         /// <summary>Anfitrião → todos: o golpe pegou (o som e o sangue).</summary>

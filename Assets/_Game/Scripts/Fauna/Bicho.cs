@@ -35,6 +35,8 @@ namespace ZombieCityCleaner.Fauna
         public float Vida { get; internal set; }
         /// <summary>Levando alguma coisa (a etapa 3: o galho na boca do castor, o peixe nas garras da águia; vai pela rede).</summary>
         public bool Carregando { get; internal set; }
+        /// <summary>Uivando (20/11/2026: parado, a cabeça para o céu; vai pela rede).</summary>
+        public bool Uivando { get; internal set; }
         /// <summary>O que sobrou da carcaça (1: inteira; a matilha comendo deixa menos para quem carnear depois).</summary>
         public float Restante { get; internal set; } = 1f;
         /// <summary>Quando morreu (as horas do jogo, para a carcaça apodrecer).</summary>
@@ -65,7 +67,7 @@ namespace ZombieCityCleaner.Fauna
             Copia = copia;
             Escala = Especies.Escala(e, v);
             Estado = EstadoDoBicho.Pastando;
-            Ferido = Carneado = Alfa = Carregando = false;
+            Ferido = Carneado = Alfa = Carregando = Uivando = false;
             Restante = 1f;
             Velocidade = 0f;
             Vida = Especies.Pontos(e, v);
@@ -105,6 +107,7 @@ namespace ZombieCityCleaner.Fauna
             else if (!Morto && Dados.corpo == Corpo.Quadrupede && Nadando()) pose = AnimacaoDoBicho.Pose.Nadando;
             else if (!Morto && (Especie == Especie.Esquilo || Especie == Especie.Guaxinim) && AcimaDaSuperficie() > 0.6f) pose = AnimacaoDoBicho.Pose.Alerta;
             else if (!Morto && Dados.papel == Papel.Urso && Estado == EstadoDoBicho.Investindo && Velocidade < 0.5f && AlguemEmCima()) pose = AnimacaoDoBicho.Pose.Alerta;
+            else if (!Morto && Uivando && Dados.corpo == Corpo.Quadrupede) pose = AnimacaoDoBicho.Pose.Uivando;
             Olhos(dt);   // (a etapa 4) os olhos que brilham na lanterna
             // a referência das passadas: o trote fica perto de 30% dela e o galope acima de 60% (desde 13/11 a corrida
             // é mais lenta e o trote é ~40% dela; sem isso, o trote já saía galopando)
@@ -199,9 +202,10 @@ namespace ZombieCityCleaner.Fauna
         float _giroDaCopia;
         bool _copiaPosta;
 
-        internal void ReceberCopia(Vector3 posicao, float giro, EstadoDoBicho estado, float velocidade, bool ferido, bool carneado, bool alfa, bool carregando = false)
+        internal void ReceberCopia(Vector3 posicao, float giro, EstadoDoBicho estado, float velocidade, bool ferido, bool carneado, bool alfa, bool carregando = false, bool uivando = false)
         {
             Carregando = carregando;
+            Uivando = uivando;
             _alvoDaCopia = posicao;
             _giroDaCopia = giro;
             if (!_copiaPosta)

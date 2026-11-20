@@ -74,6 +74,7 @@ namespace ZombieCityCleaner.Player
             if (rede == null || !rede.IsOwner) return;
             PecasNosBracos();
             MirarPeloPonto();
+            GolpeDoMixamoFP();   // (o teste do golpe do Mixamo, 19/11/2026: ArmaJogador.GolpeDoMixamo.cs)
         }
 
         // as peças do que está posto na arma da mão, no modelo dela (só quando muda)

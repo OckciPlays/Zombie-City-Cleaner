@@ -171,7 +171,7 @@ namespace ZombieCityCleaner.Fauna
         /// filhotes. 'teste': o F1 (todos os tipos, sem a mancha). Devolve quantos nasceram.
         /// </summary>
         /// <summary>O grupo do F1 chega distraído por estes segundos (a 18 m, o veado fugiria na hora: ele foge a 40 m).</summary>
-        const float SegundosDistraido = 10f;
+        const float SegundosDistraido = 3f;   // (20/11/2026: eram 10 s, e o Pedro achou que os bichos postos pelo F1 demoravam a reagir)
 
         /// <summary>O grupo que o último NascerGrupo fez (a etapa 5: o lugar dele).</summary>
         Grupo _ultimoGrupo;

@@ -6,24 +6,30 @@ using ZombieCityCleaner.Combat;
 namespace ZombieCityCleaner.Vehicles
 {
     /// <summary>
-    /// Os sons do carro, gerados por código (como os do tiro e dos passos): o motor (um laço de 1 s, tocado com o pitch
-    /// da rotação), a partida (a chave entrando e girando, o solenoide, o motor de arranque em laço, o pinhão soltando e
-    /// o motor pegando), a buzina, a porta abrindo e a porta batendo. As amostras são geradas em outra thread no começo
-    /// da partida (<see cref="Preparar"/>, na tela de carregamento), e cada clipe sai delas na primeira vez que é pedido:
-    /// geradas na hora, o motor e a buzina paravam o jogo por uns 150 ms no primeiro quadro do carro (31/10/2026).
+    /// Os sons do carro. Os gravados (Resources/Carro, <see cref="Gravado"/>): a partida (a chave entrando e girando, o
+    /// motor de arranque em laço e o motor pegando), o motor desligando, os laços do motor de cada modelo, a buzina, as
+    /// portas, o capô fechando, o pneu furando, o ar vazando, o vapor e as batidas. Desde 20/11/2026 (a pedido: "podemos
+    /// excluir os sons que já foram substituídos"), eles não têm mais a reserva feita em código; sem a gravação, null.
+    /// Continuam gerados por código (como os dos passos) os que não têm gravação: o laço único do motor (o dos carros sem
+    /// os laços gravados), o solenoide, o pinhão soltando, a tossida, o macaco, o abastecer e o capô (e a tampa do
+    /// porta-malas) abrindo, e a reserva do capô fechando. As amostras são geradas em outra thread no começo da partida
+    /// (<see cref="Preparar"/>, na tela de carregamento), e cada clipe sai delas na primeira vez que é pedido: geradas na
+    /// hora, o motor e a buzina paravam o jogo por uns 150 ms no primeiro quadro do carro (31/10/2026).
     /// </summary>
     public static class SomDoCarro
     {
         const int Taxa = 44100;
-        static AudioClip _motor, _arranque, _pegar, _solenoide, _soltar, _clique, _entra, _abrir, _fechar, _buzina;
+        static AudioClip _motor, _solenoide, _soltar, _abrir, _fechar;
 
-        // as amostras de cada som, pela semente dele (7 a 22: a posição aqui mais 7)
+        // as amostras de cada som, pela semente dele (7 a 22: a posição aqui mais 7). Os null (20/11/2026) são os que só
+        // têm o gravado: o arranque (8), a buzina (11), o motor pegando (12), a chave girando (15) e entrando (16), o pneu
+        // furando (18), o ar vazando (20) e o vapor (21)
         static readonly Func<float[]>[] Receitas =
         {
-            () => GerarMotor(7), () => GerarArranque(8), () => GerarAbrir(9), () => GerarFechar(10), () => GerarBuzina(11),
-            () => GerarPegar(12), () => GerarSolenoide(13), () => GerarSoltar(14), () => GerarCliqueDaChave(15),
-            () => GerarChaveEntra(16), () => GerarTossida(17), () => GerarPneuFurando(18), () => GerarMacaco(19),
-            () => GerarChiado(20, 3600f, 1.3f, 7f, 0.12f, 0f), () => GerarChiado(21, 1900f, 0.8f, 3f, 0.25f, 0.35f),
+            () => GerarMotor(7), null, () => GerarAbrir(9), () => GerarFechar(10), null,
+            null, () => GerarSolenoide(13), () => GerarSoltar(14), null,
+            null, () => GerarTossida(17), null, () => GerarMacaco(19),
+            null, null,
             () => GerarAbastecer(22),
         };
         static Task<float[][]> _preparadas;
@@ -35,7 +41,7 @@ namespace ZombieCityCleaner.Vehicles
             _preparadas = Task.Run(() =>
             {
                 var todas = new float[Receitas.Length][];
-                for (int i = 0; i < todas.Length; i++) todas[i] = Receitas[i]();
+                for (int i = 0; i < todas.Length; i++) todas[i] = Receitas[i]?.Invoke();
                 return todas;
             });
         }
@@ -45,34 +51,75 @@ namespace ZombieCityCleaner.Vehicles
 
         /// <summary>O motor em marcha lenta, em laço (1 s; com pitch 1 são 32 explosões por segundo).</summary>
         public static AudioClip Motor => _motor != null ? _motor : _motor = SomGerado.Clip("Motor do carro", Dados(7));
-        /// <summary>O motor de arranque girando o motor, em laço (1 s): toca enquanto a chave fica na partida.</summary>
-        public static AudioClip Arranque => _arranque != null ? _arranque : _arranque = SomGerado.Clip("Arranque do carro", Dados(8));
-        /// <summary>O motor pegando e caindo para a marcha lenta (o laço do motor entra em <see cref="LacoEntra"/>).</summary>
-        public static AudioClip Pegar => _pegar != null ? _pegar : _pegar = SomGerado.Clip("Motor pegando", Dados(12));
+        // (20/11/2026: os que têm gravação devolvem só ela; os feitos em código que eram a reserva deles saíram)
+        /// <summary>O motor de arranque girando o motor, em laço: toca enquanto a chave fica na partida (o gravado).</summary>
+        public static AudioClip Arranque => Gravado("arranque");   // (20/11/2026: o gravado do sfxjar, dois giros em laço)
+        /// <summary>O motor pegando e caindo para a marcha lenta (o gravado; o laço do motor entra em <see cref="LacoEntra"/>).</summary>
+        public static AudioClip Pegar => Gravado("pegar");
         public static AudioClip Solenoide => _solenoide != null ? _solenoide : _solenoide = SomGerado.Clip("Solenoide do arranque", Dados(13));
         public static AudioClip SoltarArranque => _soltar != null ? _soltar : _soltar = SomGerado.Clip("Arranque soltando", Dados(14));
-        public static AudioClip CliqueDaChave => _clique != null ? _clique : _clique = SomGerado.Clip("Chave girando", Dados(15));
-        public static AudioClip ChaveEntra => _entra != null ? _entra : _entra = SomGerado.Clip("Chave entrando", Dados(16));
+        public static AudioClip CliqueDaChave => Gravado("chave_gira");
+        public static AudioClip ChaveEntra => Gravado("chave_entra");
         /// <summary>O motor tossindo (quase pegando): um acerto no mini-game da partida.</summary>
         public static AudioClip Tossida => _tossida != null ? _tossida : _tossida = SomGerado.Clip("Motor tossindo", Dados(17));
         static AudioClip _tossida;
-        /// <summary>O pneu furado por um tiro: o estouro e o ar escapando.</summary>
-        public static AudioClip PneuFurando => _furando != null ? _furando : _furando = SomGerado.Clip("Pneu furando", Dados(18));
-        static AudioClip _furando;
+        /// <summary>O pneu furado por um tiro: o estouro e o ar escapando (o gravado).</summary>
+        public static AudioClip PneuFurando => Gravado("pneu_furando");
         /// <summary>O macaco sanfona girando (2,2 s, o tempoDoMacaco do carro): a catraca da manivela e o fuso rangendo.</summary>
         public static AudioClip Macaco => _macaco != null ? _macaco : _macaco = SomGerado.Clip("Macaco do carro", Dados(19));
         static AudioClip _macaco;
-        public static AudioClip PortaAbrir => _abrir != null ? _abrir : _abrir = SomGerado.Clip("Porta do carro abrindo", Dados(9));
-        public static AudioClip PortaFechar => _fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", Dados(10));
-        /// <summary>A buzina, em laço (1 s).</summary>
-        public static AudioClip Buzina => _buzina != null ? _buzina : _buzina = SomGerado.Clip("Buzina do carro", Dados(11));
-        /// <summary>O ar escapando do pneu furado (o furo lento), em laço (1 s). 01/11/2026, provisório.</summary>
-        public static AudioClip ArVazando => _ar != null ? _ar : _ar = SomGerado.Clip("Ar do pneu vazando", Dados(20));
-        /// <summary>O vapor do radiador vazando, em laço (1 s). 01/11/2026, provisório.</summary>
-        public static AudioClip Vapor => _vapor != null ? _vapor : _vapor = SomGerado.Clip("Vapor do radiador", Dados(21));
+        public static AudioClip PortaAbrir => Gravado("porta_abrir");
+        public static AudioClip PortaFechar => Gravado("porta_fechar");
+        /// <summary>A buzina, em laço (o gravado).</summary>
+        public static AudioClip Buzina => Gravado("buzina");
+        /// <summary>A buzina de cada carro (20/11/2026): o cupê e a caminhonete com a outra (a de carro novo, do sfxjar).</summary>
+        public static AudioClip BuzinaDe(Loot.Item chave) =>
+            chave == Loot.Item.ChaveDoCupe || chave == Loot.Item.ChaveDaCaminhonete ? Gravado("outra_buzina") ?? Buzina
+            : chave == Loot.Item.ChaveDaPerua ? Gravado("perua_buzina") ?? Buzina   // (20/11/2026: a buzina antiga, na perua)
+            : Buzina;
+        /// <summary>O ar escapando do pneu furado (o furo lento), em laço (o gravado).</summary>
+        public static AudioClip ArVazando => Gravado("ar_vazando");
+        /// <summary>O vapor do radiador vazando, em laço (o gravado).</summary>
+        public static AudioClip Vapor => Gravado("vapor");
         /// <summary>A gasolina caindo do galão no tanque (2,2 s): o gorgolejo e o jorro. 01/11/2026, provisório.</summary>
         public static AudioClip Abastecer => _abastecer != null ? _abastecer : _abastecer = SomGerado.Clip("Abastecendo com o galão", Dados(22));
-        static AudioClip _ar, _vapor, _abastecer;
+        static AudioClip _abastecer;
+
+        // ------------------------------------------------------------------ os gravados (19/11/2026)
+        // a segunda leva da repaginada: o Vehicle - Essentials, o vapor do Nature Sound FX e as batidas do Regular Impact
+        // Sounds, em Resources/Carro (Combat/SonsGravados). Sem eles, null (20/11/2026: os feitos aqui que eram a reserva
+        // deles saíram).
+        static AudioClip Gravado(string nome) => SonsGravados.Um("Carro", nome);
+
+        /// <summary>O motor desligando (só o gravado; null sem ele).</summary>
+        public static AudioClip Desligar => Gravado("desligar");
+
+        /// <summary>
+        /// O capô e a tampa do porta-malas abrindo e fechando: o som feito aqui, o de antes (20/11/2026: o Pedro não gostou
+        /// do porta-malas gravado e preferiu manter o antigo; as portas continuam com as gravadas).
+        /// </summary>
+        public static AudioClip CapoAbrir => _abrir != null ? _abrir : _abrir = SomGerado.Clip("Porta do carro abrindo", Dados(9));
+        public static AudioClip CapoFechar => Gravado("capo_fechar") ?? (_fechar != null ? _fechar : _fechar = SomGerado.Clip("Porta do carro batendo", Dados(10)));   // (20/11/2026: o gravado; a reserva fica, a do porta-malas)
+
+        /// <summary>A batida do carro pela mudança de velocidade (m/s): a leve (o metal) ou a forte (null sem os gravados).</summary>
+        public static AudioClip Batida(float mudanca) => Gravado(mudanca >= 6f ? "batida_forte" : "batida_leve");
+
+        /// <summary>
+        /// Os laços gravados do motor de um conjunto, do lento ao rápido (20/11/2026: cada carro com o seu): 'a' a perua,
+        /// 'b' o cupê, 'c' a caminhonete (a marcha lenta dela, da van, com os giros do cupê). Sem o conjunto, o da perua;
+        /// sem nenhum, null.
+        /// </summary>
+        public static AudioClip[] LacosDoMotor(char conjunto)
+        {
+            var lacos = SonsGravados.Varios("Carro", "motor_" + conjunto + "_");
+            if (lacos != null && lacos.Length == 1 && conjunto == 'c')
+            {
+                var b = SonsGravados.Varios("Carro", "motor_b_");
+                if (b != null && b.Length >= 3) return new[] { lacos[0], b[1], b[2] };
+            }
+            if (lacos != null && lacos.Length >= 3) return lacos;
+            return conjunto != 'a' ? LacosDoMotor('a') : null;
+        }
 
         /// <summary>
         /// Um motor de 4 cilindros: os harmônicos das explosões (32 por segundo, todos inteiros em 1 s, para o laço não ter
@@ -113,122 +160,6 @@ namespace ZombieCityCleaner.Vehicles
         /// lenta, e o som de pegar começa a sumir.
         /// </summary>
         public const float LacoEntra = 0.69f;
-
-        /// <summary>
-        /// O motor de arranque girando o motor (um laço de 1 s), como o de um 4 cilindros dos anos 90: o zunido da
-        /// engrenagem no volante do motor (~370 Hz e os harmônicos, com o chiado das escovas), que perde força a cada
-        /// compressão (5 por segundo), e o sopro grave do ar de cada cilindro soltando. A rotação do arranque é periódica
-        /// em 1 s, e as frequências são acertadas para dar um número inteiro de voltas nesse segundo: o laço não tem
-        /// emenda. O ruído é gerado por 2 s, e só o segundo é usado (os filtros já assentaram).
-        /// </summary>
-        static float[] GerarArranque(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Taxa;
-            var d = new float[n];
-            var escovas = new SomDePasso.Faixa(3200f, 1.5f);
-            var dentes = new SomDePasso.Faixa(1150f, 4f);
-            var sopro = new SomDePasso.PassaBaixa(190f, 2);
-            var bloco = new SomDePasso.Ressonador(85f, 0.06f, 1f);
-            var lp = new SomDePasso.PassaBaixa(5500f, 2);
-            double voltas = 0;
-            for (int i = 0; i < n; i++) voltas += RotacaoDoArranque(i / (double)Taxa) / Taxa;
-            double fDentes = System.Math.Round(370 * voltas) / voltas, fArmadura = System.Math.Round(58 * voltas) / voltas;
-            double faseDentes = 0, faseArmadura = 0;
-            for (int i = 0; i < 2 * n; i++)
-            {
-                double t = i / (double)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                float naCompressao = (float)(t * 5.0 % 1.0);
-                float comp = Compressao(naCompressao);
-                float w = RotacaoDoArranque(t);
-                faseDentes += 2 * System.Math.PI * fDentes * w / Taxa;
-                faseArmadura += 2 * System.Math.PI * fArmadura * w / Taxa;
-                float fd = (float)faseDentes, fa = (float)faseArmadura;
-                float zunido = Mathf.Sin(fd) * 0.5f + Mathf.Sin(2f * fd + 0.7f) * 0.3f + Mathf.Sin(3f * fd + 1.3f) * 0.15f;
-                float armadura = Mathf.Sin(fa) * 0.3f + Mathf.Sin(2f * fa + 0.4f) * 0.12f;
-                float chiado = escovas.Passar(ruido) * 0.25f + dentes.Passar(ruido) * (0.4f + 0.6f * w) * 0.5f;
-                float carga = 0.65f + 0.5f * comp;   // na compressão, ele força (mais alto)
-                float giro = (zunido * 0.35f + armadura + chiado) * w * carga;
-                // o ar de cada cilindro soltando, logo depois da compressão
-                float dx = Mathf.Repeat(naCompressao - 0.8f + 0.5f, 1f) - 0.5f;
-                float ar = sopro.Passar(ruido) * Mathf.Exp(-dx * dx / (0.07f * 0.07f)) * 4f;
-                float s = lp.Passar(giro + ar * 1.5f + bloco.Passar(ar) * 2f);
-                if (i >= n) d[i - n] = s;
-            }
-            return Normalizar(d, 0.7f);
-        }
-
-        // a força da compressão (0 a 1) na fração do ciclo de um cilindro: o pico em 0,62, contado em volta (sem emenda)
-        static float Compressao(float naCompressao)
-        {
-            float dx = Mathf.Repeat(naCompressao - 0.62f + 0.5f, 1f) - 0.5f;
-            return Mathf.Exp(-dx * dx / (0.16f * 0.16f));
-        }
-
-        // a rotação do arranque (1 = solto): cai 30% em cada compressão
-        static float RotacaoDoArranque(double t) => 1f - 0.3f * Compressao((float)(t * 5.0 % 1.0));
-
-        /// <summary>
-        /// O motor pegando (1,25 s): as primeiras explosões falham, ele acelera até ~1.700 rpm (58 explosões por segundo)
-        /// e cai devagar até a marcha lenta (30 por segundo, a do laço, feita com a mesma conta). De 0,74 a 1,14 s ele
-        /// some, e o laço (<see cref="Motor"/>) entra em <see cref="LacoEntra"/>. O motor de arranque é outro som
-        /// (<see cref="Arranque"/>): ele continua girando enquanto a chave fica na partida.
-        /// </summary>
-        static float[] GerarPegar(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(1.25f * Taxa);
-            var motor = new float[n];
-            const int harmonicos = 14;
-            var fase = new float[harmonicos + 2];
-            for (int k = 0; k < fase.Length; k++) fase[k] = (float)(r.NextDouble() * Mathf.PI * 2);
-            var escape = new SomDePasso.PassaBaixa(650f, 2);
-            var corpo = new SomDePasso.Ressonador(96f, 0.035f, 1f);
-            const float Pega = 0.02f, Sobe = Pega + 0.32f;
-            double faseMotor = 0;
-            int ciclo = -1;
-            float ganhoDoCiclo = 0f;
-            float picoNaLenta = 1e-6f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                float f;
-                if (t < Pega) f = 0f;
-                else if (t < Sobe) f = Mathf.Lerp(8f, 58f, Mathf.SmoothStep(0f, 1f, (t - Pega) / (Sobe - Pega)));
-                else f = 30f + 28f * Mathf.Exp(-(t - Sobe) * 5f);
-                faseMotor += f / Taxa;
-                float p = (float)(faseMotor % 1.0);
-                int c = (int)faseMotor;
-                if (t >= Pega && c != ciclo)
-                {
-                    ciclo = c;
-                    // as primeiras falham de vez em quando
-                    ganhoDoCiclo = c < 7 && r.NextDouble() < 0.35 ? 0.25f : 1f;
-                }
-                float pulso = Mathf.Exp(-p * 7f) * ganhoDoCiclo;
-                float explosao = escape.Passar(ruido) * pulso;
-                float baque = corpo.Passar(t >= Pega && p < 1f / 64f ? ruido * ganhoDoCiclo : 0f);
-                float h = 0f;
-                double ang = 2.0 * System.Math.PI * faseMotor;
-                for (int k = 1; k <= harmonicos; k++)
-                    h += (float)System.Math.Sin(k * ang + fase[k]) / Mathf.Pow(k, 0.9f) * (k % 2 == 0 ? 0.75f : 1f);
-                h += 0.35f * (float)System.Math.Sin(0.5 * ang + fase[0]);
-                h += 0.15f * (float)System.Math.Sin(0.25 * ang + fase[harmonicos + 1]);
-                float tom = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(Pega + 0.02f, Pega + 0.22f, t));   // o ronco firma quando ele pega
-                float m = h * 0.35f * tom + explosao * 2.2f + baque * 0.8f;
-                if (t > Pega + 0.52f && t < Pega + 0.67f) picoNaLenta = Mathf.Max(picoNaLenta, Mathf.Abs(m));
-                float acelera = 1f + 0.45f * Mathf.Exp(-Mathf.Pow((t - Sobe) / 0.18f, 2f));
-                float some = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(Pega + 0.72f, Pega + 1.12f, t));
-                motor[i] = m * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(Pega - 0.01f, Pega + 0.05f, t)) * acelera * some;
-            }
-            // na marcha lenta, no nível do laço (o carro toca este som a 0,6 e o laço a ~0,4)
-            float k2 = 0.8f * 0.40f / 0.6f / picoNaLenta;
-            float max = 0f;
-            for (int i = 0; i < n; i++) { motor[i] *= k2; max = Mathf.Max(max, Mathf.Abs(motor[i])); }
-            return max > 0.95f ? Normalizar(motor, 0.95f) : motor;
-        }
 
         /// <summary>O solenoide do arranque estalando (a chave chegou na partida).</summary>
         static float[] GerarSolenoide(int semente)
@@ -283,25 +214,6 @@ namespace ZombieCityCleaner.Vehicles
             return max > 0.85f ? Normalizar(d, 0.85f) : d;
         }
 
-        /// <summary>A chave passando de uma posição para outra: o estalo do miolo (dois toques metálicos curtos).</summary>
-        static float[] GerarCliqueDaChave(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(0.06f * Taxa);
-            var d = new float[n];
-            var a = new SomDePasso.Ressonador(3600f, 0.004f, 1f);
-            var b = new SomDePasso.Ressonador(6100f, 0.003f, 1f);
-            var c = new SomDePasso.Ressonador(1400f, 0.006f, 1f);
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                float x = ruido * (Mathf.Exp(-t * 2500f) + 0.5f * Degrau(t - 0.009f) * Mathf.Exp(-Mathf.Max(0f, t - 0.009f) * 2500f));
-                d[i] = a.Passar(x) + b.Passar(x) * 0.6f + c.Passar(x) * 0.8f;
-            }
-            return Normalizar(d, 0.5f);
-        }
-
         /// <summary>
         /// O motor tossindo (0,35 s): duas explosões soltas, a segunda mais fraca (o ronco do escape pulsando, o baque do
         /// bloco e um pouco do tom do motor), como as primeiras do <see cref="Pegar"/>, sem ele firmar.
@@ -330,69 +242,6 @@ namespace ZombieCityCleaner.Vehicles
                 d[i] = escape.Passar(ruido) * pulso * 2.4f + corpo.Passar(golpe) * 1.2f + bloco.Passar(golpe) * 0.6f;
             }
             return Normalizar(d, 0.75f);
-        }
-
-        /// <summary>A chave entrando na ignição: os pinos do miolo estalando um a um (cada vez mais agudos), o metal raspando e o encaixe no fim.</summary>
-        static float[] GerarChaveEntra(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(0.32f * Taxa);
-            var d = new float[n];
-            var raspa = new SomDePasso.Faixa(4200f, 2f);
-            var pinos = new SomDePasso.Ressonador[5];
-            for (int k = 0; k < pinos.Length; k++) pinos[k] = new SomDePasso.Ressonador(3000f + 450f * k, 0.004f, 1f);
-            var encaixe = new SomDePasso.Ressonador(1700f, 0.01f, 1f);
-            var corpo = new SomDePasso.Ressonador(420f, 0.012f, 1f);
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                float s = raspa.Passar(ruido) * 0.06f * Mathf.SmoothStep(0f, 1f, t / 0.02f) * (t < 0.22f ? 1f : Mathf.Exp(-(t - 0.22f) * 80f));
-                for (int k = 0; k < pinos.Length; k++)
-                {
-                    float tk = t - (0.03f + k * 0.038f);
-                    s += pinos[k].Passar(Degrau(tk) * ruido * Mathf.Exp(-Mathf.Max(0f, tk) * 3000f));
-                }
-                float te = t - 0.235f;
-                float x = Degrau(te) * ruido * Mathf.Exp(-Mathf.Max(0f, te) * 1500f);
-                s += encaixe.Passar(x) * 1.6f + corpo.Passar(x) * 1.2f;
-                d[i] = s;
-            }
-            return Normalizar(d, 0.5f);
-        }
-
-        /// <summary>
-        /// A buzina (um laço de 1 s): duas cornetas eletromagnéticas em terça maior (412 e 518 Hz, inteiros para o laço
-        /// não ter emenda), cada uma com os harmônicos do diafragma, reforçados pela boca da corneta (~850 Hz e ~2,4 kHz),
-        /// e uma saturação que dá a aspereza.
-        /// </summary>
-        static float[] GerarBuzina(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Taxa;
-            var d = new float[n];
-            int[] tons = { 412, 518 };
-            var freqs = new System.Collections.Generic.List<float>();
-            var ganhos = new System.Collections.Generic.List<float>();
-            var fases = new System.Collections.Generic.List<float>();
-            foreach (int f0 in tons)
-                for (int k = 1; k * f0 < 9000; k++)
-                {
-                    float fk = k * f0;
-                    float g = 1f / Mathf.Pow(k, 0.6f) * (0.35f + 1.6f * Mathf.Exp(-Mathf.Pow((fk - 2400f) / 900f, 2f)) + 0.8f * Mathf.Exp(-Mathf.Pow((fk - 850f) / 350f, 2f)));
-                    freqs.Add(fk);
-                    ganhos.Add(g);
-                    fases.Add((float)(r.NextDouble() * Mathf.PI * 2));
-                }
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float s = 0f;
-                for (int j = 0; j < freqs.Count; j++) s += ganhos[j] * Mathf.Sin(2f * Mathf.PI * freqs[j] * t + fases[j]);
-                s *= 1f + 0.04f * Mathf.Sin(2f * Mathf.PI * 6f * t);   // o diafragma tremendo um pouco
-                d[i] = (float)System.Math.Tanh(s * 0.35f);
-            }
-            return Normalizar(d, 0.8f);
         }
 
         /// <summary>A porta abrindo: o trinco soltando (dois estalos de metal) e a borracha da porta descolando.</summary>
@@ -455,33 +304,6 @@ namespace ZombieCityCleaner.Vehicles
         }
 
         /// <summary>
-        /// O pneu furando: o estouro (um baque grave da borracha, um seno que cai de 140 para 60 Hz, e o estalo) e o ar
-        /// escapando, um chiado forte que perde força e escurece (de ~4,2 para ~1,8 kHz) em 1,8 s.
-        /// </summary>
-        static float[] GerarPneuFurando(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(1.9f * Taxa);
-            var d = new float[n];
-            var ar = new SomDePasso.Faixa(4200f, 1.2f);
-            var estalo = new SomDePasso.Faixa(1800f, 1.5f);
-            var lp = new SomDePasso.PassaBaixa(9000f);
-            float fase = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                fase += 2f * Mathf.PI * Mathf.Lerp(60f, 140f, Mathf.Exp(-t * 35f)) / Taxa;
-                float baque = Mathf.Sin(fase) * Mathf.Exp(-t * 22f) * Mathf.Clamp01(t / 0.0015f);
-                float golpe = estalo.Passar(ruido * Mathf.Exp(-t * 160f)) * 1.4f;
-                if (i % 64 == 0) ar.Centro(Mathf.Lerp(1800f, 4200f, Mathf.Exp(-t * 1.2f)));
-                float sopro = Mathf.Clamp01((t - 0.01f) / 0.04f) * Mathf.Exp(-t * 1.6f) * (0.85f + 0.15f * Mathf.Sin(t * 37f));
-                d[i] = lp.Passar(baque * 1.2f + golpe + ar.Passar(ruido) * sopro * 0.9f);
-            }
-            return Normalizar(d, 0.85f);
-        }
-
-        /// <summary>
         /// O macaco: um estalo de catraca a cada meia volta da manivela (~0,17 s, desafinado), o metal tocando em dois modos
         /// (1,87 e 3,15 kHz) e o fuso rangendo baixo, que sobe e desce com a volta.
         /// </summary>
@@ -517,40 +339,6 @@ namespace ZombieCityCleaner.Vehicles
         }
 
         static float Degrau(float x) => x >= 0f ? 1f : 0f;
-
-        /// <summary>
-        /// Um chiado em laço de 1 s (o ar do pneu, o vapor): ruído numa faixa (centro e Q), com um tremor de amplitude
-        /// (inteiro em Hz, para o laço não ter emenda) e, se pedido, um ronco grave por baixo. O ruído roda 2 s e só o
-        /// segundo é usado (o filtro já assentado); a emenda é cruzada nos últimos 50 ms.
-        /// </summary>
-        static float[] GerarChiado(int semente, float centro, float q, float tremor, float profundidade, float ronco)
-        {
-            var r = new System.Random(semente);
-            var faixa = new SomDePasso.Faixa(centro, q);
-            var grave = new SomDePasso.PassaBaixa(260f, 2);
-            int n = Taxa;
-            var d = new float[2 * n];
-            for (int i = 0; i < 2 * n; i++)
-            {
-                float t = (i % n) / (float)Taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                float am = 1f - profundidade + profundidade * (0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * tremor * t));
-                d[i] = faixa.Passar(ruido) * am + grave.Passar(ruido) * ronco * 3f;
-            }
-            var laco = new float[n];
-            int emenda = Taxa / 20;
-            for (int i = 0; i < n; i++)
-            {
-                float x = d[n + i];
-                if (i < emenda)
-                {
-                    float k = i / (float)emenda;
-                    x = x * k + d[i] * (1f - k);   // o fim do primeiro segundo entra no começo do segundo
-                }
-                laco[i] = x;
-            }
-            return Normalizar(laco, 0.7f);
-        }
 
         /// <summary>
         /// A gasolina do galão: o jorro (ruído numa faixa média, que entra e sai) e o gorgolejo do ar entrando no galão, um

@@ -1090,7 +1090,7 @@ namespace ZombieCityCleaner.Player
             bool bebe = Itens.Consumivel(item).tipo == TipoDeLoot.Bebida;
             var ouvido = _rede.cameraMundo != null ? _rede.cameraMundo.transform.position : transform.position + Vector3.up * 1.6f;
             Efeitos.Som(bebe || Itens.EhRemedio(item) ? Efeitos.AbrirTampa : Efeitos.AbrirLata, ouvido, 0.45f, false);
-            Efeitos.Som(bebe ? Efeitos.Gole : Efeitos.Mastigar, ouvido, 0.5f, false);
+            Efeitos.Som(bebe ? Efeitos.GoleDe(item) : Efeitos.MastigarDe(item), ouvido, 0.5f, false);
             ConsumirRpc(id);
         }
 

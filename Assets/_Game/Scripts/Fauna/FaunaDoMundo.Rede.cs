@@ -38,7 +38,7 @@ namespace ZombieCityCleaner.Fauna
         const float IntervaloDeEnvio = 0.1f, TempoParaSumir = 2f;
         /// <summary>Até onde os bichos vão para cada cliente (m): todos os que existem em volta dele (eles somem a 270 m de todos).</summary>
         public const float AlcanceDaRede = 300f;
-        const byte BitFerido = 0x08, BitCarneado = 0x10, BitAlfa = 0x20, BitCarregando = 0x40;
+        const byte BitFerido = 0x08, BitCarneado = 0x10, BitAlfa = 0x20, BitCarregando = 0x40, BitUivando = 0x80;
 
         float _proximoEnvio;
         int _tick;
@@ -93,7 +93,7 @@ namespace ZombieCityCleaner.Fauna
                     w.WriteValueSafe(Centimetros(p.z));
                     w.WriteValueSafe((byte)(Mathf.RoundToInt(b.transform.eulerAngles.y * (256f / 360f)) & 255));
                     byte estado = (byte)((byte)b.Estado | (b.Ferido ? BitFerido : 0) | (b.Carneado ? BitCarneado : 0) | (b.Alfa ? BitAlfa : 0)
-                                         | (b.Carregando ? BitCarregando : 0));
+                                         | (b.Carregando ? BitCarregando : 0) | (b.Uivando ? BitUivando : 0));
                     w.WriteValueSafe(estado);
                     w.WriteValueSafe((byte)Mathf.Clamp(Mathf.RoundToInt(b.Velocidade * 10f), 0, 255));
                 }
@@ -131,7 +131,8 @@ namespace ZombieCityCleaner.Fauna
                     c = NovaCopia(id, geracao, (Especie)especie, (Variante)variante);
                 }
                 c.ReceberCopia(origem + new Vector3(x, y, z) * 0.01f, giro * (360f / 256f), (EstadoDoBicho)(estado & 7), velocidade / 10f,
-                               (estado & BitFerido) != 0, (estado & BitCarneado) != 0, (estado & BitAlfa) != 0, (estado & BitCarregando) != 0);
+                               (estado & BitFerido) != 0, (estado & BitCarneado) != 0, (estado & BitAlfa) != 0, (estado & BitCarregando) != 0,
+                               (estado & BitUivando) != 0);
                 _ultimoRecebido[c] = agora;
             }
         }

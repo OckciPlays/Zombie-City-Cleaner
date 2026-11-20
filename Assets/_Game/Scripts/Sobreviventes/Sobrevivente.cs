@@ -295,6 +295,7 @@ namespace ZombieCityCleaner.Sobreviventes
             if (boca == null) boca = transform;
             Efeitos.Clarao(boca, 0);
             Efeitos.Som(Efeitos.Tiros[(int)arma], boca.position, 1f, true, 150f);
+            EcoDoTiro.Tocar(arma, boca.position, 1f, true, 150f);   // (19/11/2026: o eco do lugar)
             if (arma == TipoDeArma.Espingarda) Efeitos.Som(Efeitos.Bomba, boca.position, 0.7f, true, 25f);
             foreach (var i in impactos)
             {

@@ -6,58 +6,33 @@ using Ressonador = ZombieCityCleaner.Combat.SomDePasso.Ressonador;
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// Os sons do corpo e dos curativos (05/11/2026, o sistema de vida por membro), gerados por código como os da comida
-    /// (<see cref="SomDosItens"/>), cada um uma vez só, na primeira vez que toca: o estalo do osso quebrando (seco e
-    /// grave), o pano rasgando (a atadura e a bandagem abrindo), o pano roçando (enrolando a faixa), o velcro ou a fita
-    /// fechando (o fim do curativo e da tala), o zíper do kit médico e o comprimido saindo da cartela. Tocam por
+    /// Os sons do corpo e dos curativos (05/11/2026, o sistema de vida por membro): o estalo do osso quebrando e o zíper do
+    /// kit médico são os gravados (Resources/Corpo; 20/11/2026: os feitos em código, a reserva deles, saíram); o pano
+    /// rasgando (a atadura e a bandagem abrindo), o pano roçando (enrolando a faixa), o velcro ou a fita fechando (o fim do
+    /// curativo e da tala) e o comprimido saindo da cartela são gerados por código como os da comida
+    /// (<see cref="SomDosItens"/>), cada um uma vez só, na primeira vez que toca. Tocam por
     /// <see cref="Efeitos.Som(AudioClip, Vector3, float, bool, float)"/> (no dono, na cabeça: não espaciais).
     /// </summary>
     public static class SomDosCurativos
     {
         const int Taxa = 44100;
 
-        static AudioClip _estalo, _rasgo, _enrolar, _fecho, _ziper, _cartela;
+        static AudioClip _rasgo, _enrolar, _fecho, _cartela;
 
-        /// <summary>O osso quebrando: um estalo seco e grave (a fratura).</summary>
-        public static AudioClip Estalo => _estalo != null ? _estalo : (_estalo = SomGerado.Clip("Osso", GerarEstalo(11), Taxa));
+        /// <summary>O osso quebrando (a fratura): o gravado (null sem ele).</summary>
+        public static AudioClip Estalo => SonsGravados.Um("Corpo", "osso_");   // (20/11/2026: o gravado)
         /// <summary>O pano rasgando (o começo da atadura e da bandagem).</summary>
         public static AudioClip Rasgo => _rasgo != null ? _rasgo : (_rasgo = SomGerado.Clip("Pano rasgando", GerarRasgo(23), Taxa));
         /// <summary>O pano roçando (a faixa dando a volta no braço).</summary>
         public static AudioClip Enrolar => _enrolar != null ? _enrolar : (_enrolar = SomGerado.Clip("Pano enrolando", GerarEnrolar(31), Taxa));
         /// <summary>O velcro ou a fita fechando (o fim do curativo e da tala).</summary>
         public static AudioClip Fecho => _fecho != null ? _fecho : (_fecho = SomGerado.Clip("Velcro", GerarFecho(41), Taxa));
-        /// <summary>O zíper do kit médico abrindo.</summary>
-        public static AudioClip Ziper => _ziper != null ? _ziper : (_ziper = SomGerado.Clip("Zíper", GerarZiper(53), Taxa));
+        /// <summary>O zíper do kit médico abrindo: o gravado (null sem ele).</summary>
+        public static AudioClip Ziper => SonsGravados.Um("Corpo", "ziper_");   // (20/11/2026: o gravado)
         /// <summary>O comprimido saindo da cartela (o alumínio estalando e o comprimido batendo na mão).</summary>
         public static AudioClip Cartela => _cartela != null ? _cartela : (_cartela = SomGerado.Clip("Cartela", GerarCartela(67), Taxa));
 
         // ------------------------------------------------ os sons ------------------------------------------------
-
-        /// <summary>
-        /// O osso: um estalo curto (uns estilhaços nos primeiros 30 ms), o corpo do estalo em modos graves que morrem logo
-        /// (o osso dentro da carne não soa como madeira solta) e o baque surdo por baixo.
-        /// </summary>
-        static float[] GerarEstalo(int semente)
-        {
-            var r = new System.Random(semente);
-            var y = new float[Mathf.RoundToInt(0.35f * Taxa)];
-            var modos = new[] { new Ressonador(160f, 0.05f, 1f), new Ressonador(390f, 0.03f, 0.8f), new Ressonador(870f, 0.015f, 0.5f), new Ressonador(1900f, 0.008f, 0.3f) };
-            var abafa = new PassaBaixa(3200f, 2);
-            float[] lascas = { 0.004f, 0.011f + (float)r.NextDouble() * 0.006f, 0.022f + (float)r.NextDouble() * 0.01f };
-            for (int i = 0; i < y.Length; i++)
-            {
-                float t = i / (float)Taxa;
-                float golpe = Impulso(t, 0f, 0.0015f) * 1.4f;
-                foreach (float l in lascas) golpe += Impulso(t, l, 0.0012f) * 0.6f;
-                float x = Ruido(r) * golpe;
-                float corpo = 0f;
-                foreach (var m in modos) corpo += m.Passar(x);
-                // o baque da carne, embaixo de tudo
-                float baque = Mathf.Sin(2f * Mathf.PI * 72f * t) * Mathf.Exp(-t / 0.045f) * 0.5f;
-                y[i] = abafa.Passar(corpo * 2.2f + x * 0.25f) + baque;
-            }
-            return Acabar(y, 0.9f);
-        }
 
         /// <summary>
         /// O pano rasgando: os fios estourando em grãos (mais densos no meio do puxão), num ruído de faixa larga que sobe
@@ -127,40 +102,6 @@ namespace ZombieCityCleaner.Combat
                 y[i] = macio.Passar(gancho.Passar(grao) + corpo.Passar(Ruido(r) * (crepita * 0.25f + aperta * 1.2f)));
             }
             return Acabar(y, 0.7f);
-        }
-
-        /// <summary>
-        /// O zíper: um trem de cliques (os dentes), que acelera e depois freia, cada um um toque de metal pequeno, com o
-        /// pano da bolsa roçando por baixo.
-        /// </summary>
-        static float[] GerarZiper(int semente)
-        {
-            var r = new System.Random(semente);
-            float dur = 0.75f;
-            var y = new float[Mathf.RoundToInt(dur * Taxa)];
-            var dente = new[] { new Ressonador(3100f, 0.004f, 1f), new Ressonador(5200f, 0.003f, 0.6f) };
-            var pano = new Faixa(1400f, 0.8f);
-            var macio = new PassaBaixa(9000f, 2);
-            float fase = 0f;
-            for (int i = 0; i < y.Length; i++)
-            {
-                float t = i / (float)Taxa;
-                float k = t / dur;
-                // os dentes por segundo: começa devagar, corre e freia no fim da volta
-                float ritmo = Mathf.Lerp(45f, 140f, Mathf.Sin(Mathf.Clamp01(k * 1.15f) * Mathf.PI));
-                fase += ritmo / Taxa;
-                float x = 0f;
-                if (fase >= 1f)
-                {
-                    fase -= 1f;
-                    x = (0.6f + 0.4f * (float)r.NextDouble()) * (r.NextDouble() < 0.5 ? 1f : -1f) * 3f;
-                }
-                float metal = 0f;
-                foreach (var d in dente) metal += d.Passar(x);
-                float roca = Mathf.Sin(Mathf.Clamp01(k * 1.1f) * Mathf.PI) * 0.15f;
-                y[i] = macio.Passar(metal * 4f + pano.Passar(Ruido(r) * roca));
-            }
-            return Acabar(y, 0.65f);
         }
 
         /// <summary>

@@ -114,7 +114,7 @@ namespace ZombieCityCleaner.Zombies
             foreach (var lista in _corpos)
                 foreach (var c in lista)
                 {
-                    if (!c.emUso || c.vivo) continue;
+                    if (!c.emUso || c.vivo || c.NoTornado) continue;   // (rodando no tornado, ele espera: CorpoDeZumbi.Tornado.cs)
                     float t = agora - c.caiuEm;
                     if (t > tempoDoCorpo)
                     {

@@ -122,3 +122,30 @@ InitTestScene*.unity*
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
 __pycache__/
+
+# Os pacotes de som da Asset Store (20/11/2026; grátis, quase 1 GB): o jogo usa só as cópias preparadas em
+# Assets/_Game/Audio/Resources (Docs/22-Os-Sons.md)
+/Assets/Animal Sound Effect Pack Lite/
+/Assets/Animal Sound Effect Pack Lite.meta
+/Assets/Deadly Kombat Free version/
+/Assets/Deadly Kombat Free version.meta
+/Assets/Footsteps - Essentials/
+/Assets/Footsteps - Essentials.meta
+/Assets/FreeWeaponSFX_v1.1/
+/Assets/FreeWeaponSFX_v1.1.meta
+/Assets/Nature - Essentials/
+/Assets/Nature - Essentials.meta
+/Assets/Nature Sound FX/
+/Assets/Nature Sound FX.meta
+/Assets/Rain Forest SFX/
+/Assets/Rain Forest SFX.meta
+/Assets/RegularImpactsSFX/
+/Assets/RegularImpactsSFX.meta
+/Assets/Vehicle_Essentials/
+/Assets/Vehicle_Essentials.meta
+/Assets/Voices - Essentials/
+/Assets/Voices - Essentials.meta
+/Assets/Weapons of Choice FREE - Komposite Sound/
+/Assets/Weapons of Choice FREE - Komposite Sound.meta
+/Assets/no9_Game_Sounds/
+/Assets/no9_Game_Sounds.meta

@@ -14,15 +14,21 @@ namespace ZombieCityCleaner.Music
     /// mais baixo (a cada 25 a 50 s); no perigo e nos momentos (o "te viram", a saída, o amanhecer, a morte), nada além do
     /// vento. A sombra (só a tensão, baixinho, no silêncio; 04/11/2026) não cala o ambiente: conta como a música da
     /// exploração.</item>
-    /// <item>O que o vento mexe (a janela batendo, a porta, a placa de metal rangendo, a lata rolando) acontece logo depois
-    /// de uma rajada do vento da trilha passar (os tempos das rajadas vêm do Ferramentas/trilha, no trilha.json).</item>
-    /// <item>Os uivos dos cachorros e as placas de metal estão nas notas do ré menor da trilha.</item>
+    /// <item>Depois de uma rajada do vento da trilha passar (os tempos vêm do Ferramentas/trilha, no trilha.json), às vezes
+    /// um galho estala no mato (fora). Até 20/11/2026 a rajada batia a janela, a porta, a placa de metal e a lata, sons
+    /// feitos em código que saíram a pedido ("vamos deixar só os novos").</item>
+    /// <item>Os uivos e as placas de metal estão nas notas do ré menor da trilha. Desde 19/11/2026 (a pedido: "quero descartar
+    /// o som dos cachorros", que não existem no jogo), os cachorros saíram: de dia, os pássaros (os pardais e os da floresta);
+    /// à noite, a coruja, os lobos bem longe e um galho estalando no mato. Os sons novos ficam em Resources/Ambiente (dos
+    /// pacotes grátis Animal Sound Effect Pack Lite, Rain Forest SFX, Nature - Essentials e Sparrow Sounds), e quantos
+    /// sons tocam continua igual: só mudou o quê.</item>
     /// <item>Cada som vem de um lugar em volta de quem escuta (a janela, numa fachada de verdade, achada por um raio; os
-    /// cachorros, longe; os corvos, no alto), abafado pela distância e pelo que estiver no meio (Combat/Abafamento).</item>
-    /// <item>À noite, os grilos (em laço). De dentro de um prédio ou de uma casa (ou debaixo de um teto), o vento e os
-    /// grilos chegam abafados, e quem range é a madeira.</item>
+    /// lobos, bem longe; os corvos, a coruja e os pássaros, no alto), abafado pela distância e pelo que estiver no meio (Combat/Abafamento).</item>
+    /// <item>À noite, os grilos (em laço; desde 20/11/2026 os gravados do Rain Forest SFX, em Resources/Ambiente/Grilos).
+    /// De dentro de um prédio ou de uma casa (ou debaixo de um teto), o vento, os grilos e os bichos chegam abafados.</item>
     /// </list>
-    /// Os sons saem do Ferramentas/ambiente.py (Audio/Ambiente) e entram no TrilhaDoJogo pelo menu Montar a trilha.
+    /// Só os gravados tocam (Resources/Ambiente: Passaros, Corvos, Coruja, Lobos, Galhos e Grilos). Os feitos em código
+    /// (Audio/Ambiente, do antigo Ferramentas/ambiente.py) saíram do jogo em 20/11/2026.
     /// </summary>
     public partial class MaestroDaTrilha
     {
@@ -33,8 +39,8 @@ namespace ZombieCityCleaner.Music
         public Vector2 ambienteNoSilencio = new Vector2(9f, 20f);
         [Tooltip("Com a música da exploração, um a cada tantos segundos.")]
         public Vector2 ambienteNaMusica = new Vector2(25f, 50f);
-        [Tooltip("A chance de uma rajada do vento bater uma janela, uma porta, a placa ou a lata.")]
-        [Range(0f, 1f)] public float chanceNaRajada = 0.6f;
+        [Tooltip("A chance de uma rajada do vento estalar um galho no mato (fora).")]
+        [Range(0f, 1f)] public float chanceNaRajada = 0.25f;
         [Tooltip("Com a música da exploração tocando, o ambiente fica a este tanto do volume.")]
         [Range(0f, 1f)] public float ambienteComMusica = 0.65f;
 
@@ -151,7 +157,7 @@ namespace ZombieCityCleaner.Music
             {
                 if (agora < _rajadas[i]) continue;
                 _rajadas.RemoveAt(i);
-                if (!quieto && Random.value < chanceNaRajada) TocarEvento(DoVento(), agora + Random.Range(0.2f, 1.0f), "rajada");
+                if (!quieto && _dentro < 0.5f && Random.value < chanceNaRajada) TocarEvento("galho", agora + Random.Range(0.2f, 1.0f), "rajada");
             }
             if (quieto)
             {
@@ -186,7 +192,8 @@ namespace ZombieCityCleaner.Music
         {
             float noite = Mathf.InverseLerp(0.3f, 0.8f, CicloDoDia.Noite);
             float musica = PerigoDeVerdade ? 0.4f : ComMusicaCalma ? 0.6f : 1f;
-            float alvo = ligado && _trilha.grilos != null && _trilha.grilos.Length > 0 ? volumeDosGrilos * noite * musica * Mathf.Lerp(1f, 0.35f, _dentro) : 0f;
+            var grilos = Novos("Grilos");   // (20/11/2026: os gravados; os feitos em código saíram)
+            float alvo = ligado && grilos != null ? volumeDosGrilos * noite * musica * Mathf.Lerp(1f, 0.35f, _dentro) : 0f;
             _volumeDosGrilosAgora = Mathf.MoveTowards(_volumeDosGrilosAgora, alvo, dt * 0.12f);
             if (_volumeDosGrilosAgora <= 0.001f)
             {
@@ -207,7 +214,7 @@ namespace ZombieCityCleaner.Music
             }
             if (!_grilos.isPlaying)
             {
-                _grilos.clip = _trilha.grilos[Random.Range(0, _trilha.grilos.Length)];
+                _grilos.clip = grilos[Random.Range(0, grilos.Length)];
                 _grilos.time = Random.Range(0f, _grilos.clip.length * 0.9f);
                 _grilos.Play();
             }
@@ -218,18 +225,37 @@ namespace ZombieCityCleaner.Music
         // ------------------------------------------------------------------ os eventos
         AudioClip[] Clipes(string tipo)
         {
+            // (20/11/2026) só os gravados: a janela, a porta, a placa, a lata, a madeira, os corvos e os latidos (feitos em
+            // código) saíram
             switch (tipo)
             {
-                case "latido": return _trilha.latidos;
-                case "uivo": return _trilha.uivos;
-                case "janela": return _trilha.janelas;
-                case "porta": return _trilha.portas;
-                case "placa": return _trilha.placas;
-                case "lata": return _trilha.latas;
-                case "madeira": return _trilha.madeira;
-                case "corvos": return _trilha.corvos;
+                case "uivo": return Novos("Lobos");
+                case "passaros": return Novos("Passaros");
+                case "corvos": return Novos("Corvos");   // (20/11/2026: os gravados que o Pedro mandou)
+                case "coruja": return Novos("Coruja");
+                case "galho": return Novos("Galhos");
             }
             return null;
+        }
+
+        static readonly Dictionary<string, AudioClip[]> _novos = new Dictionary<string, AudioClip[]>();
+
+        // os sons novos do ambiente, de Resources/Ambiente/<pasta> (null se a pasta estiver vazia)
+        static AudioClip[] Novos(string pasta)
+        {
+            if (!_novos.TryGetValue(pasta, out var c) || c == null || (c.Length > 0 && c[0] == null))
+                _novos[pasta] = c = Resources.LoadAll<AudioClip>("Ambiente/" + pasta);
+            return c != null && c.Length > 0 ? c : null;
+        }
+
+        /// <summary>Os tipos de som do ambiente que o F1 toca um a um.</summary>
+        public static readonly string[] TiposDoAmbiente = { "passaros", "corvos", "coruja", "uivo", "galho" };
+
+        /// <summary>Pelo F1: um som de ambiente do tipo pedido, agora, no lugar onde ele tocaria.</summary>
+        public void AmbienteDoTipo(string tipo)
+        {
+            if (_trilha == null) return;
+            TocarEvento(tipo, AudioSettings.dspTime + 0.05, "F1");
         }
 
         static string Pesar(params (string tipo, float peso)[] opcoes)
@@ -245,23 +271,18 @@ namespace ZombieCityCleaner.Music
             return opcoes[opcoes.Length - 1].tipo;
         }
 
-        // o que a rajada mexe
-        string DoVento() => _dentro > 0.5f
-            ? Pesar(("madeira", 0.5f), ("janela", 0.3f), ("porta", 0.2f))
-            : Pesar(("janela", 0.4f), ("placa", 0.3f), ("porta", 0.15f), ("lata", 0.15f));
-
         // um som solto, pelo lugar e pela hora (sem repetir o tipo do último)
         string Sortear(bool dia)
         {
             for (int tentativa = 0; tentativa < 3; tentativa++)
             {
-                string t = _dentro > 0.5f
-                    ? Pesar(("madeira", 0.5f), ("porta", 0.2f), (dia ? "latido" : "uivo", 0.15f), ("latido", 0.15f))
-                    : dia ? Pesar(("corvos", 0.35f), ("latido", 0.25f), ("janela", 0.15f), ("placa", 0.15f), ("porta", 0.1f))
-                          : Pesar(("latido", 0.35f), ("uivo", 0.25f), ("janela", 0.15f), ("placa", 0.15f), ("porta", 0.1f));
+                // (20/11/2026: só os gravados. A cidade rangendo (a janela, a porta, a placa, a madeira) e os corvos eram feitos
+                // em código e saíram; dentro, os bichos de fora chegam abafados)
+                string t = dia ? Pesar(("passaros", _dentro > 0.5f ? 0.7f : 0.55f), ("corvos", _dentro > 0.5f ? 0.3f : 0.25f), ("galho", _dentro > 0.5f ? 0f : 0.2f))
+                               : Pesar(("coruja", 0.4f), ("uivo", 0.3f), ("galho", _dentro > 0.5f ? 0f : 0.3f));
                 if (t != _ultimoTipo) return t;
             }
-            return _ultimoTipo ?? "latido";
+            return dia ? "passaros" : "coruja";
         }
 
         void TocarEvento(string tipo, double quando, string porque)
@@ -276,44 +297,42 @@ namespace ZombieCityCleaner.Music
             float alcance, volume;
             switch (tipo)
             {
-                case "latido":
+                // os lobos (19/11/2026, no lugar dos cachorros): bem mais longe que eles, além das casas
                 case "uivo":
-                    onde = ouvido + direcao * Random.Range(45f, 75f) + Vector3.down * 1.5f;
-                    alcance = 140f;
-                    volume = tipo == "latido" ? 0.85f : 0.7f;
+                    onde = ouvido + direcao * Random.Range(90f, 150f) + Vector3.down * 1.5f;
+                    alcance = 320f;
+                    volume = 0.55f;
                     break;
+                // os corvos no alto (20/11/2026: os gravados), a uma rua de distância
                 case "corvos":
                     onde = ouvido + direcao * Random.Range(20f, 45f) + Vector3.up * Random.Range(10f, 18f);
                     alcance = 90f;
-                    volume = 0.6f;
-                    break;
-                case "janela":
-                case "porta":
-                case "placa":
-                    // numa fachada de verdade, se houver uma em volta (até 30 m); senão, no ar, a uma distância de rua
-                    if (Physics.Raycast(ouvido, direcao, out var fachada, 30f, Abafamento.Mascara, QueryTriggerInteraction.Ignore) && fachada.distance > 2f)
-                        onde = fachada.point + fachada.normal * 0.3f + Vector3.up * Random.Range(0f, 4f);
-                    else
-                        onde = ouvido + direcao * Random.Range(12f, 25f) + Vector3.up * Random.Range(1f, 4f);
-                    alcance = tipo == "placa" ? 60f : 70f;
-                    volume = tipo == "janela" ? 0.8f : tipo == "porta" ? 0.9f : 0.45f;
-                    break;
-                case "lata":
-                    onde = ouvido + direcao * Random.Range(6f, 18f) + Vector3.down * 1.5f;
-                    alcance = 40f;
                     volume = 0.5f;
                     break;
-                default:   // a madeira: perto, dentro
-                    onde = ouvido + Random.insideUnitSphere * 3f + direcao * Random.Range(3f, 6f);
-                    alcance = 25f;
-                    volume = 0.6f;
+                // (19/11/2026) os pássaros nas árvores e nos telhados, perto e baixinho
+                case "passaros":
+                    onde = ouvido + direcao * Random.Range(10f, 28f) + Vector3.up * Random.Range(3f, 9f);
+                    alcance = 60f;
+                    volume = 0.5f;
+                    break;
+                // a coruja numa árvore, a uma rua de distância
+                case "coruja":
+                    onde = ouvido + direcao * Random.Range(25f, 50f) + Vector3.up * Random.Range(6f, 12f);
+                    alcance = 120f;
+                    volume = 0.3f;
+                    break;
+                // o galho estalando no mato, perto o bastante para dar medo (e o que sobrar: só os gravados tocam)
+                default:
+                    onde = ouvido + direcao * Random.Range(10f, 25f) + Vector3.down * 1f;
+                    alcance = 50f;
+                    volume = 0.45f;
                     break;
             }
             var som = PegarSomDoAmbiente();
             som.transform.position = onde;
             som.clip = clipe;
             som.maxDistance = alcance;
-            som.bypassReverbZones = tipo != "madeira";   // os de fora já trazem o eco da rua
+            som.bypassReverbZones = true;   // os de fora já trazem o eco da rua
             float distancia = Vector3.Distance(ouvido, onde);
             float tapado = Abafamento.Quanto(ouvido, onde);
             if (distancia > 30f) tapado *= 0.6f;   // de longe, o som passa por cima dos telhados: nunca chega todo tapado

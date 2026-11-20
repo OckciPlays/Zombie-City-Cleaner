@@ -5,9 +5,12 @@ using ZombieCityCleaner.World;
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// Efeitos de tiro compartilhados: clarão do cano (luz rápida + brilho), faíscas no impacto e sons gerados por
-    /// código (tiro, clique sem bala, carregador, bomba e cartucho da espingarda, lanterna, e a porta e os interruptores
-    /// do bunker). O tiro de cada arma vem do <see cref="SomDeTiro"/>, em variações.
+    /// Efeitos de tiro compartilhados: clarão do cano (luz rápida + brilho), faíscas no impacto e os sons das armas, da
+    /// comida, dos passos e do soco. Desde 20/11/2026 (a pedido: "podemos excluir os sons que já foram substituídos"), os
+    /// gravados (<see cref="SonsGravados"/>: o tiro de cada arma, o clique sem bala, o pente, a bomba e o cartucho da
+    /// espingarda, o ferrolho, a luneta, a lanterna, os interruptores, as mordidas, os goles, o soco e os passos) não têm
+    /// mais a reserva feita em código; sem um deles, o som não toca. Ficam feitos aqui só os que não têm gravação: a
+    /// recarga, abrir a lata e a tampa, largar, o soco na parede (<see cref="SocoParede"/>) e os passos no carpete.
     /// Com a porta do bunker fechada, o som de um lado não chega do outro (<see cref="BunkerRede.Isolado"/>).
     /// Fica num objeto da cena, com os materiais das partículas.
     /// </summary>
@@ -22,16 +25,25 @@ namespace ZombieCityCleaner.Combat
         public static AudioClip Clique, Recarga, Carregador, Bomba, Cartucho, Lanterna, Ferrolho, LunetaEntra, LunetaSai;
         /// <summary>O interruptor do bunker.</summary>
         public static AudioClip Chave;
-        /// <summary>A comida e a água (<see cref="SomDosItens"/>): abrir, as mordidas, os goles e largar no chão.</summary>
+        /// <summary>A comida e a água: abrir e largar no chão (<see cref="SomDosItens"/>); as mordidas e os goles, os gravados.</summary>
         public static AudioClip AbrirLata, AbrirTampa, Largar;
         public static AudioClip[] Mastigar, Gole;
-        /// <summary>Os passos (<see cref="SomDePasso"/>): [superfície][correndo ? 1 : 0][variação].</summary>
+        /// <summary>Os passos (os gravados; o carpete, do <see cref="SomDePasso"/>): [superfície][correndo ? 1 : 0][variação].</summary>
         public static AudioClip[][][] Passos;
-        /// <summary>O soco (<see cref="SomDoSoco"/>): o vento do braço, a pancada num zumbi e a batida numa parede.</summary>
+        /// <summary>O soco: o vento do braço e a pancada num zumbi (os gravados) e a batida numa parede (<see cref="SomDoSoco"/>).</summary>
         public static AudioClip[] SocoVento, SocoCarne;
         public static AudioClip SocoParede;
+        /// <summary>O soco (ou a arma branca) na parede: as variações gravadas (19/11/2026; desde 20/11/2026, só elas).</summary>
+        public static AudioClip[] SocosNaParede;
+        /// <summary>As cápsulas caindo no chão depois do tiro (19/11/2026, gravadas; null sem elas).</summary>
+        public static AudioClip[] Capsulas;
 
         readonly Queue<AudioSource> _fontes = new Queue<AudioSource>();
+        // (20/11/2026) até quando cada fonte está tocando: o som novo vai para uma livre, e não mais para a próxima da fila
+        // (com os gravados mais longos, o uivo do lobo era "roubado" no meio por um passo ou uma cápsula: pulava de lugar
+        // ou sumia)
+        readonly Dictionary<AudioSource, float> _ocupadaAte = new Dictionary<AudioSource, float>();
+        const int FontesNoComeco = 24, FontesNoMaximo = 64;
         ParticleSystem _faiscas, _poeira, _lascas;
 
         void Awake()
@@ -39,55 +51,18 @@ namespace ZombieCityCleaner.Combat
             _instancia = this;
             Tiros = new AudioClip[Armas.Quantas][];
             // (as de sucata, 09/11/2026, usam o som da real: elas vêm depois dela)
+            // (20/11/2026: só os gravados; o tiro feito em código, o SomDeTiro, saiu: as 5 reais têm os seus em Resources/Armas)
             for (int i = 0; i < Armas.Quantas; i++)
-                Tiros[i] = Armas.DeSucata((TipoDeArma)i) ? Tiros[(int)Armas.Real((TipoDeArma)i)]
-                    : SomDeTiro.Gerar("Tiro d" + Armas.Todas[i].nomeComArtigo, Armas.Todas[i].som);
-            Clique = Gerar("Clique", 0.06f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 160f) * 0.7f);
+                Tiros[i] = Armas.DeSucata((TipoDeArma)i) ? Tiros[(int)Armas.Real((TipoDeArma)i)] : SonsGravados.Tiros((TipoDeArma)i);
+            // os que não têm gravação continuam feitos aqui (a recarga, a lata, a tampa, largar e o soco na parede, que o carro,
+            // a árvore caindo e os zumbis também tocam)
             Recarga = Gerar("Recarga", 0.5f, (t, r) => (float)(r.NextDouble() * 2 - 1) * (Mathf.Exp(-t * 120f) + Mathf.Exp(-Mathf.Max(0, t - 0.28f) * 140f) * (t > 0.28f ? 1 : 0)) * 0.6f);
-            Lanterna = Gerar("Lanterna", 0.04f, (t, r) => (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 220f) * 0.5f);
-            // o carregador saindo ou entrando: um estalo seco e o metal batendo logo depois
-            Carregador = Gerar("Carregador", 0.12f, (t, r) => (float)(r.NextDouble() * 2 - 1) * (Mathf.Exp(-t * 180f) + 0.6f * Mathf.Exp(-Mathf.Max(0f, t - 0.035f) * 150f) * (t > 0.035f ? 1 : 0)) * 0.6f
-                                                         + Mathf.Sin(2f * Mathf.PI * 2100f * t) * Mathf.Exp(-t * 90f) * 0.15f);
-            // a bomba da espingarda: para trás (no começo) e para a frente (0,3 s depois), dois golpes de metal
-            Bomba = Gerar("Bomba", 0.45f, (t, r) => Golpe(t, r, 0f, 1f) + Golpe(t, r, 0.3f, 1.2f));
-            // o cartucho entrando no tubo: um clique curto
-            Cartucho = Gerar("Cartucho", 0.08f, (t, r) => Golpe(t, r, 0f, 0.6f));
-            // o ferrolho da sniper, puxado à mão: a alavanca sobe, vai para trás, volta e desce (tocado 0,42 s depois do
-            // tiro, junto da animação)
-            Ferrolho = Gerar("Ferrolho", 0.5f, (t, r) => Golpe(t, r, 0.04f, 0.5f) + Arrasto(t, r, 0.07f, 0.09f) + Golpe(t, r, 0.165f, 0.9f)
-                                                       + Arrasto(t, r, 0.2f, 0.08f) + Golpe(t, r, 0.29f, 1.0f) + Golpe(t, r, 0.37f, 0.55f));
-            // a luneta: o pano da manga roçando e a borracha da ocular encostando no rosto; ao sair, só um roçar curto
-            LunetaEntra = Gerar("Luneta entra", 0.22f, (t, r) => Arrasto(t, r, 0f, 0.14f) * 0.8f + Golpe(t, r, 0.15f, 0.25f));
-            LunetaSai = Gerar("Luneta sai", 0.14f, (t, r) => Arrasto(t, r, 0f, 0.1f) * 0.6f + Golpe(t, r, 0.02f, 0.12f));
-            Chave = Gerar("Interruptor", 0.07f, (t, r) => Golpe(t, r, 0f, 0.45f) + Golpe(t, r, 0.012f, 0.3f));
             AbrirLata = SomDosItens.Clip("Abrir lata", SomDosItens.AbrirLata(21));
             AbrirTampa = SomDosItens.Clip("Abrir tampa", SomDosItens.AbrirTampa(22));
             Largar = SomDosItens.Clip("Largar", SomDosItens.Largar(23));
-            Mastigar = new AudioClip[3];
-            Gole = new AudioClip[3];
-            for (int i = 0; i < 3; i++)
-            {
-                Mastigar[i] = SomDosItens.Clip($"Mastigar {i + 1}", SomDosItens.Mastigar(30 + i));
-                Gole[i] = SomDosItens.Clip($"Gole {i + 1}", SomDosItens.Gole(40 + i));
-            }
-            Passos = SomDePasso.Gerar();
-            SocoVento = new AudioClip[3];
-            SocoCarne = new AudioClip[3];
-            for (int i = 0; i < 3; i++)
-            {
-                SocoVento[i] = SomGerado.Clip($"Soco vento {i + 1}", SomDoSoco.Vento(51 + i));
-                SocoCarne[i] = SomGerado.Clip($"Soco na carne {i + 1}", SomDoSoco.NaCarne(61 + i));
-            }
             SocoParede = SomGerado.Clip("Soco na parede", SomDoSoco.NaParede(71));
-            for (int i = 0; i < 24; i++)
-            {
-                var go = new GameObject("Som");
-                go.transform.SetParent(transform);
-                var s = go.AddComponent<AudioSource>();
-                s.playOnAwake = false; s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = 2f; s.maxDistance = 60f;
-                go.AddComponent<AudioLowPassFilter>().cutoffFrequency = 22000f;
-                _fontes.Enqueue(s);
-            }
+            PorOsGravados();   // (19/11/2026, a repaginada dos sons: SonsGravados)
+            for (int i = 0; i < FontesNoComeco; i++) _fontes.Enqueue(NovaFonte());
             _faiscas = Particulas("Faíscas", new Color(1f, 0.8f, 0.4f), 0.03f, 0.25f, 6f);
             _poeira = Particulas("Poeira", new Color(0.55f, 0.52f, 0.48f), 0.07f, 0.6f, 1.2f);
             // as lascas do machado na madeira (18/11/2026): pedacinhos claros que pulam do corte e caem
@@ -242,22 +217,6 @@ namespace ZombieCityCleaner.Combat
             return SomGerado.Clip(nome, dados, taxa);
         }
 
-        // um golpe de metal: ruído que some rápido e um tilintar
-        static float Golpe(float t, System.Random r, float em, float forca)
-        {
-            float d = t - em;
-            if (d < 0f) return 0f;
-            return ((float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-d * 120f) * 0.6f + Mathf.Sin(2f * Mathf.PI * 1700f * d) * Mathf.Exp(-d * 60f) * 0.25f) * forca;
-        }
-
-        // um arrasto: ruído que sobe e desce durante a duração (metal deslizando, pano roçando)
-        static float Arrasto(float t, System.Random r, float em, float duracao)
-        {
-            float d = t - em;
-            if (d < 0f || d > duracao) return 0f;
-            return (float)(r.NextDouble() * 2 - 1) * Mathf.Sin(Mathf.PI * d / duracao) * 0.22f;
-        }
-
         ParticleSystem Particulas(string nome, Color cor, float tamanho, float vida, float velocidade)
         {
             var go = new GameObject(nome);
@@ -275,6 +234,68 @@ namespace ZombieCityCleaner.Combat
             return ps;
         }
 
+        // os sons gravados (19/11/2026: Combat/SonsGravados). Desde 20/11/2026, sem a reserva feita em código: os feitos aqui
+        // que eles trocavam saíram (o pente, a bomba, o cartucho, o ferrolho, a luneta, o soco, o clique, as mordidas, os
+        // goles, a lanterna, o interruptor e os passos de cada chão); sem a gravação, null, e o Som não toca
+        static void PorOsGravados()
+        {
+            Carregador = SonsGravados.Manuseio("carregador_entra_rifle");
+            Bomba = SonsGravados.Manuseio("bomba");
+            Cartucho = SonsGravados.Manuseio("cartucho");
+            Ferrolho = SonsGravados.Manuseio("ferrolho");
+            LunetaEntra = SonsGravados.Manuseio("luneta_entra");
+            LunetaSai = SonsGravados.Manuseio("luneta_sai");
+            Capsulas = SonsGravados.Capsulas;
+            SocoVento = SonsGravados.Golpes("SocoVento");
+            SocoCarne = SonsGravados.Golpes("SocoCarne");
+            SocosNaParede = SonsGravados.Golpes("SocoParede");
+            // (20/11/2026, os do sfxjar que o Pedro mandou: a arma sem bala, as mordidas e os goles)
+            Clique = SonsGravados.Manuseio("arma_clique");
+            Mastigar = SonsGravados.Varios("Comida", "mastigar_");
+            Gole = SonsGravados.Varios("Comida", "gole_");
+            // (20/11/2026) os cliques gravados: o da lanterna e o dos interruptores (o bunker, o capô)
+            var cliques = SonsGravados.Varios("Interface", "clique_");
+            Lanterna = cliques != null ? cliques[0] : null;
+            Chave = cliques != null ? cliques[cliques.Length > 1 ? 1 : 0] : null;
+            // os passos: os gravados de cada chão; só o carpete, que não tem gravação, continua o feito em código (SomDePasso)
+            int chaos = System.Enum.GetValues(typeof(Superficie)).Length;
+            Passos = new AudioClip[chaos][][];
+            for (int s = 0; s < chaos; s++)
+            {
+                Passos[s] = new AudioClip[2][];
+                for (int c = 0; c < 2; c++)
+                    Passos[s][c] = SonsGravados.Passos((Superficie)s, c == 1)
+                                   ?? ((Superficie)s == Superficie.Carpete ? SomDePasso.Gerar(Superficie.Carpete, c == 1) : null);
+            }
+        }
+
+        /// <summary>A arma que emperrou (20/11/2026: o gatilho e o ferrolho travado, gravados; sem eles, o clique).</summary>
+        public static AudioClip ArmaEmperrada => SonsGravados.Manuseio("arma_emperrada") ?? Clique;
+
+        /// <summary>As mordidas (20/11/2026): o salgadinho crocante; o resto, as mordidas de sempre.</summary>
+        public static AudioClip[] MastigarDe(Loot.Item item) =>
+            item == Loot.Item.Salgadinho ? SonsGravados.Varios("Comida", "crocante_") ?? Mastigar : Mastigar;
+
+        /// <summary>Os goles da bebida (20/11/2026): o suco e o copo de água pelo canudo; o resto, os goles da garrafa.</summary>
+        public static AudioClip[] GoleDe(Loot.Item item) =>
+            item == Loot.Item.Suco || item == Loot.Item.CopoDeAgua ? SonsGravados.Varios("Comida", "canudo_") ?? Gole : Gole;
+
+        /// <summary>O pente saindo da arma (o da pistola e da submetralhadora, ou o do fuzil).</summary>
+        public static AudioClip CarregadorSai(TipoDeArma a) => SonsGravados.Manuseio(DePistola(a) ? "carregador_sai_pistola" : "carregador_sai_rifle") ?? Carregador;
+
+        /// <summary>O pente entrando na arma.</summary>
+        public static AudioClip CarregadorEntra(TipoDeArma a) => SonsGravados.Manuseio(DePistola(a) ? "carregador_entra_pistola" : "carregador_entra_rifle") ?? Carregador;
+
+        /// <summary>A alavanca (ou o ferrolho da pistola) puxada no fim da recarga com a arma vazia (null sem os gravados).</summary>
+        public static AudioClip Engatilhar(TipoDeArma a) => SonsGravados.Manuseio(DePistola(a) ? "engatilhar_pistola" : "engatilhar_rifle");
+
+        static bool DePistola(TipoDeArma a) { var r = Armas.Real(a); return r == TipoDeArma.Pistola || r == TipoDeArma.Submetralhadora; }
+
+        /// <summary>O golpe de uma arma branca que pegou (a lâmina corta; o bastão bate; a tocha e o resto, a pancada).</summary>
+        public static AudioClip[] GolpeDaArma(Loot.Item item) =>
+            item == Loot.Item.Faca || item == Loot.Item.Machado || item == Loot.Item.Lanca ? SonsGravados.Golpes("Corte") ?? SocoCarne
+            : item == Loot.Item.Bastao ? SonsGravados.Golpes("Bastao") ?? SocoCarne : SocoCarne;
+
         /// <summary>
         /// Toca um som. Espacial = 3D no ponto, ouvido até o alcance e mais abafado quanto mais longe; senão, sai
         /// "dentro da cabeça" (o próprio tiro).
@@ -285,7 +306,8 @@ namespace ZombieCityCleaner.Combat
             var cam = Camera.main;
             // a porta do bunker fechada separa quem ouve do som
             if (espacial && cam != null && BunkerRede.Isolado(cam.transform.position, posicao)) return;
-            var s = _instancia._fontes.Dequeue(); _instancia._fontes.Enqueue(s);
+            float pitch = Random.Range(0.94f, 1.06f);
+            var s = _instancia.FonteLivre(clip.length / pitch);
             s.transform.position = posicao;
             s.spatialBlend = espacial ? 1f : 0f;
             s.maxDistance = alcance;
@@ -299,8 +321,39 @@ namespace ZombieCityCleaner.Combat
                 volume *= Mathf.Lerp(1f, Abafamento.VolumeTapado, tapado);
             }
             s.GetComponent<AudioLowPassFilter>().cutoffFrequency = corte;
-            s.pitch = Random.Range(0.94f, 1.06f);
+            s.pitch = pitch;
             s.PlayOneShot(clip, volume);
+        }
+
+        AudioSource NovaFonte()
+        {
+            var go = new GameObject("Som");
+            go.transform.SetParent(transform);
+            var s = go.AddComponent<AudioSource>();
+            s.playOnAwake = false; s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = 2f; s.maxDistance = 60f;
+            go.AddComponent<AudioLowPassFilter>().cutoffFrequency = 22000f;
+            return s;
+        }
+
+        // uma fonte que já terminou o som dela; sem nenhuma, uma nova (até 64); com todas ocupadas, a que termina primeiro,
+        // parada antes (o som velho acaba ali, em vez de pular para o lugar do novo)
+        AudioSource FonteLivre(float duracao)
+        {
+            float agora = Time.unscaledTime;
+            AudioSource livre = null, antes = null;
+            float maisCedo = float.MaxValue;
+            for (int i = 0; i < _fontes.Count; i++)
+            {
+                var f = _fontes.Dequeue(); _fontes.Enqueue(f);
+                if (f == null) continue;
+                float ate = _ocupadaAte.TryGetValue(f, out float t) ? t : 0f;
+                if (ate <= agora) { livre = f; break; }
+                if (ate < maisCedo) { maisCedo = ate; antes = f; }
+            }
+            if (livre == null && _fontes.Count < FontesNoMaximo) { livre = NovaFonte(); _fontes.Enqueue(livre); }
+            if (livre == null) { livre = antes; livre.Stop(); }
+            _ocupadaAte[livre] = agora + duracao + 0.05f;
+            return livre;
         }
 
         /// <summary>Toca uma das variações, sorteada.</summary>

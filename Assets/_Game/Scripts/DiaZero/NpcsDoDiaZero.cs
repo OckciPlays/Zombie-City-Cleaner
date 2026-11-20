@@ -95,7 +95,7 @@ namespace ZombieCityCleaner.DiaZero
                     som.maxDistance = 45f;
                     som.volume = 0.55f;
                     som.pitch = 0.9f + 0.1f * i;
-                    som.time = i * 0.3f % Mathf.Max(0.1f, som.clip.length);
+                    if (som.clip != null) som.time = i * 0.3f % Mathf.Max(0.1f, som.clip.length);   // (20/11/2026: só o gravado; null sem ele)
                     som.Play();
                     _carros.Add(c.transform);
                 }

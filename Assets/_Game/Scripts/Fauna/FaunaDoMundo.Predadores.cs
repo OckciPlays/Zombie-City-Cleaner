@@ -58,7 +58,12 @@ namespace ZombieCityCleaner.Fauna
         internal bool PodeAtacar(Grupo g, JogadorRede j)
         {
             if (j == null || !j.AlvoValido || j.Vida == null || j.Vida.Caido.Value) return false;
-            if (CicloDoDia.Noite < NoiteDaMatilha || g.desfeita) return false;
+            if (g.desfeita) return false;
+            // (20/11/2026, a pedido: "o lobo não está atacando") de dia, o lobo também cerca quem chega perto dele (o líder a
+            // menos de 40 m; o lobo foge a 30 m, e é aí que a matilha decide: Bicho.Matilha.cs), sozinho ou ferido; o coiote
+            // continua só à noite
+            if (CicloDoDia.Noite < NoiteDaMatilha && (g.especie != Especie.Lobo || g.lider == null
+                || Vector3.Distance(g.lider.transform.position, j.transform.position) > 40f)) return false;
             if (Adultos(g) < (g.especie == Especie.Coiote ? 3 : 2)) return false;
             if (j.Passageiro != null && j.Passageiro.NoCarro) return false;
             if (j.DebaixoDeTeto.Value || j.Vida.Abrigado()) return false;
@@ -67,13 +72,15 @@ namespace ZombieCityCleaner.Fauna
         }
 
         /// <summary>Um da matilha notou o jogador: o sorteio de cercar (no máximo um a cada 5 s por matilha).</summary>
-        internal void MatilhaViuGente(Grupo g, JogadorRede j, float agora)
+        internal void MatilhaViuGente(Grupo g, JogadorRede j, float agora, bool agoraMesmo = false)
         {
-            if (g.alvo != null || agora < g.largaAte || agora - g.pensouNoAlvo < 5f) return;
+            // (agoraMesmo: a matilha que ia fugir de quem chegou perto decide na hora, sem esperar os 5 s; os lobos que chegam
+            // juntos à beira contam como uma só decisão)
+            if (g.alvo != null || agora < g.largaAte || agora - g.pensouNoAlvo < (agoraMesmo ? 1.5f : 5f)) return;
             g.pensouNoAlvo = agora;
             if (!PodeAtacar(g, j)) return;
             // a sorte: o lobo cerca mais que o coiote (o ferido chama mais)
-            float chance = (g.especie == Especie.Coiote ? 0.35f : 0.6f) + (Ferido(j) ? 0.2f : 0f);
+            float chance = (g.especie == Especie.Coiote ? 0.35f : CicloDoDia.Noite < NoiteDaMatilha ? 0.4f : 0.6f) + (Ferido(j) ? 0.2f : 0f);
             if (Random.value > chance) return;
             g.alvo = j;
             g.presa = null;
@@ -81,7 +88,9 @@ namespace ZombieCityCleaner.Fauna
             g.atacante = null;
             g.proximoBote = agora + Random.Range(3f, 6f);
             g.rondaGiro = Random.Range(0f, 360f);
-            if (g.lider != null) g.lider.Tocar(SomDoBicho.Rosnado);
+            LadoDosFilhotes(g, j);
+            if (g.especie == Especie.Lobo) ChamarAMatilha(g, agora);   // (20/11/2026: o líder uiva chamando todos)
+            else if (g.lider != null) g.lider.Tocar(SomDoBicho.Rosnado);
             if (j.Vida != null) j.Vida.AbalarAgora(g.especie == Especie.Coiote ? 4f : 7f, MotivoDaMente.Susto);
         }
 
@@ -89,8 +98,9 @@ namespace ZombieCityCleaner.Fauna
         internal bool PodeContinuarAtaque(Grupo g, JogadorRede j, float agora)
         {
             if (j == null || !j.AlvoValido || j.Vida == null || j.Vida.Caido.Value) return false;
-            if ((!g.cercoDeTeste && CicloDoDia.Noite < NoiteDaMatilha - 0.1f) || g.desfeita) return false;
-            if (Adultos(g) < 2) return false;
+            // (o lobo também de dia, 20/11/2026; o coiote de dia só no revide)
+            if ((!g.cercoDeTeste && agora >= g.revideAte && g.especie != Especie.Lobo && CicloDoDia.Noite < NoiteDaMatilha - 0.1f) || g.desfeita) return false;
+            if (Adultos(g) < (agora < g.revideAte ? 1 : 2)) return false;   // (atacada, até o último lobo briga)
             if (j.Passageiro != null && j.Passageiro.NoCarro) return false;
             if (j.DebaixoDeTeto.Value || j.Vida.Abrigado()) return false;
             if (g.lider != null && Vector3.Distance(g.lider.transform.position, j.transform.position) > 90f) return false;
@@ -104,8 +114,59 @@ namespace ZombieCityCleaner.Fauna
             g.atacante = null;
             g.largaAte = agora + (fugir ? Random.Range(60f, 120f) : 30f);
             g.cercoDeTeste = false;
+            g.revideAte = g.chamadoAte = -1f;
             foreach (var m in g.membros)
                 if (m != null && !m.Morto) m.Espantar(de, agora, fugir);
+        }
+
+        /// <summary>
+        /// (20/11/2026, a pedido: "quando atacamos ele, independe ser de dia ou de noite, se estou ferido ou não, ele e a
+        /// alcateia deveria atacar, os filhotes recuados para trás") alguém atacou a matilha de lobos (o tiro ou o golpe num
+        /// deles, um deles morto): o líder uiva chamando todos, e a matilha cerca quem atacou por 60 s (cada novo ataque
+        /// estica), de dia ou de noite, sem o tiro espantar. O fogo, o carro, o teto e a distância ainda seguram, e o alfa
+        /// morto ainda desfaz a matilha. Desde 20/11/2026 o coiote também (o chamado dele é o coro de latidos).
+        /// </summary>
+        internal void MatilhaAtacada(Grupo g, JogadorRede autor, float agora)
+        {
+            // (20/11/2026, a pedido: os coiotes também "não atacam quando eu ataco") o lobo e o coiote
+            if (g == null || autor == null || g.desfeita || (g.especie != Especie.Lobo && g.especie != Especie.Coiote)) return;
+            if (!autor.AlvoValido || autor.Vida == null || autor.Vida.Caido.Value) return;
+            g.revideAte = agora + 60f;
+            if (g.alvo == autor) return;   // (já cercando quem atacou: só estica o revide)
+            g.alvo = autor;
+            g.presa = null;
+            g.carcaca = null;
+            g.atacante = null;
+            g.largaAte = 0f;
+            g.cercoDeTeste = false;
+            g.rondaGiro = Random.Range(0f, 360f);
+            LadoDosFilhotes(g, autor);
+            ChamarAMatilha(g, agora);
+            foreach (var m in g.membros)
+                if (m != null && !m.Morto) m.AtenderOChamado(agora);
+            if (autor.Vida != null) autor.Vida.AbalarAgora(8f, MotivoDaMente.Susto);
+        }
+
+        // o líder (vivo e perto) uiva chamando a matilha: parado uns 4 s; os botes começam depois do uivo
+        void ChamarAMatilha(Grupo g, float agora)
+        {
+            var l = g.lider;
+            if (l == null || l.Morto)
+            {
+                g.proximoBote = Mathf.Max(g.proximoBote, agora + 1.5f);
+                return;
+            }
+            l.ComecarUivo(this, agora, 4f);
+            g.chamadoAte = agora + 4f;
+            g.proximoBote = Mathf.Max(g.proximoBote, g.chamadoAte + Random.Range(0.5f, 1.5f));
+        }
+
+        // os filhotes ficam do lado em que a matilha estava, longe de quem ela cerca
+        static void LadoDosFilhotes(Grupo g, JogadorRede j)
+        {
+            Vector3 lado = g.Centro - j.transform.position;
+            lado.y = 0f;
+            g.ladoDosFilhotes = lado.sqrMagnitude > 0.5f ? lado.normalized : -j.transform.forward;
         }
 
         /// <summary>O alfa (ou o líder) da matilha morreu: ela se desfaz (todos fogem e não atacam mais por uns minutos).</summary>
@@ -225,6 +286,23 @@ namespace ZombieCityCleaner.Fauna
         }
 
         /// <summary>O F1: a matilha mais perto cerca o jogador agora (sem esperar a noite e o sorteio).</summary>
+        /// <summary>O F1 (20/11/2026): o lobo vivo mais perto uiva agora, com a pose.</summary>
+        public string UivoDeTeste(JogadorRede j)
+        {
+            if (!_servidor || j == null) return "Só o anfitrião.";
+            Bicho melhor = null;
+            float m = float.MaxValue;
+            foreach (var b in _ativos)
+            {
+                if (b.Morto || b.Especie != Especie.Lobo) continue;
+                float d = Vector3.Distance(b.transform.position, j.transform.position);
+                if (d < m) { m = d; melhor = b; }
+            }
+            if (melhor == null) return "Nenhum lobo por perto (ponha lobos antes).";
+            melhor.ComecarUivo(this, Time.time);
+            return $"{melhor.Dados.NomeDaVariante(melhor.Variante)} a {m:0} m uivando.";
+        }
+
         public string CercarDeTeste(JogadorRede j)
         {
             if (!_servidor || j == null) return "Só o anfitrião.";

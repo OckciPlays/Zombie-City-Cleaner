@@ -254,7 +254,8 @@ namespace ZombieCityCleaner.Zombies
                 foreach (var p in partes) p.interpolation = RigidbodyInterpolation.Interpolate;
             PassoDosMusculos();
             PassoDaEstatua();
-            if (_passosSemInterpolar <= 0 && !_comMusculos && !_vigiando) enabled = false;
+            bool tornado = PassoDoTornado();   // (o tornado perto: o corpo sobe e roda; CorpoDeZumbi.Tornado.cs)
+            if (_passosSemInterpolar <= 0 && !_comMusculos && !_vigiando && !tornado) enabled = false;
         }
 
         /// <summary>Depois de assentar, a física para (o corpo vira cinemático, parado no lugar).</summary>

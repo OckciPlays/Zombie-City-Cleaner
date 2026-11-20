@@ -9,7 +9,7 @@ namespace ZombieCityCleaner.Loot
     /// a mesma dos outros itens), e o ícone (128×128) e a foto (600×500) são desenhados das mesmas caixinhas, vistas de cima
     /// e de lado como os ícones do loot.py. Nada disso vai para as cenas nem para os arquivos: tudo nasce no Play.
     /// </summary>
-    public static class ItensDaCaca
+    public static partial class ItensDaCaca
     {
         /// <summary>
         /// Os itens com o modelo daqui (a caça; e o bagre da pesca, da etapa 3; e, em 18/11/2026, os gravetos, o espeto e a
@@ -22,10 +22,36 @@ namespace ZombieCityCleaner.Loot
         {
             public Vector3 centro, tamanho;
             public int px, py;   // a célula da paleta (x, y de cima para baixo)
+            public float giro;   // (19/11/2026) o giro em volta do eixo vertical, no centro dela (graus): as peças redondas
         }
 
-        static Caixa C(float x, float y, float z, float lx, float ly, float lz, int px, int py) =>
-            new Caixa { centro = new Vector3(x, y, z), tamanho = new Vector3(lx, ly, lz), px = px, py = py };
+        static Caixa C(float x, float y, float z, float lx, float ly, float lz, int px, int py, float giro = 0f) =>
+            new Caixa { centro = new Vector3(x, y, z), tamanho = new Vector3(lx, ly, lz), px = px, py = py, giro = giro };
+
+        // a face de uma caixa girada: a normal e os cantos no giro dela
+        static Vector3 Girada(Caixa c, Vector3 v) => c.giro == 0f ? v : Quaternion.Euler(0f, c.giro, 0f) * v;
+        static Vector3 PontoGirado(Caixa c, Vector3 p) => c.giro == 0f ? p : c.centro + Quaternion.Euler(0f, c.giro, 0f) * (p - c.centro);
+
+        // um disco (o pandeiro, a boca e o bojo do violão): seis faixas pelo meio, giradas de 30 em 30 graus, com a ponta de
+        // cada uma num lado do dodecágono de raio de dentro 'raio' (as pontas se encontram nos cantos: o contorno fica liso;
+        // quadrados girados deixariam pontas, como uma estrela); a altura 'alto' em y
+        static IEnumerable<Caixa> Disco(float x, float y, float z, float raio, float alto, int px, int py)
+        {
+            float largura = 2f * raio * Mathf.Tan(15f * Mathf.Deg2Rad);
+            for (int k = 0; k < 6; k++) yield return C(x, y, z, raio * 2f, alto, largura, px, py, k * 30f);
+        }
+
+        // um aro de 12 lados (a parede do pandeiro): o raio do meio da parede, a espessura e a altura (cada tábua do tamanho
+        // do lado de fora: os cantos se encontram por fora, sem dentes)
+        static IEnumerable<Caixa> Aro(float y, float raio, float espessura, float alto, int px, int py)
+        {
+            float lado = 2f * (raio + espessura * 0.5f) * Mathf.Tan(15f * Mathf.Deg2Rad);
+            for (int k = 0; k < 12; k++)
+            {
+                float a = k * 30f * Mathf.Deg2Rad;
+                yield return C(raio * Mathf.Cos(a), y, raio * Mathf.Sin(a), espessura, alto, lado, px, py, -k * 30f);
+            }
+        }
 
         // as caixinhas de cada item (metros; o chão em y = 0) e as cores da paleta
         static Caixa[] Pecas(Item i) => i switch
@@ -113,55 +139,11 @@ namespace ZombieCityCleaner.Loot
                 C(0.01f, 0.022f, 0.064f, 0.07f, 0.006f, 0.03f, 6, 6),
                 C(0.225f, 0.0435f, 0.012f, 0.014f, 0.004f, 0.014f, 2, 3),
             },
-            // os instrumentos (18/11/2026): o violão deitado (o bojo, a boca, o cavalete, o braço, a cabeça e as cordas)
-            Item.Violao => new[]
-            {
-                C(-0.25f, 0.05f, 0f, 0.36f, 0.1f, 0.38f, 12, 4),
-                C(0.01f, 0.05f, 0f, 0.24f, 0.1f, 0.3f, 12, 4),
-                C(-0.06f, 0.101f, 0f, 0.09f, 0.004f, 0.09f, 2, 0),
-                C(-0.31f, 0.102f, 0f, 0.03f, 0.006f, 0.14f, 2, 0),
-                C(0.33f, 0.07f, 0f, 0.42f, 0.04f, 0.06f, 1, 14),
-                C(0.6f, 0.065f, 0f, 0.14f, 0.03f, 0.085f, 1, 14),
-                C(0.12f, 0.106f, 0f, 0.84f, 0.003f, 0.04f, 2, 8),
-            },
-            // o pandeiro: a pele, o aro e as platinelas
-            Item.Pandeiro => new[]
-            {
-                C(0f, 0.057f, 0f, 0.24f, 0.006f, 0.24f, 10, 9),
-                C(0.12f, 0.03f, 0f, 0.02f, 0.06f, 0.26f, 12, 4),
-                C(-0.12f, 0.03f, 0f, 0.02f, 0.06f, 0.26f, 12, 4),
-                C(0f, 0.03f, 0.12f, 0.24f, 0.06f, 0.02f, 12, 4),
-                C(0f, 0.03f, -0.12f, 0.24f, 0.06f, 0.02f, 12, 4),
-                C(0.133f, 0.03f, 0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
-                C(0.133f, 0.03f, -0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
-                C(-0.133f, 0.03f, 0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
-                C(-0.133f, 0.03f, -0.06f, 0.008f, 0.03f, 0.04f, 2, 8),
-                C(0.06f, 0.03f, 0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
-                C(-0.06f, 0.03f, 0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
-                C(0.06f, 0.03f, -0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
-                C(-0.06f, 0.03f, -0.133f, 0.04f, 0.03f, 0.008f, 2, 8),
-            },
-            // a gaita: as tampas de metal e o pente escuro com os furos na frente
-            Item.Gaita => new[]
-            {
-                C(0f, 0.0125f, 0f, 0.1f, 0.017f, 0.026f, 2, 3),
-                C(0f, 0.0235f, 0f, 0.104f, 0.005f, 0.028f, 14, 3),
-                C(0f, 0.0025f, 0f, 0.104f, 0.005f, 0.028f, 14, 3),
-            },
-            // a flauta doce: o corpo de madeira clara, a cabeça e o pé, a janela e os furos
-            Item.Flauta => new[]
-            {
-                C(0f, 0.012f, 0f, 0.38f, 0.024f, 0.024f, 13, 4),
-                C(0.21f, 0.014f, 0f, 0.06f, 0.028f, 0.028f, 12, 4),
-                C(-0.205f, 0.013f, 0f, 0.04f, 0.026f, 0.026f, 12, 4),
-                C(0.195f, 0.0285f, 0f, 0.012f, 0.002f, 0.01f, 2, 0),
-                C(0.08f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-                C(0.04f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-                C(0f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-                C(-0.04f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-                C(-0.08f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-                C(-0.12f, 0.0245f, 0f, 0.008f, 0.002f, 0.008f, 2, 0),
-            },
+            // os instrumentos (18/11/2026; 19/11/2026, mais detalhados para o vídeo da fogueira: ItensDaCaca.Instrumentos)
+            Item.Violao => Violao(),
+            Item.Pandeiro => Pandeiro(),
+            Item.Gaita => Gaita(),
+            Item.Flauta => Flauta(),
             _ => null,
         };
 
@@ -217,7 +199,8 @@ namespace ZombieCityCleaner.Loot
                     Cantos(c, normal, out var a, out var b, out var d, out var e);
                     int i0 = v.Count;
                     v.Add(a); v.Add(b); v.Add(d); v.Add(e);
-                    for (int k = 0; k < 4; k++) { n.Add(normal); uv.Add(cor); }
+                    var girada = Girada(c, normal);
+                    for (int k = 0; k < 4; k++) { n.Add(girada); uv.Add(cor); }
                     t.Add(i0); t.Add(i0 + 1); t.Add(i0 + 2);
                     t.Add(i0); t.Add(i0 + 2); t.Add(i0 + 3);
                 }
@@ -245,6 +228,8 @@ namespace ZombieCityCleaner.Loot
             e = meio - du + dw;
             // o sentido: na Unity, a frente do triângulo (a, b, d) é para onde (b - a) × (d - a) aponta (o horário visto de fora)
             if (Vector3.Dot(Vector3.Cross(b - a, d - a), normal) < 0f) { var x = b; b = e; e = x; }
+            // a caixa girada: os cantos giram em volta do centro dela (o sentido não muda)
+            a = PontoGirado(c, a); b = PontoGirado(c, b); d = PontoGirado(c, d); e = PontoGirado(c, e);
         }
 
         // ------------------------------------------------------------------ o ícone e a foto (desenhados das caixinhas)
@@ -293,7 +278,7 @@ namespace ZombieCityCleaner.Loot
             foreach (var c in caixas)
                 for (int k = 0; k < 8; k++)
                 {
-                    var p = paraTela * (c.centro + Vector3.Scale(c.tamanho * 0.5f, new Vector3((k & 1) == 0 ? -1 : 1, (k & 2) == 0 ? -1 : 1, (k & 4) == 0 ? -1 : 1)));
+                    var p = paraTela * PontoGirado(c, c.centro + Vector3.Scale(c.tamanho * 0.5f, new Vector3((k & 1) == 0 ? -1 : 1, (k & 2) == 0 ? -1 : 1, (k & 4) == 0 ? -1 : 1)));
                     x0 = Mathf.Min(x0, p.x); x1 = Mathf.Max(x1, p.x);
                     y0 = Mathf.Min(y0, p.y); y1 = Mathf.Max(y1, p.y);
                 }
@@ -314,13 +299,14 @@ namespace ZombieCityCleaner.Loot
             foreach (var c in caixas)
             {
                 var cor = CorDaPaleta(c.px, c.py);
-                foreach (var normal in Normais)
+                foreach (var reta in Normais)
                 {
+                    var normal = Girada(c, reta);
                     float luz = Vector3.Dot(normal, olho);
                     if (luz <= 0.01f) continue;
                     float sombra = normal.y > 0.5f ? 1.12f : normal.x > 0.5f || normal.x < -0.5f ? 0.72f : 0.92f;
                     var tinta = new Color32((byte)Mathf.Clamp(cor.r * sombra, 0, 255), (byte)Mathf.Clamp(cor.g * sombra, 0, 255), (byte)Mathf.Clamp(cor.b * sombra, 0, 255), 255);
-                    Cantos(c, normal, out var a, out var b, out var d, out var e);
+                    Cantos(c, reta, out var a, out var b, out var d, out var e);
                     var q = new[] { Tela(a, out float za), Tela(b, out float zb), Tela(d, out float zd), Tela(e, out float ze) };
                     Preencher(px, fundo, largura, altura, q, new Vector3(za, zb, zd), tinta);
                 }

@@ -74,6 +74,7 @@ namespace ZombieCityCleaner.Sobreviventes
             int semente = quem.Identidade.Value.semente;
             _instancia._falas.RemoveAll(f => f.quem == quem);
             string texto = lista[Random.Range(0, lista.Length)];
+            quem.VozLocal(Combat.TipoDeVoz.Expressao, 0.8f);   // (19/11/2026: o "hum" de quem fala, no lugar dos bipes)
             Ultima = $"{quem.Identidade.Value.papel}: {texto}";
             _instancia._falas.Add(new Fala
             {
@@ -127,7 +128,7 @@ namespace ZombieCityCleaner.Sobreviventes
                 while (f.letrasTocadas < letras)
                 {
                     char c = f.texto[f.letrasTocadas++];
-                    if (perto && char.IsLetter(c) && f.letrasTocadas % 2 == 1)
+                    if (perto && !Combat.VozDoPersonagem.TemVozes && char.IsLetter(c) && f.letrasTocadas % 2 == 1)
                         Combat.Efeitos.Som(Bipe(f.tom), f.quem.transform.position + Vector3.up * 1.7f, 0.5f, true, Alcance);
                 }
                 _falas[i] = f;

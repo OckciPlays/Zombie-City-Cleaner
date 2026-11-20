@@ -1015,6 +1015,7 @@ namespace ZombieCityCleaner.Sobreviventes
             if (autor != null && NaEstrada) CarrosQuebradosDoMundo.Instancia?.TornarHostil(cena, autor);
             if (autor != null) grupo?.Ver(autor, autor.transform.position, this);
             else if (vida > 0f && Random.value < 0.3f) Falar(Frase.Zumbis);
+            VozDoNpc(vida > 0f ? TipoDeVoz.Golpe : TipoDeVoz.Dor);   // (19/11/2026: a voz)
             if (vida > 0f)
             {
                 ReagirAoTiro(Time.time);   // (18/11/2026) para trás da proteção, a mira atrapalhada

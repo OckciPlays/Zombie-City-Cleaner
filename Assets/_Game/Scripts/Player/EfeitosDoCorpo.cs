@@ -206,7 +206,9 @@ namespace ZombieCityCleaner.Player
                     _calafrioDura = Random.Range(2f, 3f);
                     _proximoCalafrio = t + _calafrioDura + Random.Range(20f, 40f);
                     _dentesNaOnda = false;
-                    if (sons) Tocar(SomDoCorpo.Calafrio, VolumeDosSons * Mathf.Max(0.4f, _febre));
+                    // (19/11/2026: o frio na respiração gravada, na voz do jogador)
+                    var frio = _rede != null ? VozDoPersonagem.Um(_rede.PessoaDaVoz, TipoDeVoz.RespiracaoFrio) : null;
+                    if (sons) Tocar(frio != null ? frio : SomDoCorpo.Calafrio, VolumeDosSons * Mathf.Max(0.4f, _febre));
                 }
             }
             else if (!comFebre) _proximoCalafrio = -1f;
@@ -229,7 +231,10 @@ namespace ZombieCityCleaner.Player
                 if (t >= _proximaRespiracao)
                 {
                     bool pesada = e.Sepse;
-                    Tocar(pesada ? SomDoCorpo.RespiracaoPesada : SomDoCorpo.Respiracao, VolumeDosSons * _febre * (pesada ? 1.1f : 0.85f));
+                    // (20/11/2026, os do sfxjar) a respiração ofegante gravada, de homem ou de mulher pelo corpo do personagem (a
+                    // feita em código, a reserva dela aqui, saiu; a crise de pânico ainda usa a do SomDoCorpo)
+                    var ofegante = SonsGravados.Um("Corpo", _rede != null && _rede.Aparencia.Value.EhMulher ? "ofegante_mulher_" : "ofegante_homem_");
+                    Tocar(ofegante, VolumeDosSons * _febre * (pesada ? 0.8f : 0.5f));
                     _proximaRespiracao = t + (pesada ? Random.Range(3f, 4.5f) : Random.Range(6f, 10f));
                 }
             }

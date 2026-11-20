@@ -107,7 +107,7 @@ namespace ZombieCityCleaner.World
             bool aberta = _estado.TryGetValue(j.chave, out byte bits) ? (bits & BitAberta) != 0 : JanelaAbertaNoComeco(j.construcao.semente, j.indice);
             if (aberta && Barricada(j.chave)) aberta = false;   // (a barricada de tábuas, 11/11/2026)
             j.Definir(aberta, ja);
-            if (!ja && j.Aberta != antes) Efeitos.Som(j.Aberta ? SomDasPortas.Abrir : SomDasPortas.Fechar, j.Meio, 0.55f, true, 20f);
+            if (!ja && j.Aberta != antes) Efeitos.Som(j.Aberta ? SomDasPortas.JanelaAbrir : SomDasPortas.JanelaFechar, j.Meio, 0.55f, true, 20f);
         }
 
         /// <summary>As janelas vivas (as que abrem) a até 'raio' m de 'ponto' (os sobreviventes atirando da janela, 18/11/2026).</summary>

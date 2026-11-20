@@ -112,8 +112,8 @@ namespace ZombieCityCleaner.Vehicles
             float antes = visto;
             visto = Mathf.MoveTowards(visto, aberto ? 1f : 0f, dt / (aberto ? 0.7f : 0.45f));
             if (visto == antes) return;
-            if (antes == 0f) Efeitos.Som(SomDoCarro.PortaAbrir, capo.position, 0.6f, true, 20f);
-            if (visto == 0f) Efeitos.Som(SomDoCarro.PortaFechar, capo.position, 0.8f, true, 30f);
+            if (antes == 0f) Efeitos.Som(SomDoCarro.CapoAbrir, capo.position, 0.6f, true, 20f);   // (19/11/2026: o capô gravado)
+            if (visto == 0f) Efeitos.Som(SomDoCarro.CapoFechar, capo.position, 0.8f, true, 30f);
             float k = aberto ? Mathf.SmoothStep(0f, 1f, visto) : visto * visto;
             capo.localRotation = repouso * Quaternion.Euler(-abertura * k, 0f, 0f);
         }

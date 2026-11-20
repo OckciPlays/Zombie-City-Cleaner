@@ -3,23 +3,20 @@ using UnityEngine;
 namespace ZombieCityCleaner.Combat
 {
     /// <summary>
-    /// Os sons do fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte), gerados por código como os da comida: o maço
-    /// sacudindo, a pedra do isqueiro raspando com a chama pegando, a chama, a tragada (o chiado da brasa e o ar entrando),
-    /// o sopro da baforada e o peteleco. Cada um é feito na primeira vez que toca.
+    /// Os sons do fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço sacudindo, o isqueiro (o gravado, com a
+    /// chama pegando), a tragada (o chiado da brasa e o ar entrando), o sopro da baforada e o peteleco. Os que não são
+    /// gravados são gerados por código como os da comida, cada um na primeira vez que toca.
+    /// (20/11/2026: o isqueiro e a chama feitos em código, a reserva do gravado, saíram.)
     /// </summary>
     public static class SomDoFumo
     {
         const int Taxa = 44100;
-        static AudioClip _sacudir, _pedra, _chama, _tragada, _sopro, _peteleco;
+        static AudioClip _sacudir, _tragada, _sopro, _peteleco;
 
         /// <summary>Duas batidinhas do maço na palma (o cigarro subindo).</summary>
         public static AudioClip Sacudir => _sacudir ??= Fazer("Maço sacudindo", 0.16f, (t, r, _) => Batida(t, r, 0f, 0.55f, 0.012f) + Batida(t, r, 0.07f, 0.4f, 0.010f));
-        /// <summary>A pedra raspando na roda, o estalo e a chama pegando (o "fff").</summary>
-        public static AudioClip Pedra => _pedra ??= Fazer("Isqueiro", 0.42f, (t, r, f) =>
-            Faixa(t, 0f, 0.07f) * Ruido(r) * 0.35f + Batida(t, r, 0.075f, 0.6f, 0.006f) + Faixa(t, 0.08f, 0.42f) * f.Baixa(Ruido(r), 0.18f) * 0.45f);
-        /// <summary>A chama acesa (um sopro baixinho, tremendo).</summary>
-        public static AudioClip Chama => _chama ??= Fazer("Chama", 1.0f, (t, r, f) =>
-            Faixa(t, 0f, 1.0f) * f.Baixa(Ruido(r), 0.08f) * (0.22f + 0.06f * Mathf.Sin(t * 37f)));
+        /// <summary>O isqueiro: a pedra raspando na roda e a chama pegando (o gravado do sfxjar, sorteado; null sem ele).</summary>
+        public static AudioClip Pedra => SonsGravados.Um("Fumo", "isqueiro_");   // (20/11/2026: só o gravado)
         /// <summary>A tragada: o ar entrando pelo filtro e o chiado da brasa (estalinhos soltos).</summary>
         public static AudioClip Tragada => _tragada ??= Fazer("Tragada", 0.95f, (t, r, f) =>
             Faixa(t, 0.02f, 0.9f) * f.Baixa(Ruido(r), 0.10f) * 0.30f + (r.NextDouble() < 0.0016 ? (float)(r.NextDouble() * 2 - 1) * 0.5f : 0f));

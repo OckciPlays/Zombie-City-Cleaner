@@ -446,8 +446,6 @@ namespace ZombieCityCleaner.Loot
             }
         }
 
-        float _proximoEstalo;
-
         void Update()
         {
             // cada cópia: o fogo das fogueiras acende e apaga pelo relógio
@@ -456,10 +454,8 @@ namespace ZombieCityCleaner.Loot
             if (IsServer && IsSpawned) AssarNoServidor();   // (o assar, 18/11/2026: o fogo conta para o que está nele)
             ArmadilhasAgora();   // as armadilhas (11/11/2026, a etapa 5a: ConstrucoesNoMundo.Armadilhas.cs): o anfitrião decide, e cada cópia vê
             BarricadasAgora();   // as de tábuas (11/11/2026, a etapa 5b: ConstrucoesNoMundo.Barricadas.cs): a malha danificada e o som de quem mexe
-            var camDoEstalo = Camera.main;
-            Vector3 ouvido = camDoEstalo != null ? camDoEstalo.transform.position : Vector3.zero;
-            float maisPerto = float.MaxValue;
-            Vector3 estalo = default;
+            // (o som das fogueiras é o laço gravado do fogo, o SomDasChamas; 20/11/2026: os estalos da lenha feitos em
+            // código, a reserva dele, saíram)
             foreach (var c in _lista)
                 if (Itens.EhFogueira(c.tipo) && _objetos.TryGetValue(c.id, out var o) && o != null)
                 {
@@ -472,19 +468,7 @@ namespace ZombieCityCleaner.Loot
                     // (18/11/2026) mais lenha guardada, o fogo maior (de 75% a 130%, cheio com uns 12 min)
                     float cheia = Mathf.Clamp01((c.valor - Agora) / (12f * 60f));
                     fogo.localScale = Vector3.one * Mathf.Lerp(0.75f, 1.3f, cheia);
-                    float d2 = (c.pos - ouvido).sqrMagnitude;
-                    if (d2 < maisPerto)
-                    {
-                        maisPerto = d2;
-                        estalo = c.pos;
-                    }
                 }
-            // o estalo da lenha da fogueira acesa mais perto (até 18 m), como as do acampamento (18/11/2026)
-            if (camDoEstalo != null && maisPerto < 18f * 18f && Time.time >= _proximoEstalo)
-            {
-                _proximoEstalo = Time.time + UnityEngine.Random.Range(0.07f, 0.4f);
-                ZombieCityCleaner.Combat.Efeitos.Som(Sobreviventes.AcampamentosDoMundo.Estalos(), estalo + Vector3.up * 0.3f, UnityEngine.Random.Range(0.18f, 0.45f), true, 20f);
-            }
             InformarTetos();
             if (!IsServer || !IsSpawned || Time.time < _proximoTique) return;
             // o anfitrião, a cada meio segundo: a chuva no fogo e os zumbis nas barricadas
@@ -641,6 +625,9 @@ namespace ZombieCityCleaner.Loot
             render.sharedMaterial = material;
             render.shadowCastingMode = ShadowCastingMode.Off;
             ps.Play();
+            // o som do fogo de verdade (19/11/2026, o Nature Sound FX): as chamas do mundo de 0,2 para cima (SomDasChamas);
+            // as da primeira pessoa ficam perto da origem e não têm som (o da tocha do dono vem do corpo)
+            if (noMundo) ZombieCityCleaner.Combat.SomDasChamas.Por(fogo, tamanho);
             return fogo;
         }
     }

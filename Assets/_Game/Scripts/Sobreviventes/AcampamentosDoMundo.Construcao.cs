@@ -17,7 +17,7 @@ namespace ZombieCityCleaner.Sobreviventes
     ///  - a cerca: os pedaços de alambrado, os muros de sacos de areia e os contêineres (<see cref="ModelosDaEstrada"/>) e as
     ///    barreiras de concreto do portão (o modelo do Blender), com as caixas de colisão;
     ///  - as bancas: o balcão, as caixas, os postes, a lona, a placa escrita (o <see cref="Letreiro"/>) e uma lâmpada;
-    ///  - as barracas dos moradores e as fogueiras (o fogo das construções, com a luz e um estalo de vez em quando).
+    ///  - as barracas dos moradores e as fogueiras (o fogo das construções, com a luz e o laço gravado do fogo, o SomDasChamas).
     /// Pronta, a área do NavMesh em volta é refeita (<see cref="NavMeshDoMundo.Mudou"/>).
     /// </summary>
     public partial class AcampamentosDoMundo
@@ -36,8 +36,7 @@ namespace ZombieCityCleaner.Sobreviventes
         static readonly Dictionary<int, Mesh> _malhasDasPecas = new Dictionary<int, Mesh>();
         [System.NonSerialized] Material _letras;
         int _versaoDasLetras = -1;
-        float _proximaRevisao, _proximoEstalo;
-        static AudioClip[] _estalos;
+        float _proximaRevisao;
 
         static readonly string[] Lonas = { "CarroAzul", "CarroVerde", "Laranja", "CarroVinho", "Ferrugem" };
 
@@ -415,55 +414,18 @@ namespace ZombieCityCleaner.Sobreviventes
             }
         }
 
-        // o fogo tremula, e a mais perto estala de vez em quando (até 20 m de quem ouve)
+        // o fogo tremula (o som é o laço gravado do fogo, o SomDasChamas; 20/11/2026: os estalos da lenha feitos em código,
+        // a reserva dele, saíram)
         void Fogueiras()
         {
-            var cam = Camera.main;
-            Vector3 ouvido = cam != null ? cam.transform.position : Vector3.zero;
-            float agora = Time.time, menor = float.MaxValue;
-            Vector3 maisPerto = default;
+            float agora = Time.time;
             foreach (var c in _construidos.Values)
                 foreach (var (pos, luz) in c.Fogueiras)
                 {
                     if (luz != null && luz.gameObject.activeSelf == _fogueirasApagadas) luz.gameObject.SetActive(!_fogueirasApagadas);
                     if (_fogueirasApagadas) continue;
                     if (luz != null) luz.intensity = 2.6f + 0.9f * Mathf.PerlinNoise(agora * 3.1f, pos.x) + 0.4f * Mathf.Sin(agora * 17f + pos.z);
-                    float d = (pos - ouvido).sqrMagnitude;
-                    if (d < menor)
-                    {
-                        menor = d;
-                        maisPerto = pos;
-                    }
                 }
-            if (cam == null || menor > 20f * 20f || agora < _proximoEstalo) return;
-            _proximoEstalo = agora + Random.Range(0.07f, 0.4f);
-            Efeitos.Som(Estalos(), maisPerto, Random.Range(0.18f, 0.45f), true, 20f);
-        }
-
-        // os estalos da lenha: estouros curtos de ruído (gerados uma vez)
-        internal static AudioClip[] Estalos()   // (também as fogueiras dos jogadores, 18/11/2026)
-        {
-            if (_estalos != null) return _estalos;
-            const int taxa = 44100;
-            var rnd = new System.Random(77);
-            _estalos = new AudioClip[10];
-            for (int k = 0; k < _estalos.Length; k++)
-            {
-                int n = (int)(taxa * (0.02f + 0.05f * (float)rnd.NextDouble()));
-                var dados = new float[n];
-                float queda = 60f + 140f * (float)rnd.NextDouble();
-                float anterior = 0f;
-                for (int i = 0; i < n; i++)
-                {
-                    float t = i / (float)taxa;
-                    float ruido = (float)(rnd.NextDouble() * 2.0 - 1.0);
-                    anterior = Mathf.Lerp(anterior, ruido, 0.55f);   // um pouco mais grave que o ruído branco
-                    dados[i] = anterior * Mathf.Exp(-t * queda) * 0.9f;
-                }
-                _estalos[k] = AudioClip.Create($"Estalo {k}", n, 1, taxa, false);
-                _estalos[k].SetData(dados, 0);
-            }
-            return _estalos;
         }
     }
 }

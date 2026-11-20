@@ -17,7 +17,6 @@ namespace ZombieCityCleaner.EditorTools
     {
         const string Pasta = "Assets/_Game/Audio/Trilha";
         const string Asset = "Assets/_Game/Audio/Resources/TrilhaDoJogo.asset";
-        const string PastaDoAmbiente = "Assets/_Game/Audio/Ambiente";
 
         [System.Serializable]
         class Info
@@ -56,27 +55,6 @@ namespace ZombieCityCleaner.EditorTools
             {
                 AssetDatabase.StopAssetEditing();
             }
-            // o ambiente: os grilos em estéreo (laço longo, comprimidos na memória); os eventos, mono e curtos
-            var doAmbiente = Directory.Exists(PastaDoAmbiente)
-                ? Directory.GetFiles(PastaDoAmbiente, "*.wav").Select(p => p.Replace('\\', '/')).OrderBy(p => p).ToArray() : new string[0];
-            foreach (var caminho in doAmbiente)
-            {
-                var imp = (AudioImporter)AssetImporter.GetAtPath(caminho);
-                if (imp == null) continue;
-                bool laco = Path.GetFileName(caminho).StartsWith("Grilos");
-                imp.forceToMono = !laco;
-                imp.loadInBackground = false;
-                var s = imp.defaultSampleSettings;
-                s.loadType = laco ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
-                s.compressionFormat = AudioCompressionFormat.Vorbis;
-                s.quality = 0.6f;
-                s.preloadAudioData = true;
-                imp.defaultSampleSettings = s;
-                imp.SaveAndReimport();
-            }
-            AudioClip[] DoAmbiente(string prefixo) => doAmbiente.Where(p => Path.GetFileNameWithoutExtension(p).StartsWith(prefixo))
-                .Select(AssetDatabase.LoadAssetAtPath<AudioClip>).Where(c => c != null).ToArray();
-
             string Nome(string p) => Path.GetFileNameWithoutExtension(p);
             AudioClip Clipe(string p) => AssetDatabase.LoadAssetAtPath<AudioClip>(p);
             AudioClip[] Varios(string prefixo) => arquivos.Where(p => Nome(p).StartsWith(prefixo)).Select(Clipe).Where(c => c != null).ToArray();
@@ -121,15 +99,6 @@ namespace ZombieCityCleaner.EditorTools
             trilha.sobreposicaoDoVento = info.sobreposicaoDoVento;
             trilha.rajadasDoVentoDeDia = info.rajadasDeDia;
             trilha.rajadasDoVentoDeNoite = info.rajadasDeNoite;
-            trilha.grilos = DoAmbiente("Grilos_");
-            trilha.latidos = DoAmbiente("Latido_");
-            trilha.uivos = DoAmbiente("Uivo_");
-            trilha.janelas = DoAmbiente("Janela_");
-            trilha.portas = DoAmbiente("Porta_");
-            trilha.placas = DoAmbiente("Placa_");
-            trilha.latas = DoAmbiente("Lata_");
-            trilha.madeira = DoAmbiente("Madeira_");
-            trilha.corvos = DoAmbiente("Corvos_");
             trilha.amanhecer = Clipe($"{Pasta}/momentos/amanhecer.ogg");
             trilha.morte = Clipe($"{Pasta}/momentos/morte.ogg");
             trilha.menu = Clipe($"{Pasta}/momentos/menu.ogg");
@@ -140,8 +109,7 @@ namespace ZombieCityCleaner.EditorTools
                       $"tempestade {trilha.tempestade?.blocos?.Length ?? 0}, tornado {trilha.tornado?.blocos?.Length ?? 0}, perigo {trilha.perigo.Length} (x3 camadas), " +
                       $"entradas {trilha.entradas.Length}, saídas {trilha.saidas.Length} + {trilha.saidasPelaPedra.Length} pela pedra, " +
                       $"vento {trilha.ventoDeDia.Length} + {trilha.ventoDeNoite.Length} (rajadas {trilha.rajadasDoVentoDeDia?.Length ?? 0}), " +
-                      $"ambiente {trilha.grilos.Length} grilos, {trilha.latidos.Length + trilha.uivos.Length} cachorros, {trilha.janelas.Length + trilha.portas.Length + trilha.placas.Length + trilha.latas.Length} do vento, " +
-                      $"{trilha.madeira.Length} madeira, {trilha.corvos.Length} corvos, amanhecer {(trilha.amanhecer != null ? "sim" : "não")}, morte {(trilha.morte != null ? "sim" : "não")}");
+                      $"amanhecer {(trilha.amanhecer != null ? "sim" : "não")}, morte {(trilha.morte != null ? "sim" : "não")}");
         }
     }
 }

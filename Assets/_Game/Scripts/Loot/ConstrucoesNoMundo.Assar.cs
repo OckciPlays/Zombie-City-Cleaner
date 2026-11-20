@@ -253,7 +253,11 @@ namespace ZombieCityCleaner.Loot
                 int chave = Chave(a.fogueira, a.lugar);
                 _assandoVistos.Add(chave);
                 if (!_assandoObjetos.TryGetValue(chave, out var o) || o == null) _assandoObjetos[chave] = o = MontarAssando(c.Value, a);
-                if (o != null) Tingir(o, a);
+                if (o != null)
+                {
+                    Tingir(o, a);
+                    Chiar(o, Acesa(c.Value));
+                }
             }
             _assandoSobrando.Clear();
             foreach (var chave in _assandoObjetos.Keys)
@@ -263,6 +267,30 @@ namespace ZombieCityCleaner.Loot
                 if (_assandoObjetos[chave] != null) Destroy(_assandoObjetos[chave]);
                 _assandoObjetos.Remove(chave);
             }
+        }
+
+        // (20/11/2026, o som do sfxjar que o Pedro aprovou) a comida chiando no fogo: em laço, só com a fogueira acesa
+        static void Chiar(GameObject o, bool acesa)
+        {
+            var som = o.GetComponent<AudioSource>();
+            if (som == null)
+            {
+                var clip = Combat.SonsGravados.Um("Comida", "chiando_");
+                if (clip == null) return;
+                som = o.AddComponent<AudioSource>();
+                som.clip = clip;
+                som.loop = true;
+                som.playOnAwake = false;
+                som.spatialBlend = 1f;
+                som.rolloffMode = AudioRolloffMode.Linear;
+                som.minDistance = 1f;
+                som.maxDistance = 14f;
+                som.dopplerLevel = 0f;
+                som.volume = 0.35f;
+                som.time = UnityEngine.Random.Range(0f, clip.length * 0.9f);
+            }
+            if (acesa && !som.isPlaying) som.Play();
+            else if (!acesa && som.isPlaying) som.Stop();
         }
 
         static GameObject Peca(Transform pai, string nome, Mesh malha, Material material)

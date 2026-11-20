@@ -33,6 +33,15 @@
 #   sumiam na borda de baixo; agora a pegada da corrida fica 3 cm mais à frente, girada no plano da palma, com o
 #   cotovelo mais baixo). O motor passou a ser o fazer5.py (com o braco4.py), no lugar do fazer2.py da rodada 2.
 # - A submetralhadora NÃO entra: ela voltou ao FBX original (a entrada dela está marcada como não usada).
+# - 19/11/2026, a pedido ("ao invés de quebrar esse pulso, leva o cotovelo mais pra frente, com isso o braço estica
+#   um pouco"): a esquerda da espingarda com o cotovelo à frente. A busca do cotovelo cobrava pouco pelo pulso dobrado
+#   (bom até 50) e muito por tirar o antebraço do lugar dele na tela (peso_tela 600, pq_tela 400, pq_meio 1500): agora
+#   o pulso é bom até 12 e cortado em 30, e o antebraço fica livre na tela (60, 60, 0); fora da pegada, o pulso fica
+#   em 35/18/70. O pulso parado foi de 48 para 30 graus e a torção de 16 para 2 (o pulso não afina mais). Reto de vez,
+#   ele pede o antebraço torcido 112 graus: sem osso de torção, 30 é o meio-termo.
+# - 19/11/2026, depois: o rifle, a sniper e o rifle de sucata com o mesmo cotovelo à frente, num passo depois deste
+#   arquivo (pegada_fogo_esticar.py: lê o FBX que sai daqui e refaz só os braços, a mão e os dedos no mesmo lugar, com a
+#   busca do cotovelo da espingarda). Quem gerar estas armas de novo aqui roda o esticar depois (os comandos estão nele).
 #
 # AS REGRAS DA PEGADA (o que a segunda tentativa aprendeu)
 # 1. Julgar pela câmera do jogo (55 graus na vertical, 1280x720), lado a lado com o original e com as referências, em
@@ -265,20 +274,21 @@ _POSES_SNIPER = {
 
 # ESPINGARDA: o p_final.json da rodada 3 (o params_r3.json da rodada3/).
 _PARAMS_ESPINGARDA = {'L': {'osso': 'pump',
+       'dobra_corte': 30,
        'C': [0.001, -0.498, 0.0255],
        'phi': 30,
        'alfa': 45,
        'g': [0.0, 0.09, -0.0375],
        'polegar_alvo': [0.03, -0.53, 0.032],
        'direto': 1,
-       'peso_tela': 600,
+       'peso_tela': 60,
        'peso_cot': 0,
        'tol': 0.001,
        'tol_polegar': 0.0008,
        'modo_dedos': 'fila',
        'pre': 5,
        'peso_encosto': 3.0,
-       'dobra_boa': 50,
+       'dobra_boa': 12,
        'rigido_cot': 0.9,
        'rigido_ombro': 0.9,
        'giro_caminho': 'antes',
@@ -286,8 +296,8 @@ _PARAMS_ESPINGARDA = {'L': {'osso': 'pump',
        'por_quadro': 1,
        'pq_gira_ombro': 1,
        'abre_dedos': 1.0,
-       'pq_tela': 400,
-       'pq_meio': 1500,
+       'pq_tela': 60,
+       'pq_meio': 0,
        'pq_suave': 1,
        'pq_cont': 150,
        'peso_vao_polegar': 8000.0,
@@ -304,7 +314,7 @@ _PARAMS_ESPINGARDA = {'L': {'osso': 'pump',
                               '10': [6, 75, 35],
                               '11': [6, 75, 35],
                               '13': [5, 60]}},
-       'no_caminho': [60, 24, 90],
+       'no_caminho': [35, 18, 70],
        'z_max': 0.04,
        'peso_z': 3.0,
        'peso_vizinho': 4.0,

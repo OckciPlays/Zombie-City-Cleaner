@@ -347,6 +347,7 @@ namespace ZombieCityCleaner.Vehicles
                 {
                     _batidaAte = -1f;
                     if (_maiorMudanca >= desgaste.batidaQueEstraga) BateuRpc(_pontoDaBatida, _maiorMudanca);
+                    SomDaBatida(transform.TransformPoint(_pontoDaBatida), _maiorMudanca);   // (19/11/2026: o som da batida, Carro.SomGravado.cs)
                 }
             }
             _velDoPasso = _corpo.linearVelocity;

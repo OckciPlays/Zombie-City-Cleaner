@@ -20,6 +20,8 @@ namespace ZombieCityCleaner.Fauna
     {
         float _avisoAte, _proximaPatada, _ultimaGente = -999f, _provocadoAte, _distanciaAntes, _fimDoAtaque;
         int _patadas, _patadasMax;
+        // (20/11/2026) a mãe defendendo o filhote atingido (ou morto): vem de mais longe e não larga tão cedo
+        float _defendendoAte;
         bool _falso, _decidiu, _decidiuAtaque, _vaiEmbora;
         JogadorRede _alvoDoUrso;
 
@@ -292,12 +294,12 @@ namespace ZombieCityCleaner.Fauna
                 }
                 return;
             }
-            if (d > 45f)
+            if (d > (agora < _defendendoAte ? 120f : 45f))
             {
                 Acalmar();
                 return;
             }
-            Ir(pj, Dados.correr * 0.85f);
+            Ir(pj, Dados.correr * (agora < _defendendoAte ? 0.95f : 0.85f));
         }
 
         // o filhote: segue a mãe; com perigo perto, corre para trás dela; sem a mãe, foge
@@ -317,6 +319,23 @@ namespace ZombieCityCleaner.Fauna
                     Fugir(agora, true);
                 }
                 else Pastar(f, agora);
+                return;
+            }
+            // (20/11/2026) a mãe atacando de verdade: o filhote não vai junto; fica para trás, a uns 25 m de quem ela ataca
+            if (!mae._pescando && mae.Estado == EstadoDoBicho.Investindo && mae._alvoDoUrso != null)
+            {
+                Vector3 briga = mae._alvoDoUrso.transform.position;
+                Vector3 lado = Plano(transform.position - briga);
+                if (lado.sqrMagnitude < 0.5f) lado = Plano(mae.transform.position - briga);
+                if (lado.sqrMagnitude < 0.5f) lado = -transform.forward;
+                float db = Vector3.Distance(Plano(transform.position), Plano(briga));
+                if (db < 25f)
+                {
+                    Estado = EstadoDoBicho.Andando;
+                    Ir(briga + lado.normalized * 27f, Dados.correr * 0.6f);
+                }
+                else { _temDestino = false; _velAlvo = 0f; Estado = EstadoDoBicho.Alerta; }
+                Olhar(briga);
                 return;
             }
             // (13/11) a patada na água da mãe pescando usa a pose do ataque: não é perigo (o filhote corria para dentro da água)
@@ -362,6 +381,7 @@ namespace ZombieCityCleaner.Fauna
             float ateAMae = Vector3.Distance(Plano(transform.position), Plano(mae.transform.position));
             if (ateAMae > 12f)
             {
+                ChorarLongeDaMae(agora);   // (19/11/2026: Bicho.SomGravado.cs)
                 Vector3 junto = mae.transform.position + LugarNoGrupo.normalized * 3f;
                 if (FaunaDoMundo.FunduraEm(junto) > 0.25f)
                 {
@@ -397,8 +417,8 @@ namespace ZombieCityCleaner.Fauna
             if (Variante == Variante.Filhote) { _perigo = ponto; _perigoAte = agora + 10f; return; }
             if (Estado == EstadoDoBicho.Investindo)
             {
-                // atacando: o negro às vezes desiste com o tiro; o pardo, quase nunca
-                if (Random.value < (Negro ? 0.3f : 0.08f))
+                // atacando: o negro às vezes desiste com o tiro; o pardo, quase nunca; a mãe defendendo, nunca
+                if (agora >= _defendendoAte && Random.value < (Negro ? 0.3f : 0.08f))
                 {
                     Acalmar();
                     _perigo = ponto;
@@ -423,17 +443,76 @@ namespace ZombieCityCleaner.Fauna
             }
         }
 
+        bool TemFilhotes()
+        {
+            if (Grupo == null || Variante == Variante.Filhote) return false;
+            foreach (var b in Grupo.membros)
+                if (b != null && !b.Morto && b != this && b.Variante == Variante.Filhote) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// (20/11/2026) A mãe defende o filhote (atingido ou morto por alguém; ou ela mesma ferida, com os filhotes): vem
+        /// direto, sem aviso e sem o falso ataque, de até 120 m, com mais patadas, e não foge (só quase morta, abaixo de
+        /// 12% da vida). O tiro no meio do ataque não a faz desistir.
+        /// </summary>
+        internal void DefenderFilhote(JogadorRede autor, float agora)
+        {
+            if (Morto || Copia || autor == null || !autor.AlvoValido) return;
+            if (Vida < Especies.Pontos(Especie, Variante) * 0.12f)
+            {
+                Acalmar();
+                _perigo = autor.transform.position;
+                _fugaAte = agora + 25f;
+                Fugir(agora, true);
+                return;
+            }
+            LargarPesca();
+            _alvoDoUrso = autor;
+            _ultimaGente = agora;
+            _provocadoAte = agora + 90f;
+            _defendendoAte = agora + 40f;
+            _perigoAte = -999f;
+            _decidiu = _decidiuAtaque = true;
+            _vaiEmbora = false;
+            if (Estado == EstadoDoBicho.Investindo && !_falso)
+            {
+                _fimDoAtaque = Mathf.Max(_fimDoAtaque, agora + 25f);
+                _patadasMax = Mathf.Max(_patadasMax, _patadas + 3);
+                return;
+            }
+            _falso = false;
+            ComecarAtaqueDoUrso(agora);
+            _fimDoAtaque = agora + 25f;
+            _patadasMax = Random.Range(4, 7);
+            ProximaDecisao = Mathf.Min(ProximaDecisao, agora + 0.1f);
+        }
+
         void FeridoUrso(JogadorRede autor, float agora)
         {
             LargarPesca();
             if (Variante == Variante.Filhote)
             {
+                // (20/11/2026, a pedido: "quando atiro no filhote, a mãe parece nem se importar") a mãe vem para cima de
+                // quem atirou; o filhote se esconde atrás dela (PensarFilhoteDeUrso); sem ela, foge
+                bool temMae = false;
+                if (autor != null && Grupo != null)
+                    foreach (var m in Grupo.membros)
+                        if (m != null && m != this && !m.Morto && m.Variante != Variante.Filhote) { m.DefenderFilhote(autor, agora); temMae = true; }
+                if (temMae)
+                {
+                    _alvoDoUrso = autor;
+                    _ultimaGente = agora;
+                    return;
+                }
                 Fugir(agora, true);
                 return;
             }
             _provocadoAte = agora + 60f;
             if (autor != null) _alvoDoUrso = autor;
             _ultimaGente = agora;
+            bool mae = TemFilhotes();
+            if (mae && autor != null) { DefenderFilhote(autor, agora); return; }   // (20/11/2026: a mãe sempre defende)
             if (Vida < Especies.Pontos(Especie, Variante) * 0.3f)
             {
                 Acalmar();

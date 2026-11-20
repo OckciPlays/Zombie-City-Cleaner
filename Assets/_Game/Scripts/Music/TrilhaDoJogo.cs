@@ -75,17 +75,8 @@ namespace ZombieCityCleaner.Music
         [Tooltip("As rajadas de cada bloco de vento (na mesma ordem dos blocos).")]
         public Rajadas[] rajadasDoVentoDeDia, rajadasDoVentoDeNoite;
 
-        [Header("O ambiente (a pedido em 29/10/2026; Audio/Ambiente, do Ferramentas/ambiente.py)")]
-        [Tooltip("Os grilos, à noite (em laço, estéreo).")]
-        public AudioClip[] grilos;
-        [Tooltip("Os cachorros longe: latidos e uivos (os uivos no ré menor da trilha).")]
-        public AudioClip[] latidos, uivos;
-        [Tooltip("O que o vento mexe: a janela, a porta, a placa de metal e a lata rolando.")]
-        public AudioClip[] janelas, portas, placas, latas;
-        [Tooltip("De dentro dos prédios: a madeira rangendo.")]
-        public AudioClip[] madeira;
-        [Tooltip("De dia: os corvos.")]
-        public AudioClip[] corvos;
+        // (20/11/2026) o ambiente feito em código (Audio/Ambiente: os grilos, os cachorros, a janela, a porta, a placa, a
+        // lata, a madeira e os corvos) saiu: o MaestroDaTrilha toca só os gravados de Resources/Ambiente
 
         [Header("Os momentos")]
         public AudioClip amanhecer;

@@ -100,12 +100,15 @@ namespace ZombieCityCleaner.Player
             {
                 if (_crise > 0.3f)
                 {
-                    Efeitos.Som(SomDoCorpo.RespiracaoPesada, Ouvido, 0.25f + 0.35f * _crise, false);
-                    _proximaRespiracao = Time.time + Random.Range(0.9f, 1.3f);
+                    // (19/11/2026: a respiração gravada, na voz do jogador; o próximo fôlego quando este acaba)
+                    var forte = _rede != null ? VozDoPersonagem.Um(_rede.PessoaDaVoz, TipoDeVoz.RespiracaoForte) : null;
+                    Efeitos.Som(forte != null ? forte : SomDoCorpo.RespiracaoPesada, Ouvido, 0.25f + 0.35f * _crise, false);
+                    _proximaRespiracao = Time.time + (forte != null ? forte.length * 0.95f : Random.Range(0.9f, 1.3f));
                 }
                 else
                 {
-                    Efeitos.Som(SomDoCorpo.Respiracao, Ouvido, 0.25f, false);
+                    var funda = _rede != null ? VozDoPersonagem.Um(_rede.PessoaDaVoz, TipoDeVoz.RespiracaoForte) : null;
+                    Efeitos.Som(funda != null ? funda : SomDoCorpo.Respiracao, Ouvido, funda != null ? 0.18f : 0.25f, false);
                     _proximaRespiracao = Time.time + Random.Range(7f, 14f);
                 }
             }

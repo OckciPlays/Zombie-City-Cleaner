@@ -268,7 +268,7 @@ namespace ZombieCityCleaner.Player
                 yield return Ate(11f / Fps); Tocar(SomDoFumo.Sacudir, 0.5f);
                 yield return Ate(15f / Fps); Tocar(SomDoFumo.Sacudir, 0.4f);
                 yield return Ate(ChamaAcende - 0.08f); Tocar(SomDoFumo.Pedra, 0.6f);
-                yield return Ate(ChamaAcende + 0.25f); Tocar(SomDoFumo.Chama, 0.4f);
+                yield return Ate(ChamaAcende + 0.25f);   // (o tempo da chama, que já vem no isqueiro gravado: a feita em código saiu, 20/11/2026)
                 yield return Ate(BrasaAcende); Tocar(SomDoFumo.Tragada, 0.45f);
             }
             else if (qual == 1)

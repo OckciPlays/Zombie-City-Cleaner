@@ -65,7 +65,7 @@ namespace ZombieCityCleaner.Player
         float _proximaRede;
         GUIStyle _estilo, _estiloPequeno;
         float _u;
-        static AudioClip _plop, _catraca, _estalo;
+        static AudioClip _plop, _estalo;
 
         void Awake()
         {
@@ -491,8 +491,9 @@ namespace ZombieCityCleaner.Player
                 if (Time.time >= _proximaCatraca)
                 {
                     _proximaCatraca = Time.time + 0.075f;
-                    if (_catraca == null) _catraca = GerarCatraca();
-                    Efeitos.Som(_catraca, _rede.Olho.position, 0.18f, false);
+                    // (20/11/2026) o molinete recolhendo: grãos da fita rebobinando (o sfxjar; a catraca feita em código, a
+                    // reserva dele, saiu)
+                    Efeitos.Som(SonsGravados.Um("Pesca", "molinete_"), _rede.Olho.position, 0.3f, false);
                 }
             }
             else if (_puxao > 0.15f) _distancia += _puxao * Leva * dt;
@@ -553,21 +554,6 @@ namespace ZombieCityCleaner.Player
                 dados[i] = (Mathf.Sin(fase) * 0.7f + filtro * 0.35f) * Mathf.Exp(-t * 18f);
             }
             return SomGerado.Clip("Plop", dados, taxa);
-        }
-
-        // a catraca do molinete: um tique seco e curto
-        static AudioClip GerarCatraca()
-        {
-            const int taxa = 22050;
-            int n = taxa / 40;
-            var dados = new float[n];
-            var r = new System.Random(5);
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)taxa;
-                dados[i] = ((float)(r.NextDouble() * 2 - 1) * 0.5f + Mathf.Sin(2f * Mathf.PI * 2400f * t) * 0.5f) * Mathf.Exp(-t * 400f);
-            }
-            return SomGerado.Clip("Catraca", dados, taxa);
         }
 
         // a linha arrebentando: um estalo e um zunido que cai

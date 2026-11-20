@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.Fauna
     /// </summary>
     public sealed class AnimacaoDoBicho
     {
-        public enum Pose : byte { Parado, Comendo, Alerta, Andando, Correndo, Atacando, Morto, Deitado, Nadando, Voando, DeitadoComendo }
+        public enum Pose : byte { Parado, Comendo, Alerta, Andando, Correndo, Atacando, Morto, Deitado, Nadando, Voando, DeitadoComendo, Uivando }
 
         struct Junta
         {
@@ -30,7 +30,7 @@ namespace ZombieCityCleaner.Fauna
         Junta _raiz, _corpo, _pescoco, _cabeca;
         readonly List<(Junta cima, Junta baixo, bool tras)> _pernas = new List<(Junta, Junta, bool)>();
         readonly List<Junta> _cauda = new List<Junta>(), _orelhas = new List<Junta>(), _asas = new List<Junta>(), _gomos = new List<Junta>();
-        float _fase, _tempo, _comer, _alerta, _morto, _deitado, _voar, _ataque, _andar, _correr, _orelhaAte, _orelhaGiro, _empe, _nadar, _comendoDeitado;
+        float _fase, _tempo, _comer, _alerta, _morto, _deitado, _voar, _ataque, _andar, _correr, _orelhaAte, _orelhaGiro, _empe, _nadar, _comendoDeitado, _uivar;
 
         public AnimacaoDoBicho(Transform bicho, ModeloDoBicho m, Especie e)
         {
@@ -99,6 +99,8 @@ namespace ZombieCityCleaner.Fauna
             // (14/11) deitado de barriga, comendo o que tem entre as patas (o urso e o salmão; antes, sentado)
             _comendoDeitado = Chegar(_comendoDeitado, pose == Pose.DeitadoComendo ? 1f : 0f, 1.2f, dt);
             if (pose == Pose.DeitadoComendo) _comer = Chegar(_comer, 0.5f, 1.6f, dt);
+            // (20/11/2026) o uivo: o peito sobe, o pescoço e o focinho apontam para o céu, a cauda baixa
+            _uivar = Chegar(_uivar, pose == Pose.Uivando ? 1f : 0f, pose == Pose.Uivando ? 2.2f : 1.6f, dt);
             _ataque = pose == Pose.Atacando ? Mathf.Repeat(_ataque + dt * 1.6f, 1f) : Chegar(_ataque, 0f, 3f, dt);
             if (pose == Pose.Morto) velocidade = 0f;
 
@@ -142,7 +144,7 @@ namespace ZombieCityCleaner.Fauna
                 float y = Mathf.Abs(Mathf.Sin(_fase * Mathf.PI * 2f * (galope > 0.5f ? 1f : 2f))) * bob;
                 float respirar = Mathf.Sin(_tempo * 1.6f + _sorte) * 0.004f * _altura * (1f - _andar);
                 _corpo.t.localPosition = _corpo.posicao + _corpo.t.parent.InverseTransformVector(_bicho.up * (y + respirar));
-                Por(_corpo, Mathf.Sin(_fase * Mathf.PI * 2f) * 6f * galope - 4f * _ataque * Mathf.Sin(_ataque * Mathf.PI));
+                Por(_corpo, Mathf.Sin(_fase * Mathf.PI * 2f) * 6f * galope - 4f * _ataque * Mathf.Sin(_ataque * Mathf.PI) - 9f * _uivar);
             }
 
             // as pernas
@@ -181,6 +183,9 @@ namespace ZombieCityCleaner.Fauna
             float cabeca = 22f * _comer + alertaCabeca * _alerta + mastigar + aceno + 20f * Mathf.Sin(_ataque * Mathf.PI) + 15f * _morto + 20f * _empe - 14f * _nadar
                            + Mathf.Sin(_tempo * 3.5f + _sorte) * 7f * _comendoDeitado;   // (deitado comendo: puxa o peixe)
             pescoco -= 22f * _nadar;
+            // (o uivo: o número negativo levanta; o tremor pequeno é o fôlego do uivo)
+            pescoco -= 46f * _uivar;
+            cabeca -= (30f + Mathf.Sin(_tempo * 9f) * 2.5f) * _uivar;
             float virar = olhar * (1f - _comer) * (1f - _morto);
             Por(_pescoco, pescoco, virar * 0.45f);
             Por(_cabeca, cabeca, virar * 0.55f);
@@ -188,7 +193,7 @@ namespace ZombieCityCleaner.Fauna
             // a cauda: abana devagar; levantada no alerta e na fuga (a bandeira do veado)
             float bandeira = _caudaDeBandeira ? Mathf.Max(_alerta, galope) : 0f;
             for (int i = 0; i < _cauda.Count; i++)
-                Por(_cauda[i], (i == 0 ? 80f : 25f) * bandeira * (1f - _morto), Mathf.Sin(_tempo * 2.3f + _sorte + i) * 8f * (1f - _morto));
+                Por(_cauda[i], (i == 0 ? 80f : 25f) * bandeira * (1f - _morto) - (i == 0 ? 18f : 6f) * _uivar, Mathf.Sin(_tempo * 2.3f + _sorte + i) * 8f * (1f - _morto));
 
             // as orelhas: um tremor de vez em quando; no alerta, para a frente
             if (_tempo > _orelhaAte)

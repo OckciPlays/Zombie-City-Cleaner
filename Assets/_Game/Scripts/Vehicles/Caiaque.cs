@@ -314,6 +314,9 @@ namespace ZombieCityCleaner.Vehicles
             Vector3 ponta = nova + frente * (Mathf.Sign(_velocidade == 0f ? 1f : _velocidade) * meioComprimento);
             if (Mathf.Abs(_velocidade) > 0.01f && Agua.Fundura(ponta) < 0.25f)
             {
+                // (19/11/2026) o casco batendo no fundo raso, gravado (com força: mais de 0,5 m/s)
+                if (Mathf.Abs(_velocidade) > 0.5f)
+                    Efeitos.Som(SonsGravados.Varios("Agua", "caiaque_encalha_"), ponta, Mathf.Clamp01(Mathf.Abs(_velocidade) / 2.5f), true, 25f);
                 _velocidade = 0f;
                 nova = transform.position;
             }

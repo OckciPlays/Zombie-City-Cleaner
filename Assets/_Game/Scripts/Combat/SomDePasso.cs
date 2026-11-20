@@ -16,31 +16,26 @@ namespace ZombieCityCleaner.Combat
     ///   macio na terra;
     /// - carpete: quase nada: um baque surdo e curto, e o pano roçando bem baixinho.
     /// Quatro variações de cada, andando e correndo.
+    /// Desde 20/11/2026, no jogo só o carpete sai daqui (o concreto, a madeira e a grama são os gravados, em
+    /// Resources/Passos, sem a reserva; ver <see cref="Efeitos.Passos"/>). Os outros chãos continuam aqui para as prévias do
+    /// Editor (Editor/PreviasDosSons).
     /// </summary>
     public static class SomDePasso
     {
         const int Taxa = 44100;
         const int Variacoes = 4;
 
-        /// <summary>Os clipes por superfície ([superfície][correndo ? 1 : 0][variação]).</summary>
-        public static AudioClip[][][] Gerar()
+        /// <summary>As variações dos passos de um chão, andando ou correndo (20/11/2026: um chão de cada vez, o carpete).</summary>
+        public static AudioClip[] Gerar(Superficie chao, bool correndo)
         {
-            int n = System.Enum.GetValues(typeof(Superficie)).Length;
-            var todos = new AudioClip[n][][];
-            for (int s = 0; s < n; s++)
+            int s = (int)chao, c = correndo ? 1 : 0;
+            var clips = new AudioClip[Variacoes];
+            for (int v = 0; v < Variacoes; v++)
             {
-                todos[s] = new AudioClip[2][];
-                for (int c = 0; c < 2; c++)
-                {
-                    todos[s][c] = new AudioClip[Variacoes];
-                    for (int v = 0; v < Variacoes; v++)
-                    {
-                        var dados = Passo((Superficie)s, c == 1, 100 * s + 10 * c + v);
-                        todos[s][c][v] = SomGerado.Clip($"Passo {(Superficie)s} {(c == 1 ? "correndo" : "andando")} {v + 1}", dados, Taxa);
-                    }
-                }
+                var dados = Passo(chao, correndo, 100 * s + 10 * c + v);
+                clips[v] = SomGerado.Clip($"Passo {chao} {(correndo ? "correndo" : "andando")} {v + 1}", dados, Taxa);
             }
-            return todos;
+            return clips;
         }
 
         /// <summary>As amostras de um passo.</summary>

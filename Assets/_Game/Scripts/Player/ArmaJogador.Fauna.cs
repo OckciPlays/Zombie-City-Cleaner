@@ -64,7 +64,7 @@ namespace ZombieCityCleaner.Player
             var parte = hit.collider.GetComponent<ParteDoBicho>();
             if (parte == null || parte.bicho == null) return false;
             if (parte.bicho.Morto) return true;   // a carcaça (carneia-se com E, não com o golpe)
-            Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
+            Efeitos.Som(faca ? Efeitos.GolpeDaArma(NaMao) : Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
             Sangue.Respingo(ponto, -cam.forward);
             _marcaAte = Time.time + 0.18f;
             _marcaNaCabeca = parte.cabeca;

@@ -4,17 +4,23 @@ using ZombieCityCleaner.Combat;
 namespace ZombieCityCleaner.World
 {
     /// <summary>
-    /// Os sons das portas e das janelas das casas (o Plano_Portas.md da pasta de arte), gerados por código como os outros do
-    /// jogo (<see cref="SomGerado"/>): abrir (o rangido da dobradiça velha), fechar (a batida da folha no batente e o
-    /// estalo do trinco), a trancada (a maçaneta girando e o trinco batendo na tranca, três vezes), a gazua (os cliques
-    /// dos pinos) e o pé de cabra (a madeira rachando e a fechadura arrebentando).
+    /// Os sons das portas e das janelas das casas (o Plano_Portas.md da pasta de arte): abrir e fechar (a porta e a janela)
+    /// são os gravados; a trancada (a maçaneta girando e o trinco batendo na tranca, três vezes), a gazua (os cliques dos
+    /// pinos), o pé de cabra (a madeira rachando e a fechadura arrebentando) e o forçar são gerados por código como os
+    /// outros do jogo (<see cref="SomGerado"/>).
     /// </summary>
     public static class SomDasPortas
     {
-        static AudioClip _abrir, _fechar, _trancada, _gazua, _peDeCabra, _forcando;
+        static AudioClip _trancada, _gazua, _peDeCabra, _forcando;
 
-        public static AudioClip Abrir => _abrir ??= SomGerado.Clip("Porta: abrir", Rangido(41));
-        public static AudioClip Fechar => _fechar ??= SomGerado.Clip("Porta: fechar", Batida(42));
+        // (20/11/2026, a pedido: "o som da porta que precisa ser trocada") abrir e fechar gravados (o sfxjar, CC0), em
+        // Resources/Portas, sorteados (20/11/2026: o rangido e a batida feitos aqui, a reserva deles, saíram; sem eles, null).
+        // A trancada, a gazua e o pé de cabra continuam daqui.
+        public static AudioClip Abrir => SonsGravados.Um("Portas", "abrir_");
+        public static AudioClip Fechar => SonsGravados.Um("Portas", "fechar_");
+        /// <summary>A janela abrindo e fechando (a dobradiça mais aguda e mais curta que a da porta).</summary>
+        public static AudioClip JanelaAbrir => SonsGravados.Um("Portas", "janela_abrir_") ?? Abrir;
+        public static AudioClip JanelaFechar => SonsGravados.Um("Portas", "janela_fechar_") ?? Fechar;
         public static AudioClip Trancada => _trancada ??= SomGerado.Clip("Porta: trancada", Chacoalhar(43));
         public static AudioClip Gazua => _gazua ??= SomGerado.Clip("Porta: gazua", Pinos(44));
         public static AudioClip PeDeCabra => _peDeCabra ??= SomGerado.Clip("Porta: pé de cabra", Rachar(45));
@@ -24,46 +30,6 @@ namespace ZombieCityCleaner.World
         const int Taxa = 44100;
 
         static float Ruido(System.Random r) => (float)(r.NextDouble() * 2 - 1);
-
-        // o rangido: um tom áspero (os pulsos da dobradiça raspando) subindo e descendo devagar, com o chiado
-        static float[] Rangido(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(0.55f * Taxa);
-            var d = new float[n];
-            float fase = 0f, filtro = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa, k = t / 0.55f;
-                float f = 380f + 160f * Mathf.Sin(k * Mathf.PI * 1.3f) + 25f * Mathf.Sin(t * 37f);
-                fase += f / Taxa;
-                // pulsos estreitos (a dobradiça agarra e solta) em vez do seno liso
-                float pulso = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(fase * 2f * Mathf.PI)), 6f) * 2f - 0.35f;
-                filtro += (Ruido(r) - filtro) * 0.2f;
-                float env = Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI) * (0.6f + 0.4f * Mathf.Sin(t * 9f));
-                d[i] = (pulso * 0.35f + filtro * 0.12f) * env * 0.6f;
-            }
-            return d;
-        }
-
-        // a batida: o baque grave da folha (dois modos da madeira) e, logo depois, o estalo do trinco
-        static float[] Batida(int semente)
-        {
-            var r = new System.Random(semente);
-            int n = Mathf.RoundToInt(0.35f * Taxa);
-            var d = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)Taxa;
-                float baque = Mathf.Sin(2f * Mathf.PI * 95f * t) * Mathf.Exp(-t * 18f) * 0.7f
-                            + Mathf.Sin(2f * Mathf.PI * 210f * t) * Mathf.Exp(-t * 30f) * 0.35f
-                            + Ruido(r) * Mathf.Exp(-t * 120f) * 0.4f;
-                float t2 = t - 0.06f;
-                float trinco = t2 > 0f ? (Mathf.Sin(2f * Mathf.PI * 2600f * t2) * 0.4f + Ruido(r) * 0.3f) * Mathf.Exp(-t2 * 160f) : 0f;
-                d[i] = (baque + trinco) * 0.8f;
-            }
-            return d;
-        }
 
         // um clique metálico (a lingueta, os pinos), em 'tom' e com 'forca'
         static void Clique(float[] d, System.Random r, float inicio, float tom, float forca, float decai = 140f)

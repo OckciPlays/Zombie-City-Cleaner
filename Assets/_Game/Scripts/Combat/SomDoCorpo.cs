@@ -9,7 +9,8 @@ namespace ZombieCityCleaner.Combat
     /// do <see cref="SomDosCurativos"/>, cada um uma vez só, na primeira vez que toca: o calafrio (o ar saindo aos trancos
     /// entre os dentes), os dentes batendo, a respiração tremida da febre e a respiração pesada da sepse. Tocam no dono,
     /// na cabeça (não espaciais), pelo <see cref="Efeitos.Som(AudioClip, Vector3, float, bool, float)"/>; quem toca é o
-    /// Player/EfeitosDoCorpo.
+    /// Player/EfeitosDoCorpo (20/11/2026: a respiração da febre e da sepse lá é só a ofegante gravada; as duas daqui ficam
+    /// para a crise de pânico, Player/CriseDePanico, quando falta a voz gravada).
     /// </summary>
     public static class SomDoCorpo
     {

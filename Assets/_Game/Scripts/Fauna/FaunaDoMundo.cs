@@ -363,6 +363,12 @@ namespace ZombieCityCleaner.Fauna
             var g = b.Grupo;
             if (g != null && b.Dados.papel == Papel.Matilha && (b.Alfa || g.lider == b))
                 AlfaMorreu(g, Time.time, autor != null ? autor.transform.position : b.transform.position);
+            // (20/11/2026) quem matou um lobo da matilha (não o alfa) leva a matilha toda em cima; quem matou o filhote de
+            // urso leva a mãe
+            else if (g != null && autor != null && !g.desfeita && b.Dados.papel == Papel.Matilha) MatilhaAtacada(g, autor, Time.time);
+            if (g != null && autor != null && b.Dados.papel == Papel.Urso && b.Variante == Variante.Filhote)
+                foreach (var m in g.membros)
+                    if (m != null && m != b && !m.Morto && m.Variante != Variante.Filhote) m.DefenderFilhote(autor, Time.time);
             // (a etapa 5) o último adulto do grupo: os filhotes ficam órfãos, perto da carcaça dele
             if (g != null && b.Variante != Variante.Filhote)
             {

@@ -192,7 +192,8 @@ namespace ZombieCityCleaner.DiaZero
                     _tosseDesde = t;
                     _proximaTosse = t + Random.Range(7f, 16f);
                     _voz.pitch = Random.Range(0.92f, 1.08f);
-                    _voz.PlayOneShot(SonsDoDiaZero.Tosse(_mulher, Random.Range(0, 3)), 0.9f);
+                    var tosse = SonsDoDiaZero.Tosse(_mulher, Random.Range(0, 3));   // (20/11/2026: só a gravada; null sem ela)
+                    if (tosse != null) _voz.PlayOneShot(tosse, 0.9f);
                 }
                 if (t >= _proximaCoceira && t - _tosseDesde > 2f)
                 {
@@ -406,7 +407,7 @@ namespace ZombieCityCleaner.DiaZero
                 som.minDistance = 1f;
                 som.maxDistance = 12f;
                 som.volume = 0.35f;
-                som.time = sorte * Mathf.Max(0.1f, som.clip.length);
+                if (som.clip != null) som.time = sorte * Mathf.Max(0.1f, som.clip.length);   // (20/11/2026: só a gravada; null sem ela)
                 som.Play();
             }
             // o canteiro na frente (onde a água cai) e a mangueira enrolada no chão, atrás

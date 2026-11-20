@@ -885,6 +885,7 @@ namespace ZombieCityCleaner.Player
             var boca = bocasCorpo[(int)arma];
             Efeitos.Clarao(boca, 0);
             Efeitos.Som(Efeitos.Tiros[(int)arma], boca.position, volume, true, 150f * volume);   // tiro se ouve longe
+            EcoDoTiro.Tocar(arma, boca.position, volume, true, 150f * volume);   // (19/11/2026: o eco do lugar)
             if (arma == TipoDeArma.Espingarda) StartCoroutine(SomDepois(boca, Efeitos.Bomba, 0.33f, 0.8f));
             if (Armas.Dados(arma).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
             foreach (var i in impactos)
@@ -922,7 +923,7 @@ namespace ZombieCityCleaner.Player
                 Efeitos.Som(Efeitos.SocoCarne, ponto, 0.8f, true, 20f);
                 Sangue.Respingo(ponto, (transform.position + Vector3.up * 1.5f - ponto).normalized);
             }
-            else Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, true, 15f);
+            else Efeitos.Som(Efeitos.SocosNaParede, ponto, 0.6f, true, 15f);
         }
 
         IEnumerator SomDepois(Transform boca, AudioClip clip, float espera, float volume)

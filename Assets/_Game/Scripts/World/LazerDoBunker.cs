@@ -47,7 +47,6 @@ namespace ZombieCityCleaner.World
         static readonly Vector2 TamanhoDaTela = new Vector2(0.44f, 0.32f);
         const int W = 64, H = 48;
 
-        static AudioClip _chiado;
         Material _material;
         Texture2D _textura;
         Color32[] _pixels;
@@ -90,7 +89,7 @@ namespace ZombieCityCleaner.World
             _luz.shadows = LightShadows.None;
             _luz.enabled = false;
             _som = gameObject.AddComponent<AudioSource>();
-            _som.clip = Chiado();
+            _som.clip = SonsGravados.Um("Bunker", "chiado_tv");   // (20/11/2026: o gravado do sfxjar; o chiado feito em código saiu)
             _som.loop = true;
             _som.spatialBlend = 1f;
             _som.rolloffMode = AudioRolloffMode.Linear;
@@ -160,35 +159,15 @@ namespace ZombieCityCleaner.World
             new Color(0.75f, 0.75f, 0.75f), new Color(0.75f, 0.75f, 0.2f), new Color(0.2f, 0.75f, 0.75f), new Color(0.2f, 0.75f, 0.2f),
             new Color(0.75f, 0.2f, 0.75f), new Color(0.75f, 0.2f, 0.2f), new Color(0.2f, 0.2f, 0.75f),
         };
-
-        // o chiado da TV: o ruído branco filtrado (4 s, em laço), com umas batidas da fita
-        static AudioClip Chiado()
-        {
-            if (_chiado != null) return _chiado;
-            int taxa = 22050, n = taxa * 4;
-            var d = new float[n];
-            var r = new System.Random(7);
-            float a = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float b = (float)r.NextDouble() * 2f - 1f;
-                a = a * 0.55f + b * 0.45f;
-                float hum = 0.08f * Mathf.Sin(2f * Mathf.PI * 60f * i / taxa);
-                d[i] = (a * 0.5f + hum) * (0.85f + 0.15f * Mathf.Sin(2f * Mathf.PI * 0.5f * i / taxa));
-            }
-            _chiado = SomGerado.Clip("Chiado da TV", d, taxa);
-            return _chiado;
-        }
     }
 
     /// <summary>
     /// A estação de rádio das operações (a parte 8): quando um morador ouve o rádio (<see cref="BunkerDoMundo.RadioLigado"/>),
-    /// o alto-falante chia, com os assobios da sintonia e, de vez em quando, um bipe de código ao longe (ninguém chamando: os
-    /// pedidos de socorro vêm na parte 11).
+    /// o alto-falante chia (o rádio gravado do sfxjar, em laço, Resources/Bunker; ninguém chamando: os pedidos de socorro vêm
+    /// na parte 11). (20/11/2026: o som de 8 s feito em código, a reserva do gravado, saiu; sem ele, o rádio fica mudo.)
     /// </summary>
     public class RadioDoBunker : MonoBehaviour
     {
-        static AudioClip _som;
         AudioSource _fonte;
         bool _ligado;
 
@@ -197,7 +176,7 @@ namespace ZombieCityCleaner.World
         void Start()
         {
             _fonte = gameObject.AddComponent<AudioSource>();
-            _fonte.clip = Som();
+            _fonte.clip = SonsGravados.Um("Bunker", "radio");   // (20/11/2026: o gravado do sfxjar)
             _fonte.loop = true;
             _fonte.spatialBlend = 1f;
             _fonte.rolloffMode = AudioRolloffMode.Linear;
@@ -215,45 +194,10 @@ namespace ZombieCityCleaner.World
             _ligado = ligado;
             if (ligado)
             {
-                _fonte.time = Random.Range(0f, _fonte.clip.length);
+                if (_fonte.clip != null) _fonte.time = Random.Range(0f, _fonte.clip.length);
                 _fonte.Play();
             }
             else _fonte.Stop();
-        }
-
-        // 8 s: o chiado com as ondas da sintonia, os assobios (o tom que sobe e desce) e os bipes do código
-        static AudioClip Som()
-        {
-            if (_som != null) return _som;
-            int taxa = 22050, n = taxa * 8;
-            var d = new float[n];
-            var r = new System.Random(11);
-            float a = 0f, fase = 0f, faseBipe = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = (float)i / taxa;
-                float b = (float)r.NextDouble() * 2f - 1f;
-                a = a * 0.7f + b * 0.3f;
-                float onda = 0.6f + 0.4f * Mathf.Sin(2f * Mathf.PI * 0.23f * t) * Mathf.Sin(2f * Mathf.PI * 0.07f * t + 1f);
-                float assobio = 0f;
-                if (t > 2.2f && t < 3.4f)
-                {
-                    float f = 900f + 700f * Mathf.Sin((t - 2.2f) * 2.6f);
-                    fase += 2f * Mathf.PI * f / taxa;
-                    assobio = 0.12f * Mathf.Sin(fase) * Mathf.Sin(Mathf.PI * (t - 2.2f) / 1.2f);
-                }
-                float bipe = 0f;
-                if (t > 5f && t < 7f)
-                {
-                    float u = (t - 5f) * 6f;
-                    bool liga = (u % 1f) < ((int)u % 3 == 0 ? 0.6f : 0.25f);
-                    faseBipe += 2f * Mathf.PI * 700f / taxa;
-                    bipe = liga ? 0.06f * Mathf.Sin(faseBipe) : 0f;
-                }
-                d[i] = a * 0.45f * onda + assobio + bipe;
-            }
-            _som = SomGerado.Clip("O rádio do bunker", d, taxa);
-            return _som;
         }
     }
 

@@ -144,7 +144,7 @@ A ordem, do zero: cidade → clima → armas → jogador e rede → zumbis (e, p
 ### Efeitos e som (`Combat/`)
 
 - **`Efeitos`:** os sons gerados por código (o tiro de cada arma, clique, carregador, bomba, cartucho, ferrolho, a luneta entrando e saindo e lanterna), o clarão do cano (criado a cada tiro) e as faíscas. O som espacial fica mais abafado quanto mais longe.
-- **`SomDeTiro`:** o tiro sintetizado em camadas, com um perfil por arma e 3 variações de cada.
+- **Os tiros:** desde 20/11/2026, só os gravados (`Resources/Armas/<arma>`; o `SomDeTiro`, que sintetizava o tiro, saiu). Os sons do jogo estão no `Docs/22-Os-Sons.md`.
 - **`SomDePasso`:** os passos (o calcanhar e a ponta do pé) em concreto, madeira, carpete e grama, 4 variações de cada, andando e correndo. **`SomDosItens`:** abrir a lata, mastigar, abrir a garrafa, o gole e largar no chão. **`SomDoSoco`:** o soco no ar, na carne e na parede.
 - **`SomGerado`:** todo som feito por código passa por ele, que troca valores inválidos (NaN) por zero. Um NaN num clipe cala o áudio da Unity inteiro (o jogo ficava mudo depois de comer).
 - **`Sangue`:** respingo, explosão da cabeça, jorro do pescoço e manchas no chão (decals), tudo em pools.

@@ -906,6 +906,9 @@ namespace ZombieCityCleaner.Vehicles
                     _pegouEm = Time.time;
                     Efeitos.Som(pegarProprio != null ? pegarProprio : SomDoCarro.Pegar, noMotor, 0.6f, true, 35f);
                 }
+                // (19/11/2026) o motor desligando, gravado (o carro; a moto não)
+                if (antes == EstadoDoMotor.Ligado && e < EstadoDoMotor.Ligado && !moto && SomDoCarro.Desligar != null)
+                    Efeitos.Som(SomDoCarro.Desligar, noMotor, 0.6f, true, 30f);
             }
 
             // a bateria acabou no meio da partida: o arranque para
@@ -1535,7 +1538,8 @@ namespace ZombieCityCleaner.Vehicles
                 if (pedra)
                 {
                     Efeitos.Impacto(ponto, transform.forward * Mathf.Sign(v));
-                    Efeitos.Som(Efeitos.SocoParede, ponto, 1f, true, 40f);
+                    var batida = SomDoCarro.Batida(rapidez);   // (19/11/2026: o metal amassando na estátua)
+                    Efeitos.Som(batida != null ? batida : Efeitos.SocoParede, ponto, 1f, true, 40f);
                 }
                 else
                 {
@@ -1814,6 +1818,7 @@ namespace ZombieCityCleaner.Vehicles
         void Motor(float dt)
         {
             if (motor == null) return;
+            if (!_motorGravadoVisto) UsarMotorGravado();   // (19/11/2026: os carros com os laços gravados, Carro.SomGravado.cs)
             // as motos têm os laços próprios, em camadas (Carro.Moto.cs)
             if (MotorEmCamadas)
             {
@@ -1835,7 +1840,7 @@ namespace ZombieCityCleaner.Vehicles
         void Buzina(float dt)
         {
             if (buzina == null) return;
-            if (buzina.clip == null) buzina.clip = SomDoCarro.Buzina;
+            if (buzina.clip == null) buzina.clip = SomDoCarro.BuzinaDe(chaveDoVeiculo);
             bool tocando = (IsOwner ? _buzinaLocal : _buzina.Value) && Pecas.BateriaAcende;
             buzina.volume = Mathf.MoveTowards(buzina.volume, tocando ? 0.9f : 0f, dt * 25f);
             if (buzina.volume > 0.001f && !buzina.isPlaying) buzina.Play();

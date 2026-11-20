@@ -686,7 +686,7 @@ namespace ZombieCityCleaner.Player
                                             && Random.value < (desgaste - Itens.DesgasteQueEmperra) / (100f - Itens.DesgasteQueEmperra) * 0.3f * d.emperra))
                     {
                         Acao(DryFireId);
-                        Efeitos.Som(Efeitos.Clique, Boca.position, 0.8f, false);
+                        Efeitos.Som(Efeitos.ArmaEmperrada, Boca.position, 0.8f, false);
                         _emperrouAte = Time.time + 1.4f;
                         _proximoTiro = Time.time + Mathf.Max(d.intervalo, 0.35f);
                     }
@@ -779,6 +779,7 @@ namespace ZombieCityCleaner.Player
             _socoDireito = !_socoDireito;
             Acao(direito ? FireId : DryFireId);
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.45f, false);
+            if (Random.value < 0.3f) rede.Voz(TipoDeVoz.Esforco, 0.7f);   // (19/11/2026: a voz)
             rede.AnunciarSoco();
             yield return new WaitForSeconds(SomDoSoco.Impacto);
             Golpear(alcanceDoSoco, raioDoSoco, danoDoSoco * (forte ? 1f : VigorDoJogador.DanoSemVigor), false, false, 0f);   // o punho não tem fio: não explode a cabeça
@@ -801,6 +802,7 @@ namespace ZombieCityCleaner.Player
             _proximoTiro = Time.time + b.intervalo * PartesDoCorpo.LentidaoDoGolpe(Corpo) * (forte ? 1f : VigorDoJogador.LentidaoSemVigor);   // (o braço quebrado com a tala: mais lento)
             Acao(FireId);
             Efeitos.Som(Efeitos.SocoVento, rede.cameraMundo.transform.position, 0.55f, false);
+            if (Random.value < 0.35f) rede.Voz(TipoDeVoz.Esforco, 0.75f);   // (19/11/2026: a voz)
             rede.AnunciarSoco();
             yield return new WaitForSeconds(b.impacto);
             Golpear(b.alcance, b.raio, b.dano * (1f + 0.05f * Habilidades.Pontos(rede, Habilidade.BracoForte)) * (forte ? 1f : VigorDoJogador.DanoSemVigor), true, b.porRegiao, b.corte);
@@ -831,7 +833,7 @@ namespace ZombieCityCleaner.Player
                 if (hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada && (parte == null || parte.sobrevivente == null || parte.sobrevivente.Morto)) continue;   // os corpos no chão
                 if (parte != null && parte.sobrevivente != null)
                 {
-                    Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
+                    Efeitos.Som(faca ? Efeitos.GolpeDaArma(NaMao) : Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
                     Sangue.Respingo(ponto, -cam.forward);
                     _marcaAte = Time.time + 0.18f;
                     _marcaNaCabeca = parte.regiao == Sobreviventes.RegiaoDoSobrevivente.Cabeca;
@@ -847,7 +849,7 @@ namespace ZombieCityCleaner.Player
                     bool pedra = DePedra(hitbox);
                     if (pedra)
                     {
-                        Efeitos.Som(Efeitos.SocoParede, ponto, 0.8f, false);
+                        Efeitos.Som(Efeitos.SocosNaParede, ponto, 0.8f, false);
                         Efeitos.Impacto(ponto, -cam.forward);
                     }
                     else
@@ -874,7 +876,7 @@ namespace ZombieCityCleaner.Player
                 var outro = OutroJogador(hit.collider);
                 if (outro != null)
                 {
-                    Efeitos.Som(Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
+                    Efeitos.Som(faca ? Efeitos.GolpeDaArma(NaMao) : Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
                     Sangue.Respingo(ponto, -cam.forward);
                     _marcaAte = Time.time + 0.18f;
                     _marcaNaCabeca = false;
@@ -890,7 +892,7 @@ namespace ZombieCityCleaner.Player
                 bool madeira = NaMao == Item.Machado && GolpeNaArvore(hit.collider, ponto);
                 if (!madeira)
                 {
-                    Efeitos.Som(Efeitos.SocoParede, ponto, 0.6f, false);
+                    Efeitos.Som(Efeitos.SocosNaParede, ponto, 0.6f, false);
                     if (faca) Efeitos.Impacto(ponto, -cam.forward);   // a lâmina na parede: faíscas e poeira
                 }
                 // a arma branca numa barricada de tábuas (11/11/2026, a etapa 5b: as tábuas, ou a porta e a janela barricadas do
@@ -920,7 +922,7 @@ namespace ZombieCityCleaner.Player
             foreach (float quando in new[] { 14 / 24f, 20 / 24f, 26 / 24f })
             {
                 yield return new WaitForSeconds(Mathf.Max(0f, quando - (Time.time - inicio)));
-                if (!remedio) Efeitos.Som(bebe ? Efeitos.Gole : Efeitos.Mastigar, rede.cameraMundo.transform.position, 0.5f, false);
+                if (!remedio) Efeitos.Som(bebe ? Efeitos.GoleDe(item) : Efeitos.MastigarDe(item), rede.cameraMundo.transform.position, 0.5f, false);
             }
             yield return new WaitForSeconds(Mathf.Max(0f, Itens.Consumivel(item).tempoDeUso - (Time.time - inicio)));
             Usando = false;
@@ -943,6 +945,11 @@ namespace ZombieCityCleaner.Player
                 Efeitos.LuzDoClarao(rede.NoMundo(Boca.position));
             }
             Efeitos.Som(Efeitos.Tiros[(int)Atual], Boca.position, Melhorias.VolumeDoTiro(MelhoriasNaMao), false);   // (o silenciador, 10/11/2026)
+            // o eco do lugar e a cápsula caindo (19/11/2026, a repaginada dos sons; a espingarda e a sniper soltam a delas na
+            // bomba e no ferrolho)
+            EcoDoTiro.Tocar(Atual, transform.position + Vector3.up * 1.5f, Melhorias.VolumeDoTiro(MelhoriasNaMao), false, 0f);
+            if (Efeitos.Capsulas != null && Atual != TipoDeArma.Espingarda && !d.ferrolho)
+                StartCoroutine(SomDepois(Efeitos.Capsulas[Random.Range(0, Efeitos.Capsulas.Length)], Random.Range(0.35f, 0.6f), 0.22f));
             if (Atual == TipoDeArma.Espingarda) StartCoroutine(SomDepois(Efeitos.Bomba, 0.33f, 0.8f));
             if (d.ferrolho) StartCoroutine(SomDepois(Efeitos.Ferrolho, 0.42f, 0.7f));
             movimento.Coice(d.coiceGraus * (AtirandoAsCegas ? 0.4f : 1f) * (Corpo.AlgumBracoRuim ? 1.35f : 1f)   // (o braço quebrado segura mal o coice)
@@ -1390,6 +1397,7 @@ namespace ZombieCityCleaner.Player
                 Animador.speed = 1f / rapido;
                 _recargaAcelerada = true;
             }
+            bool vazia = Municao == 0;   // (19/11/2026: vazia, no fim puxa a alavanca, ou a bomba da espingarda)
             if (d.cartuchoACartucho)
             {
                 // um cartucho por vez (cada um sai de uma caixa); o cartucho entra perto do fim da animação (quadro 9 a 10
@@ -1409,15 +1417,18 @@ namespace ZombieCityCleaner.Player
             {
                 Acao(ReloadId);
                 yield return new WaitForSeconds(d.carregadorSai * rapido);
-                Efeitos.Som(Efeitos.Carregador, Boca.position, 0.6f, false);
+                Efeitos.Som(Efeitos.CarregadorSai(Atual), Boca.position, 0.6f, false);
                 yield return new WaitForSeconds((d.carregadorEntra - d.carregadorSai) * rapido);
-                Efeitos.Som(Efeitos.Carregador, Boca.position, 0.8f, false);
+                Efeitos.Som(Efeitos.CarregadorEntra(Atual), Boca.position, 0.8f, false);
                 yield return new WaitForSeconds((d.tempoRecarga - d.carregadorEntra) * rapido);
                 // o pente é completado com o que houver nas caixas (o que sobrou nele continua)
                 int balas = Mathf.Min(d.capacidade - Municao, Reserva);
                 Municao += balas;
                 GastarDaReserva(balas);
+                var alavanca = vazia && balas > 0 && !d.ferrolho ? Efeitos.Engatilhar(Atual) : null;
+                if (alavanca != null) Efeitos.Som(alavanca, Boca.position, 0.7f, false);
             }
+            if (vazia && d.cartuchoACartucho && Municao > 0) Efeitos.Som(Efeitos.Bomba, Boca.position, 0.7f, false);
             Recarregando = false;
             _recarga = null;
             VoltarVelocidadeDosBracos();

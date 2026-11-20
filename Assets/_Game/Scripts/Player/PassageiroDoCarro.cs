@@ -171,6 +171,20 @@ namespace ZombieCityCleaner.Player
                 if (_ossos.TryGetValue("hand" + l, out var mao) && doPrefab.TryGetValue("hand" + l, out var maoDoPrefab))
                     _palma[mao] = Quaternion.Inverse(maoDoPrefab.rotation) * (corpoDoPrefab.right * (l == ".R" ? -1f : 1f));
             }
+            // (19/11/2026, quem toca: PassageiroDoCarro.NoChao.cs) o repouso das mãos, dos dedos e dos polegares, e a boca e os
+            // eixos do rosto no espaço da cabeça
+            _maosNoRepouso.Clear();
+            foreach (var l in new[] { ".L", ".R" })
+                foreach (var dedo in new[] { "hand", "index1", "index2", "middle1", "middle2", "ring1", "ring2", "pinky1", "pinky2", "thumb", "thumb2" })
+                    if (_ossos.TryGetValue(dedo + l, out var osso) && doPrefab.TryGetValue(dedo + l, out var doRepouso)) _maosNoRepouso[osso] = doRepouso.localRotation;
+            _temRosto = doPrefab.TryGetValue("head", out var cabecaDoPrefab);
+            if (_temRosto)
+            {
+                var volta = Quaternion.Inverse(cabecaDoPrefab.rotation);
+                _bocaNaCabeca = volta * (corpoDoPrefab.up * 0.03f + corpoDoPrefab.forward * 0.11f);
+                _frenteNaCabeca = volta * corpoDoPrefab.forward;
+                _cimaNaCabeca = volta * corpoDoPrefab.up;
+            }
         }
 
         // ------------------------------------------------------------------------------------------ as juntas
@@ -341,6 +355,7 @@ namespace ZombieCityCleaner.Player
             {
                 SentadoNoChao();   // (sentado no chão perto do fogo, 18/11/2026: PassageiroDoCarro.NoChao.cs)
                 PoseDoInstrumento();   // (tocando, 18/11/2026: PassageiroDoCarro.Instrumento.cs)
+                GolpeDoMixamoNoCorpo();   // (o teste do golpe do Mixamo, 19/11/2026: ArmaJogador.GolpeDoMixamo.cs)
                 return;
             }
             float dt = Time.deltaTime;

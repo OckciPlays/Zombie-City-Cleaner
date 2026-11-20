@@ -18,11 +18,12 @@ namespace ZombieCityCleaner.UI
         static readonly float[] VolumesDaTrilha = { 0.25f, 0.5f, 0.7f, 0.85f, 1f };
 
         GUIStyle _textoDasRegras;
+        int _tipoDoAmbiente;
         float _uDasRegras;
 
         Rect PainelDaTrilha(float u, Rect emCima)
         {
-            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 240 * u);
+            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 270 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -89,7 +90,8 @@ namespace ZombieCityCleaner.UI
                 Avisar("A morte: tudo some e toca a morte; depois o vento.");
             }
             y += 30 * u;
-            // o ambiente (a pedido em 29/10/2026): os grilos, os cachorros, a janela e a placa com o vento, os corvos
+            // o ambiente (a pedido em 29/10/2026; desde 20/11/2026 só os gravados): os pássaros, a coruja, os lobos, o galho e
+            // os grilos
             bool ambienteLigado = MaestroDaTrilha.AmbienteLigado;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), ambienteLigado ? $"Ambiente: {Mathf.RoundToInt(MaestroDaTrilha.VolumeDoAmbiente * 100f)}%" : "Ambiente: DESLIGADO", _botao))
             {
@@ -100,6 +102,16 @@ namespace ZombieCityCleaner.UI
             {
                 m.AmbienteAgora();
                 Avisar("Um som de ambiente agora (o que caberia aqui: de dia ou de noite, dentro ou fora).");
+            }
+            // (19/11/2026) cada tipo de som do ambiente, no lugar onde ele tocaria: os pássaros, a coruja, os lobos (o uivo) e o
+            // galho (20/11/2026: os feitos em código, a janela, a porta, a placa, a lata, a madeira e os corvos, saíram)
+            y += 30 * u;
+            string tipoDoAmbiente = MaestroDaTrilha.TiposDoAmbiente[_tipoDoAmbiente % MaestroDaTrilha.TiposDoAmbiente.Length];
+            if (GUI.Button(new Rect(x, y, meio, 26 * u), $"Tipo: {tipoDoAmbiente} (trocar)", _botao)) _tipoDoAmbiente++;
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Tocar esse tipo", _botao))
+            {
+                m.AmbienteDoTipo(tipoDoAmbiente);
+                Avisar($"O ambiente: {tipoDoAmbiente}, no lugar onde ele tocaria.");
             }
             return regras.width > 0f ? Rect.MinMaxRect(area.xMin, area.yMin, regras.xMax, Mathf.Max(area.yMax, regras.yMax)) : area;
         }

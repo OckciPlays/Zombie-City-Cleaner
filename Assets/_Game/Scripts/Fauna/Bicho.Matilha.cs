@@ -49,6 +49,18 @@ namespace ZombieCityCleaner.Fauna
                 _gentoAte = agora + 15f;
                 if (g != null) f.MatilhaViuGente(g, quem, agora);
             }
+            // (20/11/2026) uivando: parado, a cabeça para o céu, até acabar; o zumbi ou o urso perto corta o uivo
+            if (Uivando)
+            {
+                if (agora < _uivoAte && !(agora < _perigoAte && Vector3.Distance(p, _perigo) < Dados.visao * 0.6f))
+                {
+                    Estado = EstadoDoBicho.Alerta;
+                    _temDestino = false;
+                    _velAlvo = 0f;
+                    return;
+                }
+                Uivando = false;
+            }
 
             if (Estado == EstadoDoBicho.Fugindo)
             {
@@ -74,6 +86,13 @@ namespace ZombieCityCleaner.Fauna
                 bool noite = CicloDoDia.Noite > 0.55f;
                 if (d < (noite ? Dados.fuga * 0.5f : Dados.fuga) * (cacando ? 0.45f : 1f))
                 {
+                    // (20/11/2026, a pedido: "o lobo não está atacando") de dia, a matilha de lobos que vai fugir de quem
+                    // chegou perto pode encarar e cercar (uma vez por aproximação; FaunaDoMundo.PodeAtacar)
+                    if (!noite && !cacando && g != null && g.especie == Especie.Lobo && g.alvo == null)
+                    {
+                        f.MatilhaViuGente(g, _alvo, agora, true);
+                        if (g.alvo != null) { Ronda(f, g, agora, dt); return; }
+                    }
                     _perigo = _alvo.transform.position;
                     _perigoAte = agora + 8f;
                     AvisarGrupo(_perigo, agora, true);
@@ -84,6 +103,7 @@ namespace ZombieCityCleaner.Fauna
                 {
                     Estado = EstadoDoBicho.Alerta;
                     Olhar(_alvo.transform.position);
+                    RosnarDeLonge(agora);   // (20/11/2026: o líder rosna para quem olha; Bicho.SomGravado.cs)
                     // à noite, a matilha acompanha de longe (uns 30 m), sem chegar
                     if (noite && d > 38f) Ir(_alvo.transform.position + (p - _alvo.transform.position).normalized * 30f, Dados.andar);
                     else { _temDestino = false; _velAlvo = 0f; }
@@ -104,14 +124,17 @@ namespace ZombieCityCleaner.Fauna
         {
             _folego = 0f;
             float noite = CicloDoDia.Noite;
-            // (a etapa 4, os sons da noite) o líder uiva de vez em quando à noite, mesmo sem caçar
-            if (Grupo != null && Grupo.lider == this && noite > 0.6f)
+            // (a etapa 4, os sons da noite) o líder uiva de vez em quando, mesmo sem caçar: o primeiro de 20 a 60 s depois de
+            // a matilha aparecer; depois, à noite de 3 a 6 min e de dia, mais raro, de 7 a 12 min (20/11/2026: antes, de dia
+            // o lobo não fazia som nenhum)
+            if (Grupo != null && Grupo.lider == this)
             {
-                if (_proximoUivoLivre < 0f) _proximoUivoLivre = agora + Random.Range(30f, 120f);
+                if (_proximoUivoLivre < 0f) _proximoUivoLivre = agora + Random.Range(20f, 60f);
                 else if (agora > _proximoUivoLivre)
                 {
-                    _proximoUivoLivre = agora + Random.Range(180f, 360f);
-                    f.Uivar(this);
+                    _proximoUivoLivre = agora + (noite > 0.6f ? Random.Range(180f, 360f) : Random.Range(420f, 720f));
+                    ComecarUivo(f, agora);   // (20/11/2026: com a pose; Bicho.SomGravado.cs)
+                    return;
                 }
             }
             if (Estado == EstadoDoBicho.Deitado)
@@ -248,8 +271,21 @@ namespace ZombieCityCleaner.Fauna
             bool noFogo = f.NoFogo(c, out var centroDoFogo, out float raioDoFogo);
             if (this == g.atacante && !noFogo) { Bote(f, g, j, agora); return; }
             if (this == g.atacante) g.atacante = null;
+            // (20/11/2026) os filhotes ficam para trás, longe da briga: a uns 30 m de quem é cercado, do lado da matilha
+            if (Variante == Variante.Filhote)
+            {
+                Vector3 atras = c + g.ladoDosFilhotes * 30f + LugarNoGrupo * 0.5f;
+                Estado = EstadoDoBicho.Alerta;
+                float df = Vector3.Distance(Plano(transform.position), Plano(atras));
+                if (df > 1.5f) Ir(atras, df > 8f ? Dados.correr * 0.6f : Dados.trotar);
+                else { _temDestino = false; _velAlvo = 0f; }
+                Olhar(c);
+                return;
+            }
+            // (20/11/2026) o chamado: o líder uiva parado (ComecarUivo, que segura ele no PensarMatilha), e os outros já vêm
+            bool chamando = agora < g.chamadoAte;
+            bool revide = agora < g.revideAte;
             int n = g.Adultos(this, out int i);
-            if (Variante == Variante.Filhote) { i = n; n++; }
             float raio = Coiote ? 11f : 9f;
             Vector3 meio = c;
             if (noFogo)
@@ -263,14 +299,15 @@ namespace ZombieCityCleaner.Fauna
             Vector3 ponto = meio + Quaternion.Euler(0f, ang, 0f) * Vector3.forward * raio;
             Estado = EstadoDoBicho.Alerta;
             float dist = Vector3.Distance(Plano(transform.position), Plano(ponto));
-            if (dist > 1f) Ir(ponto, dist > 5f ? Dados.trotar : Dados.andar);
+            // (quem vem de longe atendendo o chamado, ou no revide, corre)
+            if (dist > 1f) Ir(ponto, dist > 12f && (chamando || revide) ? Dados.correr * 0.8f : dist > 5f ? Dados.trotar : Dados.andar);
             else { _temDestino = false; _velAlvo = 0f; }
             Olhar(c);
-            if (Random.value < 0.06f * Mathf.Max(0.3f, dt)) Tocar(SomDoBicho.Rosnado);
-            // o líder manda o próximo bote: o que está mais atrás do jogador (fora da vista dele)
-            if (g.lider == this && !noFogo && g.atacante == null && agora > g.proximoBote)
+            if (Random.value < (revide ? 0.15f : 0.06f) * Mathf.Max(0.3f, dt)) Tocar(SomDoBicho.Rosnado);
+            // o líder manda o próximo bote: o que está mais atrás do jogador (fora da vista dele); no revide, mais seguido
+            if (g.lider == this && !noFogo && !chamando && g.atacante == null && agora > g.proximoBote)
             {
-                g.proximoBote = agora + (Coiote ? Random.Range(4f, 8f) : Random.Range(2.5f, 5.5f));
+                g.proximoBote = agora + (revide ? (Coiote ? Random.Range(2f, 4.5f) : Random.Range(1.5f, 3.5f)) : Coiote ? Random.Range(4f, 8f) : Random.Range(2.5f, 5.5f));
                 Bicho melhor = null;
                 float atras = float.MaxValue;
                 Vector3 olha = j.transform.forward;
@@ -354,6 +391,7 @@ namespace ZombieCityCleaner.Fauna
             var g = Grupo;
             if (g != null && g.alvo != null)
             {
+                if (agora < g.revideAte) return;   // (20/11/2026: atacada, a matilha não se espanta com o tiro)
                 // um sorteio por tiro, pela matilha toda: o coiote larga mais
                 if (g.ultimoTiro != agora)
                 {
@@ -372,9 +410,33 @@ namespace ZombieCityCleaner.Fauna
             }
         }
 
+        /// <summary>
+        /// (20/11/2026) O chamado do líder (a matilha atacada): quem fugia do tiro ou do ferimento volta para a briga (sem
+        /// isso, o medo do tiro segurava cada um fugindo por uns 15 s antes do cerco).
+        /// </summary>
+        internal void AtenderOChamado(float agora)
+        {
+            if (Morto || Copia) return;
+            _fugaAte = 0f;
+            _perigoAte = -999f;
+            if (Estado == EstadoDoBicho.Fugindo) Estado = EstadoDoBicho.Alerta;
+            ProximaDecisao = Mathf.Min(ProximaDecisao, agora + Random.Range(0.1f, 0.5f));
+        }
+
         void FeridoNaMatilha(JogadorRede autor, float agora)
         {
             var g = Grupo;
+            // (20/11/2026, a pedido) o lobo da matilha atacado por alguém: a matilha toda vem para cima (de dia ou de noite,
+            // ferido ou não); só o ferido demais (abaixo de 25% da vida) sai da briga, e o filhote vai para trás
+            if (g != null && autor != null && !g.desfeita)   // (o coiote também, desde 20/11/2026)
+            {
+                FaunaDoMundo.Instancia?.MatilhaAtacada(g, autor, agora);
+                if (g.alvo == autor && (Variante == Variante.Filhote || Vida >= Especies.Pontos(Especie, Variante) * 0.25f))
+                {
+                    AtenderOChamado(agora);   // (o tiro que levou não vira perigo para fugir)
+                    return;
+                }
+            }
             if (g != null && g.alvo != null && Random.value < (Coiote ? 0.6f : 0.25f))
                 FaunaDoMundo.Instancia?.LargarAlvo(g, agora, _perigo, true);
             if (g != null && g.atacante == this) g.atacante = null;

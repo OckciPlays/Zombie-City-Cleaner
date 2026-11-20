@@ -160,7 +160,7 @@ namespace ZombieCityCleaner.Vehicles
                 if (s == null) continue;
                 float peso = j == i ? Mathf.Cos(x * Mathf.PI * 0.5f) : j == i + 1 ? Mathf.Sin(x * Mathf.PI * 0.5f) : 0f;
                 s.volume = _volumeDoMotor * peso;
-                s.pitch = Mathf.Clamp(g / Mathf.Max(0.01f, giroDosLacos[j]), 0.3f, 3f);
+                s.pitch = Mathf.Clamp(g / Mathf.Max(0.01f, giroDosLacos[j]) * _tomDoMotor, 0.3f, 3f);   // (o tom: Carro.SomGravado.cs)
                 if (s.volume > 0.001f && !s.isPlaying) s.Play();
                 else if (s.volume <= 0.001f && s.isPlaying) s.Stop();
             }

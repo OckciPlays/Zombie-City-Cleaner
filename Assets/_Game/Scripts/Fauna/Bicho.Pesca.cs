@@ -136,6 +136,7 @@ namespace ZombieCityCleaner.Fauna
                 {
                     Estado = EstadoDoBicho.DeitadoComendo;
                     if (_comerAte <= 0f) _comerAte = agora + Random.Range(18f, 32f);
+                    Mastigar(agora);   // (19/11/2026: o urso mastigando, Bicho.SomGravado.cs)
                 }
                 if (_comerAte > 0f && agora > _comerAte)
                 {

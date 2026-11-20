@@ -39,8 +39,6 @@ namespace ZombieCityCleaner.Player
         const float TempoMinimoNoAr = 0.15f;   // menos que isso não é queda (os degraus da escada)
         const float SaltoDeTeleporte = 1f;     // a diferença entre o que andou e o que a velocidade explica (m)
 
-        static AudioClip _baque;
-
         VidaJogador _vida;
         MovimentoPrimeiraPessoa _mov;
         PuloDaJanela _janela;
@@ -67,7 +65,6 @@ namespace ZombieCityCleaner.Player
             _passageiro = GetComponent<PassageiroDoCarro>();
             _cc = GetComponent<CharacterController>();
             Local = this;
-            if (_baque == null) _baque = GerarBaque();
         }
 
         void OnDestroy()
@@ -179,7 +176,9 @@ namespace ZombieCityCleaner.Player
             if (_subida > SubidaDoArremesso) h = Mathf.Min(h, AlturaDoArremesso);
             if (float.IsNaN(h) || h < AlturaQueMachuca) return;
             _mov.Coice(-Mathf.Min(8f, h));   // a cabeça bate para baixo
-            Efeitos.Som(_baque, p + Vector3.up * 0.3f, Mathf.Clamp(0.55f + h * 0.04f, 0.55f, 1f), false);
+            // (20/11/2026: o baque gravado; o feito em código, a reserva dele, saiu)
+            Efeitos.Som(SonsGravados.Um("Corpo", "baque_"), p + Vector3.up * 0.3f, Mathf.Clamp(0.55f + h * 0.04f, 0.55f, 1f), false);
+            GetComponent<JogadorRede>()?.Voz(TipoDeVoz.Queda, 0.85f);   // (19/11/2026: o gemido da queda; a fratura, a dor)
             _vida.PedirQueda(h);
         }
 
@@ -200,31 +199,6 @@ namespace ZombieCityCleaner.Player
             var mapa = LakewoodNaCena.Instancia;
             if (mapa != null && mapa.ChaoNoMundo != null && mapa.ChaoNoMundo.Agua(p.x, p.z, out float nivel)) return Mathf.Max(0f, nivel - p.y);
             return 0f;
-        }
-
-        // o baque do corpo no chão: mais grave e mais longo que o do golpe, gerado por código como os outros sons
-        static AudioClip GerarBaque()
-        {
-            const int taxa = 22050;
-            int n = taxa / 2;
-            var dados = new float[n];
-            var r = new System.Random(31);
-            float filtro = 0f, grave = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)taxa;
-                float ruido = (float)(r.NextDouble() * 2 - 1);
-                filtro = Mathf.Lerp(filtro, ruido, 0.08f);
-                grave = Mathf.Lerp(grave, ruido, 0.02f);
-                // o tombo (o ruído abafado) e o peso do corpo (um grave que cai de 70 para 45 Hz)
-                float tom = Mathf.Sin(t * 2f * Mathf.PI * Mathf.Lerp(70f, 45f, Mathf.Clamp01(t * 4f))) * 0.7f * Mathf.Exp(-t * 9f);
-                float tombo = (filtro * 1.8f + grave * 3.5f) * Mathf.Exp(-t * 11f);
-                // um segundo toque, mais fraco (o corpo assentando)
-                float t2 = t - 0.09f;
-                float assenta = t2 > 0f ? filtro * 0.9f * Mathf.Exp(-t2 * 22f) : 0f;
-                dados[i] = Mathf.Clamp(tom + tombo + assenta, -1f, 1f);
-            }
-            return SomGerado.Clip("Queda", dados, taxa);
         }
     }
 }

@@ -95,6 +95,20 @@ namespace ZombieCityCleaner.Player
                 if (rede.IsServer) Zombies.ZombieManager.BarulhoDaPoca(chao.point, rede, correndo);
                 return;
             }
+            // (20/11/2026, a pedido: "precisamos de um som de passos na água, quando a água é rasa e estamos andando nela")
+            // com água acima do chão (o raso do lago e dos rios, antes de nadar), os passos na água (o Footsteps - Essentials, em
+            // Resources/Passos/Agua); o barulho chama os zumbis como o da poça
+            if (Agua.Nivel(chao.point, out float nivel) && nivel > chao.point.y + 0.03f)
+            {
+                var naAgua = SonsGravados.Varios("Passos/Agua", correndo ? "correndo_" : "andando_");
+                if (naAgua != null)
+                {
+                    if (rede.IsOwner) Efeitos.Som(naAgua, chao.point, 0.6f * forca, false);
+                    else Efeitos.Som(naAgua, chao.point, 0.9f * forca, true, 30f);
+                    if (rede.IsServer) Zombies.ZombieManager.BarulhoDaPoca(chao.point, rede, correndo);
+                    return;
+                }
+            }
             var clips = Efeitos.Passos[(int)Do(chao.collider, chao.point)][correndo ? 1 : 0];
             if (rede.IsOwner) Efeitos.Som(clips, chao.point, volumeProprio * forca, false);
             else Efeitos.Som(clips, chao.point, volumeDosOutros * forca, true, 25f);

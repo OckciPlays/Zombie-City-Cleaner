@@ -77,7 +77,7 @@ namespace ZombieCityCleaner.Combat
         public float dispersao, dispersaoAndando;
         public float coiceGraus;
         public float alcance;
-        public SomDeTiro.Perfil som;
+        // (20/11/2026: o perfil do tiro feito em código, o "som", saiu com o SomDeTiro: o tiro é o gravado, Resources/Armas)
         /// <summary>A boca do cano na malha da arma avulsa (origem no cabo, cano em +Z).</summary>
         public Vector3 boca;
         /// <summary>
@@ -106,19 +106,19 @@ namespace ZombieCityCleaner.Combat
             {
                 nome = "pistola", nomeComArtigo = "a pistola", capacidade = 12, calibre = Calibre.Nove, intervalo = 0.18f, tempoRecarga = 40 / 24f,
                 carregadorSai = 5 / 24f, carregadorEntra = 27 / 24f, dano = 15f, dispersao = 0.3f, dispersaoAndando = 1.2f,
-                coiceGraus = 1.6f, alcance = 80f, som = SomDeTiro.Pistola, boca = new Vector3(0f, 0.093f, 0.188f),
+                coiceGraus = 1.6f, alcance = 80f, boca = new Vector3(0f, 0.093f, 0.188f),
             },
             new DadosDaArma
             {
                 nome = "rifle", nomeComArtigo = "o rifle", capacidade = 30, calibre = Calibre.Cinco56, intervalo = 0.1f, automatica = true,
                 tempoRecarga = 46 / 24f, carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 25f, dispersao = 0.5f,
-                dispersaoAndando = 1.8f, coiceGraus = 0.9f, alcance = 120f, som = SomDeTiro.Rifle, boca = new Vector3(0f, 0.105f, 0.732f),
+                dispersaoAndando = 1.8f, coiceGraus = 0.9f, alcance = 120f, boca = new Vector3(0f, 0.105f, 0.732f),
             },
             new DadosDaArma
             {
                 nome = "submetralhadora", nomeComArtigo = "a submetralhadora", capacidade = 25, calibre = Calibre.Nove, intervalo = 0.075f,
                 automatica = true, tempoRecarga = 40 / 24f, carregadorSai = 10 / 24f, carregadorEntra = 31 / 24f, dano = 18f,
-                dispersao = 0.9f, dispersaoAndando = 1.6f, coiceGraus = 0.6f, alcance = 60f, som = SomDeTiro.Submetralhadora,
+                dispersao = 0.9f, dispersaoAndando = 1.6f, coiceGraus = 0.6f, alcance = 60f,
                 boca = new Vector3(0f, 0.105f, 0.291f),
             },
             new DadosDaArma
@@ -130,7 +130,7 @@ namespace ZombieCityCleaner.Combat
                 // para valer um tiro só); de longe, pouco
                 faixas = new[] { new FaixaDeDano(5f, 115f), new FaixaDeDano(15f, 30f), new FaixaDeDano(float.MaxValue, 17f) },
                 dispersao = 3.5f, dispersaoAndando = 1f, coiceGraus = 4f,
-                alcance = 35f, som = SomDeTiro.Espingarda, boca = new Vector3(0f, 0.056f, 0.892f),
+                alcance = 35f, boca = new Vector3(0f, 0.056f, 0.892f),
             },
             new DadosDaArma
             {
@@ -140,7 +140,7 @@ namespace ZombieCityCleaner.Combat
                 carregadorSai = 11 / 24f, carregadorEntra = 36 / 24f, dano = 50f,
                 dispersao = 0f, dispersaoSemLuneta = 4f, dispersaoAndando = 2.5f, coiceGraus = 5f, alcance = 160f,
                 fovLuneta = 12f, ferrolho = true, corpoComo = TipoDeArma.Rifle,
-                som = SomDeTiro.Sniper, boca = new Vector3(0f, 0.115f, 0.905f),
+                boca = new Vector3(0f, 0.115f, 0.905f),
             },
         });
 

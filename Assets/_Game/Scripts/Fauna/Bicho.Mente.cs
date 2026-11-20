@@ -40,6 +40,16 @@ namespace ZombieCityCleaner.Fauna
         public bool desfeita;
         /// <summary>O cerco do F1 (vale de dia).</summary>
         public bool cercoDeTeste;
+        /// <summary>
+        /// (20/11/2026, a pedido: "quando atacamos ele, independe ser de dia ou de noite, se estou ferido ou não, ele e a
+        /// alcateia deveria atacar") a matilha de lobos atacada (o tiro ou o golpe num deles, um deles morto) cerca quem
+        /// atacou até aqui, de dia ou de noite, sem o tiro espantar (o alfa morto ainda desfaz a matilha).
+        /// </summary>
+        public float revideAte = -1f;
+        /// <summary>O chamado: o líder uiva, parado, até aqui; a matilha corre para a roda e os botes começam depois.</summary>
+        public float chamadoAte = -1f;
+        /// <summary>Para que lado de quem é cercado os filhotes ficam (longe, atrás da matilha).</summary>
+        public Vector3 ladoDosFilhotes = Vector3.forward;
 
         // ---------------------------------------------------- a água (a etapa 3: Bicho.Agua.cs)
         /// <summary>O ninho dos gansos (na margem): a fêmea choca e o macho guarda.</summary>
@@ -142,6 +152,8 @@ namespace ZombieCityCleaner.Fauna
             Exposto = false;
             _distraidoAte = 0f;
             Grupo = null;
+            Uivando = false;
+            _uivoAte = 0f;
         }
 
         // ------------------------------------------------------------------ a decisão (a cada 0,3 a 3 s)
@@ -557,7 +569,15 @@ namespace ZombieCityCleaner.Fauna
             if (velAlvo > 0.05f && agora >= _proximaSondagem)
             {
                 _proximaSondagem = agora + (velAlvo > 4f ? 0.1f : 0.25f);
-                _desvio = Desviar(p, dir, velAlvo, dist + 0.5f);
+                // (20/11/2026) quem ataca olha só até o alvo: a parede, o carro ou a água logo atrás do jogador faziam o urso
+                // desviar a 4 m dele e passar direto
+                // e, a menos de 6 m, com a linha livre até o alvo, vai reto (a esfera larga do desvio pegava a árvore ao lado
+                // do jogador, e o urso ficava rodeando)
+                Vector3 altura = Vector3.up * Mathf.Max(0.25f, Dados.altura * Escala * 0.6f);
+                if (Estado == EstadoDoBicho.Investindo && dist < 6f
+                    && !Physics.Linecast(p + altura, new Vector3(_destino.x, p.y, _destino.z) + altura, 1 | (1 << 11), QueryTriggerInteraction.Ignore))
+                    _desvio = 0f;
+                else _desvio = Desviar(p, dir, velAlvo, Estado == EstadoDoBicho.Investindo ? Mathf.Max(0.6f, dist - 1f) : dist + 0.5f);
             }
             if (velAlvo > 0.05f) dir = Quaternion.Euler(0f, _desvio, 0f) * dir;
             // a aceleração (a fuga arranca rápido) e a freada
@@ -574,6 +594,8 @@ namespace ZombieCityCleaner.Fauna
             if (_peixeNaBoca != null) Levar(_peixeNaBoca);
         }
 
+        bool EhOAlvo(Transform t) => (_alvo != null && t.IsChildOf(_alvo.transform)) || (_alvoDoUrso != null && t.IsChildOf(_alvoDoUrso.transform));
+
         // o primeiro rumo livre (de árvore, parede, carro, gente, água funda e da borda do mapa) perto do desejado
         // (13/11) 'ate': até onde olhar (o destino perto: o urso que vai ao raso não via a água funda além dele e dava voltas)
         float Desviar(Vector3 p, Vector3 dir, float vel, float ate = 999f)
@@ -587,8 +609,10 @@ namespace ZombieCityCleaner.Fauna
             for (int i = 0; i < Desvios.Length; i++)
             {
                 Vector3 d = Quaternion.Euler(0f, _desvio * 0.5f + Desvios[i], 0f) * dir;
+                // (20/11/2026) quem ataca não desvia do alvo: o do lobo e do alce (_alvo) e o do urso (_alvoDoUrso; antes ficava
+                // de fora, e o urso rodeava o jogador a 3–7 m sem nunca dar a patada)
                 if (!voando && Physics.SphereCast(origem, raio, d, out var hit, olhar, MascaraDoCaminho, QueryTriggerInteraction.Ignore)
-                    && !(Estado == EstadoDoBicho.Investindo && _alvo != null && hit.collider.transform.IsChildOf(_alvo.transform))) continue;
+                    && !(Estado == EstadoDoBicho.Investindo && EhOAlvo(hit.collider.transform))) continue;
                 Vector3 adiante = p + d * olhar;
                 if (temMapa)
                 {

@@ -21,7 +21,7 @@ namespace ZombieCityCleaner.Fauna
     /// </summary>
     public sealed partial class Bicho
     {
-        float _calarAte, _proximoCoaxar, _proximoChocalho, _proximoBote, _trepadoAte, _semGenteDesde, _proximoGluGlu, _reviraAte;
+        float _calarAte, _proximoCoaxar, _proximoChocalho, _proximoBote, _trepadoAte, _semGenteDesde, _proximoGluGlu, _reviraAte, _proximoChiadoDoGuaxinim;
         bool _trepando, _temArvore, _empoleirado, _avisou;
         Vector3 _peDoTronco;
         float _raioDoTronco;
@@ -246,6 +246,12 @@ namespace ZombieCityCleaner.Fauna
                 _perigo = de;
                 _perigoAte = agora + 10f;
                 _reviraAte = 0f;
+                // (20/11/2026) assustado, ele chia (no máximo um a cada 6 a 12 s)
+                if (agora >= _proximoChiadoDoGuaxinim)
+                {
+                    _proximoChiadoDoGuaxinim = agora + Random.Range(6f, 12f);
+                    Tocar(SomDoBicho.Guaxinim);
+                }
                 if (Trepar(f, agora)) return;
                 Fugir(agora, true);
                 return;
@@ -258,6 +264,12 @@ namespace ZombieCityCleaner.Fauna
                 _temDestino = false;
                 _velAlvo = 0f;
                 if (Random.value < 0.4f) Tocar(_lixoDeAgora == TipoDeLixo.Sacolas ? SomDoBicho.Sacola : Random.value < 0.5f ? SomDoBicho.Sacola : SomDoBicho.Remexer);
+                else if (agora >= _proximoChiadoDoGuaxinim && Random.value < 0.08f)
+                {
+                    // (20/11/2026) no lixo, de vez em quando, o resmungo dele
+                    _proximoChiadoDoGuaxinim = agora + Random.Range(15f, 35f);
+                    Tocar(SomDoBicho.Guaxinim);
+                }
                 return;
             }
             // à noite (e, na cidade, de dia também: 13/11), o lixo mais perto (a até 60 m) que ninguém revirou faz pouco

@@ -187,7 +187,7 @@ namespace ZombieCityCleaner.Loot
         void EstouroRpc(Vector3 centro, int area, Vector3 chao, float raio, float segundos)
         {
             MostrarAreaDeFogo(area, chao, raio, segundos);
-            Efeitos.Som(SomDoFogo.Estouro, centro, 1f, true, 140f);
+            SomDoFogo.Estourar(centro);   // o baque e a labareda grande (19/11/2026)
             var go = new GameObject("Estouro do galão");
             go.transform.SetParent(transform, false);
             go.transform.position = centro;

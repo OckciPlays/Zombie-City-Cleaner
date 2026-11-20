@@ -40,7 +40,6 @@ namespace ZombieCityCleaner.Player
         /// <summary>No dono: quando o botão de renascer acende (Time.time).</summary>
         public float PodeRenascerEm { get; private set; }
 
-        static AudioClip _somDoGolpe;
         float _ultimoGolpe, _clarao, _caiuNoServidor;
         string _ultimaCausa;
         FomeESede _fomeESede;
@@ -59,11 +58,11 @@ namespace ZombieCityCleaner.Player
                 Caido.Value = false;
             }
             NascerCorpo();
-            if (_somDoGolpe == null) _somDoGolpe = GerarSom();
-            if (IsOwner && GetComponent<TelaDeMorte>() == null) gameObject.AddComponent<TelaDeMorte>();
+            bool dono = IsOwner;
+            if (dono && GetComponent<TelaDeMorte>() == null) gameObject.AddComponent<TelaDeMorte>();
             // o corpo (05/11/2026): no dono, a queda, os efeitos das lesões, o curativo com a barra e a silhueta no HUD; em
             // todas as máquinas, a faixa e a tala no corpo
-            if (IsOwner)
+            if (dono)
             {
                 if (GetComponent<QuedaDoJogador>() == null) gameObject.AddComponent<QuedaDoJogador>();
                 if (GetComponent<EfeitosDoCorpo>() == null) gameObject.AddComponent<EfeitosDoCorpo>();
@@ -176,13 +175,17 @@ namespace ZombieCityCleaner.Player
             _clarao = 1f;
             UltimoGolpeNoDono = Time.time;
             // a queda já teve o tranco e o baque no dono (QuedaDoJogador): aqui, só o osso
+            // (19/11/2026) a voz: o golpe, e a dor com o osso quebrando na fratura
+            bool fratura = lesao >= (byte)Lesao.Fratura;
+            if (fratura) Efeitos.Som(SonsGravados.Golpes("Osso"), transform.position + Vector3.up * 1.2f, 0.8f, false);
+            if (fratura || (TipoDeGolpe)tipo != TipoDeGolpe.Queda) _rede?.Voz(fratura ? TipoDeVoz.Dor : TipoDeVoz.Golpe);
             if ((TipoDeGolpe)tipo == TipoDeGolpe.Queda)
             {
                 if (lesao >= (byte)Lesao.Fratura) GetComponent<MovimentoPrimeiraPessoa>().Coice(-3f);
             }
             else
             {
-                Efeitos.Som(_somDoGolpe, transform.position + Vector3.up * 1.5f, 0.9f, false);
+                Efeitos.Som(SonsGravados.Um("Corpo", "baque_"), transform.position + Vector3.up * 1.5f, 0.8f, false);   // (20/11/2026: o baque gravado; o feito em código saiu)
                 GetComponent<MovimentoPrimeiraPessoa>().Coice(lesao >= (byte)Lesao.Fratura ? -6f : -2.5f);   // o golpe sacode a cabeça para baixo
             }
             AvisarDoGolpe((ParteDoCorpo)parte, (TipoDeGolpe)tipo, (Lesao)lesao, abriu);
@@ -194,6 +197,7 @@ namespace ZombieCityCleaner.Player
         {
             Causa = causa;
             PerdeuAsCoisas = !diaZero;
+            _rede?.Voz(TipoDeVoz.Dor, 1f);   // (19/11/2026: o último grito)
             PodeRenascerEm = Time.time + esperaParaRenascer;
             GetComponent<PassageiroDoCarro>().Soltar();
             Caiu?.Invoke();
@@ -311,23 +315,6 @@ namespace ZombieCityCleaner.Player
             GUI.color = c;
             GUI.DrawTexture(new Rect(x, y, w, h), Texture2D.whiteTexture);
             GUI.color = antes;
-        }
-
-        // um baque surdo, gerado por código como os outros sons
-        static AudioClip GerarSom()
-        {
-            const int taxa = 22050;
-            int n = taxa / 3;
-            var dados = new float[n];
-            var r = new System.Random(7);
-            float filtro = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)taxa;
-                filtro = Mathf.Lerp(filtro, (float)(r.NextDouble() * 2 - 1), 0.12f);
-                dados[i] = (filtro * 1.6f + Mathf.Sin(t * 2f * Mathf.PI * 85f) * 0.5f) * Mathf.Exp(-t * 14f);
-            }
-            return SomGerado.Clip("Golpe", dados, taxa);
         }
     }
 }

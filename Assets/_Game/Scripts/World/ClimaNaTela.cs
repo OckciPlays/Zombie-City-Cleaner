@@ -51,7 +51,7 @@ namespace ZombieCityCleaner.World
 
         // ------------------------------------------------------------------ os sons
         AudioClip _somFina, _somChuva, _somForte, _somTelhado, _somCarro, _somVento, _somTornado, _somZumbido;
-        AudioClip[] _trovoesLonge, _trovoesMedio, _trovoesPerto, _estalos;
+        AudioClip[] _trovoesLonge, _trovoesMedio, _trovoesPerto;
         static AudioClip[] _sonsDaPoca;
 
         AudioSource _fina, _media, _forte, _telhado, _carro, _vento, _tornadoSom, _zumbido;
@@ -137,11 +137,12 @@ namespace ZombieCityCleaner.World
             _somCarro = Carregar("chuva_carro");
             _somVento = Carregar("vento_forte");
             _somTornado = Carregar("tornado");
-            _somZumbido = Carregar("zumbido");
-            _trovoesLonge = Varios("trovao_longe_", 4);
-            _trovoesMedio = Varios("trovao_medio_", 3);
-            _trovoesPerto = Varios("trovao_perto_", 3);
-            _estalos = Varios("estalo_", 2);
+            _somZumbido = Carregar("zumbido");   // (20/11/2026: o zumbido feito em código saiu; sem ele, só o resto abaixa)
+            // (19/11/2026: mais trovões, do Nature Sound FX: o longe do 5 em diante, o médio e o perto do 4; desde 20/11/2026,
+            // a pedido, só eles: os feitos em código, do 1 ao 3, e o estalo saíram de Resources/Clima)
+            _trovoesLonge = Varios("trovao_longe_", 6);
+            _trovoesMedio = Varios("trovao_medio_", 6);
+            _trovoesPerto = Varios("trovao_perto_", 6);
 
             _fina = Fonte("Chuva fina", _somFina, out _filtroFina);
             _media = Fonte("Chuva", _somChuva, out _filtroMedia);
@@ -344,8 +345,8 @@ namespace ZombieCityCleaner.World
             float corte = CorteDeFora;
             Laco(_fina, _filtroFina, 0.42f * wFina * fora, corte);
             Laco(_media, _filtroMedia, 0.55f * wMedia * fora, corte);
-            Laco(_forte, _filtroForte, 0.7f * wForte * fora, corte);
-            Laco(_telhado, null, 0.6f * Mathf.Clamp01(c * 1.4f) * _noTelhado * _surdo, 22000f);
+            Laco(_forte, _filtroForte, 0.8f * wForte * fora, corte);   // (20/11/2026: a chuva gravada, 0,7 → 0,8)
+            Laco(_telhado, null, 0.75f * Mathf.Clamp01(c * 1.4f) * _noTelhado * _surdo, 22000f);   // (a lona gravada, 0,6 → 0,75)
             Laco(_carro, null, 0.65f * Mathf.Clamp01(c * 1.3f) * _noCarro * _surdo, 22000f);
             float v = Tempo.Vento;
             Laco(_vento, _filtroVento, 0.55f * Mathf.Pow(Mathf.Clamp01((v - 0.15f) / 0.85f), 1.3f) * fora, corte);
@@ -576,8 +577,11 @@ namespace ZombieCityCleaner.World
             double atraso = dist / 343.0;
             if (dist < 150f)
             {
-                _trovoes.Add(new Trovao { quando = agora + atraso, clip = Sortear(_estalos), volume = 1f, corte = 22000f, ponto = raio.ponto, zumbido = dist < 50f ? 1f - dist / 50f : 0f });
-                _trovoes.Add(new Trovao { quando = agora + atraso + 0.06, clip = Sortear(_trovoesPerto), volume = 0.95f, corte = 22000f, ponto = raio.ponto });
+                // (20/11/2026, a pedido: "quando o raio cair perto da gente, deveria fazer um barulho maior (do som real)") o
+                // trovão de perto gravado (o estalo seco já vem no começo dele, mais forte que os outros) e, por baixo, o ronco
+                // de um médio, que rola pelo céu depois do estalo
+                _trovoes.Add(new Trovao { quando = agora + atraso, clip = Sortear(_trovoesPerto), volume = 1f, corte = 22000f, ponto = raio.ponto, zumbido = dist < 50f ? 1f - dist / 50f : 0f });
+                _trovoes.Add(new Trovao { quando = agora + atraso + 0.35, clip = Sortear(_trovoesMedio), volume = Mathf.Lerp(0.8f, 0.6f, dist / 150f), corte = 9000f, ponto = raio.ponto });
             }
             else if (dist < 750f)
             {
@@ -617,11 +621,14 @@ namespace ZombieCityCleaner.World
                 fonte.clip = t.clip;
                 fonte.volume = t.volume * Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(_abafo / 0.8f)) * Mathf.Lerp(1f, 0.15f, Mathf.Clamp01((_abafo - 0.8f) / 0.2f));
                 fonte.Play();
-                // o zumbido no ouvido (o raio bem perto): o resto abaixa e volta aos poucos
-                if (t.zumbido > 0f && _zumbido.clip != null && _abafo < 0.9f)
+                // o raio bem perto: o resto abaixa e volta aos poucos (o ouvido atordoado); o zumbido só se houver o som dele
+                if (t.zumbido > 0f && _abafo < 0.9f)
                 {
-                    _zumbido.volume = 0.5f * t.zumbido * (1f - 0.6f * _abafo);
-                    _zumbido.Play();
+                    if (_zumbido.clip != null)
+                    {
+                        _zumbido.volume = 0.5f * t.zumbido * (1f - 0.6f * _abafo);
+                        _zumbido.Play();
+                    }
                     _surdo = Mathf.Min(_surdo, Mathf.Lerp(1f, 0.2f, t.zumbido));
                 }
             }
