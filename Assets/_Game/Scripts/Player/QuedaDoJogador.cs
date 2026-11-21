@@ -176,7 +176,8 @@ namespace ZombieCityCleaner.Player
             if (_subida > SubidaDoArremesso) h = Mathf.Min(h, AlturaDoArremesso);
             if (float.IsNaN(h) || h < AlturaQueMachuca) return;
             _mov.Coice(-Mathf.Min(8f, h));   // a cabeça bate para baixo
-            // (20/11/2026: o baque gravado; o feito em código, a reserva dele, saiu)
+            // (21/11/2026, a pedido: o baque gravado da queda tinha ruído e saiu; até achar outro, a queda fica só com o gemido.
+            // Um Corpo/baque_ novo volta a tocar aqui sozinho)
             Efeitos.Som(SonsGravados.Um("Corpo", "baque_"), p + Vector3.up * 0.3f, Mathf.Clamp(0.55f + h * 0.04f, 0.55f, 1f), false);
             GetComponent<JogadorRede>()?.Voz(TipoDeVoz.Queda, 0.85f);   // (19/11/2026: o gemido da queda; a fratura, a dor)
             _vida.PedirQueda(h);

@@ -69,6 +69,9 @@ lista da seção 2 e apague à mão o que ainda existir aí (uma cópia local, o
   `Bichos/Urubu`. Até achar outros: a tampa do baú fechando usa a porta de armário fechando; o carro que passa no Dia 0
   usa o motor gravado da perua (`Carro/motor_a_2_1000`); a árvore cai sem os estalos (só o machado e o tombo); o
   guaxinim, o peru e o urubu ficam mudos.
+- **O baque da queda (21/11/2026, também com ruído):** saíram `Corpo/baque_1` e `baque_2`. A queda (de 3 m para cima) fica só
+  com o gemido da voz; o golpe recebido toca o soco na carne (`Golpes/SocoCarne`). Um `Corpo/baque_` novo volta a tocar na queda
+  sozinho.
 
 - **Não volte os sons antigos** dos arquivos que foram trocados com o mesmo nome. A versão nova é a certa:
   `Audio/Carro/Alarme_01..03`, `Audio/Hospital/*`, `Audio/Motos/Cross_Pegar` e `FatBoy_Pegar`,
@@ -117,3 +120,4 @@ Os sons que ainda são feitos em código (não há gravação) ou que não exist
   gravados tinham ruído e saíram); a mordida, o guincho do coelho, a patada do urso e o espirro do gambá.
 - **A árvore:** os estalos dela começando a cair (os gravados tinham ruído e saíram).
 - **O Dia 0:** o carro passando (hoje é o motor da perua em laço).
+- **O corpo:** o baque da queda (o gravado tinha ruído e saiu).

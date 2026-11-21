@@ -185,7 +185,8 @@ namespace ZombieCityCleaner.Player
             }
             else
             {
-                Efeitos.Som(SonsGravados.Um("Corpo", "baque_"), transform.position + Vector3.up * 1.5f, 0.8f, false);   // (20/11/2026: o baque gravado; o feito em código saiu)
+                // (21/11/2026: o baque gravado tinha ruído e saiu; o golpe recebido toca o soco na carne, do Deadly Kombat)
+                Efeitos.Som(SonsGravados.Golpes("SocoCarne"), transform.position + Vector3.up * 1.5f, 0.8f, false);
                 GetComponent<MovimentoPrimeiraPessoa>().Coice(lesao >= (byte)Lesao.Fratura ? -6f : -2.5f);   // o golpe sacode a cabeça para baixo
             }
             AvisarDoGolpe((ParteDoCorpo)parte, (TipoDeGolpe)tipo, (Lesao)lesao, abriu);
