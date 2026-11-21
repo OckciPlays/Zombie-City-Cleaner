@@ -8,7 +8,8 @@ namespace ZombieCityCleaner.Fauna
     /// Os olhos na lanterna (a etapa 4, 12/11/2026), em cada máquina (nada vai pela rede): à noite, quando a lanterna do
     /// jogador desta máquina aponta para o bicho (num cone de ~16°, até 70 m, sem nada na frente), os dois olhos brilham
     /// de longe, na cor de cada um (o veado verde-branco, o lobo e o coiote amarelo-verde, o urso laranja, o guaxinim
-    /// amarelo...). Dois pontinhos sem luz da cena (o material sem sombra), postos na frente da cabeça a cada quadro.
+    /// amarelo...). Dois pontinhos sem luz da cena (o material sem sombra), postos na frente da cara a cada quadro
+    /// (desde 20/11/2026, na face da caixa da cabeça virada para a câmera: OlhosNaCara).
     /// </summary>
     public sealed partial class Bicho
     {
@@ -65,11 +66,45 @@ namespace ZombieCityCleaner.Fauna
             // na frente da cabeça, afastados pelo tamanho do bicho; maiores de longe (para se ver os pontinhos)
             var c = Camera.main.transform.position;
             float tam = Mathf.Clamp(Altura * 0.05f, 0.02f, 0.08f) * Mathf.Lerp(1f, 3f, Mathf.InverseLerp(10f, 70f, Vector3.Distance(c, Modelo.cabeca.position)));
-            Vector3 frente = transform.forward * Mathf.Max(0.04f, Altura * 0.14f), lado = transform.right * Mathf.Max(0.02f, Altura * 0.07f);
-            Vector3 meio = Modelo.cabeca.position + frente + Vector3.up * Altura * 0.03f;
+            if (!OlhosNaCara(c, out var meio, out var lado))
+            {
+                Vector3 frente = transform.forward * Mathf.Max(0.04f, Altura * 0.14f);
+                lado = transform.right * Mathf.Max(0.02f, Altura * 0.07f);
+                meio = Modelo.cabeca.position + frente + Vector3.up * Altura * 0.03f;
+            }
             _olhoE.position = meio - lado;
             _olhoD.position = meio + lado;
             _olhoE.localScale = _olhoD.localScale = Vector3.one * tam;
+        }
+
+        BoxCollider _caixaDaCabeca;
+        bool _procurouACaixa;
+
+        /// <summary>
+        /// (20/11/2026, a pedido: os olhos do lobo e do urso não brilhavam na lanterna) Nos modelos do Tripo, o ponto um pouco
+        /// à frente do osso da cabeça fica dentro do focinho (a caixa da cabeça), e as bolinhas não apareciam: só o cervo, de
+        /// cabeça fina, mostrava. Com a caixa da cabeça (o colisor dela, preso no osso), os olhos vão para a face dela virada
+        /// para a câmera, um pouco acima do meio; 'lado': metade da distância entre os dois. Sem a caixa (os bichos de caixas),
+        /// fica a conta antiga.
+        /// </summary>
+        bool OlhosNaCara(Vector3 camera, out Vector3 meio, out Vector3 lado)
+        {
+            meio = lado = default;
+            if (!_procurouACaixa)
+            {
+                _procurouACaixa = true;
+                foreach (var p in GetComponentsInChildren<ParteDoBicho>(true))
+                    if (p.cabeca && p.TryGetComponent(out BoxCollider caixa)) { _caixaDaCabeca = caixa; break; }
+            }
+            var bc = _caixaDaCabeca;
+            if (bc == null) return false;
+            var t = bc.transform;
+            var centro = t.TransformPoint(bc.center + Vector3.up * bc.size.y * 0.08f);
+            var para = (camera - centro).normalized;
+            if (!bc.Raycast(new Ray(centro + para * 5f, -para), out var hit, 5f)) return false;
+            meio = hit.point + para * 0.02f;
+            lado = t.right * (bc.size.x * Mathf.Abs(t.lossyScale.x) * 0.22f);
+            return true;
         }
 
         void CriarOlhos()
