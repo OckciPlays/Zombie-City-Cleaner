@@ -35,6 +35,9 @@ namespace ZombieCityCleaner.Player
         [Tooltip("Mais perto que isso da cabeça (uma parede logo atrás), o corpo some, para não tapar a tela.")]
         public float pertoDemais = 0.55f;
         public float alcanceDaMira = 200f;
+        [Tooltip("Até esta distância da cabeça (m), o que fica no caminho do tiro puxa a mira para ele (a parede, a proteção);"
+                 + " mais longe, não (as árvores no fundo, perto da linha, faziam a mira pular).")]
+        public float bloqueioPerto = 6f;
 
         /// <summary>A escolha do jogador (o V): a terceira pessoa a pé e a câmera de trás no carro.</summary>
         public static bool Ligada { get; set; }
@@ -201,10 +204,11 @@ namespace ZombieCityCleaner.Player
             Vector3 para = alvo - olho;
             // um alvo colado na cabeça (ou atrás dela) não dá direção: a da câmera
             Mira.rotation = Vector3.Dot(para, frente) > 0.5f ? Quaternion.LookRotation(para, cam.up) : cam.rotation;
-            // o que fica no caminho da cabeça até o alvo (o tiro bate nele): a mira vai para lá
+            // o que fica no caminho da cabeça até o alvo (o tiro bate nele): a mira vai para lá, só quando está perto (23/11/2026:
+            // só um auxílio; de longe, as árvores perto da linha faziam a mira pular de uma para outra)
             MiraBloqueada = null;
             float ate = para.magnitude;
-            if (ate > 0.3f && Physics.Raycast(olho, para / ate, out var bloqueio, ate - 0.15f, MascaraDaMira, QueryTriggerInteraction.Ignore))
+            if (ate > 0.3f && Physics.Raycast(olho, para / ate, out var bloqueio, Mathf.Min(ate - 0.15f, bloqueioPerto), MascaraDaMira, QueryTriggerInteraction.Ignore))
                 MiraBloqueada = bloqueio.point;
         }
 

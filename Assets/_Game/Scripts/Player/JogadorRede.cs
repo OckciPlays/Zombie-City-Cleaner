@@ -890,6 +890,8 @@ namespace ZombieCityCleaner.Player
             if (Armas.Dados(arma).ferrolho) StartCoroutine(SomDepois(boca, Efeitos.Ferrolho, 0.42f, 0.7f));
             foreach (var i in impactos)
             {
+                // o trajeto da bala (23/11/2026): do cano da arma do corpo até onde bateu (o tiro perdido chega com o ponto lá longe)
+                if (i.ponto != Vector3.zero) RastroDaBala.Mostrar(boca.position, i.ponto, 0.3f);
                 if (i.tipo == TipoDeAcerto.Carne) Sangue.Respingo(i.ponto, i.normal);
                 else if (i.tipo != TipoDeAcerto.Nada) Efeitos.Impacto(i.ponto, i.normal);
                 if (i.tipo == TipoDeAcerto.Cenario) Sangue.FuroDeTiro(i.ponto, i.normal);

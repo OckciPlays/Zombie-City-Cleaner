@@ -345,7 +345,7 @@ namespace ZombieCityCleaner.Player
             a = Gravar(a, 1, a1);
             a = Gravar(a, 2, a2);
             _atalhos.Value = a;
-            Escolhido.Value = (byte)Mathf.Clamp(escolhido, 0, Atalhos - 1);
+            Escolhido.Value = (byte)Mathf.Clamp(escolhido, 0, MaosLivres);   // (23/11/2026: também com as armas guardadas)
             Mudou?.Invoke();
         }
 

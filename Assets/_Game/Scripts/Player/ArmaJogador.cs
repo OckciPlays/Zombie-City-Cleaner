@@ -987,7 +987,8 @@ namespace ZombieCityCleaner.Player
                 // (na terceira pessoa a câmera não treme: o tremor do braço e o calafrio entram aqui, no tiro)
                 var mira = cego ? miraCega : rede.EmTerceiraPessoa && EfeitosDoCorpo.Local != null ? cam.rotation * EfeitosDoCorpo.Local.DesvioDaMira : cam.rotation;
                 Vector3 direcao = mira * (Quaternion.Euler(desvio.y, desvio.x, 0f) * Vector3.forward);
-                impactos[k] = Disparar(cego ? origemCega : OrigemDaMira(cam), direcao, d);
+                Vector3 origemDoTiro = cego ? origemCega : OrigemDaMira(cam);
+                impactos[k] = Disparar(origemDoTiro, direcao, d);
                 // o galão e o rastro da cerca de fogo (12/11/2026): o galão é um gatilho que o raio atravessa, e o rastro
                 // não tem colisor (a bala para no chão em cima dele)
                 var cercas = Loot.ConstrucoesNoMundo.Instancia;
@@ -998,6 +999,12 @@ namespace ZombieCityCleaner.Player
                     cercas.ConferirTiroNasCercas(cam.position, direcao, parou ? Vector3.Distance(cam.position, imp.ponto) : d.alcance, imp.ponto,
                                                  imp.tipo == JogadorRede.TipoDeAcerto.Cenario);
                 }
+                // o trajeto da bala (23/11/2026, Combat/RastroDaBala): do cano até onde bateu; o tiro que não pegou nada leva o
+                // ponto lá longe no anúncio, para os outros desenharem o mesmo risco
+                if (impactos[k].tipo == JogadorRede.TipoDeAcerto.Nada) impactos[k].ponto = origemDoTiro + direcao * Mathf.Min(d.alcance, 150f);
+                bool corpo = rede.EmTerceiraPessoa || (rede.Passageiro != null && rede.Passageiro.ArmaNoCorpo);
+                Vector3 cano = corpo ? rede.bocasCorpo[(int)Atual].position : rede.NoMundo(Boca.position);
+                RastroDaBala.Mostrar(cano, impactos[k].ponto, corpo ? 0.3f : 1.2f);
             }
             _chumboDoCentro = false;
             MandarAcertos(d);

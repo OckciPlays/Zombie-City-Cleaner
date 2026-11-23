@@ -67,6 +67,11 @@ namespace ZombieCityCleaner.Player
     public partial class InventarioJogador : NetworkBehaviour
     {
         public const int Atalhos = 3;
+        /// <summary>
+        /// O Escolhido das armas guardadas (23/11/2026, o X): as mãos livres, com os 3 atalhos como estavam. O X de novo volta
+        /// ao atalho de antes. O "atalho" 3 não existe (sempre vazio), por isso a mão fica vazia sem mais nada.
+        /// </summary>
+        public const int MaosLivres = Atalhos;
 
         [Tooltip("Os ícones coloridos, na ordem de Itens.Modelos (as armas, a lata e a garrafa).")]
         public Texture2D[] icones;
@@ -108,8 +113,12 @@ namespace ZombieCityCleaner.Player
         public int Linhas => TamanhoDaGrade.y;
         // os 3 atalhos, 16 bits cada (o Id do item na mochila; 0 = vazio), escritos pelo dono
         readonly NetworkVariable<long> _atalhos = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-        /// <summary>O atalho da mão (0 a 2).</summary>
+        /// <summary>O atalho da mão (0 a 2; <see cref="MaosLivres"/>: as armas guardadas, com o X).</summary>
         public readonly NetworkVariable<byte> Escolhido = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>As armas estão guardadas (o X): as mãos livres.</summary>
+        public bool ArmasGuardadas => Escolhido.Value >= Atalhos;
+        // o atalho de antes de guardar as armas (o X de novo volta para ele)
+        byte _antesDeGuardar;
 
         /// <summary>O Id do item de um atalho (0, vazio; pode apontar para um item que acabou de sair da mochila).</summary>
         public ushort Atalho(int lugar) => Ler(_atalhos.Value, lugar);
@@ -1172,7 +1181,7 @@ namespace ZombieCityCleaner.Player
                 {
                     _pegouAte = 0f;
                     int lugar = -1;
-                    if (Ler(a, Escolhido.Value) == 0) lugar = Escolhido.Value;
+                    if (Escolhido.Value < Atalhos && Ler(a, Escolhido.Value) == 0) lugar = Escolhido.Value;   // (guardadas: não)
                     else if (Itens.EhArma(e.Value.item))
                         for (int i = Atalhos - 1; i >= 0; i--)
                             if (Ler(a, i) == 0) lugar = i;
@@ -1188,7 +1197,9 @@ namespace ZombieCityCleaner.Player
                     _naMaoQuandoChegar = 0;
                     for (int i = 0; i < Atalhos; i++)
                         if (Ler(a, i) == e.Value.id) a = Gravar(a, i, 0);
-                    a = Gravar(a, Escolhido.Value, e.Value.id);
+                    int naMao = Escolhido.Value < Atalhos ? Escolhido.Value : 0;   // (com as armas guardadas, o primeiro atalho)
+                    a = Gravar(a, naMao, e.Value.id);
+                    escolher = naMao;
                 }
                 if (a != _atalhos.Value) _atalhos.Value = a;
                 if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
@@ -1297,7 +1308,12 @@ namespace ZombieCityCleaner.Player
         void PorNaMaoRpc(ushort id)
         {
             if (Do(id) == Item.Nada) _naMaoQuandoChegar = id;
-            else PorNoAtalho(Escolhido.Value, id);
+            else
+            {
+                int naMao = Escolhido.Value < Atalhos ? Escolhido.Value : 0;   // (com as armas guardadas, o primeiro atalho)
+                PorNoAtalho(naMao, id);
+                if (naMao != Escolhido.Value) Escolhido.Value = (byte)naMao;
+            }
         }
 
         ushort _naMaoQuandoChegar;
@@ -1481,6 +1497,16 @@ namespace ZombieCityCleaner.Player
             {
                 float roda = mouse.scroll.ReadValue().y;
                 if (roda != 0f) escolher = Proximo(roda < 0f ? 1 : -1);
+            }
+            // o X (23/11/2026): guarda as armas (as mãos livres, os atalhos como estavam); o X de novo volta à de antes
+            if (teclado != null && !teclado.ctrlKey.isPressed && teclado.xKey.wasPressedThisFrame)
+            {
+                if (Escolhido.Value < Atalhos)
+                {
+                    _antesDeGuardar = Escolhido.Value;
+                    escolher = MaosLivres;
+                }
+                else escolher = _antesDeGuardar;
             }
             if (escolher >= 0 && escolher != Escolhido.Value) Escolhido.Value = (byte)escolher;
             // dentro do carro, não larga nada; com o pneu nas mãos, G larga o pneu
@@ -1687,7 +1713,7 @@ namespace ZombieCityCleaner.Player
             }
             else if (Time.time < _nomeAte)
             {
-                linha = naMao == Item.Nada ? "mãos vazias   ·   clique: soco"
+                linha = naMao == Item.Nada ? (ArmasGuardadas ? "armas guardadas   ·   X: pegar de volta   ·   clique: soco" : "mãos vazias   ·   clique: soco")
                     : Itens.EhBranca(naMao) ? $"{Itens.Nome(naMao)}   ·   clique: golpear   ·   G: largar"
                     : naMao == Item.Molotov ? $"{Itens.Nome(naMao)}   ·   clique: arremessar   ·   G: largar"
                     : naMao == Item.Lampiao ? $"{Itens.Nome(naMao)} ({(LampiaoAcesoNaMao ? "aceso" : "sem combustível")})   ·   G: largar aceso" : Itens.Nome(naMao);
