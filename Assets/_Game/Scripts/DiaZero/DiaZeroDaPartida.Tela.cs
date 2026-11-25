@@ -34,7 +34,7 @@ namespace ZombieCityCleaner.DiaZero
 
         void OnGUI()
         {
-            if (!IsSpawned || _mundo == null) return;
+            if (!IsSpawned || (_mundo == null && _lakewood == null)) return;
             float u = Mathf.Min(Screen.height / 720f, Screen.width / 1280f);
             Estilos(u);
             if (_passagem)
@@ -43,7 +43,7 @@ namespace ZombieCityCleaner.DiaZero
                 DesenharAPassagem(u);
                 return;
             }
-            if (!_mundo.NoDiaZero) return;
+            if (!MundoNoDiaZero) return;
             // carregando a rua (antes de o jogador nascer)
             if (!_ruaPronta || JogadorRede.Local == null)
             {
@@ -77,7 +77,7 @@ namespace ZombieCityCleaner.DiaZero
             int compras = Compras(eu);
             if (compras > 0)
             {
-                Sombra(new Rect(x, y, w, 20 * u), $"{compras} {(compras == 1 ? "compra" : "compras")} no bunker", _cantoPequeno);
+                Sombra(new Rect(x, y, w, 20 * u), $"{compras} {(compras == 1 ? "compra" : "compras")} {(NoLakewood ? "na caçamba da caminhonete" : "no bunker")}", _cantoPequeno);
                 y += 22 * u;
             }
             if (Carrinho.Loja != null && Carrinho.Quantos > 0)
@@ -103,14 +103,31 @@ namespace ZombieCityCleaner.DiaZero
             }
             Preto(alfa);
             var antes = GUI.color;
+            // a fuga do Lakewood (23/11/2026): os 30 dias de quarentena, contados pelo rádio, e a noite do colapso
+            if (NoLakewood && _lakewood.NaFuga)
+            {
+                GUI.color = new Color(1f, 1f, 1f, texto);
+                GUI.Label(new Rect(0, Screen.height * 0.2f, Screen.width, 90 * u), "30 DIAS DEPOIS", _grande);
+                float y = Screen.height * 0.2f + 100 * u;
+                for (int i = 0; i < BoletinsDaQuarentena.Length; i++)
+                {
+                    float a = Mathf.Clamp01((t - 2.2f - i * 1.25f) / 0.6f);
+                    if (_prontoDesde >= 0f) a = Mathf.Min(a, texto);
+                    GUI.color = new Color(1f, 1f, 1f, a);
+                    GUI.Label(new Rect(Screen.width * 0.15f, y + i * 34 * u, Screen.width * 0.7f, 30 * u), BoletinsDaQuarentena[i], _texto);
+                }
+                GUI.color = antes;
+                return;
+            }
             GUI.color = new Color(1f, 1f, 1f, texto);
             GUI.Label(new Rect(0, Screen.height * 0.38f, Screen.width, 90 * u), "5 ANOS DEPOIS", _grande);
             GUI.Label(new Rect(Screen.width * 0.2f, Screen.height * 0.38f + 96 * u, Screen.width * 0.6f, 50 * u),
-                      "A porta do abrigo ficou fechada. Lá fora, o mundo mudou.", _texto);
+                      NoLakewood ? "Vocês sobreviveram no bunker da comunidade, na encosta do lago. Lá fora, o mundo mudou."
+                                 : "A porta do abrigo ficou fechada. Lá fora, o mundo mudou.", _texto);
             if (!string.IsNullOrEmpty(_quemFicouFora))
                 GUI.Label(new Rect(Screen.width * 0.2f, Screen.height * 0.38f + 140 * u, Screen.width * 0.6f, 40 * u),
                           $"{_quemFicouFora} ficou de fora quando a porta fechou: as compras ficaram para trás.", _texto);
-            if (_prontoDesde < 0f)
+            if (_prontoDesde < 0f && _mundo != null)
             {
                 // a barra da geração (fina, embaixo)
                 float w = 360 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.84f;
@@ -123,6 +140,17 @@ namespace ZombieCityCleaner.DiaZero
             }
             GUI.color = antes;
         }
+
+        /// <summary>Os 30 dias de quarentena (a tela da fuga no Lakewood): o rádio da emergência, cada vez pior.</summary>
+        static readonly string[] BoletinsDaQuarentena =
+        {
+            "Dia 3: as escolas fecham. O governo pede que todos fiquem em casa.",
+            "Dia 9: os hospitais de Seattle não recebem mais doentes.",
+            "Dia 16: o exército nas estradas e as barreiras nas saídas da vila.",
+            "Dia 23: a TV sai do ar à noite. Só fica o rádio da emergência.",
+            "Dia 29: o rádio pede que ninguém abra a porta para os doentes.",
+            "Dia 30, de noite: os gritos começam na rua.",
+        };
 
         static void Preto(float alfa)
         {

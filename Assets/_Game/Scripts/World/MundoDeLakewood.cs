@@ -43,6 +43,10 @@ namespace ZombieCityCleaner.World
                 var salvo = Salvar.Salvamento.Atual;
                 _semente.Value = salvo != null && salvo.lakewood && salvo.temEstado && salvo.semente != 0 ? salvo.semente : SementeNova();
             }
+            // o Dia 0 (22/11/2026, a etapa 4 do Docs/23): o jogo novo começa nele; a casa da família entra já aqui, em cada
+            // máquina, para o jogador nascer na sala dela (ele nasce logo depois deste objeto)
+            if (IsServer) TalvezComecarODiaZero();
+            if (LakewoodNaCena.Instancia != null) LakewoodNaCena.Instancia.AcompanharODiaZero();
             AoNascerAsArvores();
             PaineisNoSpawn();
         }

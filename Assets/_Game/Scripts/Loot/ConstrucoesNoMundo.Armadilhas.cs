@@ -57,6 +57,8 @@ namespace ZombieCityCleaner.Loot
             Item.CercaFogo => A.SegundosDaCercaDe(c.nivel),
             Item.Barricada => A.VidaDaBarricadaSolta(c.nivel, Fortaleza(c)),
             Item.TabuasBarricada => A.VidaDaBarricadaDeTabuas(Janela(c), Reforcada(c), c.nivel, Fortaleza(c)),
+            Item.MuroDeToras => VidaDoMuro,   // (a base, 24/11/2026)
+            Item.PortaoDeToras => VidaDoPortao,
             _ => 1f,
         };
 

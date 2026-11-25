@@ -21,6 +21,11 @@ namespace ZombieCityCleaner.Loot
         Comida = 16, Agua, Feijao, Carne, Milho, Sopa, Salgadinho, Chocolate, BarraDeEnergia,
         RefrigeranteGarrafa, RefrigeranteLata, Energetico, CopoDeAgua, Leite, Suco, GarrafaTermica,
         MochilaPequena = 32, MochilaMedia, MochilaGrande, Coldre,
+        // a base (24/11/2026, a pedido: "colocar uma espécie de núcleo da base ... depois daria para upar ela com alguns itens
+        // específicos (tipo a cabeça dos bosses, ou o olho do brutamonte, garganta do long e cabeça do Oco)"): os troféus que os
+        // zumbis especiais deixam e os kits da base (o núcleo, o muro e o portão de toras; ConstrucoesNoMundo.Base.cs)
+        OlhoDoBrutamonte = 36, GargantaDoLong = 37, CabecaDoOco = 38, CabecaDeChefe = 39,
+        NucleoDaBase = 40, MuroDeToras = 41, PortaoDeToras = 42,
         Municao9mm = 48, Municao556, Municao12, Municao762,
         // a munição das armas de sucata (09/11/2026): a de prego e a de parafuso
         MunicaoPrego = 52, MunicaoParafuso = 53,
@@ -331,7 +336,7 @@ namespace ZombieCityCleaner.Loot
             // os kits de montar (a fogueira, a cama e a barricada)
             Material(Item.Fogueira, "Fogueira", "fogueira", "a fogueira", "fogueiras", "Lenha arrumada. Monte no chão: luz, e os zumbis ficam longe.", 1, TipoDeLoot.Construcao),
             Material(Item.Cama, "Cama", "cama improvisada", "a cama improvisada", "camas improvisadas", "Monte no chão: você volta nela quando cair.", 1, TipoDeLoot.Construcao),
-            Material(Item.Barricada, "Barricada", "barricada", "a barricada", "barricadas", "Tábuas pregadas. Monte numa porta: segura os zumbis.", 1, TipoDeLoot.Construcao),
+            Material(Item.Barricada, "Barricada", "barricada", "a barricada", "barricadas", "Tábuas pregadas. Monte na área de um núcleo da base: segura os zumbis.", 1, TipoDeLoot.Construcao),
             // a luz (01/11/2026): no fim da lista, para os índices dos outros modelos não mudarem
             Material(Item.Lanterna, "Lanterna", "lanterna", "a lanterna", "lanternas", "Vai presa no peito: F liga e desliga. Gasta as pilhas.", 1),
             Material(Item.Pilhas, "Pilhas", "par de pilhas", "o par de pilhas", "pares de pilhas", "Botão direito na lanterna: trocar as pilhas.", 6),
@@ -452,6 +457,22 @@ namespace ZombieCityCleaner.Loot
                            "Uma gaita em dó: a melodia da roda. Na mão, clique para tocar. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
             NaMao(Material(Item.Flauta, "Flauta", "flauta doce", "a flauta doce", "flautas doces",
                            "Uma flauta doce de madeira: a segunda voz da roda. Na mão, clique para tocar. Acalma quem ouve, mas o barulho chama os zumbis.", 1)),
+            // a base (24/11/2026; no fim da lista, para os índices dos outros não mudarem): os troféus e os kits, caixinhas do
+            // Loot/ItensDaCaca.Base.cs até o Pedro trocar os modelos
+            Material(Item.OlhoDoBrutamonte, "OlhoDoBrutamonte", "olho do Brutamonte", "o olho do Brutamonte", "olhos do Brutamonte",
+                     "O ponto fraco das costas do Brutamonte, arrancado do corpo. Sobe o núcleo da base para o nível 4.", 2),
+            Material(Item.GargantaDoLong, "GargantaDoLong", "garganta do Long", "a garganta do Long", "gargantas do Long",
+                     "O papo de gosma do Long. Duas sobem o núcleo da base para o nível 3.", 3),
+            Material(Item.CabecaDoOco, "CabecaDoOco", "cabeça de Oco", "a cabeça de Oco", "cabeças de Oco",
+                     "Uma cabeça inteira de Oco (o tiro na cabeça não deixa nada). Três sobem o núcleo da base para o nível 2.", 4),
+            Material(Item.CabecaDeChefe, "CabecaDeChefe", "cabeça de chefe", "a cabeça de chefe", "cabeças de chefe",
+                     "A cabeça de um dos chefes. Sobe o núcleo da base para o nível 5, o último.", 1),
+            Material(Item.NucleoDaBase, "NucleoDaBase", "núcleo da base", "o núcleo da base", "núcleos da base",
+                     "Um braseiro grande de sucata. Montado, a base nasce em volta dele: o muro, o portão e a barricada só se montam dentro da área dele. Os troféus dos zumbis especiais aumentam a área.", 1, TipoDeLoot.Construcao),
+            Material(Item.MuroDeToras, "MuroDeToras", "muro de toras", "o muro de toras", "muros de toras",
+                     "Um pedaço de muro de 3 m de toras pregadas. Monte dentro da área de um núcleo da base: os zumbis param nele e batem até quebrar.", 1, TipoDeLoot.Construcao),
+            Material(Item.PortaoDeToras, "PortaoDeToras", "portão de toras", "o portão de toras", "portões de toras",
+                     "Um portão de toras de 3 m que abre e fecha no E. Monte dentro da área de um núcleo da base.", 1, TipoDeLoot.Construcao),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -502,7 +523,11 @@ namespace ZombieCityCleaner.Loot
             get { foreach (var l in _loot) yield return l.item; }
         }
         /// <summary>Um kit de montar no mundo (a fogueira, a cama, a barricada).</summary>
-        public static bool EhConstrucao(Item i) => (i >= Item.Fogueira && i <= Item.Barricada) || i == Item.KitFogueira || EhArmadilha(i);
+        public static bool EhConstrucao(Item i) => (i >= Item.Fogueira && i <= Item.Barricada) || i == Item.KitFogueira || EhArmadilha(i) || EhDaBase(i);
+        /// <summary>(24/11/2026) Uma construção da base: o núcleo, o muro e o portão de toras (ConstrucoesNoMundo.Base.cs).</summary>
+        public static bool EhDaBase(Item i) => i >= Item.NucleoDaBase && i <= Item.PortaoDeToras;
+        /// <summary>(24/11/2026) Um troféu dos zumbis especiais: sobe o nível do núcleo da base.</summary>
+        public static bool EhTrofeu(Item i) => i >= Item.OlhoDoBrutamonte && i <= Item.CabecaDeChefe;
         /// <summary>Uma armadilha (11/11/2026, a etapa 5a): o alarme de latas, o tapete de pregos, as estacas e a cerca de fogo.</summary>
         public static bool EhArmadilha(Item i) => i >= Item.AlarmeLatas && i <= Item.CercaFogo;
         /// <summary>Uma fogueira (a de lenha e a portátil, 11/11/2026): acende, apaga na chuva e segura os zumbis.</summary>
@@ -826,6 +851,9 @@ namespace ZombieCityCleaner.Loot
             if (i == Item.Violao) return new UnityEngine.Vector2Int(4, 2);   // os instrumentos (18/11/2026)
             if (i == Item.Pandeiro) return new UnityEngine.Vector2Int(2, 2);
             if (i == Item.Flauta) return new UnityEngine.Vector2Int(2, 1);
+            // a base (24/11/2026): o núcleo é grande; o muro e o portão, compridos
+            if (i == Item.NucleoDaBase || i == Item.CabecaDeChefe) return new UnityEngine.Vector2Int(2, 2);
+            if (i == Item.MuroDeToras || i == Item.PortaoDeToras) return new UnityEngine.Vector2Int(3, 2);
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

@@ -1538,6 +1538,499 @@ jogo dentro delas e os especiais).
 - **Ainda não:** o save do Lakewood (o `Salvamento` é do mundo sorteado), o túnel do laboratório, o caminho da porta do
   hospital até a rua, os especiais com as referências do usuário e as outras três cidades.
 
+### O bunker da comunidade no Lakewood (22/11/2026, a etapa 2 do `Docs/23-Campanha-e-Mapa.md`)
+
+O pedido: o bunker no mapa novo, como o da campanha nova. O bunker não é da família: é de uma comunidade, com um líder
+(o dono) e um major. Aprovado: "o bunker na encosta do lago, ao lado do lote 114, onde se nasce hoje"; "a casa de teste
+das armas e dos veículos sai do jogo normal"; "as cartas dos moradores saem; a comunidade já vem sorteada, com o líder e o
+major fixos".
+
+- **O lugar** (`MapaDeLakewood.bunker`, um `BunkerDoMapa`):
+  - É achado pela ferramenta Zombie City Cleaner > Lakewood > Etapa 6: o bunker da comunidade (`Editor/Lakewood/BunkerDeLakewood`).
+  - A busca:
+    - a pegada do bunker do mundo sorteado (`PlantaDeBunker.Pegada`, 60 × 68 m), a até 260 m da casa da partida;
+    - o portão na beira de uma estrada, com o pátio na altura dela e a beira dele fora do asfalto e do acostamento;
+    - fora da água, dos lotes, do terreiro e das outras estradas;
+    - o menor corte e aterro (até 14 m de desnível) e perto da partida.
+  - Hoje: o meio da caixa em (9.737; 6.268) do mapa, o giro de 120°, o pátio a 154,0 m, o portão a 7,8 m do meio da
+    Sawmill Road, a 50 m da casa da partida. Fica cavado na encosta do outro lado da rua, e o barranco sobe uns 12 m atrás
+    do morro.
+- **O chão** (`Mundo/Lakewood/ChaoDeLakewood.Bunker.cs`, o `LugarDoBunker`):
+  - a pegada plana na altura do pátio, com um talude de 16 m até o chão de fora;
+  - o pátio de concreto (`NoPatio`) plano até a beira, depois da estrada no `Altura`: a rampa da estrada que passa na
+    frente furava a laje, até 47 cm no canto;
+  - o buraco no terreno embaixo da caixa inteira (o `Buracos` do hospital), e a laje da garagem cobre;
+  - a terra batida nos pesos, sem pinheiros até 10 m e sem grama;
+  - a pegada marcada no relevo de longe.
+- **Na cena:** o `BunkerDoMundo` do mundo sorteado, no "Obras das cidades".
+  - O `CidadesNaCenaDeLakewood` põe junto as estantes (`EstantesDoBunker`), a sinuca e a "Parede de armas"
+    (`MontagemDoMundo.PorOBunker`).
+  - O `LakewoodNaCena.FixarOBunker` (no Awake) chama o `BunkerDoMundo.Fixar(posição, giro, semente)`, como o hospital. O
+    bunker fica com o lugar fixo, sem os `DadosDoMundo`: o `TemBunker`, a semente da obra e, antes do jogador local
+    existir, a casca e a garagem querendo montar em volta da sala de operações.
+- **A partida** (`World/LakewoodNaCena.Bunker.cs`):
+  - Os 4 nascimentos ficam na sala de operações, olhando para a mesa de reunião (o `GeradorDoMundo.PartidaNoBunker`).
+    O `Start` passa os pontos de nascimento da cena para lá, e o `partida` (o chão em volta no Awake) vai junto.
+  - O anfitrião põe a perua e o cupê de ré nas vagas da garagem, as motos na vaga de antes da perua e as 4 chaves no chão
+    da sala. Isso só acontece com o `BunkerDoMundo.Pronto`: antes, o chão da garagem é o buraco do terreno.
+  - As armas ficam no arsenal (a parede de armas).
+- **A casa de teste:** a casa da partida continua no mapa, vazia.
+  - O F1, painel do Lakewood, tem o botão "Armas e veículos na casa de teste" (`PorACasaDeTeste`, no anfitrião, uma vez
+    por partida): os 4 veículos no terreiro e as armas nas mesas, como era a partida antes.
+  - Os lugares do "ir para" ganharam "O pátio do bunker" e "A casa de teste".
+- **Dentro do bunker:**
+  - O `Segurar` não puxa para cima quem está dentro do bunker ou do Hospital Principal (o `EmObraFunda`: o
+    `BunkerDoMundo.Dentro` e o `HospitalDoMundo.Dentro`, como no `MundoDaPartida.ManterNoChao`). Quem cai abaixo do
+    último andar sai da caixa e volta a valer.
+  - O `EsperarOBunker` deixa parado (`MovimentoPrimeiraPessoa.Esperando`) o jogador que está num lugar do bunker ainda
+    sem a colisão (a casca, ou o andar dele) e solta quando ela chega.
+- **Os moradores** (o `MoradoresDoBunker` já vinha no Lakewood pelo `SobreviventesDoMundo`):
+  - O `Ativo` e a identidade do mundo usam o `MundoDoJogo` (o `Pronto` e a `Chave`), e não mais o `MundoDaPartida`.
+  - Um jogo do Lakewood sem ninguém (o novo, e os salvos de antes do bunker) ganha a comunidade no `Iniciar`:
+    - `SorteioDosMoradores.SortearComunidade(a semente da partida)`: sem o parente da família;
+    - o líder, Gus Rodrigues (o `CargoDoLider`, com as histórias `DonoDoBunker` e `AbriuOBunker`, de 56 a 64 anos);
+    - o major, Peter Ziquinatti (o `CargoDoMajor`, com as histórias `Major` e `TrouxeOsSoldados`, de 44 a 52 anos), os
+      dois no grupo 0;
+    - os nomes são fixos, a pedido; o líder do clã rival vai ser o Cristian;
+    - depois, os grupos do mapa.
+  - O `SepararAComunidade` põe no bunker o líder, o major e os grupos seguintes inteiros, até uns 8 (`MoradoresDaComunidade`).
+    O resto fica no mapa.
+  - As quatro histórias novas têm o peso 0: nunca saem no sorteio comum (o `Pedido.antes` pede).
+  - A ficha ganhou o `cargo`, e o terminal mostra o `NomeComCargo` ("Eugene Graham, líder do bunker").
+  - A tela do Novo jogo do Lakewood diz que o bunker é da comunidade (sem as cartas).
+- **Conferido no Play (22/11/2026, um jogador):**
+  - o jogador nasce na sala de operações e espera uns 1,2 s pela garagem;
+  - os 4 veículos ficam na garagem e as 4 chaves na sala;
+  - nos 5 andares, ele fica de pé sem voltar para a superfície;
+  - a casa de teste funciona;
+  - a comunidade de 9 (o líder, o major e 7), com as camas e a reserva da despensa;
+  - o save guarda os moradores (com os cargos), os 43 do mapa e as estantes;
+  - 0 queda, 0 erro.
+- **Os testes:** `LakewoodTestes.OBunkerFicaNaEncostaComOPatioPlanoEOBuraco` e
+  `MoradoresTestes.AComunidadeDoBunkerTemOLiderEOMajor`.
+
+### A Woodcreek de antes: a época do Lakewood (22/11/2026, a etapa 3 do `Docs/23-Campanha-e-Mapa.md`)
+
+O pedido: a versão de antes do apocalipse da cidade onde se começa, com a mesma geografia (as árvores, as casas, as ruas
+nos mesmos lugares), para o D0, a quarentena e a fuga. Ela troca durante a partida, sem recarregar a cena (a passagem dos 5
+anos vai trocar de volta).
+
+- **A época na rede** (`World/MundoDeLakewood.Epoca.cs`):
+  - o `EpocaDoMundo` (`Depois` = 0, o padrão e o dos saves; `Antes` = 1) numa NetworkVariable do `MundoDeLakewood`;
+  - o anfitrião muda com o `PorAEpoca`. Hoje é pelo F1, painel do Lakewood, no botão "Época: ...";
+  - não vai no save: o `Salvamento.MundoJogavel` não salva no antes;
+  - a `VersaoDaRede` foi para 32.
+- **Na cena** (`World/LakewoodNaCena.Epoca.cs`): o `AcompanharAEpoca`, no `Update`, chama o `AplicarAEpoca` quando a época
+  muda (uns 5 ms):
+  - **Os materiais do abandono** ganham uma cópia limpa (`NaEpoca`, `Limpo`), com o `_Intensidade`, o `_Escorrido`, o
+    `_Desbotado`, o `_Descascado`, o `_Umidade`, o `_Rachadura`, o `_MusgoNoTelhado`, o `_Ferrugem`, o `_Rua`, o `_Pocas`
+    e o `_Mofo` em 0. Ela é trocada nos renderers da raiz montada na hora (as caixas de longe, as ruas, os caminhos, a usina:
+    513 objetos). As obras de perto, os carros das garagens e o hospital já nascem com ela.
+  - **As ruas das cidades** têm duas versões montadas no Awake (`MontarAsRuas`; `RuasDaCidade.Nova`): a de antes tem os
+    postes de madeira nova, a lente acesa (o "JanelaAcesa") e a placa de entrada sem o risco e o zero de spray. Uma fica
+    ligada de cada vez.
+  - **As obras de perto** saem e montam de novo na época (`RefazerAsObras`; as que estavam montando viram órfãs, e o
+    `ReceberAsOrfas` devolve a hera e as pichações delas). O `ObrasDeLakewood.Montar(plano, antes)` faz:
+    - a obra nova (`Obra.nova`: sem as tábuas, o sangue e o mofo);
+    - as janelas todas inteiras que abrem (`AbandonoDaObra.JanelasNovas`; com o grau 0, as `Janelas` não faziam nada e
+      os vãos ficavam sem vidro);
+    - sem a hera e as pichações;
+    - a loja de armas intacta (`PlantaDaLojaDeArmas.Nova`: a sala segura trancada, sem as marcas e as pichações);
+    - a escola sem as carteiras caídas;
+    - sem o saque (`comSaque: false`).
+  - **O hospital** (`HospitalDoMundo.FicarNovo`) desmonta e volta novo:
+    - a obra nova: o `Hospital` pula as marcas e as placas do forro caídas e deixa todos os vidros inteiros;
+    - sem a hera e as marcas;
+    - o material limpo (o `MaterialDasCasas` passa pelo `NaEpoca`).
+  - **O chão:** o `ChaoDeLakewood.Antes` deixa os quintais dos lotes com o gramado aparado (a terra batida de 2 a 8%, a
+    grama a 0,15 em vez de 0,45). Os blocos em volta das cidades com lotes são montados de novo (`Passo = -1`), e a grama
+    também (`GramaDensa.Chao`). As árvores são as mesmas: a geografia não muda.
+  - **Os sistemas do depois:**
+    - o antes é o "Dia 0" do Lakewood (o `IMundoDoJogo.NoDiaZero`), então os grupos, as emboscadas, o acampamento, as
+      bases, os carros quebrados e os moradores do bunker param;
+    - sem zumbis (`ZombieManager.ForaDaEpoca` e o `RecolherTodos`);
+    - sem os carros abandonados da beira e os painéis de sucata (o `BeiraDoMapa.Atual` é nulo no antes);
+    - o dia limpo (o `AmbienteDoDia.DiaLimpo` = 1: sem a neblina do abandono).
+  - **As luzes dos postes:** à noite, no antes, as 10 lâmpadas mais perto da câmera acendem (`AcenderOsPostes`). São spots
+    de 75°, sem sombra, com a força 25 e o alcance 26 m (a força 2,2 das lojas não chegava a 7 m do chão).
+- **Conferido no Play (22/11/2026, um jogador):**
+  - as fotos dos mesmos lugares nas duas épocas (`D:\Zombiegame\Trabalho-Claude\woodcreek_de_antes`);
+  - no antes: 0 zumbis (eram 20), 0 carros da beira, o acampamento sumido (16 pessoas → 0) e os sistemas parados;
+  - de volta ao depois, tudo volta;
+  - 0 erro.
+- **Ainda não:**
+  - as lojas por dentro no antes (os produtos à venda, o caixa): é a etapa 4, o D0 (feito; a seção abaixo);
+  - as janelas acesas à noite: o shader não tem emissão;
+  - os carros andando (no D0, os da vila: a seção abaixo);
+  - os moradores do bunker no antes.
+
+### O Dia 0 na Woodcreek (22/11/2026, a etapa 4 do `Docs/23-Campanha-e-Mapa.md`)
+
+As decisões do Pedro: a carteira de $1.000 com a pistola a $1.000, as compras na caçamba da caminhonete e a casa da família
+no norte da vila (o lote 104, um sobrado com garagem na Spruce Lane, a ~660 m do bunker). O jogo novo do Lakewood começa
+nele; o mundo sorteado continua com a rua do Dia 0 (a cena `DiaZero`), sem mudança.
+
+- **A marca na rede** (`World/MundoDeLakewood.DiaZero.cs`): a NetworkVariable `_diaZero` (`NoDiaZero`).
+  - O anfitrião começa no `OnNetworkSpawn` (`TalvezComecarODiaZero`): um jogo novo (o save sem o estado) com o
+    `ComecarPeloDiaZero` (o botão "COMEÇAR PELO DIA 0" do menu do novo jogo, `MenuOnline.Lakewood.cs`) põe a época no
+    antes e liga o Dia 0. O F1 (painel do Lakewood) também começa, numa partida aberta.
+  - `AcabarODiaZero`: desliga já, e a época volta para o depois 1,8 s depois (a tela dos 5 anos já está preta).
+  - O `MundoDoJogo.NoDiaZeroAgora` junta o Dia 0 dos dois mapas: a pistola do começo, o XP, a trilha, o clima, o corpo,
+    a morte sem perder nada e o botão de sair leem ele.
+  - A `VersaoDaRede` foi para 33.
+- **O controle é o mesmo do mundo sorteado** (`DiaZero/DiaZeroDaPartida*.cs`, agora também no "Mundo (Lakewood)"): o
+  lobby, a TV, as carteiras, o caixa, o F1 e a passagem. Com a `MundoDeLakewood` no lugar da `MundoDaPartida`
+  (`NoLakewood`):
+  - não carrega a cena da rua (o palco é do mapa) nem cria o jogador (o Netcode cria; ele vai para a sala da casa);
+  - o pagamento guarda cada compra também na caçamba (`LakewoodNaCena.GuardarNaCacamba`);
+  - a porta (as chaves) chama o `AcabarODiaZero` e não tira as compras de quem está fora;
+  - a passagem termina sem o `FicouPronto` do mundo sorteado: com a época de depois e o palco fora, cada um vai para o
+    ponto de nascimento (a sala de operações do bunker);
+  - o Dia 0 pode começar de novo na mesma partida (`ComecouODia`, o F1).
+- **O palco** (`DiaZero/WoodcreekDoDiaZero*.cs`, um `RuaDoDiaZero` filho): o prefab
+  `Prefabs/DiaZero/PalcoDoDiaZeroNaWoodcreek` (com a introdução, os NPCs e os carros), posto pelo `LakewoodNaCena`
+  (`LakewoodNaCena.DiaZero.cs`) com o Dia 0 e tirado com a época de depois. Os pontos de nascimento passam para a sala da
+  casa e voltam para o bunker.
+  - **A casa:** a planta do lote montada só pelos pontos dos móveis, numa âncora no lugar da obra; o `ACasaDaFamilia` da
+    rua faz os nascimentos, o sofá, a TV e o "dentro de casa". Com a obra de verdade na cena, a `NossaCasa` é ela (a TV da
+    mobília nova; a introdução acha a TV de novo quando a obra volta). Quem está na casa sem a colisão dela espera parado
+    (`EsperarACasa`).
+  - **O fim:** o `PorAPortaDoFim` (virtual na rua: lá é a porta do abrigo) põe as chaves da casa (`ChavesDaCasa`) ao lado
+    da porta da frente, por dentro.
+  - **As lojas** (`WoodcreekDoDiaZero.Lojas.cs`): o `SortearAsLojas` diz o que cada lote vende (o mercado, a farmácia, as
+    24 horas como a conveniência, a primeira loja comum de roupas e a segunda de ferragens, o posto e a loja de armas
+    nova; o resto fechado). O `PorAObra`, na etapa dos móveis, chama o `AbrirALoja`: as prateleiras do Dia 0
+    (`PrateleirasDoDia`: caixas vazias com as tábuas nas alturas das fileiras, o corpo só na colisão, sem vidro: o do atlas
+    é opaco), as gôndolas do meio do salão (`GondolasDoMeio`; na de roupas, o meio fica para a mesa das mochilas), o caixa
+    ao lado da porta nas comuns e a `LojaDoDiaZero` (o `Montar` aceita os balcões de fora; a loja de armas nova tem o
+    `MontarNaLojaDeArmas`, pelos móveis prefab dela: os produtos em cima dos balcões de vidro e das gôndolas, as brancas
+    penduradas nos painéis, o caixa no balcão do caixa).
+  - **O posto de antes** não desenha os móveis antigos (`ModelosDaEstrada.Posto(variante, semMobilia)`; os itens que vêm
+    no modelo atrapalhavam os produtos).
+  - **As pessoas** (`WoodcreekDoDiaZero.Npcs.cs`, os `NpcsDoDiaZero` de sempre): os atendentes (a conta da planta, sem a
+    obra), os quintais perto do comércio e da casa, as calçadas do comércio e a beira da Creek Street; 5 doentes.
+  - **Os carros** (`DiaZero/CarrosDaWoodcreek.cs`): 9 nas estradas do chão que passam pela vila (cortadas na caixa dela,
+    com 90 m de folga), pela faixa da direita, voltando pela outra na ponta; freiam diante de um jogador, de um veículo ou
+    de outro carro. Cada máquina anda os seus.
+  - **Os cenários da introdução** ficam 1,5 km acima da casa (`LugarDosCenarios`, virtual na rua).
+- **O jornal da pandemia** (`DiaZero/IntroDoDiaZero.Pandemia.cs`, ligado pelo `pandemia` do prefab): o roteiro novo nos
+  mesmos tempos da trilha (a sala, o hospital no Brasil, o aeroporto, a entrevista do governo, o mercado lotado, a sala),
+  com as falas e a faixa novas. A introdução do mundo sorteado continua a de antes.
+- **A caminhonete e a caçamba:**
+  - o anfitrião põe a caminhonete (`LakewoodNaCena.caminhonete`) na entrada da garagem da casa (o nariz para a garagem),
+    uma só (o F1 de novo a traz de volta);
+  - a caçamba é uma estante das `EstantesDoBunker` (`BaseDasCacambas` = 61000, a `FormaDaCacamba` de 12 × 6), como o
+    compartimento do caiaque: o mesmo save, a mesma tela; o `Perto` é o da tampa de trás. De trás da caminhonete, o E do
+    `PortaMalasDoCarro` abre ela (`Carro.CacambaDeGuardar`); dos lados, continua a subida;
+  - no fim do dia, ela vai para o pátio do bunker (`LevarACaminhoneteAoBunker`), com a chave na sala de operações;
+  - no save do Lakewood, ela é o número 10 (o `MundoDaPartida.QualDaCaminhonete`).
+- **A montagem:** Zombie City Cleaner > Lakewood > Etapa 7: o Dia 0 na Woodcreek (`Editor/Lakewood/DiaZeroNaWoodcreek.cs`)
+  refaz o prefab do palco e liga o `DiaZeroDaPartida`, o palco e a caminhonete na cena do Lakewood.
+- **Conferido no Play (22/11/2026, um jogador):** do jogo novo ao bunker, as 8 lojas abertas, o jornal inteiro, a pistola
+  e as compras na caçamba, a caçamba aberta no inventário, os 33 NPCs e os 9 carros, a passagem e a caminhonete no pátio;
+  0 erro. As fotos ficam em `D:\Zombiegame\Trabalho-Claude\dia_zero_lakewood`.
+- **Ainda não:** dois jogadores; as compras à mostra na caçamba; os carros parando para as pessoas; as lojas fechadas por
+  dentro.
+- **23/11/2026:** as chaves da casa levam à fuga (a seção abaixo); o "Pular o Dia 0" do F1 continua indo direto aos 5 anos.
+- **Os bugs que o Pedro achou (23/11/2026):**
+  - **Os NPCs andando e correndo parados:** eram os do jornal da pandemia (`IntroDoDiaZero.Pandemia.cs`). Agora quem anda
+    no saguão do aeroporto e quem corre no mercado lotado se mexe de verdade (`NpcDoCinema.Percorrer`: de um ponto a outro,
+    na velocidade, em laço fora do quadro, com a animação no passo). No aeroporto, em duas faixas longe das colunas e de
+    quem está parado; no mercado, pelos corredores, na direção da câmera.
+  - **A chave da caminhonete:**
+    - em cima da mesa de centro da sala da nossa casa (`WoodcreekDoDiaZero.LugarDaChave`, o `AChaveNaMesa`);
+    - sem ela, vai para a mesa de canto, a da cozinha, outra mesa ou o rack;
+    - o tampo é o da peça 0 do conjunto da mobília nova (`MobiliaNova.Pecas`: a mesa, o vaso e a revista têm cada um o seu
+      lugar e a sua escala), e a chave vai no canto do tampo mais longe do que está em cima;
+    - o anfitrião a põe junto com a caminhonete (`LakewoodNaCena.PorAChave`). Quem a pega fica com ela: no bunker não
+      aparece outra (`_chaveDoDia`).
+  - **A loja de armas:** vende a submetralhadora, a espingarda, o rifle e a sniper (uma de cada) e a munição (caixas de 60
+    balas). Os preços são do Pedro, para as armas serem de veterano:
+
+    | Arma | Preço | Munição | Caixa | Limite de caixas |
+    |---|---|---|---|---|
+    | Pistola | $1.000 | 9mm | $50 | 3 |
+    | Submetralhadora | $2.000 | 9mm | $50 | 3 |
+    | Espingarda | $2.500 | calibre 12 | $100 | 3 |
+    | Rifle | $4.000 | 5,56 | $120 | 2 |
+    | Sniper | $5.000 | 7,62 | $150 | 2 |
+
+    - As armas longas ficam penduradas nos `ExpositorArmasLongas` (a 1,1 e a 1,45 m) e de pé no `RackDeFuzis` (a fileira
+      `dePe`, o cano para cima).
+    - A munição vai nas prateleiras livres das `EstantesMunicao` (0,85, 1,23 e 1,61 m) e no balcão dos expositores (0,80 m).
+    - As alturas foram medidas nas malhas da `Mobilia_Nova_Malhas.asset`. As fileiras ganharam `longa`, `dePe` e `municao`:
+      com o lugar delas na loja, as armas longas e a munição só vão nele.
+  - **A farmácia:** já tinha os 14 produtos à mostra; o problema era reconhecê-los (caixinhas parecidas). Agora toda fileira
+    de produto tem a etiqueta com o nome e o preço (`LojaDoDiaZero.Etiqueta`: letras escuras num cartão claro, na beira da
+    prateleira; no expositor, embaixo da arma; no rack, na base), em todas as lojas do Dia 0.
+  - **A chave invisível:** a cena do Lakewood tinha só 9 malhas no `ItensNoMundo.malhasDePeca` (montada antes da chave da
+    caminhonete, de 15/11): a chave existia mas não aparecia (a da mesa e a do bunker). Agora a lista tem as 10
+    (`Peca_ChaveDaCaminhonete`), como no `Mundo.unity`; no Play, ela aparece em cima da mesa.
+  - **Conferido no Play** (dois testes, 0 erro):
+    - 4 pessoas andando no aeroporto (~1,35 m/s) e 2 correndo no mercado (~3 m/s);
+    - a chave no tampo da mesa de centro (o chão da obra a 1,2 cm embaixo dela);
+    - a loja de armas com os 18 produtos à mostra, 0 sem lugar e 51 etiquetas;
+    - a sniper recusada com $1.000 e a pistola comprada ($1.000);
+    - a farmácia com os 14 produtos e as 158 etiquetas.
+  - **Na fuga, a caminhonete não pega** (o Pedro: "pode deixar ela, só colocar como ela não está pegando na hora de dar a
+    partida"):
+    - ela continua na entrada da garagem, mas na partida (pela chave ou pela ligação direta) o motor só tosse ("O motor
+      tosse, mas não pega"); se tinha ficado ligada, apaga;
+    - a regra é o `LakewoodNaCena.NaoPegaNaFuga(carro)` (a fuga e o nome da caminhonete da família, iguais em todas as
+      máquinas), no `Carro.PegarAgora`, no `Carro.Ignicao` e no `FicaLigadoSemMotorista`;
+    - esvaziar o tanque não bastava: o posto vende o galão cheio, e as compras vão para a caçamba. A caçamba continua
+      abrindo;
+    - conferido no Play (0 erro): no Dia 0 ela pega; na fuga, fica no lugar (a 0,5 m), não pega e está desligada.
+  - **Em aberto:** a carteira do Dia 0 é sempre de $1.000 (o dinheiro guardado do personagem não entra).
+
+### A fuga: os 30 dias, o colapso e a chegada ao bunker (23/11/2026, as etapas 5 e 6 do `Docs/23-Campanha-e-Mapa.md`)
+
+O pedido do Pedro (antes de sair): uma missão no canto de cima, à direita, para correr; o caos (pessoas devoradas pelos
+Ocos, o Brutamonte, o Long); falhar e morrer volta ao começo; perto do bunker, descendo a rua a pé, a comunidade entrando e
+alguém chamando de dentro.
+
+- **A marca na rede** (`World/MundoDeLakewood.Fuga.cs`): `_fuga`, `_tentativa`, `_falhou`, `_chegou` e o `_fugaDesde` (o
+  relógio da tentativa, que começa depois da tela). O anfitrião:
+  - `ComecarAFuga` (as chaves da casa, `DiaZeroDaPartida.FecharAPortaRpc` no Lakewood, sem o "pular"): o Dia 0 acaba, a
+    época continua no antes, a meia-noite parada (`SempreDeNoite`);
+  - `FalharAFuga` (alguém caiu) e, 4,5 s depois, `Recomecar` (a tentativa nova);
+  - `ChegarAoBunker` e, 2,5 s depois, `AcabarAFuga`: a época de depois 1,8 s depois, a manhã;
+  - a marca "Bunker" do mapa (`PorAMarcaDoBunker`/`TirarAMarcaDoBunker`: o alfinete com a distância e o minimapa; sai no
+    fim, senão iria para o save).
+  - A `VersaoDaRede` foi para 34.
+- **Os 30 dias** (por enquanto, uma tela): a passagem do `DiaZeroDaPartida` no Lakewood com a fuga mostra "30 DIAS
+  DEPOIS" e os boletins do rádio (`BoletinsDaQuarentena`), por 11 s (`MundoDeLakewood.TelaDosTrintaDias`), e põe cada um
+  na sala da casa.
+- **Na cena** (`World/LakewoodNaCena.Fuga.cs`, chamado pelo `AcompanharODiaZero`): o `ZombieManager.ForaDaEpoca` só no
+  antes sem a fuga (os zumbis do povoamento voltam, menos na tela dos 30 dias); a `FugaNaTela`; o palco vira a noite do
+  colapso (`WoodcreekDoDiaZero.VirarAFuga`). No anfitrião:
+  - a cada tentativa (`MontarATentativa`): o `RecolherTodos`, todos de pé e curados (quem caiu, pelo `RenascerAgora`, na
+    sala da casa), uma lanterna para quem não tem, os zumbis da fuga (`PorOsZumbisDaFuga`, pelo `NascerEspecial` com o
+    `NavMesh.SamplePosition`: um Oco em cima de cada corpo, o Brutamonte e três Ocos a 36–44% do caminho, o Long na beira
+    a 60% com dois Corredores, um grupo a 76% e outro perto do bunker), o portão do bunker aberto
+    (`BunkerDoMundo.PorAPorta`, novo) e a marca;
+  - alguém com o `Caido`: a falha; todos a menos de 7 m do portão (ou na caixa do bunker, `BunkerDoMundo.NaCaixa`, novo:
+    o `Dentro` conta a frente do pátio também): a chegada;
+  - no fim, o portão fecha, a marca sai e os zumbis do antes saem.
+- **O palco na noite do colapso** (`DiaZero/WoodcreekDoDiaZero.Fuga.cs`, em cada máquina, uma vez):
+  - **o caminho** (`MontarOCaminho`): o menor caminho pela rede das estradas e das ruas do chão (o Dijkstra nos pontos
+    delas, com os cruzamentos a menos de 6 m), da frente da casa ao portão da cerca do bunker, um ponto a cada 6 m;
+    `NoCaminho(fração)` e `NoCaminhoNoMundo(fração, desvio)` põem tudo ao longo dele;
+  - os NPCs do Dia 0 saem e entram os que fogem (correndo em trechos do caminho, ida e volta), os 7 corpos com o sangue,
+    os 6 carros batidos (3 pegando fogo, com o `ConstrucoesNoMundo.Fogo`, a `ChamaTremula` e o `SomDasChamas`; 3 com o
+    alarme dos carros) e os carros que circulavam saem;
+  - **a chegada** (`PorAChegada`): a luz em cima do portão, o Gus Rodrigues do lado dele, de braços abertos
+    (`ChamadoNoPortao`), e 5 da comunidade correndo da cerca para dentro (`CorrendoParaOBunker`, só o desenho: some
+    dentro e volta a correr).
+- **A tela** (`World/FugaNaTela.cs`): a missão no canto de cima, à direita (os metros até o portão e a tentativa), a fala
+  do Gus embaixo a menos de 45 m (com o grito dele), os gritos pela vila (as vozes gravadas, `VozDoPersonagem`), a tela
+  "A FUGA FALHOU" (a volta para a casa por baixo dela) e a dos 5 anos (com o palco fora, a sala de operações do bunker).
+- **A abertura** (`MundoDoJogo.NaAbertura` = o Dia 0 ou a fuga): quem morre não perde a mochila, e não há XP.
+- **O F1** (painel do Lakewood): "Pular a fuga (chegar ao bunker)".
+- **Ainda não:** os 30 dias jogados; o líder recebendo o grupo lá dentro; os zumbis atacando os NPCs da vila (eles só
+  atacam os jogadores e os sobreviventes); a sirene de polícia (não há o som); dois jogadores.
+
+### O Dia 0 mais vivo e a primeira missão depois dos 5 anos (24/11/2026, a pedido)
+
+O pedido do Pedro: mais ambientação na fuga ("mais npcs, alguns mortos no chão e sendo devorados"); um limite no mapa no D0
+("dá para pegar a caminhonete e andar o mapa inteiro, vamos restringir a cidade local"); as lojas com nome na fachada; um
+"chat de conversa com algumas perguntas" com os vizinhos e os atendentes; o bug dos NPCs que "surgem do nada e entram"
+no portão do bunker; e a primeira missão: "Perdemos todos os itens na loucura do D0, a primeira missão da gente é retomar
+a cidade com o npc capitão (junto com os colegas) e lá recuperamos os itens que compramos no D0, também podemos concertar
+a caminhonete (onde ela estará totalmente danificada, precisando trocar as rodas e os componentes do motor)".
+
+- **A conversa com os NPCs** (`DiaZero/TelaDeConversa.cs`):
+  - a `IConversavel` (o nome, a saudação, as perguntas, onde está, se pode conversar e o aviso de começo e fim) e a
+    `Pergunta` (o texto, as respostas sorteadas, a ação e se fecha a conversa);
+  - a `ConversaComNpc` é um `Interagivel` (o "[E] Conversar com…"): o `ConversaComNpc.Por(go, conversa)` põe uma cápsula
+    de gatilho (0,35 × 1,8 m) no NPC, que o raio do `ArmaJogador` acha;
+  - a `TelaDeConversa` (OnGUI, embaixo, sem caixa atrás, como as legendas): o nome, a fala e as perguntas numeradas
+    (as teclas 1 a 9 ou o clique, pelo `MenuOnline.Tela`). Fecha com o E, o TAB, o ESC, a mais de 4,5 m ou no "Tchau.".
+- **As conversas do Dia 0** (`DiaZero/ConversaDoDiaZero.cs`, posta pelo `NpcsDoDiaZero` em cada NPC):
+  - o nome americano pela semente e pelo `NpcDoDiaZero.Mulher`, e o papel com o artigo ("a vizinha", "o atendente do
+    mercado", "a farmacêutica"…);
+  - as perguntas: a doença; "Você está bem?" (o doente tosse e disfarça); o atendente responde o que a loja vende e uma
+    pergunta da loja (as armas caras, o que ter em casa, o movimento); os outros dizem onde ficam as três lojas mais perto
+    (a direção e os metros, de verdade, pelo `WoodcreekDoDiaZero.LojasNoMapa`: as lojas longe de todos ainda não estão
+    montadas) e o que acham da quarentena;
+  - conversando, o NPC para (`NpcDoDiaZero.Conversando`) e olha para quem fala. Na fuga e cortando a grama, não conversa.
+- **O caos da fuga** (`DiaZero/WoodcreekDoDiaZero.Colapso.cs` e o `Fuga.cs`):
+  - 22 pessoas fugindo (eram 14), 12 corpos (eram 7) e 9 carros batidos (eram 6);
+  - em cada corpo, um Oco **devorando** (a `FiguraDeOco`: o `Oco_00_Original` dos Resources, só o desenho, de quatro no
+    "RastejarParado" ou mordendo no "Attack" a cada 1,2–2,4 s); a cada três que fogem, um Oco **correndo atrás** (o
+    "Chase", 1,2 s atrás, pelo rastro);
+  - um jogador a 14 m (`FiguraDeOco.Acorda`): o desenho sai e, no anfitrião, nasce um Oco de verdade no lugar
+    (`LakewoodNaCena.NascerUmOcoNaFuga`). A cada tentativa, as figuras voltam (`RefazerAsFiguras`). O plano antigo, um Oco
+    de verdade em cima de cada corpo, saiu.
+- **O limite da cidade no Dia 0 e na fuga** (`DiaZero/WoodcreekDoDiaZero.Limite.cs`):
+  - um círculo: o meio e o raio do contorno da Woodcreek + 70 m (e pelo menos a distância até o bunker + 90 m);
+  - quem sai volta para a beira, a 2 m para dentro; o carro do dono que dirige volta parado, virado para dentro; o aviso
+    "A cidade está em quarentena: a polícia fechou as estradas. Não dá para sair da Woodcreek." fica 4 s na tela;
+  - onde as estradas e as ruas cruzam o círculo (achado por bisseção, um a cada 40 m), um bloqueio: cavaletes, cones e a
+    placa amarela "QUARENTENA / ESTRADA FECHADA PELA POLÍCIA";
+  - no `LateUpdate` da `WoodcreekDoDiaZero` (`AcompanharOLimite`), só no Dia 0 e na fuga.
+- **As fachadas das lojas** (`WoodcreekDoDiaZero.Lojas.cs`): cada loja de kit ganha o nome na placa da fachada
+  (`NomeDaFachada`, pela semente do lote: "MERCADO WOODCREEK", "MERCADO DO LAGO", "FARMÁCIA WOODCREEK", "FERRAGENS E
+  AUTOPEÇAS", "ROUPAS & CIA"…; o `RuaDoDiaZero.Placa`), e a loja de armas, uma placa vermelha "ARMAS E MUNIÇÃO"
+  (`PlacaDaLojaDeArmas`). O nome vai na planta do mapa no `SortearAsLojas` (`DarONome`), antes de a obra da loja ser
+  montada: sem nome, o kit desenha letras de bloco na placa (`Loja.Fachada`), e o letreiro por cima saía com as letras
+  dobradas. Quando o palco sai (`OnDestroy`, agora virtual no `RuaDoDiaZero`), a planta volta ao nome de antes (a loja
+  abandonada de depois é a mesma planta).
+- **O portão do bunker** (o bug: "os npc simplesmente surgem do nada e entram para dentro"): o `CorrendoParaOBunker` foi
+  refeito. Os 5 da comunidade ficam parados na abertura da cerca do pátio, virados para a rua; quando um jogador chega a 40 m
+  deles (descendo a rua), cada um corre os ~47 m até a porta, uma vez (um 0,9 s depois do outro), e some lá dentro. Não
+  voltam mais.
+- **A primeira missão: retomar a Woodcreek** (`World/LakewoodNaCena.Missao.cs`, `World/MundoDeLakewood.Missao.cs`,
+  `World/MissaoNaTela.cs`):
+  - **na chegada ao bunker** (`ChegarAoBunker`), o anfitrião tira tudo de cada jogador (`InventarioJogador.TirarTudo`: a
+    mochila, as armas, o pneu na mão) e põe na caçamba da caminhonete (`CacambaDaFamilia`); o que não cabe vai para o chão
+    atrás dela. As roupas vestidas ficam;
+  - **nos 5 anos** (`TirarOPalco`, quando a fuga chegou): a caminhonete fica na entrada da garagem da casa da família, sem
+    as 4 rodas, sem o estepe, sem a vela, sem a bateria e sem o radiador (o macaco fica), com 25% de gasolina e as compras
+    na caçamba (`DeixarACaminhoneteNaCasa`). Pulando o Dia 0 pelo F1, ela vai para o pátio do bunker, como antes;
+  - **as etapas** (`EtapaDaMissao`, numa NetworkVariable da `MundoDeLakewood`, com os zumbis que faltam, as peças que
+    faltam e o que está na caçamba):
+    1. `FaleComOCapitao`: começa quando a caminhonete está quebrada a mais de 150 m do portão do bunker;
+    2. `VaParaACasa`: depois de "Vamos retomar a Woodcreek." na conversa com o Capitão (o `EscoltaRpc`);
+    3. `RetomeARua`: um jogador a 80 m da caminhonete; nascem 14 zumbis (2 Corredores e 12 Ocos) entre 14 e 48 m dela;
+    4. `ConserteACaminhonete`: sobraram 2 ou menos;
+    5. `Cumprida`: as 4 rodas sem furo, a vela boa, a bateria que gira e o radiador (`LakewoodNaCena.Consertada`).
+  - **o Capitão** (`PorOCapitao`): um `Sobrevivente` militar com o rifle, no pátio do bunker, ao lado do portão, num
+    grupo aliado (`GrupoDeSobreviventes.aliado`: nunca hostil; o grupo `GrupoDoCapitao` = 64999 na identidade, para as
+    outras máquinas acharem ele). O `Sobrevivente.Escolta.cs`: com a escolta, segue o jogador mais perto (para a 4 m,
+    corre a mais de 12 m e, a mais de 70 m, aparece 5 m atrás dele: o `AlcancarOsJogadores`, no começo do `Pensar`,
+    porque longe dos jogadores ele fica sem o NavMesh e o agente desliga); sem ela, espera no posto, olhando para quem
+    chega.
+    Os zumbis perto, ele luta como os outros. Morto, volta depois de 60 s, sem ninguém a 25 m do pátio;
+  - **a conversa do Capitão** (`ConversaDoCapitao`): quem é ele, o que houve lá fora, "Vamos retomar a Woodcreek.",
+    "Venha comigo." / "Espere aqui." e "Como conserto a caminhonete?" (as peças dos carros largados da vila, o macaco na
+    caçamba);
+  - **a tela** (`MissaoNaTela`): "RETOME A WOODCREEK" no canto de cima, à direita, o que fazer, os números e os metros até
+    o Capitão ou a caminhonete; cumprida, "MISSÃO CUMPRIDA" por 15 s;
+  - **o save**: a missão sai do estado da caminhonete (quebrada longe do bunker, ela volta à conversa com o Capitão). Só o
+    "já cumprida" vai no save (`MundoSalvo.primeiraMissao`), para um pneu furado depois não começar a missão de novo.
+  - A `VersaoDaRede` foi para 36.
+- **Conferido no Play** (um jogador, seis testes, 0 erro; os roteiros em `D:\Zombiegame\Trabalho-Claude\dia_zero_bugs`):
+  - a conversa abre no NPC, as perguntas e as respostas certas, "onde ficam as lojas" com a direção e os metros, e ela
+    fecha a 9 m;
+  - as fachadas "MERCADO DO LAGO", "FARMÁCIA WOODCREEK", "LOJA DA ANN" e "FERRAGENS E AUTOPEÇAS", sem as letras de bloco;
+  - o limite segura na beira (a 818 m do meio, com o raio de 820 m) e mostra o aviso; os 5 bloqueios nas saídas;
+  - na fuga, 19 figuras (12 devorando, 7 correndo atrás) e 5 carros pegando fogo; a 10 m, a figura vira um Oco de verdade;
+  - o portão: ninguém se mexe com o jogador a 110 m; a 27 m deles, correm, e em 17 s os 5 estão lá dentro;
+  - a chegada (o que o jogador levava vai para a caçamba), a caminhonete na casa sem as 7 peças, o Capitão a 4 m do
+    portão; a escolta (a 8 m do jogador, e a 6 m depois de o jogador ir a 600 m); os 14 zumbis na rua; morta a horda, o
+    conserto; a missão cumprida e marcada para o save;
+  - erros do caminho, corrigidos: o "_falta" do portão voltava a esperar a cada vez (a marca `_chamado`); o Capitão longe
+    do NavMesh não pensava na escolta; as letras de bloco do kit por baixo do letreiro.
+- **Ainda não:** os 30 dias jogados; os NPCs da comunidade conversando no bunker; o Capitão entrando no carro (ele aparece
+  perto de quem está a mais de 70 m); dois jogadores; o conserto de verdade, peça por peça (no teste, as peças foram postas
+  pelo save).
+
+### A cidade de Lakewood (23/11/2026, a parte C do `Docs/23-Campanha-e-Mapa.md`: a parte 1, o desenho)
+
+O pedido do Pedro (22/11): "manter o padrão das cidades como era no mapa antigo, porém agora as cidades estão maiores e
+precisamos deixar desse tamanho (corresponder com o mapa e mini-mapa)"; a escolha (23/11): a cidade de Lakewood primeiro,
+em partes (o centro e o comércio, depois os bairros e a zona industrial).
+
+- **A ferramenta** (`Editor/Lakewood/CidadePrincipalDeLakewood.cs`; Lakewood > Etapa 6: a cidade de Lakewood, uns 50 s, e
+  a imagem dela, `Recordings/Imgs/Lakewood/Lakewood_Lakewood.png`, a 2 m por pixel): a receita grava as ruas e os lotes da
+  cidade no asset (o `DesenhoDaCidade.Gravar`; rodar de novo troca os dela).
+  - **A grade:** as linhas de norte a sul em x = 9852 + 100·i (a 9852 é a Airport Road) e as de leste a oeste em z = 3492 +
+    75·j (a 3492 é a Eastern Highway; a South Shore Highway cai na j = -8). Avenidas de 12 m a cada 5 i e 6 j; ruas de 8 m.
+    Os quarteirões bons: dentro do contorno, secos e com o relevo variando até 5 m.
+  - **As beiras** (`Tipo`): a rua (1); a que corre junto de uma rodovia, que é a rua dela (2: os lotes ficam de frente
+    para a rodovia, com a calçada a partir da beira do asfalto dela, `Limite`); e a que passa a menos de 12 m da beira de
+    uma rodovia ou a cruza (3): sai. No lugar da 3, o pedaço do nó da grade até a rodovia (o T), com 20 m ou mais, a 35 m
+    de outro T e a 40 m dos nós das rodovias. As beiras seguidas viram uma `RuaDaCidade` só.
+  - **As zonas** (pela distância ao nó das rodovias, (9820; 3500), com um ruído de ±15%): o centro até 340 m (os prédios,
+    10% estacionamentos), o comércio até 540 m (as lojas de 12 a 22 m), as faixas (as lojas na beira das rodovias e da
+    Central Avenue e do Lakewood Boulevard até 1 km), a industrial (o sudeste: x > 9952 e z < 2760, os galpões) e os
+    bairros (as casas de 24 m ou mais, 7% vazias).
+  - **As fileiras:** de frente para as ruas de leste a oeste; de frente para as de norte a sul só quando uma delas é larga e
+    as outras não (o boulevard). 0,3 m entre os lotes (o teste pede meio metro) e as pontas a 2 m a mais das ruas dos lados
+    (o patamar segue a rua da frente; de longe, o terreno entre o lote e a rua do lado cobria a beira dela). Junto de uma
+    rodovia, a frente recua até 6 m e fica a até 9 m da beira dela, olhando para ela.
+  - **Os especiais de quarteirão inteiro** (o quarteirão bom mais perto de cada alvo, com a frente para a rua mais baixa):
+    a praça do meio (a nordeste do nó, como no mapa sorteado) e 4 nos bairros, 2 escolas, 3 igrejas e os bombeiros. Os 3
+    postos, no começo de uma fileira de frente para a rodovia perto dos alvos.
+- **Os tipos novos de lote** (`UsoDoLote`, no fim do enum: o asset grava o número): `Predio`, `Estacionamento`, `Praca` e
+  `Galpao`. Por enquanto, sem plano no `ObrasDeLakewood` (o chão plano do lote); o pintor do mapa, a imagem e o
+  `LotesDeLakewood.Comum` já os conhecem.
+- **A rede das estradas** (`ChaoDeLakewood.Estradas.cs`), duas regras novas, conferidas (a rede de antes saiu igual):
+  - no passo 1, o grupo de pontas em cima do meio de outra estrada entra nela (o nó fica dela também);
+  - no passo 3, o X perto de um nó só é pulado quando o nó já é das duas estradas (a grade tem cruzamentos a menos de 30 m
+    de outros nós).
+- **O chão:** nas cidades `Principal`, o patamar do lote fica no máximo 20 cm acima da rua da frente (com 60 cm, de longe,
+  o terreno cobria a beira do asfalto); de longe (os passos de 8 e 16 m), perto de uma pista, nem o patamar fica acima
+  dela.
+- **Os caminhos dos lotes** (as pedras da trilha e as faixas de concreto até a rua): saíram do `MontarAsObras` (com os 4
+  mil lotes, levavam uns 40 s no Awake) e vêm com a obra de verdade (`CaminhosDoLote`, na mesma tarefa dela,
+  `ObraPronta.Caminhos`, o filho "Caminhos" no espaço do mapa).
+- **As imagens do Lakewood** (`ImagemDeLakewood.Pasta`): a pasta de arte, no PC dela; nos outros, a
+  `Recordings/Imgs/Lakewood` do projeto (fora do git). A `ImagemDaCidade.Gravar` ganhou a escala (metros por pixel).
+- **O teste** `ACidadeDeLakewoodTemAGradeEAsZonas`; o `OsLotesDasCidadesFicamNoLugar` ficou rápido (as caixas das linhas;
+  com os 4 mil lotes, levava 13 min). São 34 testes do Lakewood.
+- **No Play** (um jogador, 0 erros): abre em ~10 s (6,5 s antes da cidade), 75 FPS nas ruas do Editor.
+- **As partes 2 a 5 (23/11/2026, "Sim, siga"):**
+  - **As calçadas das ruas** (`RuasDaCidade.CalcadasDasRuas`, nas cidades `Principal`): dos dois lados de cada rua da
+    cidade, menos os cortes onde outra rua chega (pelo ângulo das duas: a calçada para onde passaria por cima do asfalto e
+    da calçada da outra), e o quadrado de cada esquina entre duas ruas da cidade quase em ângulo reto, na altura do nó
+    (`Faixa`, sem as juntas). Uns 190 km.
+  - **As ruas em pedaços** (`LakewoodNaCena.Cidades.cs`, `PedacoDasRuas` 256 m, pelo `MalhaDeObra.Dividir`): o desenho e a
+    colisão de cada pedaço à parte. A versão "de antes" das ruas só é montada quando a época vira para o antes
+    (`_ruasPorFazer`, no `AplicarAEpoca`). Os apelidos são de cada cidade (`ApelidosDasRuas` por cidade).
+  - **Os prédios** (`ObrasDeLakewood.DoPredio`/`MontarPredio`/`PredioDeLonge`): o `Predio` do kit, de 4 a 15 andares pela
+    distância ao meio da cidade, a frente 0,6 m atrás da frente do lote; a casca na obra, as janelas escuras de cada andar
+    (`ObraPronta.Escuros`) e o `AndaresDoPredio` no `PorOResto` (sem o eco da obra inteira: o de cada andar); a obra com um
+    andar cozinhando não sai (`AndaresCozinhando`).
+  - **O saque das lojas:**
+    - as unidades novas (`PontoDeMovel.Mercado` 1002, `VinteQuatroHoras` 1003, `Armas` 1004 e as comuns `Roupas`,
+      `Ferragens`, `Esportes`, `Variedades` 1005 a 1008, pela semente da loja), no `MoveisDaObra.UnidadeDaLoja`;
+    - as regras de cada uma (`CatalogoDoSaque.RegraDaLoja`: o salão e os fundos pelo tipo; o escritório e o banheiro
+      iguais), as quantidades (`QuantosNaLoja`) e as chances (`ChancesDasLojas`: 55, 33 e 12; a de armas, as do mapa);
+    - os lugares dos móveis antigos das lojas, medidos pela `MontagemDosLugaresDoSaque.EscreverAntigos` (a lista
+      `Antigos` ganhou a prateleira da loja, o caixa, o freezer, o expositor refrigerado, a vitrine, os de armas, o
+      arquivo e a mesa de corte; o expositor refrigerado e o armário de armas ficaram sem lugares);
+    - no Lakewood, o `MontarLoja` desenha os móveis antigos (`Mobilia.Por`, depois do apocalipse, com os produtos do
+      modelo) e a etapa 3 do `PorAObra` chama o `MobiliaDaConstrucao.Por` também sem a mobília nova (o saque dos móveis
+      antigos das lojas e do posto).
+  - **O estacionamento, a praça e o galpão** (`ObrasDeLakewood.MontarEstacionamento`/`MontarPraca`/`MontarGalpao`): o
+    asfalto com as vagas e os carros (as vagas vão para o `ObraPronta.Carros`); os caminhos, o chafariz, os bancos e as
+    árvores dos canteiros (`ChaoDeLakewood.QuintalDaPlanta`; a "construção" da praça é o chafariz,
+    `PlanoDaObra.TamanhoDoLote`); o corpo de metal fechado, o telhado, os portões e a plataforma.
+  - **A caixa de longe de cada lote** fica num `try`: um lote com problema não derruba as obras do mapa.
+- **A marina e os galpões por dentro (23/11/2026, "Siga: marina e galpões"):**
+  - **O galpão por dentro** (`ObrasDeLakewood.MontarGalpao`, refeito nas coordenadas da obra: o meio no chão, a frente em
+    -z; antes ele saía nas do lote): o piso de concreto, as paredes de metal com os vãos dos portões de enrolar (um aberto,
+    os outros com a folha descida) e da porta, o telhado de duas águas com os oitões dos dois lados, a plataforma das
+    cargas; as fileiras de estantes de aço costas com costas (até 48, um corredor de través a cada quatro), 8 caixas no
+    fundo e o escritório (a mesa e o arquivo) no canto da porta. Os móveis são `PontoDeMovel` da unidade nova
+    `PontoDeMovel.Galpao` (1009), desenhados pelo `Mobilia.Por`; o saque pela `CatalogoDoSaque.RegraDoGalpao` (ferramentas,
+    galões, lanternas, machado, panos, mochilas, limpeza, comida e bebida; 10 a 20 itens). A `CasaPronta` tem o dentro e a
+    zona de concreto (os passos e o eco).
+  - **A Marina Road e os lotes** (`CidadePrincipalDeLakewood`, `NomeDaMarina`/`RuaDaMarina`/`FimDaRuaDaMarina` 22 m): a rua
+    sai do nó da grade mais perto do lugar "Lakewood Marina" (8752; 3567) e para 22 m antes dele (8389; 3779), 420 m. A loja
+    (22 × 24 m) e o estacionamento (26 × 24 m) ficam nos últimos 120 m, pelo `DesenhoDaCidade.EspecialMaisPlano` (o lugar
+    que cabe com o menor desnível: 1,9 m; o `Especial` dava 3,0 e 3,3 m).
+  - **A rede das estradas** (`ChaoDeLakewood.MontarARede`): o passo 1 junta uma ponta que cai no meio de outra estrada
+    (põe o nó nela), e o passo 3 só pula o cruzamento se o nó já for das duas estradas (um nó a menos de 0,5 m vira o
+    cruzamento). Os nós do resto do mapa saíram iguais (conferido antes e depois).
+  - **O píer** (`Mundo/Lakewood/MarinaDeLakewood.cs`, `LakewoodNaCena.MontarAMarina`, o objeto "Lakewood Marina: o píer e os
+    barcos", com o material da cidade e um MeshCollider): acha a beira mais perto do fim da rua e o rumo com mais água; a
+    passarela de 6 m na beira, o píer de 46 m (o deque 0,85 m acima da água), os dedos de 9 m a cada 9 m, as estacas até o
+    fundo, os barcos (o casco sólido, a cabine, o para-brisa e o motor; alguns afundados), a bomba de combustível e a rampa.
+    Conferido: o píer de 52 m saindo de (8314; 3793), 7 pontes, 5 barcos (2 afundados), 3.834 triângulos.
+  - **A loja da marina** (`ObrasDeLakewood.DaLojaDaMarina`, o lote de nome "marina", fora da cota das lojas): uma comum de um
+    andar com a semente acertada para a unidade `Esportes`. A `RegraDosEsportes` ficou sem as roupas (elas são muitas no
+    catálogo e tomavam a loja: 13 itens, quase todos roupa): a vara e a isca, as bebidas, as pilhas, a lanterna, a faca, as
+    mochilas, o machado e o violão. Vale para todas as lojas de esportes.
+  - Conferido no Play (0 erros): o galpão de 42 × 23 m com 16 itens na cena, a marina e a loja com 13 itens (antes da regra
+    sem as roupas: a regra nova foi conferida só pelo catálogo e pelos testes). Os 34 testes do Lakewood passam; os do saque,
+    das lojas, da mobília e dos lugares, 16 de 17.
+- **Ainda não:** o saque da loja de armas do Lakewood (os móveis dela são prefabs sem os lugares), o expositor refrigerado e
+  o armário de armas sem lugares, e os salões grandes das lojas meio vazios no meio. O
+  `LojasTestes.AsCidadesTemAsLojas` falha desde 13/11 (procura o hospital do mapa sorteado como um prédio).
+
 ## A cidade em blocos (Parte 4)
 
 - **Montada por código:** `Editor/MontagemDaCidade`, menu Zombie City Cleaner > Montar cidade em blocos. Ela apaga e refaz a raiz "Cidade" (e o antigo "Teste (temporário)"), então mudanças feitas à mão na cidade se perdem. Mude o script e rode de novo.
@@ -5727,6 +6220,24 @@ família nos riachos com a represa (`FaunaDoMundo.Rios.cs`, no save junto da toc
 boiam nos rios; o lixo da Woodcreek à vista (`LixoDaCidade.cs`: a lata, as sacolas e a caçamba), que o guaxinim
 revira (na cidade, de dia também; o barulho chama os zumbis perto); o esquilo sobe nas árvores sozinho. O sangramento
 dos bichos conta o tempo de verdade (quem investia sangrava 4 vezes mais rápido).
+**As latas de lixo refeitas** (23/11/2026, a pedido: "estão muito simples... parece que não se encaixa no jogo"):
+- **Antes:** eram os cilindros e os cubos da Unity, de cor lisa (`ModelosDosBichos`).
+- **Agora:** são malhas da `MalhaDeObra` (`Mundo/Gerador/ModelosDoLixo.cs`), guardadas por variante, no material da
+  cidade com o abandono. O `LixoDaCidade.MaterialDoLixo` é o `materialDaCidade` do Lakewood, sem a umidade da base; no mapa
+  sorteado, uma cópia do dos objetos sem a altura. Na época de antes, fica limpo (o lixo é refeito quando a época vira).
+- **O carrinho de plástico com rodas** (80% das casas, pela `QualLata(semente)`): a borda, as nervuras, o painel e a
+  etiqueta na frente, a barra do caminhão, as rodas e o eixo, a alça e a tampa na dobradiça (fechada, entreaberta com a
+  sacola ou aberta para trás). As cores PlasticoVerde, PlasticoPreto, PlasticoAzul e PlasticoCinza são novas na `Paleta`
+  (linha 14), com o abandono da madeira (desbota, escorre e racha) na `TexturasDoAbandono`.
+- **A lata de metal galvanizada:** os anéis, as alças e a tampa de cone (no lugar, ou encostada com a sacola).
+- **As sacolas:** anéis tortos de 9 lados (o plástico em pregas, sem a cara de pedra da esfera), o pescoço e as pontas do
+  nó. As cores Saco, SacoVerde e SacoBranco (as duas últimas são novas).
+- **A caçamba:** o corpo com a frente baixa, as duas tampas de plástico (uma entreaberta ou virada para trás, com os sacos
+  à vista), os bolsos do garfo, os reforços, os patins, a placa e o aviso.
+- **O lixo revirado pelo guaxinim** (`FaunaDoMundo.Castores.Lixo`): os restos (os papéis, as latas, a garrafa, a caixa de
+  pizza e a comida), as sacolas rasgadas e a mesma lata da casa, caída de lado (`LixoDaCidade.LataPerto`).
+- **Conferido no Play** (0 erros): 4.686 pontos de lixo no Lakewood (1.662 carrinhos e 427 latas de metal); o guaxinim
+  revirou um carrinho azul e o lixo mostrou o mesmo carrinho caído; no antes, o material limpo.
 **A etapa 5** (13/11): a caça ao ver (a cobra e o sapo, o urso e o salmão: desde 14/11 ele come deitado e, com filhotes,
 larga o peixe para eles, que deitam em volta e comem; o estado 7 é o `DeitadoComendo`, antes `Sentado`; o sapo e o
 vaga-lume com 1 minuto de espera); os lugares dos bichos (`FaunaDoMundo.Lugares.cs`, `LugaresNaTela.cs`: as cavernas

@@ -41,7 +41,8 @@ namespace ZombieCityCleaner.EditorTools
             (4, new[] { "Telhado", "TelhadoAzul", "TelhadoEscuro", "TelhadoAzulEscuro", "Cumeeira" }),
             (5, new[] { "Metal", "Poste", "Cromo", "Grade", "CarroAzul", "CarroVinho", "CarroCinza", "CarroVerde", "CarroBege", "CarroBranco",
                         "Lixeira", "Cacamba", "Hidrante", "PlacaVermelha", "PlacaBranca", "PlacaVerde", "PlacaAmarela" }),
-            (6, new[] { "Madeira", "MadeiraVelha", "BancoMadeira", "Papelao", "Compensado" }),
+            (6, new[] { "Madeira", "MadeiraVelha", "BancoMadeira", "Papelao", "Compensado",
+                        "PlasticoVerde", "PlasticoPreto", "PlasticoAzul", "PlasticoCinza" }),   // (o plástico do lixo, 23/11/2026)
             (7, new[] { "Vidro", "VidroCarro", "VidroSujo", "Farol" }),
             (8, new[] { "ParedeInterna", "PapelVerde", "PapelRosa", "Azulejo", "Piso", "Carpete", "Taco", "Teto" }),
             (9, new[] { "TijoloAparente" }),

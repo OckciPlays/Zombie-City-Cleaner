@@ -22,6 +22,13 @@ namespace ZombieCityCleaner.DiaZero
         public Transform Par { get; set; }
         public LugarDeNpc Lugar { get; private set; }
         public bool Doente => Lugar != null && Lugar.doente;
+        /// <summary>O corpo de mulher (as conversas: o artigo e o nome).</summary>
+        public bool Mulher => _mulher;
+        /// <summary>
+        /// Conversando com o jogador desta máquina (24/11/2026, <see cref="ConversaDoDiaZero"/>): para onde está, olha para ele
+        /// e só volta à rotina (no lugar do relógio) quando a conversa acaba.
+        /// </summary>
+        public bool Conversando { get; set; }
 
         Animator _an;
         Transform _peito, _pescoco, _cabeca, _ombroD, _bracoD, _anteD, _maoD, _ombroE, _bracoE, _anteE, _maoE;
@@ -33,6 +40,16 @@ namespace ZombieCityCleaner.DiaZero
         bool _mulher;
         float _proximaTosse, _tosseDesde = -10f, _proximaCoceira, _coceiraDesde = -10f, _acenoDesde = -10f, _proximoAceno;
         Transform _cortador, _esfregao, _bico;
+        // as peças soltas (o cortador, a mangueira, o esfregão, o balde, o canteiro): ficam ao lado do NPC, não são filhas dele,
+        // e saem junto com ele (23/11/2026, a pedido: o cortador continuava ligado na noite da fuga, depois que os NPCs do dia
+        // saíam; a mangueira também ficava jogando água)
+        readonly System.Collections.Generic.List<GameObject> _pecas = new System.Collections.Generic.List<GameObject>();
+
+        void OnDestroy()
+        {
+            foreach (var p in _pecas) if (p != null) Destroy(p);
+            _pecas.Clear();
+        }
         ParticleSystem _agua;
         float _fase;
         bool _andando;
@@ -128,7 +145,18 @@ namespace ZombieCityCleaner.DiaZero
         void Update()
         {
             float t = Time.time;
-            if (_caminho != null && _total > 0.1f)
+            if (Conversando)
+            {
+                Tocar("Parado");
+                var quem = JogadorRede.Local;
+                if (quem != null)
+                {
+                    var d = quem.transform.position - transform.position;
+                    d.y = 0f;
+                    if (d.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(d), Time.deltaTime * 5f);
+                }
+            }
+            else if (_caminho != null && _total > 0.1f)
             {
                 double agora = NpcsDoDiaZero.Agora;
                 // com as paradas (o faxineiro esfrega, quem compra olha a prateleira): anda 'passo' metros e para 'parado' s
@@ -454,8 +482,9 @@ namespace ZombieCityCleaner.DiaZero
             _maquina.spatialBlend = 1f;
             _maquina.rolloffMode = AudioRolloffMode.Linear;
             _maquina.minDistance = 2f;
-            _maquina.maxDistance = 35f;
-            Combat.MixerDeSom.NoCanal(_maquina, Combat.CanalDoSom.Objetos, 0.5f);   // (20/11/2026: o cortador no canal Objetos)
+            _maquina.maxDistance = 30f;
+            // (20/11/2026: o cortador no canal Objetos; 23/11/2026, a pedido, "acho que está muito alto": de 0,5 para 0,22)
+            Combat.MixerDeSom.NoCanal(_maquina, Combat.CanalDoSom.Objetos, 0.22f);
             _maquina.Play();
         }
 
@@ -477,6 +506,7 @@ namespace ZombieCityCleaner.DiaZero
         {
             var go = new GameObject(nome);
             go.transform.SetParent(pai != null ? pai : transform.parent, false);
+            if (pai == null) _pecas.Add(go);
             var malha = obra.vis.ParaMesh(nome);
             go.AddComponent<MeshFilter>().sharedMesh = malha;
             go.AddComponent<MeshRenderer>().sharedMaterial = material;

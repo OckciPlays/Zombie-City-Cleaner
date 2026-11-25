@@ -69,6 +69,20 @@ namespace ZombieCityCleaner.World
             }
         }
 
+        /// <summary>
+        /// O Dia 0 está acontecendo: no mundo sorteado (a rua do Dia 0) ou no Lakewood (a Woodcreek de antes, 22/11/2026).
+        /// Os sistemas do jogador leem aqui (a pistola do começo, o XP, a trilha, o clima, o corpo, a morte sem perder nada).
+        /// </summary>
+        public static bool NoDiaZeroAgora =>
+            (MundoDaPartida.Instancia != null && MundoDaPartida.Instancia.NoDiaZero) ||
+            (MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.NoDiaZero);
+
+        /// <summary>
+        /// A abertura da campanha: o Dia 0 ou a fuga do Lakewood (23/11/2026). Quem morre nela não perde a mochila (a fuga
+        /// recomeça), e ela não dá XP.
+        /// </summary>
+        public static bool NaAbertura => NoDiaZeroAgora || (MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.NaFuga);
+
         /// <summary>O mundo da cena, pronto para os sistemas da partida (null antes disso, no Dia 0 e sem mundo).</summary>
         public static IMundoDoJogo Pronto
         {

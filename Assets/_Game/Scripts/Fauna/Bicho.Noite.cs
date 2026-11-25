@@ -240,12 +240,15 @@ namespace ZombieCityCleaner.Fauna
         void PensarGuaxinim(FaunaDoMundo f, float agora, float dt)
         {
             Vector3 p = transform.position;
+            // (23/11/2026) com a caçamba (indo, pulando, dentro ou saindo): Bicho.Cacamba.cs
+            if (NaCacamba != FaseDaCacamba.Fora && PensarNaCacamba(f, agora)) return;
             if (_trepando && Trepar(f, agora)) return;
             if (agora >= _distraidoAte && f.Perceber(this, out var de, out _, out _) && Vector3.Distance(p, de) < Dados.fuga)
             {
                 _perigo = de;
                 _perigoAte = agora + 10f;
                 _reviraAte = 0f;
+                _derrubandoAte = 0f;
                 // (20/11/2026) assustado, ele chia (no máximo um a cada 6 a 12 s)
                 if (agora >= _proximoChiadoDoGuaxinim)
                 {
@@ -273,8 +276,15 @@ namespace ZombieCityCleaner.Fauna
                 return;
             }
             // à noite (e, na cidade, de dia também: 13/11), o lixo mais perto (a até 60 m) que ninguém revirou faz pouco
-            if ((ENoite || FaunaDoMundo.NaCidade(p)) && f.LixeiraPerto(p, 60f, out var lixeira, out var tipo))
+            if ((ENoite || FaunaDoMundo.NaCidade(p)) && f.LixeiraPerto(p, 60f, out var lixeira, out var tipo, out int indice, QuerCacamba(agora)))
             {
+                // (23/11/2026) a caçamba das lojas: ele entra nela (Bicho.Cacamba.cs) em vez de espalhar o lixo do lado
+                if (tipo == TipoDeLixo.Cacamba && indice >= 0)
+                {
+                    IrParaACacamba(indice, lixeira, LixoDaCidade.GiroDePe(LixoDaCidade.Pontos[indice]));
+                    PensarNaCacamba(f, agora);
+                    return;
+                }
                 float d = Vector3.Distance(Plano(p), Plano(lixeira));
                 if (d > (tipo == TipoDeLixo.Cacamba ? 1.6f : 1.2f))
                 {
@@ -282,13 +292,17 @@ namespace ZombieCityCleaner.Fauna
                     Ir(lixeira, d > 15f ? Dados.trotar : Dados.andar);
                     return;
                 }
-                // derruba a lata (o barulho), rasga a sacola ou bate a tampa da caçamba; o lixo fica espalhado
+                // (23/11/2026) a lata da casa: uns segundos mexendo (ela balança) antes de tombar
+                if (tipo == TipoDeLixo.Lata && MexendoNaLata(lixeira, agora)) return;
+                // derruba a lata, rasga a sacola ou bate a tampa da caçamba (no mapa sorteado); o lixo fica espalhado
                 var ponto = tipo == TipoDeLixo.Cacamba ? lixeira + Quaternion.LookRotation(Plano(p - lixeira).sqrMagnitude > 0.01f ? Plano(p - lixeira) : Vector3.forward) * Vector3.right * 1.6f : lixeira;
                 f.ReviraLixeira(ponto, (byte)tipo);
                 f.BarulhoNoLixo(lixeira, tipo);
                 _lixoDeAgora = tipo;
                 _proximoSom = 0f;
-                Tocar(tipo == TipoDeLixo.Lata ? SomDoBicho.Lata : tipo == TipoDeLixo.Cacamba ? SomDoBicho.Cacamba : SomDoBicho.Sacola);
+                // (a lata tombando toca em cada máquina, junto com a queda desenhada: FaunaDoMundo.Castores.cs; no mapa
+                // sorteado, sem a lata desenhada, o barulho de antes)
+                if (tipo != TipoDeLixo.Lata || indice < 0) Tocar(tipo == TipoDeLixo.Lata ? SomDoBicho.Lata : tipo == TipoDeLixo.Cacamba ? SomDoBicho.Cacamba : SomDoBicho.Sacola);
                 _reviraAte = agora + Random.Range(15f, 35f);
                 return;
             }

@@ -28,6 +28,17 @@ namespace ZombieCityCleaner.Mundo
         /// o chão plano do lote; a cerca, a casa, as barracas e as pessoas são do AcampamentosDoMundo.
         /// </summary>
         Acampamento,
+        /// <summary>
+        /// Um prédio de apartamentos do kit, de 5 a 15 andares (23/11/2026, a cidade de Lakewood: o centro no padrão do mapa
+        /// sorteado). Os andares saem da semente e da distância ao meio da cidade.
+        /// </summary>
+        Predio,
+        /// <summary>O estacionamento (o asfalto com as vagas e os carros largados).</summary>
+        Estacionamento,
+        /// <summary>A praça (o gramado, as árvores, os bancos).</summary>
+        Praca,
+        /// <summary>O galpão da zona industrial (a fazer).</summary>
+        Galpao,
     }
 
     /// <summary>
@@ -148,6 +159,10 @@ namespace ZombieCityCleaner.Mundo
             UsoDoLote.LojaDeArmas => "loja de armas",
             UsoDoLote.Cabana => "cabana",
             UsoDoLote.Acampamento => "acampamento dos comerciantes",
+            UsoDoLote.Predio => "prédio",
+            UsoDoLote.Estacionamento => "estacionamento",
+            UsoDoLote.Praca => "praça",
+            UsoDoLote.Galpao => "galpão",
             _ => string.IsNullOrEmpty(nome) ? "especial" : nome,
         };
     }
@@ -166,7 +181,8 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>Se o lote é dos que precisam de pouco desnível (os comuns, enchidos ao longo das ruas).</summary>
         public static bool Comum(LoteDoMapa l) =>
-            l.tipo == UsoDoLote.Casa || l.tipo == UsoDoLote.Loja || l.tipo == UsoDoLote.Vazio || l.tipo == UsoDoLote.Cabana;
+            l.tipo == UsoDoLote.Casa || l.tipo == UsoDoLote.Loja || l.tipo == UsoDoLote.Vazio || l.tipo == UsoDoLote.Cabana ||
+            l.tipo == UsoDoLote.Predio || l.tipo == UsoDoLote.Estacionamento || l.tipo == UsoDoLote.Galpao;
 
         /// <summary>
         /// O desnível do relevo no lote (de 5 × 5 pontos: o chão de verdade, sem os patamares dos lotes nem os cortes das

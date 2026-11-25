@@ -337,8 +337,7 @@ namespace ZombieCityCleaner.World
             float dt = Time.deltaTime;
             double horasPorSegundo = 24.0 / (minutosPorDia * 60.0);
             _horas += dt * horasPorSegundo;
-            var mundo = MundoDaPartida.Instancia;
-            bool semClima = !climaLigado || ModoVideo.Ligado || (mundo != null && mundo.NoDiaZero);
+            bool semClima = !climaLigado || ModoVideo.Ligado || MundoDoJogo.NoDiaZeroAgora;
             if (semClima)
             {
                 // no Dia 0 (o dia limpo de antes) e no vídeo, nada; o calendário começa depois, com os dias de sol

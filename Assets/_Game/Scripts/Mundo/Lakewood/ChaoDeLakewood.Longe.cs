@@ -129,6 +129,8 @@ namespace ZombieCityCleaner.Mundo
             }
             // o terreiro da casa da partida, com o talude
             if (Partida != null) Marcar(Partida.Meio, Partida.Raio + 3f);
+            // a pegada do bunker, com o talude
+            if (Bunker != null) Marcar(Bunker.MeioDaPegada, Bunker.Raio + 3f);
             // os patamares dos lotes das cidades, com o talude
             foreach (var l in Lotes)
                 if (l.Ocupado) Marcar(l.Lote.meio, 0.5f * Mathf.Sqrt(l.Lote.largura * l.Lote.largura + l.Lote.fundo * l.Lote.fundo) + l.Talude + 3f);

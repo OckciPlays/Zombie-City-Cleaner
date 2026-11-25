@@ -19,7 +19,13 @@ namespace ZombieCityCleaner.Fauna
             // (19/11/2026) o filhote de urso chora no lugar do bufo, dos dentes e do rugido
             if (b.Variante == Variante.Filhote && (b.Especie == Especie.UrsoNegro || b.Especie == Especie.UrsoPardo)
                 && (som == SomDoBicho.BufoDoUrso || som == SomDoBicho.Dentes || som == SomDoBicho.Rugido)) som = SomDoBicho.Filhote;
-            Vector3 p = b.transform.position + Vector3.up * b.Altura;
+            TocarSomNoPonto(b.transform.position + Vector3.up * b.Altura, som);
+        }
+
+        /// <summary>Só no anfitrião: um som dos bichos num ponto (23/11/2026: a tampa da caçamba no susto), para todos no alcance.</summary>
+        internal void TocarSomNoPonto(Vector3 p, SomDoBicho som)
+        {
+            if (!_servidor) return;
             SomDosBichos.Tocar(som, p);
             var nm = NetworkManager.Singleton;
             if (nm == null || !nm.IsListening) return;

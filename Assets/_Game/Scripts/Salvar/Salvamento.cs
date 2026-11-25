@@ -74,7 +74,7 @@ namespace ZombieCityCleaner.Salvar
         }
 
         // o mundo está jogável: o sorteado pronto e fora do Dia 0, ou o Lakewood com a partida começada
-        bool MundoJogavel => _mundo != null ? _mundo.Pronto && !_mundo.NoDiaZero : _lakewood != null && _lakewood.Pronto;
+        bool MundoJogavel => _mundo != null ? _mundo.Pronto && !_mundo.NoDiaZero : _lakewood != null && _lakewood.Pronto && !_lakewood.Antes;
 
         public override void OnDestroy()
         {
@@ -216,9 +216,11 @@ namespace ZombieCityCleaner.Salvar
 
             m.arvoresCortadas = _mundo != null ? _mundo.ArvoresCortadas() : _lakewood.ArvoresCortadas();   // (06/11/2026)
             m.troncosNoChao = _lakewood != null ? _lakewood.TroncosNoChao() : new List<World.TroncoNoChao>();   // (18/11/2026)
+            if (_lakewood != null) m.primeiraMissao = m.primeiraMissao || _lakewood.PrimeiraMissaoCumprida;   // (24/11/2026, a primeira missão)
             m.paineisDesmontados = _mundo != null ? _mundo.PaineisDesmontados() : _lakewood.PaineisDesmontados();   // (09/11/2026, a sucata)
             m.fauna = Fauna.FaunaDoMundo.NiveisParaSalvar();   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.CastoresParaSalvar(out m.tocasDosCastores, out m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
+            m.lixosRevirados = Fauna.FaunaDoMundo.LixosParaSalvar();   // os lixos da cidade revirados (23/11/2026)
             m.mobiliaAberta.Clear();
             if (MobiliaNovaDoMundo.Instancia != null)
                 foreach (var k in MobiliaNovaDoMundo.Instancia.Copia()) m.mobiliaAberta.Add(unchecked((long)k));
@@ -288,7 +290,7 @@ namespace ZombieCityCleaner.Salvar
                     var s = new MochilaSalva
                     {
                         nome = mc.nome.ToString(), pos = mc.pos, giro = mc.giro, mochila = (int)mc.mochila, dinheiro = mc.dinheiro,
-                        colunas = mc.colunas, linhas = mc.linhas,
+                        colunas = mc.colunas, linhas = mc.linhas, tipo = (int)mc.tipo, origem = mc.origem,   // (24/11/2026: o lixo)
                     };
                     foreach (var it in itensDela)
                         s.itens.Add(new ItemSalvo { item = (int)it.item, x = it.x, y = it.y, girado = it.girado, qtd = it.qtd, desgaste = it.desgaste, cores = unchecked((long)it.cores) });
@@ -542,10 +544,12 @@ namespace ZombieCityCleaner.Salvar
             {
                 _lakewood.RestaurarArvores(m.arvoresCortadas);
                 _lakewood.RestaurarTroncos(m.troncosNoChao);   // as árvores caídas (18/11/2026)
+                _lakewood.PrimeiraMissaoCumprida = m.primeiraMissao;   // a primeira missão já cumprida (24/11/2026)
                 _lakewood.RestaurarPaineis(m.paineisDesmontados);
             }
             Fauna.FaunaDoMundo.Restaurar(m.fauna);   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.RestaurarCastores(m.tocasDosCastores, m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
+            Fauna.FaunaDoMundo.RestaurarLixos(m.lixosRevirados);   // os lixos da cidade revirados (23/11/2026)
             var abertas = new List<ulong>(m.mobiliaAberta.Count);
             foreach (long k in m.mobiliaAberta) abertas.Add(unchecked((ulong)k));
             MobiliaNovaDoMundo.Instancia?.Restaurar(abertas);
@@ -615,6 +619,7 @@ namespace ZombieCityCleaner.Salvar
                     pos = s.pos, giro = s.giro, mochila = (Item)s.mochila, dinheiro = s.dinheiro,
                     colunas = (byte)Mathf.Clamp(s.colunas, 1, 255), linhas = (byte)Mathf.Clamp(s.linhas, 1, 255),
                     nome = new Unity.Collections.FixedString32Bytes(MochilasNoChao.Curto(s.nome)),
+                    tipo = (TipoDeRecipiente)Mathf.Clamp(s.tipo, 0, 255), origem = s.origem,   // (24/11/2026: o lixo)
                 };
                 var itensDela = new List<ItemNaMochila>(s.itens.Count);
                 foreach (var it in s.itens)

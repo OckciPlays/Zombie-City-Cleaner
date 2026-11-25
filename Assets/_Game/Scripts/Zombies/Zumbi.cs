@@ -193,6 +193,7 @@ namespace ZombieCityCleaner.Zombies
         {
             bool ligado = _visivel && (!Morto || (EhChefe && !_afundou)) && _boneco == null;   // (o chefe morto fica até afundar)
             foreach (var r in renderers) r.enabled = ligado;
+            MostrarAMochila(ligado);   // (o zumbi de mochila, 24/11/2026: Zumbi.Mochila.cs)
         }
 
         // hitboxes só no nível Perto; morto (ou o boneco caindo no lugar dele), nada leva tiro; um membro que caiu não leva mais
@@ -479,6 +480,7 @@ namespace ZombieCityCleaner.Zombies
             _dorAte = _ataqueAte = 0f;
             ZerarPedra();
             ZerarVoz();
+            TirarAMochila();   // (24/11/2026: Zumbi.Mochila.cs)
             Golpes = 0; Reacoes = 0; Velocidade = 0f; _velAnimacao = 0f; _qtd = 0;
             Atual = Estado.Parado;
             if (agente.enabled)
@@ -519,6 +521,7 @@ namespace ZombieCityCleaner.Zombies
             AplicarAparencia();
             AplicarNivel(Nivel.Longe, true);
             PrepararEspecial();   // os especiais (Zumbi.Especiais.cs)
+            VestirAMochila();   // (o zumbi de mochila, 24/11/2026: Zumbi.Mochila.cs)
         }
 
         /// <summary>Muda o nível de detalhe no anfitrião: além do visual, liga ou desliga a navegação.</summary>
@@ -1019,6 +1022,7 @@ namespace ZombieCityCleaner.Zombies
             }
             Velocidade = 0f;
             _m.ContarMorte();
+            SaqueDosZumbis.AoMorrer(this);   // (24/11/2026) o que ele levava: o recipiente do corpo, no chão (SaqueDosZumbis.cs)
             if (EhChefe) DepoisDaMorteDoChefe();   // o Blindado se divide, o Alongado vira o Longo
         }
 
@@ -1052,6 +1056,7 @@ namespace ZombieCityCleaner.Zombies
             _visivel = true;
             AplicarAparencia();
             AplicarNivel(Nivel.Medio, true);
+            VestirAMochila();   // (o zumbi de mochila, 24/11/2026: o mesmo sorteio do anfitrião)
         }
 
         internal void Receber(double tempo, Vector3 posicao, float yaw, Estado estado, byte golpes, byte reacoes, byte morte, float velocidade, byte cortes, byte pedra,

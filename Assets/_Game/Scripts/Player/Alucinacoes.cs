@@ -182,6 +182,14 @@ namespace ZombieCityCleaner.Player
             }
         }
 
+        /// <summary>Onde estão os zumbis falsos que ainda não viraram fantasma (o roteiro do vídeo 1 mira neles).</summary>
+        public void OndeEstaoOsFalsos(List<Vector3> lista)
+        {
+            lista.Clear();
+            foreach (var f in _falsos)
+                if (f.go != null && !f.fantasma) lista.Add(f.go.transform.position);
+        }
+
         /// <summary>Zumbis falsos vindo pela frente (de 1 a 3).</summary>
         public void ZumbisFalsos(int quantos)
         {

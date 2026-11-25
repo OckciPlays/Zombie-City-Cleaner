@@ -38,10 +38,15 @@ namespace ZombieCityCleaner.Vehicles
                     ? $"[E] Pegar o estepe ({e}%){(inv.PneuVaiParaAsMaos ? " nas mãos (pesado)" : "")}" : motivo;
                 if (AcharPneu(inv, out int estado, out _)) return $"[E] Guardar o pneu ({estado}%)";
             }
-            // a caçamba (a caminhonete) não fecha: fora do estepe e do macaco, a subida (sem lugar livre, nada, e a mira passa
-            // para o que está atrás)
+            // a caçamba (a caminhonete) não fecha: fora do estepe e do macaco, de trás dela, o que está guardado nela (as compras
+            // do Dia 0, 22/11/2026); dos lados, a subida (sem lugar livre, nada, e a mira passa para o que está atrás)
             if (carro.cacamba)
             {
+                if (DeTras(quem))
+                {
+                    int n = Guardadas();
+                    return n == 0 ? "[E] Abrir a caçamba (vazia)" : $"[E] Abrir a caçamba ({n} {(n == 1 ? "coisa" : "coisas")})";
+                }
                 var subida = Subida(quem);
                 return subida != null ? subida.Dica(quem) : null;
             }
@@ -70,11 +75,32 @@ namespace ZombieCityCleaner.Vehicles
             }
             if (carro.cacamba)
             {
+                if (DeTras(quem))
+                {
+                    quem.GetComponent<TelaDoInventario>()?.AbrirEstante(carro.CacambaDeGuardar);
+                    return;
+                }
                 var subida = Subida(quem);
                 if (subida != null && subida.Dica(quem) != null) subida.Usar(quem);
                 return;
             }
             carro.PedirPortaMalas(false);
+        }
+
+        // quem está atrás da caminhonete (na tampa de trás), com as estantes na cena: abre o que está guardado na caçamba
+        bool DeTras(ArmaJogador quem)
+        {
+            var e = World.EstantesDoBunker.Instancia;
+            if (e == null || !e.IsSpawned || carro.CacambaDeGuardar < 0) return false;
+            return carro.transform.InverseTransformPoint(quem.transform.position).z < carro.pontoDoPortaMalas.z + 0.4f;
+        }
+
+        // quantas coisas estão guardadas na caçamba
+        int Guardadas()
+        {
+            int n = 0;
+            foreach (var it in World.EstantesDoBunker.Instancia.Guardados) if (it.estante == carro.CacambaDeGuardar) n++;
+            return n;
         }
 
         // a subida da caçamba do lado onde o jogador está (pelo x dele no espaço do carro)

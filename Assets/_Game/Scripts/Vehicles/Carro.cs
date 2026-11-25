@@ -767,6 +767,13 @@ namespace ZombieCityCleaner.Vehicles
             motivo = null;
             if (!IsSpawned || !IsOwner || _estadoLocal != EstadoDoMotor.Arranque) return false;
             var p = Pecas;
+            // a caminhonete da família na fuga (23/11/2026): o motor tosse e não pega
+            if (World.LakewoodNaCena.NaoPegaNaFuga(this))
+            {
+                Tossir();
+                motivo = "O motor tosse, mas não pega";
+                return false;
+            }
             if (!p.VelaBoa || Fervendo || SemGasolina)
             {
                 Tossir();
@@ -822,7 +829,7 @@ namespace ZombieCityCleaner.Vehicles
         /// No dono, sem motorista: o motor ligado continua ligado enquanto puder (sem ferver, com a vela boa e gasolina).
         /// O resto (a ignição acesa, a partida, o mini-game da direta) perde a chave ao sair, como antes.
         /// </summary>
-        bool FicaLigadoSemMotorista => _estadoLocal == EstadoDoMotor.Ligado && !Fervendo && Pecas.VelaBoa && !SemGasolina;
+        bool FicaLigadoSemMotorista => _estadoLocal == EstadoDoMotor.Ligado && !Fervendo && Pecas.VelaBoa && !SemGasolina && !World.LakewoodNaCena.NaoPegaNaFuga(this);
 
         void MudarEstado(EstadoDoMotor e)
         {
@@ -862,7 +869,7 @@ namespace ZombieCityCleaner.Vehicles
             EstadoDoMotor novo;
             if (_anguloDaChave < ChaveDesliga) novo = EstadoDoMotor.Desligado;
             // ferveu (ou tiraram a vela, ou acabou a gasolina): o motor apaga, e a chave fica na ignição
-            else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa || SemGasolina ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
+            else if (e == EstadoDoMotor.Ligado) novo = Fervendo || !Pecas.VelaBoa || SemGasolina || World.LakewoodNaCena.NaoPegaNaFuga(this) ? EstadoDoMotor.Ignicao : EstadoDoMotor.Ligado;
             else if (_presaNaPartida) novo = EstadoDoMotor.Arranque;
             else novo = EstadoDoMotor.Ignicao;
             // na ligação direta não há "desligado com a chave": puxada até o fim, os fios se soltam

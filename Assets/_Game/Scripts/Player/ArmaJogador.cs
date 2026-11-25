@@ -1496,7 +1496,9 @@ namespace ZombieCityCleaner.Player
                 {
                     // as partes dos sobreviventes (e os corpos no chão) não tapam a mochila do lado, nem o móvel o item
                     // do saque dentro dele
-                    if (hit.collider.isTrigger || hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada || DeDentro(i, n, hit.point, null)) continue;
+                    // (24/11/2026) nem o corpo caído do zumbi (as partes do boneco): o E revista o que ele deixou ali
+                    if (hit.collider.isTrigger || hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada
+                        || hit.collider.gameObject.layer == Zombies.CorpoDeZumbi.Camada || DeDentro(i, n, hit.point, null)) continue;
                     return;
                 }
                 string dica = alvo.Dica(this);

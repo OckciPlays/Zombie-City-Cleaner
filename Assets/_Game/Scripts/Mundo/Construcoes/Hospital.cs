@@ -482,9 +482,12 @@ namespace ZombieCityCleaner.Mundo
             }
             Acabamentos(an);
             PlacasDoAndar(an);
-            // o abandono (a parte 5): as marcas e as placas do forro que caíram
-            MarcasDoAndar(an);
-            PlacasNoChao(f);
+            // o abandono (a parte 5): as marcas e as placas do forro que caíram (no hospital de antes, 22/11/2026, nada)
+            if (!nova)
+            {
+                MarcasDoAndar(an);
+                PlacasNoChao(f);
+            }
             NoPoco(f);
             if (f == Terreo) { BalcaoEmU(R(23f, 12.6f, 33f, 15.2f), "Madeira"); VagasDaGaragem(); }
             if (f == 2) BalcaoEmU(R(22f, 12.5f, 34f, 16f), "ParedeInterna");

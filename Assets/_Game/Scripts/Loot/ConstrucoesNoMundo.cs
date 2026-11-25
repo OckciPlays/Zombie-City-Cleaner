@@ -170,6 +170,7 @@ namespace ZombieCityCleaner.Loot
         {
             if (tipo == Item.KitFogueira) return ItensDoFogo.Fogueira;   // a portátil (11/11/2026): do Resources/ItensDoFogo
             if (Itens.EhArmadilha(tipo)) return ItensDasArmadilhas.Montada(tipo);   // as armadilhas (11/11/2026): do Resources/ItensDasArmadilhas
+            if (Itens.EhDaBase(tipo)) return MalhaDaBase(tipo);   // o núcleo, o muro e o portão (24/11/2026: ConstrucoesNoMundo.Base.cs)
             int k = tipo - Item.Fogueira;
             return Itens.EhConstrucao(tipo) && malhas != null && k >= 0 && k < malhas.Length ? malhas[k] : null;
         }
@@ -190,6 +191,14 @@ namespace ZombieCityCleaner.Loot
             float sobe = Itens.EhArmadilha(tipo) ? Mathf.Min(0.2f, 0.18f * Mathf.Max(b.extents.x, b.extents.z)) : 0f;
             var centro = ponto + rot * new Vector3(b.center.x, b.center.y + 0.06f + sobe * 0.5f, b.center.z);
             var meia = new Vector3(b.extents.x - 0.02f, Mathf.Max(0.01f, b.extents.y - 0.05f - sobe * 0.5f), b.extents.z - 0.02f);
+            // (a base, 24/11/2026: as estacas do muro e do portão entram no chão, e eles são compridos: a caixa começa uns
+            // 30 cm acima do chão, para caber numa ladeira de uns 20%)
+            if (Itens.EhDaBase(tipo))
+            {
+                float baixo = Mathf.Max(b.min.y, 0f) + 0.11f + Mathf.Min(0.35f, 0.14f * Mathf.Max(b.extents.x, b.extents.z)), alto = b.max.y;
+                centro = ponto + rot * new Vector3(b.center.x, (baixo + alto) * 0.5f, b.center.z);
+                meia = new Vector3(b.extents.x - 0.02f, Mathf.Max(0.01f, (alto - baixo) * 0.5f), b.extents.z - 0.02f);
+            }
             var batidas = Physics.OverlapBox(centro, meia, rot, MascaraDeMontar, QueryTriggerInteraction.Ignore);
             foreach (var c in batidas)
                 if (c != ignorar) return false;
@@ -297,6 +306,13 @@ namespace ZombieCityCleaner.Loot
             if ((inventario.transform.position - ponto).sqrMagnitude > (AlcanceDeMontar + 1f) * (AlcanceDeMontar + 1f)) return;
             if (!NoChao(inventario.transform.position, ponto)) return;
             if (!Cabe(kit.item, ponto, giro)) return;
+            // (24/11/2026) a base: o muro, o portão e a barricada só dentro da área de um núcleo; o núcleo, longe de outro
+            string motivo = PodeMontarAqui(kit.item, ponto);
+            if (motivo != null)
+            {
+                inventario.AvisarDono(motivo);
+                return;
+            }
             // a portátil (11/11/2026, a etapa 4) não é montada na chuva fora de um teto: o kit fica na mochila
             if (kit.item == Item.KitFogueira && ChoveNoFogo && !cobertoParaQuemMonta && !World.Tempo.SobTeto(ponto))
             {
@@ -314,6 +330,10 @@ namespace ZombieCityCleaner.Loot
                 : kit.item == Item.KitFogueira ? Agora + SegundosDoKit(kit.desgaste)
                 : Itens.EhArmadilha(kit.item) ? ValorDaArmadilha(kit.item, kit.desgaste, nivel) : 0f;
             if (fortaleza && kit.item == Item.Estacas) valor *= ArmadilhasDoJogador.FatorDaFortaleza;
+            // (24/11/2026) o núcleo começa no nível 1; o muro e o portão, com a vida cheia
+            if (kit.item == Item.NucleoDaBase) valor = 1f;
+            else if (kit.item == Item.MuroDeToras) valor = VidaDoMuro;
+            else if (kit.item == Item.PortaoDeToras) valor = VidaDoPortao;
             // na chuva, fora de um teto (o de quem monta ou o do anfitrião), a fogueira fica montada, apagada, e a lenha do kit
             // volta como 1 madeira (a que acende depois, debaixo de um teto ou sem chuva; 05/11/2026)
             bool apagadaNaChuva = kit.item == Item.Fogueira && ChoveNoFogo && !cobertoParaQuemMonta && !World.Tempo.SobTeto(ponto);
@@ -376,6 +396,13 @@ namespace ZombieCityCleaner.Loot
                 case Item.CercaFogo:
                     UsarArmadilha(k, c, inventario);   // (11/11/2026, a etapa 5a: ConstrucoesNoMundo.Armadilhas.cs)
                     break;
+                case Item.NucleoDaBase:
+                    SubirONucleo(k, c, inventario);   // (24/11/2026: os troféus sobem o nível; ConstrucoesNoMundo.Base.cs)
+                    break;
+                case Item.PortaoDeToras:
+                    c.extra ^= BitAberto;   // (24/11/2026: abre e fecha)
+                    _lista[k] = c;
+                    break;
             }
         }
 
@@ -431,7 +458,9 @@ namespace ZombieCityCleaner.Loot
             {
                 var c = _lista[k];
                 // (e as barricadas de tábuas das portas e das janelas, 11/11/2026, a etapa 5b: a porta volta a abrir, fechada)
-                if (c.tipo != Item.Barricada && c.tipo != Item.Estacas && c.tipo != Item.TabuasBarricada) continue;
+                // (e o muro e o portão de toras, 24/11/2026: sobra uma tora)
+                bool toras = c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras;
+                if (c.tipo != Item.Barricada && c.tipo != Item.Estacas && c.tipo != Item.TabuasBarricada && !toras) continue;
                 Vector3 d = c.pos - ponto;
                 d.y = 0f;
                 if (d.sqrMagnitude > raio * raio) continue;
@@ -441,7 +470,8 @@ namespace ZombieCityCleaner.Loot
                     continue;
                 }
                 _lista.RemoveAt(k);
-                ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
+                if (toras) ItensNoMundo.Instancia?.Criar(Item.Toras, c.pos, c.giro, 1);
+                else ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
                 if (c.tipo == Item.Estacas) EstacasQuebradas(c, quem);
             }
         }
@@ -454,6 +484,7 @@ namespace ZombieCityCleaner.Loot
             if (IsServer && IsSpawned) AssarNoServidor();   // (o assar, 18/11/2026: o fogo conta para o que está nele)
             ArmadilhasAgora();   // as armadilhas (11/11/2026, a etapa 5a: ConstrucoesNoMundo.Armadilhas.cs): o anfitrião decide, e cada cópia vê
             BarricadasAgora();   // as de tábuas (11/11/2026, a etapa 5b: ConstrucoesNoMundo.Barricadas.cs): a malha danificada e o som de quem mexe
+            BaseAgora();   // (24/11/2026) o fogo do núcleo, a folha do portão e a área no chão (ConstrucoesNoMundo.Base.cs)
             // (o som das fogueiras é o laço gravado do fogo, o SomDasChamas; 20/11/2026: os estalos da lenha feitos em
             // código, a reserva dele, saíram)
             foreach (var c in _lista)
@@ -489,10 +520,13 @@ namespace ZombieCityCleaner.Loot
             var rot = Quaternion.Euler(0f, c.giro, 0f);
             var inv = Quaternion.Inverse(rot);
             var b = CaixaDe(c);   // (a de tábuas, 11/11/2026: a malha da porta ou da janela, no tamanho do vão)
+            // (o muro e o portão da base, 24/11/2026: quem perdeu o jogador de vista atrás dele e procura ali também bate;
+            // no teste, os zumbis encostados no muro paravam de bater assim que o jogador sumia atrás dele)
+            bool daBase = c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras;
             int n = 0;
             foreach (var z in zm.Ativos)
             {
-                if (z == null || z.Morto || !z.Engajado) continue;
+                if (z == null || z.Morto || !(z.Engajado || (daBase && z.Atual == Zumbi.Estado.Procurando))) continue;
                 var local = inv * (z.transform.position - c.pos);
                 var d = new Vector3(Mathf.Max(0f, Mathf.Abs(local.x - b.center.x) - b.extents.x), 0f, Mathf.Max(0f, Mathf.Abs(local.z - b.center.z) - b.extents.z));
                 if (d.magnitude < 0.9f && Mathf.Abs(local.y) < 1.5f) n++;
@@ -551,10 +585,12 @@ namespace ZombieCityCleaner.Loot
             col.size = b.size;
             // a fogueira e a cama não seguram ninguém (passa-se por cima); a barricada, sim (e as estacas, 11/11/2026, e a
             // de tábuas, na porta e na janela)
-            col.isTrigger = c.tipo != Item.Barricada && c.tipo != Item.Estacas && !tabuas;
+            // (a base, 24/11/2026: o núcleo e o muro seguram; o portão faz a dele no MontarDaBase)
+            col.isTrigger = c.tipo != Item.Barricada && c.tipo != Item.Estacas && !tabuas && !Itens.EhDaBase(c.tipo);
             var mira = go.AddComponent<ConstrucaoNaMira>();
             mira.mundo = this;
             mira.id = c.id;
+            if (Itens.EhDaBase(c.tipo)) MontarDaBase(go, c);
             // (a de tábuas na porta também corta o NavMesh: os zumbis que querem entrar param nela; na janela, não precisa,
             // o peitoril já fica fora do NavMesh)
             if (c.tipo == Item.Barricada || c.tipo == Item.Estacas || (tabuas && !Janela(c)))
@@ -681,6 +717,10 @@ namespace ZombieCityCleaner.Loot
                 case Item.Estacas:
                 case Item.CercaFogo:
                     return mundo.DicaDaArmadilha(c, quem);   // (11/11/2026, a etapa 5a)
+                case Item.NucleoDaBase:
+                case Item.MuroDeToras:
+                case Item.PortaoDeToras:
+                    return ConstrucoesNoMundo.DicaDaBase(c, quem);   // (24/11/2026: ConstrucoesNoMundo.Base.cs)
             }
             return null;
         }
@@ -760,16 +800,21 @@ namespace ZombieCityCleaner.Loot
         // segurar o E na fogueira acesa senta perto dela (18/11/2026, SentarNoFogo); o toque curto, a lenha (o Usar)
         bool _sentando;
 
+        // a base (24/11/2026): o toque no E sobe o núcleo ou abre o portão; segurar desmonta
+        bool _desmontandoABase;
+
         public override bool ToqueUsa(ArmaJogador quem)
         {
             var d = mundo.Dados(id);
-            return d != null && Itens.EhFogueira(d.Value.tipo);
+            return d != null && (Itens.EhFogueira(d.Value.tipo) || d.Value.tipo == Item.NucleoDaBase || d.Value.tipo == Item.PortaoDeToras);
         }
 
         public override float Segurar(ArmaJogador quem)
         {
             var d = mundo.Dados(id);
             _segurandoOClique = false;
+            _desmontandoABase = d != null && Itens.EhDaBase(d.Value.tipo);
+            if (_desmontandoABase) return ConstrucoesNoMundo.SegundosDeDesmontarABase;
             _sentando = d != null && Itens.EhFogueira(d.Value.tipo) && mundo.Acesa(d.Value) && !SentarNoFogo.Sentado;
             if (_sentando) return 0.6f;
             return d != null && d.Value.tipo == Item.TabuasBarricada && mundo.PodeDesmontar(d.Value, quem) ? ArmadilhasDoJogador.SegundosDeDesmontar : 0f;
@@ -777,6 +822,12 @@ namespace ZombieCityCleaner.Loot
 
         public override void Segurado(ArmaJogador quem)
         {
+            if (_desmontandoABase)
+            {
+                _desmontandoABase = false;
+                mundo.PedirDesmontarDaBase(id);
+                return;
+            }
             if (_sentando)
             {
                 _sentando = false;
@@ -789,6 +840,6 @@ namespace ZombieCityCleaner.Loot
             _segurandoOClique = false;
         }
 
-        public override string Segurando(ArmaJogador quem) => _sentando ? "Sentando" : _segurandoOClique ? "Pregando as tábuas soltas" : "Arrancando as tábuas";
+        public override string Segurando(ArmaJogador quem) => _desmontandoABase ? ConstrucoesNoMundo.DesmontandoDaBase(mundo.Dados(id)) : _sentando ? "Sentando" : _segurandoOClique ? "Pregando as tábuas soltas" : "Arrancando as tábuas";
     }
 }

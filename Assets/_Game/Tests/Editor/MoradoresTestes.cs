@@ -330,6 +330,40 @@ namespace ZombieCityCleaner.Testes
         }
 
         [Test]
+        public void AComunidadeDoBunkerTemOLiderEOMajor()
+        {
+            // 22/11/2026, a etapa 2 do Docs/23 (o Lakewood): sem o parente da família; o líder (o dono do bunker) e o major
+            // primeiro, no grupo 0; os grupos inteiros no bunker até uns 8; a mesma semente dá a mesma comunidade
+            for (int s = 1; s <= 200; s++)
+            {
+                var m = SorteioDosMoradores.SortearComunidade(s);
+                Assert.AreEqual(JsonUtility.ToJson(m), JsonUtility.ToJson(SorteioDosMoradores.SortearComunidade(s)), $"a semente {s} deu duas comunidades");
+                Assert.AreEqual(SorteioDosMoradores.NpcsNoMundo, m.fichas.Count);
+                var lider = m.fichas[0];
+                var major = m.fichas[1];
+                Assert.AreEqual(SorteioDosMoradores.CargoDoLider, lider.cargo);
+                Assert.AreEqual("Gus Rodrigues", lider.NomeCompleto);
+                Assert.AreEqual("Peter Ziquinatti", major.NomeCompleto);
+                Assert.IsFalse(m.fichas.Skip(2).Any(f => f.nome == "Gus" || f.nome == "Peter"), $"semente {s}: o nome do líder ou do major em outro");
+                Assert.AreEqual(ListasDosMoradores.DonoDoBunker, lider.antes);
+                Assert.AreEqual(SorteioDosMoradores.CargoDoMajor, major.cargo);
+                Assert.AreEqual(ListasDosMoradores.Major, major.antes);
+                Assert.AreEqual(0, lider.grupo);
+                Assert.AreEqual(0, major.grupo);
+                Assert.IsTrue(m.fichas.All(f => f.parente == ParenteDaFamilia.Nenhum && f.depois != ListasDosMoradores.ComAFamilia), $"semente {s}: o parente da família");
+                Assert.IsTrue(m.fichas.Skip(2).All(f => string.IsNullOrEmpty(f.cargo) && f.antes != ListasDosMoradores.DonoDoBunker && f.antes != ListasDosMoradores.Major), $"semente {s}: um cargo ou uma história do líder sorteada");
+                var (bunker, mapa) = SorteioDosMoradores.SepararAComunidade(m);
+                Assert.Contains(lider, bunker);
+                Assert.Contains(major, bunker);
+                Assert.That(bunker.Count, Is.InRange(3, SorteioDosMoradores.MoradoresDaComunidade + 1), $"semente {s}: {bunker.Count} no bunker");
+                Assert.AreEqual(m.fichas.Count, bunker.Count + mapa.Count);
+                // uma família não se separa: os grupos do bunker não têm ninguém no mapa
+                var grupos = new HashSet<int>(bunker.Select(f => f.grupo));
+                Assert.IsFalse(mapa.Any(f => grupos.Contains(f.grupo)), $"semente {s}: um grupo separado");
+            }
+        }
+
+        [Test]
         public void OSortearUmNaoTemAFamilia()
         {
             for (int s = 1; s <= 500; s++)

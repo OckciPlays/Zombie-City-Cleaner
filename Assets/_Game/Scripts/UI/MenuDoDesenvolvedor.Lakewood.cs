@@ -70,6 +70,11 @@ namespace ZombieCityCleaner.UI
             if (_lugaresDeLakewood != null) return _lugaresDeLakewood;
             var d = Lakewood.Mapa;
             var l = new List<(string, Vector2)> { ("A partida", new Vector2(Lakewood.partida.x, Lakewood.partida.z)), ("O meio do mapa", d.Meio) };
+            // o pátio do bunker da comunidade e o terreiro da casa de teste (22/11/2026)
+            var bunker = Lakewood.ChaoNoMapa.Bunker;
+            if (bunker != null) l.Add(("O pátio do bunker", bunker.NoMapa(5f, PlantaDeBunker.Patio.yMin + 8f)));
+            var casa = Lakewood.ChaoNoMapa.Partida;
+            if (casa != null) l.Add(("A casa de teste", casa.NoMapa(LugarDaPartida.PartidasEmA[0], LugarDaPartida.LinhaDaPartida)));
             if (d.represa.Tem) l.Add((d.represa.nome, d.represa.Meio + Lakewood.ChaoNoMapa.Relevo.Jusante * 120f));
             foreach (var c in d.cidades) l.Add((c.nome, c.centro));
             foreach (var lg in d.lugares) l.Add((lg.nome, lg.ponto));
@@ -105,6 +110,41 @@ namespace ZombieCityCleaner.UI
             escolhido.transform.SetPositionAndRotation(ponto, corpo.rotation);
         }
 
+        /// <summary>Pede ao anfitrião a casa de teste: os 4 veículos no terreiro da casa da partida e as armas nas mesas.</summary>
+        [Rpc(SendTo.Server)]
+        void CasaDeTesteEmLakewoodRpc(RpcParams parametros = default)
+        {
+            if (!Aceita(parametros) || Lakewood == null) return;
+            Debug.Log("[Lakewood] " + Lakewood.PorACasaDeTeste());
+        }
+
+        /// <summary>Pede ao anfitrião a outra época (22/11/2026, a Woodcreek de antes: o antes e o depois do apocalipse).</summary>
+        [Rpc(SendTo.Server)]
+        void TrocarAEpocaEmLakewoodRpc(RpcParams parametros = default)
+        {
+            var m = MundoDeLakewood.Instancia;
+            if (!Aceita(parametros) || m == null) return;
+            m.PorAEpoca(m.Antes ? EpocaDoMundo.Depois : EpocaDoMundo.Antes);
+        }
+
+        /// <summary>Pede ao anfitrião a chegada ao bunker agora (23/11/2026: pular a fuga, direto para os 5 anos).</summary>
+        [Rpc(SendTo.Server)]
+        void PularAFugaEmLakewoodRpc(RpcParams parametros = default)
+        {
+            var m = MundoDeLakewood.Instancia;
+            if (!Aceita(parametros) || m == null) return;
+            m.ChegarAoBunker();
+        }
+
+        /// <summary>Pede ao anfitrião o Dia 0 agora (22/11/2026, a etapa 4 do Docs/23: a casa da família, a TV e as lojas).</summary>
+        [Rpc(SendTo.Server)]
+        void ComecarODiaZeroEmLakewoodRpc(RpcParams parametros = default)
+        {
+            var m = MundoDeLakewood.Instancia;
+            if (!Aceita(parametros) || m == null) return;
+            m.ComecarODiaZero();
+        }
+
         /// <summary>O painel, à direita do menu (nada fora da cena do Lakewood). Devolve onde ele ficou.</summary>
         Rect PainelDeLakewood(float u, Rect menu)
         {
@@ -112,7 +152,7 @@ namespace ZombieCityCleaner.UI
             if (lw == null || lw.ChaoNoMapa == null) return default;
             var lugares = LugaresDeLakewood();
             int linhasDeLugares = (lugares.Count + 1) / 2;
-            var area = new Rect(menu.xMax + 8 * u, menu.y, 300 * u, (330 + 32 * linhasDeLugares) * u);
+            var area = new Rect(menu.xMax + 8 * u, menu.y, 300 * u, (458 + 32 * linhasDeLugares) * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -183,6 +223,39 @@ namespace ZombieCityCleaner.UI
                 TrazerOCarroEmLakewoodRpc();
                 Avisar("O carro livre mais perto vem para a sua frente.");
             }
+            y += 32 * u;
+            // a casa de teste (22/11/2026): a partida de antes do bunker, com as armas nas mesas e os veículos no terreiro
+            if (GUI.Button(new Rect(x, y, w, 26 * u), "Armas e veículos na casa de teste", _botao))
+            {
+                CasaDeTesteEmLakewoodRpc();
+                Avisar("A casa de teste: os 4 veículos no terreiro e as armas nas mesas (o anfitrião põe, uma vez).");
+            }
+            y += 32 * u;
+            // a época (22/11/2026): o antes do apocalipse (a Woodcreek nova, sem zumbis) e o depois
+            bool noAntes = LakewoodNaCena.NoAntes;
+            if (GUI.Button(new Rect(x, y, w, 26 * u), noAntes ? "Época: antes do apocalipse (ir para depois)" : "Época: depois (ir para antes do apocalipse)", _botao))
+            {
+                TrocarAEpocaEmLakewoodRpc();
+                Avisar(noAntes ? "Os 5 anos depois: a Woodcreek abandonada." : "Antes do apocalipse: a Woodcreek nova, sem zumbis.");
+            }
+            y += 32 * u;
+            // o Dia 0 (22/11/2026): a casa da família na Woodcreek de antes, o jornal na TV e as compras
+            var mundo = MundoDeLakewood.Instancia;
+            GUI.enabled = mundo != null && !mundo.NoDiaZero;
+            if (GUI.Button(new Rect(x, y, w, 26 * u), mundo != null && mundo.NoDiaZero ? "No Dia 0 (o painel DIA 0 ao lado)" : "Começar o Dia 0 (a casa da família)", _botao))
+            {
+                ComecarODiaZeroEmLakewoodRpc();
+                Avisar("O Dia 0: todos vão para a casa da família, na Woodcreek de antes.");
+            }
+            y += 32 * u;
+            // a fuga (23/11/2026): direto para a chegada ao bunker e os 5 anos
+            GUI.enabled = mundo != null && mundo.NaFuga && !mundo.Chegou;
+            if (GUI.Button(new Rect(x, y, w, 26 * u), "Pular a fuga (chegar ao bunker)", _botao))
+            {
+                PularAFugaEmLakewoodRpc();
+                Avisar("A chegada ao bunker: 5 anos depois.");
+            }
+            GUI.enabled = true;
             return area;
         }
     }

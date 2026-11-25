@@ -235,7 +235,8 @@ namespace ZombieCityCleaner.Loot
             for (int k = _lista.Count - 1; k >= 0; k--)
             {
                 var c = _lista[k];
-                if (c.tipo != Item.Barricada && c.tipo != Item.TabuasBarricada) continue;
+                // (e o muro e o portão fechado da base, 24/11/2026)
+                if (c.tipo != Item.Barricada && c.tipo != Item.TabuasBarricada && !ZumbisBatem(c)) continue;
                 int zumbis = ZumbisNa(c);
                 if (zumbis == 0) continue;
                 _batidaEm[c.id] = Time.time;
@@ -251,8 +252,9 @@ namespace ZombieCityCleaner.Loot
                     continue;
                 }
                 _lista.RemoveAt(k);
-                // sobram umas tábuas no chão
-                ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
+                // sobram umas tábuas no chão (do muro e do portão, uma tora)
+                if (c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras) ItensNoMundo.Instancia?.Criar(Item.Toras, c.pos, c.giro, 1);
+                else ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
             }
             if (Time.time >= _proximoConserto)
             {

@@ -62,7 +62,16 @@ namespace ZombieCityCleaner.Player
                 _vermelho = Transparente(new Color(1f, 0.3f, 0.25f, 0.45f));
             }
             _arma.Montando = true;
+            MontandoABase = Itens.EhDaBase(tipo) || ConstrucoesNoMundo.PrecisaDoNucleo(tipo);
         }
+
+        /// <summary>
+        /// (24/11/2026) O jogador desta máquina está montando uma peça da base (o núcleo, o muro, o portão, a barricada): a área
+        /// de cada núcleo aparece no chão (ConstrucoesNoMundo.Base.cs).
+        /// </summary>
+        public static bool MontandoABase { get; private set; }
+        // por que não dá para montar aqui (fora da área de um núcleo), ou null
+        string _motivo;
 
         public void Parar()
         {
@@ -70,6 +79,7 @@ namespace ZombieCityCleaner.Player
             if (_sombra != null) Destroy(_sombra);
             _sombra = null;
             if (_arma != null) _arma.Montando = false;
+            MontandoABase = false;
         }
 
         void OnDisable() => Parar();
@@ -111,13 +121,26 @@ namespace ZombieCityCleaner.Player
             }
             // só no chão em que ele pisa (não em cima da mesa)
             if (_noChao && !ConstrucoesNoMundo.NoChao(transform.position, _ponto)) _noChao = false;
-            _cabe = _noChao && mundo.Cabe(_tipo, _ponto, _giro);
+            // (24/11/2026) o muro e o portão encaixam na ponta de outro (em linha ou na quina): o chão do ponto encaixado
+            float giro = _giro;
+            if (_noChao)
+            {
+                var encaixe = _ponto;
+                if (mundo.Encaixar(_tipo, ref encaixe, ref giro)
+                    && Physics.Raycast(encaixe + Vector3.up * 1.5f, Vector3.down, out var chaoDoEncaixe, 3f, MascaraDoChao, QueryTriggerInteraction.Ignore)
+                    && ConstrucoesNoMundo.NoChao(transform.position, chaoDoEncaixe.point))
+                    _ponto = chaoDoEncaixe.point;
+                else giro = _giro;
+            }
+            // (24/11/2026) a base só dentro da área de um núcleo (e o núcleo, longe de outro)
+            _motivo = _noChao ? mundo.PodeMontarAqui(_tipo, _ponto) : null;
+            _cabe = _noChao && _motivo == null && mundo.Cabe(_tipo, _ponto, giro);
             _sombra.SetActive(_noChao);
-            _sombra.transform.SetPositionAndRotation(_ponto + Vector3.up * 0.01f, Quaternion.Euler(0f, _giro, 0f));
+            _sombra.transform.SetPositionAndRotation(_ponto + Vector3.up * 0.01f, Quaternion.Euler(0f, giro, 0f));
             foreach (var r in _renders) r.sharedMaterial = _cabe ? _verde : _vermelho;
             if (_cabe && mouse != null && mouse.leftButton.wasPressedThisFrame)
             {
-                mundo.PedirMontar(_kit, _ponto, _giro);
+                mundo.PedirMontar(_kit, _ponto, giro);
                 Combat.Efeitos.Som(Combat.Efeitos.Largar, _ponto + Vector3.up * 0.3f, 0.8f, false);
                 Parar();
             }
@@ -130,7 +153,7 @@ namespace ZombieCityCleaner.Player
             var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
             string texto = !_noChao ? $"Montando {Itens.NomeComArtigo(_tipo)}: mire no chão"
                 : _cabe ? $"Clique: montar {Itens.NomeComArtigo(_tipo)}   ·   R ou roda: girar   ·   botão direito: desistir"
-                : "Não cabe aqui   ·   R ou roda: girar   ·   botão direito: desistir";
+                : $"{_motivo ?? "Não cabe aqui"}   ·   R ou roda: girar   ·   botão direito: desistir";
             var r = new Rect(0f, Screen.height * 0.62f, Screen.width, 28 * u);
             estilo.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
             GUI.Label(new Rect(r.x + 1.5f * u, r.y + 1.5f * u, r.width, r.height), texto, estilo);

@@ -16,6 +16,10 @@ namespace ZombieCityCleaner.Mundo
         // o modelo antigo: os lugares (o meio, a largura, a altura livre e o fundo), no tamanho em que ele foi feito
         static readonly Dictionary<string, LugarDoSaque[]> _antigos = new Dictionary<string, LugarDoSaque[]>
         {
+            ["Arquivo"] = new[]
+            {
+                L(0f, 1.3f, 0f, 0.48f, 0.6f, 0.58f),
+            },
             ["Balcao"] = new[]
             {
                 L(0.36f, 1.1f, 0.18f, 1.12f, 0.6f, 0.32f),
@@ -24,6 +28,20 @@ namespace ZombieCityCleaner.Mundo
                 L(0.07f, 1.1f, -0.08f, 0.54f, 0.6f, 0.16f),
                 L(-0.41f, 1.116f, -0.03f, 0.28f, 0.6f, 0.2f),
                 L(-0.27f, 1.108f, 0.11f, 0.1f, 0.6f, 0.08f),
+            },
+            ["Balcao_Caixa"] = new[]
+            {
+                L(0.03f, 1f, 0.02f, 0.46f, 0.6f, 0.64f),
+                L(0.69f, 1f, 0.02f, 0.26f, 0.6f, 0.64f),
+                L(-0.71f, 1f, 0.02f, 0.22f, 0.6f, 0.64f),
+                L(0.41f, 1f, 0.2f, 0.26f, 0.6f, 0.28f),
+            },
+            ["CaixasDeMunicao"] = new[]
+            {
+                L(0.19f, 0.2f, 0.09f, 0.18f, 0.6f, 0.14f),
+                L(-0.05f, 0.395f, 0.06f, 0.24f, 0.6f, 0.1f),
+                L(-0.01f, 0.395f, -0.1f, 0.24f, 0.6f, 0.1f),
+                L(0.21f, 0.2f, -0.09f, 0.14f, 0.6f, 0.14f),
             },
             ["Caixas_A"] = new[]
             {
@@ -53,6 +71,15 @@ namespace ZombieCityCleaner.Mundo
                 L(0.593f, 0.455f, -0.037f, 0.34f, 0.543f, 0.36f),
                 L(-0.635f, 1.293f, -0.017f, 0.3f, 0.505f, 0.4f),
             },
+            ["ExpositorDeArmas"] = new[]
+            {
+                L(0f, 0.9f, 0.02f, 1.48f, 0.228f, 0.28f),
+            },
+            ["Freezer"] = new[]
+            {
+                L(-0.39f, 0.9f, 0f, 0.82f, 0.6f, 0.8f),
+                L(0.4f, 0.91f, 0f, 0.74f, 0.6f, 0.72f),
+            },
             ["Gondola"] = new[]
             {
                 L(0.23f, 0.61f, -0.36f, 0.4f, 0.428f, 1.26f),
@@ -63,6 +90,14 @@ namespace ZombieCityCleaner.Mundo
                 L(0.23f, 1.06f, -0.54f, 0.4f, 0.6f, 0.74f),
                 L(-0.24f, 0.12f, 0.54f, 0.42f, 0.468f, 0.7f),
                 L(0.24f, 0.12f, 0.76f, 0.42f, 0.468f, 0.62f),
+            },
+            ["MesaDeCorte"] = new[]
+            {
+                L(0f, 0.21f, 0f, 1.46f, 0.6f, 0.6f),
+                L(0f, 0.9f, 0.27f, 1.6f, 0.6f, 0.16f),
+                L(0.65f, 0.9f, -0.09f, 0.3f, 0.6f, 0.52f),
+                L(-0.65f, 0.9f, -0.14f, 0.3f, 0.6f, 0.42f),
+                L(0.19f, 0.9f, -0.29f, 0.58f, 0.6f, 0.12f),
             },
             ["MesaDeEscritorio"] = new[]
             {
@@ -99,6 +134,17 @@ namespace ZombieCityCleaner.Mundo
                 L(0.22f, 1.405f, 0.01f, 0.28f, 0.403f, 0.34f),
                 L(0.442f, 1.106f, 0.02f, 0.22f, 0.277f, 0.3f),
             },
+            ["Prateleira_Loja"] = new[]
+            {
+                L(0f, 0.98f, 0.01f, 1.42f, 0.403f, 0.38f),
+                L(0.09f, 1.405f, 0.01f, 1.24f, 0.403f, 0.38f),
+                L(-0.24f, 0.555f, 0.01f, 0.94f, 0.403f, 0.38f),
+                L(-0.32f, 0.12f, 0.02f, 0.78f, 0.413f, 0.4f),
+                L(0.46f, 0.555f, 0.01f, 0.34f, 0.403f, 0.38f),
+                L(0.56f, 0.12f, 0.02f, 0.3f, 0.413f, 0.4f),
+                L(0.24f, 0.12f, 0.02f, 0.18f, 0.413f, 0.4f),
+                L(-0.66f, 1.405f, 0.01f, 0.1f, 0.403f, 0.38f),
+            },
             ["Prateleira_Rouparia"] = new[]
             {
                 L(0.17f, 0.98f, 0.01f, 0.42f, 0.403f, 0.38f),
@@ -109,6 +155,11 @@ namespace ZombieCityCleaner.Mundo
                 L(-0.03f, 0.555f, 0.01f, 0.18f, 0.403f, 0.38f),
                 L(-0.314f, 1.516f, 0.02f, 0.2f, 0.292f, 0.34f),
                 L(0.157f, 0.668f, 0.02f, 0.16f, 0.29f, 0.36f),
+            },
+            ["Vitrine"] = new[]
+            {
+                L(0f, 1f, 0f, 1.4f, 0.6f, 0.6f),
+                L(-0.345f, 0.675f, -0.05f, 0.16f, 0.303f, 0.1f),
             },
         };
     }

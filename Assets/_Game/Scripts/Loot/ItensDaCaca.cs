@@ -16,7 +16,10 @@ namespace ZombieCityCleaner.Loot
         /// panela da fogueira).
         /// </summary>
         public static readonly Item[] Todos = { Item.CarneCrua, Item.CarneAssada, Item.Couro, Item.Gordura, Item.Bagre, Item.Gravetos, Item.Espeto, Item.Panela, Item.Salmao,
-                                                Item.Violao, Item.Pandeiro, Item.Gaita, Item.Flauta };
+                                                Item.Violao, Item.Pandeiro, Item.Gaita, Item.Flauta,
+                                                // (24/11/2026, a base: ItensDaCaca.Base.cs)
+                                                Item.OlhoDoBrutamonte, Item.GargantaDoLong, Item.CabecaDoOco, Item.CabecaDeChefe,
+                                                Item.NucleoDaBase, Item.MuroDeToras, Item.PortaoDeToras };
 
         struct Caixa
         {
@@ -144,6 +147,14 @@ namespace ZombieCityCleaner.Loot
             Item.Pandeiro => Pandeiro(),
             Item.Gaita => Gaita(),
             Item.Flauta => Flauta(),
+            // a base (24/11/2026: ItensDaCaca.Base.cs)
+            Item.OlhoDoBrutamonte => Olho(),
+            Item.GargantaDoLong => Garganta(),
+            Item.CabecaDoOco => CabecaDoOco(),
+            Item.CabecaDeChefe => CabecaDeChefe(),
+            Item.NucleoDaBase => KitDoNucleo(),
+            Item.MuroDeToras => KitDoMuro(false),
+            Item.PortaoDeToras => KitDoMuro(true),
             _ => null,
         };
 

@@ -56,6 +56,8 @@ namespace ZombieCityCleaner.World
                 var l = LakewoodNaCena.Instancia;
                 if (l != null && l.ChaoNoMapa != null)
                 {
+                    // (no antes do apocalipse, nenhum carro abandonado nem painel de sucata: 22/11/2026)
+                    if (LakewoodNaCena.NoAntes) return null;
                     if (_lakewood == null || _lakewood.Chao != l.ChaoNoMapa) _lakewood = new DoLakewood(l.ChaoNoMapa);
                     return _lakewood;
                 }

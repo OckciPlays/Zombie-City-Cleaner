@@ -78,8 +78,19 @@ namespace ZombieCityCleaner.DiaZero
         public static DiaZeroDaPartida Instancia { get; private set; }
 
         /// <summary>Nesta máquina, o Dia 0 está acontecendo e a rua está pronta.</summary>
-        public static bool NoDia => Instancia != null && Instancia.IsSpawned && Instancia._mundo != null && Instancia._mundo.NoDiaZero &&
+        public static bool NoDia => Instancia != null && Instancia.IsSpawned && Instancia.MundoNoDiaZero &&
                                     Instancia._ruaPronta && RuaDoDiaZero.Instancia != null && RuaDoDiaZero.Instancia.Pronta;
+
+        /// <summary>
+        /// O Dia 0 é o do Lakewood (22/11/2026, a etapa 4 do Docs/23): a rua é a Woodcreek de antes (o
+        /// <see cref="WoodcreekDoDiaZero"/>, no mapa, e não uma cena por cima), o jogador já nasceu pelo Netcode (vai para a sala
+        /// da casa da família), as compras vão para a caçamba da caminhonete na hora do pagamento, e a porta de casa leva aos 5
+        /// anos depois no bunker da comunidade.
+        /// </summary>
+        public bool NoLakewood => _mundo == null && _lakewood != null;
+
+        // o Dia 0 do mundo desta cena (o sorteado ou o Lakewood)
+        bool MundoNoDiaZero => _mundo != null ? _mundo.NoDiaZero : _lakewood != null && _lakewood.NoDiaZero;
 
         /// <summary>A tela dos 5 anos depois está na frente (a porta fechou e o mundo ainda não apareceu).</summary>
         public static bool NaPassagem => Instancia != null && Instancia._passagem;
@@ -88,13 +99,14 @@ namespace ZombieCityCleaner.DiaZero
         /// A tela preta de carregar a rua está na frente (o Dia 0 nesta máquina, antes de o jogador nascer): os cortes dos
         /// zumbis andam nela, e ela espera por eles (09/11/2026; veja o <see cref="CarregarARua"/>).
         /// </summary>
-        public static bool CarregandoARua => Instancia != null && Instancia.IsSpawned && Instancia._mundo != null && Instancia._mundo.NoDiaZero &&
+        public static bool CarregandoARua => Instancia != null && Instancia.IsSpawned && Instancia.MundoNoDiaZero &&
                                             !Instancia._passagem && (!Instancia._ruaPronta || JogadorRede.Local == null);
 
         NetworkList<CarteiraDoDia> _carteiras;
         NetworkList<CompraDoDia> _compras;
         ushort _proximoId = 1, _proximoLugar;
         MundoDaPartida _mundo;
+        MundoDeLakewood _lakewood;
 
         // a cena (em cada máquina)
         AsyncOperation _carregando;
@@ -124,6 +136,7 @@ namespace ZombieCityCleaner.DiaZero
             _carteiras = new NetworkList<CarteiraDoDia>();
             _compras = new NetworkList<CompraDoDia>();
             _mundo = GetComponent<MundoDaPartida>();
+            _lakewood = GetComponent<MundoDeLakewood>();
             Instancia = this;
         }
 
@@ -164,7 +177,7 @@ namespace ZombieCityCleaner.DiaZero
             Carrinho.Esvaziar(false);
             TelaDoCaixa.Fechar();
             MenuOnline.Cinema = false;
-            AmbienteDoDia.DiaLimpo = 0f;
+            if (_mundo != null) AmbienteDoDia.DiaLimpo = 0f;   // (no Lakewood, o dia limpo é da época: LakewoodNaCena.Epoca.cs)
             _passagem = false;
             _esperandoARua.Clear();
             Descarregar();
@@ -174,11 +187,13 @@ namespace ZombieCityCleaner.DiaZero
 
         void Update()
         {
-            if (!IsSpawned || _mundo == null) return;
-            // o dia limpo (o sol e as cores do mundo normal) no Dia 0 e na tela dos 5 anos, até o mundo aparecer
-            AmbienteDoDia.DiaLimpo = _mundo.NoDiaZero || (_passagem && _prontoDesde < 0f) ? 1f : 0f;
-            if (_mundo.NoDiaZero)
+            if (!IsSpawned || (_mundo == null && _lakewood == null)) return;
+            // o dia limpo (o sol e as cores do mundo normal) no Dia 0 e na tela dos 5 anos, até o mundo aparecer (no Lakewood,
+            // quem cuida é a época)
+            if (_mundo != null) AmbienteDoDia.DiaLimpo = _mundo.NoDiaZero || (_passagem && _prontoDesde < 0f) ? 1f : 0f;
+            if (MundoNoDiaZero)
             {
+                if (!_estavaNoDia && NoLakewood) ComecouODia();
                 _estavaNoDia = true;
                 CarregarARua();
                 if (_ruaPronta) NaRua();
@@ -189,10 +204,32 @@ namespace ZombieCityCleaner.DiaZero
 
         bool _semACena;
 
+        // no Lakewood, o Dia 0 pode começar de novo na mesma partida (o F1): tudo volta ao começo (o lobby, as carteiras, as
+        // compras, a TV)
+        void ComecouODia()
+        {
+            _ruaPronta = _pediuOJogador = _passagem = false;
+            _prontoDesde = -1f;
+            _temUltimoDentro = false;
+            _quemFicouFora = "";
+            IntroDoDiaZero.JaViu = false;
+            if (!IsServer) return;
+            _carteiras.Clear();
+            _compras.Clear();
+            _proximoId = 1;
+            _proximoLugar = 0;
+            ComecarOLobby();
+        }
+
         void CarregarARua()
         {
             if (_ruaPronta || _semACena) return;
-            if (_carregando == null && !SceneManager.GetSceneByName(Cena).isLoaded)
+            if (NoLakewood)
+            {
+                // a Woodcreek de antes já está no mapa: o palco (a casa, as lojas, os NPCs) é posto pelo LakewoodNaCena
+                if (RuaDoDiaZero.Instancia == null || !RuaDoDiaZero.Instancia.Pronta) return;
+            }
+            else if (_carregando == null && !SceneManager.GetSceneByName(Cena).isLoaded)
             {
                 _carregando = SceneManager.LoadSceneAsync(Cena, LoadSceneMode.Additive);
                 if (_carregando == null)
@@ -204,7 +241,7 @@ namespace ZombieCityCleaner.DiaZero
                 }
                 return;
             }
-            if (_carregando != null && !_carregando.isDone) return;
+            if (!NoLakewood && _carregando != null && !_carregando.isDone) return;
             _carregando = null;
             var rua = RuaDoDiaZero.Instancia;
             if (rua == null || !rua.Pronta) return;
@@ -256,6 +293,19 @@ namespace ZombieCityCleaner.DiaZero
                 _pediuOJogador = true;
                 ProntoNaRuaRpc();
             }
+            // no Lakewood, o jogador já nasceu (pelo Netcode, talvez antes da casa): vai para a sala dela
+            if (NoLakewood) IrParaACasa();
+        }
+
+        // no Lakewood: o jogador local na sala da casa da família (o lugar dele na fila na frente do sofá)
+        void IrParaACasa()
+        {
+            var j = JogadorRede.Local;
+            if (j == null) return;
+            var rua = RuaDoDiaZero.Instancia;
+            if (rua != null && rua.DentroDaCasa(j.transform.position)) return;
+            var pose = PontosDeNascimento.Ponto(NetworkManager.LocalClientId);
+            j.GetComponent<MovimentoPrimeiraPessoa>().Teleportar(pose.position, pose.rotation.eulerAngles.y);
         }
 
         /// <summary>Cliente → anfitrião: a rua está pronta aqui (pode criar o meu jogador).</summary>
@@ -263,7 +313,7 @@ namespace ZombieCityCleaner.DiaZero
         void ProntoNaRuaRpc(RpcParams parametros = default)
         {
             ulong cliente = parametros.Receive.SenderClientId;
-            if (!_mundo.NoDiaZero) return;
+            if (!MundoNoDiaZero) return;
             if (!_ruaPronta) { if (!_esperandoARua.Contains(cliente)) _esperandoARua.Add(cliente); return; }
             CriarNaRua(cliente);
         }
@@ -272,7 +322,7 @@ namespace ZombieCityCleaner.DiaZero
         {
             if (!NetworkManager.ConnectedClients.TryGetValue(cliente, out var c)) return;
             if (Carteira(cliente) < 0) _carteiras.Add(new CarteiraDoDia { cliente = cliente, dinheiro = PrecosDoDiaZero.Economias });
-            if (c.PlayerObject != null) return;
+            if (c.PlayerObject != null || NoLakewood) return;   // (no Lakewood, o Netcode cria o jogador)
             var ponto = PontosDeNascimento.Ponto(cliente);
             var jogador = Instantiate(NetworkManager.NetworkConfig.PlayerPrefab, ponto.position, ponto.rotation);
             jogador.GetComponent<NetworkObject>().SpawnAsPlayerObject(cliente, true);
@@ -291,6 +341,7 @@ namespace ZombieCityCleaner.DiaZero
             _vistas.Clear();
             _ruaPronta = false;
             _carregando = null;
+            if (NoLakewood) return;   // (o palco da Woodcreek sai com a época de depois: LakewoodNaCena.DiaZero.cs)
             var cena = SceneManager.GetSceneByName(Cena);
             if (cena.isLoaded) SceneManager.UnloadSceneAsync(cena);
         }
@@ -379,7 +430,7 @@ namespace ZombieCityCleaner.DiaZero
         {
             ulong cliente = parametros.Receive.SenderClientId;
             var alvo = RpcTarget.Single(cliente, RpcTargetUse.Temp);
-            if (!_mundo.NoDiaZero || pedido.produtos == null || pedido.roupas == null)
+            if (!MundoNoDiaZero || pedido.produtos == null || pedido.roupas == null)
             {
                 ResultadoRpc(false, 0, 0, alvo);
                 return;
@@ -418,11 +469,16 @@ namespace ZombieCityCleaner.DiaZero
             carteira.dinheiro -= total;
             carteira.gasto += total;
             _carteiras[k] = carteira;
+            int noChao = 0;
             foreach (byte i in pedido.produtos)
             {
                 var p = PrecosDoDiaZero.DaLoja(loja, i);
-                if (p.HasValue) Guardar(cliente, p.Value);
+                if (!p.HasValue) continue;
+                Guardar(cliente, p.Value);
+                // no Lakewood (22/11/2026, o Pedro: "Caçamba da caminhonete"), a compra vai já para a caçamba
+                if (NoLakewood && !LakewoodNaCena.GuardarNaCacamba(p.Value.item, p.Value.desgaste)) noChao++;
             }
+            if (noChao > 0) Debug.LogWarning($"[Dia 0] A caçamba encheu: {noChao} compras ficaram no chão atrás da caminhonete.");
             Debug.Log($"[Dia 0] O jogador {cliente} pagou {PrecosDoDiaZero.Dinheiro(total)} na {PrecosDoDiaZero.Nome(loja)} ({pedido.produtos.Length} produtos, {pedido.roupas.Length / 2} roupas); sobraram {PrecosDoDiaZero.Dinheiro(carteira.dinheiro)}.");
             ResultadoRpc(true, total, carteira.dinheiro, alvo);
         }
@@ -463,7 +519,9 @@ namespace ZombieCityCleaner.DiaZero
             {
                 Carrinho.Pago();
                 TelaDoCaixa.Fechar();
-                Avisar($"Pago: {PrecosDoDiaZero.Dinheiro(total)}. As compras foram direto para o bunker (sobraram {PrecosDoDiaZero.Dinheiro(sobrou)}).");
+                Avisar(NoLakewood
+                    ? $"Pago: {PrecosDoDiaZero.Dinheiro(total)}. As compras foram para a caçamba da caminhonete, na frente de casa (sobraram {PrecosDoDiaZero.Dinheiro(sobrou)})."
+                    : $"Pago: {PrecosDoDiaZero.Dinheiro(total)}. As compras foram direto para o bunker (sobraram {PrecosDoDiaZero.Dinheiro(sobrou)}).");
             }
             else Avisar(total > 0 ? $"Não deu: o total é {PrecosDoDiaZero.Dinheiro(total)} e você tem {PrecosDoDiaZero.Dinheiro(sobrou)}. Tire alguma coisa do carrinho."
                                   : "Não deu para pagar agora.");
@@ -548,19 +606,19 @@ namespace ZombieCityCleaner.DiaZero
         /// <summary>O jogador local fecha a porta do abrigo (de dentro de casa).</summary>
         public void PedirFecharAPorta()
         {
-            if (IsSpawned && _mundo.NoDiaZero) FecharAPortaRpc(false);
+            if (IsSpawned && MundoNoDiaZero) FecharAPortaRpc(false);
         }
 
         /// <summary>O F1: pular o Dia 0 (todos levam as compras, onde estiverem).</summary>
         public void PedirPular()
         {
-            if (IsSpawned && _mundo.NoDiaZero) FecharAPortaRpc(true);
+            if (IsSpawned && MundoNoDiaZero) FecharAPortaRpc(true);
         }
 
         /// <summary>O F1: mais 1.000 dólares para quem pediu.</summary>
         public void PedirMaisDinheiro()
         {
-            if (IsSpawned && _mundo.NoDiaZero) MaisDinheiroRpc();
+            if (IsSpawned && MundoNoDiaZero) MaisDinheiroRpc();
         }
 
         [Rpc(SendTo.Server)]
@@ -577,14 +635,15 @@ namespace ZombieCityCleaner.DiaZero
         [Rpc(SendTo.Server)]
         void FecharAPortaRpc(bool pular, RpcParams parametros = default)
         {
-            if (!_mundo.NoDiaZero) return;
+            if (!MundoNoDiaZero) return;
             var rua = RuaDoDiaZero.Instancia;
             ulong quem = parametros.Receive.SenderClientId;
             if (!pular && rua != null && NetworkManager.ConnectedClients.TryGetValue(quem, out var c) && c.PlayerObject != null &&
                 !rua.DentroDaCasa(c.PlayerObject.transform.position)) return;
             var fora = new List<string>();
             var deFora = new HashSet<ulong>();
-            if (!pular && rua != null)
+            // (no Lakewood, as compras já estão na caçamba: quem ficou fora vai junto, sem perder nada)
+            if (!pular && rua != null && !NoLakewood)
                 foreach (var kv in NetworkManager.ConnectedClients)
                 {
                     var po = kv.Value.PlayerObject;
@@ -614,19 +673,31 @@ namespace ZombieCityCleaner.DiaZero
                     }
                 }
             }
-            Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para o bunker" +
-                      (fora.Count > 0 ? $"; ficaram de fora: {string.Join(", ", fora)}." : "."));
+            if (NoLakewood)
+                Debug.Log($"[Dia 0] A casa foi trancada{(pular ? " (pulado no F1)" : "")}: o Dia 0 acabou; {LakewoodNaCena.CacambaComAsCompras} coisas na caçamba da caminhonete.");
+            else
+                Debug.Log($"[Dia 0] A porta do abrigo fechou{(pular ? " (pulado no F1)" : "")}: {_levar.Count} compras vão para o bunker" +
+                          (fora.Count > 0 ? $"; ficaram de fora: {string.Join(", ", fora)}." : "."));
             PortaFechouRpc(string.Join(", ", fora));
-            // 5 anos depois, a saída do abrigo é de manhã (o relógio volta a andar)
+            // 5 anos depois, a saída do abrigo é de manhã (o relógio volta a andar); no Lakewood, as chaves levam à fuga: a
+            // noite do colapso, 30 dias depois (23/11/2026, o Pedro: "uma missão principal... com o objetivo de correr")
             var ciclo = CicloDoDia.Instancia;
+            bool fuga = NoLakewood && !pular;
             if (ciclo != null)
             {
                 ciclo.SempreDeDia(false);
-                CicloDoDia.MudarHora(HoraDaSaida);
-                ciclo.HoraRede.Value = HoraDaSaida;
+                if (fuga) ciclo.SempreDeNoite(true);   // (a meia-noite, parada até a chegada ao bunker)
+                else
+                {
+                    CicloDoDia.MudarHora(HoraDaSaida);
+                    ciclo.HoraRede.Value = HoraDaSaida;
+                }
             }
-            _mundo.AcabarODiaZero();
+            if (_mundo != null) _mundo.AcabarODiaZero();
+            else if (fuga) _lakewood.ComecarAFuga();
+            else _lakewood.AcabarODiaZero();
         }
+
 
         /// <summary>Anfitrião → todos: a porta fechou (com quem ficou de fora).</summary>
         [Rpc(SendTo.Everyone)]
@@ -652,6 +723,35 @@ namespace ZombieCityCleaner.DiaZero
             float t = Time.unscaledTime - _passagemDesde;
             // a rua sai com a tela já preta
             if (t > 1.3f && (_ruaPronta || SceneManager.GetSceneByName(Cena).isLoaded)) Descarregar();
+            // no Lakewood, com a fuga: a tela dos 30 dias, e cada um volta para a sala da casa (a noite do colapso)
+            if (NoLakewood && _prontoDesde < 0f && _lakewood.NaFuga && t > MundoDeLakewood.TelaDosTrintaDias - 1.5f)
+            {
+                _prontoDesde = Time.unscaledTime;
+                var j = JogadorRede.Local;
+                if (j != null)
+                {
+                    var mov = j.GetComponent<MovimentoPrimeiraPessoa>();
+                    var pose = PontosDeNascimento.Ponto(NetworkManager.LocalClientId);
+                    mov.Voando = false;
+                    mov.Teleportar(pose.position, pose.rotation.eulerAngles.y);
+                }
+                Debug.Log("[Fuga] A noite do colapso, na casa da família.");
+            }
+            // no Lakewood: com a época de depois e o palco fora (a tela preta cobre a troca), cada um vai para a sala de
+            // operações do bunker da comunidade (o EsperarOBunker segura quem chega antes do piso)
+            if (NoLakewood && _prontoDesde < 0f && t > 3f && !LakewoodNaCena.NoAntes && !LakewoodNaCena.ComPalcoDoDiaZero)
+            {
+                _prontoDesde = Time.unscaledTime;
+                var j = JogadorRede.Local;
+                if (j != null)
+                {
+                    var mov = j.GetComponent<MovimentoPrimeiraPessoa>();
+                    var pose = PontosDeNascimento.Ponto(NetworkManager.LocalClientId);
+                    mov.Voando = false;
+                    mov.Teleportar(pose.position, pose.rotation.eulerAngles.y);
+                }
+                Debug.Log("[Dia 0] Os 5 anos depois: no bunker da comunidade.");
+            }
             if (_prontoDesde >= 0f && Time.unscaledTime - _prontoDesde > 4.5f)
             {
                 _passagem = false;

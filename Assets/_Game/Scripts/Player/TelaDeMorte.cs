@@ -38,8 +38,12 @@ namespace ZombieCityCleaner.Player
             else if (!caido && _aberta) Fechar();
             if (!_aberta || MenuOnline.Pausado) return;
             var teclado = Keyboard.current;
+            if (NaFuga) return;   // (na fuga do Lakewood, a noite recomeça para todos: sem o renascer de cada um)
             if (teclado != null && (teclado.enterKey.wasPressedThisFrame || teclado.numpadEnterKey.wasPressedThisFrame)) _vida.PedirRenascer();
         }
+
+        // a fuga do Lakewood (23/11/2026): quem cai faz a noite recomeçar para todos, na casa
+        static bool NaFuga => World.MundoDeLakewood.Instancia != null && World.MundoDeLakewood.Instancia.NaFuga;
 
         void Fechar()
         {
@@ -79,6 +83,12 @@ namespace ZombieCityCleaner.Player
             y += 76 * u;
             GUI.Label(new Rect(0, y, Screen.width, 32 * u), _vida.Causa, _causa);
             y += 40 * u;
+            if (NaFuga)
+            {
+                GUI.Label(new Rect(0, y, Screen.width, 26 * u), "A fuga falhou: em instantes, a noite recomeça na casa, para todos.", _texto);
+                GUI.color = antes;
+                return;
+            }
             GUI.Label(new Rect(0, y, Screen.width, 26 * u), _vida.PerdeuAsCoisas
                 ? "A sua mochila e as suas roupas ficaram onde você caiu."
                 : "No Dia 0, você não perde nada.", _texto);

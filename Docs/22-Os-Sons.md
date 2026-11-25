@@ -72,6 +72,30 @@ lista da seção 2 e apague à mão o que ainda existir aí (uma cópia local, o
 - **O baque da queda (21/11/2026, também com ruído):** saíram `Corpo/baque_1` e `baque_2`. A queda (de 3 m para cima) fica só
   com o gemido da voz; o golpe recebido toca o soco na carne (`Golpes/SocoCarne`). Um `Corpo/baque_` novo volta a tocar na queda
   sozinho.
+- **Os sons ruins do Dia 0 (23/11/2026, a pedido: "sons dos coiotes de repente no D0, precisamos tirar também, som está
+  ruim")**, guardados em `Trabalho-Claude/sons_sfxjar/tirados_ruido`:
+  - em `Audio/Resources`, saíram `Ambiente/Lobos/lobos_1` e `lobos_2` (ficam o 3, o 4 e o 5) e `Ambiente/Grilos/grilos_1`
+    (fica o 2);
+  - saiu a pasta inteira `Bichos/Latido` (`latido_pedro_1..7`): o coiote fica mudo até achar outro latido.
+- **O cortador de grama do Dia 0 (23/11/2026, a pedido: "retirar só de noite o som; de dia, abaixar um pouco"):** de dia
+  ele toca mais baixo (0,22 no canal Objetos, era 0,5).
+  - À noite ele continuava ligado: a peça do cortador (e a da mangueira, com a água) fica ao lado do vizinho, não é
+    filha dele, e não saía quando os NPCs do dia saíam na noite da fuga.
+  - Agora as peças soltas saem junto com o NPC (`NpcDoDiaZero`).
+- **O despertar da noite do colapso (23/11/2026, a pedido: "para começar a noite devia ter um som alto, como se fosse
+  tiros, gritos mesmos, para o personagem acordar durante a noite, e sirenes tocando"):**
+  - quando a fuga começa a contar, e em cada tentativa nova (`World/FugaNaTela.Despertar`), toca uma sequência de 12 s:
+    - a rajada de um rifle a uns 35 m, e a câmera dá um pulo e o coração dispara;
+    - um grito perto, a pistola a uns 55 m e outro grito;
+    - a submetralhadora longe, a 110 m, mais um grito e a espingarda a uns 70 m;
+  - os tiros são os gravados das armas, com o eco do lugar;
+  - as sirenes são a de alerta da defesa civil (o "National Alert Signal" do sfxjar, CC0 do BigSoundBank), em
+    `Resources/DiaZero/sirene_1` e `sirene_2` (a mesma, 6% mais aguda). Tocam em laço a noite toda, no alto de um poste:
+    uma a uns 130 m da casa e outra perto do lago (`WoodcreekDoDiaZero.PorAsSirenes`);
+  - as sirenes de polícia americanas do sfxjar são sintetizadas, e a "Siren" do National Park Service tem muito chiado:
+    ficaram de fora.
+  - Os gritos de sempre da fuga saíam de 13 a 24 m de altura (a altura multiplicava pela distância): agora saem da
+    altura de uma pessoa.
 
 - **Não volte os sons antigos** dos arquivos que foram trocados com o mesmo nome. A versão nova é a certa:
   `Audio/Carro/Alarme_01..03`, `Audio/Hospital/*`, `Audio/Motos/Cross_Pegar` e `FatBoy_Pegar`,

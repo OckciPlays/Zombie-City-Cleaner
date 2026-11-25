@@ -31,8 +31,7 @@ namespace ZombieCityCleaner.Player
         public void GanharXp(int quanto, string motivo)
         {
             if (!IsServer || !IsSpawned || quanto <= 0) return;
-            var mundo = World.MundoDaPartida.Instancia;
-            if (mundo != null && mundo.NoDiaZero) return;   // o Dia 0 é a abertura: não conta
+            if (World.MundoDoJogo.NaAbertura) return;   // o Dia 0 e a fuga são a abertura: não contam (nos dois mapas)
             var p = Progresso.Value;
             int antes = p.Nivel;
             p.xp = Mathf.Min(10_000_000, p.xp + quanto);

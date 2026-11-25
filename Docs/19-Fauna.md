@@ -465,6 +465,66 @@ alto, estranha e quando há filhotes, eles não vêm comer quando o urso fica ne
   também ficou conferido. A pesca de verdade depende da sorte da patada (numa das vezes, a mãe pescou 100 s sem pegar
   nada); para testar, o F1 ganhou **"O urso mais perto pega um salmão"** (`FaunaDoMundo.UrsoPegaOSalmao`).
 
+## O guaxinim nas latas e na caçamba, e o lixo revirado (23/11/2026, a pedido)
+
+O pedido, trazido pela sessão da campanha: "faça os códigos do guaxinim revirando as latas menores (elas caindo após) e
+entrando nas latas grandes (não caindo, mas com eles dentro e depois quando chegamos perto ou mexemos no lixo eles saem
+correndo com um jump scare no jogador, com um barulho alto por exemplo), também daria para lootear os lixos ... restos de
+comida, bebidas, sucatas, pregos e parafusos (esses dois itens ... ficariam em lugares de oficina, e poderia ser encontrado
+em lixos)". Sobre os pregos e os parafusos, o Pedro escolheu a munição que já existe (`MunicaoPrego` e `MunicaoParafuso`,
+a das armas de sucata).
+
+- **A lata da casa** (o carrinho e a lata de metal; `Bicho.Cacamba.cs`, `MexendoNaLata`): o guaxinim chega, fica de 1,6 a
+  3 s mexendo nela, e ela balança. O balanço é desenhado em cada máquina pelo `LixoDaCidade.Balancar`, que vê o guaxinim
+  parado do lado. Depois ela **tomba**: o lixo espalhado novo começa com a lata de pé, onde ela estava, e ela cai em volta
+  da beirada do fundo (`FaunaDoMundo.QuedaDaLata`):
+  - mais rápido no fim, como caindo, com um tranco ao bater no chão;
+  - o carrinho cai de lado; a lata de metal perde a tampa, que voa para o lado da boca;
+  - quando ela bate, aparecem os restos e as sacolas rasgadas e soam as latas (as gravadas das armadilhas,
+    `SomDoBicho.LataCaindo`).
+
+  A idade do lixo espalhado vai na mensagem das casas, e só o lixo novo, de até 4 s, mostra a queda. A lata caída agora
+  fica junto de onde ela estava, e não a 0,7 m.
+- **A caçamba das lojas**: o guaxinim não espalha mais o lixo do lado. Ele vai até a beirada, pula para dentro (um arco
+  por cima da borda de 1,3 m) e fica lá de 4 a 10 minutos, parado no fundo, escondido pelas paredes. Cabem 3 por caçamba,
+  e o grupo entra junto. De vez em quando ele remexe, um barulho baixo que dá para ouvir chegando perto, e a caçamba dá um
+  tranco pequeno.
+  - **O susto**: quem chega a menos de 2,6 m da caçamba (`FaunaDoMundo.SustoPerto`), ou segura E nela, faz todos os de
+    dentro saírem num pulo, um atrás do outro, para o lado de quem chegou, de viés, e correndo dali. Soam a tampa batendo
+    alto (`SomDoBicho.SustoNaCacamba`, que se ouve a 90 m) e as latas, e os zumbis a até 25 m ouvem.
+  - Quem está a até 7 m leva o susto na mente (de −3 a −8, `MotivoDaMente.Susto`). Na máquina dele, a câmera sacode e o
+    coração dispara (`MonitorCardiaco.Sobressalto`, de +25 a +55 bpm, que somem em uns 15 s).
+  - Sozinho, ele sai calmo e joga um pouco de lixo do lado.
+- **Revirar o lixo** (`LixoNaMira`, `FaunaDoMundo.Lixo.cs`): segure E na lata, nas sacolas, na caçamba (que demora mais,
+  2,2 s) ou no lixo espalhado. O anfitrião confere a distância e sorteia o que se acha:
+  - a comida largada (o salgadinho, o chocolate, as latas de comida), as bebidas, a sucata e a munição de prego e de
+    parafuso; às vezes pano, pilhas, fios, fita, cigarros;
+  - a caçamba tem mais sucata, peças, pregos e parafusos; nada acontece em 15 a 30% das vezes;
+  - a lata que o guaxinim já revirou tem pouca comida (ele comeu);
+  - o que não cabe na mochila cai aos pés; dá 1 XP de saque; o aviso diz o que achou.
+
+  Revirar a lata e as sacolas derruba e espalha como o guaxinim, e faz um pouco de barulho (8 a 12 m). Com guaxinim dentro
+  da caçamba, é só o susto: o lixo fica para depois.
+- **Cada lixo se revira uma vez**: os revirados vão a todos pela mensagem `ZCC.LixoRevirado`, e quem entra recebe a lista
+  inteira. No save do mundo (`MundoSalvo.lixosRevirados`), cada um vai pela chave do lugar no mapa, de meio em meio
+  metro, e não pela ordem na lista. Assim, o save continua certo quando a cidade ganha lotes. Depois de revirado, a dica
+  diz "Lixo já revirado".
+- **A oficina**: a munição de prego (incomum, de 6 a 20) e a de parafuso (rara, de 3 a 10) entram no saque das
+  ferramentas, nos mesmos lugares da sucata: a bancada, as prateleiras e as estantes do porão, da garagem e do depósito.
+- **O F1**: "Ir para a caçamba" (6 m na frente da caçamba mais perto) e "Guaxinim na caçamba" (2 guaxinins já dentro da
+  caçamba mais perto, a mais de 4 m do jogador).
+- **A `VersaoDaRede` foi para 35**: os RPCs de revirar e do susto, a mensagem dos revirados e os 2 sons novos.
+
+**Os testes no Play (23/11/2026, no Lakewood, `Trabalho-Claude/lixo/teste_lixo1.cs`, fotos e logs em `lixo/teste`):** 0
+erros.
+- Os 2 guaxinins do F1 foram até a lata, a lata balançou com eles mexendo e tombou com a queda desenhada.
+- Revirar a lata deu um chocolate, e revirar de novo não deu nada. A caçamba deu sucata e pano; as sacolas, sucata e um
+  energético. A dica "[Segure E] Revirar a caçamba" apareceu.
+- No susto da caçamba, os guaxinins saíram e subiram numa árvore a 8 m, o coração foi a 111 bpm e a mente caiu 5.
+- A munição de prego e a de parafuso estão no saque da oficina.
+
+O pulo para dentro e para fora e a queda da lata não foram vistos quadro a quadro nas fotos.
+
 ## O que ficou para depois
 
 - O "derrubar" do urso é o empurrão com o tremor (o jogador não fica caído no chão: não há queda sem morrer no jogo).

@@ -163,8 +163,7 @@ namespace ZombieCityCleaner.Player
             Vehicles.Caiaque.TirarDeTodos(OwnerClientId);   // (e no caiaque)
             // a mochila, com tudo dentro, e as roupas vestidas ficam onde ele caiu (02/11 e 03/11/2026, a pedido); no Dia 0
             // não se perde nada
-            var mundo = World.MundoDaPartida.Instancia;
-            bool diaZero = mundo != null && mundo.NoDiaZero;
+            bool diaZero = World.MundoDoJogo.NaAbertura;   // (nos dois mapas, e na fuga do Lakewood)
             if (!diaZero) Loot.MochilasNoChao.Instancia?.DaMorte(GetComponent<InventarioJogador>());
             MorreuRpc(causa ?? _ultimaCausa ?? "Mordido pelos zumbis.", diaZero);
         }

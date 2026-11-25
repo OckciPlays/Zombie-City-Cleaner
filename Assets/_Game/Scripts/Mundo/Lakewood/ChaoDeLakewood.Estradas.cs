@@ -60,6 +60,9 @@ namespace ZombieCityCleaner.Mundo
                 return nos.Count - 1;
             }
 
+            // os pontos que entram no meio de outra estrada (o T e o grupo de pontas em cima dela)
+            var inserir = new List<(int e, int seg, float t, Vector2 p)>();
+
             // 1) as pontas juntas: um nó só (uma ponta da usina manda no lugar; senão, a média)
             var pontas = new List<(int e, bool fim)>();
             for (int e = 0; e < n; e++) { pontas.Add((e, false)); pontas.Add((e, true)); }
@@ -86,6 +89,33 @@ namespace ZombieCityCleaner.Mundo
                 {
                     foreach (int g in grupo) lugar += Ponta(pontas[g]);
                     lugar /= grupo.Count;
+                    // (23/11/2026, a grade da cidade de Lakewood) o grupo em cima do meio de outra estrada: o nó fica nela e
+                    // entra nela também (sem isso, as duas ruas se encontravam em cima da rodovia sem o nó dela)
+                    float melhorD = PertoDoNo;
+                    int qualE = -1, segE = -1;
+                    float tE = 0f;
+                    for (int e = 0; e < n; e++)
+                    {
+                        bool doGrupo = false;
+                        foreach (int g in grupo) doGrupo |= pontas[g].e == e;
+                        if (doGrupo) continue;
+                        var l = linhas[e];
+                        for (int s = 1; s < l.Count; s++)
+                        {
+                            float d = Linhas.DistanciaDoSegmento(lugar, l[s - 1], l[s], out float t);
+                            if (d < melhorD) { melhorD = d; qualE = e; segE = s; tE = t; }
+                        }
+                    }
+                    if (qualE >= 0)
+                    {
+                        var lq = linhas[qualE];
+                        var q = Vector2.Lerp(lq[segE - 1], lq[segE], tE);
+                        if ((q - lq[0]).sqrMagnitude >= PertoDoNo * PertoDoNo && (q - lq[lq.Count - 1]).sqrMagnitude >= PertoDoNo * PertoDoNo)
+                        {
+                            lugar = q;
+                            inserir.Add((qualE, segE, tE, q));
+                        }
+                    }
                 }
                 foreach (int g in grupo)
                 {
@@ -96,7 +126,6 @@ namespace ZombieCityCleaner.Mundo
             }
 
             // 2) as pontas que encostam no meio de outra estrada (o T): a ponta vai para o ponto mais perto dela, que entra nela
-            var inserir = new List<(int e, int seg, float t, Vector2 p)>();
             for (int a = 0; a < pontas.Count; a++)
             {
                 if (usada[a]) continue;
@@ -162,10 +191,19 @@ namespace ZombieCityCleaner.Mundo
                     var lb = linhas[b];
                     if (!Linhas.Cruzam(la[i - 1], la[i], lb[j - 1], lb[j], out var x, out float ta, out float tb)) continue;
                     bool pertoDeUmNo = false;
-                    foreach (var no in nos) pertoDeUmNo |= (no - x).sqrMagnitude < 30f * 30f;
+                    foreach (var no in nos)
+                        if ((no - x).sqrMagnitude < 30f * 30f && NaLinha(no, la) && NaLinha(no, lb))
+                        {
+                            // em cima do nó (uma ponta que chegou no cruzamento de duas): o cruzamento é ele, nas duas
+                            if ((no - x).sqrMagnitude < 0.25f) { x = no; break; }
+                            pertoDeUmNo = true;
+                            break;
+                        }
                     if (pertoDeUmNo) continue;
-                    inserir.Add((a, i, ta, x));
-                    inserir.Add((b, j, tb, x));
+                    // (o mesmo ponto numa linha uma vez só: o cruzamento no vértice entre dois segmentos aparece nos dois)
+                    bool jaTem(int e) => inserir.Exists(q => q.e == e && (q.p - x).sqrMagnitude < 0.01f);
+                    if (!jaTem(a)) inserir.Add((a, i, ta, x));
+                    if (!jaTem(b)) inserir.Add((b, j, tb, x));
                     NoEm(x);
                 }
             Inserir(linhas, inserir);
@@ -226,6 +264,14 @@ namespace ZombieCityCleaner.Mundo
                     for (int k = 0; k < est.Pontos.Length; k++)
                         est.AteONo[k] = Mathf.Min(est.AteONo[k], Mathf.Abs(est.AoLongo[k] - est.AoLongo[i]));
                 }
+        }
+
+        // se o ponto fica em cima da linha (a menos de meio metro)
+        static bool NaLinha(Vector2 p, List<Vector2> l)
+        {
+            for (int s = 1; s < l.Count; s++)
+                if (Linhas.DistanciaDoSegmento(p, l[s - 1], l[s], out _) < 0.5f) return true;
+            return false;
         }
 
         List<(int i, float h)> PinosDe(int e)

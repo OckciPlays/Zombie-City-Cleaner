@@ -140,6 +140,9 @@ namespace ZombieCityCleaner.EditorTools
         {
             "Prateleira_Farmacia", "Gondola", "EstanteDeAco", "Caixas_A", "Caixas_B", "PiaDeBanheiro",
             "ArmarioDeRemedios", "CriadoMudo", "MesaDeEscritorio", "Balcao", "Prateleira_Rouparia", "Prateleira",
+            // as outras lojas (23/11/2026, o comércio da cidade de Lakewood: o mercado, a 24 horas, as comuns e o posto)
+            "Prateleira_Loja", "Balcao_Caixa", "Freezer", "ExpositorRefrigerado", "Vitrine", "ExpositorDeArmas",
+            "ArmarioDeArmas", "CaixasDeMunicao", "Arquivo", "MesaDeCorte",
         };
 
         const int MaximoNosAntigos = 8;

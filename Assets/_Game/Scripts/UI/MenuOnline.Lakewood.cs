@@ -32,15 +32,21 @@ namespace ZombieCityCleaner.UI
             Caixa(L, 78, LW, 290, "MUNDO");
             GUI.Label(R(cx, 116, cw, 30), "Condado de Lakewood", _eMundo);
             GUI.Label(R(cx, 148, cw, 22), "12 × 10 km em volta do reservatório da hidrelétrica", _eDetalheDoMundo);
-            GUI.Label(R(cx, 184, cw, 70), "Você começa numa casa na beira do lago, na ponta da Woodcreek, a vila do nordeste, " +
-                                           "com as armas nas mesas e os carros no terreiro.", _eDica);
-            GUI.Label(R(cx, 266, cw, 70), "O jogo salva sozinho a cada 5 minutos e ao sair da partida, e volta pelo Continuar " +
-                                           "do menu.", _eDica);
+            // o Dia 0 (22/11/2026, a etapa 4 do Docs/23): o começo na casa da família, na Woodcreek de antes
+            bool d0 = World.MundoDeLakewood.ComecarPeloDiaZero;
+            GUI.Label(R(cx, 182, cw, 64), d0
+                ? "Você começa no Dia 0: na casa da família, na Woodcreek de antes do apocalipse, com o jornal na TV, $ 1.000 e as " +
+                  "lojas abertas. As compras vão para a caçamba da caminhonete."
+                : "Você começa no bunker da comunidade, cavado na encosta do lago, na ponta da Woodcreek, a vila do nordeste, com " +
+                  "os carros e as motos na garagem.", _eDica);
+            if (Botao(cx, 250, 300, 30, d0 ? "COMEÇAR PELO DIA 0: SIM" : "COMEÇAR PELO DIA 0: NÃO")) World.MundoDeLakewood.ComecarPeloDiaZero = !d0;
+            GUI.Label(R(cx, 288, cw, 70), "O jogo salva sozinho a cada 5 minutos e ao sair da partida (o Dia 0 não é salvo), e " +
+                                           "volta pelo Continuar do menu.", _eDica);
 
-            // à esquerda: os moradores (desligados)
-            Caixa(L, 380, LW, 210, "MORADORES DO BUNKER", "DESLIGADOS");
-            GUI.Label(R(cx, 418, cw, 70), "A escolha dos moradores fica desligada por enquanto: o Lakewood ainda não tem o " +
-                                           "bunker.", _eDica);
+            // à esquerda: os moradores (22/11/2026, a etapa 2 do Docs/23: a comunidade do bunker já vem sorteada, sem as cartas)
+            Caixa(L, 380, LW, 210, "MORADORES DO BUNKER", "A COMUNIDADE");
+            GUI.Label(R(cx, 418, cw, 96), "O bunker não é de vocês: é de uma comunidade, com o líder que o construiu, um major " +
+                                           "do Exército e uns seis sobreviventes. Vocês chegam como a nova equipe de exploradores.", _eDica);
 
             // à direita: o personagem e os amigos
             float px = 650, pw = 590, pcx = px + 14, pcw = pw - 28;

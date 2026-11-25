@@ -86,10 +86,13 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>Quantos lotes de cada tipo a Woodcreek tem no mapa.</summary>
-        public static string Resumo(MapaDeLakewood mapa)
+        public static string Resumo(MapaDeLakewood mapa) => ResumoDe(mapa, Cidade);
+
+        /// <summary>Quantos lotes de cada tipo a cidade tem no mapa.</summary>
+        public static string ResumoDe(MapaDeLakewood mapa, string cidade)
         {
-            var lotes = mapa.lotes.FindAll(l => l.cidade == Cidade);
-            var sb = new StringBuilder($"{mapa.ruas.FindAll(r => r.cidade == Cidade).Count} ruas novas e {lotes.Count} lotes (");
+            var lotes = mapa.lotes.FindAll(l => l.cidade == cidade);
+            var sb = new StringBuilder($"{mapa.ruas.FindAll(r => r.cidade == cidade).Count} ruas novas e {lotes.Count} lotes (");
             bool primeiro = true;
             foreach (UsoDoLote t in System.Enum.GetValues(typeof(UsoDoLote)))
             {

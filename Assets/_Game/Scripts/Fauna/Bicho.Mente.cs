@@ -556,6 +556,7 @@ namespace ZombieCityCleaner.Fauna
                 Velocidade = 0f;
                 return;
             }
+            if (NaCacamba != FaseDaCacamba.Fora && MoverNaCacamba(agora)) return;   // (23/11/2026: o guaxinim pulando e dentro da caçamba)
             float velAlvo = _temDestino ? _velAlvo : 0f;
             Vector3 para = _destino - p;
             para.y = 0f;

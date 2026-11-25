@@ -54,26 +54,32 @@ namespace ZombieCityCleaner.DiaZero
         [Tooltip("Do Cidade_Rua.fbx: a barreira, o cavalete, o cone, o hidrante e a lixeira.")]
         public Mesh barreira, cavalete, cone, hidrante, lixeira;
 
-        public static RuaDoDiaZero Instancia { get; private set; }
+        public static RuaDoDiaZero Instancia { get; protected set; }
         /// <summary>A rua está montada (as lojas, a casa e os pontos).</summary>
-        public bool Pronta { get; private set; }
+        public bool Pronta { get; protected set; }
 
         /// <summary>A nossa casa (o objeto dela: as coordenadas da planta, já espelhadas).</summary>
-        public Transform NossaCasa { get; private set; }
-        public Planta PlantaDaCasa { get; private set; }
+        public Transform NossaCasa { get; protected set; }
+        public Planta PlantaDaCasa { get; protected set; }
         /// <summary>Onde os 4 nascem (na sala, de frente para a TV) e para onde olham.</summary>
         public readonly Vector3[] Nascimentos = new Vector3[4];
         public readonly float[] GirosDosNascimentos = new float[4];
         /// <summary>O olho de quem está no sofá e a TV (para a introdução), no mundo.</summary>
-        public Vector3 OlhoNoSofa { get; private set; }
-        public Vector3 Tv { get; private set; }
+        public Vector3 OlhoNoSofa { get; protected set; }
+        public Vector3 Tv { get; protected set; }
         /// <summary>Onde as compras aparecem dentro da casa (nas coordenadas da casa: o chão da sala e da cozinha, fora dos móveis).</summary>
         public readonly List<Vector3> LugaresDasCompras = new List<Vector3>();
         public readonly List<LojaDoDiaZero> Lojas = new List<LojaDoDiaZero>();
         public readonly List<LugarDeNpc> Npcs = new List<LugarDeNpc>();
         /// <summary>A rua vai de x = Inicio a x = Fim (as pontas fechadas).</summary>
-        public float Inicio { get; private set; }
-        public float Fim { get; private set; }
+        public float Inicio { get; protected set; }
+        public float Fim { get; protected set; }
+
+        /// <summary>
+        /// Onde os cenários da introdução são montados (no mundo): aqui, 420 m ao sul do meio da rua. A Woodcreek do Lakewood
+        /// (<see cref="WoodcreekDoDiaZero"/>) os põe no alto, longe do relevo.
+        /// </summary>
+        public virtual Vector3 LugarDosCenarios => new Vector3((Inicio + Fim) / 2f, 0f, -420f);
 
         protected override string Chave => $"dia-zero|{semente}|{mobilia?.Length ?? 0}|{roupas?.Length ?? 0}";
 
@@ -86,7 +92,7 @@ namespace ZombieCityCleaner.DiaZero
 
         static readonly Color[] CoresDasLetras = { new Color(0.95f, 0.94f, 0.9f), new Color(0.08f, 0.08f, 0.09f), new Color(0.75f, 0.12f, 0.1f) };
 
-        void OnDestroy()
+        protected virtual void OnDestroy()
         {
             if (Instancia == this) Instancia = null;
         }
@@ -238,7 +244,7 @@ namespace ZombieCityCleaner.DiaZero
         }
 
         // a nossa casa: os nascimentos (na sala, de frente para a TV), o olho do sofá, os lugares das compras e a porta do abrigo
-        void ACasaDaFamilia(GameObject go, Planta p, List<PontoDeMovel> pontos, Medidas M)
+        protected void ACasaDaFamilia(GameObject go, Planta p, List<PontoDeMovel> pontos, Medidas M)
         {
             NossaCasa = go.transform;
             PlantaDaCasa = p;
@@ -359,7 +365,16 @@ namespace ZombieCityCleaner.DiaZero
                     LugaresDasCompras.AddRange(celulas);
                 }
 
-            // a porta do abrigo: no fim do corredor, do lado sem a porta de fora (a parede de x0 da planta)
+            PorAPortaDoFim(go, p, M);
+        }
+
+        /// <summary>
+        /// O que acaba o dia, dentro da nossa casa: aqui, a porta do abrigo no fim do corredor, do lado sem a porta de fora (a
+        /// parede de x0 da planta). Na Woodcreek, as chaves da casa ao lado da porta da frente.
+        /// </summary>
+        protected virtual void PorAPortaDoFim(GameObject go, Planta p, Medidas M)
+        {
+            float sx = p.espelhar ? -1f : 1f, piso = global::ZombieCityCleaner.Mundo.Casa.PisoDe(p);
             var corredor = p.comodos.Find(k => k.tipo == "corredor" && k.andar == 0);
             if (corredor != null)
             {
@@ -475,7 +490,7 @@ namespace ZombieCityCleaner.DiaZero
         }
 
         // o nome da loja escrito na placa da fachada (a mesma conta do Loja.Fachada)
-        void Placa(Transform loja, PlantaDeLoja p)
+        protected void Placa(Transform loja, PlantaDeLoja p)
         {
             var M = Medidas.DoJogo;
             float e = M.esp / 2, h = p.PeDireitoDe(0);

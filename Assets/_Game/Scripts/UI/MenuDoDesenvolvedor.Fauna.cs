@@ -40,7 +40,7 @@ namespace ZombieCityCleaner.UI
                 + "\n" + ZombieCityCleaner.Combat.SomDasChamas.Resumo() + "\n" + ZombieCityCleaner.World.SomDaAgua.Resumo()
                 + $"\neco do último tiro: {ZombieCityCleaner.Combat.EcoDoTiro.UltimoLugar} (volume {ZombieCityCleaner.Combat.EcoDoTiro.Volume:0.##})";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDaFauna, w);
-            int linhas = (BotoesDaFauna.Length + 1) / 2 + 31;
+            int linhas = (BotoesDaFauna.Length + 1) / 2 + 33;   // (23/11/2026: mais a linha da caçamba; 24/11, a da base)
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
@@ -118,6 +118,19 @@ namespace ZombieCityCleaner.UI
                 else Avisar("Sem lixo à vista neste mapa (só na Woodcreek, no Lakewood).");
             }
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim no lixo", _botao)) TesteDaFaunaRpc(15, 0);
+            // (23/11/2026) a caçamba das lojas e os guaxinins escondidos nela (o susto: FaunaDoMundo.Lixo.cs)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para a caçamba", _botao))
+            {
+                if (FaunaDoMundo.LugarNaCacamba(GetComponent<JogadorRede>(), out var onde, out float giro))
+                    GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(onde + Vector3.up * 0.1f, giro);
+                else Avisar("Sem caçamba a até 400 m (só no Lakewood, atrás das lojas).");
+            }
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim na caçamba", _botao)) TesteDaFaunaRpc(24, 0);
+            // (24/11/2026) a base (os kits e os troféus na mochila) e o saque dos zumbis (um Oco de mochila na frente)
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Kits da base e troféus", _botao)) TesteDaFaunaRpc(31, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Zumbi de mochila na frente", _botao)) TesteDaFaunaRpc(32, 0);
             // a etapa 5: os lugares dos bichos (a caverna, a toca dos coiotes, o brejo)
             y += passo * u;
             float terco = (w - 12 * u) / 3f;
@@ -393,6 +406,9 @@ namespace ZombieCityCleaner.UI
                 case 15:
                     aviso = f != null ? f.GuaxinimNoLixo(j) : "Sem a fauna neste mundo.";
                     break;
+                case 24:
+                    aviso = f != null ? f.GuaxinimNaCacamba(j) : "Sem a fauna neste mundo.";
+                    break;
                 case 16:
                     aviso = f != null ? f.BichosDoLugar(j) : "Sem a fauna neste mundo.";
                     break;
@@ -439,6 +455,41 @@ namespace ZombieCityCleaner.UI
                     break;
                 case 30:
                     aviso = f != null ? f.UivoDeTeste(j) : "Sem a fauna neste mundo.";
+                    break;
+                case 31:
+                    {
+                        // (24/11/2026) a base: o núcleo, 4 muros, o portão e os troféus dos 4 níveis
+                        var mochila = GetComponent<InventarioJogador>();
+                        if (mochila != null)
+                        {
+                            mochila.EntregarItem(Item.NucleoDaBase, 1);
+                            mochila.EntregarItem(Item.MuroDeToras, 4);
+                            mochila.EntregarItem(Item.PortaoDeToras, 1);
+                            mochila.EntregarItem(Item.CabecaDoOco, 3);
+                            mochila.EntregarItem(Item.GargantaDoLong, 2);
+                            mochila.EntregarItem(Item.OlhoDoBrutamonte, 1);
+                            mochila.EntregarItem(Item.CabecaDeChefe, 1);
+                        }
+                        aviso = "O núcleo, 4 muros, o portão e os troféus dos níveis (o que não coube está aos seus pés). Monte o núcleo primeiro: o muro e o portão só dentro da área dele.";
+                    }
+                    break;
+                case 32:
+                    {
+                        // (24/11/2026) um Oco de mochila 6 m na frente (a mochila forçada só no anfitrião)
+                        var zm = Zombies.ZombieManager.Instancia;
+                        if (zm == null)
+                        {
+                            aviso = "Sem zumbis neste mundo.";
+                            break;
+                        }
+                        Vector3 frente = transform.forward;
+                        frente.y = 0f;
+                        frente.Normalize();
+                        Zombies.Zumbi.ForcarMochilas = 1;
+                        var z = zm.NascerEspecial(Zombies.TipoDeZumbi.Oco, transform.position + frente * 6f, Quaternion.LookRotation(-frente).eulerAngles.y);
+                        Zombies.Zumbi.ForcarMochilas = 0;
+                        aviso = z != null ? $"Um Oco com {Itens.NomeComArtigo(z.MochilaNasCostas)} a 6 m. Mate e segure E no corpo." : "Não deu para criar o zumbi.";
+                    }
                     break;
             }
             if (aviso != null) AvisoDoTesteRpc(aviso, RpcTarget.Single(parametros.Receive.SenderClientId, RpcTargetUse.Temp));

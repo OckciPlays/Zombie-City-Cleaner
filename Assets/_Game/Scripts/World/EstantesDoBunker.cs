@@ -143,6 +143,19 @@ namespace ZombieCityCleaner.World
         /// <summary>É o compartimento de um caiaque (e não um móvel do bunker)?</summary>
         public static bool EhDoCaiaque(int estante) => estante >= BaseDosCaiaques && estante < BaseDosCaiaques + 16;
 
+        /// <summary>
+        /// A caçamba da caminhonete (22/11/2026, o Dia 0 na Woodcreek: o Pedro, "Caçamba da caminhonete": as compras vão para
+        /// ela): uma estante de 12 × 6 (três fundos de 2 linhas, no chão da caçamba), com o número <see cref="BaseDasCacambas"/>
+        /// (uma caminhonete só). O "perto" é o da tampa de trás (<see cref="Vehicles.Carro.PontoDoPortaMalas"/>); quem está na
+        /// caçamba também alcança. Nada aparece por fora, como no caiaque.
+        /// </summary>
+        public const int BaseDasCacambas = 61000;
+        const string Cacamba = "CacambaDaCaminhonete";
+        static readonly Forma FormaDaCacamba = new Forma { nome = "caçamba da caminhonete", colunas = 12, alturas = new[] { 0f, 0f, 0f }, largura = 1.5f, fundo = 1.6f, vao = 0.5f };
+
+        /// <summary>É a caçamba de uma caminhonete?</summary>
+        public static bool EhDaCacamba(int estante) => estante >= BaseDasCacambas && estante < BaseDasCacambas + 16;
+
         public static bool EhEstante(string modelo) => modelo != null && Formas.ContainsKey(modelo);
         public static Forma FormaDe(string modelo) => modelo != null && Formas.TryGetValue(modelo, out var f) ? f : null;
 
@@ -150,11 +163,12 @@ namespace ZombieCityCleaner.World
         public static string ModeloDa(int estante)
         {
             if (EhDoCaiaque(estante)) return Compartimento;   // (mesmo antes de o caiaque nascer: o save dele carrega)
+            if (EhDaCacamba(estante)) return Cacamba;
             var todos = MoveisDoBunker.Todos;
             return estante >= 0 && estante < todos.Length && EhEstante(todos[estante].modelo) ? todos[estante].modelo : null;
         }
 
-        public static Forma FormaDa(int estante) => EhDoCaiaque(estante) ? FormaDoCompartimento : FormaDe(ModeloDa(estante));
+        public static Forma FormaDa(int estante) => EhDoCaiaque(estante) ? FormaDoCompartimento : EhDaCacamba(estante) ? FormaDaCacamba : FormaDe(ModeloDa(estante));
 
         NetworkList<ItemNaEstante> _itens;
         ushort _proximoId = 1;
@@ -465,6 +479,19 @@ namespace ZombieCityCleaner.World
                 if (dc.y < -2.5f || dc.y > 2.5f) return false;
                 dc.y = 0f;
                 return dc.magnitude <= distancia;
+            }
+            if (EhDaCacamba(estante))
+            {
+                // a tampa de trás da caminhonete (quem está na caçamba também alcança)
+                foreach (var c in Vehicles.Carro.Todos)
+                {
+                    if (c == null || !c.cacamba || c.CacambaDeGuardar != estante) continue;
+                    var dc = ponto - c.PontoDoPortaMalas;
+                    if (dc.y < -2.5f || dc.y > 3f) continue;
+                    dc.y = 0f;
+                    if (dc.magnitude <= distancia + 1.5f) return true;
+                }
+                return false;
             }
             var bunker = BunkerDoMundo.Instancia;
             if (bunker == null || !bunker.PontoDoMovel(estante, out var pe)) return false;

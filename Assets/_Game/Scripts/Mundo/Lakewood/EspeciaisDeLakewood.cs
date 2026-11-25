@@ -429,7 +429,7 @@ namespace ZombieCityCleaner.Mundo
                     for (float z = zIni; z <= zFim; z += 1.3f)
                     {
                         if (r.NextDouble() < 0.1) continue;
-                        bool caida = r.NextDouble() < 0.12;
+                        bool caida = r.NextDouble() < 0.12 && !c.nova;   // (a escola de antes, 22/11/2026: nenhuma caída)
                         float giro = (noX1 ? 180f : 0f) + (caida ? 90f : (float)(r.NextDouble() * 14 - 7));
                         Carteira(c, new Vector3(x, y, z), giro, caida);
                     }

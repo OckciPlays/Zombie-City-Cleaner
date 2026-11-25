@@ -19,7 +19,7 @@ namespace ZombieCityCleaner.EditorTools
     /// </summary>
     public static class LeituraDaReferencia
     {
-        public const string Imagem = ImagemDeLakewood.Pasta + @"\Lakewood_Referencia.png";
+        public const string Imagem = ImagemDeLakewood.PastaDaArte + @"\Lakewood_Referencia.png";
         /// <summary>A moldura: o mapa fica entre estas colunas e linhas da imagem (px; a linha 0 em cima).</summary>
         public const int X0 = 32, X1 = 1264, Y0 = 29, Y1 = 984;
         const byte Desconhecido = 255;

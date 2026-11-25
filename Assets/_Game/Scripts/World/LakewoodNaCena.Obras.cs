@@ -59,11 +59,12 @@ namespace ZombieCityCleaner.World
         /// <summary>Quantas obras de verdade estão na cena (para o F1).</summary>
         public int ObrasPerto { get; private set; }
 
-        // as caixas de longe de todas as obras e os caminhos de cada cidade (uma vez, no Awake)
+        // as caixas de longe de todas as obras (uma vez, no Awake); os caminhos de cada lote vêm com a obra de verdade, perto
+        // de alguém (23/11/2026: com os 4 mil lotes da cidade de Lakewood, as pedras das trilhas e as faixas das entradas de
+        // todos levavam uns 40 s no Awake)
         void MontarAsObras(Transform pai)
         {
             _paiDasObras = pai;
-            var caminhos = new Dictionary<string, MalhaDeObra>();
             foreach (var l in Chao.Lotes)
             {
                 if (l.Plano == null) continue;
@@ -74,20 +75,32 @@ namespace ZombieCityCleaner.World
                     continue;
                 }
                 var longe = new MalhaDeObra();
-                ObrasDeLakewood.CaixaDeLonge(l.Plano, longe);
+                // (um lote com problema fica sem a caixa de longe; os outros seguem: 23/11/2026, uma cor fora da paleta num
+                // galpão derrubava todas as obras do mapa)
+                try { ObrasDeLakewood.CaixaDeLonge(l.Plano, longe); }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[Lakewood] A caixa de longe do lote {l.Indice} ({l.Plano.Nome}) não montou: {e.Message}");
+                    longe = new MalhaDeObra();
+                }
                 // com o material das casas (o abandono), como a obra de verdade: a troca não muda a cor
                 var go = Objeto($"{l.Lote.cidade}: {l.Plano.Nome} (de longe)", longe.ParaMesh($"Obra de longe {l.Indice}"), materialDasCasas != null ? materialDasCasas : materialDaCidade, pai);
                 // (o "NoMundo" do lote é no espaço do mapa: embaixo da raiz deslocada, a posição local)
                 go.transform.SetLocalPositionAndRotation(l.NoMundo(0f, 0f), l.Rotacao);
                 go.isStatic = false;
                 _obras.Add(new ObraNaCena { Lote = l, Plano = l.Plano, Longe = go.GetComponent<MeshRenderer>() });
-                if (!caminhos.TryGetValue(l.Lote.cidade, out var m)) caminhos[l.Lote.cidade] = m = new MalhaDeObra();
-                if (l.Trilha != null) PedrasDaTrilha(l, m);
-                else if (l.Plano.Entrada.HasValue) Caminho(l, l.Plano.Entrada.Value, 1.2f, m);
-                if (l.Plano.EntradaDoCarro.HasValue) Caminho(l, l.Plano.EntradaDoCarro.Value, 3f, m);
             }
-            foreach (var kv in caminhos)
-                if (kv.Value.Triangulos > 0) Objeto($"{kv.Key}: os caminhos", kv.Value.ParaMesh($"{kv.Key} (caminhos)"), materialDaCidade, pai);
+        }
+
+        // os caminhos do lote (no espaço do mapa): as pedras da trilha da porta, ou a faixa até a porta (as lojas), e a entrada
+        // do carro; em outra thread, junto da obra (o chão só lê)
+        MalhaDeObra CaminhosDoLote(ChaoDeLakewood.LoteNoChao l)
+        {
+            var m = new MalhaDeObra();
+            if (l.Trilha != null) PedrasDaTrilha(l, m);
+            else if (l.Plano.Entrada.HasValue) Caminho(l, l.Plano.Entrada.Value, 1.2f, m);
+            if (l.Plano.EntradaDoCarro.HasValue) Caminho(l, l.Plano.EntradaDoCarro.Value, 3f, m);
+            return m.Triangulos > 0 ? m : null;
         }
 
         // o Hospital Principal no lote da cidade (Plano_Lakewood, Etapa 6, a parte 4): o HospitalDoMundo da cena, com o
@@ -216,10 +229,18 @@ namespace ZombieCityCleaner.World
                 if (o.Querida && !o.Falhou && o.Perto == null && o.Montando == null && o.Pronta == null && montando < obrasAoMesmoTempo)
                 {
                     var plano = o.Plano;
-                    o.Montando = Task.Run(() => ObrasDeLakewood.Montar(plano));
+                    var lote = o.Lote;
+                    bool antes = _antes;   // (a época de agora: LakewoodNaCena.Epoca.cs)
+                    o.Montando = Task.Run(() =>
+                    {
+                        var pronta = ObrasDeLakewood.Montar(plano, antes);
+                        if (pronta != null) pronta.Caminhos = CaminhosDoLote(lote);
+                        return pronta;
+                    });
                     montando++;
                 }
-                if (!o.Querida && o.Perto != null) TirarAObra(o);
+                // (um prédio com um andar cozinhando a colisão espera: a malha não pode sumir no meio)
+                if (!o.Querida && o.Perto != null && !AndaresCozinhando(o)) TirarAObra(o);
                 if (o.Perto != null) perto++;
             }
             ObrasPerto = perto;
@@ -228,6 +249,7 @@ namespace ZombieCityCleaner.World
         // a cada quadro: no máximo uma obra pronta vira objeto, e as colisões cozidas entram
         void ReceberAsObras()
         {
+            ReceberAsOrfas();
             if (Time.time >= _proximaObra)
             {
                 _proximaObra = Time.time + 0.25f;
@@ -315,7 +337,18 @@ namespace ZombieCityCleaner.World
                     o.Malhas.Add(desenho);
                     go.AddComponent<MeshFilter>().sharedMesh = desenho;
                     var r = go.AddComponent<MeshRenderer>();
-                    r.sharedMaterial = materialDasCasas != null ? materialDasCasas : materialDaCidade;
+                    r.sharedMaterial = NaEpoca(materialDasCasas != null ? materialDasCasas : materialDaCidade);
+                    // os caminhos do lote (no espaço do mapa: o filho fica no lugar do pai das obras)
+                    if (p.Caminhos != null)
+                    {
+                        var caminhos = p.Caminhos.ParaMesh($"{c.Nome} (caminhos)");
+                        o.Malhas.Add(caminhos);
+                        var cg = new GameObject("Caminhos");
+                        cg.transform.SetParent(go.transform, false);
+                        cg.transform.SetPositionAndRotation(_paiDasObras.position, _paiDasObras.rotation);
+                        cg.AddComponent<MeshFilter>().sharedMesh = caminhos;
+                        cg.AddComponent<MeshRenderer>().sharedMaterial = NaEpoca(materialDaCidade);
+                    }
                     o.Etapa = 1;
                     return false;
                 }
@@ -329,11 +362,15 @@ namespace ZombieCityCleaner.World
                     Devolver(p);
                     // os móveis antigos (as lojas, o posto)
                     MoveisDaConstrucao.Por(go, c.Moveis);
+                    // no Dia 0, as lojas que vendem abrem (as prateleiras, o caixa e os produtos: LakewoodNaCena.DiaZero.cs)
+                    AbrirNoDiaZero(go, o, p, c);
                     o.Etapa = 3;
                     return false;
                 case 3:
                     // a mobília nova (as casas; com o saque) e as portas que abrem
-                    if (MobiliaNovaDoMundo.Instancia != null && c.MobiliaNova != null) MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100);
+                    // (no antes do apocalipse, sem o saque: as casas e as lojas são das pessoas; 22/11/2026)
+                    // (23/11/2026: também sem a mobília nova, para o saque dos móveis antigos das lojas e do posto)
+                    if (MobiliaNovaDoMundo.Instancia != null) MobiliaDaConstrucao.Por(go, c.Moveis, c.MobiliaNova, c.Semente, -100, comSaque: !_antes);
                     c.MobiliaNova = null;
                     if (PortasDoMundo.Instancia != null) PortasDaConstrucao.Por(go, c.Portas, c.Janelas, c.Semente);
                     o.Etapa = 4;
@@ -407,13 +444,41 @@ namespace ZombieCityCleaner.World
                 dentro.transform.SetParent(go.transform, false);
                 dentro.transform.localPosition = c.CentroDeDentro;
                 dentro.AddComponent<AreaInterna>().tamanho = c.TamanhoDeDentro;
-                EcoSoDentro.Criar(go.transform, new Bounds(c.CentroDeDentro, c.TamanhoDeDentro));
+                // (no prédio, o eco é de cada andar: o AndaresDoPredio)
+                if (o.Plano.Predio == null) EcoSoDentro.Criar(go.transform, new Bounds(c.CentroDeDentro, c.TamanhoDeDentro));
+            }
+            // o prédio (23/11/2026, a cidade de Lakewood): as janelas escuras de cada andar e os andares por dentro, perto de
+            // alguém (o AndaresDoPredio, como no mapa sorteado)
+            if (o.Plano.Predio != null && p.Escuros != null)
+            {
+                var planta = o.Plano.Predio;
+                var material = NaEpoca(materialDasCasas != null ? materialDasCasas : materialDaCidade);
+                var escuros = new MeshRenderer[planta.andares];
+                for (int f = 0; f < p.Escuros.Length; f++)
+                {
+                    var em = p.Escuros[f];
+                    if (em == null) continue;
+                    if (em.Triangulos > 0 && f < escuros.Length)
+                    {
+                        var e = new GameObject($"Janelas escuras do andar {f}");
+                        e.transform.SetParent(go.transform, false);
+                        var malha = em.ParaMesh($"{c.Nome}: janelas escuras {f}");
+                        o.Malhas.Add(malha);
+                        e.AddComponent<MeshFilter>().sharedMesh = malha;
+                        escuros[f] = e.AddComponent<MeshRenderer>();
+                        escuros[f].sharedMaterial = NaEpoca(materialDaCidade);
+                        escuros[f].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    }
+                    MalhaDeObra.Devolver(em);
+                }
+                p.Escuros = null;
+                go.AddComponent<AndaresDoPredio>().Ligar(planta, escuros, material);
             }
             // os carros parados na garagem ou na vaga (sete em cada dez casas)
             if (carrosParados != null && carrosParados.Length > 0 && p.Carros.Count > 0)
             {
                 var rnd = new System.Random(c.Semente * 31 + 7);
-                var material = materialDaUsina != null ? materialDaUsina : materialDaCidade;
+                var material = NaEpoca(materialDaUsina != null ? materialDaUsina : materialDaCidade);
                 foreach (var (pos, yaw) in p.Carros)
                 {
                     if (rnd.NextDouble() > 0.7) continue;
@@ -489,6 +554,8 @@ namespace ZombieCityCleaner.World
             parte.quanto = Mathf.Sign(parte.quanto) * (estado == 0 ? 85f : 35f);
             parte.Pousar(true);
         }
+
+        static bool AndaresCozinhando(ObraNaCena o) => o.Perto != null && o.Perto.TryGetComponent<AndaresDoPredio>(out var a) && a.Cozinhando;
 
         void TirarAObra(ObraNaCena o)
         {

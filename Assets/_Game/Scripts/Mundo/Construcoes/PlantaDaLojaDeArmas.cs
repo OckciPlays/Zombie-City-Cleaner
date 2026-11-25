@@ -161,6 +161,16 @@ namespace ZombieCityCleaner.Mundo
             return v;
         }
 
+        /// <summary>
+        /// A loja de antes do apocalipse (22/11/2026, a Woodcreek de antes): a sala segura intacta, sem a barricada, o
+        /// acampamento, a gôndola tombada, a baia e os balcões quebrados, o sangue e as tábuas.
+        /// </summary>
+        public static Variacao Nova(int semente) => new Variacao
+        {
+            semente = semente, sala = EstadoDaSala.Intacta, barricada = false, acampamento = false, gondolaTombada = false,
+            baiaQuebrada = -1, vitrinesQuebradas = 0, sangue = 0f, tabuas = 0f,
+        };
+
         // ------------------------------------------------------------ os cômodos e as portas
 
         /// <summary>

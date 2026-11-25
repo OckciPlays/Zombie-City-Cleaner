@@ -88,8 +88,16 @@ namespace ZombieCityCleaner.Mundo
         /// veio com ele); os outros são as famílias e os bandos que vão estar pelo mapa (as comunidades, as bases, os perdidos).
         /// </summary>
         public int grupo;
+        /// <summary>
+        /// O cargo na comunidade do bunker (22/11/2026, o Lakewood: "Líder do bunker", "Major"); vazio para os outros. O
+        /// terminal mostra ao lado do nome (<see cref="NomeComCargo"/>).
+        /// </summary>
+        public string cargo;
 
         public string NomeCompleto => string.IsNullOrEmpty(apelido) ? $"{nome} {sobrenome}" : $"{nome} \"{apelido}\" {sobrenome}";
+
+        /// <summary>O nome completo com o cargo ("Walter Hayes, líder do bunker").</summary>
+        public string NomeComCargo => string.IsNullOrEmpty(cargo) ? NomeCompleto : $"{NomeCompleto}, {cargo.ToLowerInvariant()}";
 
         public int Pontos(Habilidade h) => habilidades[(int)h];
         public Paixao PaixaoEm(Habilidade h) => paixoes[(int)h];

@@ -29,7 +29,7 @@ namespace ZombieCityCleaner.UI
             y += 26 * u;
             ulong eu = NetworkManager.LocalClientId;
             GUI.Label(new Rect(x, y, w, 40 * u), $"Dinheiro: {PrecosDoDiaZero.Dinheiro(dia.Dinheiro(eu))} (gastou {PrecosDoDiaZero.Dinheiro(dia.Gasto(eu))})\n" +
-                                                 $"{dia.Compras(eu)} compras no bunker · {rua.Npcs.Count} NPCs", _texto);
+                                                 $"{dia.Compras(eu)} compras {(dia.NoLakewood ? "na caçamba" : "no bunker")} · {rua.Npcs.Count} NPCs", _texto);
             y += 46 * u;
             if (GUI.Button(new Rect(x, y, w, 30 * u), "Pular o Dia 0 (ir para o mundo)", _botao))
             {
@@ -64,6 +64,13 @@ namespace ZombieCityCleaner.UI
                 if (mov != null) mov.Teleportar(ponto + Vector3.up * 0.1f, giro);
             }
             Ir("Nossa casa", rua.Nascimentos[0], rua.GirosDosNascimentos[0]);
+            // na Woodcreek, as lojas que vendem (a obra delas só entra perto: a frente de cada uma, na rua)
+            var woodcreek = WoodcreekDoDiaZero.Atual;
+            if (woodcreek != null)
+            {
+                foreach (var (nome, ponto, giro) in woodcreek.FrentesDasLojas()) Ir(nome, ponto, giro);
+                return area;
+            }
             foreach (var loja in rua.Lojas)
             {
                 // na calçada, de frente para a porta da loja

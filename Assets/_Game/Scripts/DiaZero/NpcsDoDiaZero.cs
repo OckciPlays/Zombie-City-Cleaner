@@ -71,6 +71,7 @@ namespace ZombieCityCleaner.DiaZero
                 go.name = $"NPC {i + 1} ({l.rotina}{(l.doente ? ", doente" : "")})";
                 var n = go.AddComponent<NpcDoDiaZero>();
                 n.Iniciar(_rua, l, i, particulas);
+                ConversaDoDiaZero.Por(n);   // (24/11/2026: o E conversa)
                 _npcs.Add(n);
             }
             for (int i = 0; i < _npcs.Count; i++)

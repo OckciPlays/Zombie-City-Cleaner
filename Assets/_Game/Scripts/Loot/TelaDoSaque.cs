@@ -54,6 +54,9 @@ namespace ZombieCityCleaner.Loot
             if (!_aberta) return;
             var j = JogadorRede.Local;
             var m = MochilasNoChao.Instancia;
+            // (24/11/2026) o recipiente que o anfitrião acabou de criar (o lixo revirado) pode chegar depois do pedido de abrir:
+            // a tela espera um pouco por ele antes de fechar
+            if (j != null && m != null && !m.Achar(_id, out _) && Time.unscaledTime - _abriuEm < 1.5f) return;
             if (j == null || m == null || !m.Achar(_id, out var mochila) ||
                 (j.transform.position - mochila.pos).sqrMagnitude > (MochilasNoChao.Alcance + 0.6f) * (MochilasNoChao.Alcance + 0.6f))
             {
@@ -107,10 +110,8 @@ namespace ZombieCityCleaner.Loot
                 m.PedirGuardar(_id, clicouA.Value);
             }
 
-            // a dele
-            string nome = MochilasNoChao.NomeDaMochila(mochila);
-            GUI.Label(new Rect(x0 + meio + 12 * u, y0 + 12 * u, meio - 30 * u, 24 * u),
-                      $"{nome.ToUpper()}{(mochila.mochila != Item.Nada ? $" · {Itens.Nome(mochila.mochila)}" : "")}", _titulo);
+            // a dele (24/11/2026: o título do recipiente: a mochila, o zumbi, o lixo)
+            GUI.Label(new Rect(x0 + meio + 12 * u, y0 + 12 * u, meio - 30 * u, 24 * u), MochilasNoChao.TituloDe(mochila), _titulo);
             var deles = m.Itens(_id);
             float celB = Mathf.Min(42f * u, (meio - 40 * u) / Mathf.Max(1, (int)mochila.colunas));
             float alturaB = Mathf.Min(celB * mochila.linhas, 360 * u);
@@ -123,15 +124,23 @@ namespace ZombieCityCleaner.Loot
             // embaixo: o dinheiro, pegar tudo, trocar de mochila
             float by = y0 + h - 58 * u;
             GUI.Label(new Rect(x0 + 18 * u, by - 40 * u, w - 36 * u, 36 * u),
-                      _dica ?? "Clique num item dele para pegar; num seu, para guardar lá. ESC, E ou TAB fecham.", _texto);
+                      _dica ?? (mochila.DoLixo ? "Clique num item do lixo para pegar; num seu, para jogar lá. ESC, E ou TAB fecham."
+                                               : "Clique num item dele para pegar; num seu, para guardar lá. ESC, E ou TAB fecham."), _texto);
             float bw = 200 * u;
             if (GUI.Button(new Rect(x0 + 18 * u, by, bw, 38 * u), "Pegar tudo", _botao)) m.PedirPegarTudo(_id);
-            GUI.enabled = mochila.dinheiro > 0;
-            if (GUI.Button(new Rect(x0 + 28 * u + bw, by, bw, 38 * u), mochila.dinheiro > 0 ? $"Pegar {PrecosDoDiaZero.Dinheiro(mochila.dinheiro)}" : "Sem dinheiro", _botao))
-                m.PedirDinheiro(_id);
-            GUI.enabled = MaiorQueAMinha(mochila.mochila, inv.MochilaVestida.Value);
-            if (GUI.Button(new Rect(x0 + 38 * u + bw * 2, by, bw + 40 * u, 38 * u), "Trocar de mochila (a dele é maior)", _botao))
-                m.PedirTrocarDeMochila(_id);
+            // (24/11/2026) o dinheiro e a troca de mochila só quando há (o lixo nunca tem; o zumbi, às vezes)
+            if (mochila.tipo == TipoDeRecipiente.Mochila || mochila.dinheiro > 0)
+            {
+                GUI.enabled = mochila.dinheiro > 0;
+                if (GUI.Button(new Rect(x0 + 28 * u + bw, by, bw, 38 * u), mochila.dinheiro > 0 ? $"Pegar {PrecosDoDiaZero.Dinheiro(mochila.dinheiro)}" : "Sem dinheiro", _botao))
+                    m.PedirDinheiro(_id);
+            }
+            if (Itens.EhMochila(mochila.mochila))
+            {
+                GUI.enabled = MaiorQueAMinha(mochila.mochila, inv.MochilaVestida.Value);
+                if (GUI.Button(new Rect(x0 + 38 * u + bw * 2, by, bw + 40 * u, 38 * u), "Trocar de mochila (a dele é maior)", _botao))
+                    m.PedirTrocarDeMochila(_id);
+            }
             GUI.enabled = true;
             if (GUI.Button(new Rect(x0 + w - 18 * u - 120 * u, by, 120 * u, 38 * u), "Fechar", _botao)) Fechar();
         }

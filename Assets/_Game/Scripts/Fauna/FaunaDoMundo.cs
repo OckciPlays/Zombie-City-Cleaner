@@ -91,6 +91,7 @@ namespace ZombieCityCleaner.Fauna
                 nm?.CustomMessagingManager?.RegisterNamedMessageHandler(NomeDoSom, AoReceberSom);
                 nm?.CustomMessagingManager?.RegisterNamedMessageHandler(NomeDasCasas, AoReceberCasas);
             }
+            LigarOLixo(nm);   // (23/11/2026, o lixo revirado: FaunaDoMundo.Lixo.cs)
             ZombieManager.AoBarulho += AoBarulho;
             _ultimaHora = HorasDoJogo;
             // (a etapa 4) os vaga-lumes, só na tela de cada máquina
@@ -117,6 +118,7 @@ namespace ZombieCityCleaner.Fauna
                 nm.CustomMessagingManager?.UnregisterNamedMessageHandler(NomeDoSom);
                 nm.CustomMessagingManager?.UnregisterNamedMessageHandler(NomeDasCasas);
             }
+            DesligarOLixo(nm);
             if (_servidor)
             {
                 NiveisGuardados = NiveisParaSalvar();   // (sair e voltar ao mesmo mundo no mesmo Play)
@@ -213,6 +215,7 @@ namespace ZombieCityCleaner.Fauna
             ArrumarGrupos();
             Enviar();
             AtualizarCasas();
+            AtualizarLixos(agora);   // (23/11/2026: o susto da caçamba e os revirados para quem entrou)
             Ceu(agora);
             CheiroEVeneno(dt);
         }

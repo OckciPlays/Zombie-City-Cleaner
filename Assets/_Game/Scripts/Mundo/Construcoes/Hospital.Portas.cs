@@ -417,6 +417,12 @@ namespace ZombieCityCleaner.Mundo
             // fresta clara em volta de cada vidro, que parecia uma segunda moldura de metal
             const string vidro = "Vidro";
             const float margem = -0.012f;
+            // o hospital de antes do apocalipse (22/11/2026, a Woodcreek de antes): todos os vidros inteiros
+            if (nova)
+            {
+                foreach (var v in _vidros) AbandonoDaObra.Vidro(this, w, v, rnd, false, vidro, margem);
+                return;
+            }
             double r = rnd.NextDouble();
             float tapada = k.tipo == "quarto" ? 1f : k.tipo == "entrada" ? 0.15f : f == Terreo ? 0.4f : 0.08f;
             float quebrada = f == Terreo ? 0.25f : 0.3f, semVidro = 0.04f;

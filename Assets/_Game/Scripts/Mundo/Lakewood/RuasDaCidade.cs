@@ -35,12 +35,26 @@ namespace ZombieCityCleaner.Mundo
         }
 
         /// <summary>Monta as peças da cidade no desenho e na colisão (nas coordenadas do mundo).</summary>
+        /// <summary>
+        /// Montando a versão de antes do apocalipse (22/11/2026, a Woodcreek de antes): os postes de madeira nova com a lente
+        /// acesa, e a placa de entrada sem o risco vermelho e o zero de spray. Só na thread principal (o Montar é do Awake).
+        /// </summary>
+        public static bool Nova;
+
+        static string MadeiraVelha => Nova ? "Madeira" : "MadeiraVelha";
+
+        /// <summary>Os pontos das lâmpadas dos postes montados com <see cref="Nova"/> (no espaço do mapa, embaixo da lente).</summary>
+        public static readonly List<Vector3> LuzesDosPostes = new List<Vector3>();
+
         public static Resumo Montar(ChaoDeLakewood chao, string cidade, string populacao, MalhaDeObra vis, MalhaDeObra col, IDictionary<string, string> apelidos = null)
         {
             var r = new Resumo();
             var lotes = chao.Lotes.FindAll(l => l.Lote.cidade == cidade);
             if (lotes.Count == 0) return r;
             r.Calcada = Calcadas(chao, lotes, vis, col);
+            // as cidades grandes (23/11/2026, a cidade de Lakewood, no padrão do mapa sorteado): a calçada em todas as ruas
+            var c = chao.Mapa.cidades.Find(x => x.nome == cidade);
+            if (c != null && c.tipo == TipoDeCidade.Principal) r.Calcada += CalcadasDasRuas(chao, cidade, vis, col);
             r.Placas = PlacasDasEsquinas(chao, cidade, vis, col, apelidos);
             r.Entradas = Entradas(chao, cidade, lotes, populacao, vis, col);
             r.Postes = Postes(chao, cidade, lotes, vis, col);
@@ -183,6 +197,162 @@ namespace ZombieCityCleaner.Mundo
             return total;
         }
 
+        // ------------------------------------------------------------------ as calçadas das ruas (as cidades grandes)
+
+        // a direção da estrada saindo do ponto i para o lado do sentido (+1 para os pontos seguintes, -1 para os anteriores)
+        static Vector2 Saindo(ChaoDeLakewood.Estrada e, int i, int sentido)
+        {
+            int j = Mathf.Clamp(i + sentido, 0, e.Pontos.Length - 1);
+            return (e.Pontos[j] - e.Pontos[i]).normalized;
+        }
+
+        // o ponto, a direção e a altura do asfalto a "s" metros do começo da estrada
+        static void Em(ChaoDeLakewood.Estrada e, float s, out Vector2 p, out Vector2 t, out float h)
+        {
+            int i = PontoEm(e, s, out float u);
+            p = Vector2.Lerp(e.Pontos[i], e.Pontos[i + 1], u);
+            t = (e.Pontos[i + 1] - e.Pontos[i]).normalized;
+            h = Mathf.Lerp(e.Alturas[i], e.Alturas[i + 1], u);
+        }
+
+        /// <summary>
+        /// As calçadas das ruas novas de uma cidade grande, dos dois lados, de ponta a ponta, menos onde outra rua chega (a
+        /// calçada para onde passaria por cima do asfalto e da calçada dela, pelo ângulo das duas); nas esquinas entre duas
+        /// ruas da cidade, o quadrado que junta as duas calçadas, na altura do nó. Devolve os metros.
+        /// </summary>
+        static float CalcadasDasRuas(ChaoDeLakewood chao, string cidade, MalhaDeObra vis, MalhaDeObra col)
+        {
+            var nomes = new HashSet<string>();
+            foreach (var r in chao.Mapa.ruas) if (r.cidade == cidade) nomes.Add(r.nome);
+            bool DaCidade(ChaoDeLakewood.Estrada e) => e.Via.tipo == TipoDeVia.Rua && nomes.Contains(e.Via.nome);
+            // os cortes de cada lado de cada rua: (a estrada, o lado) → os trechos sem calçada
+            var cortes = new Dictionary<(int, int), List<(float a, float b)>>();
+            void Cortar(int e, int lado, float a, float b)
+            {
+                if (!cortes.TryGetValue((e, lado), out var l)) cortes[(e, lado)] = l = new List<(float a, float b)>();
+                l.Add((a, b));
+            }
+            var pernas = new List<(int e, int i, Vector2 d, float meia, bool rua, int sentido)>();
+            foreach (var no in chao.Nos)
+            {
+                pernas.Clear();
+                foreach (var (e, i) in no.Pontos)
+                {
+                    var est = chao.Estradas[e];
+                    bool rua = DaCidade(est);
+                    if (i + 1 < est.Pontos.Length) pernas.Add((e, i, Saindo(est, i, 1), est.MeiaLargura, rua, 1));
+                    if (i > 0) pernas.Add((e, i, Saindo(est, i, -1), est.MeiaLargura, rua, -1));
+                }
+                // quanto cada perna de rua da cidade fica sem calçada, de cada lado: o que as outras pernas daquele lado pedem
+                foreach (var p in pernas)
+                {
+                    if (!p.rua) continue;
+                    float esq = 0f, dir = 0f;
+                    foreach (var q in pernas)
+                    {
+                        if (q.e == p.e) continue;
+                        float cruz = p.d.x * q.d.y - p.d.y * q.d.x, sen = Mathf.Abs(cruz), cos = Vector2.Dot(p.d, q.d);
+                        if (sen < 0.25f) continue;   // (quase paralelas: a mesma linha seguindo)
+                        float fora = q.meia + (q.rua ? LarguraDaCalcada : 0f);
+                        float recuo = fora / sen + (p.meia + LarguraDaCalcada) * Mathf.Abs(cos) / sen;
+                        if (cruz > 0f) esq = Mathf.Max(esq, recuo); else dir = Mathf.Max(dir, recuo);
+                    }
+                    var est = chao.Estradas[p.e];
+                    float s = est.AoLongo[p.i];
+                    // a esquerda de quem anda no sentido da perna é o lado +1 da estrada se o sentido for +1
+                    int ladoEsq = p.sentido > 0 ? 1 : -1;
+                    if (esq > 0f) Cortar(p.e, ladoEsq, p.sentido > 0 ? s - 0.01f : s - esq, p.sentido > 0 ? s + esq : s + 0.01f);
+                    if (dir > 0f) Cortar(p.e, -ladoEsq, p.sentido > 0 ? s - 0.01f : s - dir, p.sentido > 0 ? s + dir : s + 0.01f);
+                }
+                // as esquinas: entre duas pernas seguidas (pelo ângulo) de ruas da cidade, quase em ângulo reto
+                pernas.Sort((x, y) => Mathf.Atan2(x.d.y, x.d.x).CompareTo(Mathf.Atan2(y.d.y, y.d.x)));
+                for (int k = 0; k < pernas.Count && pernas.Count >= 2; k++)
+                {
+                    var a = pernas[k];
+                    var b = pernas[(k + 1) % pernas.Count];
+                    if (!a.rua || !b.rua || a.e == b.e) continue;
+                    float ang = Vector2.SignedAngle(a.d, b.d);
+                    if (ang < 60f || ang > 120f) continue;
+                    float h = no.Altura + AlturaDaCalcada;
+                    var o = no.Posicao;
+                    // o quadrado: ao longo de a, da beira do asfalto de b até a calçada dela; ao longo de b, da beira de a
+                    var p0 = o + a.d * b.meia + b.d * a.meia;
+                    var p1 = o + a.d * (b.meia + LarguraDaCalcada) + b.d * a.meia;
+                    var p2 = o + a.d * (b.meia + LarguraDaCalcada) + b.d * (a.meia + LarguraDaCalcada);
+                    var p3 = o + a.d * b.meia + b.d * (a.meia + LarguraDaCalcada);
+                    var topo = new[] { V(p0, h), V(p1, h), V(p2, h), V(p3, h) };
+                    vis.Face(topo, Vector3.up, "Calcada");
+                    col.Face(topo, Vector3.up, "Calcada");
+                    // o meio-fio dos dois lados que dão para o asfalto
+                    var m1 = new[] { V(p0, h), V(p1, h), V(p1, h - 0.3f), V(p0, h - 0.3f) };
+                    var m2 = new[] { V(p0, h), V(p3, h), V(p3, h - 0.3f), V(p0, h - 0.3f) };
+                    vis.Face(m1, V(-b.d, 0f), "MeioFio");
+                    col.Face(m1, V(-b.d, 0f), "MeioFio");
+                    vis.Face(m2, V(-a.d, 0f), "MeioFio");
+                    col.Face(m2, V(-a.d, 0f), "MeioFio");
+                }
+            }
+            // as faixas de cada lado, fora dos cortes
+            float total = 0f;
+            for (int e = 0; e < chao.Estradas.Count; e++)
+            {
+                var est = chao.Estradas[e];
+                if (!DaCidade(est)) continue;
+                float fim = est.AoLongo[est.AoLongo.Length - 1];
+                foreach (int lado in new[] { -1, 1 })
+                {
+                    var l = cortes.TryGetValue((e, lado), out var lc) ? lc : new List<(float a, float b)>();
+                    l.Sort((x, y) => x.a.CompareTo(y.a));
+                    float s = 0f;
+                    foreach (var (a, b) in l)
+                    {
+                        if (a > s + 0.5f) total += Faixa(est, s, Mathf.Min(a, fim), lado, vis, col);
+                        s = Mathf.Max(s, b);
+                    }
+                    if (fim > s + 0.5f) total += Faixa(est, s, fim, lado, vis, col);
+                }
+            }
+            return total;
+        }
+
+        // uma faixa de calçada de um lado da estrada, de "sa" a "sb" metros do começo, com o meio-fio, o lado de trás e as
+        // pontas
+        static float Faixa(ChaoDeLakewood.Estrada e, float sa, float sb, int lado, MalhaDeObra vis, MalhaDeObra col)
+        {
+            if (sb - sa < 0.5f) return 0f;
+            var ss = new List<float> { sa };
+            for (int i = 0; i < e.Pontos.Length; i++)
+                if (e.AoLongo[i] > sa + 0.05f && e.AoLongo[i] < sb - 0.05f) ss.Add(e.AoLongo[i]);
+            ss.Add(sb);
+            float meia = e.MeiaLargura;
+            for (int k = 0; k + 1 < ss.Count; k++)
+            {
+                Em(e, ss[k], out var pa, out var ta, out float ha);
+                Em(e, ss[k + 1], out var pb, out var tb, out float hb);
+                // (a direção do trecho: os dois pontos no mesmo segmento)
+                var t = (pb - pa).sqrMagnitude > 1e-6f ? (pb - pa).normalized : ta;
+                var n = new Vector2(-t.y, t.x) * lado;
+                ha += AlturaDaCalcada;
+                hb += AlturaDaCalcada;
+                var a0 = V(pa + n * meia, ha);
+                var a1 = V(pa + n * (meia + LarguraDaCalcada), ha);
+                var b0 = V(pb + n * meia, hb);
+                var b1 = V(pb + n * (meia + LarguraDaCalcada), hb);
+                var topo = lado > 0 ? new[] { a0, b0, b1, a1 } : new[] { a0, a1, b1, b0 };
+                vis.Face(topo, Vector3.up, "Calcada");
+                col.Face(topo, Vector3.up, "Calcada");
+                var dentro = V(-n, 0f);
+                var meioFio = new[] { a0, b0, b0 + Vector3.down * 0.3f, a0 + Vector3.down * 0.3f };
+                vis.Face(meioFio, dentro, "MeioFio");
+                col.Face(meioFio, dentro, "MeioFio");
+                vis.Face(new[] { a1, b1, b1 + Vector3.down * 0.8f, a1 + Vector3.down * 0.8f }, -dentro, "Concreto");
+                if (k == 0) vis.Face(new[] { a0, a1, a1 + Vector3.down * 0.8f, a0 + Vector3.down * 0.3f }, V(-t, 0f), "Concreto");
+                if (k + 2 == ss.Count) vis.Face(new[] { b0, b1, b1 + Vector3.down * 0.8f, b0 + Vector3.down * 0.3f }, V(t, 0f), "Concreto");
+                // (sem as juntas das placas: com os 190 km de calçada da cidade de Lakewood, eram uns 400 mil triângulos)
+            }
+            return sb - sa;
+        }
+
         // ------------------------------------------------------------------ as placas das esquinas
 
         // em cada nó com uma rua nova: o poste verde na esquina, com uma placa ao longo de cada rua (o nome dela nas duas
@@ -286,14 +456,14 @@ namespace ZombieCityCleaner.Mundo
             foreach (float x in new[] { -1.35f, 1.35f })
             {
                 var poste = pe + dir * x;
-                vis.Caixa(Matrix4x4.TRS(poste + Vector3.up * 1.4f, giro, Vector3.one), new Vector3(0.16f, 2.8f, 0.16f), "MadeiraVelha");
+                vis.Caixa(Matrix4x4.TRS(poste + Vector3.up * 1.4f, giro, Vector3.one), new Vector3(0.16f, 2.8f, 0.16f), MadeiraVelha);
                 col.Caixa(Matrix4x4.TRS(poste + Vector3.up * 1.4f, giro, Vector3.one), new Vector3(0.2f, 2.8f, 0.2f), "Madeira");
             }
             var meio = pe + Vector3.up * 1.95f;
             vis.Caixa(Matrix4x4.TRS(meio, giro, Vector3.one), new Vector3(3.4f, 1.7f, 0.1f), "Madeira");
             // a moldura
-            vis.Caixa(Matrix4x4.TRS(meio + f * 0.055f + Vector3.up * 0.8f, giro, Vector3.one), new Vector3(3.4f, 0.1f, 0.02f), "MadeiraVelha");
-            vis.Caixa(Matrix4x4.TRS(meio + f * 0.055f + Vector3.down * 0.8f, giro, Vector3.one), new Vector3(3.4f, 0.1f, 0.02f), "MadeiraVelha");
+            vis.Caixa(Matrix4x4.TRS(meio + f * 0.055f + Vector3.up * 0.8f, giro, Vector3.one), new Vector3(3.4f, 0.1f, 0.02f), MadeiraVelha);
+            vis.Caixa(Matrix4x4.TRS(meio + f * 0.055f + Vector3.down * 0.8f, giro, Vector3.one), new Vector3(3.4f, 0.1f, 0.02f), MadeiraVelha);
             var face = meio + f * 0.066f;
             Letreiro(vis, "WELCOME TO", face + Vector3.up * 0.45f, dir, Vector3.up, f, 0.2f, "PlacaBranca");
             Letreiro(vis, cidade.ToUpperInvariant(), face - Vector3.up * 0.1f, dir, Vector3.up, f, 0.42f, "PlacaBranca");
@@ -302,9 +472,12 @@ namespace ZombieCityCleaner.Mundo
             Letreiro(vis, pop, face - Vector3.up * 0.62f, dir, Vector3.up, f, 0.15f, "PlacaBranca");
             // o risco vermelho por cima da população (e o zero de spray do lado)
             float larg = Letras.Largura(pop, 0.15f) + 0.15f;
-            var risco = face + f * 0.006f - Vector3.up * 0.545f;
-            vis.Caixa(Matrix4x4.TRS(risco, giro * Quaternion.Euler(0f, 0f, 8f), Vector3.one), new Vector3(larg, 0.05f, 0.004f), "PlacaVermelha");
-            Letreiro(vis, "0", face + f * 0.004f + dir * (larg * 0.5f + 0.25f) - Vector3.up * 0.7f, dir, Vector3.up, f, 0.3f, "PlacaVermelha");
+            if (!Nova)
+            {
+                var risco = face + f * 0.006f - Vector3.up * 0.545f;
+                vis.Caixa(Matrix4x4.TRS(risco, giro * Quaternion.Euler(0f, 0f, 8f), Vector3.one), new Vector3(larg, 0.05f, 0.004f), "PlacaVermelha");
+                Letreiro(vis, "0", face + f * 0.004f + dir * (larg * 0.5f + 0.25f) - Vector3.up * 0.7f, dir, Vector3.up, f, 0.3f, "PlacaVermelha");
+            }
         }
 
         // ------------------------------------------------------------------ os postes
@@ -356,11 +529,11 @@ namespace ZombieCityCleaner.Mundo
         // um poste de madeira de 8,4 m com a travessa, os isoladores e o braço da luz (apagada) virado para a rua
         static void PosteDeMadeira(MalhaDeObra vis, MalhaDeObra col, Vector3 pe, Vector3 paraARua)
         {
-            vis.Cilindro(Matrix4x4.Translate(pe + Vector3.down * 0.3f), 0.15f, 0.11f, 8.7f, 6, "MadeiraVelha");
+            vis.Cilindro(Matrix4x4.Translate(pe + Vector3.down * 0.3f), 0.15f, 0.11f, 8.7f, 6, MadeiraVelha);
             col.Caixa(Matrix4x4.Translate(pe + Vector3.up * 3f), new Vector3(0.3f, 6f, 0.3f), "Madeira");
             var lado = Vector3.Cross(Vector3.up, paraARua).normalized;
             var giro = Quaternion.LookRotation(paraARua, Vector3.up);
-            vis.Caixa(Matrix4x4.TRS(pe + Vector3.up * 7.75f, giro, Vector3.one), new Vector3(1.8f, 0.1f, 0.1f), "MadeiraVelha");
+            vis.Caixa(Matrix4x4.TRS(pe + Vector3.up * 7.75f, giro, Vector3.one), new Vector3(1.8f, 0.1f, 0.1f), MadeiraVelha);
             foreach (float x in new[] { -0.8f, -0.3f, 0.3f, 0.8f })
                 vis.Cilindro(Matrix4x4.Translate(pe + lado * x + Vector3.up * 7.8f), 0.035f, 0.025f, 0.12f, 4, "Cromo");
             // o braço e a luminária (a lente apagada embaixo)
@@ -368,12 +541,13 @@ namespace ZombieCityCleaner.Mundo
             var braco1 = braco0 + paraARua * 1.5f + Vector3.up * 0.25f;
             vis.Tubo(braco0, braco1, 0.035f, 4, "Metal");
             var cabeca = Matrix4x4.TRS(braco1 + paraARua * 0.2f, giro, Vector3.one);
+            if (Nova) LuzesDosPostes.Add(braco1 + paraARua * 0.2f + Vector3.down * 0.2f);
             vis.Caixa(cabeca, new Vector3(0.28f, 0.12f, 0.5f), "Poste");
             vis.Face(new[]
             {
                 braco1 + paraARua * 0.02f + lado * 0.1f + Vector3.down * 0.061f, braco1 + paraARua * 0.38f + lado * 0.1f + Vector3.down * 0.061f,
                 braco1 + paraARua * 0.38f - lado * 0.1f + Vector3.down * 0.061f, braco1 + paraARua * 0.02f - lado * 0.1f + Vector3.down * 0.061f,
-            }, Vector3.down, "Lente");
+            }, Vector3.down, Nova ? "JanelaAcesa" : "Lente");
         }
     }
 }

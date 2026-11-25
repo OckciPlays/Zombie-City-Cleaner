@@ -72,6 +72,24 @@ namespace ZombieCityCleaner.Mundo
             }
         }
 
+        /// <summary>
+        /// As janelas de fora de uma obra de antes do apocalipse (22/11/2026, a Woodcreek de antes, a etapa 3 do Docs/23):
+        /// todas com o vidro inteiro, que abrem (só com as portas vivas). Sem isso, com o grau 0, as <see cref="Janelas"/> não
+        /// faziam nada e os vãos ficavam sem vidro.
+        /// </summary>
+        public static void JanelasNovas(Obra obra)
+        {
+            if (!obra.portasVivas) return;
+            _fora ??= new List<Parede>();
+            DeFora(obra, _fora);
+            foreach (var w in _fora)
+                foreach (var ab in w.aberturas)
+                {
+                    if (ab.EhPorta || obra.Tapada(w, ab)) continue;
+                    obra.janelas.Add(JanelaViva(obra, w, ab));
+                }
+        }
+
         // o ponto da janela que abre: o meio do peitoril (no meio da parede), ao longo dela e para fora
         static JanelaDaObra JanelaViva(Obra obra, Parede w, Abertura ab)
         {

@@ -84,6 +84,10 @@ namespace ZombieCityCleaner.Mundo
             UsoDoLote.Especial => new Color(0.62f, 0.72f, 0.92f),
             UsoDoLote.Cabana => new Color(0.72f, 0.5f, 0.31f),
             UsoDoLote.Acampamento => new Color(0.45f, 0.75f, 0.42f),
+            UsoDoLote.Predio => new Color(0.5f, 0.56f, 0.72f),
+            UsoDoLote.Estacionamento => new Color(0.42f, 0.42f, 0.44f),
+            UsoDoLote.Praca => new Color(0.5f, 0.72f, 0.4f),
+            UsoDoLote.Galpao => new Color(0.66f, 0.68f, 0.7f),
             _ => LoteVazio,
         };
 
@@ -116,6 +120,9 @@ namespace ZombieCityCleaner.Mundo
                 UsoDoLote.Loja => (0.86f, 0.8f, 0.06f),
                 UsoDoLote.Posto => (0.8f, 0.7f, 0.08f),
                 UsoDoLote.Cabana => (0.6f, 0.55f, 0.2f),
+                UsoDoLote.Predio => (0.88f, 0.72f, 0.04f),
+                UsoDoLote.Estacionamento or UsoDoLote.Praca => (0.92f, 0.9f, 0.05f),
+                UsoDoLote.Galpao => (0.86f, 0.7f, 0.1f),
                 _ => (0.7f, 0.6f, 0.15f),
             };
             meia = new Vector2(fl * l.largura * 0.5f, ff * l.fundo * 0.5f);

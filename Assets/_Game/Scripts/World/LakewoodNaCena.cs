@@ -155,6 +155,8 @@ namespace ZombieCityCleaner.World
             MontarEstradas();
             MontarAsCidades();
             MontarACasaDaPartida();
+            // o bunker da comunidade (a etapa 2 do Docs/23): com ele, a partida é a sala de operações (LakewoodNaCena.Bunker.cs)
+            FixarOBunker();
             MontarBorda();
             float esperouOLonge = Time.realtimeSinceStartup;
             gradeDeLonge.Wait();
@@ -192,6 +194,7 @@ namespace ZombieCityCleaner.World
             AmbienteDoDia.SemNeblina = false;
             Graficos.TabelaDaFloresta = false;
             MobiliaNova.DeslocamentoDasChaves = Vector3.zero;
+            EsquecerAEpoca();
         }
 
         /// <summary>O nome do setor onde o ponto do mundo está ("A1" no canto sudoeste).</summary>
@@ -413,6 +416,9 @@ namespace ZombieCityCleaner.World
 
         void Update()
         {
+            // a época da partida (22/11/2026, a Woodcreek de antes: LakewoodNaCena.Epoca.cs) e o Dia 0 (LakewoodNaCena.DiaZero.cs)
+            AcompanharAEpoca();
+            AcompanharODiaZero();
             var olho = Camera.main;
             if (olho == null) return;
             // (a câmera está no mundo; as contas daqui, no mapa)
@@ -442,6 +448,7 @@ namespace ZombieCityCleaner.World
             }
             Receber();
             GarantirOChao();
+            EsperarOBunker();
             ReceberAsObras();
             PorOCarro();
             Pinheiros(olho, c);
@@ -883,7 +890,8 @@ namespace ZombieCityCleaner.World
                 float h = ChaoNoMundo.Altura(p.x, p.z);
                 var mov = meu.GetComponent<MovimentoPrimeiraPessoa>();
                 var passageiro = meu.GetComponent<PassageiroDoCarro>();
-                if (p.y < h - 2.5f && mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro))
+                // (dentro do bunker e no subsolo do hospital, os andares ficam abaixo do chão do terreno: ali não vale)
+                if (p.y < h - 2.5f && mov != null && !mov.Voando && (passageiro == null || !passageiro.NoCarro) && !EmObraFunda(p))
                 {
                     string falta = QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto";
                     GarantirEm(NoMapa2(p), Vector2.zero, 10f, "o jogador");
@@ -897,7 +905,7 @@ namespace ZombieCityCleaner.World
                 if (carro == null || !carro.IsSpawned || !carro.IsOwner) continue;
                 var p = carro.transform.position;
                 float h = ChaoNoMundo.Altura(p.x, p.z);
-                if (p.y > h - 3f) continue;
+                if (p.y > h - 3f || EmObraFunda(p)) continue;
                 string falta = QueFaltaAosZumbis(p, 8f) ?? "o chão em volta estava pronto";
                 GarantirEm(NoMapa2(p), Vector2.zero, 14f, $"o veículo {carro.name}");
                 float y = AlturaParaVoltar(p, h, carro.transform);

@@ -17,5 +17,11 @@ namespace ZombieCityCleaner.DiaZero
         // (20/11/2026: o carro passando gravado tinha ruído e saiu; até achar outro, o motor gravado da perua a 1000 rpm)
         public static AudioClip MotorDoCarro => SonsGravados.Um("DiaZero", "carro_passando") ?? SonsGravados.Um("Carro", "motor_a_2_");
         public static AudioClip Agua => SonsGravados.Um("DiaZero", "mangueira");   // (20/11/2026: os gravados)
+
+        /// <summary>
+        /// (23/11/2026, a pedido: "sirenes tocando" na noite do colapso) A sirene de alerta da defesa civil, gravada (o "National
+        /// Alert Signal" do sfxjar, CC0 do BigSoundBank), e a mesma um pouco mais aguda: tocam longe, em laço, a noite toda.
+        /// </summary>
+        public static AudioClip[] Sirenes => SonsGravados.Varios("DiaZero", "sirene_");
     }
 }

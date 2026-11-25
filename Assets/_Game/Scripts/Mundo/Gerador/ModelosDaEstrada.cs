@@ -89,7 +89,7 @@ namespace ZombieCityCleaner.Mundo
         /// colisão em malha, os pisos e a caixa de dentro), a cobertura com as duas ilhas de bombas na frente dela e o totem
         /// com a placa perto da estrada. A cor da bandeira muda com a variante.
         /// </summary>
-        public static Modelo Posto(int variante)
+        public static Modelo Posto(int variante, bool semMobilia = false)
         {
             var m = new Modelo();
             string marca = CoresDoPosto[Mathf.Abs(variante) % CoresDoPosto.Length];
@@ -102,7 +102,9 @@ namespace ZombieCityCleaner.Mundo
             planta.placa = marca;
             var loja = new Loja(planta, medidas);
             loja.Montar((x, z) => 0f, 0f);
-            Mobilia.Por(loja.moveis, loja.vis, loja.col, planta.semente);   // a mobília (sem ela registrada, nada)
+            // a mobília (sem ela registrada, nada); no posto de antes do Lakewood, sem ela (22/11/2026: os produtos do Dia 0
+            // entram nas prateleiras desenhadas pelo DiaZero.PrateleirasDoDia, sem os itens que vêm no modelo)
+            if (!semMobilia) Mobilia.Por(loja.moveis, loja.vis, loja.col, planta.semente);
             var M = Matrix4x4.TRS(new Vector3(0f, 0f, -10f), Quaternion.Euler(0f, 180f, 0f), Vector3.one);
             m.Malha.Juntar(loja.vis, M, planta.espelhar);
             m.MalhaDeColisao = new MalhaDeObra();

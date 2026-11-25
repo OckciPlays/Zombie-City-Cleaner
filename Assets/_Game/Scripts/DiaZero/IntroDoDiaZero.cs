@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.DiaZero
     ///  - de volta à TV: os primeiros casos nos Estados Unidos, no nosso estado; a última pancada e o fim.
     /// Os cenários ficam longe da rua (montados quando a introdução começa, e apagados no fim). Enter ou Espaço pula.
     /// </summary>
-    public class IntroDoDiaZero : MonoBehaviour
+    public partial class IntroDoDiaZero : MonoBehaviour
     {
         [Tooltip("A trilha da introdução (Audio/DiaZero/IntroDoDiaZero.ogg).")]
         public AudioClip trilha;
@@ -36,7 +36,6 @@ namespace ZombieCityCleaner.DiaZero
         public static bool Tocando { get; private set; }
 
         public const float Duracao = 91f;
-        static readonly Vector3 Longe = new Vector3(0f, 0f, -420f);
 
         RuaDoDiaZero _rua;
         Transform _cenarios;
@@ -221,6 +220,12 @@ namespace ZombieCityCleaner.DiaZero
 
         void Filmar(float t)
         {
+            // (o jornal da pandemia, o Dia 0 na Woodcreek: IntroDoDiaZero.Pandemia.cs)
+            if (pandemia)
+            {
+                FilmarAPandemia(t);
+                return;
+            }
             AmbienteDoDia.Escurecer = t >= 56f && t < 72f ? 1f : 0f;
             bool naTv = t < 10f || (t >= 72f && t < 84f);
             if (_estudio != null) _estudio.enabled = naTv;
@@ -341,6 +346,7 @@ namespace ZombieCityCleaner.DiaZero
         bool _tvPronta;
         Vector2 _tvTamanho;
         float _procurandoDesde = -1f;
+        GameObject _eDaTv;
 
         /// <summary>A TV da sala foi achada (a tela e o E dela).</summary>
         public bool TvPronta => _tvPronta;
@@ -349,6 +355,12 @@ namespace ZombieCityCleaner.DiaZero
         // ela em 15 s, uma tela no lugar do rack
         void PrepararATv()
         {
+            // (a casa da Woodcreek é montada de novo quando alguém volta para perto: a TV dela também; 22/11/2026)
+            if (_tvPronta && _eDaTv == null)
+            {
+                _tvPronta = false;
+                _procurandoDesde = -1f;
+            }
             if (_tvPronta || _rua == null || !_rua.Pronta || _rua.NossaCasa == null || JogadorRede.Local == null) return;
             if (_procurandoDesde < 0f) _procurandoDesde = Time.time;
             Transform tv = null;
@@ -375,6 +387,7 @@ namespace ZombieCityCleaner.DiaZero
             _tvPronta = true;
             // o E da TV: uma caixa na frente da tela (um pouco à frente do móvel, para a mira achar antes dele)
             var go = new GameObject("Televisão (E)");
+            _eDaTv = go;
             go.transform.SetParent(_rua.NossaCasa, true);
             go.transform.SetPositionAndRotation(_tvCentro + _tvFrente * 0.12f, Quaternion.LookRotation(_tvFrente));
             var col = go.AddComponent<BoxCollider>();
@@ -407,7 +420,7 @@ namespace ZombieCityCleaner.DiaZero
         {
             _cenarios = new GameObject("Cenários da introdução").transform;
             _cenarios.SetParent(transform, false);
-            _cenarios.position = new Vector3((_rua.Inicio + _rua.Fim) / 2f, 0f, 0f) + Longe;
+            _cenarios.position = _rua.LugarDosCenarios;
             var M = Medidas.DoJogo;
             var mat = _rua.material;
             Mesh Movel(string nome)
@@ -459,7 +472,7 @@ namespace ZombieCityCleaner.DiaZero
                 faixa.Caixa(new Vector3(0f, -0.205f, 1f), new Vector3(0.74f, 0.085f, 0.004f), "PlacaVermelha");
                 faixa.Caixa(new Vector3(-0.29f, 0.215f, 1f), new Vector3(0.12f, 0.06f, 0.004f), "PlacaVermelha");
                 Peca("Faixa", faixa, cam.transform, mat);
-                _textoDaFaixa = new List<ModelosDaEstrada.Texto> { TextoDaFaixa(FaixaDoJornal(0f)) };
+                _textoDaFaixa = new List<ModelosDaEstrada.Texto> { TextoDaFaixa(Faixa(0f)) };
                 _faixaDoJornal = Letras(cam.transform, new Vector3(0f, -0.205f, 0.996f), _textoDaFaixa);
                 Letras(cam.transform, new Vector3(-0.29f, 0.215f, 0.996f), new List<ModelosDaEstrada.Texto>
                 {
@@ -521,6 +534,13 @@ namespace ZombieCityCleaner.DiaZero
                     l.intensity = 1.8f;
                     l.color = new Color(0.9f, 1f, 0.95f);
                 }
+            }
+
+            // (o jornal da pandemia: o aeroporto, a entrevista do governo e o mercado, no lugar do que vem depois)
+            if (pandemia)
+            {
+                MontarAPandemia(M, mat, npc);
+                return;
             }
 
             // a rua no Brasil: o homem de pedra na calçada, a faixa da polícia, quem olha de longe
@@ -749,7 +769,7 @@ namespace ZombieCityCleaner.DiaZero
         string _faixaAgora;
         void AtualizarAFaixa(float t)
         {
-            string f = FaixaDoJornal(t);
+            string f = Faixa(t);
             if (f == _faixaAgora || _faixaDoJornal == null) return;
             _faixaAgora = f;
             _textoDaFaixa[0] = TextoDaFaixa(f);
@@ -797,14 +817,14 @@ namespace ZombieCityCleaner.DiaZero
                 _selo.normal.textColor = new Color(0.62f, 0.08f, 0.07f);
                 GUI.Label(new Rect(40 * u, y, 120 * u, 40 * u), "AO VIVO", _selo);
                 _selo.normal.textColor = corDoSelo;
-                GUI.Label(new Rect(175 * u, y, Screen.width - 260 * u, 40 * u), FaixaDoJornal(t), _faixa);
+                GUI.Label(new Rect(175 * u, y, Screen.width - 260 * u, 40 * u), Faixa(t), _faixa);
                 GUI.Label(new Rect(Screen.width - 150 * u, barra + 16 * u, 110 * u, 30 * u), "24H", _selo);
                 float pisca = Mathf.Repeat(t, 1f) < 0.6f ? 1f : 0f;
                 Caixa(new Rect(44 * u, barra + 24 * u, 12 * u, 12 * u), new Color(0.9f, 0.1f, 0.08f, pisca));
                 GUI.Label(new Rect(62 * u, barra + 14 * u, 90 * u, 30 * u), "REC", _selo);
             }
             // a história, escrita aos poucos na faixa de baixo
-            foreach (var f in Falas)
+            foreach (var f in FalasAgora)
             {
                 if (t < f.de || t > f.ate) continue;
                 int letras = Mathf.Clamp(Mathf.FloorToInt((t - f.de) * 32f), 0, f.texto.Length);
@@ -845,6 +865,42 @@ namespace ZombieCityCleaner.DiaZero
         bool _pedra, _congelado;
         int _quadros;
         Animator _an;
+        Vector3 _de, _ate;
+        float _vel, _fase;
+        bool _anda;
+
+        /// <summary>
+        /// Anda de verdade (23/11/2026, o Pedro: "alguns npcs ficam correndo / andando e ficam parados no mesmo lugar"): de
+        /// 'de' até 'ate' (no mundo), na velocidade (m/s), virado para onde vai, e volta ao começo (o laço fica fora do
+        /// quadro); 'fase' (0 a 1) é onde ele está no começo. A animação acompanha o passo (o "Andar" a 1,35 m/s, o "Correr"
+        /// a 3,6 m/s).
+        /// </summary>
+        public void Percorrer(Vector3 de, Vector3 ate, float velocidade, float fase, bool correndo)
+        {
+            _de = de;
+            _ate = ate;
+            _vel = velocidade;
+            _fase = Mathf.Repeat(fase, 1f) * Vector3.Distance(de, ate);
+            _anda = true;
+            var dir = ate - de;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir);
+            if (_an != null)
+            {
+                _an.Play(correndo ? "Correr" : "Andar", 0, Random.value);
+                _an.speed = correndo ? velocidade / 3.6f : Mathf.Clamp(velocidade / 1.35f, 0.5f, 1.4f);
+            }
+            Update();
+        }
+
+        void Update()
+        {
+            if (!_anda) return;
+            float compr = Vector3.Distance(_de, _ate);
+            if (compr < 0.01f) return;
+            float s = Mathf.Repeat(Time.time * _vel + _fase, compr);
+            transform.position = Vector3.Lerp(_de, _ate, s / compr);
+        }
         Transform _coluna, _peito, _bracoD, _anteD, _maoD, _bracoE, _anteE, _maoE;
 
         public void Iniciar(string animacao, Pose pose, bool pedra = false, bool doente = false)

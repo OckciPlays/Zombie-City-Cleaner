@@ -24,8 +24,11 @@ namespace ZombieCityCleaner.EditorTools
         static readonly Color Amarelo = new Color(1f, 0.84f, 0.36f);
         static readonly Color Estrada = new Color(0.34f, 0.34f, 0.36f), BeiraDaEstrada = new Color(0.12f, 0.12f, 0.12f);
 
-        /// <summary>Grava o plano da cidade e devolve o caminho (nulo sem lotes).</summary>
-        public static string Gravar(MapaDeLakewood mapa, ChaoDeLakewood chao, string cidade, IDictionary<string, string> apelidos = null)
+        /// <summary>
+        /// Grava o plano da cidade e devolve o caminho (nulo sem lotes). A escala é quantos metros cada pixel mostra (1 na
+        /// Woodcreek; 2 na Lakewood, de 3,3 × 2,8 km).
+        /// </summary>
+        public static string Gravar(MapaDeLakewood mapa, ChaoDeLakewood chao, string cidade, IDictionary<string, string> apelidos = null, float escala = 1f)
         {
             var lotes = mapa.lotes.FindAll(l => l.cidade == cidade);
             var ruas = mapa.ruas.FindAll(r => r.cidade == cidade);
@@ -41,8 +44,8 @@ namespace ZombieCityCleaner.EditorTools
             foreach (var l in lotes) foreach (var c in l.Cantos()) Abrir(c);
             foreach (var r in ruas) foreach (var p in r.pontos) Abrir(p);
             x0 = Mathf.Floor(x0 - Margem); z0 = Mathf.Floor(z0 - Margem);
-            int W = Mathf.CeilToInt(x1 + Margem - x0), H = Mathf.Max(Mathf.CeilToInt(z1 + Margem - z0), 900);
-            var px = Chao(mapa, chao, x0, z0, W, H);
+            int W = Mathf.CeilToInt((x1 + Margem - x0) / escala), H = Mathf.Max(Mathf.CeilToInt((z1 + Margem - z0) / escala), 900);
+            var px = Chao(mapa, chao, x0, z0, W, H, escala);
 
             void Pinta(int i, int j, Color c)
             {
@@ -55,10 +58,10 @@ namespace ZombieCityCleaner.EditorTools
             {
                 var fr = new Vector2(-lado.y, lado.x);
                 float alcance = Mathf.Sqrt(meiaA * meiaA + meiaB * meiaB) + 1f;
-                for (int j = Mathf.FloorToInt(meio.y - z0 - alcance); j <= Mathf.CeilToInt(meio.y - z0 + alcance); j++)
-                for (int i = Mathf.FloorToInt(meio.x - x0 - alcance); i <= Mathf.CeilToInt(meio.x - x0 + alcance); i++)
+                for (int j = Mathf.FloorToInt((meio.y - z0 - alcance) / escala); j <= Mathf.CeilToInt((meio.y - z0 + alcance) / escala); j++)
+                for (int i = Mathf.FloorToInt((meio.x - x0 - alcance) / escala); i <= Mathf.CeilToInt((meio.x - x0 + alcance) / escala); i++)
                 {
-                    var q = new Vector2(x0 + i + 0.5f, z0 + j + 0.5f) - meio;
+                    var q = new Vector2(x0 + (i + 0.5f) * escala, z0 + (j + 0.5f) * escala) - meio;
                     if (Mathf.Abs(Vector2.Dot(q, lado)) <= meiaA && Mathf.Abs(Vector2.Dot(q, fr)) <= meiaB) Pinta(i, j, cor);
                 }
             }
@@ -69,11 +72,11 @@ namespace ZombieCityCleaner.EditorTools
                 {
                     var a = pts[s];
                     var b = pts[(s + 1) % n];
-                    int i0 = Mathf.FloorToInt(Mathf.Min(a.x, b.x) - x0 - meia - 1), i1 = Mathf.CeilToInt(Mathf.Max(a.x, b.x) - x0 + meia + 1);
-                    int j0 = Mathf.FloorToInt(Mathf.Min(a.y, b.y) - z0 - meia - 1), j1 = Mathf.CeilToInt(Mathf.Max(a.y, b.y) - z0 + meia + 1);
+                    int i0 = Mathf.FloorToInt((Mathf.Min(a.x, b.x) - x0 - meia - 1) / escala), i1 = Mathf.CeilToInt((Mathf.Max(a.x, b.x) - x0 + meia + 1) / escala);
+                    int j0 = Mathf.FloorToInt((Mathf.Min(a.y, b.y) - z0 - meia - 1) / escala), j1 = Mathf.CeilToInt((Mathf.Max(a.y, b.y) - z0 + meia + 1) / escala);
                     for (int j = j0; j <= j1; j++)
                     for (int i = i0; i <= i1; i++)
-                        if (Linhas.DistanciaDoSegmento(new Vector2(x0 + i + 0.5f, z0 + j + 0.5f), a, b, out _) <= meia) Pinta(i, j, cor);
+                        if (Linhas.DistanciaDoSegmento(new Vector2(x0 + (i + 0.5f) * escala, z0 + (j + 0.5f) * escala), a, b, out _) <= Mathf.Max(meia, escala * 0.5f)) Pinta(i, j, cor);
                 }
             }
 
@@ -81,9 +84,9 @@ namespace ZombieCityCleaner.EditorTools
             var cid = mapa.cidades.Find(c => c.nome == cidade);
             if (cid != null && cid.contorno.Count >= 3)
             {
-                var cont = Linhas.Reamostrar(MapaDeLakewood.Contorno(cid.contorno), 2f, true);
+                var cont = Linhas.Reamostrar(MapaDeLakewood.Contorno(cid.contorno), 2f * escala, true);
                 for (int k = 0; k < cont.Count; k++)
-                    if (k % 12 < 7) Linha(new[] { cont[k], cont[(k + 1) % cont.Count] }, false, 1.2f, new Color(0.95f, 0.9f, 0.7f));
+                    if (k % 12 < 7) Linha(new[] { cont[k], cont[(k + 1) % cont.Count] }, false, 1.2f * escala, new Color(0.95f, 0.9f, 0.7f));
             }
 
             // os lotes: a beira, o chão e a construção
@@ -91,15 +94,15 @@ namespace ZombieCityCleaner.EditorTools
             {
                 Caixa(l.meio, l.Lado, l.largura * 0.5f, l.fundo * 0.5f, PintorDeLakewood.BeiraDoLote);
                 var chaoDoLote = l.tipo == UsoDoLote.Vazio ? PintorDeLakewood.LoteVazio : PintorDeLakewood.Quintal;
-                Caixa(l.meio, l.Lado, l.largura * 0.5f - 1f, l.fundo * 0.5f - 1f, chaoDoLote);
+                Caixa(l.meio, l.Lado, l.largura * 0.5f - escala, l.fundo * 0.5f - escala, chaoDoLote);
                 if (!PintorDeLakewood.Pegada(l, out var pm, out var meia)) continue;
                 var c = l.NoMapa(pm.x, pm.y);
-                Caixa(c, l.Lado, meia.x + 0.8f, meia.y + 0.8f, PintorDeLakewood.BeiraDoLote);
+                Caixa(c, l.Lado, meia.x + 0.8f * escala, meia.y + 0.8f * escala, PintorDeLakewood.BeiraDoLote);
                 Caixa(c, l.Lado, meia.x, meia.y, PintorDeLakewood.CorDoLote(l.tipo));
             }
 
             // as estradas da Etapa 5 e as ruas novas, na largura de verdade
-            var caixa = Rect.MinMaxRect(x0 - 50f, z0 - 50f, x0 + W + 50f, z0 + H + 50f);
+            var caixa = Rect.MinMaxRect(x0 - 50f, z0 - 50f, x0 + W * escala + 50f, z0 + H * escala + 50f);
             var trechos = new List<(string nome, List<Vector2> pts, float meia, bool nova)>();
             foreach (var e in chao.Estradas)
             {
@@ -117,7 +120,7 @@ namespace ZombieCityCleaner.EditorTools
             }
             foreach (var r in ruas)
                 if (r.pontos.Count >= 2) trechos.Add((r.nome, r.fechada ? new List<Vector2>(r.pontos) { r.pontos[0] } : r.pontos, r.MeiaLargura, true));
-            foreach (var t in trechos) Linha(t.pts, false, t.meia + 0.9f, BeiraDaEstrada);
+            foreach (var t in trechos) Linha(t.pts, false, t.meia + 0.9f * escala, BeiraDaEstrada);
             foreach (var t in trechos) Linha(t.pts, false, t.meia, t.nova ? PintorDeLakewood.RuaNova * 0.85f : Estrada);
 
             var mapaTex = new Texture2D(W, H, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Point };
@@ -140,7 +143,9 @@ namespace ZombieCityCleaner.EditorTools
             }
             foreach (var l in lotes)
             {
-                if (l.tipo == UsoDoLote.Casa || l.tipo == UsoDoLote.Vazio || l.tipo == UsoDoLote.Loja || l.tipo == UsoDoLote.Cabana) continue;
+                if (l.tipo == UsoDoLote.Casa || l.tipo == UsoDoLote.Vazio || l.tipo == UsoDoLote.Loja || l.tipo == UsoDoLote.Cabana ||
+                    l.tipo == UsoDoLote.Predio || l.tipo == UsoDoLote.Estacionamento || l.tipo == UsoDoLote.Galpao) continue;
+                if (l.tipo == UsoDoLote.Praca && escala > 1f) continue;
                 PintorDeLakewood.Pegada(l, out var pm, out _);
                 string nome = l.tipo == UsoDoLote.Hospital ? "Hospital" : char.ToUpper(l.Descricao[0]) + l.Descricao.Substring(1);
                 var cor = l.tipo == UsoDoLote.Hospital ? new Color(0.1f, 0.1f, 0.14f) : Amarelo;
@@ -155,6 +160,10 @@ namespace ZombieCityCleaner.EditorTools
             float metros = 0f;
             foreach (var r in ruas) metros += Linhas.Comprimento(r.pontos, r.fechada);
             linhas.Append($"{lotes.Count} lotes:\n  {Conta(UsoDoLote.Casa)} casas e {Conta(UsoDoLote.Vazio)} vazios\n  {Conta(UsoDoLote.Loja)} lojas\n");
+            if (Conta(UsoDoLote.Predio) > 0) linhas.Append($"  {Conta(UsoDoLote.Predio)} prédios\n");
+            if (Conta(UsoDoLote.Estacionamento) + Conta(UsoDoLote.Praca) > 0)
+                linhas.Append($"  {Conta(UsoDoLote.Estacionamento)} estacionamentos e {Conta(UsoDoLote.Praca)} praças\n");
+            if (Conta(UsoDoLote.Galpao) > 0) linhas.Append($"  {Conta(UsoDoLote.Galpao)} galpões (a fazer)\n");
             var outros = new List<string>();
             if (Conta(UsoDoLote.Posto) > 0) outros.Add("o posto");
             if (Conta(UsoDoLote.Hospital) > 0) outros.Add("o hospital");
@@ -168,14 +177,14 @@ namespace ZombieCityCleaner.EditorTools
             {
                 ImagemDeLakewood.Elemento<RawImage>(t, 0, 0, W, H).texture = mapaTex;
                 foreach (var nm in nomes)
-                    ImagemDeLakewood.Texto(t, fonte, nm.texto, nm.ponto - new Vector2(x0, z0), nm.tam, nm.cor, nm.estilo,
+                    ImagemDeLakewood.Texto(t, fonte, nm.texto, (nm.ponto - new Vector2(x0, z0)) / escala, nm.tam, nm.cor, nm.estilo,
                                            nm.cor.grayscale < 0.3f ? Color.clear : new Color(0f, 0f, 0f, 0.9f), nm.giro);
                 float x = W + 30f, y = H - 40f, w = Painel - 50f;
                 ImagemDeLakewood.TextoAEsquerda(t, fonte, cidade, x, y, 38, Color.white, FontStyle.Bold, w);
                 y -= 48f;
                 ImagemDeLakewood.TextoAEsquerda(t, fonte, "A Etapa 6: as ruas e os lotes", x, y, 17, Claro, FontStyle.Normal, w);
                 y -= 24f;
-                ImagemDeLakewood.TextoAEsquerda(t, fonte, $"do mapa, {System.DateTime.Now:dd/MM/yyyy}; 1 px = 1 m", x, y, 14, Cinza, FontStyle.Italic, w);
+                ImagemDeLakewood.TextoAEsquerda(t, fonte, $"do mapa, {System.DateTime.Now:dd/MM/yyyy}; 1 px = {escala:0.#} m", x, y, 14, Cinza, FontStyle.Italic, w);
                 y -= 44f;
                 ImagemDeLakewood.TextoAEsquerda(t, fonte, "Legenda", x, y, 22, Color.white, FontStyle.Bold, w);
                 y -= 34f;
@@ -189,6 +198,10 @@ namespace ZombieCityCleaner.EditorTools
                 Item("Casa", PintorDeLakewood.CorDoLote(UsoDoLote.Casa));
                 Item("Lote vazio (a mata)", PintorDeLakewood.LoteVazio);
                 Item("Loja", PintorDeLakewood.CorDoLote(UsoDoLote.Loja));
+                if (Conta(UsoDoLote.Predio) > 0) Item("Prédio", PintorDeLakewood.CorDoLote(UsoDoLote.Predio));
+                if (Conta(UsoDoLote.Estacionamento) > 0) Item("Estacionamento", PintorDeLakewood.CorDoLote(UsoDoLote.Estacionamento));
+                if (Conta(UsoDoLote.Praca) > 0) Item("Praça", PintorDeLakewood.CorDoLote(UsoDoLote.Praca));
+                if (Conta(UsoDoLote.Galpao) > 0) Item("Galpão (a fazer)", PintorDeLakewood.CorDoLote(UsoDoLote.Galpao));
                 Item("Posto", PintorDeLakewood.CorDoLote(UsoDoLote.Posto));
                 Item("Hospital", PintorDeLakewood.CorDoLote(UsoDoLote.Hospital));
                 Item("Loja de armas", PintorDeLakewood.CorDoLote(UsoDoLote.LojaDeArmas));
@@ -205,8 +218,8 @@ namespace ZombieCityCleaner.EditorTools
                 ImagemDeLakewood.Elemento<Image>(t, x, ey, 200f, 10f).color = Color.white;
                 ImagemDeLakewood.Elemento<Image>(t, x + 101f, ey + 2f, 97f, 6f).color = new Color(0.16f, 0.16f, 0.16f);
                 ImagemDeLakewood.Texto(t, fonte, "0", new Vector2(x, ey + 26f), 14, Claro, FontStyle.Normal, Color.clear, 0f);
-                ImagemDeLakewood.Texto(t, fonte, "100", new Vector2(x + 100f, ey + 26f), 14, Claro, FontStyle.Normal, Color.clear, 0f);
-                ImagemDeLakewood.Texto(t, fonte, "200 m", new Vector2(x + 200f, ey + 26f), 14, Claro, FontStyle.Normal, Color.clear, 0f);
+                ImagemDeLakewood.Texto(t, fonte, $"{100f * escala:0}", new Vector2(x + 100f, ey + 26f), 14, Claro, FontStyle.Normal, Color.clear, 0f);
+                ImagemDeLakewood.Texto(t, fonte, $"{200f * escala:0} m", new Vector2(x + 200f, ey + 26f), 14, Claro, FontStyle.Normal, Color.clear, 0f);
                 ImagemDeLakewood.Texto(t, fonte, "↑ N", new Vector2(x + 300f, ey + 12f), 30, Color.white, FontStyle.Bold, Color.clear, 0f);
             });
             Object.DestroyImmediate(mapaTex);
@@ -218,12 +231,12 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         // o chão: o relevo sombreado (a luz do noroeste), a mata em manchas, as curvas de nível de 2 m e a água
-        static Color[] Chao(MapaDeLakewood mapa, ChaoDeLakewood chao, float x0, float z0, int W, int H)
+        static Color[] Chao(MapaDeLakewood mapa, ChaoDeLakewood chao, float x0, float z0, int W, int H, float escala)
         {
             var alt = new float[(W + 2) * (H + 2)];
             for (int j = 0; j < H + 2; j++)
             for (int i = 0; i < W + 2; i++)
-                alt[j * (W + 2) + i] = chao.Altura(x0 + i - 0.5f, z0 + j - 0.5f);
+                alt[j * (W + 2) + i] = chao.Altura(x0 + (i - 0.5f) * escala, z0 + (j - 0.5f) * escala);
             float A(int i, int j) => alt[(j + 1) * (W + 2) + i + 1];
             var px = new Color[W * H];
             var sol = new Vector3(-0.5f, 0.75f, 0.45f).normalized;
@@ -232,8 +245,8 @@ namespace ZombieCityCleaner.EditorTools
             for (int j = 0; j < H; j++)
             for (int i = 0; i < W; i++)
             {
-                float x = x0 + i + 0.5f, z = z0 + j + 0.5f, h = A(i, j);
-                float dx = (A(i + 1, j) - A(i - 1, j)) * 0.5f, dz = (A(i, j + 1) - A(i, j - 1)) * 0.5f;
+                float x = x0 + (i + 0.5f) * escala, z = z0 + (j + 0.5f) * escala, h = A(i, j);
+                float dx = (A(i + 1, j) - A(i - 1, j)) * 0.5f / escala, dz = (A(i, j + 1) - A(i, j - 1)) * 0.5f / escala;
                 var n = new Vector3(-dx, 1f, -dz).normalized;
                 float luz = Mathf.Clamp01(Vector3.Dot(n, sol)) * 0.55f + 0.45f;
                 float mancha = Mathf.PerlinNoise(x * 0.04f, z * 0.04f) * 0.6f + Mathf.PerlinNoise(x * 0.15f, z * 0.15f) * 0.4f;

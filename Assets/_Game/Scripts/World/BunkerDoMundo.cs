@@ -52,6 +52,30 @@ namespace ZombieCityCleaner.World
 
         public static BunkerDoMundo Instancia { get; private set; }
 
+        // fora do mundo sorteado (o Lakewood, 22/11/2026, a etapa 2 do Docs/23): o lugar fixo, como o do HospitalDoMundo
+        bool _temFixo;
+        Vector3 _posicaoFixa;
+        float _giroFixo;
+        int _sementeFixa = 1;
+
+        /// <summary>
+        /// O bunker num lugar fixo (a cena sem o mundo sorteado: o Lakewood): o meio da caixa no chão da garagem, o giro (o
+        /// portão olha para o -z) e a semente da obra.
+        /// </summary>
+        public void Fixar(Vector3 posicao, float giro, int semente)
+        {
+            Desmontar();
+            _temFixo = true;
+            _posicaoFixa = posicao;
+            _giroFixo = giro;
+            _sementeFixa = semente;
+        }
+
+        /// <summary>O mundo tem o bunker (o sorteado com ele, ou o lugar fixo do Lakewood).</summary>
+        public bool TemBunker => _d != null ? _d.TemBunker : _temFixo;
+
+        int Semente => _d != null ? _d.Semente : _sementeFixa;
+
         /// <summary>As portas (os bits da rede).</summary>
         public const int Portao = 0, Portinhola = 1, PortaDoB4 = 2, PortaDaCasinha = 3, CamaraFria = 4;
         const float Folga = 3f;
@@ -227,6 +251,18 @@ namespace ZombieCityCleaner.World
         /// O ponto (mundo) fica na caixa do bunker, na casinha ou embaixo do morro: o chão do terreno passa por cima dele, e
         /// quem está ali não volta para a superfície (<see cref="MundoDaPartida"/>).
         /// </summary>
+        /// <summary>
+        /// O ponto está dentro da caixa do bunker (do portão para dentro, de um andar qualquer), e não no pátio ou em cima do
+        /// morro (23/11/2026, a chegada da fuga do Lakewood: o <see cref="Dentro"/> conta a frente também).
+        /// </summary>
+        public static bool NaCaixa(Vector3 p)
+        {
+            var b = Instancia;
+            if (b == null || b._raiz == null) return false;
+            var q = b._raiz.InverseTransformPoint(p);
+            return Mathf.Abs(q.x) < X1 && q.z > Z0 - 0.3f && q.z < Z1 && q.y > Base(Andares - 1) - 1f && q.y < TopoDaCaixa - 0.3f;
+        }
+
         public static bool Dentro(Vector3 p)
         {
             var b = Instancia;
@@ -286,17 +322,20 @@ namespace ZombieCityCleaner.World
                 Desmontar();
                 _d = d;
             }
-            if (_d == null || !_d.TemBunker) return;
+            if (!TemBunker) return;
             if (_raiz == null)
             {
-                _raiz = new GameObject("Bunker da família").transform;
-                _raiz.SetPositionAndRotation(_d.PosicaoDoBunker, Quaternion.Euler(0f, _d.GiroDoBunker, 0f));
+                _raiz = new GameObject(_d != null ? "Bunker da família" : "Bunker da comunidade").transform;
+                if (_d != null) _raiz.SetPositionAndRotation(_d.PosicaoDoBunker, Quaternion.Euler(0f, _d.GiroDoBunker, 0f));
+                else _raiz.SetPositionAndRotation(_posicaoFixa, Quaternion.Euler(0f, _giroFixo, 0f));
             }
 
             float agora = Time.unscaledTime;
             var local = JogadorRede.Local;
             if (local != null) Querer(local.transform.position, agora);
             if (mundo != null && !mundo.Pronto) Querer(_d.Partida, agora);
+            // no Lakewood, antes de o jogador local existir (ele nasce na sala de operações): a casca e a garagem já montam
+            else if (_d == null && local == null) Querer(_raiz.TransformPoint(new Vector3(MeioDasOperacoes.x + X0, 0.5f, MeioDasOperacoes.y + Z0)), agora);
             var rede = NetworkManager.Singleton;
             if (rede != null && rede.IsServer)
                 foreach (var j in JogadorRede.Todos)
@@ -342,7 +381,7 @@ namespace ZombieCityCleaner.World
             bool querida = agora - _cascaQueridaEm < Folga || (mundo != null && !mundo.Pronto);
             if (querida && _casca == null && _montandoCasca == null)
             {
-                int semente = _d.Semente;
+                int semente = Semente;
                 _montandoCasca = Task.Run(() =>
                 {
                     var m = Medidas.DoJogo;
@@ -688,7 +727,7 @@ namespace ZombieCityCleaner.World
                     }
                 if (querido && a.Objeto == null && a.Montando == null && _montando < MontagensAoMesmoTempo)
                 {
-                    int andar = f, semente = _d.Semente;
+                    int andar = f, semente = Semente;
                     a.Montando = Task.Run(() =>
                     {
                         var b = new Bunker(Medidas.DoJogo, andar, semente);
@@ -953,6 +992,18 @@ namespace ZombieCityCleaner.World
                 return;
             }
             PortaRpc((byte)porta);
+        }
+
+        /// <summary>
+        /// No anfitrião: a porta aberta ou fechada (23/11/2026, a fuga do Lakewood: o portão aberto para a chegada, fechado no
+        /// fim). Sem o alarme dos zumbis do E.
+        /// </summary>
+        public void PorAPorta(int porta, bool aberta)
+        {
+            if (!IsServer || !IsSpawned || porta < 0 || porta > CamaraFria) return;
+            byte bit = (byte)(1 << porta);
+            byte v = aberta ? (byte)(_portas.Value | bit) : (byte)(_portas.Value & ~bit);
+            if (v != _portas.Value) _portas.Value = v;
         }
 
         /// <summary>O E num interruptor: pelo anfitrião (na rede) ou direto.</summary>

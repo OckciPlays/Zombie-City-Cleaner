@@ -272,7 +272,8 @@ namespace ZombieCityCleaner.Fauna
             foreach (var l in _lixos)
             {
                 if (l.ate < agora || (l.pos - perto).sqrMagnitude > r2 || saida.Count >= 60) continue;
-                saida.Add(new Casa { tipo = 3, pos = l.pos, tamanho = l.tipo });
+                // (23/11/2026) a idade (s) vai na largura: o lixo novo mostra a lata tombando
+                saida.Add(new Casa { tipo = 3, pos = l.pos, tamanho = l.tipo, largura = LixoDura - (l.ate - agora) });
             }
         }
 
@@ -318,7 +319,7 @@ namespace ZombieCityCleaner.Fauna
                     if (_feitas.TryGetValue(k, out var f) && f.go != null && Mathf.Abs(f.tamanho - c.tamanho) < 0.04f) continue;
                     if (f.go != null) Destroy(f.go);
                     var go = c.tipo == 0 ? Toca(c.pos, c.tamanho) : c.tipo == 1 ? TocoRoido(c.pos, c.tamanho) : c.tipo == 2 ? Ninho(c.pos)
-                           : c.tipo == 4 ? Represa(c.pos, c.tamanho, c.giro, c.largura) : Lixo(c.pos, Mathf.RoundToInt(c.tamanho));
+                           : c.tipo == 4 ? Represa(c.pos, c.tamanho, c.giro, c.largura) : Lixo(c.pos, Mathf.RoundToInt(c.tamanho), c.largura);
                     go.transform.SetParent(transform, true);
                     _feitas[k] = (go, c.tamanho);
                 }
@@ -329,6 +330,7 @@ namespace ZombieCityCleaner.Fauna
                     if (_feitas[k].go != null) Destroy(_feitas[k].go);
                     _feitas.Remove(k);
                 }
+                LixoDaCidade.ConferirAgora();   // (23/11/2026: a lata de pé some junto com a que começa a tombar)
             }
 
             static readonly Color Galho = new Color(0.36f, 0.27f, 0.18f), GalhoClaro = new Color(0.52f, 0.41f, 0.28f), Barro = new Color(0.25f, 0.2f, 0.15f);
@@ -402,21 +404,112 @@ namespace ZombieCityCleaner.Fauna
             }
 
             // o lixo espalhado: a lata deitada (ou só as sacolas rasgadas), os sacos e os papéis em volta (13/11: o tipo é de
-            // onde ele veio: 0 a lata, 1 as sacolas, 2 a caçamba)
-            static GameObject Lixo(Vector3 p, int tipo = 0)
+            // onde ele veio: 0 a lata, 1 as sacolas, 2 a caçamba). 'idade' (23/11/2026): os segundos desde que ele espalhou (o
+            // novo mostra a lata tombando)
+            static GameObject Lixo(Vector3 p, int tipo = 0, float idade = 999f)
             {
                 var go = new GameObject("Lixo espalhado");
                 go.transform.position = p;
-                var r = new System.Random(Mathf.RoundToInt(p.x * 7f + p.z * 3f));
-                if (tipo == 0) ModelosDosBichos.CaixaSolta(go.transform, new Vector3(0.6f, 0.22f, 0.1f), new Vector3(0.45f, 0.45f, 0.75f), new Color(0.25f, 0.32f, 0.28f), new Vector3(0f, 30f, 90f));
+                int semente = Mathf.RoundToInt(p.x * 7f + p.z * 3f);
+                var r = new System.Random(semente);
+                var t = go.transform;
+                // (23/11/2026) as malhas do ModelosDoLixo: os restos espalhados, as sacolas rasgadas e, da casa, a mesma lata
+                // de pé antes (o carrinho ou a de metal), caída de lado com a boca para o lixo
+                var soltos = new List<GameObject>();
+                soltos.Add(LixoDaCidade.Peca(t, "Os restos", ModelosDoLixo.Restos(r.Next(ModelosDoLixo.VariantesDosRestos)), Vector3.zero, Quaternion.Euler(0f, (float)r.NextDouble() * 360f, 0f)));
                 for (int i = 0; i < 3; i++)
-                    ModelosDosBichos.CaixaSolta(go.transform, new Vector3((float)r.NextDouble() * 2f - 1f, 0.1f, (float)r.NextDouble() * 2f - 1f) * 1.2f + Vector3.up * 0.1f,
-                        new Vector3(0.35f, 0.2f, 0.3f), new Color(0.08f, 0.08f, 0.09f), new Vector3(0f, (float)r.NextDouble() * 360f, 15f));
-                for (int i = 0; i < 9; i++)
-                    ModelosDosBichos.CaixaSolta(go.transform, new Vector3((float)r.NextDouble() * 2f - 1f, 0f, (float)r.NextDouble() * 2f - 1f) * 1.8f + Vector3.up * 0.02f,
-                        new Vector3(0.18f, 0.01f, 0.13f), i % 3 == 0 ? new Color(0.8f, 0.78f, 0.7f) : i % 3 == 1 ? new Color(0.55f, 0.42f, 0.3f) : new Color(0.6f, 0.15f, 0.12f),
-                        new Vector3(0f, (float)r.NextDouble() * 360f, 0f));
+                {
+                    var pos = new Vector3((float)r.NextDouble() * 2f - 1f, 0f, (float)r.NextDouble() * 2f - 1f) * 1.2f;
+                    soltos.Add(LixoDaCidade.Peca(t, "Sacola rasgada", ModelosDoLixo.Sacola(r.Next(ModelosDoLixo.FormasDaSacola), r.Next(ModelosDoLixo.CoresDaSacola.Length), i > 0 || tipo != 1),
+                        pos, Quaternion.Euler(0f, (float)r.NextDouble() * 360f, 0f)));
+                }
+                // (23/11/2026) o E revira o lixo espalhado também (o do lixo de onde ele veio): um gatilho largo, no chão
+                int indice = LixoDaCidade.IndiceMaisPerto(p, 2.2f);
+                if (indice >= 0)
+                {
+                    var gatilho = go.AddComponent<BoxCollider>();
+                    gatilho.isTrigger = true;
+                    gatilho.center = new Vector3(0f, 0.3f, 0f);
+                    gatilho.size = new Vector3(2.6f, 0.6f, 2.6f);
+                    var mira = go.AddComponent<LixoNaMira>();
+                    mira.indice = indice;
+                    mira.tipo = LixoDaCidade.Pontos[indice].tipo;
+                    mira.espalhado = true;
+                }
+                if (tipo == 0 && LixoDaCidade.LataPerto(p, out var deCasa))
+                {
+                    LataTombada(go, deCasa, idade < 4f, soltos);
+                    return go;
+                }
+                if (tipo == 0)
+                {
+                    var lata = LixoDaCidade.LataPerto(p, out var ponto) ? ModelosDoLixo.QualLata(ponto.semente) : ModelosDoLixo.QualLata(semente);
+                    float giro = 20f + (float)r.NextDouble() * 30f;
+                    if (lata.carrinho)
+                        LixoDaCidade.Peca(t, "O carrinho caído", ModelosDoLixo.Carrinho(lata.cor, 2), new Vector3(0.75f, 0.315f, 0.1f), Quaternion.Euler(0f, giro, 90f));
+                    else
+                    {
+                        LixoDaCidade.Peca(t, "A lata caída", ModelosDoLixo.LataDeMetal(2), new Vector3(0.7f, 0.29f, 0.1f), Quaternion.Euler(0f, giro, 90f));
+                        LixoDaCidade.Peca(t, "A tampa da lata", ModelosDoLixo.TampaDaLata(), new Vector3(1.25f, 0.13f, -0.55f), Quaternion.Euler(180f, (float)r.NextDouble() * 360f, 0f));
+                    }
+                }
                 return go;
+            }
+
+            // (23/11/2026) a lata da casa caída: a mesma que estava de pé (o carrinho ou a de metal), tombada em volta da beirada
+            // do fundo, para o lado que a semente escolhe (o carrinho cai de lado); a de metal perde a tampa, que vai para o
+            // lado da boca. 'animar': a queda (FaunaDoMundo.QuedaDaLata), com os restos aparecendo quando ela bate no chão
+            static void LataTombada(GameObject go, LixoDaCidade.Ponto ponto, bool animar, List<GameObject> soltos)
+            {
+                var t = go.transform;
+                var lata = ModelosDoLixo.QualLata(ponto.semente);
+                var r = new System.Random(ponto.semente ^ 0x5bd1e995);
+                var giroDePe = Quaternion.Euler(0f, LixoDaCidade.GiroDePe(ponto), 0f);
+                Vector3 posDePe = ponto.pos, d;
+                float raio;
+                if (lata.carrinho)
+                {
+                    d = giroDePe * (r.NextDouble() < 0.5 ? Vector3.right : Vector3.left);
+                    raio = ModelosDoLixo.TamanhoDoCarrinho.x * 0.5f;
+                }
+                else
+                {
+                    d = Quaternion.Euler(0f, (float)r.NextDouble() * 360f, 0f) * Vector3.forward;
+                    raio = ModelosDoLixo.RaioDaLata;
+                }
+                Vector3 pivo = posDePe + d * raio, eixo = Vector3.Cross(Vector3.up, d);
+                var deitada = Quaternion.AngleAxis(90f, eixo);
+                var peca = LixoDaCidade.Peca(t, lata.carrinho ? "O carrinho caído" : "A lata caída",
+                                             lata.carrinho ? ModelosDoLixo.Carrinho(lata.cor, 2) : ModelosDoLixo.LataDeMetal(2), Vector3.zero, Quaternion.identity);
+                peca.transform.SetPositionAndRotation(pivo + deitada * (posDePe - pivo), deitada * giroDePe);
+                GameObject tampa = null;
+                Vector3 tampaPara = default;
+                var tampaGiro = Quaternion.identity;
+                if (!lata.carrinho)
+                {
+                    Vector3 lado = eixo * (r.NextDouble() < 0.5 ? 1f : -1f);
+                    tampaPara = pivo + d * (ModelosDoLixo.AlturaDaLata + 0.3f) + lado * 0.45f;
+                    tampaPara.y = posDePe.y + 0.13f;
+                    tampaGiro = Quaternion.Euler(180f, (float)r.NextDouble() * 360f, 0f);
+                    tampa = LixoDaCidade.Peca(t, "A tampa da lata", ModelosDoLixo.TampaDaLata(), Vector3.zero, Quaternion.identity);
+                    tampa.transform.SetPositionAndRotation(tampaPara, tampaGiro);
+                }
+                if (!animar) return;
+                foreach (var s in soltos) if (s != null) s.SetActive(false);
+                var q = go.AddComponent<QuedaDaLata>();
+                q.lata = peca.transform;
+                q.tampa = tampa != null ? tampa.transform : null;
+                q.pivo = pivo;
+                q.eixo = eixo;
+                q.posDePe = posDePe;
+                q.giroDePe = giroDePe;
+                q.tampaDe = posDePe + Vector3.up * ModelosDoLixo.AlturaDaLata;
+                q.tampaGiroDe = giroDePe;
+                q.tampaPara = tampaPara;
+                q.tampaGiroPara = tampaGiro;
+                q.aparecem = soltos.ToArray();
+                q.desde = Time.time;
+                q.Update();   // (já no primeiro quadro, a lata de pé)
             }
 
             // o ninho: os galhos em roda e três ovos

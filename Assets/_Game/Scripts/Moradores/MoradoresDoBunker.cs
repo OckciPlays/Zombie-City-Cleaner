@@ -83,7 +83,8 @@ namespace ZombieCityCleaner.Moradores
 
         readonly List<Morador> _moradores = new List<Morador>();
         readonly Dictionary<int, int> _ocupados = new Dictionary<int, int>();   // o lugar → o id de quem está nele (ou indo)
-        DadosDoMundo _dados;
+        // o mundo da partida (MundoDoJogo.Chave: o sorteado ou o Lakewood, com a semente da partida); 0 sem nenhum
+        int _mundo;
         bool _iniciado, _reservaPosta;
         float _ultimaHora, _proximoTick, _iniciadoEm;
         GameObject _prefab;
@@ -108,31 +109,29 @@ namespace ZombieCityCleaner.Moradores
 
         static BunkerDoMundo Bunker => BunkerDoMundo.Instancia;
 
+        // (22/11/2026, a etapa 2 do Docs/23: o mundo do jogo, e não só o sorteado; no Lakewood, o bunker da comunidade)
         bool Ativo
         {
             get
             {
                 var rede = NetworkManager.Singleton;
-                var m = MundoDaPartida.Instancia;
-                return rede != null && rede.IsServer && m != null && m.IsSpawned && m.Pronto && !m.NoDiaZero && m.Dados != null && m.Dados.TemBunker
-                       && Bunker != null && Bunker.Raiz != null;
+                return rede != null && rede.IsServer && MundoDoJogo.Pronto != null && Bunker != null && Bunker.TemBunker && Bunker.Raiz != null;
             }
         }
 
         void Update()
         {
-            var mundo = MundoDaPartida.Instancia;
-            var dados = mundo != null ? mundo.Dados : null;
-            if (dados != _dados || (_iniciado && (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)))
+            int mundo = MundoDoJogo.Chave(MundoDoJogo.Atual);
+            if (mundo != _mundo || (_iniciado && (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)))
             {
-                bool outroMundo = dados != _dados;
+                bool outroMundo = mundo != _mundo;
                 Limpar();
-                _dados = dados;
+                _mundo = mundo;
                 if (outroMundo) EsquecerOTerminal();
             }
             // o registro e as metas do terminal (a parte 7): do save, uma vez por mundo, também no Dia 0
             var rede = NetworkManager.Singleton;
-            if (!_carregado && _dados != null && rede != null && rede.IsServer) CarregarOTerminal();
+            if (!_carregado && _mundo != 0 && rede != null && rede.IsServer) CarregarOTerminal();
             if (_carregado) AvisarAsMexidas();
             if (!Ativo) return;
             if (!_iniciado) Iniciar();
@@ -167,6 +166,21 @@ namespace ZombieCityCleaner.Moradores
             _prefab = RecursosDosMoradores.Carregar() != null ? RecursosDosMoradores.Carregar().corpo : null;
             if (_prefab == null) Debug.LogWarning("[Moradores] Falta o corpo dos moradores (Zombie City Cleaner > Moradores > Montar o corpo).");
             var salvo = Salvamento.Atual;
+            // o Lakewood (22/11/2026, a etapa 2 do Docs/23): o bunker é da comunidade, que já vem sorteada (o líder, o major e
+            // os grupos seguintes; sem as cartas). Um jogo do Lakewood sem ninguém (o novo, e os salvos de antes do bunker)
+            // ganha a comunidade agora, com a semente da partida
+            if (salvo != null && salvo.lakewood && (salvo.moradores == null || salvo.moradores.Count == 0)
+                && (salvo.npcsDoMapa == null || salvo.npcsDoMapa.Count == 0))
+            {
+                int semente = MundoDoJogo.Pronto != null ? MundoDoJogo.Pronto.SementeDaPartida : salvo.semente;
+                var npcs = SorteioDosMoradores.SortearComunidade(semente != 0 ? semente : 1);
+                var (bunker, mapa) = SorteioDosMoradores.SepararAComunidade(npcs);
+                salvo.moradores = bunker;
+                salvo.npcsDoMapa = mapa;
+                salvo.npcsDescobertos = bunker.ConvertAll(f => f.id);
+                salvo.proximoMorador = npcs.proximoId;
+                Debug.Log($"[Moradores] A comunidade do bunker (o Lakewood): {bunker.Count} moradores ({string.Join(", ", bunker.ConvertAll(f => f.NomeComCargo))}) e {mapa.Count} pelo mapa.");
+            }
             if (salvo != null && salvo.moradores != null)
                 foreach (var f in salvo.moradores) Acrescentar(f, salvo.vidaDosMoradores?.Find(v => v.id == f.id));
             DarAsCamas();

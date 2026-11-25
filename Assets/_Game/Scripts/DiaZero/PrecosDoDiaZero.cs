@@ -36,13 +36,20 @@ namespace ZombieCityCleaner.DiaZero
     {
         /// <summary>As economias de cada jogador.</summary>
         public const int Economias = 1000;
+        /// <summary>
+        /// As armas da loja de armas (23/11/2026, o Pedro: "quero deixar as armas principais mais raras e difíceis de acesso,
+        /// como se só conseguisse comprar jogadores veteranos"): a pistola custa tudo o que um jogador novo tem ($1.000); a
+        /// submetralhadora $2.000, a espingarda $2.500, o rifle $4.000 e a sniper $5.000.
+        /// </summary>
+        public const int PrecoDaPistola = 1000, PrecoDaSubmetralhadora = 2000, PrecoDaEspingarda = 2500, PrecoDoRifle = 4000, PrecoDaSniper = 5000;
 
         public static string Nome(LojaDoDia l) => l switch
         {
             LojaDoDia.Mercado => "Mercado",
             LojaDoDia.Farmacia => "Farmácia",
-            // (09/11/2026, a sucata, 2ª leva: a loja de armas virou a de caça e ferragens, sem as armas de fogo reais)
-            LojaDoDia.Armas => "Caça e ferragens",
+            // (09/11/2026, a sucata, 2ª leva: a loja de armas virou a de caça e ferragens, sem as armas de fogo reais; desde
+            // 22/11/2026 ela vende a pistola a $1.000, e na Woodcreek é a loja de armas da East Shore Highway)
+            LojaDoDia.Armas => "Loja de armas",
             LojaDoDia.Ferragens => "Ferragens e autopeças",
             LojaDoDia.Roupas => "Loja de roupas",
             _ => "Loja do posto",
@@ -90,6 +97,17 @@ namespace ZombieCityCleaner.DiaZero
                 new Produto(Item.Faca, 40), new Produto(Item.Machado, 45), new Produto(Item.Bastao, 20),
                 new Produto(Item.VaraDePesca, 35), new Produto(Item.Isca, 5), new Produto(Item.Polvora, 14),
                 new Produto(Item.Sucata, 3, 0, "sucata (pregos e parafusos)"), new Produto(Item.Lanterna, 25), new Produto(Item.Pilhas, 8),
+                // a pistola (22/11/2026, a etapa 4 do Docs/23, o D0 na Woodcreek: o Pedro escolheu "Pistola a $1.000"): o preço
+                // das economias inteiras de um jogador. No fim, porque o pedido manda o índice do produto
+                new Produto(Item.Pistola, PrecoDaPistola),
+                // as armas longas e a munição (23/11/2026, o Pedro: "Na loja de arma está faltando algumas armas, como
+                // espingarda, sniper, rifle (vão precisar de ajustes no preço, claro). Também munições"): nos expositores
+                // de armas longas e nas estantes de munição da loja de armas da Woodcreek. Cada caixa tem 60 balas; os
+                // preços do Pedro (23/11/2026): a caixa de 9mm $50, a de calibre 12 $100, a de 5,56 $120 e a de 7,62 $150
+                new Produto(Item.Espingarda, PrecoDaEspingarda), new Produto(Item.Rifle, PrecoDoRifle), new Produto(Item.Sniper, PrecoDaSniper),
+                new Produto(Item.Municao9mm, 50), new Produto(Item.Municao12, 100), new Produto(Item.Municao556, 120), new Produto(Item.Municao762, 150),
+                // a submetralhadora (23/11/2026, o Pedro: "SMG 2000"), também no fim
+                new Produto(Item.Submetralhadora, PrecoDaSubmetralhadora),
             },
             [LojaDoDia.Ferragens] = new[]
             {
@@ -136,6 +154,16 @@ namespace ZombieCityCleaner.DiaZero
             // a pólvora e a sucata da loja de caça (09/11/2026): o bastante para começar o Armeiro de sucata, não um arsenal
             Item.Polvora => 5,
             Item.Sucata => 24,
+            Item.Pistola => 1,
+            // as armas longas, uma de cada; a munição, poucas caixas (23/11/2026)
+            Item.Submetralhadora => 1,
+            Item.Espingarda => 1,
+            Item.Rifle => 1,
+            Item.Sniper => 1,
+            Item.Municao9mm => 3,
+            Item.Municao12 => 3,
+            Item.Municao556 => 2,
+            Item.Municao762 => 2,
             _ => 0,
         };
 

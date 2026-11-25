@@ -252,8 +252,7 @@ namespace ZombieCityCleaner.Player
         {
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
             // na cena de vídeo, de mãos vazias; no Dia 0 também (a vida normal: o que tiver, foi comprado)
-            var mundo = World.MundoDaPartida.Instancia;
-            if (ModoVideo.SemArma || (mundo != null && mundo.NoDiaZero)) return;
+            if (ModoVideo.SemArma || World.MundoDoJogo.NoDiaZeroAgora) return;   // (e no Dia 0 do Lakewood, 22/11/2026)
             Receber(Item.Pistola);
             if (!_lanternaDoComeco)
             {

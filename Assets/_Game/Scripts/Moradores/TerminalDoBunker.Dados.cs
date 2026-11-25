@@ -235,7 +235,7 @@ namespace ZombieCityCleaner.Moradores
             string idade = SorteioDosMoradores.TextoDaIdade(f);
             return new MembroNoTerminal
             {
-                id = f.id, nome = m.Nome, completo = f.NomeCompleto, idade = idade,
+                id = f.id, nome = m.Nome, completo = f.NomeComCargo, idade = idade,
                 agora = $"{NomesNoTerminal.Agora(v)}{(m.fumo != MoradoresDoBunker.EstadoDoFumo.Nada ? ", fumando" : "")} ({onde})",
                 carrega = carrega.Count == 0 ? "nada" : string.Join(", ", carrega),
                 saude = string.Join(" · ", saude), andar = v.andar, cama = v.cama,
@@ -265,7 +265,7 @@ namespace ZombieCityCleaner.Moradores
                 d.cartas.Add(new CartaNoTerminal
                 {
                     id = f.id, grupo = f.grupo, conhecido = conhecido, noBunker = noBunker.Contains(f.id),
-                    nome = conhecido ? f.NomeCompleto : "", idade = conhecido ? $"{f.idade} anos" : "",
+                    nome = conhecido ? f.NomeComCargo : "", idade = conhecido ? $"{f.idade} anos" : "",
                 });
             }
         }
@@ -298,7 +298,7 @@ namespace ZombieCityCleaner.Moradores
             foreach (var x in doBunker) if (g.DoId(x.id) == null) g.fichas.Add(x);
 
             var sb = new StringBuilder();
-            sb.Append(f.NomeCompleto.ToUpperInvariant()).Append('\n');
+            sb.Append(f.NomeComCargo.ToUpperInvariant()).Append('\n');
             sb.Append(SorteioDosMoradores.TextoDaIdade(f)).Append(noBunker.Contains(id) ? " · no bunker" : " · lá fora").Append('\n');
             sb.Append('\n');
             sb.Append("ANTES: ").Append(SorteioDosMoradores.NomeDeAntes(f)).Append(". ").Append(SorteioDosMoradores.FraseDeAntes(f)).Append('\n');

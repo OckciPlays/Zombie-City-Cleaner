@@ -196,6 +196,12 @@ namespace ZombieCityCleaner.Loot
             // sucata, na bancada (ela também aparece nas cozinhas)
             R(Item.Espeto, 1, false, Item.Nada, P(Item.Gravetos, 2)),
             R(Item.Panela, 1, true, Item.Ferramenta, P(Item.Sucata, 3)),
+            // a base (24/11/2026, a pedido: "começar a realizar o modo construção do jogo (criar muros e tudo)"; no fim, para os
+            // índices das outras não mudarem): o núcleo, o braseiro de sucata, na bancada; o muro e o portão, das toras das árvores
+            // derrubadas, pregados com a ferramenta, em qualquer lugar
+            R(Item.NucleoDaBase, 1, true, Item.Ferramenta, P(Item.Sucata, 6), P(Item.PecasDeMetal, 2), P(Item.Toras, 2)),
+            R(Item.MuroDeToras, 1, false, Item.Ferramenta, P(Item.Toras, 3), P(Item.Pregos, 4)),
+            R(Item.PortaoDeToras, 1, false, Item.Ferramenta, P(Item.Toras, 3), P(Item.Pregos, 6), P(Item.PecasDeMetal)),
         };
 
         // a receita do fogo (11/11/2026): a da habilidade, com 1 combustível

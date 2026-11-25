@@ -126,11 +126,14 @@ namespace ZombieCityCleaner.World
 
         // ------------------------------------------------------------------ os veículos e as armas (no anfitrião)
 
-        // os veículos arrumados nas vagas do terreiro (uma vez) e, com os itens do chão prontos, as armas nas mesas
+        // os veículos arrumados nas vagas do terreiro (uma vez) e, com os itens do chão prontos, as armas nas mesas. Com o
+        // bunker da comunidade (22/11/2026, a etapa 2 do Docs/23), os veículos vão para a garagem dele (com ela pronta) e
+        // as chaves para a sala de operações; a casa da partida fica vazia (as armas e os veículos dela, pelo F1)
         bool PorOsDaPartida()
         {
             var lugar = Chao.Partida;
-            if (lugar == null || veiculos == null || veiculos.Length == 0) return false;
+            bool comBunker = Chao.Bunker != null && _bunker != null;
+            if ((lugar == null && !comBunker) || veiculos == null || veiculos.Length == 0) return false;
             var rede = NetworkManager.Singleton;
             if (rede == null || !rede.IsListening) return true;
             if (!rede.IsServer) return true;
@@ -141,26 +144,22 @@ namespace ZombieCityCleaner.World
                 _veiculosPostos = _armasPostas = true;
                 return true;
             }
+            var mundo = ItensNoMundo.Instancia;
+            if (comBunker)
+            {
+                // a garagem com a colisão (antes, o chão dela é o buraco do terreno) e os itens do chão para as chaves
+                if (!_veiculosPostos && _bunker.Pronto && mundo != null && mundo.IsSpawned)
+                {
+                    _veiculosPostos = _armasPostas = true;
+                    PorOsVeiculosNoBunker(mundo);
+                }
+                return true;
+            }
             if (!_veiculosPostos)
             {
                 _veiculosPostos = true;
-                for (int i = 0; i < veiculos.Length && i < LugarDaPartida.VagasEmA.Length; i++)
-                {
-                    if (veiculos[i] == null) continue;
-                    // (o "NoMundo" do lugar é no mapa; o veículo fica no mundo)
-                    var pos = OrigemDeLakewood.NoMundo(lugar.NoMundo(LugarDaPartida.VagasEmA[i], LugarDaPartida.LinhaDosVeiculos, 0.6f));
-                    var go = Instantiate(veiculos[i], pos, Quaternion.Euler(0f, lugar.GiroDosVeiculos, 0f));
-                    go.name = veiculos[i].name;
-                    var carro = go.GetComponent<Carro>();
-                    if (carro != null)
-                    {
-                        carro.ArrumadoDeFabrica();
-                        if (carro.chaveDoVeiculo != Item.Nada) _chaves.Add(carro.chaveDoVeiculo);
-                    }
-                    go.GetComponent<NetworkObject>().Spawn(true);
-                }
+                PorOsVeiculosNoTerreiro();
             }
-            var mundo = ItensNoMundo.Instancia;
             if (!_armasPostas && mundo != null && mundo.IsSpawned)
             {
                 _armasPostas = true;
@@ -169,9 +168,32 @@ namespace ZombieCityCleaner.World
             return true;
         }
 
+        // os quatro veículos arrumados nas vagas do terreiro da casa da partida, de frente para a estrada
+        void PorOsVeiculosNoTerreiro()
+        {
+            var lugar = Chao.Partida;
+            for (int i = 0; i < veiculos.Length && i < LugarDaPartida.VagasEmA.Length; i++)
+            {
+                if (veiculos[i] == null) continue;
+                // (o "NoMundo" do lugar é no mapa; o veículo fica no mundo)
+                var pos = OrigemDeLakewood.NoMundo(lugar.NoMundo(LugarDaPartida.VagasEmA[i], LugarDaPartida.LinhaDosVeiculos, 0.6f));
+                var go = Instantiate(veiculos[i], pos, Quaternion.Euler(0f, lugar.GiroDosVeiculos, 0f));
+                go.name = veiculos[i].name;
+                var carro = go.GetComponent<Carro>();
+                if (carro != null)
+                {
+                    carro.ArrumadoDeFabrica();
+                    if (carro.chaveDoVeiculo != Item.Nada) _chaves.Add(carro.chaveDoVeiculo);
+                }
+                go.GetComponent<NetworkObject>().Spawn(true);
+            }
+        }
+
         /// <summary>O número do veículo para o save: a vaga dele no terreiro (a perua 0, o cupê 1, as motos 2 e 3); -1 de outro.</summary>
         public int QualDoCarro(Carro c)
         {
+            // a caminhonete da família (22/11/2026, o Dia 0 na Woodcreek): o mesmo número do mundo sorteado
+            if (c != null && caminhonete != null && c.name.StartsWith(caminhonete.name)) return MundoDaPartida.QualDaCaminhonete;
             if (c == null || veiculos == null) return -1;
             for (int i = 0; i < veiculos.Length; i++)
                 if (veiculos[i] != null && c.name.StartsWith(veiculos[i].name)) return i;
@@ -179,7 +201,8 @@ namespace ZombieCityCleaner.World
         }
 
         /// <summary>O prefab do veículo pelo número do save, ou null.</summary>
-        public GameObject PrefabDoCarro(int qual) => veiculos != null && qual >= 0 && qual < veiculos.Length ? veiculos[qual] : null;
+        public GameObject PrefabDoCarro(int qual) => qual == MundoDaPartida.QualDaCaminhonete ? caminhonete
+            : veiculos != null && qual >= 0 && qual < veiculos.Length ? veiculos[qual] : null;
 
         // os grupos das mesas (cada um começa numa mesa): as chaves e as armas de fogo, a munição e as armas brancas
         List<List<(Item item, int qtd)>> GruposDasMesas()

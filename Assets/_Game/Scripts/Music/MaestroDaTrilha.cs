@@ -298,8 +298,7 @@ namespace ZombieCityCleaner.Music
             var eu = JogadorRede.Local;
             // no Dia 0 (o mundo normal, antes do apocalipse), a trilha do jogo não toca: a festa, o jornal na TV e a rua têm
             // os sons deles; ela começa no mundo, depois da porta do abrigo (02/11/2026: tocava no começo do jornal)
-            var mundo = MundoDaPartida.Instancia;
-            bool emJogo = Ligada && _trilha != null && eu != null && eu.IsSpawned && !(mundo != null && mundo.NoDiaZero);
+            bool emJogo = Ligada && _trilha != null && eu != null && eu.IsSpawned && !World.MundoDoJogo.NoDiaZeroAgora;   // (e no do Lakewood)
             if (!emJogo)
             {
                 if (_estado != Estado.Fora) Desligar(agora);

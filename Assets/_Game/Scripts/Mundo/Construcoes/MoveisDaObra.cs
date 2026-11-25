@@ -33,6 +33,15 @@ namespace ZombieCityCleaner.Mundo
         /// ponto: o lugar, o tamanho e a ordem dos pontos não mudam (os índices, as chaves salvas e o NavMesh ficam iguais).
         /// </summary>
         public const int Farmacia = 1000, Hospital = 1001;
+        /// <summary>
+        /// As outras lojas (23/11/2026, o comércio da cidade de Lakewood: "construir dentro dela os lugares de comércio,
+        /// farmácia, mercado e alguns outros (onde vão ter loots)"): o mercado, a 24 horas (e a loja do posto), a loja de
+        /// armas do kit e as comuns, de quatro jeitos pela semente da loja (as roupas, as ferragens, os esportes e as
+        /// variedades).
+        /// </summary>
+        public const int Mercado = 1002, VinteQuatroHoras = 1003, Armas = 1004, Roupas = 1005, Ferragens = 1006, Esportes = 1007, Variedades = 1008;
+        /// <summary>O galpão da zona industrial (23/11/2026): as estantes de aço, as caixas e o escritório.</summary>
+        public const int Galpao = 1009;
         /// <summary>A unidade é de loja (a farmácia, o hospital), não uma moradia.</summary>
         public bool DeLoja => unidade >= Farmacia;
         /// <summary>O ponto foi espelhado (<see cref="Espelhado"/>): o móvel antigo é desenhado espelhado, e os lugares dele também.</summary>
@@ -236,6 +245,18 @@ namespace ZombieCityCleaner.Mundo
         /// Os pontos dos móveis do cômodo k, com o chão em 'chao' (nas coordenadas da obra, sem espelhar), em 'saida'. A
         /// obra já está montada (as paredes, as portas e o que ocupa o chão).
         /// </summary>
+        /// <summary>A unidade de loja do contexto (o tipo da loja, o hospital); 0 nos outros (o prédio).</summary>
+        public static int UnidadeDaLoja(string contexto, int semente) => contexto switch
+        {
+            nameof(TipoDeLoja.Farmacia) => PontoDeMovel.Farmacia,
+            "hospital" => PontoDeMovel.Hospital,
+            nameof(TipoDeLoja.Mercado) => PontoDeMovel.Mercado,
+            nameof(TipoDeLoja.VinteQuatroHoras) or nameof(TipoDeLoja.Conveniencia) => PontoDeMovel.VinteQuatroHoras,
+            nameof(TipoDeLoja.Armas) => PontoDeMovel.Armas,
+            nameof(TipoDeLoja.Comum) => PontoDeMovel.Roupas + (int)(((uint)semente >> 5) % 4u),
+            _ => 0,
+        };
+
         public static void Distribuir(Obra obra, Comodo k, float chao, string contexto, int semente, List<PontoDeMovel> saida)
         {
             var receita = Receita(contexto, k.tipo);
@@ -243,7 +264,7 @@ namespace ZombieCityCleaner.Mundo
             // a moradia dos pontos deste cômodo (a casa, o apartamento da loja ou do prédio, ou nenhuma); a farmácia e o
             // hospital, a unidade de loja (o saque deles, nos móveis antigos)
             bool morada = contexto == "casa";
-            _unidade = !morada ? (contexto == nameof(TipoDeLoja.Farmacia) ? PontoDeMovel.Farmacia : contexto == "hospital" ? PontoDeMovel.Hospital : 0)
+            _unidade = !morada ? UnidadeDaLoja(contexto, semente)
                      : k.apto >= 0 ? k.apto + 1 : obra is Loja ? k.andar + 1 : 1;
             _apartamento = morada && (k.apto >= 0 || obra is Loja);
             float e = obra.m.esp / 2;

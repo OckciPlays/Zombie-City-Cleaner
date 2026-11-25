@@ -178,6 +178,9 @@ namespace ZombieCityCleaner.Mundo
             // a sucata (09/11/2026, a 2ª leva da etapa 1b): às vezes, com as ferramentas (a bancada, as prateleiras e as estantes
             // do porão, da garagem e do depósito), de 1 a 3. A outra fonte são os painéis de metal da rua e o desmontar
             C("Sucata", I, EspecieDoSaque.Ferramenta, 1, 3),
+            // a munição das armas de sucata (23/11/2026, a pedido: os pregos e os parafusos "ficariam em lugares de oficina, e
+            // poderia ser encontrado em lixos"): na oficina, com as ferramentas (os lixos da cidade: Fauna/FaunaDoMundo.Lixo.cs)
+            C("MunicaoPrego", I, EspecieDoSaque.Ferramenta, 6, 20), C("MunicaoParafuso", R, EspecieDoSaque.Ferramenta, 3, 10),
             // o fumo (03/11/2026, o Plano_Cigarro.md da pasta de arte): o maço, normal, na cabeceira, na sala (a mesa de
             // centro e o rack), nas gavetas da cozinha e do escritório e na oficina, com 2 a 20 cigarros
             C("MacoDeCigarros", N, EspecieDoSaque.Cabeceira | EspecieDoSaque.Lanche | EspecieDoSaque.GavetaDaCozinha | EspecieDoSaque.Escritorio
@@ -374,8 +377,45 @@ namespace ZombieCityCleaner.Mundo
         /// só a espécie Farmacia (o antibiótico raro das casas fica de fora: aqui ele é incomum), e o pano na rouparia. Null
         /// fora de uma unidade de loja.
         /// </summary>
-        public static Regra RegraDaLoja(int unidade, string comodo) =>
-            unidade < PontoDeMovel.Farmacia ? null : comodo == "rouparia" ? RegraDaRouparia : RegraDaFarmacia;
+        public static Regra RegraDaLoja(int unidade, string comodo)
+        {
+            if (unidade < PontoDeMovel.Farmacia) return null;
+            if (unidade == PontoDeMovel.Farmacia || unidade == PontoDeMovel.Hospital) return comodo == "rouparia" ? RegraDaRouparia : RegraDaFarmacia;
+            // as outras lojas (23/11/2026): o escritório e o banheiro iguais em todas; o salão e os fundos pelo tipo
+            if (comodo == "escritorio") return RegraDoEscritorioDaLoja;
+            if (comodo == "banheiro") return RegraDoBanheiroDaLoja;
+            bool fundos = comodo == "estoque" || comodo == "deposito" || comodo == "acougue";
+            return unidade switch
+            {
+                PontoDeMovel.Mercado => fundos ? RegraDoEstoqueDoMercado : RegraDoMercado,
+                PontoDeMovel.VinteQuatroHoras => fundos ? RegraDoEstoqueDaConveniencia : RegraDaConveniencia,
+                PontoDeMovel.Armas => fundos ? RegraDoEstoqueDasArmas : RegraDasArmas,
+                PontoDeMovel.Roupas => RegraDasRoupas,
+                PontoDeMovel.Ferragens => RegraDasFerragens,
+                PontoDeMovel.Esportes => RegraDosEsportes,
+                PontoDeMovel.Galpao => RegraDoGalpao,
+                _ => RegraDasVariedades,
+            };
+        }
+
+        // as outras lojas (23/11/2026, o comércio da cidade de Lakewood): o que cada uma vende, em cima dos móveis antigos
+        static Regra Tudo(EspecieDoSaque e) => G(e, e, e, 1f);
+        static readonly Regra RegraDoMercado = Tudo(EspecieDoSaque.Comida | EspecieDoSaque.Bebida | EspecieDoSaque.Lanche | EspecieDoSaque.Limpeza);
+        static readonly Regra RegraDoEstoqueDoMercado = Tudo(EspecieDoSaque.Comida | EspecieDoSaque.Bebida | EspecieDoSaque.Limpeza | EspecieDoSaque.Galao);
+        static readonly Regra RegraDaConveniencia = Tudo(EspecieDoSaque.Lanche | EspecieDoSaque.Bebida | EspecieDoSaque.Comida | EspecieDoSaque.Luz | EspecieDoSaque.Cabeceira | EspecieDoSaque.Limpeza);
+        static readonly Regra RegraDoEstoqueDaConveniencia = Tudo(EspecieDoSaque.Lanche | EspecieDoSaque.Bebida | EspecieDoSaque.Comida | EspecieDoSaque.Luz);
+        static readonly Regra RegraDasArmas = Tudo(EspecieDoSaque.ArmaCurta | EspecieDoSaque.ArmaLonga | EspecieDoSaque.Municao | EspecieDoSaque.Faca | EspecieDoSaque.Luz);
+        static readonly Regra RegraDoEstoqueDasArmas = Tudo(EspecieDoSaque.Municao | EspecieDoSaque.ArmaCurta | EspecieDoSaque.ArmaLonga);
+        static readonly Regra RegraDasRoupas = Tudo(EspecieDoSaque.Roupa | EspecieDoSaque.RoupaPequena | EspecieDoSaque.Mochila | EspecieDoSaque.Pano);
+        static readonly Regra RegraDasFerragens = Tudo(EspecieDoSaque.Ferramenta | EspecieDoSaque.Luz | EspecieDoSaque.Galao | EspecieDoSaque.Machado | EspecieDoSaque.Faca | EspecieDoSaque.Limpeza);
+        static readonly Regra RegraDosEsportes = Tudo(EspecieDoSaque.Pesca | EspecieDoSaque.Mochila | EspecieDoSaque.Faca | EspecieDoSaque.Machado | EspecieDoSaque.Luz | EspecieDoSaque.Bebida);   // (sem as roupas: elas são muitas no catálogo e tomavam a loja; a da marina é desta)
+        static readonly Regra RegraDasVariedades = Tudo(EspecieDoSaque.Lanche | EspecieDoSaque.Luz | EspecieDoSaque.Escritorio | EspecieDoSaque.Limpeza | EspecieDoSaque.Pano | EspecieDoSaque.RoupaPequena | EspecieDoSaque.Cabeceira);
+        static readonly Regra RegraDoEscritorioDaLoja = Tudo(EspecieDoSaque.Escritorio | EspecieDoSaque.Luz);
+        // o galpão (23/11/2026): o que sobrou do estoque de uma distribuidora (as ferramentas, os galões, as lanternas, os panos,
+        // as mochilas, a limpeza e umas conservas)
+        static readonly Regra RegraDoGalpao = Tudo(EspecieDoSaque.Ferramenta | EspecieDoSaque.Galao | EspecieDoSaque.Luz | EspecieDoSaque.Machado |
+                                                   EspecieDoSaque.Pano | EspecieDoSaque.Mochila | EspecieDoSaque.Limpeza | EspecieDoSaque.Comida | EspecieDoSaque.Bebida);
+        static readonly Regra RegraDoBanheiroDaLoja = Tudo(EspecieDoSaque.Remedio | EspecieDoSaque.Limpeza);
 
         /// <summary>O que o lugar do móvel aceita: em cima, atrás de uma porta ou tampa, ou numa gaveta.</summary>
         public static EspecieDoSaque Aceita(Regra r, LugarDoSaque l) =>
@@ -419,7 +459,17 @@ namespace ZombieCityCleaner.Mundo
         /// Quantos itens uma unidade de loja tem (o dobro desde 17/11/2026): a farmácia de 16 a 28 (mais ou menos o dobro de
         /// uma casa), cada andar do hospital de 10 a 20 (cada andar é uma obra, com o seu sorteio). Sem porão.
         /// </summary>
-        public static (int min, int max) QuantosNaLoja(int unidade) => unidade == PontoDeMovel.Hospital ? (10, 20) : (16, 28);
+        public static (int min, int max) QuantosNaLoja(int unidade) => unidade switch
+        {
+            PontoDeMovel.Hospital => (10, 20),
+            PontoDeMovel.Farmacia => (16, 28),
+            // as outras lojas (23/11/2026)
+            PontoDeMovel.Mercado => (14, 26),
+            PontoDeMovel.VinteQuatroHoras => (8, 16),
+            PontoDeMovel.Armas => (6, 12),
+            PontoDeMovel.Galpao => (10, 20),
+            _ => (6, 14),
+        };
 
         /// <summary>
         /// As raridades na farmácia (normal 50, incomum 38, raro 12) e no hospital (45, 40 e 15). Sem épico nem lendário:
@@ -430,7 +480,11 @@ namespace ZombieCityCleaner.Mundo
 
         /// <summary>As chances da unidade: as da farmácia, as do hospital, ou as de todo o mapa (<see cref="Chances"/>).</summary>
         public static float[] ChancesDa(int unidade) =>
-            unidade == PontoDeMovel.Farmacia ? ChancesDaFarmacia : unidade == PontoDeMovel.Hospital ? ChancesDoHospital : Chances;
+            unidade == PontoDeMovel.Farmacia ? ChancesDaFarmacia : unidade == PontoDeMovel.Hospital ? ChancesDoHospital
+            : unidade == PontoDeMovel.Armas || unidade < PontoDeMovel.Farmacia ? Chances : ChancesDasLojas;
+
+        /// <summary>As raridades nas outras lojas (23/11/2026): o que sobrou nas prateleiras é quase tudo comum (55, 33 e 12).</summary>
+        public static readonly float[] ChancesDasLojas = { 0.55f, 0.33f, 0.12f, 0f, 0f };
 
         // ------------------------------------------------------------------ o estado do que se acha (a decisão 6)
 

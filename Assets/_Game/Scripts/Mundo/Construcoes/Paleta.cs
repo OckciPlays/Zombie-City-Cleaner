@@ -65,6 +65,11 @@ namespace ZombieCityCleaner.Mundo
             ["FenoEscuro"] = new Vector2Int(8, 14),
             // o tijolo aparente do Hospital Principal (o shader do abandono desenha os tijolos)
             ["TijoloAparente"] = new Vector2Int(9, 14),
+            // o lixo da cidade (23/11/2026, ModelosDoLixo): o plástico dos carrinhos (no abandono, como a madeira: desbota,
+            // escorre e racha) e as sacolas verde e branca (sem abandono, como o Saco). Só aqui (não estão no cidade_kit.py)
+            ["PlasticoVerde"] = new Vector2Int(10, 14), ["PlasticoPreto"] = new Vector2Int(11, 14),
+            ["PlasticoAzul"] = new Vector2Int(12, 14), ["PlasticoCinza"] = new Vector2Int(13, 14),
+            ["SacoVerde"] = new Vector2Int(14, 14), ["SacoBranco"] = new Vector2Int(15, 14),
         };
 
         /// <summary>O UV do meio do quadradinho da cor.</summary>

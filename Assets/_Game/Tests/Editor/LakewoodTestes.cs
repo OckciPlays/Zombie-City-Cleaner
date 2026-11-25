@@ -854,6 +854,55 @@ namespace ZombieCityCleaner.Testes
         }
 
         [Test]
+        public void OBunkerFicaNaEncostaComOPatioPlanoEOBuraco()
+        {
+            // 22/11/2026, a etapa 2 do Docs/23 ("o bunker na encosta do lago, ao lado do lote 114, onde se nasce hoje"): a
+            // pegada do bunker do mundo sorteado plana na altura da estrada do portão, fora da água, dos lotes e do terreiro
+            // da casa da partida, sem grama e sem pinheiros; o buraco no terreno embaixo da caixa inteira; os nascimentos na
+            // sala de operações
+            var c = Chao();
+            var b = c.Bunker;
+            Assert.IsNotNull(b, "o bunker no mapa (Zombie City Cleaner > Lakewood > Etapa 6: o bunker da comunidade)");
+            var peg = PlantaDeBunker.Pegada;
+            var portao = b.NoMapa((PlantaDeBunker.VaoDaCercaX0 + PlantaDeBunker.VaoDaCercaX1) * 0.5f, peg.yMin);
+            Assert.IsTrue(c.EstradaPerto(portao.x, portao.y, 12f, out float de, out float hEstrada, out bool ponte, out _) && !ponte, "a estrada na frente do portão");
+            Assert.AreEqual(hEstrada - 0.08f, b.Altura, 0.05f, "o pátio na altura da estrada");
+            Assert.Less(Vector2.Distance(b.Meio, c.Mapa.casaDaPartida.naEstrada), 260f, "perto da casa da partida");
+            int pinheiros = 0;
+            var plantas = new List<PlantaDaFloresta>();
+            var vistos = new HashSet<Vector2Int>();
+            for (float z = peg.yMin + 1f; z <= peg.yMax - 1f; z += 2f)
+            for (float x = peg.xMin + 1f; x <= peg.xMax - 1f; x += 2f)
+            {
+                var p = b.NoMapa(x, z);
+                // (na frente, fora do pátio de concreto, o chão pode seguir a rampa da estrada que passa ali)
+                bool naFrente = z < PlantaDeBunker.Patio.yMax && !b.NoPatio(p.x, p.y);
+                if (!naFrente) Assert.AreEqual(b.Altura, c.Altura(p.x, p.y), 0.05f, $"o chão da pegada em ({x:F0}; {z:F0})");
+                Assert.AreEqual(0f, c.Grama(p.x, p.y), 1e-4f, $"a grama na pegada em ({x:F0}; {z:F0})");
+                Assert.IsFalse(c.Agua(p.x, p.y, out _), "a água na pegada");
+                Assert.IsNull(c.LoteEm(p.x, p.y), "um lote na pegada");
+                Assert.IsTrue(c.Partida == null || c.Partida.DistanciaDoTerreiro(p.x, p.y) > 0f, "o terreiro da casa na pegada");
+                bool naCaixa = Mathf.Abs(x) < PlantaDeBunker.X1 && Mathf.Abs(z) < PlantaDeBunker.Z1;
+                Assert.AreEqual(naCaixa, c.NoBuraco(p.x, p.y), $"o buraco do terreno em ({x:F0}; {z:F0})");
+                vistos.Add(new Vector2Int(Mathf.FloorToInt(p.x / ChaoDeLakewood.TamanhoDoBloco), Mathf.FloorToInt(p.y / ChaoDeLakewood.TamanhoDoBloco)));
+            }
+            foreach (var bl in vistos)
+            {
+                plantas.Clear();
+                c.Plantas(bl.x, bl.y, plantas);
+                foreach (var pl in plantas)
+                    if (b.DistanciaDaPegada(pl.Posicao.x, pl.Posicao.z) < 6f) pinheiros++;
+            }
+            Assert.AreEqual(0, pinheiros, "os pinheiros na pegada");
+            // os nascimentos ficam na sala de operações, dentro da caixa (o x e o z locais do esboço)
+            foreach (var n in PlantaDeBunker.Nascimentos)
+            {
+                var q = b.Local(b.DoEsboco(n).x, b.DoEsboco(n).z);
+                Assert.IsTrue(Mathf.Abs(q.x) < PlantaDeBunker.X1 && Mathf.Abs(q.y) < PlantaDeBunker.Z1, $"o nascimento {n} fora da caixa");
+            }
+        }
+
+        [Test]
         public void ACasaDaPartidaFicaNoTerreiroPertoDaEstrada()
         {
             // 10/11/2026 ("coloque para o jogador nascer perto de alguma estrada... uma casa perto da estrada... sem mobília,
@@ -924,6 +973,37 @@ namespace ZombieCityCleaner.Testes
         }
 
         [Test]
+        public void ACidadeDeLakewoodTemAGradeEAsZonas()
+        {
+            // 23/11/2026, a parte C do Docs/23 (a cidade de Lakewood no padrão das cidades do mapa sorteado, no tamanho do mapa):
+            // a grade de ruas, os prédios no centro, as lojas no comércio, as casas nos bairros, as praças e os especiais
+            var m = Mapa();
+            var lotes = LotesDe("Lakewood");
+            int Conta(UsoDoLote t) => lotes.FindAll(l => l.tipo == t).Count;
+            Assert.GreaterOrEqual(m.ruas.FindAll(r => r.cidade == "Lakewood").Count, 100, "a grade de ruas");
+            Assert.GreaterOrEqual(lotes.Count, 3000, "os lotes no tamanho do mapa");
+            Assert.GreaterOrEqual(Conta(UsoDoLote.Predio), 120, "os prédios do centro");
+            Assert.GreaterOrEqual(Conta(UsoDoLote.Loja), 400, "as lojas do comércio");
+            Assert.GreaterOrEqual(Conta(UsoDoLote.Casa), 1500, "as casas dos bairros");
+            Assert.GreaterOrEqual(Conta(UsoDoLote.Praca), 3, "as praças");
+            Assert.GreaterOrEqual(Conta(UsoDoLote.Posto), 2, "os postos");
+            foreach (var nome in new[] { "igreja", "escola", "bombeiros" })
+                Assert.IsTrue(lotes.Exists(l => l.tipo == UsoDoLote.Especial && l.nome == nome), $"o especial: {nome}");
+            // os prédios perto do meio (o nó das rodovias) e as casas longe
+            var meio = new Vector2(9820f, 3500f);
+            float Media(UsoDoLote t)
+            {
+                float soma = 0f;
+                var l = lotes.FindAll(x => x.tipo == t);
+                foreach (var x in l) soma += Vector2.Distance(x.meio, meio);
+                return soma / l.Count;
+            }
+            Assert.Less(Media(UsoDoLote.Predio), 400f, "os prédios no centro");
+            Assert.Greater(Media(UsoDoLote.Casa), Media(UsoDoLote.Loja), "as casas mais longe que as lojas");
+            Assert.Greater(Media(UsoDoLote.Loja), Media(UsoDoLote.Predio), "as lojas mais longe que os prédios");
+        }
+
+        [Test]
         public void AWoodcreekTemAsRuasEOsLotesDoPlano()
         {
             var m = Mapa();
@@ -968,10 +1048,21 @@ namespace ZombieCityCleaner.Testes
             var c = Chao();
             Assert.Greater(m.lotes.Count, 0, "os lotes (Zombie City Cleaner > Lakewood > Etapa 6)");
             var linhas = LinhasDasRuas();
+            // a caixa de cada linha (23/11/2026: com os 4 mil lotes da cidade de Lakewood, medir cada ponto de cada lote até
+            // todas as linhas levava 13 min)
+            var caixas = new List<Rect>();
+            foreach (var (_, pontos, meia, _) in linhas)
+            {
+                float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
+                foreach (var q in pontos) { x0 = Mathf.Min(x0, q.x); x1 = Mathf.Max(x1, q.x); z0 = Mathf.Min(z0, q.y); z1 = Mathf.Max(z1, q.y); }
+                caixas.Add(Rect.MinMaxRect(x0 - meia - 2f, z0 - meia - 2f, x1 + meia + 2f, z1 + meia + 2f));
+            }
             var erros = new List<string>();
             foreach (var l in m.lotes)
             {
                 string qual = $"{l.cidade}: {l.Descricao} em ({l.meio.x:F0}; {l.meio.y:F0})";
+                float raioDoLote = 0.5f * Mathf.Sqrt(l.largura * l.largura + l.fundo * l.fundo);
+                var caixaDoLote = Rect.MinMaxRect(l.meio.x - raioDoLote, l.meio.y - raioDoLote, l.meio.x + raioDoLote, l.meio.y + raioDoLote);
                 var cidade = m.cidades.Find(x => x.nome == l.cidade);
                 Assert.IsNotNull(cidade, qual);
                 var contorno = MapaDeLakewood.Contorno(cidade.contorno);
@@ -990,13 +1081,17 @@ namespace ZombieCityCleaner.Testes
                 for (int j = 0; j <= 8; j++)
                 {
                     var p = l.NoMapa((i / 8f - 0.5f) * l.largura, (j / 8f - 0.5f) * l.fundo);
-                    foreach (var (nome, pontos, meia, fechada) in linhas)
+                    for (int k = 0; k < linhas.Count; k++)
+                    {
+                        if (!caixas[k].Overlaps(caixaDoLote)) continue;
+                        var (nome, pontos, meia, fechada) = linhas[k];
                         if (Linhas.Distancia(p, pontos, fechada) < meia + 1f)
                         {
                             erros.Add($"{qual}: em cima da {nome}");
                             i = j = 9;
                             break;
                         }
+                    }
                 }
                 // de frente para a rua dele: a beira da frente perto dela, e a frente olhando para ela
                 float melhor = float.MaxValue;
@@ -1024,8 +1119,14 @@ namespace ZombieCityCleaner.Testes
             // nenhum em cima do outro
             for (int i = 0; i < m.lotes.Count; i++)
             for (int j = i + 1; j < m.lotes.Count; j++)
-                if (LoteDoMapa.Encostam(m.lotes[i], m.lotes[j], 0.5f))
+            {
+                var li = m.lotes[i];
+                var lj = m.lotes[j];
+                float alcance = 0.5f * (li.largura + li.fundo + lj.largura + lj.fundo) + 1f;
+                if ((li.meio - lj.meio).sqrMagnitude > alcance * alcance) continue;
+                if (LoteDoMapa.Encostam(li, lj, 0.5f))
                     erros.Add($"{m.lotes[i].Descricao} em ({m.lotes[i].meio.x:F0}; {m.lotes[i].meio.y:F0}) e {m.lotes[j].Descricao} em ({m.lotes[j].meio.x:F0}; {m.lotes[j].meio.y:F0}) se encostam");
+            }
             Assert.IsEmpty(erros, string.Join("\n", erros));
         }
 
@@ -1063,9 +1164,11 @@ namespace ZombieCityCleaner.Testes
                     if (lote == null || !lote.Ocupado) continue;
                     var q = lote.Lote.NoLote(new Vector2(pl.Posicao.x, pl.Posicao.z));
                     bool naObra = lote.DistanciaDaConstrucao(pl.Posicao.x, pl.Posicao.z) < 3.5f;
-                    bool naFrente = lote.Lote.tipo != UsoDoLote.Cabana && q.y < lote.Construcao.yMin + 0.5f;
+                    // (a praça, 23/11/2026: as árvores nos canteiros, também na metade da frente)
+                    bool praca = lote.Lote.tipo == UsoDoLote.Praca;
+                    bool naFrente = lote.Lote.tipo != UsoDoLote.Cabana && !praca && q.y < lote.Construcao.yMin + 0.5f;
                     bool naTrilha = c.DistanciaDaTrilha(pl.Posicao.x, pl.Posicao.z, 3f) < 2f;
-                    bool semQuintal = lote.Lote.tipo != UsoDoLote.Casa && lote.Lote.tipo != UsoDoLote.Cabana && lote.Lote.tipo != UsoDoLote.Especial;
+                    bool semQuintal = lote.Lote.tipo != UsoDoLote.Casa && lote.Lote.tipo != UsoDoLote.Cabana && lote.Lote.tipo != UsoDoLote.Especial && !praca;
                     if (naObra || naFrente || naTrilha || semQuintal)
                         erros.Add($"um pinheiro no lote {lote.Lote.Descricao} em ({pl.Posicao.x:F0}; {pl.Posicao.z:F0}){(naObra ? ", na construção" : "")}{(naFrente ? ", na frente" : "")}{(naTrilha ? ", na trilha" : "")}{(semQuintal ? ", sem quintal" : "")}");
                 }
@@ -1141,6 +1244,49 @@ namespace ZombieCityCleaner.Testes
             foreach (var t in new[] { "igreja", "escola", "bombeiros", "guarda florestal", "motel" })
                 Assert.IsTrue(tipos.Contains(t), $"a Woodcreek sem o especial \"{t}\"");
             Assert.AreEqual(26, cabanas, "as cabanas do Cabin Loop");
+        }
+
+        [Test]
+        public void ACasaDaFamiliaDoDiaZeroFicaNoNorteDaWoodcreekComGaragem()
+        {
+            // 22/11/2026, a etapa 4 do Docs/23 (o D0 na Woodcreek): a casa da família é a do lote de casa mais perto do ponto
+            // escolhido (o WoodcreekDoDiaZero.CasaDaFamilia, na Spruce Lane), com a entrada da garagem (a caminhonete fica
+            // nela), ao norte do comércio e a uns 600 a 750 m do bunker (a fuga atravessa a vila); e a vila tem as lojas que
+            // vendem no Dia 0 (o mercado, a farmácia, a loja de armas e o posto)
+            var c = Chao();
+            var ponto = new Vector2(9921.5f, 6901f);
+            ChaoDeLakewood.LoteNoChao casa = null;
+            float melhor = float.MaxValue;
+            foreach (var l in c.Lotes)
+            {
+                if (l.Plano == null || l.Plano.Uso != UsoDoLote.Casa || l.Plano.Casa == null) continue;
+                float d = (l.Lote.meio - ponto).sqrMagnitude;
+                if (d < melhor) { melhor = d; casa = l; }
+            }
+            Assert.IsNotNull(casa, "a casa da família");
+            Assert.Less(Mathf.Sqrt(melhor), 2f, "o lote da casa no ponto escolhido");
+            Assert.AreEqual("Woodcreek", casa.Lote.cidade);
+            Assert.IsTrue(casa.Plano.EntradaDoCarro.HasValue, "a entrada da garagem");
+            Assert.IsNotNull(c.Bunker, "o bunker no mapa");
+            float aoBunker = Vector2.Distance(casa.Lote.meio, c.Bunker.Meio);
+            Assert.That(aoBunker, Is.InRange(600f, 750f), "a distância até o bunker");
+            Assert.Greater(casa.Lote.meio.y, 6850f, "ao norte do comércio");
+            // a entrada da garagem, onde a caminhonete fica: seca, fora de outro lote e sem degrau grande
+            var boca = casa.Lote.NoMapa(casa.Plano.EntradaDoCarro.Value.x, casa.Plano.EntradaDoCarro.Value.y);
+            var vaga = boca + casa.Lote.Frente * 3f;
+            Assert.IsFalse(c.Agua(vaga.x, vaga.y, out _), "a água na vaga da caminhonete");
+            var outro = c.LoteEm(vaga.x, vaga.y);
+            Assert.IsTrue(outro == null || outro == casa, "a vaga da caminhonete em outro lote");
+            Assert.Less(Mathf.Abs(c.Altura(vaga.x, vaga.y) - c.Altura(boca.x, boca.y)), 0.8f, "o degrau entre a garagem e a vaga");
+            var lojas = new HashSet<string>();
+            foreach (var l in c.Lotes)
+            {
+                if (l.Plano == null || l.Lote.cidade != "Woodcreek") continue;
+                if (l.Plano.Uso == UsoDoLote.Loja && l.Plano.Loja != null) lojas.Add(l.Plano.Loja.tipo.ToString());
+                else lojas.Add(l.Plano.Uso.ToString());
+            }
+            foreach (var t in new[] { "Mercado", "Farmacia", "LojaDeArmas", "Posto", "Comum" })
+                Assert.IsTrue(lojas.Contains(t), $"a Woodcreek sem {t}");
         }
     }
 }

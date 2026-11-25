@@ -143,6 +143,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void Pensar()
         {
             if (_morto.Value || agente == null) return;
+            if (AlcancarOsJogadores()) return;   // (24/11/2026: o aliado que ficou para trás, Sobrevivente.Escolta.cs)
             if (!agente.enabled)
             {
                 // o militar longe do NavMesh dos jogadores (aparece a 170 m): parado no posto, vê e atira de longe
@@ -187,6 +188,7 @@ namespace ZombieCityCleaner.Sobreviventes
             // (18/11/2026) no tiroteio, com o inimigo visto há pouco, só o zumbi colado (a 6 m) tira ele da luta
             else if (_zumbi != null && ZumbiAmeaca(_zumbi)
                      && (!combate || agora - grupo.viuEm > 3f || (_zumbi.transform.position - transform.position).sqrMagnitude < 6f * 6f)) LutarComZumbi(agora);
+            else if (Aliado) PensarComoAliado(agora);   // (24/11/2026: o Capitão, Sobrevivente.Escolta.cs)
             else if (combate) Combater(agora);
             else if (naEmboscada) Aguardar(agora);   // (a emboscada, 18/11/2026: Sobrevivente.Emboscada.cs)
             else if (NaEstrada) FicarNaEstrada(agora);

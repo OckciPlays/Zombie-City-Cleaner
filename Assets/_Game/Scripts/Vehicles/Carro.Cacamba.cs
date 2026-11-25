@@ -28,5 +28,11 @@ namespace ZombieCityCleaner.Vehicles
 
         /// <summary>O lugar fica na caçamba (sem o teto, com a pose de sentado no piso).</summary>
         public bool NaCacamba(int lugar) => cacamba && lugar >= primeiroLugarNaCacamba && lugar < Lugares;
+
+        /// <summary>
+        /// A estante da caçamba (22/11/2026, o Dia 0 na Woodcreek: as compras vão para ela; uma estante das
+        /// <see cref="World.EstantesDoBunker"/>, como o compartimento do caiaque), ou -1 sem caçamba. A caminhonete é uma só.
+        /// </summary>
+        public int CacambaDeGuardar => cacamba ? World.EstantesDoBunker.BaseDasCacambas : -1;
     }
 }

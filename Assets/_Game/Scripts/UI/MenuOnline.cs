@@ -719,7 +719,7 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
             if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Configurações", _botao)) _opcoes = true;
             // (12/11/2026: no Dia 0 nada é salvo, e o botão avisa)
-            bool noDiaZero = MundoDaPartida.Instancia != null && MundoDaPartida.Instancia.NoDiaZero;
+            bool noDiaZero = MundoDoJogo.NoDiaZeroAgora;   // (o do Lakewood também)
             if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), noDiaZero ? "Sair (o Dia 0 não é salvo)" : "Sair da partida", _botao))
             {
                 _pausa = false;

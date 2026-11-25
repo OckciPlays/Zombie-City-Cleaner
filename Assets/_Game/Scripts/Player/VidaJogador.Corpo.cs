@@ -107,7 +107,8 @@ namespace ZombieCityCleaner.Player
             get
             {
                 var mundo = MundoDaPartida.Instancia;
-                return mundo == null || (mundo.Pronto && !mundo.NoDiaZero);
+                if (MundoDoJogo.NoDiaZeroAgora) return false;   // (o Dia 0 do Lakewood também, 22/11/2026)
+                return mundo == null || mundo.Pronto;
             }
         }
 

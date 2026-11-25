@@ -342,6 +342,42 @@ namespace ZombieCityCleaner.Mundo
             while (_alt.Count < ate) _alt.Add(SemAltura);
         }
 
+        /// <summary>
+        /// Divide a malha em pedaços quadrados de "tamanho" m em x e z, pelo meio de cada triângulo (23/11/2026: as ruas da
+        /// cidade de Lakewood numa malha só passavam de 2 milhões de triângulos na colisão; em pedaços, a física e o recorte
+        /// da câmera tratam cada um à parte). A chave é o quadrado (x, z).
+        /// </summary>
+        public Dictionary<(int, int), MalhaDeObra> Dividir(float tamanho)
+        {
+            var saida = new Dictionary<(int, int), MalhaDeObra>();
+            var mapas = new Dictionary<(int, int), Dictionary<int, int>>();
+            for (int i = 0; i < _t.Count; i += 3)
+            {
+                var centro = (_v[_t[i]] + _v[_t[i + 1]] + _v[_t[i + 2]]) / 3f;
+                var k = (Mathf.FloorToInt(centro.x / tamanho), Mathf.FloorToInt(centro.z / tamanho));
+                if (!saida.TryGetValue(k, out var m))
+                {
+                    saida[k] = m = new MalhaDeObra(1024);
+                    mapas[k] = new Dictionary<int, int>();
+                }
+                var mapa = mapas[k];
+                for (int q = 0; q < 3; q++)
+                {
+                    int v = _t[i + q];
+                    if (!mapa.TryGetValue(v, out int novo))
+                    {
+                        novo = m._v.Count;
+                        mapa[v] = novo;
+                        m._v.Add(_v[v]);
+                        m._n.Add(_n[v]);
+                        m._uv.Add(_uv[v]);
+                    }
+                    m._t.Add(novo);
+                }
+            }
+            return saida;
+        }
+
         /// <summary>Espelha a malha em x, nela mesma (sem copiar), com o sentido dos triângulos trocado (a frente continua fora).</summary>
         public void Espelhar()
         {

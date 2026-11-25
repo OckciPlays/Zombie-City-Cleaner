@@ -214,6 +214,22 @@ namespace ZombieCityCleaner.Mundo
                                                 && Vector2.Distance(l.meio, MeioDaCasa) < 25f;
     }
 
+    /// <summary>
+    /// O bunker da comunidade (22/11/2026, a etapa 2 do Docs/23-Campanha-e-Mapa.md): o bunker do mundo sorteado
+    /// (<see cref="PlantaDeBunker"/>), cavado na encosta perto da casa da partida, com o portão para a estrada. O lugar é
+    /// achado no Editor (Zombie City Cleaner > Lakewood > O bunker) e guardado aqui; o chão (o pátio plano, o talude e o
+    /// buraco embaixo da caixa) sai do ChaoDeLakewood.
+    /// </summary>
+    [Serializable]
+    public class BunkerDoMapa
+    {
+        public bool tem;
+        [Tooltip("O meio da caixa (no mapa).")] public Vector2 meio;
+        [Tooltip("O giro do bunker (graus, o da Unity): o portão olha para o -z dele.")] public float giro;
+        [Tooltip("O chão do pátio e da garagem (m): o da estrada na frente do portão.")] public float altura;
+        [Tooltip("A estrada do portão (o nome), para o relatório.")] public string estrada;
+    }
+
     /// <summary>Um túnel da rede subterrânea (Plano_Lakewood, Etapa 8): por enquanto, só a linha reservada no mapa.</summary>
     [Serializable]
     public class TunelDoMapa
@@ -275,6 +291,8 @@ namespace ZombieCityCleaner.Mundo
         [Tooltip("Onde a partida fica por enquanto (a cena acha o chão seco mais perto).")] public Vector2 partida = new Vector2(8550f, 3600f);
         [Tooltip("A casa da partida, com as mesas das armas e os veículos arrumados no terreiro (com ela, a partida é o terreiro).")]
         public CasaDaPartida casaDaPartida = new CasaDaPartida();
+        [Tooltip("O bunker da comunidade (com ele, o jogo novo começa na sala de operações; a casa da partida fica para o teste).")]
+        public BunkerDoMapa bunker = new BunkerDoMapa();
 
         [Header("A cobertura (lida da imagem de referência)")]
         [Tooltip("O lado de cada célula das grades (m).")] public float celulaDaGrade = 50f;

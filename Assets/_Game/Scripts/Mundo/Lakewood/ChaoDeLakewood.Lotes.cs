@@ -107,6 +107,10 @@ namespace ZombieCityCleaner.Mundo
             Lotes.Clear();
             _lotes.Clear();
             if (Mapa.lotes == null) return;
+            // as cidades grandes (23/11/2026, a cidade de Lakewood): o patamar no máximo 20 cm acima da rua da frente (com
+            // 60 cm, de longe, o triângulo do terreno entre o lote e a pista cobria a beira do asfalto)
+            var grandes = new HashSet<string>();
+            foreach (var c in Mapa.cidades) if (c.tipo == TipoDeCidade.Principal) grandes.Add(c.nome);
             for (int i = 0; i < Mapa.lotes.Count; i++)
             {
                 var l = Mapa.lotes[i];
@@ -121,7 +125,7 @@ namespace ZombieCityCleaner.Mundo
                     soma += Relevo.Altura(p.x, p.y);
                 }
                 float media = soma / 25f, rua = hr - 0.08f;
-                float altura = rua + Mathf.Clamp(media - rua, -0.3f, 0.6f);
+                float altura = rua + Mathf.Clamp(media - rua, -0.3f, l.cidade != null && grandes.Contains(l.cidade) ? 0.2f : 0.6f);
                 // o talude: a maior diferença para o chão logo fora do lote
                 float maior = 0f;
                 for (int a = -1; a <= 1; a++)
@@ -287,6 +291,13 @@ namespace ZombieCityCleaner.Mundo
         /// </summary>
         public readonly List<(Vector2 centro, Vector2 eixoX, Vector2 eixoZ, Vector2 meia)> Buracos = new List<(Vector2, Vector2, Vector2, Vector2)>();
 
+        /// <summary>
+        /// A época do mundo (22/11/2026, a Woodcreek de antes, a etapa 3 do Docs/23): no antes do apocalipse, os quintais dos
+        /// lotes têm o gramado aparado (quase sem a terra batida e com bem menos tufos). Quem muda refaz os blocos das cidades e
+        /// a grama (o LakewoodNaCena). As árvores são as mesmas nas duas épocas (a mesma geografia).
+        /// </summary>
+        public bool Antes { get; set; }
+
         /// <summary>Se o ponto fica num buraco do terreno (com a folga).</summary>
         public bool NoBuraco(float x, float z, float folga = 0f)
         {
@@ -390,7 +401,7 @@ namespace ZombieCityCleaner.Mundo
                 if (w > 0f)
                 {
                     float n = 0.5f + 0.5f * _sorte.Amostra(x / 9f, z / 9f);
-                    float terra = Mathf.Lerp(0.08f, 0.38f, Geo.Suave(0.55f, 0.85f, n));
+                    float terra = Antes ? Mathf.Lerp(0.02f, 0.08f, Geo.Suave(0.6f, 0.9f, n)) : Mathf.Lerp(0.08f, 0.38f, Geo.Suave(0.55f, 0.85f, n));
                     r = Mathf.Lerp(r, 0.9f - terra, w);
                     g = Mathf.Lerp(g, terra, w);
                     b = Mathf.Lerp(b, 0.03f, w);
@@ -441,6 +452,16 @@ namespace ZombieCityCleaner.Mundo
         float QuintalDaPlanta(LoteNoChao l, float x, float z)
         {
             var uso = l.Plano != null ? l.Plano.Uso : l.Lote.tipo;
+            if (uso == UsoDoLote.Praca)
+            {
+                // a praça (23/11/2026): as árvores nos quatro canteiros, longe da cruz dos caminhos, da volta e do chafariz
+                var q = l.Lote.NoLote(new Vector2(x, z));
+                float mx = l.Lote.largura * 0.5f, mz = l.Lote.fundo * 0.5f;
+                if (Mathf.Abs(q.x) < 3.5f || Mathf.Abs(q.y) < 3.5f) return -1f;
+                if (Mathf.Abs(q.x) > mx - 5f || Mathf.Abs(q.y) > mz - 5f) return -1f;
+                if (q.magnitude < 10.5f) return -1f;
+                return 0.3f;
+            }
             if (uso != UsoDoLote.Casa && uso != UsoDoLote.Cabana && uso != UsoDoLote.Especial) return -1f;
             var p = l.Lote.NoLote(new Vector2(x, z));
             if (Mathf.Abs(p.x) > l.Lote.largura * 0.5f - 1.2f || Mathf.Abs(p.y) > l.Lote.fundo * 0.5f - 1.2f) return -1f;
@@ -473,7 +494,8 @@ namespace ZombieCityCleaner.Mundo
             if (l == null || !l.Ocupado) return 1f;
             float dentro = 1f - Geo.Suave(0f, 1.5f, l.Distancia(x, z));
             float longeDaObra = Geo.Suave(2f, 3.5f, l.DistanciaDaConstrucao(x, z));
-            return Mathf.Lerp(1f, 0.45f * longeDaObra, dentro);
+            // (no antes, o gramado aparado: bem menos tufos)
+            return Mathf.Lerp(1f, (Antes ? 0.15f : 0.45f) * longeDaObra, dentro);
         }
     }
 }

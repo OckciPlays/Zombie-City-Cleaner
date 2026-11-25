@@ -57,6 +57,8 @@ namespace ZombieCityCleaner.Salvar
         /// save de antes dela: ao carregar, ela aparece uma vez numa vaga livre da garagem (ou no pátio) e a chave no chão da sala.
         /// </summary>
         public bool caminhonete;
+        /// <summary>A primeira missão depois dos 5 anos (retomar a Woodcreek e consertar a caminhonete) já foi cumprida (24/11/2026).</summary>
+        public bool primeiraMissao;
         /// <summary>Onde os caiaques ficaram (06/11/2026).</summary>
         public List<CaiaqueSalvo> caiaques = new List<CaiaqueSalvo>();
         public string criadoEm, salvoEm;
@@ -82,6 +84,8 @@ namespace ZombieCityCleaner.Salvar
         /// <summary>As tocas dos castores e as árvores que eles roeram (12/11/2026, a etapa 3 da fauna: FaunaDoMundo.Castores.cs).</summary>
         public List<Fauna.TocaDoCastor> tocasDosCastores = new List<Fauna.TocaDoCastor>();
         public List<Fauna.ArvoreRoida> arvoresRoidas = new List<Fauna.ArvoreRoida>();
+        /// <summary>Os lixos da cidade já revirados (23/11/2026: as chaves do lugar no mapa, FaunaDoMundo.ChaveDoLixo).</summary>
+        public List<int> lixosRevirados = new List<int>();
         public long armasNaParede, pentesNaParede;
         public List<PosicaoSalva> posicoes = new List<PosicaoSalva>();
         /// <summary>Os grupos de sobreviventes de cada cidade (quem morreu continua morto).</summary>
@@ -470,6 +474,8 @@ namespace ZombieCityCleaner.Salvar
         public Vector3 pos;
         public float giro;
         public int mochila, dinheiro, colunas, linhas;
+        /// <summary>(24/11/2026) De que é (Loot.TipoDeRecipiente: 0 a mochila; o lixo) e quem é (a chave do lixo).</summary>
+        public int tipo, origem;
         public List<ItemSalvo> itens = new List<ItemSalvo>();
     }
 }

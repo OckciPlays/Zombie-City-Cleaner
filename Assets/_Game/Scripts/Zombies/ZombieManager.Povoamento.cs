@@ -101,6 +101,19 @@ namespace ZombieCityCleaner.Zombies
         /// povoadas com menos do que a densidade de agora (ao escurecer, de ×2 para ×3: ganham a diferença, como se mais
         /// zumbis saíssem à noite). Ao clarear não somem: os que sobram se escondem ou viram pedra.
         /// </summary>
+        /// <summary>
+        /// O mundo está numa época sem zumbis (22/11/2026: o antes do apocalipse do Lakewood, LakewoodNaCena.Epoca.cs): o
+        /// povoamento para (os do hospital e dos prédios também).
+        /// </summary>
+        public static bool ForaDaEpoca;
+
+        /// <summary>No anfitrião: todos os zumbis voltam para a reserva (o antes do apocalipse começou).</summary>
+        public void RecolherTodos()
+        {
+            if (!IsServer || !IsSpawned) return;
+            Limpar();
+        }
+
         void PovoarEmVolta(float agora)
         {
             if (agora < _proximoPovoamento) return;
@@ -108,7 +121,7 @@ namespace ZombieCityCleaner.Zombies
             var dados = ChaoDosZumbis.Atual;
             if (dados == null || QuantosJogadores == 0) return;
             Recolher(agora);
-            if (!PovoarOMundo.Value) return;
+            if (!PovoarOMundo.Value || ForaDaEpoca) return;
             PovoarAndares(dados);   // os andares dos prédios que carregaram (ZombieManager.Predios.cs)
             PovoarOHospital(dados);   // os andares do Hospital Principal que carregaram (ZombieManager.Hospital.cs)
             float c = celulaDoPovoamento, agoraD = DensidadeAgora;

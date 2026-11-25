@@ -226,6 +226,14 @@ namespace ZombieCityCleaner.Mundo
             A("Veterinario", "Veterinário", "Veterinária", 26, 75, 25, "Fazendeiro", Habilidade.Medicina, 0.6f,
               "{N} cuidou de vaca e cavalo nas fazendas da região por {anos}.",
               bonus: new[] { (Habilidade.Medicina, 4), (Habilidade.Plantio, 2) }),
+            // as da comunidade do bunker do Lakewood (22/11/2026, a etapa 2 do Docs/23): peso 0, só saem pedidas
+            // (SorteioDosMoradores.SortearComunidade)
+            A(DonoDoBunker, "Dono do bunker", "Dona do bunker", 50, 75, 30, "Civil", Habilidade.Social, 0f,
+              "{N} construiu o bunker na encosta do lago anos antes de tudo, quando a cidade inteira achava que era loucura.", "Durao",
+              bonus: new[] { (Habilidade.Social, 6), (Habilidade.Construcao, 3), (Habilidade.Combate, 2) }),
+            A(Major, "Major do Exército", "Major do Exército", 38, 60, 22, "Militar", Habilidade.Combate, 0f,
+              "{N} comandava o posto da Guarda Nacional no condado quando a quarentena começou.", "SangueFrio",
+              bonus: new[] { (Habilidade.Combate, 9), (Habilidade.Social, 3), (Habilidade.Medicina, 1) }),
         };
 
         static HistoriaDoMorador D(string chave, string m, string f, float peso, string frase, string puxa = null,
@@ -236,6 +244,8 @@ namespace ZombieCityCleaner.Mundo
         };
 
         public const string ComAFamilia = "ComAFamilia";
+        /// <summary>As histórias do líder e do major da comunidade do bunker (o Lakewood).</summary>
+        public const string DonoDoBunker = "DonoDoBunker", Major = "Major", AbriuOBunker = "AbriuOBunker", TrouxeOsSoldados = "TrouxeOsSoldados";
 
         /// <summary>Como ele sobreviveu aos anos do apocalipse e chegou ao bunker (a segunda parte da história).</summary>
         public static readonly HistoriaDoMorador[] Depois =
@@ -260,6 +270,13 @@ namespace ZombieCityCleaner.Mundo
               (Habilidade.Mecanica, 3), (Habilidade.Oficio, 2)),
             D("Porao", "Ficou escondido num porão", "Ficou escondida num porão", 0.8f,
               "{N} passou meses trancad{o} num porão, ouvindo os zumbis lá em cima.", "Medroso"),
+            // as da comunidade do bunker do Lakewood (peso 0: só saem pedidas)
+            D(AbriuOBunker, "Abriu o bunker para quem fugia", "Abriu o bunker para quem fugia", 0f,
+              "{N} abriu as portas do bunker para quem fugia da cidade no D+30 e organiza a comunidade desde então.", null,
+              (Habilidade.Social, 3)),
+            D(TrouxeOsSoldados, "Chegou ao bunker com os soldados", "Chegou ao bunker com os soldados", 0f,
+              "{N} chegou ao bunker com o que sobrou dos soldados no D+30 e cuida da defesa desde então.", null,
+              (Habilidade.Combate, 2), (Habilidade.Construcao, 1)),
             D("CacouZumbis", "Caçou zumbis", "Caçou zumbis", 0.7f,
               "{N} limpou casa por casa em troca de comida e perdeu a conta de quantos derrubou.", "SangueFrio",
               (Habilidade.Combate, 4)),

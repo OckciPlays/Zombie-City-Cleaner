@@ -241,6 +241,48 @@ namespace ZombieCityCleaner.EditorTools
         }
 
         /// <summary>
+        /// Um lote especial no trecho mais plano da rua entre os pontos dela mais perto de "de" e de "ate" (23/11/2026, a
+        /// marina da cidade de Lakewood, na encosta da baía): do lado e com o recuo dados, onde ele cabe com o menor desnível.
+        /// Null se não couber em nenhum.
+        /// </summary>
+        public LoteDoMapa EspecialMaisPlano(UsoDoLote tipo, string nome, string rua, Vector2 de, Vector2 ate, int lado, float largura, float fundo, float recuo)
+        {
+            LoteDoMapa melhor = null;
+            float menor = float.MaxValue;
+            foreach (var r in LinhasDe(rua))
+            {
+                int ia = 1, ib = 1;
+                float da = float.MaxValue, db = float.MaxValue;
+                for (int i = 1; i < r.Pontos.Count - 1; i++)
+                {
+                    float a = Vector2.Distance(r.Pontos[i], de), b = Vector2.Distance(r.Pontos[i], ate);
+                    if (a < da) { da = a; ia = i; }
+                    if (b < db) { db = b; ib = i; }
+                }
+                for (int i = Mathf.Min(ia, ib); i <= Mathf.Max(ia, ib); i++)
+                {
+                    var l = NoPonto(r, i, lado, largura, fundo, recuo);
+                    l.tipo = tipo;
+                    l.nome = nome;
+                    l.cidade = _cidade;
+                    if (!Cabe(l, 0f, 1.5f)) continue;
+                    float desnivel = LotesDeLakewood.Desnivel(_chao, l, out bool agua);
+                    if (agua || desnivel >= menor) continue;
+                    menor = desnivel;
+                    melhor = l;
+                }
+            }
+            if (melhor == null)
+            {
+                _relatorio.Append($"\n  {tipo} {nome}: NÃO COUBE na {rua}");
+                return null;
+            }
+            Lotes.Add(melhor);
+            _relatorio.Append($"\n  {melhor.Descricao} ({nome}): ({melhor.meio.x:F0}; {melhor.meio.y:F0}), {largura:F0} × {fundo:F0} m, de frente para a {rua}, desnível de {menor:F1} m");
+            return melhor;
+        }
+
+        /// <summary>
         /// Os lotes ao longo de uma rua: em cada ponto dela (dentro da área, se houver), dos lados pedidos (1 à direita de
         /// quem anda do primeiro ponto para o último, 2 à esquerda, 3 os dois), o lote onde cabe (com "pulo" de folga entre um
         /// e outro), com o chão quase plano e longe da água. Uma fração "vazio" deles (pelo sorteio) fica vazia, com a mata.

@@ -15,7 +15,9 @@ namespace ZombieCityCleaner.World
         // o mundo do jogo (12/11/2026, a parte 1 do "O jogo do mundo sorteado no Lakewood"): o pronto e a semente vêm do
         // MundoDeLakewood (a rede); a área, a borda e as estradas, do chão
         bool IMundoDoJogo.PartidaPronta => MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Pronto;
-        bool IMundoDoJogo.NoDiaZero => false;
+        // (22/11/2026, a Woodcreek de antes: o antes do apocalipse é o Dia 0 do Lakewood: os grupos, as emboscadas, o
+        // acampamento, as bases e os carros quebrados desligam, e os moradores do bunker esperam)
+        bool IMundoDoJogo.NoDiaZero => _antes;
         int IMundoDoJogo.SementeDaPartida => MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Semente != 0
             ? MundoDeLakewood.Instancia.Semente : (mapa != null ? mapa.semente : 1);
         // (16/11/2026, OrigemDeLakewood: as interfaces falam no mundo do jogo; os pontos vão para o mapa aqui)

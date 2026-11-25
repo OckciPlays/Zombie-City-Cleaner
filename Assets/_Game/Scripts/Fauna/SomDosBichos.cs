@@ -17,6 +17,9 @@ namespace ZombieCityCleaner.Fauna
         Filhote, Comendo,
         // 20/11/2026 (os do sfxjar): o chiado do guaxinim
         Guaxinim,
+        // 23/11/2026 (o guaxinim e o lixo): a lata tombando (as latas gravadas das armadilhas) e o susto da caçamba (a tampa
+        // batendo, mais alto e mais longe que a do guaxinim mexendo)
+        LataCaindo, SustoNaCacamba,
     }
 
     /// <summary>
@@ -56,6 +59,8 @@ namespace ZombieCityCleaner.Fauna
             SomDoBicho.Filhote => 90f,
             SomDoBicho.Comendo => 30f,
             SomDoBicho.Guaxinim => 45f,
+            SomDoBicho.LataCaindo => 60f,
+            SomDoBicho.SustoNaCacamba => 90f,
             _ => 70f,
         };
 
@@ -66,6 +71,8 @@ namespace ZombieCityCleaner.Fauna
             SomDoBicho.Rugido => 1f,
             SomDoBicho.Mordida => 0.8f,
             SomDoBicho.Patada => 0.9f,
+            SomDoBicho.LataCaindo => 0.9f,
+            SomDoBicho.SustoNaCacamba => 1f,
             _ => 0.75f,
         };
 
@@ -87,7 +94,10 @@ namespace ZombieCityCleaner.Fauna
                 // os gravados (19/11/2026, do Animal Sound Effect Pack Lite: o lobo, o urso, o veado, o alce, a águia, o
                 // sapo e a cascavel) em Resources/Bichos/<o som>; sem eles, os feitos aqui (20/11/2026: só os que não têm
                 // gravação; os outros, sem a pasta, ficam calados)
-                var gravados = Resources.LoadAll<AudioClip>("Bichos/" + s);
+                // (23/11/2026) a lata tombando: as latas gravadas das armadilhas; o susto da caçamba: a tampa da caçamba
+                var gravados = s == SomDoBicho.LataCaindo ? SonsGravados.Varios("Armadilhas", "latas_")
+                             : s == SomDoBicho.SustoNaCacamba ? Clips(SomDoBicho.Cacamba)
+                             : Resources.LoadAll<AudioClip>("Bichos/" + s);
                 if (gravados != null && gravados.Length > 0) _clips[i] = gravados;
                 else
                 {

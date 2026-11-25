@@ -89,6 +89,8 @@ namespace ZombieCityCleaner.Mundo
             Partida = LugarDaPartida.De(this);
             // os lotes das cidades (Etapa 6: o patamar de cada um na altura da rua da frente): ChaoDeLakewood.Lotes.cs
             MontarOsLotes();
+            // o bunker da comunidade (a etapa 2 do Docs/23): a pegada plana e o buraco embaixo da caixa (ChaoDeLakewood.Bunker.cs)
+            PorOBunker();
         }
 
         public static float MeiaLarguraDe(TipoDeVia t) => t switch { TipoDeVia.Rodovia => 6.5f, TipoDeVia.Secundaria => 4.2f, TipoDeVia.Rua => 3.5f, _ => 2.6f };
@@ -308,6 +310,8 @@ namespace ZombieCityCleaner.Mundo
             if (Usina != null) h = Usina.Chao(x, z, h);
             // o terreiro da casa da partida (plano, na altura da estrada na frente dele)
             if (Partida != null) h = Partida.Chao(x, z, h);
+            // a pegada do bunker (plana, na altura da estrada do portão, com o talude largo até o chão de fora)
+            if (Bunker != null) h = Bunker.Chao(x, z, h);
             // os patamares dos lotes das cidades (na altura da rua da frente, com o talude até o chão de fora)
             h = ChaoDosLotes(x, z, h);
             // as estradas: o asfalto, o acostamento e o corte ou o aterro (na ponte, o chão fica como está); e onde duas
@@ -327,9 +331,15 @@ namespace ZombieCityCleaner.Mundo
                 }
                 if (piso < float.MaxValue) h = Mathf.Min(h, piso - 0.08f);
             }
+            // o pátio de concreto do bunker fica plano até a beira (a rampa da estrada que passa na frente furava a laje)
+            if (Bunker != null && Bunker.NoPatio(x, z)) h = Bunker.Altura;
             // dentro de um lote ocupado, o patamar manda (os lotes colados na rua pegavam o talude dela na beira da frente;
             // nenhum lote encosta no asfalto)
-            return NoPatamar(x, z, h);
+            float final = NoPatamar(x, z, h);
+            // de longe (os passos de 8 e 16 m), perto de uma pista, nem o patamar fica acima dela (23/11/2026: com os 4 mil
+            // lotes da cidade de Lakewood, o triângulo entre um ponto do patamar e um da pista cobria a beira do asfalto)
+            if (folga > 0f && piso < float.MaxValue) final = Mathf.Min(final, piso - 0.08f);
+            return final;
         }
 
         // o canal do rio no ponto: o leito abaixo da água (fundo no meio, em parábola), o barranco subindo do pé (um pouco
@@ -459,6 +469,20 @@ namespace ZombieCityCleaner.Mundo
                     r = Mathf.Lerp(r, 0.1f + 0.15f * n2, w);
                     g = Mathf.Lerp(g, 0.3f, w);
                     b = Mathf.Lerp(b, 0.7f - 0.15f * n2, w);
+                    a = Mathf.Lerp(a, 0f, w);
+                }
+            }
+            // a pegada do bunker: a terra batida (o morro e o pátio de concreto ficam por cima)
+            if (Bunker != null)
+            {
+                float db = Bunker.DistanciaDaPegada(x, z);
+                if (db < 4f)
+                {
+                    float w = 1f - Geo.Suave(1f, 4f, db);
+                    float n2 = 0.5f + 0.5f * _sorte.Amostra(x / 6f, z / 6f);
+                    r = Mathf.Lerp(r, 0.15f + 0.15f * n2, w);
+                    g = Mathf.Lerp(g, 0.55f, w);
+                    b = Mathf.Lerp(b, 0.3f - 0.1f * n2, w);
                     a = Mathf.Lerp(a, 0f, w);
                 }
             }
@@ -908,6 +932,7 @@ namespace ZombieCityCleaner.Mundo
                 if (EstradaPerto(x, z, 9f, out _, out _, out _, out _)) continue;
                 if (Usina.SemArvores(x, z)) continue;                                                              // a usina e as linhas
                 if (Partida != null && Partida.DistanciaDoTerreiro(x, z) < 8f) continue;                         // a casa da partida
+                if (Bunker != null && Bunker.DistanciaDaPegada(x, z) < 10f) continue;                            // o bunker e o talude dele
                 if (NaBaseMilitar(x, z)) continue;                                                                 // o pátio das bases
                 if (Relevo.Inclinacao(x, z) > 1.1f) continue;                                                      // os paredões
                 int tamanho = cob switch
@@ -961,6 +986,8 @@ namespace ZombieCityCleaner.Mundo
             fator *= Usina.FatorDaGrama(x, z);
             // o terreiro da casa da partida (o cascalho; embaixo da casa, os tufos furariam o piso)
             if (Partida != null) fator *= Geo.Suave(1f, 3f, Partida.DistanciaDoTerreiro(x, z));
+            // a pegada do bunker (embaixo do morro e do pátio, os tufos furariam a obra)
+            if (Bunker != null) fator *= Geo.Suave(1f, 3f, Bunker.DistanciaDaPegada(x, z));
             fator *= GramaDosLotes(x, z);
             if (fator <= 0f) return 0f;
             Span<float> f = stackalloc float[MapaDeLakewood.Coberturas];

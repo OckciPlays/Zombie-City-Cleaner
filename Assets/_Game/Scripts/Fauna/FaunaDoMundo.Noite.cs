@@ -52,12 +52,19 @@ namespace ZombieCityCleaner.Fauna
         internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira) => LixeiraPerto(p, raio, out lixeira, out _);
 
         /// <summary>A lixeira mais perto e de onde ela é (no Lakewood: a lata, as sacolas ou a caçamba de LixoDaCidade).</summary>
-        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo)
+        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo) => LixeiraPerto(p, raio, out lixeira, out tipo, out _, true);
+
+        /// <summary>
+        /// (23/11/2026) Também o índice dela em <see cref="LixoDaCidade.Pontos"/> (-1 no mapa sorteado). 'cacambas': falso, a
+        /// caçamba não conta (o guaxinim que acabou de sair de uma).
+        /// </summary>
+        internal bool LixeiraPerto(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo, out int indice, bool cacambas)
         {
             lixeira = default;
             tipo = TipoDeLixo.Lata;
+            indice = -1;
             var d = DadosDoMapa;
-            if (d == null) return LixeiraDoLakewood(p, raio, out lixeira, out tipo);
+            if (d == null) return LixeiraDoLakewood(p, raio, out lixeira, out tipo, out indice, cacambas);
             if (d.Objetos == null) return false;
             float melhor = raio * raio;
             bool achou = false;
@@ -76,19 +83,26 @@ namespace ZombieCityCleaner.Fauna
         }
 
         // no Lakewood: o lixo da cidade (13/11, LixoDaCidade.cs): a lata na frente de cada casa, as sacolas e a caçamba das lojas
-        bool LixeiraDoLakewood(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo)
+        bool LixeiraDoLakewood(Vector3 p, float raio, out Vector3 lixeira, out TipoDeLixo tipo, out int indice, bool cacambas)
         {
             lixeira = default;
             tipo = TipoDeLixo.Lata;
+            indice = -1;
             float melhor = raio * raio;
             bool achou = false;
-            foreach (var l in LixoDaCidade.Pontos)
+            var pontos = LixoDaCidade.Pontos;
+            for (int i = 0; i < pontos.Count; i++)
             {
+                var l = pontos[i];
+                if (!cacambas && l.tipo == TipoDeLixo.Cacamba) continue;
                 float dx = l.pos.x - p.x, dz = l.pos.z - p.z, dd = dx * dx + dz * dz;
-                if (dd >= melhor || Revirada(l.pos)) continue;
+                // (a caçamba fica de pé: o lixo espalhado do lado não tira ela da lista; a cheia de guaxinins, sim)
+                if (dd >= melhor || (l.tipo != TipoDeLixo.Cacamba && Revirada(l.pos))) continue;
+                if (l.tipo == TipoDeLixo.Cacamba && QuantosNaCacamba(i) >= Bicho.CabemNaCacamba) continue;
                 melhor = dd;
                 lixeira = l.pos;
                 tipo = l.tipo;
+                indice = i;
                 achou = true;
             }
             return achou;
@@ -118,6 +132,8 @@ namespace ZombieCityCleaner.Fauna
             if (Revirada(c)) return;
             _lixos.Add((c, agora + LixoDura, tipo));
             if (_lixos.Count > 30) _lixos.RemoveAt(0);
+            _proximasCasas = 0f;   // (23/11/2026) vai já para as telas: a lata tomba na hora
+            LixoDaCidade.ConferirAgora();
         }
 
         // ------------------------------------------------------------------ o gambá e a cascavel (o cheiro e o veneno)

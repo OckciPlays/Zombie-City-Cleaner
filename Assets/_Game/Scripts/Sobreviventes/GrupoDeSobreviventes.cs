@@ -29,6 +29,8 @@ namespace ZombieCityCleaner.Sobreviventes
         public int quantos;
         /// <summary>Uma emboscada (18/11/2026, <see cref="EmboscadasDoMundo"/>): não explora, cada um no seu posto.</summary>
         public bool emboscada;
+        /// <summary>O grupo aliado (24/11/2026, o Capitão da primeira missão): nunca hostil aos jogadores (Sobrevivente.Escolta.cs).</summary>
+        public bool aliado;
         /// <summary>Quantos ainda vão nascer (16/11/2026: o grupo nasce um por quadro, SobreviventesDoMundo.NascerUm).</summary>
         public int nascendo;
         public readonly List<Sobrevivente> membros = new List<Sobrevivente>();
@@ -61,8 +63,8 @@ namespace ZombieCityCleaner.Sobreviventes
         /// Contra os jogadores: o grupo de busca e os militares, sempre; o acampamento, depois que alguém feriu um deles; os
         /// do carro quebrado, depois de alguém mirar neles, chegar armado ou ferir um deles.
         /// </summary>
-        public bool Hostil => baseMilitar >= 0 || (cena >= 0 ? CarrosQuebradosDoMundo.Instancia != null && CarrosQuebradosDoMundo.Instancia.Hostil(cena)
-            : acampamento < 0 || (AcampamentosDoMundo.Instancia != null && AcampamentosDoMundo.Instancia.Hostil(acampamento)));
+        public bool Hostil => !aliado && (baseMilitar >= 0 || (cena >= 0 ? CarrosQuebradosDoMundo.Instancia != null && CarrosQuebradosDoMundo.Instancia.Hostil(cena)
+            : acampamento < 0 || (AcampamentosDoMundo.Instancia != null && AcampamentosDoMundo.Instancia.Hostil(acampamento))));
 
         public Sobrevivente Lider
         {

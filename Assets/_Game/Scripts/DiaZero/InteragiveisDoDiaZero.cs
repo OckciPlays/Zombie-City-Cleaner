@@ -91,6 +91,69 @@ namespace ZombieCityCleaner.DiaZero
     }
 
     /// <summary>
+    /// As chaves da casa da família na Woodcreek (22/11/2026, o Dia 0 no Lakewood): o gancho ao lado da porta da frente, por
+    /// dentro. Com a rua liberada, E duas vezes tranca a casa e acaba o dia para todos: por enquanto, o jogo pula para os 5
+    /// anos depois, no bunker da comunidade (a quarentena, o colapso e a fuga são as próximas etapas do Docs/23). As compras
+    /// já estão na caçamba da caminhonete: quem está fora de casa vai junto, sem perder nada.
+    /// </summary>
+    public class ChavesDaCasa : Interagivel
+    {
+        float _confirmarAte;
+
+        /// <summary>O gancho com as chaves no objeto 'go' (encostado na parede, a frente para o +z dele) e a caixa da mira.</summary>
+        public static void Montar(GameObject go, Material material)
+        {
+            var obra = new Obra(4243, Medidas.DoJogo);
+            // a plaquinha de madeira, os três ganchos e as chaves penduradas (o chaveiro vermelho é o da caminhonete)
+            obra.Caixa(new Vector3(0f, 0f, 0.01f), new Vector3(0.34f, 0.16f, 0.02f), "Madeira");
+            for (int i = 0; i < 3; i++)
+            {
+                float x = -0.1f + i * 0.1f;
+                obra.Caixa(new Vector3(x, 0.01f, 0.035f), new Vector3(0.012f, 0.012f, 0.03f), "Grade");
+                if (i == 1) continue;
+                obra.Caixa(new Vector3(x, -0.04f, 0.05f), new Vector3(0.022f, 0.06f, 0.006f), "Metal");
+                obra.Caixa(new Vector3(x, -0.085f, 0.05f), new Vector3(0.035f, 0.03f, 0.012f), i == 0 ? "PlacaVermelha" : "PlacaAmarela");
+            }
+            var malha = obra.vis.ParaMesh("Chaves da casa");
+            malha.hideFlags = HideFlags.DontSave;
+            go.AddComponent<MeshFilter>().sharedMesh = malha;
+            go.AddComponent<MeshRenderer>().sharedMaterial = material;
+            MalhaDeObra.Devolver(obra.vis);
+            MalhaDeObra.Devolver(obra.col);
+            var col = go.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.center = new Vector3(0f, -0.02f, 0.12f);
+            col.size = new Vector3(0.5f, 0.4f, 0.24f);
+            go.AddComponent<ChavesDaCasa>();
+        }
+
+        public override string Dica(ArmaJogador quem)
+        {
+            // com a rua liberada (no lobby, todos ficam na casa até ver o jornal)
+            if (!DiaZeroDaPartida.NoDia || DiaZeroDaPartida.Instancia.Fase != FaseDoDia.Rua) return null;
+            string fora = DiaZeroDaPartida.QuemEstaFora();
+            if (Time.time < _confirmarAte)
+                return string.IsNullOrEmpty(fora)
+                    ? "[E] De novo: trancar a casa (o Dia 0 acaba para todos)"
+                    : $"[E] De novo: trancar mesmo assim ({fora} ainda na rua: vem junto)";
+            return string.IsNullOrEmpty(fora)
+                ? "[E] Trancar a casa e acabar o Dia 0"
+                : $"[E] Trancar a casa e acabar o Dia 0  ·  ainda na rua: {fora}";
+        }
+
+        public override void Usar(ArmaJogador quem)
+        {
+            if (Time.time < _confirmarAte)
+            {
+                _confirmarAte = 0f;
+                DiaZeroDaPartida.Instancia?.PedirFecharAPorta();
+                return;
+            }
+            _confirmarAte = Time.time + 4f;
+        }
+    }
+
+    /// <summary>
     /// A porta do abrigo na nossa casa (o Dia 0, a pedido: "uma porta na nossa casa que conseguimos abrir para passar o
     /// dia"; o bunker de verdade é do Gustavo). E duas vezes fecha a porta: o dia acaba para todos, e o jogo pula 5 anos.
     /// Quem estiver fora de casa perde as compras (a pedido).

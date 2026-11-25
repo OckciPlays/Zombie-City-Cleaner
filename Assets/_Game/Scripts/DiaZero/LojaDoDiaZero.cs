@@ -48,6 +48,8 @@ namespace ZombieCityCleaner.DiaZero
             public float largura;
             public Vector3 frente;
             public bool deArma, pequena, fria;
+            /// <summary>(23/11/2026) Só as armas longas (o expositor delas, o rack); de pé (o rack: o cano para cima); só a munição (a estante dela).</summary>
+            public bool longa, dePe, municao;
         }
 
         RuaDoDiaZero _rua;
@@ -70,11 +72,21 @@ namespace ZombieCityCleaner.DiaZero
             return _caixinha;
         }
 
-        public void Montar(RuaDoDiaZero rua, LojaDoDia tipo, PlantaDeLoja p, List<PontoDeMovel> pontos, Matrix4x4 plantaParaLocal, bool espelhar, Bounds area)
+        // os balcões dos caixas (os da planta, ou os dados de fora: as lojas comuns da Woodcreek não têm um)
+        List<Rect> _balcoes;
+
+        /// <summary>
+        /// A loja numa planta do kit (a rua do Dia 0, e as lojas da Woodcreek no Dia 0 do Lakewood): os pontos dos móveis nas
+        /// coordenadas da planta (sem espelhar), levados ao objeto pela matriz e pelo espelho. <paramref name="balcoes"/>: os
+        /// caixas, no lugar dos da planta (as lojas comuns da Woodcreek ganham o do lado da porta; 22/11/2026).
+        /// </summary>
+        public void Montar(RuaDoDiaZero rua, LojaDoDia tipo, PlantaDeLoja p, List<PontoDeMovel> pontos, Matrix4x4 plantaParaLocal, bool espelhar, Bounds area,
+                           List<Rect> balcoes = null)
         {
             _rua = rua;
             Tipo = tipo;
             Area = area;
+            _balcoes = balcoes ?? p.balcoes;
             Vector3 L(Vector3 q) => plantaParaLocal.MultiplyPoint3x4(espelhar ? new Vector3(-q.x, q.y, q.z) : q);
             Quaternion G(float giro) => plantaParaLocal.rotation * Quaternion.Euler(0f, espelhar ? -giro : giro, 0f);
             Vector3 W(Vector3 local) => transform.TransformPoint(local);
@@ -85,9 +97,9 @@ namespace ZombieCityCleaner.DiaZero
             var detalhes = new Obra(p.semente + 5, Medidas.DoJogo);
             var porta = p.ligacoes.Find(l => l.b == null && l.lado == 0);
             float xp = porta != null ? porta.pos : 0f;
-            for (int i = 0; i < p.balcoes.Count; i++)
+            for (int i = 0; i < _balcoes.Count; i++)
             {
-                var r = p.balcoes[i];
+                var r = _balcoes[i];
                 var caixa = Filho($"Caixa {i + 1}");
                 caixa.localPosition = L(new Vector3(r.center.x, piso + 0.95f, r.center.y));
                 caixa.localRotation = G(0f);
@@ -153,11 +165,19 @@ namespace ZombieCityCleaner.DiaZero
                         foreach (float y in new[] { 0.12f, 0.56f, 0.98f, 1.40f }) Nivel(y * sy / 1.9f, sz * 0.18f, Vector3.forward, sx - 0.12f);
                         break;
                     case "gondola":
-                        // a gôndola: as prateleiras nos dois lados compridos (o x dela)
+                        // a gôndola: as prateleiras nos dois lados compridos (o x dela; a deitada, com o comprido no x, o z)
                         foreach (float y in new[] { 0.12f, 0.61f, 1.06f })
                         {
-                            fileiras.Add(new Fileira { movel = pm, meio = new Vector3(sx * 0.3f, y * sy / 1.6f, 0f), largura = sz - 0.15f, frente = Vector3.right });
-                            fileiras.Add(new Fileira { movel = pm, meio = new Vector3(-sx * 0.3f, y * sy / 1.6f, 0f), largura = sz - 0.15f, frente = Vector3.left });
+                            if (sz >= sx)
+                            {
+                                fileiras.Add(new Fileira { movel = pm, meio = new Vector3(sx * 0.3f, y * sy / 1.6f, 0f), largura = sz - 0.15f, frente = Vector3.right });
+                                fileiras.Add(new Fileira { movel = pm, meio = new Vector3(-sx * 0.3f, y * sy / 1.6f, 0f), largura = sz - 0.15f, frente = Vector3.left });
+                            }
+                            else
+                            {
+                                fileiras.Add(new Fileira { movel = pm, meio = new Vector3(0f, y * sy / 1.6f, sz * 0.3f), largura = sx - 0.15f, frente = Vector3.forward });
+                                fileiras.Add(new Fileira { movel = pm, meio = new Vector3(0f, y * sy / 1.6f, -sz * 0.3f), largura = sx - 0.15f, frente = Vector3.back });
+                            }
                         }
                         var c = pm.centro;
                         float meiaX = Mathf.Abs(Mathf.Sin(pm.giro * Mathf.Deg2Rad)) > 0.7f ? sz / 2 : sx / 2;
@@ -202,6 +222,109 @@ namespace ZombieCityCleaner.DiaZero
             }
             else Produtos(fileiras, L, G);
             Luzes(p, L);
+        }
+
+        /// <summary>
+        /// A loja de armas nova da Woodcreek (o Plano_LojaDeArmas.md; 22/11/2026, o Dia 0 no Lakewood): sem planta do kit, pelos
+        /// móveis dela (<see cref="MoveisDaLojaDeArmas"/>, nas coordenadas da obra, o objeto desta loja). Os produtos vão em
+        /// cima dos balcões de vidro inteiros (a pistola, as facas, a lanterna...) e pendurados nos painéis perfurados; o caixa
+        /// é o balcão do caixa, com o vendedor atrás dele. Desde 23/11/2026, as armas longas penduradas nos expositores delas
+        /// e de pé no rack de fuzis, e a munição nas prateleiras livres das estantes de munição e no balcão dos expositores
+        /// (as alturas medidas nas malhas da Mobilia_Nova_Malhas: a frente de cada uma é o +z).
+        /// </summary>
+        public void MontarNaLojaDeArmas(RuaDoDiaZero rua, IList<MoveisDaLojaDeArmas.Movel> moveis, Bounds area, Rect salao, float altoDasLampadas)
+        {
+            _rua = rua;
+            Tipo = LojaDoDia.Armas;
+            Area = area;
+            _balcoes = new List<Rect>();
+            Vector3 L(Vector3 q) => q;
+            Quaternion G(float giro) => Quaternion.Euler(0f, giro, 0f);
+            var balcoes = new List<Fileira>();
+            var paineis = new List<Fileira>();
+            var longas = new List<Fileira>();
+            var municoes = new List<Fileira>();
+            int caixas = 0;
+            foreach (var m in moveis)
+            {
+                if (!MedidasDaMobilia.Tem(m.modelo)) continue;
+                var real = MedidasDaMobilia.Real(m.modelo) * m.escala;
+                var meio = MedidasDaMobilia.Meio(m.modelo) * m.escala;
+                var giro = Quaternion.Euler(0f, m.giro, 0f);
+                var centro = m.lugar + giro * new Vector3(meio.x, 0f, meio.y);
+                var pm = new PontoDeMovel { tipo = m.modelo, centro = centro, giro = m.giro, tamanho = real, comodo = "salao" };
+                switch (m.modelo)
+                {
+                    case "BalcaoVitrine":
+                        // em cima do vidro, ao longo do balcão
+                        balcoes.Add(new Fileira { movel = pm, meio = new Vector3(0f, real.y + 0.005f, 0f), largura = real.x - 0.3f, frente = Vector3.forward, pequena = true });
+                        break;
+                    case "GondolaLoja":
+                        // em cima da gôndola (a lanterna, as pilhas, a isca)
+                        balcoes.Add(new Fileira { movel = pm, meio = new Vector3(0f, real.y + 0.005f, 0f), largura = Mathf.Max(real.x, real.z) - 0.3f,
+                                                  frente = real.x >= real.z ? Vector3.forward : Vector3.right });
+                        break;
+                    case "PainelPerfurado":
+                        // pendurados na frente do painel, em duas alturas
+                        foreach (float y in new[] { 1.3f, 1.8f })
+                            paineis.Add(new Fileira { movel = pm, meio = new Vector3(0f, y, real.z / 2f + 0.07f), largura = real.x - 0.4f, frente = Vector3.forward, deArma = true });
+                        break;
+                    case "ExpositorArmasLongas":
+                        // as armas longas penduradas no painel, em duas alturas (abaixo das etiquetas do trilho de cima), e a
+                        // munição no balcão de baixo (o tampo a 0,80 m; a ponta da esquerda tem a arma do modelo)
+                        foreach (float y in new[] { 1.1f, 1.45f })
+                            longas.Add(new Fileira { movel = pm, meio = new Vector3(0f, y, -0.06f), largura = real.x - 0.3f, frente = Vector3.forward, deArma = true, longa = true });
+                        municoes.Add(new Fileira { movel = pm, meio = new Vector3(0.35f, 0.802f, 0.02f), largura = real.x - 1f, frente = Vector3.forward, municao = true });
+                        break;
+                    case "RackDeFuzis":
+                        // de pé no rack, a coronha na base (0,12 m) e o cano para cima
+                        longas.Add(new Fileira { movel = pm, meio = new Vector3(0f, 0.122f, 0f), largura = real.x - 0.15f, frente = Vector3.forward, deArma = true, longa = true, dePe = true });
+                        break;
+                    case "EstanteMunicao":
+                        // as prateleiras livres (0,85 e 1,61 m inteiras; a de 1,23 sem a ponta da direita, que tem a caixa do modelo)
+                        municoes.Add(new Fileira { movel = pm, meio = new Vector3(0f, 0.853f, 0.07f), largura = real.x - 0.15f, frente = Vector3.forward, municao = true });
+                        municoes.Add(new Fileira { movel = pm, meio = new Vector3(0f, 1.614f, 0.07f), largura = real.x - 0.15f, frente = Vector3.forward, municao = true });
+                        municoes.Add(new Fileira { movel = pm, meio = new Vector3(-0.14f, 1.234f, 0.07f), largura = real.x - 0.45f, frente = Vector3.forward, municao = true });
+                        break;
+                    case "BalcaoCaixa":
+                    {
+                        // o caixa: a caixa-gatilho em cima do balcão e o vendedor do lado de dentro (o +z do móvel)
+                        var caixa = Filho($"Caixa {++caixas}");
+                        caixa.localPosition = centro + Vector3.up * 1.0f;
+                        caixa.localRotation = giro;
+                        var col = caixa.gameObject.AddComponent<BoxCollider>();
+                        col.isTrigger = true;
+                        col.size = new Vector3(real.x + 0.1f, 0.6f, real.z + 0.1f);
+                        caixa.gameObject.AddComponent<CaixaDaLoja>().loja = this;
+                        var atras = centro + giro * new Vector3(0f, 0f, real.z / 2f + 0.5f);
+                        Atendentes.Add((transform.TransformPoint(atras), (transform.rotation * giro * Quaternion.Euler(0f, 180f, 0f)).eulerAngles.y));
+                        break;
+                    }
+                }
+            }
+            // os balcões primeiro (a pistola fica no vidro); as armas longas nos expositores e no rack; as armas brancas que
+            // sobrarem, nos painéis; a munição nas estantes
+            balcoes.AddRange(longas);
+            balcoes.AddRange(paineis);
+            balcoes.AddRange(municoes);
+            Produtos(balcoes, L, G);
+            // as lâmpadas da área de vendas
+            int nx = Mathf.Max(1, Mathf.RoundToInt(salao.width / 4.5f)), nz = Mathf.Max(1, Mathf.RoundToInt(salao.height / 4.5f));
+            for (int i = 0; i < nx; i++)
+                for (int k = 0; k < nz; k++)
+                    Lampada(new Vector3(Mathf.Lerp(salao.xMin, salao.xMax, (i + 0.5f) / nx), altoDasLampadas, Mathf.Lerp(salao.yMin, salao.yMax, (k + 0.5f) / nz)));
+        }
+
+        void Lampada(Vector3 local)
+        {
+            var t = Filho("Lâmpada");
+            t.localPosition = local;
+            var luz = t.gameObject.AddComponent<Light>();
+            luz.type = LightType.Point;
+            luz.range = 7.5f;
+            luz.intensity = 1.6f;
+            luz.color = new Color(1f, 0.97f, 0.9f);
+            luz.shadows = LightShadows.None;
         }
 
         // as lâmpadas acesas do salão (a loja aberta, de dia): uma a cada ~4,5 m, sem sombra
@@ -253,8 +376,15 @@ namespace ZombieCityCleaner.DiaZero
             // o que cabe em cada fileira: no expositor de armas, as armas; na geladeira, as bebidas; na vitrine e na
             // prateleirinha do expositor, o que é pequeno (não as armas longas); nas outras, o resto (as armas só sem expositor)
             bool temExpositor = fileiras.Exists(f => f.deArma);
+            // (23/11/2026) com o lugar delas, as armas longas e a munição só vão nele
+            bool Longa(Item i) => Itens.EhArma(i) && i != Item.Pistola;
+            bool temLongas = fileiras.Exists(f => f.longa), temMunicao = fileiras.Exists(f => f.municao);
             bool Serve(Fileira f, Item i)
             {
+                if (f.municao) return Itens.EhMunicao(i);
+                if (temMunicao && Itens.EhMunicao(i)) return false;
+                if (f.longa) return Longa(i);
+                if (temLongas && Longa(i)) return false;
                 if (f.deArma) return Arma(i);
                 if (f.fria) return Bebida(i);
                 if (f.pequena) return !Itens.EhArma(i) || i == Item.Pistola;
@@ -307,7 +437,9 @@ namespace ZombieCityCleaner.DiaZero
             bool arma = Itens.EhArma(produto.item) || Itens.EhBranca(produto.item);
             // o giro de cada cópia na fileira (o z da fileira olha para quem compra): as armas deitadas de lado, no
             // expositor de armas penduradas com o cano ao longo da fileira
-            Quaternion giro = f.deArma ? Quaternion.LookRotation(Vector3.right, Vector3.up)
+            // (no rack, de pé: o cano para cima e o lado da arma para quem compra)
+            Quaternion giro = f.dePe ? Quaternion.LookRotation(Vector3.up, Vector3.right)
+                            : f.deArma ? Quaternion.LookRotation(Vector3.right, Vector3.up)
                             : arma ? Quaternion.Euler(0f, 90f, 90f) : Quaternion.Euler(0f, 180f, 0f);
             var b = malha.bounds;
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
@@ -319,17 +451,18 @@ namespace ZombieCityCleaner.DiaZero
             }
             var tam = max - min;
             float largura = Mathf.Max(0.05f, tam.x);
-            int quantas = arma ? (f.deArma || largura > f.largura * 0.5f ? 1 : 2) : Mathf.Clamp(Mathf.FloorToInt(f.largura / (largura + 0.03f)), 1, 7);
+            int quantas = f.dePe ? Mathf.Clamp(Mathf.FloorToInt(f.largura / (largura + 0.06f)), 1, 4)
+                        : arma ? (f.deArma || largura > f.largura * 0.5f ? 1 : 2) : Mathf.Clamp(Mathf.FloorToInt(f.largura / (largura + 0.03f)), 1, 7);
             if (largura > f.largura + 0.15f && !f.deArma) return false;
             var t = Lugar(f, L, G, $"Produto: {produto.Nome}");
-            float passo = largura + 0.03f, ini = -(quantas - 1) * passo / 2;
+            float passo = largura + (f.dePe ? 0.06f : 0.03f), ini = -(quantas - 1) * passo / 2;
             var material = MaterialDe(produto.item);
             for (int k = 0; k < quantas; k++)
             {
                 var copia = new GameObject("Cópia") { hideFlags = HideFlags.DontSave };
                 copia.transform.SetParent(t, false);
                 // apoiado na fileira (no expositor de armas, pendurado: o meio na altura da fileira)
-                float y = f.deArma ? -(min.y + max.y) / 2 : -min.y + 0.005f;
+                float y = f.deArma && !f.dePe ? -(min.y + max.y) / 2 : -min.y + 0.005f;
                 var centro = new Vector3(-(min.x + max.x) / 2 + ini + k * passo, y, -(min.z + max.z) / 2);
                 copia.transform.localPosition = centro;
                 copia.transform.localRotation = giro;
@@ -341,12 +474,49 @@ namespace ZombieCityCleaner.DiaZero
             var col = t.gameObject.AddComponent<BoxCollider>();
             col.isTrigger = true;
             float alto = Mathf.Max(0.18f, tam.y + 0.04f);
-            col.center = new Vector3(0f, f.deArma ? 0f : alto / 2, 0.02f);
+            col.center = new Vector3(0f, f.deArma && !f.dePe ? 0f : alto / 2, 0.02f);
             col.size = new Vector3(Mathf.Min(f.largura, quantas * passo + 0.05f), alto, Mathf.Max(0.3f, tam.z + 0.1f));
             var pp = t.gameObject.AddComponent<ProdutoNaPrateleira>();
             pp.loja = this;
             pp.indice = indice;
+            Etiqueta(t, f, produto, min, max);
             return true;
+        }
+
+        // a etiqueta da fileira (23/11/2026, o Pedro: "Não consegui ver na farmácia se tem bandagens e todos os outros
+        // itens": as caixinhas parecidas só se conheciam mirando nelas): o nome e o preço em letras escuras num cartão
+        // claro, de frente para quem compra, na beira da prateleira (na frente dos produtos); no expositor, embaixo da arma
+        // pendurada; no rack, na base
+        void Etiqueta(Transform t, Fileira f, Produto produto, Vector3 min, Vector3 max)
+        {
+            if (_rua == null || _rua.materialDasLetras == null) return;
+            string texto = $"{produto.Nome.ToUpperInvariant()}  {PrecosDoDiaZero.Dinheiro(produto.preco)}";
+            float altura = Mathf.Clamp(f.largura * 0.9f / (texto.Length * 0.86f), 0.016f, 0.03f);
+            var tam = max - min;
+            Vector3 local = f.dePe ? new Vector3(0f, 0.035f, 0.26f)
+                          : f.deArma ? new Vector3(0f, -tam.y * 0.5f - 0.05f, 0.03f)
+                          : new Vector3(0f, altura * 0.75f + 0.004f, tam.z * 0.5f + 0.035f);
+            // o cartão atrás das letras
+            var cartao = new GameObject("Etiqueta") { hideFlags = HideFlags.DontSave };
+            cartao.transform.SetParent(t, false);
+            cartao.transform.localPosition = local - new Vector3(0f, 0f, 0.004f);
+            cartao.transform.localScale = new Vector3(texto.Length * altura * 0.86f + 0.03f, altura * 1.6f, 0.004f);
+            cartao.AddComponent<MeshFilter>().sharedMesh = CartaoDaEtiqueta();
+            var r = cartao.AddComponent<MeshRenderer>();
+            r.sharedMaterial = _rua.material;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            _rua.Escrever(t, local, texto, altura, ModelosDaEstrada.LetraEscura);
+        }
+
+        static Mesh _cartao;
+        static Mesh CartaoDaEtiqueta()
+        {
+            if (_cartao != null) return _cartao;
+            var m = new MalhaDeObra(64);
+            m.Caixa(Matrix4x4.identity, Vector3.one, "ListraBranca");
+            _cartao = m.ParaMesh("Cartão da etiqueta");
+            _cartao.hideFlags = HideFlags.DontSave;
+            return _cartao;
         }
 
         // ------------------------------------------------------------------ as roupas
@@ -417,7 +587,7 @@ namespace ZombieCityCleaner.DiaZero
                 float mx = (deitado ? pm.tamanho.z : pm.tamanho.x) / 2, mz = (deitado ? pm.tamanho.x : pm.tamanho.z) / 2;
                 ocupado.Add(Rect.MinMaxRect(pm.centro.x - mx, pm.centro.z - mz, pm.centro.x + mx, pm.centro.z + mz));
             }
-            ocupado.AddRange(p.balcoes);
+            ocupado.AddRange(_balcoes ?? p.balcoes);
             Vector2? lugar = null;
             float cx = (s.x0 + s.x1) / 2, cz = (s.z0 + s.z1) / 2;
             foreach (float dz in new[] { 0f, -1.2f, 1.2f, -2.4f, 2.4f })

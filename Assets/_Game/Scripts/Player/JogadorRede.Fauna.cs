@@ -45,6 +45,43 @@ namespace ZombieCityCleaner.Player
             FaunaDoMundo.Instancia?.Carnear(id, geracao, this);
         }
 
+        /// <summary>
+        /// (23/11/2026) O dono segurou E no lixo da cidade (o índice em LixoDaCidade.Pontos): o anfitrião confere e dá o que
+        /// achou (FaunaDoMundo.Lixo.cs). Com guaxinim dentro da caçamba, é o susto, e nada é revirado.
+        /// </summary>
+        public void PedirRevirarLixo(int indice)
+        {
+            if (indice < 0 || indice > ushort.MaxValue) return;
+            if (IsServer) FaunaDoMundo.Instancia?.Revirar(this, indice);
+            else RevirarLixoRpc((ushort)indice);
+        }
+
+        [Rpc(SendTo.Server)]
+        void RevirarLixoRpc(ushort indice, RpcParams parametros = default)
+        {
+            if (parametros.Receive.SenderClientId != OwnerClientId) return;
+            FaunaDoMundo.Instancia?.Revirar(this, indice);
+        }
+
+        /// <summary>
+        /// Só no anfitrião (23/11/2026): o susto de um bicho (o guaxinim pulando da caçamba): na máquina do dono, a câmera
+        /// sacode e o coração dispara. 'forca': de 0 a 1 (mais perto, mais forte).
+        /// </summary>
+        public void SustoDoBicho(float forca)
+        {
+            if (!IsServer) return;
+            SustoDoBichoRpc(Mathf.Clamp01(forca));
+        }
+
+        [Rpc(SendTo.Owner)]
+        void SustoDoBichoRpc(float forca)
+        {
+            var m = GetComponent<MovimentoPrimeiraPessoa>();
+            if (m != null) m.Tremer(0.35f + 0.5f * forca);
+            var coracao = GetComponent<MonitorCardiaco>();
+            if (coracao != null) coracao.Sobressalto(25f + 30f * forca);
+        }
+
         // ------------------------------------------------------------------ o cheiro do gambá (a etapa 4, 12/11/2026)
 
         /// <summary>

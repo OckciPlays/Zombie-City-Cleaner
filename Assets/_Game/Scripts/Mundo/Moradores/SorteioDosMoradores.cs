@@ -59,6 +59,59 @@ namespace ZombieCityCleaner.Mundo
             return m;
         }
 
+        /// <summary>O cargo do líder e o do major da comunidade do bunker (a ficha mostra ao lado do nome).</summary>
+        public const string CargoDoLider = "Líder do bunker", CargoDoMajor = "Major";
+        /// <summary>Os nomes fixos do líder e do major (22/11/2026, o Pedro: "Major - Peter Ziquinatti. Líder - Gus Rodrigues").</summary>
+        public const string NomeDoLider = "Gus", SobrenomeDoLider = "Rodrigues", NomeDoMajor = "Peter", SobrenomeDoMajor = "Ziquinatti";
+        /// <summary>Quantos moram no bunker da comunidade no começo (o líder, o major e os grupos inteiros até chegar nisso).</summary>
+        public const int MoradoresDaComunidade = 8;
+
+        /// <summary>
+        /// Os NPCs da campanha do Lakewood (22/11/2026, a etapa 2 do Docs/23; aprovado: "a comunidade já vem sorteada, com o
+        /// líder e o major fixos, e as cartas saem"): o bunker não é da família, então não há o parente. Primeiro o dono do
+        /// bunker, que lidera a comunidade, e o major que chegou com os soldados (o grupo 0, sem laço entre eles); depois os
+        /// grupos do mapa, de 1 em diante, como no mundo sorteado.
+        /// </summary>
+        public static NpcsDoMundo SortearComunidade(int semente, int total = NpcsNoMundo)
+        {
+            var r = new Random(Misturar(semente, 9));
+            var m = new NpcsDoMundo { semente = semente };
+            var lider = Gerar(r, new Pedido { mulher = false, idadeMin = 56, idadeMax = 64, antes = ListasDosMoradores.DonoDoBunker,
+                                              depois = ListasDosMoradores.AbriuOBunker, usados = Usados(m) }, m.proximoId++);
+            lider.cargo = CargoDoLider;
+            lider.nome = NomeDoLider;
+            lider.sobrenome = SobrenomeDoLider;
+            lider.apelido = "";
+            m.fichas.Add(lider);
+            var major = Gerar(r, new Pedido { mulher = false, idadeMin = 44, idadeMax = 52, antes = ListasDosMoradores.Major,
+                                              depois = ListasDosMoradores.TrouxeOsSoldados, usados = Usados(m) }, m.proximoId++);
+            major.cargo = CargoDoMajor;
+            major.nome = NomeDoMajor;
+            major.sobrenome = SobrenomeDoMajor;
+            major.apelido = "";
+            m.fichas.Add(major);
+            Grupos(r, m, total);
+            AcertarOsParentes(m);
+            return m;
+        }
+
+        /// <summary>
+        /// Os do bunker da comunidade: o líder, o major e os grupos seguintes inteiros (uma família não se separa) até
+        /// <paramref name="quantos"/>; o resto fica no mapa.
+        /// </summary>
+        public static (List<FichaDoMorador> bunker, List<FichaDoMorador> mapa) SepararAComunidade(NpcsDoMundo m, int quantos = MoradoresDaComunidade)
+        {
+            var bunker = new List<FichaDoMorador>();
+            foreach (var grupo in m.fichas.GroupBy(f => f.grupo).OrderBy(g => g.Key))
+            {
+                if (grupo.Key != 0 && bunker.Count >= quantos) break;
+                if (grupo.Key != 0 && bunker.Count + grupo.Count() > quantos + 1) continue;
+                bunker.AddRange(grupo);
+            }
+            var mapa = m.fichas.Where(f => !bunker.Contains(f)).ToList();
+            return (bunker, mapa);
+        }
+
         /// <summary>
         /// Completa os NPCs de um mundo até o <paramref name="total"/> (um mundo salvo antes das cartas, com os moradores da
         /// tela de antes): os grupos do mapa, com os ids a partir do <see cref="NpcsDoMundo.proximoId"/>.
@@ -284,7 +337,7 @@ namespace ZombieCityCleaner.Mundo
             public string sobrenome;
             public int? pele, cabelo;
             public ParenteDaFamilia parente;
-            public string depois;
+            public string antes, depois;
             public HashSet<string> usados = new HashSet<string>();
         }
 
@@ -547,7 +600,8 @@ namespace ZombieCityCleaner.Mundo
 
             // as histórias (abaixo de 22, só o estudante; acima de 66, a de antes é mais vezes a do aposentado)
             var antes = ListasDosMoradores.Antes.Where(h => f.idade >= h.idadeMin && f.idade <= h.idadeMax).ToList();
-            var historia = Pesado(r, antes, h => h.peso * (h.chave == "Estudante" && f.idade >= 22 ? 0.4f
+            var historia = (p.antes != null ? ListasDosMoradores.DeAntes(p.antes) : null)
+                           ?? Pesado(r, antes, h => h.peso * (h.chave == "Estudante" && f.idade >= 22 ? 0.4f
                                                          : h.chave == "Aposentado" && f.idade >= 66 ? 5f : 1f)) ?? ListasDosMoradores.Antes[0];
             f.antes = historia.chave;
             // o "entrou no bunker com a família" só vem pedido (o parente e quem veio com ele): os outros estão pelo mapa

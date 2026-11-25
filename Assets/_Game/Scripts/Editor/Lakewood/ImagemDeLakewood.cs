@@ -18,7 +18,15 @@ namespace ZombieCityCleaner.EditorTools
     public static class ImagemDeLakewood
     {
         /// <summary>A pasta das imagens do Lakewood na pasta de arte (a referência do usuário, o mapa e as fotos).</summary>
-        public const string Pasta = @"C:\Users\gusta\OneDrive\Documentos\Projetos\Projeto Zombie City Cleaner\Imgs\Lakewood";
+        public const string PastaDaArte = @"C:\Users\gusta\OneDrive\Documentos\Projetos\Projeto Zombie City Cleaner\Imgs\Lakewood";
+
+        /// <summary>
+        /// Onde as imagens do Lakewood vão: a pasta de arte, no PC dela; nos outros (23/11/2026: o PC do Pedro não tem a
+        /// pasta), a Recordings/Imgs/Lakewood do projeto, fora do git.
+        /// </summary>
+        public static string Pasta => Directory.Exists(Path.GetDirectoryName(PastaDaArte))
+            ? PastaDaArte
+            : Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Recordings", "Imgs", "Lakewood"));
 
         const int Camada = 31;
         const int LarguraDoMapa = 3600, Painel = 1300;

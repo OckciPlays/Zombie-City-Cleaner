@@ -14,7 +14,8 @@ namespace ZombieCityCleaner.EditorTools
     /// sistemas do mundo sorteado que as obras usam: os móveis antigos (<see cref="MobiliaDoMundo"/>, os modelos do
     /// Cidade_Mobilia.fbx), a mobília nova com o saque (<see cref="MobiliaNovaDoMundo"/>) e as portas que abrem
     /// (<see cref="PortasDoMundo"/>), o Hospital Principal (<see cref="HospitalDoMundo"/>, a parte 4), o NavMesh em volta
-    /// dos jogadores (<see cref="NavMeshDoMundo"/>) e os zumbis (o "Zumbis", a parte 5). O 3. Montar a cena também põe;
+    /// dos jogadores (<see cref="NavMeshDoMundo"/>), os zumbis (o "Zumbis", a parte 5) e o bunker da comunidade
+    /// (<see cref="BunkerDoMundo"/>, com as estantes, a parede de armas e a sinuca; 22/11/2026). O 3. Montar a cena também põe;
     /// este menu acerta a cena aberta e salva.
     /// </summary>
     public static class CidadesNaCenaDeLakewood
@@ -74,6 +75,9 @@ namespace ZombieCityCleaner.EditorTools
             // o Hospital Principal (o do mundo sorteado, fixado no lote dele pelo LakewoodNaCena), com os sons e os papéis;
             // ele também põe a mobília nova
             MontagemDoMundo.PorOHospital(obras);
+            // o bunker da comunidade (22/11/2026, a etapa 2 do Docs/23: o do mundo sorteado, fixado no lugar do mapa pelo
+            // LakewoodNaCena), com a parede de armas do arsenal, as estantes que guardam itens e a sinuca
+            MontagemDoMundo.PorOBunker(obras, cena);
             MontagemDoMundo.PorAsPortas(obras);
             // os zumbis (a parte 5): o NavMesh em volta dos jogadores, no anfitrião, e o "Zumbis" do mundo sorteado (o
             // ZombieManager com os modelos, sem hordas: o povoamento pelas células, no chão do Lakewood)

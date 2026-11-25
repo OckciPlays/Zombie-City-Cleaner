@@ -66,7 +66,39 @@ namespace ZombieCityCleaner.Player
         float _proximoAcerto, _proximoSeguir, _proximoBarulho;
         static int _proximaMusica = -1;
 
-        static float Agora => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening ? NetworkManager.Singleton.ServerTime.TimeAsFloat : Time.time;
+        /// <summary>
+        /// O relógio da música: o da rede (o mesmo em todas as máquinas). Gravando um vídeo com o tempo preso (o Recorder põe
+        /// o <see cref="Time.captureDeltaTime"/>: cada quadro anda 1/60 s no jogo, por mais que demore de verdade), ele anda
+        /// com o tempo da gravação, a partir de onde o da rede estava quando ela começou (19/11/2026, o vídeo 29: o relógio da
+        /// rede anda no tempo de verdade, e a música pulava para a frente para alcançá-lo e as mãos tocavam acelerado).
+        /// </summary>
+        static float Agora
+        {
+            get
+            {
+                float daRede = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening ? NetworkManager.Singleton.ServerTime.TimeAsFloat : Time.time;
+                if (Time.captureDeltaTime <= 0f)
+                {
+                    _relogioDaGravacao = false;
+                    return daRede;
+                }
+                if (!_relogioDaGravacao)
+                {
+                    _relogioDaGravacao = true;
+                    _naGravacao = daRede;
+                    _quadroDaGravacao = Time.frameCount;
+                }
+                else if (Time.frameCount != _quadroDaGravacao)
+                {
+                    _naGravacao += Time.captureDeltaTime * (Time.frameCount - _quadroDaGravacao);
+                    _quadroDaGravacao = Time.frameCount;
+                }
+                return (float)_naGravacao;
+            }
+        }
+        static bool _relogioDaGravacao;
+        static double _naGravacao;
+        static int _quadroDaGravacao;
 
         void Awake() => _rede = GetComponent<JogadorRede>();
 

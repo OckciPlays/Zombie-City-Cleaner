@@ -123,9 +123,17 @@ namespace ZombieCityCleaner.Player
             if (g < 8f) alvo += 18f * (1f - g / 8f);
             if (_vida.Dormindo.Value && !febre && vida >= 60f) alvo -= 12f;   // (dormindo, o coração desce, se nada o acelera)
             alvo += Extra;
+            // o sobressalto (23/11/2026, o guaxinim saindo da caçamba): o coração dispara na hora e volta aos poucos
+            _sobressalto = Mathf.MoveTowards(_sobressalto, 0f, dt * 2.5f);
+            alvo += _sobressalto;
             alvo = Mathf.Clamp(alvo, 48f, 178f);
-            _bpm = Mathf.MoveTowards(_bpm, alvo, dt * 6f);
+            _bpm = Mathf.MoveTowards(_bpm, alvo, dt * (_bpm < alvo && _sobressalto > 5f ? 45f : 6f));
         }
+
+        float _sobressalto;
+
+        /// <summary>Um susto de uma vez (23/11/2026): mais 'bpm' batimentos na hora, que somem em uns 15 s.</summary>
+        public void Sobressalto(float bpm) => _sobressalto = Mathf.Max(_sobressalto, bpm);
 
         // o próximo batimento depois deste: o RR pela frequência de agora (com um pouco de variação); com a vida muito baixa,
         // às vezes uma extrassístole antes da hora, e depois dela a pausa que compensa

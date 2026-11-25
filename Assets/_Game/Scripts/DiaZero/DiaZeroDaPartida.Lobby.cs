@@ -56,7 +56,7 @@ namespace ZombieCityCleaner.DiaZero
         [Rpc(SendTo.Server)]
         void LigarATvRpc(RpcParams parametros = default)
         {
-            if (!_mundo.NoDiaZero || Fase != FaseDoDia.Casa) return;
+            if (!MundoNoDiaZero || Fase != FaseDoDia.Casa) return;
             _viram.Clear();
             _tvDesde.Value = NetworkManager.ServerTime.Time;
             _fase.Value = (byte)FaseDoDia.Tv;

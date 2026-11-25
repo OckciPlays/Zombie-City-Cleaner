@@ -1,5 +1,31 @@
 # As armas novas (reformulação visual) — 29 e 30/10/2026
 
+## O trajeto da bala, a mira de terceira pessoa e o X das armas guardadas (23/11/2026, a pedido)
+
+- **O trajeto da bala** (`Combat/RastroDaBala.cs`; a pedido: "seria interessante ter o trajeto da bala ao invés de apenas
+  um ponto de início e ponto de fim"):
+  - um risco claro e curto (6 m) que sai do cano e corre até onde a bala bateu, a 420 m/s (bem mais lento que a bala, para
+    dar para ver), e some ao chegar; o tiro que não pegou nada vai até 150 m;
+  - quem atira desenha o dele no `ArmaJogador.Atirar`, do cano da arma dos braços na primeira pessoa e do cano da arma do
+    corpo na terceira; os outros desenham o que chega no `JogadorRede.TiroRpc`. O tiro perdido leva o ponto final no
+    anúncio, para todos verem o mesmo risco;
+  - o risco usa o shader das partículas do clima (a forma de linha, somando luz) e fica mais fraco na neblina; a largura
+    cresce com a distância da câmera (de longe, 3 cm davam menos de 1 pixel); a espingarda solta um por chumbo (até 48 ao
+    mesmo tempo);
+  - ele aparece pelo menos num quadro, mesmo com o jogo pesado. No teste com 1 a 2 quadros por segundo, o tempo do risco
+    passava antes de ele ser desenhado.
+- **A mira na terceira pessoa** (`CameraTerceiraPessoa.bloqueioPerto`, 6 m; a pedido: "parece que ele fica corrigindo a
+  mira para todas as árvores ... deveria ser apenas um auxílio"): a mira só vai para o que está no caminho da cabeça
+  quando o obstáculo está a até 6 m (a parede, a proteção, o carro logo à frente). As árvores no fundo, perto da linha, não
+  puxam mais a mira. No teste, olhando para 108 lugares em volta, só 3 ajustaram, no máximo 3,3 m.
+- **O X guarda as armas** (`InventarioJogador.MaosLivres`; a pedido: "3 slots cheios na barra + mãos livres quando
+  apertar X; quando pressionar novamente, volta a última arma"): o X deixa as mãos livres (o soco), com os 3 atalhos como
+  estavam; o X de novo volta à arma de antes. O HUD mostra "armas guardadas · X: pegar de volta". Pegar uma arma do chão
+  com as armas guardadas leva ela a um atalho livre, e o F1 que põe um item na mão usa o primeiro atalho. O personagem
+  salvo com as armas guardadas volta assim.
+- **Conferido no Play** (`Trabalho-Claude/armas/teste`): o risco nas duas câmeras, à noite (fotos `t6_*`), o X guardando
+  e devolvendo a pistola, a mira na terceira pessoa e 0 erros.
+
 ## O machado (31/10/2026): a segunda arma branca, nas duas mãos
 
 A pedido ("vamos criar o machado agora", com a imagem de um machado de cabo comprido; "o machado pode fazer a pegada em 2

@@ -67,6 +67,18 @@ namespace ZombieCityCleaner.World
             _sementeFixa = semente;
         }
 
+        // o hospital de antes do apocalipse (22/11/2026, a Woodcreek de antes, a etapa 3 do Docs/23): a obra nova (sem as
+        // marcas, as placas do forro caídas e os vidros quebrados ou tapados) e sem a hera
+        bool _novo;
+
+        /// <summary>O hospital de antes do apocalipse (novo) ou o abandonado; mudar desmonta, e ele volta montado de novo.</summary>
+        public void FicarNovo(bool novo)
+        {
+            if (_novo == novo) return;
+            _novo = novo;
+            Desmontar();
+        }
+
         /// <summary>A semente da obra: a da cena de teste (as marcas, as placas do forro e a hera saem iguais às aprovadas).</summary>
         const int Semente = 7;
         const float Folga = 3f, Abandono = 0.9f;
@@ -228,18 +240,19 @@ namespace ZombieCityCleaner.World
             if (querida && _casca == null && _montandoCasca == null)
             {
                 int portas = SementeDasPortas;
+                bool novo = _novo;
                 var nome = nomeNaTorre != null && nomeNaTorre.Length > 0 ? nomeNaTorre : null;
                 _montandoCasca = Task.Run(() =>
                 {
                     var m = Medidas.DoJogo;
                     // as portas que abrem (a parte 7): as saídas e as corta-fogo das escadas são da casca
-                    var casca = new Hospital(m, -1, Semente) { portasVivas = true, sementeDasPortas = portas, nomeNaTorre = nome };
+                    var casca = new Hospital(m, -1, Semente) { portasVivas = true, sementeDasPortas = portas, nomeNaTorre = nome, nova = novo };
                     casca.MontarCasca();
                     var terreno = new Obra(Semente, m);
                     TerrenoDoHospital.Montar(terreno);
                     return new CascaPronta
                     {
-                        Casca = casca, Terreno = terreno, Hera = AbandonoDaObra.Hera(casca, Abandono, Semente + 5, 11f),
+                        Casca = casca, Terreno = terreno, Hera = novo ? null : AbandonoDaObra.Hera(casca, Abandono, Semente + 5, 11f),
                         // os pontos dos sons e os papéis (os móveis dos 4 andares saem junto, guardados)
                         Sons = SonsDoHospital.Pontos(), Papeis = DocumentosDoHospital.Papeis(),
                     };
@@ -324,7 +337,7 @@ namespace ZombieCityCleaner.World
             pisoDoTerreno.zonas = new Bounds[0];
             pisoDoTerreno.superficies = new Superficie[0];
             pisoDoTerreno.resto = Superficie.Concreto;
-            if (c.Casca.marcas.Quadros > 0 && materialDasMarcas != null) Marcas(_casca.transform, c.Casca.marcas, "Casca");
+            if (c.Casca.marcas.Quadros > 0 && materialDasMarcas != null && !_novo) Marcas(_casca.transform, c.Casca.marcas, "Casca");
             // a hera nas paredes de fora, com o material da vegetação (o vento)
             if (c.Hera != null && c.Hera.Folhas > 0 && MaterialDaHera != null)
             {
@@ -471,9 +484,10 @@ namespace ZombieCityCleaner.World
                 if (querido && a.Objeto == null && a.Montando == null && _montando < MontagensAoMesmoTempo)
                 {
                     int andar = f, portas = SementeDasPortas;
+                    bool novo = _novo;
                     a.Montando = Task.Run(() =>
                     {
-                        var h = new Hospital(Medidas.DoJogo, andar, Semente) { portasVivas = true, sementeDasPortas = portas };
+                        var h = new Hospital(Medidas.DoJogo, andar, Semente) { portasVivas = true, sementeDasPortas = portas, nova = novo };
                         h.MontarAndar();
                         // o saque do andar (a parte 7), pela semente do mundo
                         return new AndarMontado { Obra = h, Saque = SaqueDoHospital.DoAndar(portas, andar) };
@@ -499,7 +513,7 @@ namespace ZombieCityCleaner.World
             a.Colisor = Colisores.NovoVazio(go);   // (sem cozer a malha do desenho: Colisores)
             a.Colisor.enabled = false;
             a.Cozimento = Cozinhar(a.Colisao.GetEntityId());
-            if (h.marcas.Quadros > 0 && materialDasMarcas != null) a.Marcas = Marcas(go.transform, h.marcas, Codigos[f]);
+            if (h.marcas.Quadros > 0 && materialDasMarcas != null && !_novo) a.Marcas = Marcas(go.transform, h.marcas, Codigos[f]);
             // os pisos dos passos: o de cada cômodo (o taco, o carpete) e o concreto (o azulejo, o vinílico) no resto
             var pisos = go.AddComponent<PisoPorZona>();
             var zonas = new List<Bounds>();
@@ -672,7 +686,8 @@ namespace ZombieCityCleaner.World
                 var t = TerrenoDoMundo.Instancia;
                 if (t != null) return t.materialDasCasas != null ? t.materialDasCasas : t.materialDaCidade;
                 var l = LakewoodNaCena.Instancia;
-                return l != null ? (l.materialDasCasas != null ? l.materialDasCasas : l.materialDaCidade) : null;
+                // (no Lakewood, a do antes do apocalipse é a cópia limpa: LakewoodNaCena.NaEpoca)
+                return l != null ? LakewoodNaCena.NaEpoca(l.materialDasCasas != null ? l.materialDasCasas : l.materialDaCidade) : null;
             }
         }
 

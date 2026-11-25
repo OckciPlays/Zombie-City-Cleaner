@@ -147,7 +147,12 @@ namespace ZombieCityCleaner.World
             return 110f;
         }
 
-        void Update() => CuidarDasQuedas();
+        void Update()
+        {
+            CuidarDasQuedas();
+            AcompanharOFimDoDiaZero();   // (o Dia 0: MundoDeLakewood.DiaZero.cs)
+            AcompanharAFuga();           // (a fuga: MundoDeLakewood.Fuga.cs)
+        }
 
         // a cada quadro, no anfitrião: as árvores que acabaram de bater no chão machucam quem está embaixo
         void CuidarDasQuedas()
