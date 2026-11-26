@@ -37,14 +37,18 @@ namespace ZombieCityCleaner.World
 
         public override void OnNetworkSpawn()
         {
-            // a semente da partida: nova a cada partida; a do save, se a partida veio dele (a parte 8)
-            if (IsServer && _semente.Value == 0)
+            // a semente da partida: nova a cada partida; a do save, se a partida veio dele (a parte 8). (26/11/2026, a revisão
+            // do save do Dia 0) Sempre, e não só com ela ainda 0: o objeto é da cena, que não recarrega entre as partidas, e a
+            // variável ficava com a da partida anterior; o Continuar de outro mundo, sem fechar o jogo, abria com a semente do
+            // primeiro, e o save seguinte a gravava no arquivo dele
+            if (IsServer)
             {
                 var salvo = Salvar.Salvamento.Atual;
                 _semente.Value = salvo != null && salvo.lakewood && salvo.temEstado && salvo.semente != 0 ? salvo.semente : SementeNova();
             }
             // o Dia 0 (22/11/2026, a etapa 4 do Docs/23): o jogo novo começa nele; a casa da família entra já aqui, em cada
-            // máquina, para o jogador nascer na sala dela (ele nasce logo depois deste objeto)
+            // máquina, para o jogador nascer na sala dela (ele nasce logo depois deste objeto). O save do Dia 0 ou da fuga
+            // (25/11/2026) volta neles também aqui, pelo mesmo caminho
             if (IsServer) TalvezComecarODiaZero();
             if (LakewoodNaCena.Instancia != null) LakewoodNaCena.Instancia.AcompanharODiaZero();
             AoNascerAsArvores();
@@ -53,6 +57,8 @@ namespace ZombieCityCleaner.World
 
         public override void OnNetworkDespawn()
         {
+            Retomada = false;   // (25/11/2026, o save do Dia 0: a retomada é desta partida)
+            _retomandoAFuga = false;
             AoSumirAsArvores();
             PaineisDoMundo.DefinirDesmontados(null);
             base.OnNetworkDespawn();

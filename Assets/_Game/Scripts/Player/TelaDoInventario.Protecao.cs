@@ -24,6 +24,7 @@ namespace ZombieCityCleaner.Player
         // a peça escolhida (o lugar; -1, nenhuma) e a apertada
         int _protecaoEscolhida = -1;
         LugarDaProtecao _protecaoApertada;
+        GUIStyle _quebrado;   // o "quebrado" em cima da peça (26/11/2026)
 
         /// <summary>O lugar da peça na tela (a 720p): os 4 lado a lado, na largura do retrato.</summary>
         static Rect LugarDaProtecaoNaTela(LugarDaProtecao l)
@@ -102,9 +103,15 @@ namespace ZombieCityCleaner.Player
                     }
                     else
                     {
-                        var quebrado = new GUIStyle(_centro) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-                        PorCor(quebrado, new Color(1f, 0.38f, 0.3f));
-                        GUI.Label(a, "quebrado", quebrado);
+                        // (26/11/2026, a pedido do Pedro: os textos cortados) uma linha só, na letra 9 (guardada): na 12, o
+                        // "quebrado" era mais largo que o quadrado e se partia no meio ("quebra" / "do"); sem corte nas pontas
+                        int tamanho = Mathf.Max(8, Mathf.RoundToInt(9 * u));
+                        if (_quebrado == null || _quebrado.fontSize != tamanho)
+                        {
+                            _quebrado = new GUIStyle(_centro) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, fontSize = tamanho, wordWrap = false, clipping = TextClipping.Overflow };
+                            PorCor(_quebrado, new Color(1f, 0.38f, 0.3f));
+                        }
+                        GUI.Label(a, "quebrado", _quebrado);
                     }
                 }
                 GUI.Label(new Rect(a.x - 14 * u, a.yMax + 1 * u, a.width + 28 * u, 16 * u), Protecao.NomeDoLugar(l), _centro);
@@ -206,7 +213,10 @@ namespace ZombieCityCleaner.Player
             if (icone != null) GUI.DrawTexture(new Rect(mouse - _pega, new Vector2(LadoDaProtecao * u, LadoDaProtecao * u)), icone, ScaleMode.ScaleToFit);
             string texto = !Janela.Contains(mouse) ? "soltar: largar no chão"
                 : _aba == Aba.Mochila && Em(AreaDaGrade).Contains(mouse) ? "soltar: guardar na mochila" : "solte na mochila, ou fora da janela para largar";
-            GUI.Label(new Rect(mouse.x + 14 * u, mouse.y - 20 * u, 260 * u, 20 * u), texto, _dica);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) a largura do texto, como no arrasto da estante: na de 260, as
+            // pontas do "solte na mochila, ou fora da janela para largar" saíam cortadas
+            float largura = _dica.CalcSize(new GUIContent(texto)).x + 8 * u;
+            GUI.Label(new Rect(Mathf.Min(mouse.x + 14 * u, Screen.width - largura), mouse.y - 20 * u, largura, 20 * u), texto, _dica);
         }
 
         // a peça vestida escolhida: o nome, a foto, o que ela cobre, o estado e como tirar
@@ -215,7 +225,8 @@ namespace ZombieCityCleaner.Player
             float u = _u;
             var p = inventario.Protecao.Value;
             var item = p.Peca(l);
-            GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o nome que quebra em duas linhas na letra menor
+            NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), CorDoTexto);
             var imagem = inventario.FotoDe(item);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;

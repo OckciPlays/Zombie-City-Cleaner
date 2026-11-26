@@ -26,7 +26,10 @@ namespace ZombieCityCleaner.UI
             _conteudoDasHabilidades.text = inv != null && inv.IsSpawned
                 ? inv.ResumoDoProgresso() + "\nK abre a aba HABILIDADES da mochila." : "sem o jogador";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDasHabilidades, w);
-            const int linhas = 19;   // (16: a proteção de sucata, 11/11/2026; 18: o fogo; 19: as armadilhas)
+            // (16: a proteção de sucata, 11/11/2026; 18: o fogo; 19: as armadilhas; 20: as receitas, 25/11/2026; 22: o caderno do P.
+            // 26/11/2026, a pedido do Pedro: os textos cortados pela metade. São 22 fileiras e a conta dizia 21: a trilha,
+            // logo embaixo, cobria a metade de baixo dos botões do caderno)
+            const int linhas = 22;
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + linhas * passo * u + 4 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
@@ -85,7 +88,9 @@ namespace ZombieCityCleaner.UI
             // prontas (uma de cada) e os materiais das receitas delas; o painel abre na aba Criar (perto de uma bancada)
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Melhorias: nós", _botao)) TesteDasHabilidadesRpc(21);
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Melhorias: peças", _botao)) TesteDasHabilidadesRpc(22);
+            // (26/11/2026, a pedido do Pedro: os textos cortados ...) a letra menor nos que passam do botão: "Melhorias: peças",
+            // "Molotov na frente", "Armadilhas: peças", "Aprender receitas" e "Mesa + materiais"
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Melhorias: peças", BotaoQueCabe("Melhorias: peças", meio))) TesteDasHabilidadesRpc(22);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Mat. melhorias", _botao)) TesteDasHabilidadesRpc(23);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Painel melhorias", _botao)) GetComponent<TelaDoInventario>()?.AbrirNasMelhorias();
@@ -104,17 +109,26 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Fogo: peças", _botao)) TesteDasHabilidadesRpc(29);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Mat. fogo", _botao)) TesteDasHabilidadesRpc(30);
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Molotov na frente", _botao)) TesteDasHabilidadesRpc(31);
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Molotov na frente", BotaoQueCabe("Molotov na frente", meio))) TesteDasHabilidadesRpc(31);
             // as armadilhas (11/11/2026, a etapa 5a; a Barricada de tábuas e a Fortaleza, a 5b): os nós no máximo, as peças (2
             // alarmes, 2 tapetes, as estacas, 2 cercas, 2 tábuas para barricada e a barricada solta) e os materiais das receitas
             // (com a ferramenta, 4 álcoois e o do conserto); "Barricar a porta": a porta de casa mais perto, do seu lado
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Armadilhas: nós", _botao)) TesteDasHabilidadesRpc(32);
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Armadilhas: peças", _botao)) TesteDasHabilidadesRpc(33);
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Armadilhas: peças", BotaoQueCabe("Armadilhas: peças", meio))) TesteDasHabilidadesRpc(33);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Mat. armadilhas", _botao)) TesteDasHabilidadesRpc(34);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Barricar a porta", _botao)) TesteDasHabilidadesRpc(35);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Barricar a janela", _botao)) TesteDasHabilidadesRpc(36);
+            // as receitas aprendidas e a mesa de ferramentas (25/11/2026): todas as receitas de uma vez (as da habilidade
+            // continuam pedindo a habilidade); o kit da mesa, com as madeiras, as toras e os pregos para testar
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Aprender receitas", BotaoQueCabe("Aprender receitas", meio))) TesteDasHabilidadesRpc(37);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Mesa + materiais", BotaoQueCabe("Mesa + materiais", meio))) TesteDasHabilidadesRpc(38);
+            // o caderno do P (25/11/2026, a etapa 9): todos os zumbis vistos e uns bichos de cada caçados; e o caderno limpo
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Caderno: tudo", _botao)) TesteDasHabilidadesRpc(39);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Caderno: limpar", _botao)) TesteDasHabilidadesRpc(40);
             return area;
         }
 
@@ -193,8 +207,8 @@ namespace ZombieCityCleaner.UI
                 else if (acao == 11) { Dar(Loot.Item.Machado, 1); aviso10 = "Um machado: 5 golpes no tronco derrubam a árvore."; }
                 else if (acao == 12)
                 {
-                    Dar(Loot.Item.Polvora, 5); Dar(Loot.Item.PecasDeMetal, 6); Dar(Loot.Item.Ferramenta, 1);
-                    aviso10 = "5 pólvoras, 6 peças de metal e a ferramenta: com o Armeiro, na mesa de oficina do bunker (a garagem).";
+                    Dar(Loot.Item.Polvora, 5); Dar(Loot.Item.PecasDeMetal, 6);
+                    aviso10 = "5 pólvoras e 6 peças de metal: com o Armeiro, na mesa de oficina do bunker (a garagem).";
                 }
                 // as armas de sucata (09/11/2026)
                 else if (acao <= 15)
@@ -309,9 +323,9 @@ namespace ZombieCityCleaner.UI
                 }
                 else if (acao == 34)
                 {
-                    Dar(Loot.Item.Sucata, 2); Dar(Loot.Item.Corda, 2); Dar(Loot.Item.Madeira, 10); Dar(Loot.Item.Pregos, 20); Dar(Loot.Item.Ferramenta, 1);
+                    Dar(Loot.Item.Sucata, 2); Dar(Loot.Item.Corda, 2); Dar(Loot.Item.Madeira, 10); Dar(Loot.Item.Pregos, 20);
                     Dar(Loot.Item.Desinfetante, 2); Dar(Loot.Item.Pano, 1);
-                    aviso10 = "2 sucatas, 2 cordas, 10 madeiras, 20 pregos, a ferramenta, 2 álcoois e 1 pano: as 5 receitas das armadilhas (na bancada) e um conserto da barricada de tábuas.";
+                    aviso10 = "2 sucatas, 2 cordas, 10 madeiras, 20 pregos, 2 álcoois e 1 pano: as 5 receitas das armadilhas (na mesa de ferramentas) e um conserto da barricada de tábuas.";
                 }
                 else if (acao == 35 || acao == 36)
                 {
@@ -325,6 +339,27 @@ namespace ZombieCityCleaner.UI
                         : portas.Pregar(inv, rede != null ? rede.OwnerClientId : 0, chave, true) ? (janela ? "A janela mais perto barricada do seu lado." : "A porta mais perto barricada do seu lado.")
                         : "Não deu: já está barricada (ou longe).";
                 }
+                else if (acao == 37)
+                {
+                    int novas = inv.AprenderTodasAsReceitas();
+                    aviso10 = $"Receitas aprendidas: {novas} novas ({inv.ReceitasConhecidas()} na aba Criar, com as da habilidade que você tem).";
+                }
+                else if (acao == 39)
+                {
+                    int n = inv.AnotarTudoNoCaderno();
+                    aviso10 = $"O caderno do P (a tecla P): {n} anotações novas, todos os zumbis e uns bichos de cada.";
+                }
+                else if (acao == 40)
+                {
+                    inv.LimparOCaderno();
+                    aviso10 = "O caderno do P limpo: nenhum zumbi visto e nenhum bicho caçado.";
+                }
+                else if (acao == 38)
+                {
+                    Dar(Loot.Item.MesaDeFerramentas, 1); Dar(Loot.Item.Madeira, 10); Dar(Loot.Item.Toras, 2); Dar(Loot.Item.Pregos, 12);
+                    Dar(Loot.Item.Pano, 4); Dar(Loot.Item.PecasDeMetal, 2); Dar(Loot.Item.FitaAdesiva, 2);
+                    aviso10 = "O kit da mesa de oficina (botão direito: montar), 10 madeiras, 2 toras, 12 pregos, 4 panos, 2 peças de metal e 2 fitas.";
+                }
                 else if (acao == 31)
                 {
                     var rede = GetComponent<JogadorRede>();
@@ -334,10 +369,10 @@ namespace ZombieCityCleaner.UI
                 else if (acao == 20)
                 {
                     // um de cada coisa que vira sucata (a pistola quebrada, com a ferramenta que ela pede)
-                    Dar(Loot.Item.Ferramenta, 1); Dar(Loot.Item.PeDeCabra, 1); Dar(Loot.Item.GarrafaTermica, 1); Dar(Loot.Item.PecasDeMetal, 3);
+                    Dar(Loot.Item.PeDeCabra, 1); Dar(Loot.Item.GarrafaTermica, 1); Dar(Loot.Item.PecasDeMetal, 3);
                     Dar(Loot.Item.Radiador, 1); Dar(Loot.Item.Macaco, 1);
                     if (!inv.Receber(Loot.Item.Pistola, 0, 100)) Loot.ItensNoMundo.Instancia?.Criar(Loot.Item.Pistola, transform.position + transform.forward, transform.eulerAngles.y, 0, 100);
-                    aviso10 = "Para desmontar (botão direito na mochila): a ferramenta, o pé de cabra, a garrafa térmica, 3 peças de metal, o radiador, o macaco e uma pistola quebrada.";
+                    aviso10 = "Para desmontar (botão direito na mochila): o pé de cabra, a garrafa térmica, 3 peças de metal, o radiador, o macaco e uma pistola quebrada.";
                 }
                 else
                 {

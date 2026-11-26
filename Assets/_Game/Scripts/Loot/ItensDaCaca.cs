@@ -19,7 +19,9 @@ namespace ZombieCityCleaner.Loot
                                                 Item.Violao, Item.Pandeiro, Item.Gaita, Item.Flauta,
                                                 // (24/11/2026, a base: ItensDaCaca.Base.cs)
                                                 Item.OlhoDoBrutamonte, Item.GargantaDoLong, Item.CabecaDoOco, Item.CabecaDeChefe,
-                                                Item.NucleoDaBase, Item.MuroDeToras, Item.PortaoDeToras };
+                                                Item.NucleoDaBase, Item.MuroDeToras, Item.PortaoDeToras,
+                                                // (25/11/2026, o kit da mesa de ferramentas: ItensDaCaca.Base.cs)
+                                                Item.MesaDeFerramentas };
 
         struct Caixa
         {
@@ -155,6 +157,7 @@ namespace ZombieCityCleaner.Loot
             Item.NucleoDaBase => KitDoNucleo(),
             Item.MuroDeToras => KitDoMuro(false),
             Item.PortaoDeToras => KitDoMuro(true),
+            Item.MesaDeFerramentas => KitDaMesa(),
             _ => null,
         };
 

@@ -93,11 +93,16 @@ namespace ZombieCityCleaner.Player
             var armas = ArmasDeSucata();
             bool perto = Bancada.Perto(inventario.transform.position);
             var pequeno = new GUIStyle(_pequeno) { wordWrap = false };
-            // embaixo: a bancada e o aviso do que foi feito
-            PorCor(pequeno, perto ? Bom : Ruim);
-            GUI.Label(Em(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 6, AreaDasReceitas.width, 18)),
-                perto ? "Bancada perto: clique numa peça para pôr ou tirar." : "Longe de uma bancada: aqui só dá para ver (há uma no bunker).", pequeno);
-            Aviso(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 26, AreaDasReceitas.width, 20));
+            // embaixo: a bancada e o aviso do que foi feito. (26/11/2026, a pedido do Pedro: os textos cortados) o aviso fica no
+            // lugar da linha da bancada enquanto aparece, com até duas linhas: embaixo dela, colado no fundo da janela, ele
+            // passava da borda e a 2ª linha saía cortada
+            if (AvisoAtivo) Aviso(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 4, AreaDasReceitas.width, 34), 34);
+            else
+            {
+                PorCor(pequeno, perto ? Bom : Ruim);
+                GUI.Label(Em(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 6, AreaDasReceitas.width, 18)),
+                    perto ? "Bancada perto: clique numa peça para pôr ou tirar." : "Longe de uma bancada: aqui só dá para ver (há uma no bunker).", pequeno);
+            }
             if (armas.Count == 0)
             {
                 GUI.Label(new Rect(area.x, area.y + 40 * u, area.width, 60 * u),
@@ -121,7 +126,11 @@ namespace ZombieCityCleaner.Player
                 if (icone != null) GUI.DrawTexture(new Rect(f.x + 4 * u, f.y + 3 * u, f.width - 8 * u, f.height - 18 * u), icone, ScaleMode.ScaleToFit);
                 var e = new GUIStyle(_pequeno) { alignment = TextAnchor.LowerCenter, wordWrap = false, fontSize = Mathf.RoundToInt(11 * u) };
                 int n = Melhorias.Postas(a.cores).Count;
-                GUI.Label(new Rect(f.x, f.y, f.width, f.height - 2 * u), (a.id == inventario.IdNaMao ? "na mão · " : "") + (n == 0 ? "sem melhorias" : n == 1 ? "1 melhoria" : $"{n} melhorias"), e);
+                var textoDaFicha = new GUIContent((a.id == inventario.IdNaMao ? "na mão · " : "") + (n == 0 ? "sem melhorias" : n == 1 ? "1 melhoria" : $"{n} melhorias"));
+                // (26/11/2026, a pedido do Pedro: os textos cortados) a letra 10 quando não cabe: o "na mão · sem melhorias"
+                // passava da ficha e a primeira e a última letra saíam raspadas (bem visível em 1366x768 e em 1600x900)
+                if (e.CalcSize(textoDaFicha).x > f.width - 2 * u) e.fontSize = Mathf.RoundToInt(10 * u);
+                GUI.Label(new Rect(f.x, f.y, f.width, f.height - 2 * u), textoDaFicha, e);
                 ushort id = a.id;
                 _cliquesDasMelhorias.Add((f, () => _armaDasMelhorias = id));
                 x += fichaW + 6 * u;
@@ -140,7 +149,24 @@ namespace ZombieCityCleaner.Player
                 quantas[it.item] = (quantas.TryGetValue(it.item, out int q) ? q : 0) + 1;
                 if (!soltas.TryGetValue(it.item, out var antes) || it.desgaste > antes.desgaste) soltas[it.item] = it;
             }
-            float colW = (area.width - 112 * u) / 2f, linhaH = 34 * u;
+            float colW = (area.width - 112 * u) / 2f;
+            // (26/11/2026, a pedido do Pedro: os textos cortados) as linhas das peças apertam quando os 4 blocos não cabem até o
+            // fim da área (o rifle com todas as peças na mochila: o último bloco descia por cima da linha da bancada, do aviso e
+            // da borda da janela)
+            int linhasDosBlocos = 0;
+            for (int k = 0; k < 4; k++)
+            {
+                int postasAqui = 0, podemAqui = 0;
+                for (int i = 0; i < Melhorias.Quantas; i++)
+                {
+                    var p = (PecaDaMelhoria)i;
+                    if (Melhorias.EncaixeDa(p) != (EncaixeDaMelhoria)k || !Melhorias.Serve(p, tipo)) continue;
+                    if (Melhorias.Posta(arma.cores, p)) postasAqui++;
+                    else if (soltas.ContainsKey(Melhorias.ItemDa(p))) podemAqui++;
+                }
+                linhasDosBlocos += Mathf.Max(1, Mathf.Max(postasAqui, podemAqui));
+            }
+            float linhaH = Mathf.Clamp((area.yMax - y - 4 * 22 * u - 3 * 5 * u) / linhasDosBlocos, 26 * u, 34 * u);
             for (int e = 0; e < 4; e++)
             {
                 var encaixe = (EncaixeDaMelhoria)e;
@@ -216,9 +242,14 @@ namespace ZombieCityCleaner.Player
             var resto = new GUIStyle(_pequeno) { wordWrap = false, fontSize = Mathf.RoundToInt(10 * u) };
             PorCor(resto, TextoApagado);
             float tx = caixa.xMax + 5 * u, tw = r.xMax - tx - 2 * u;
-            GUI.Label(new Rect(tx, r.y + 1 * u, tw, 16 * u), Maiuscula(Itens.Nome(item)), nome);
-            GUI.Label(new Rect(tx, r.y + 15 * u, tw, 15 * u), extra, resto);
-            if (sob) _dicaTexto = posta ? $"Tirar {Itens.NomeComArtigo(item)} (volta para a mochila)" : $"Pôr {Itens.NomeComArtigo(item)}";
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o nome e o efeito com "…" onde não cabem (o efeito do
+            // silenciador, o "×2 · ..." e, em 1600x900, o "Silenciador de filtro de óleo" passavam da ficha, cortados); o
+            // efeito inteiro vai na dica do mouse
+            string extraNaFicha = Cortar(extra, resto, tw);
+            GUI.Label(new Rect(tx, r.y + 1 * u, tw, 16 * u), Cortar(Maiuscula(Itens.Nome(item)), nome, tw), nome);
+            GUI.Label(new Rect(tx, r.y + 15 * u, tw, 15 * u), extraNaFicha, resto);
+            if (sob) _dicaTexto = (posta ? $"Tirar {Itens.NomeComArtigo(item)} (volta para a mochila)" : $"Pôr {Itens.NomeComArtigo(item)}")
+                                  + (extraNaFicha != extra ? $": {extra}" : "");
         }
     }
 }

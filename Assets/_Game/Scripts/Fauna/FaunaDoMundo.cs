@@ -353,6 +353,7 @@ namespace ZombieCityCleaner.Fauna
             float folga = 2.5f + b.Dados.comprimento * b.Escala;
             if ((b.transform.position + Vector3.up * b.Altura * 0.6f - ponto).sqrMagnitude > folga * folga) return;
             dano = Mathf.Clamp(dano, 0f, 1000f) * (cabeca ? 2.5f : 1f);
+            if (autor != null) Feriu(b, autor);   // (o caderno do P: quem feriu conta o que sangrar até morrer)
             b.Vida -= dano;
             if (b.Vida <= 0f) Matar(b, autor);
             else b.Ferir(dano, autor != null ? autor.transform.position : ponto, Time.time, autor);
@@ -389,6 +390,26 @@ namespace ZombieCityCleaner.Fauna
             if (baixarNivel) BaixarNivel(b.transform.position, b);
             if (autor != null && autor.Inventario != null)
                 autor.Inventario.GanharXp(b.Dados.pontos >= 60f ? XpDaCaca : XpDoBichoPequeno, "caça");
+            // (25/11/2026, a etapa 9) o caderno do P: o bicho caçado entra na conta de quem matou (ou de quem o feriu nos
+            // últimos 5 minutos, se ele morreu sangrando)
+            var cacador = autor != null ? autor : QuemFeriu(b);
+            _feridos.Remove(b);
+            if (cacador != null && cacador.Inventario != null) cacador.Inventario.AnotarOBicho(b.Especie);
+        }
+
+        // quem feriu cada bicho por último (o anfitrião): o que morre sangrando conta para ele no caderno
+        readonly Dictionary<Bicho, (JogadorRede quem, byte geracao, float quando)> _feridos = new Dictionary<Bicho, (JogadorRede, byte, float)>();
+
+        void Feriu(Bicho b, JogadorRede autor)
+        {
+            if (_feridos.Count > 64) _feridos.Clear();
+            _feridos[b] = (autor, b.Geracao, Time.time);
+        }
+
+        JogadorRede QuemFeriu(Bicho b)
+        {
+            if (!_feridos.TryGetValue(b, out var f)) return null;
+            return f.quem != null && f.quem.IsSpawned && f.geracao == b.Geracao && Time.time - f.quando < 300f ? f.quem : null;
         }
 
         /// <summary>
@@ -658,6 +679,8 @@ namespace ZombieCityCleaner.Fauna
             _ => "deitado",
         };
 
+        readonly GUIContent _conteudoDoF1 = new GUIContent();
+
         // os nomes e os estados em cima dos bichos (o F1)
         void OnGUI()
         {
@@ -674,7 +697,11 @@ namespace ZombieCityCleaner.Fauna
                 if (s.z < 0f) continue;
                 string t = b.Dados.NomeDaVariante(b.Variante) + (b.Alfa ? " (alfa)" : "") + "\n" + NomeDoEstado(b) + (b.Ferido ? ", sangrando" : "")
                            + (_servidor && !b.Morto ? $"\nvida {b.Vida:0}" : "");
-                GUI.Label(new Rect(s.x - 80f, Screen.height - s.y - 30f, 160f, 60f), t, estilo);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 200 px e a altura do texto: "deitado comendo,
+                // sangrando" passava dos 160 px e quebrava, e a última linha (a vida) saía cortada embaixo da caixa de 60 px
+                _conteudoDoF1.text = t;
+                float h = Mathf.Max(60f, estilo.CalcHeight(_conteudoDoF1, 200f));
+                GUI.Label(new Rect(s.x - 100f, Screen.height - s.y - 30f, 200f, h), _conteudoDoF1, estilo);
             }
         }
     }

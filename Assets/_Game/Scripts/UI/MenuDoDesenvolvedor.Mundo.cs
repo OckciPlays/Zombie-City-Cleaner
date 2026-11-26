@@ -32,6 +32,7 @@ namespace ZombieCityCleaner.UI
         const float VelocidadeDaTravessia = 44.4f, AlturaDaTravessia = 2.5f, DuracaoDaTravessia = 60f;
 
         MovimentoPrimeiraPessoa Movimento => GetComponent<MovimentoPrimeiraPessoa>();
+        static readonly GUIContent _conteudoDoMundo = new GUIContent();
 
         static DadosDoMundo Mapa => MundoDaPartida.Instancia != null ? MundoDaPartida.Instancia.Dados : null;
 
@@ -229,7 +230,12 @@ namespace ZombieCityCleaner.UI
             var mundo = MundoDaPartida.Instancia;
             var d = Mapa;
             if (d == null) return default;
-            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, (d.TemHospital ? 744 : 690) * u);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o nome, o tamanho e o resumo com a altura do texto
+            // (a semente de 5 ou 6 algarismos quebra a 2ª linha, e o resumo saía cortado embaixo); onde você está com 5 linhas
+            // (eram 4: a 1ª e a dos blocos quebram) e a linha "Dentro" do hospital com 2 (eram 1)
+            _conteudoDoMundo.text = $"{mundo.Nome}\n{Tamanhos.NomeComLado(d.Tamanho)} · semente {d.Semente} · gerador {d.Versao}\nresumo {d.Resumo:X16}";
+            float alturaDoNome = Mathf.Max(54 * u, _texto.CalcHeight(_conteudoDoMundo, 256 * u));
+            var area = new Rect(menu.xMax + 8 * u, menu.y, 280 * u, (d.TemHospital ? 744 + 8 + 14 : 690 + 8) * u + alturaDoNome - 54 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -240,17 +246,17 @@ namespace ZombieCityCleaner.UI
             float x = area.x + 12 * u, w = area.width - 24 * u, y = area.y + 8 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "MUNDO", _titulo);
             y += 26 * u;
-            GUI.Label(new Rect(x, y, w, 54 * u),
-                $"{mundo.Nome}\n{Tamanhos.NomeComLado(d.Tamanho)} · semente {d.Semente} · gerador {d.Versao}\nresumo {d.Resumo:X16}", _texto);
-            y += 58 * u;
+            GUI.Label(new Rect(x, y, w, alturaDoNome), _conteudoDoMundo, _texto);
+            y += alturaDoNome + 4 * u;
             var p = transform.position;
             var bloco = d.BlocoDe(p.x, p.z);
             var terreno = TerrenoDoMundo.Instancia;
             string blocos = terreno != null ? $"{terreno.Blocos} blocos, {terreno.BlocosComColisao} com colisão, {terreno.CasasDeVerdade} casas, {terreno.PrediosDeVerdade} prédios ({terreno.AndaresCarregados} andares)" : "";
-            // (a linha dos blocos quebra em duas)
-            GUI.Label(new Rect(x, y, w, 72 * u),
+            // (a primeira linha e a dos blocos quebram em duas: 5 linhas, 26/11/2026. E, na revisão dos textos cortados, 82, não
+            // 80: 5 linhas de 13 com o padding passam um pouco de 80; o botão continua no 84)
+            GUI.Label(new Rect(x, y, w, 82 * u),
                 $"Você: x {p.x:F0}, z {p.z:F0}, altura {p.y:F1} (chão {d.Altura(p.x, p.z):F1})\nbloco {bloco.x}, {bloco.y} de {d.BlocosPorLado} × {d.BlocosPorLado}\n{blocos}", _texto);
-            y += 76 * u;
+            y += 84 * u;
             if (GUI.Button(new Rect(x, y, w, 28 * u), Movimento.Voando ? "Parar de voar (F2)" : "Voar (F2)", _botao)) Voar(!Movimento.Voando);
             y += 36 * u;
 
@@ -301,7 +307,8 @@ namespace ZombieCityCleaner.UI
             {
                 var h = HospitalDoMundo.Instancia;
                 string estado = h != null && h.CascaMontada ? $" ({h.Carregados} andares carregados)" : "";
-                if (GUI.Button(new Rect(x, y, w, 26 * u), "O Hospital Principal" + estado, _botao))
+                string hospital = "O Hospital Principal" + estado;   // (com os andares, a letra menor: 26/11/2026)
+                if (GUI.Button(new Rect(x, y, w, 26 * u), hospital, BotaoQueCabe(hospital, w)))
                 {
                     var praca = d.NoHospital(new Vector3(0f, 0f, PlantaDoHospital.Marquise.yMin - 3.5f));
                     IrPara(praca.x, praca.z);
@@ -311,8 +318,10 @@ namespace ZombieCityCleaner.UI
                 var zm = Zombies.ZombieManager.Instancia;
                 var (sorteados, dePerto) = h != null ? h.SaqueCarregado : (0, 0);
                 string zumbis = zm != null && zm.IsServer ? $"{zm.ZumbisNoHospital} zumbis" : "zumbis no anfitrião";
-                GUI.Label(new Rect(x, y, w, 20 * u), $"Dentro: {zumbis} · saque {dePerto}/{sorteados} · {PortasDoMundo.Instancia?.Vivas ?? 0} portas", _texto);
-                y += 24 * u;
+                // (em duas linhas, 26/11/2026: no cliente, ou com os números grandes, a linha quebra, e as portas saíam cortadas)
+                // (26/11/2026, a revisão dos textos cortados: 36, não 34, como as outras caixas de 2 linhas; o botão continua no 38)
+                GUI.Label(new Rect(x, y, w, 36 * u), $"Dentro: {zumbis} · saque {dePerto}/{sorteados} · {PortasDoMundo.Instancia?.Vivas ?? 0} portas", _texto);
+                y += 38 * u;
             }
             if (GUI.Button(new Rect(x, y, w, 26 * u), _atravessando ? "Atravessando..." : "Teste de travessia (60 s a 160 km/h)", _botao) && !_atravessando)
                 ComecarTravessia();
@@ -320,7 +329,8 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y, w, 26 * u), BenchmarkDaCidade.Rodando ? "Benchmark da cidade rodando..." : "Benchmark da cidade (dia e noite)", _botao))
                 ComecarBenchmarkDaCidade();
             y += 32 * u;
-            if (GUI.Button(new Rect(x, y, w, 26 * u), ConferenciaDasCasas.Rodando ? ConferenciaDasCasas.Status : "Conferir as casas por perto (60 m)", _botao))
+            string conferir = ConferenciaDasCasas.Rodando ? ConferenciaDasCasas.Status : "Conferir as casas por perto (60 m)";
+            if (GUI.Button(new Rect(x, y, w, 26 * u), conferir, BotaoQueCabe(conferir, w)))   // (o andamento é comprido: a letra menor, 26/11/2026)
                 ComecarConferenciaDasCasas(false);
             y += 32 * u;
             if (GUI.Button(new Rect(x, y, w, 26 * u), "Conferir uma casa de cada variação", _botao))
@@ -342,7 +352,7 @@ namespace ZombieCityCleaner.UI
                 var n = MobiliaDaConstrucao.SaqueAMostra();
                 saque = $"Esconder o saque ({n[0]}/{n[1]}/{n[2]}/{n[3]}/{n[4]}; {MobiliaNovaDoMundo.QuantosPegos} pegos)";
             }
-            if (GUI.Button(new Rect(x, y, w, 26 * u), saque, _botao))
+            if (GUI.Button(new Rect(x, y, w, 26 * u), saque, BotaoQueCabe(saque, w)))   // (com os números, a letra menor, 26/11/2026)
             {
                 MobiliaDaConstrucao.MostrarOSaque = !MobiliaDaConstrucao.MostrarOSaque;
                 if (MobiliaDaConstrucao.MostrarOSaque) Avisar("O saque: cinza normal, verde incomum, azul raro, roxo épico, dourado lendário (os números no botão).");

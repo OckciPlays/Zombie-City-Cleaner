@@ -34,5 +34,25 @@ namespace ZombieCityCleaner.Vehicles
         /// <see cref="World.EstantesDoBunker"/>, como o compartimento do caiaque), ou -1 sem caçamba. A caminhonete é uma só.
         /// </summary>
         public int CacambaDeGuardar => cacamba ? World.EstantesDoBunker.BaseDasCacambas : -1;
+
+        /// <summary>O meio do chão da caçamba, ao longo do carro (o z: entre a frente dela, -0,52, e a tampa, -2,52).</summary>
+        const float MeioDaCacamba = -1.52f;
+
+        /// <summary>
+        /// Em todas as máquinas (25/11/2026, a pedido: "se andarmos com a caminhonete, esses itens ficam flutuando ainda"): o
+        /// que está na estante da caçamba aparece deitado no chão dela, preso ao carro (anda, vira e sobe com ele), pelas
+        /// <see cref="World.ItensNaEstante"/>, como numa tábua de estante. A frente da "estante" é a tampa de trás: a linha de
+        /// cima da tela fica junto da cabine, e a coluna da esquerda, à esquerda de quem olha da tampa.
+        /// </summary>
+        void PorOsItensDaCacamba()
+        {
+            if (!cacamba || CacambaDeGuardar < 0 || transform.Find("Itens na caçamba") != null) return;
+            var go = new GameObject("Itens na caçamba");
+            go.transform.SetParent(transform, false);
+            go.transform.SetLocalPositionAndRotation(new Vector3(0f, pisoDaCacamba + 0.005f, MeioDaCacamba), Quaternion.Euler(0f, 180f, 0f));
+            var itens = go.AddComponent<World.ItensNaEstante>();
+            itens.estante = CacambaDeGuardar;
+            itens.forma = World.EstantesDoBunker.FormaDa(CacambaDeGuardar);
+        }
     }
 }

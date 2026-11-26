@@ -19,7 +19,7 @@ namespace ZombieCityCleaner.Player
     /// </summary>
     public partial class TelaDoInventario
     {
-        static readonly Rect AbaHabilidades = new Rect(670, 14, 160, 36);
+        static readonly Rect AbaHabilidades = new Rect(585, 14, 128, 36);   // (25/11/2026: mais estreita, para a ANOTAÇÕES caber)
         // a árvore: do meio até o fim da coluna da direita (a 720p)
         static readonly Rect AreaDaArvore = new Rect(GradeX, 58, 1142f - GradeX, 516);
         static readonly Rect BarraDoXp = new Rect(760, 68, 374, 9);
@@ -487,10 +487,11 @@ namespace ZombieCityCleaner.Player
             IconeNoQuadrado(no, h, estado, cor, Forte(h, p, estado), true, sobMouse, negado, u);
             var antes = GUI.color;
 
-            // o selo "em breve", numa faixa no meio do ícone
+            // o selo "em breve", numa faixa no meio do ícone (26/11/2026, a pedido do Pedro: os textos cortados: quase da largura
+            // do ícone; com 3 px de cada lado, o "EM BREVE" encostava nas pontas em 1920x1080 e saía cortado em 1366x768)
             if (estado == EstadoDoNo.EmBreve)
             {
-                var faixa = new Rect(no.x + 3 * px, Mathf.Round(no.center.y - 7 * u), no.width - 6 * px, Mathf.Round(14 * u));
+                var faixa = new Rect(no.x + px, Mathf.Round(no.center.y - 7 * u), no.width - 2 * px, Mathf.Round(14 * u));
                 Ret(faixa, new Color(0.05f, 0.04f, 0.03f, 0.88f));
                 var linha = new Color(EmBreve.r, EmBreve.g, EmBreve.b, 0.75f);
                 Ret(new Rect(faixa.x, faixa.y, faixa.width, px), linha);

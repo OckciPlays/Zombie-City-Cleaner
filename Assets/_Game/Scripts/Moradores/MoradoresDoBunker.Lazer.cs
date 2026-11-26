@@ -192,7 +192,9 @@ namespace ZombieCityCleaner.Moradores
                 int n = Bunker.Bitucas;
                 if (n >= BunkerDoMundo.BitucasNoCinzeiro)
                 {
-                    Registrar($"{m.Nome} esvaziou o cinzeiro da mesinha do fumo.");
+                    // (25/11/2026, a revisão: o Ygayr, que fuma um atrás do outro do lado do cinzeiro, esvazia sem registrar;
+                    // ele enchia o registro de 100 linhas, e os avisos de verdade saíam dele)
+                    if (!EhOYgayr(m.ficha)) Registrar($"{m.Nome} esvaziou o cinzeiro da mesinha do fumo.");
                     n = 0;
                 }
                 Bunker.PorAsBitucas(n + 1);
@@ -337,7 +339,8 @@ namespace ZombieCityCleaner.Moradores
         int DaTV(Morador m)
         {
             VeATV(-1);
-            if (m.vida.lugar >= 0 && _daTV.Contains(m.vida.lugar)) return m.vida.lugar;
+            // (25/11/2026, a revisão: o de agora só se ainda é dele, como no Livre por tipo)
+            if (m.vida.lugar >= 0 && _daTV.Contains(m.vida.lugar) && Livre(m.vida.lugar, m)) return m.vida.lugar;
             return LivreDaLista(m, _daTV);
         }
 
@@ -354,7 +357,8 @@ namespace ZombieCityCleaner.Moradores
                 if ((l.tipo == TipoDoLugar.Sofa || l.tipo == TipoDoLugar.EmPe) && l.andar == MoveisDoBunker.Todos[c].andar && Plano(l.raiz - p) < PertoDoCinzeiroM)
                     lista.Add(k);
             }
-            if (m.vida.lugar >= 0 && lista.Contains(m.vida.lugar)) return m.vida.lugar;
+            // (25/11/2026, a revisão: o de agora só se ainda é dele; a cadeira do Ygayr fica do lado do cinzeiro)
+            if (m.vida.lugar >= 0 && lista.Contains(m.vida.lugar) && Livre(m.vida.lugar, m)) return m.vida.lugar;
             return LivreDaLista(m, lista);
         }
 
@@ -369,7 +373,8 @@ namespace ZombieCityCleaner.Moradores
             foreach (var m in _moradores)
             {
                 var v = m.vida;
-                if (!v.noLugar || v.lugar < 0 || v.Atividade != AtividadeDoMorador.Lazer) continue;
+                // (25/11/2026, a revisão: o Capitão e o Gus do tutorial, sem corpo aqui dentro, não ligam a TV de um sofá vazio)
+                if (!v.noLugar || v.lugar < 0 || v.Atividade != AtividadeDoMorador.Lazer || ForaDoBunker(m)) continue;
                 var acao = AcoesDoCorpo.Acao(v.acao);
                 if (acao == AcaoDoCorpo.Sofa && VeATV(v.lugar)) tv = true;
                 if (acao == AcaoDoCorpo.Cadeira && NoRadio(v.lugar)) radio = true;
@@ -440,6 +445,13 @@ namespace ZombieCityCleaner.Moradores
         // A sinuca é um lazer entre os outros (o Jogador, o lazer favorito); com um jogando sozinho, outro pode entrar
         bool QuerSinuca(Morador m, float agora, float dura)
         {
+            // (25/11/2026, a revisão: o Capitão e o Gus do tutorial, sem corpo aqui dentro, não entram na partida; na vez dele,
+            // o outro ficava parado na mesa até acabar a hora de sinuca dele)
+            if (ForaDoBunker(m))
+            {
+                m.querSinuca = m.forcarSinuca = false;
+                return false;
+            }
             var s = SinucaDoMundo.Instancia;
             if (s == null || !s.IsSpawned || Bunker == null || !Bunker.ChaveDaSinuca(out ulong chave, out var centro)) return false;
             s.Estado(chave, out var mesa);
@@ -561,7 +573,19 @@ namespace ZombieCityCleaner.Moradores
                 Rolar(p, s, mesa != null && jv.corpo != null);
                 return;
             }
-            if (mesa == null || jv.corpo == null) return;
+            if (mesa == null) return;
+            if (jv.corpo == null)
+            {
+                // (25/11/2026, a revisão) a mesa à vista e a vez de quem está sem corpo (ainda chegando no papel de outro andar,
+                // ou o corpo saiu no meio da vez): uns segundos depois, a vez passa, em vez de deixar o outro parado na mesa
+                if (p.jogadores.Count > 1 && Time.time - p.desde > 8f)
+                {
+                    p.vez++;
+                    p.estado = EstadoDaPartida.Esperando;
+                    p.desde = Time.time;
+                }
+                return;
+            }
             switch (p.estado)
             {
                 case EstadoDaPartida.Esperando:
@@ -795,7 +819,8 @@ namespace ZombieCityCleaner.Moradores
             foreach (var m in _moradores)
             {
                 if (n >= 2) break;
-                if (m.partida != null || m.vida.crise != 0) continue;
+                // (25/11/2026, a revisão: o Capitão e o Gus do tutorial não entram mais; o teste pega dois que podem)
+                if (m.partida != null || m.vida.crise != 0 || ForaDoBunker(m) || EhOYgayr(m.ficha)) continue;
                 m.forcarSinuca = true;
                 m.vida.ate = agora;
                 n++;

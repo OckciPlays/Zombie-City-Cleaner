@@ -73,7 +73,8 @@ namespace ZombieCityCleaner.UI
             }
             y += passo * u;
             if (GUI.Button(new Rect(x, y, terco, alto * u), "Barras cheias", _botao)) TesteDoBunkerRpc(BunkerEncher, 0);
-            if (GUI.Button(new Rect(x + terco + 6 * u, y, terco, alto * u), "Fome e sede 20", _botao)) TesteDoBunkerRpc(BunkerComFome, 0);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade: "Fome e sede 20" passava do terço, com a letra menor)
+            if (GUI.Button(new Rect(x + terco + 6 * u, y, terco, alto * u), "Fome e sede 20", BotaoQueCabe("Fome e sede 20", terco))) TesteDoBunkerRpc(BunkerComFome, 0);
             if (GUI.Button(new Rect(x + 2f * (terco + 6 * u), y, terco, alto * u), "Sono 5", _botao)) TesteDoBunkerRpc(BunkerComSono, 0);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Pôr um sorteado", _botao)) TesteDoBunkerRpc(BunkerPor, 0);

@@ -58,7 +58,7 @@ namespace ZombieCityCleaner.UI
             }),
             ("Materiais", new[]
             {
-                Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.Ferramenta, Item.PecasDeMetal, Item.Fios, Item.Pregos,
+                Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos,
                 Item.Isca, Item.VaraDePesca, Item.KitDeReparo, Item.Roupa, Item.Fogueira, Item.Cama, Item.Barricada, Item.Lanterna, Item.Pilhas, Item.Galao,
                 Item.Polvora, Item.Sucata, Item.Lampiao, Item.Molotov, Item.KitFogueira,
                 Item.AlarmeLatas, Item.TapetePregos, Item.Estacas, Item.CercaFogo, Item.TabuasBarricada,   // (as armadilhas, 11/11/2026; as tábuas, a 5b)
@@ -89,10 +89,20 @@ namespace ZombieCityCleaner.UI
 
         bool _aberto;
         int _destino;
+
+        /// <summary>
+        /// O F1 ou o F3 aberto nesta máquina (26/11/2026: o caderno das missões do canto de cima, UI/CadernoDeMissoes.cs, some
+        /// com ele; antes, a folha ficava por cima do alto do painel DESENVOLVEDOR).
+        /// </summary>
+        public static bool AbertoAqui { get; private set; }
         string _quantos = "10", _aviso;
         float _avisoAte;
         GUIStyle _titulo, _texto, _botao, _campo;
         float _uDosEstilos;
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o aviso de baixo e o "Desligado no anfitrião"
+        // medidos antes de montar a coluna: a caixa cresce com o texto, e o vídeo desce junto
+        static readonly GUIContent _conteudoDoAviso = new GUIContent();
+        static readonly GUIContent _conteudoDoDesligado = new GUIContent("Desligado no anfitrião: os itens (F3), o relógio e os zumbis daqui não valem. Lá: ESC > Configurações > Menu do desenvolvedor (F1).");
 
         public override void OnNetworkSpawn()
         {
@@ -104,6 +114,7 @@ namespace ZombieCityCleaner.UI
             MenuOnline.FecharTelas -= Fechar;
             if (_boneco != null) Destroy(_boneco);
             if (_aberto) Abrir(false);
+            if (IsOwner) AbertoAqui = false;
         }
 
         void Fechar()
@@ -122,6 +133,7 @@ namespace ZombieCityCleaner.UI
         void Update()
         {
             if (IsSpawned && IsServer && LiberadoNoAnfitriao.Value != Disponivel) LiberadoNoAnfitriao.Value = Disponivel;
+            if (IsSpawned && IsOwner) AbertoAqui = _aberto || _abertoItens;
             if (!IsSpawned || !IsOwner || !Disponivel || MenuOnline.Bot) return;
             var teclado = Keyboard.current;
             // o F1 ou o F3 (os itens): um de cada vez, no mesmo canto
@@ -173,7 +185,17 @@ namespace ZombieCityCleaner.UI
                 return;
             }
             bool semAnfitriao = !IsServer && !LiberadoNoAnfitriao.Value;
-            var area = new Rect(12 * u, 40 * u, 300 * u, (semAnfitriao ? 394 : 340) * u);
+            // (26/11/2026, a pedido do Pedro: os textos cortados ...) as duas caixas de texto com a altura do texto: o aviso
+            // tinha 2 linhas (36) e muitos têm de 3 a 5; o "Desligado no anfitrião" dá 4 linhas em 1920x1080 (eram 50)
+            float alturaDoDesligado = semAnfitriao ? Mathf.Max(50 * u, _texto.CalcHeight(_conteudoDoDesligado, 276 * u)) : 0f;
+            bool comAviso = _aviso != null && Time.time < _avisoAte;
+            float alturaDoAviso = 36 * u;
+            if (comAviso)
+            {
+                _conteudoDoAviso.text = _aviso;
+                alturaDoAviso = Mathf.Max(36 * u, _texto.CalcHeight(_conteudoDoAviso, 276 * u));
+            }
+            var area = new Rect(12 * u, 40 * u, 300 * u, 374 * u + (semAnfitriao ? alturaDoDesligado + 4 * u : 0f) + alturaDoAviso - 36 * u);
             Area = area;
             // (13/11/2026) o menu em quatro colunas, cada uma rolando sozinha quando passa do fim da tela
             // (MenuDoDesenvolvedor.Colunas.cs); esta é a primeira: o menu e, embaixo, o vídeo
@@ -193,9 +215,9 @@ namespace ZombieCityCleaner.UI
                 // os pedidos (itens, relógio, zumbis) valem pela opção do anfitrião
                 var cor = _texto.normal.textColor;
                 _texto.normal.textColor = new Color(1f, 0.45f, 0.35f);
-                GUI.Label(new Rect(x, y, w, 50 * u), "Desligado no anfitrião: os itens (F3), o relógio e os zumbis daqui não valem. Lá: ESC > Configurações > Menu do desenvolvedor (F1).", _texto);
+                GUI.Label(new Rect(x, y, w, alturaDoDesligado), _conteudoDoDesligado, _texto);
                 _texto.normal.textColor = cor;
-                y += 54 * u;
+                y += alturaDoDesligado + 4 * u;
             }
 
             // sempre de dia ou sempre de noite: meio-dia ou meia-noite com o relógio parado (o anfitrião manda, para todos)
@@ -211,6 +233,17 @@ namespace ZombieCityCleaner.UI
             {
                 PararRelogioRpc(!deNoite, true);
                 Avisar(deNoite ? "O relógio voltou a andar." : "Meia-noite, com o relógio parado.");
+            }
+            y += 34 * u;
+            // (25/11/2026, a pedido do Pedro: "tirar o N da opção de tirar a neblina, deixar apenas como uma opção no menu do
+            // F1") a neblina, só nesta máquina; e a linha dos zumbis no canto de cima (antes no F3), desligada de início
+            bool semNeblina = AmbienteDoDia.SemNeblina;
+            if (GUI.Toggle(new Rect(x, y, meio, 28 * u), semNeblina, "Sem neblina", _botao) != semNeblina) TrocarANeblinaDeLakewood();
+            bool info = ZombieManager.InfoNoCanto;
+            if (GUI.Toggle(new Rect(x + meio + 8 * u, y, meio, 28 * u), info, "Zumbis no canto", _botao) != info)
+            {
+                ZombieManager.InfoNoCanto = !info;
+                Avisar(info ? "A linha dos zumbis saiu do canto." : "A contagem dos zumbis no canto de cima.");
             }
             y += 34 * u;
 
@@ -264,7 +297,7 @@ namespace ZombieCityCleaner.UI
             y += 32 * u;
             if (_boneco != null) GUI.Label(new Rect(x, y, w, 22 * u), Bonecos[_qualBoneco].nome, _texto);
             y += 26 * u;
-            if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, y, w, 36 * u), _aviso, _texto);
+            if (comAviso) GUI.Label(new Rect(x, y, w, alturaDoAviso), _conteudoDoAviso, _texto);
             // gravar um vídeo jogando (03/11/2026), embaixo
             var video = PainelDoVideo(u, area);
             var coluna = FecharColuna(Rect.MinMaxRect(area.xMin, area.yMin, Mathf.Max(area.xMax, video.xMax), video.yMax), area);

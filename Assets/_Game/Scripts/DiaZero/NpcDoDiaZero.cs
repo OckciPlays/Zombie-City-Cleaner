@@ -30,6 +30,12 @@ namespace ZombieCityCleaner.DiaZero
         /// </summary>
         public bool Conversando { get; set; }
 
+        /// <summary>O número dele na rua (o mesmo em todas as máquinas: a pausa da conversa vai pela rede por ele).</summary>
+        public int Indice { get; private set; }
+
+        // sem a rede (o teste fora dela): o desconto do relógio pelas conversas, só nesta máquina
+        double _descontoLocal, _conversandoDesde = -1.0;
+
         Animator _an;
         Transform _peito, _pescoco, _cabeca, _ombroD, _bracoD, _anteD, _maoD, _ombroE, _bracoE, _anteE, _maoE;
         Vector3[] _caminho;
@@ -59,6 +65,7 @@ namespace ZombieCityCleaner.DiaZero
         public void Iniciar(RuaDoDiaZero rua, LugarDeNpc l, int indice, Material particulas)
         {
             Lugar = l;
+            Indice = indice;
             _an = GetComponentInChildren<Animator>();
             var v = GetComponent<Vestimenta>();
             if (v != null)
@@ -119,6 +126,29 @@ namespace ZombieCityCleaner.DiaZero
             AoChao(transform.position);
         }
 
+        // o relógio da partida, menos as conversas: pela rede (o anfitrião guarda as pausas) ou, fora dela, nesta máquina
+        double RelogioDele(out bool paradoNaRede, out ulong quem)
+        {
+            var d = DiaZeroDaPartida.Instancia;
+            if (d != null && d.IsSpawned) return DiaZeroDaPartida.AgoraDoNpc(Indice, out paradoNaRede, out quem);
+            paradoNaRede = false;
+            quem = 0;
+            double agora = NpcsDoDiaZero.Agora;
+            if (Conversando && _conversandoDesde < 0.0) _conversandoDesde = agora;
+            if (!Conversando && _conversandoDesde >= 0.0)
+            {
+                _descontoLocal += agora - _conversandoDesde;
+                _conversandoDesde = -1.0;
+            }
+            return agora - _descontoLocal - (_conversandoDesde >= 0.0 ? agora - _conversandoDesde : 0.0);
+        }
+
+        static JogadorRede QuemConversa(ulong cliente)
+        {
+            foreach (var j in JogadorRede.Todos) if (j != null && j.OwnerClientId == cliente) return j;
+            return null;
+        }
+
         Transform Osso(string nome)
         {
             foreach (var t in GetComponentsInChildren<Transform>(true)) if (t.name == nome) return t;
@@ -145,10 +175,13 @@ namespace ZombieCityCleaner.DiaZero
         void Update()
         {
             float t = Time.time;
-            if (Conversando)
+            // (25/11/2026) o relógio dele, menos o tempo parado nas conversas, e se alguém conversa com ele em qualquer máquina
+            // (DiaZeroDaPartida.Conversas.cs): parado em todas, olhando para quem conversa, e volta a andar de onde parou
+            double agora = RelogioDele(out bool paradoNaRede, out ulong comQuem);
+            if (Conversando || paradoNaRede)
             {
                 Tocar("Parado");
-                var quem = JogadorRede.Local;
+                var quem = Conversando ? JogadorRede.Local : QuemConversa(comQuem);
                 if (quem != null)
                 {
                     var d = quem.transform.position - transform.position;
@@ -158,7 +191,6 @@ namespace ZombieCityCleaner.DiaZero
             }
             else if (_caminho != null && _total > 0.1f)
             {
-                double agora = NpcsDoDiaZero.Agora;
                 // com as paradas (o faxineiro esfrega, quem compra olha a prateleira): anda 'passo' metros e para 'parado' s
                 float s;
                 if (_passo > 0f)

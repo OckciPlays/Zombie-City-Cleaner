@@ -413,7 +413,10 @@ namespace ZombieCityCleaner.Player
                 var t = miniaturas != null && i < miniaturas.Length ? miniaturas[i] : null;
                 if (Opcao(r, escolhida == i, u, t, null)) escolhida = i;
             }
-            GUI.Label(new Rect(p.x, p.yMax - 18 * u, p.width, 22 * u), nome(escolhida).ToUpperInvariant(), _texto);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa mais alta, com o mesmo meio (p.yMax − 7u):
+            // com a altura exata da linha, o acento do "CARGO CÁQUI" podia perder a ponta. A segunda fila das miniaturas acaba 1u
+            // acima, e a borda do painel 1u abaixo
+            GUI.Label(new Rect(p.x, p.yMax - 21 * u, p.width, 28 * u), nome(escolhida).ToUpperInvariant(), _texto);
             return escolhida;
         }
 

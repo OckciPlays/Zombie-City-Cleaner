@@ -35,7 +35,14 @@ namespace ZombieCityCleaner.Player
             if (_estilo == null || !Mathf.Approximately(u, _u))
             {
                 _u = u;
-                _estilo = new GUIStyle(EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold, TextAnchor.UpperCenter));
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) numa linha só, que pode passar da caixa sem
+                // cortar (centrada no losango, como os nomes dos jogadores): "munição de parafuso · 15 m" (158u) passava dos
+                // 156u da caixa, e a distância ia para uma segunda linha que a caixa de 18u cortava
+                _estilo = new GUIStyle(EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold, TextAnchor.UpperCenter))
+                {
+                    wordWrap = false,
+                    clipping = TextClipping.Overflow,
+                };
             }
             if (_losango == null) _losango = Losango();
             Vector3 olho = cam.transform.position;

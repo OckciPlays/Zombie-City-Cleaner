@@ -333,9 +333,26 @@ namespace ZombieCityCleaner.UI
                         T("    vontade de fumar ", Escuro);
                         T(Barra(m.fumo), m.fumo > 75f ? Ambar : Verde);
                     }
+                    // (26/11/2026, a pedido do Pedro: os textos cortados) com fome, sede, cansaço e uma ou duas condições, a linha
+                    // passava da coluna, e o grupo do painel cortava o humor e a função no meio, na divisa com a ficha: quando não
+                    // cabe numa linha, a saúde quebra na largura (como o "agora"), e o humor e a função vão na linha de baixo
+                    string humor = $"{m.humor} {m.faixa}";
+                    var corDaSaude = m.saude.StartsWith("bem") ? Verde : Ambar;
                     L();
-                    T("    saúde: ", Escuro); T(m.saude, m.saude.StartsWith("bem") ? Verde : Ambar);
-                    T("   humor: ", Escuro); T($"{m.humor} {m.faixa}", CorDoHumor(m.humor));
+                    T("    saúde: ", Escuro);
+                    if ("    saúde: ".Length + m.saude.Length + "   humor: ".Length + humor.Length + "   função: —".Length <= _colunasA)
+                    {
+                        T(m.saude, corDaSaude);
+                        T("   humor: ", Escuro);
+                    }
+                    else
+                    {
+                        var partes = Quebrar(m.saude, _colunasA - "    saúde: ".Length, _colunasA, "    saúde: ".Length);
+                        T(partes[0], corDaSaude);
+                        for (int k = 1; k < partes.Count; k++) LT(partes[k], corDaSaude);
+                        LT("    humor: ", Escuro);
+                    }
+                    T(humor, CorDoHumor(m.humor));
                     T("   função: ", Escuro); T("—", Verde);
                     if (!string.IsNullOrEmpty(m.crise))
                     {

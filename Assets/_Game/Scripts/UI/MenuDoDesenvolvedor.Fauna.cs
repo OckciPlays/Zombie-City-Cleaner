@@ -40,8 +40,13 @@ namespace ZombieCityCleaner.UI
                 + "\n" + ZombieCityCleaner.Combat.SomDasChamas.Resumo() + "\n" + ZombieCityCleaner.World.SomDaAgua.Resumo()
                 + $"\neco do último tiro: {ZombieCityCleaner.Combat.EcoDoTiro.UltimoLugar} (volume {ZombieCityCleaner.Combat.EcoDoTiro.Volume:0.##})";
             float alturaDoTexto = _texto.CalcHeight(_conteudoDaFauna, w);
-            int linhas = (BotoesDaFauna.Length + 1) / 2 + 33;   // (23/11/2026: mais a linha da caçamba; 24/11, a da base)
-            float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u + 6 * u;
+            // (23/11/2026: mais a linha da caçamba; 24/11, a da base. 26/11/2026, a pedido do Pedro: os textos cortados pela
+            // metade: a conta tinha uma fileira a menos, e a trilha cobria a última; mais 3 fileiras com os botões compridos na
+            // linha inteira: o zumbi de mochila, os sons e a amplitude do golpe)
+            int linhas = (BotoesDaFauna.Length + 1) / 2 + 37;
+            // (os dois botões dos sons com duas linhas de letra e os 9 ajustes com a barra embaixo do nome)
+            float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + 18 * u + linhas * passo * u
+                           + 2 * (AltoDeDuasLinhas - alto) * u + 9 * AlturaExtraDoAjuste * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
 
             var antes = GUI.color;
@@ -64,8 +69,9 @@ namespace ZombieCityCleaner.UI
                 if (GUI.Button(new Rect(i % 2 == 0 ? x : x2, y, meio, alto * u), rotulo, _botao)) TesteDaFaunaRpc(0, (byte)e);
                 if (i % 2 == 1 || i == BotoesDaFauna.Length - 1) y += passo * u;
             }
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Matar o mais perto", _botao)) TesteDaFaunaRpc(1, 0);
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Ferir o mais perto", _botao)) TesteDaFaunaRpc(2, 0);
+            // (26/11/2026, a pedido do Pedro: os textos cortados ...) a letra menor nos nomes que passam do meio botão
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Matar o mais perto", BotaoQueCabe("Matar o mais perto", meio))) TesteDaFaunaRpc(1, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Ferir o mais perto", BotaoQueCabe("Ferir o mais perto", meio))) TesteDaFaunaRpc(2, 0);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Faca na mochila", _botao)) TesteDaFaunaRpc(4, 0);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "3 carnes cruas", _botao)) TesteDaFaunaRpc(5, 0);
@@ -81,8 +87,8 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Lobos caçando", _botao)) TesteDaFaunaRpc(8, (byte)Especie.Lobo);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Coiotes caçando", _botao)) TesteDaFaunaRpc(8, (byte)Especie.Coiote);
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "A matilha me cerca", _botao)) TesteDaFaunaRpc(9, 0);
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "O lobo mais perto uiva", _botao)) TesteDaFaunaRpc(30, 0);   // (20/11/2026)
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "A matilha me cerca", BotaoQueCabe("A matilha me cerca", meio))) TesteDaFaunaRpc(9, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "O lobo mais perto uiva", BotaoQueCabe("O lobo mais perto uiva", meio))) TesteDaFaunaRpc(30, 0);   // (20/11/2026)
             // a etapa 3: a água (o lago, o V dos gansos, o urso pescando, os castores roendo depressa)
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para o lago", _botao))
@@ -109,7 +115,7 @@ namespace ZombieCityCleaner.UI
                     GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(margem + Vector3.up * 0.1f, giro);
                 else Avisar("Sem riacho neste mapa (só no Lakewood).");
             }
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Castores no riacho", _botao)) TesteDaFaunaRpc(14, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Castores no riacho", BotaoQueCabe("Castores no riacho", meio))) TesteDaFaunaRpc(14, 0);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para o lixo", _botao))
             {
@@ -120,17 +126,19 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim no lixo", _botao)) TesteDaFaunaRpc(15, 0);
             // (23/11/2026) a caçamba das lojas e os guaxinins escondidos nela (o susto: FaunaDoMundo.Lixo.cs)
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para a caçamba", _botao))
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Ir para a caçamba", BotaoQueCabe("Ir para a caçamba", meio)))
             {
                 if (FaunaDoMundo.LugarNaCacamba(GetComponent<JogadorRede>(), out var onde, out float giro))
                     GetComponent<MovimentoPrimeiraPessoa>()?.Teleportar(onde + Vector3.up * 0.1f, giro);
                 else Avisar("Sem caçamba a até 400 m (só no Lakewood, atrás das lojas).");
             }
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim na caçamba", _botao)) TesteDaFaunaRpc(24, 0);
-            // (24/11/2026) a base (os kits e os troféus na mochila) e o saque dos zumbis (um Oco de mochila na frente)
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Guaxinim na caçamba", BotaoQueCabe("Guaxinim na caçamba", meio))) TesteDaFaunaRpc(24, 0);
+            // (24/11/2026) a base (os kits e os troféus na mochila) e o saque dos zumbis (um Oco de mochila na frente); cada um
+            // na linha inteira (26/11/2026: "Zumbi de mochila na frente" não cabe no meio botão nem com a letra menor)
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Kits da base e troféus", _botao)) TesteDaFaunaRpc(31, 0);
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Zumbi de mochila na frente", _botao)) TesteDaFaunaRpc(32, 0);
+            if (GUI.Button(new Rect(x, y, w, alto * u), "Kits da base e troféus", _botao)) TesteDaFaunaRpc(31, 0);
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, w, alto * u), "Zumbi de mochila na frente", _botao)) TesteDaFaunaRpc(32, 0);
             // a etapa 5: os lugares dos bichos (a caverna, a toca dos coiotes, o brejo)
             y += passo * u;
             float terco = (w - 12 * u) / 3f;
@@ -145,7 +153,7 @@ namespace ZombieCityCleaner.UI
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Itens da fogueira", _botao)) TesteDaFaunaRpc(19, 0);
             // o salmão preso na lança (18/11/2026): a lança na mochila, e o peixe direto na ponta dela (para ver sem o rio)
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Lança na mochila", _botao)) TesteDaFaunaRpc(20, 0);
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Lança na mochila", BotaoQueCabe("Lança na mochila", meio))) TesteDaFaunaRpc(20, 0);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Salmão na lança", _botao)) TesteDaFaunaRpc(21, 0);
             // os instrumentos (18/11/2026, a etapa 4 da fogueira: os quatro na mochila, ou aos pés)
             y += passo * u;
@@ -155,24 +163,34 @@ namespace ZombieCityCleaner.UI
             var sons = SonsCarregados();
             int qual = sons.Count > 0 ? Mathf.Clamp(_somParaOuvir, 0, sons.Count - 1) : 0;
             string nomeDoSom = sons.Count > 0 ? $"{sons[qual].clip.name} ({qual + 1}/{sons.Count})" : "nenhum";
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o som e o grupo na linha inteira, com a letra
+            // menor ou em duas linhas (o nome do som e o grupo mais compridos não cabiam no meio botão), e o anterior e o
+            // próximo juntos embaixo
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), (OuvindoNatureza ? "Parar: " : "Ouvir: ") + nomeDoSom, _botao)) OuvirNatureza();
+            string ouvir = (OuvindoNatureza ? "Parar: " : "Ouvir: ") + nomeDoSom;
+            if (GUI.Button(new Rect(x, y, w, AltoDeDuasLinhas * u), ouvir, BotaoQueCabe(ouvir, w))) OuvirNatureza();
+            y += (passo + AltoDeDuasLinhas - alto) * u;
+            string grupo = sons.Count > 0 ? $"Grupo: {sons[qual].grupo} (trocar)" : "Grupo: -";
+            if (GUI.Button(new Rect(x, y, w, AltoDeDuasLinhas * u), grupo, BotaoQueCabe(grupo, w))) ProximoGrupo();
+            y += (passo + AltoDeDuasLinhas - alto) * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Som anterior", _botao)) ProximoSomDaNatureza(-1);
             if (GUI.Button(new Rect(x2, y, meio, alto * u), "Próximo som", _botao)) ProximoSomDaNatureza(1);
-            y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), sons.Count > 0 ? $"Grupo: {sons[qual].grupo} (trocar)" : "Grupo: -", _botao)) ProximoGrupo();
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Som anterior", _botao)) ProximoSomDaNatureza(-1);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), $"O rio no jogo: o {SomDaAgua.QualRio + 1} (trocar)", _botao)) SomDaAgua.QualRio = 1 - SomDaAgua.QualRio;
             // o golpe do Mixamo (19/11/2026, um teste: desligado, o golpe de sempre; só nesta máquina): ligar, a amplitude
             // da arma branca na mão (40, 60, 80 ou 100% do caminho do pulso dele: o machado em 80%, a tocha em 60%) e as armas
             // que usam (as cinco brancas: o machado, a tocha, a faca, a lança e o bastão)
+            // (26/11/2026: o golpe e a amplitude, cada um na linha inteira; "Golpe Mixamo: desligado" e "Bastão com pregos 100%"
+            // não cabiam no meio botão)
             y += passo * u;
-            if (GUI.Button(new Rect(x, y, meio, alto * u), GolpeDoMixamo.Ligado ? "Golpe Mixamo: LIGADO" : "Golpe Mixamo: desligado", _botao))
+            if (GUI.Button(new Rect(x, y, w, alto * u), GolpeDoMixamo.Ligado ? "Golpe Mixamo: LIGADO" : "Golpe Mixamo: desligado", _botao))
                 GolpeDoMixamo.Ligado = !GolpeDoMixamo.Ligado;
             var naMaoAgora = GetComponent<InventarioJogador>() != null ? GetComponent<InventarioJogador>().NaMao : Item.Nada;
             var daAmplitude = Itens.EhBranca(naMaoAgora) ? naMaoAgora : Item.Machado;
             string nomeDaBranca = Itens.Nome(daAmplitude);
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), $"{char.ToUpper(nomeDaBranca[0])}{nomeDaBranca.Substring(1)} {Mathf.RoundToInt(GolpeDoMixamo.AmplitudeDo(daAmplitude) * 100f)}%", _botao))
+            y += passo * u;
+            string amplitude = $"{char.ToUpper(nomeDaBranca[0])}{nomeDaBranca.Substring(1)} {Mathf.RoundToInt(GolpeDoMixamo.AmplitudeDo(daAmplitude) * 100f)}%";
+            if (GUI.Button(new Rect(x, y, w, alto * u), amplitude, BotaoQueCabe(amplitude, w)))
                 GolpeDoMixamo.GirarAmplitude(daAmplitude);
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "As 5 armas brancas na mochila", _botao)) TesteDaFaunaRpc(23, 0);
@@ -335,12 +353,21 @@ namespace ZombieCityCleaner.UI
             OuvirNatureza();
         }
 
-        // um ajuste ao vivo: o nome com o valor e a barra embaixo dele, na mesma linha
+        // a altura dos botões da fauna com duas linhas de letra (o som e o grupo: os 22 de sempre não cabem duas linhas de 10)
+        const float AltoDeDuasLinhas = 26f;
+        // o que cada ajuste ao vivo ocupa a mais que uma fileira (a barra embaixo do nome). (26/11/2026, a revisão dos textos
+        // cortados: 16, não 14, para o nome voltar a ter os 22 de antes; com 20, uma linha de 13 e o padding passavam um pouco)
+        const float AlturaExtraDoAjuste = 16f;
+
+        // um ajuste ao vivo: o nome com o valor na linha toda e a barra embaixo dele (26/11/2026, a pedido do Pedro: os textos
+        // cortados pela metade. Na mesma linha, o nome tinha só 55% da largura e quebrava: a 2ª linha, com o número, saía
+        // cortada ao meio)
         float Ajuste(float x, ref float y, float w, string rotulo, float valor, float min, float max, float u, float passo)
         {
             y += passo * u;
-            GUI.Label(new Rect(x, y, w * 0.55f, 22f * u), rotulo, _texto);
-            return GUI.HorizontalSlider(new Rect(x + w * 0.56f, y + 6f * u, w * 0.44f, 14f * u), valor, min, max);
+            GUI.Label(new Rect(x, y, w, 22f * u), rotulo, _texto);
+            y += AlturaExtraDoAjuste * u;
+            return GUI.HorizontalSlider(new Rect(x, y + 6f * u, w, 14f * u), valor, min, max);
         }
 
         void IrParaOLugar(TipoDeLugarDoBicho tipo)

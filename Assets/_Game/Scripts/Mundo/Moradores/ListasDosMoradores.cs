@@ -231,7 +231,8 @@ namespace ZombieCityCleaner.Mundo
             A(DonoDoBunker, "Dono do bunker", "Dona do bunker", 50, 75, 30, "Civil", Habilidade.Social, 0f,
               "{N} construiu o bunker na encosta do lago anos antes de tudo, quando a cidade inteira achava que era loucura.", "Durao",
               bonus: new[] { (Habilidade.Social, 6), (Habilidade.Construcao, 3), (Habilidade.Combate, 2) }),
-            A(Major, "Major do Exército", "Major do Exército", 38, 60, 22, "Militar", Habilidade.Combate, 0f,
+            // (25/11/2026, a pedido do Pedro: "meu nome é Peter ziquinatti, mas me chame de capitão") o capitão, não mais o major
+            A(Major, "Capitão do Exército", "Capitã do Exército", 38, 60, 22, "Militar", Habilidade.Combate, 0f,
               "{N} comandava o posto da Guarda Nacional no condado quando a quarentena começou.", "SangueFrio",
               bonus: new[] { (Habilidade.Combate, 9), (Habilidade.Social, 3), (Habilidade.Medicina, 1) }),
         };

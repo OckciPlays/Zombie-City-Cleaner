@@ -941,7 +941,11 @@ namespace ZombieCityCleaner.World
             if (go == null) return;
             go.name = "MesaDeOficina";
             if (prefab != null) go.transform.SetLocalPositionAndRotation(lugar, Quaternion.Euler(0f, giro, 0f));
-            foreach (var b in go.GetComponentsInChildren<Loot.Bancada>(true)) b.oficina = true;
+            foreach (var b in go.GetComponentsInChildren<Loot.Bancada>(true))
+            {
+                b.oficina = true;
+                if (prefab != null) b.alturaDoTampo = Loot.Bancada.TampoDaOficina;   // (a animação do craft, 25/11/2026)
+            }
             if (go.GetComponentInChildren<Loot.Bancada>(true) == null)
             {
                 var c = go.GetComponentInChildren<Collider>(true);

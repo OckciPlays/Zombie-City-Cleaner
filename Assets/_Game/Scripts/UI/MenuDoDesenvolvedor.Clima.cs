@@ -30,33 +30,38 @@ namespace ZombieCityCleaner.UI
         static readonly string[] NomesDasAbas = { "Zumbis", "Clima", "Gente", "Corpo", "Habil.", "Fauna", "Bunker", "Chefes" };
 
         /// <summary>A faixa das abas acima do painel do canto (o <see cref="AbasDoCanto"/>), para a Area pegar os cliques nela.</summary>
-        static float AlturaDasAbas(float u) => 24 * u;
+        static float AlturaDasAbas(float u) => 38 * u;   // (duas fileiras de 4, 26/11/2026; era uma de 24)
 
         // a letra das abas (07/11/2026: com as seis, "Habil." e "Bunker", cada aba fica com uns 38 px no painel de 250, e
         // a letra dos botões, de 13, não cabia; 12/11/2026: com as sete, a "Fauna" da develop e o "Bunker", uns 32 px, e a
-        // letra cai para 9)
+        // letra cai para 9; 26/11/2026, a pedido do Pedro: os textos cortados pela metade. Com as oito numa fileira, cada
+        // aba tinha uns 26 px em 1280x720 e 38 em 1920x1080, e "Zumbis", "Bunker", "Chefes", "Fauna", "Gente" e "Corpo"
+        // saíam cortados dos dois lados mesmo com a letra de 9. Agora são duas fileiras de 4, de uns 60 cada, e a letra volta a 10)
         GUIStyle _aba;
         float _uDaAba;
+        const int AbasPorFileira = 4;
 
         // as abas numa faixa logo acima do painel do canto (05/11/2026: com a quarta, "Corpo", a linha dentro do painel
-        // cobria os títulos "ZUMBIS (TESTE)" e "SOBREVIVENTES"); a aba ativa em branco, as outras a 55%
+        // cobria os títulos "ZUMBIS (TESTE)" e "SOBREVIVENTES"); a aba ativa em branco, as outras a 55%. Em duas fileiras
+        // (26/11/2026): Zumbis, Clima, Gente e Corpo em cima; Habil., Fauna, Bunker e Chefes embaixo
         void AbasDoCanto(float u, Rect painel)
         {
             if (_aba == null || !Mathf.Approximately(_uDaAba, u))
             {
                 _uDaAba = u;
-                _aba = new GUIStyle(_botao) { fontSize = Mathf.RoundToInt((NomesDasAbas.Length > 6 ? 9 : 11) * u) };
-                int p = Mathf.RoundToInt((NomesDasAbas.Length > 6 ? 1 : 2) * u);
+                _aba = new GUIStyle(_botao) { fontSize = Mathf.RoundToInt(10 * u) };
+                int p = Mathf.RoundToInt(2 * u);
                 _aba.padding = new RectOffset(p, p, _botao.padding.top, _botao.padding.bottom);
             }
-            float vao = 4 * u, h = 20 * u, y = painel.y - AlturaDasAbas(u);
-            float w = (painel.width - vao * (NomesDasAbas.Length - 1)) / NomesDasAbas.Length;
+            float vao = 4 * u, h = 18 * u, entreAsFileiras = 1 * u, y = painel.y - AlturaDasAbas(u);
+            float w = (painel.width - vao * (AbasPorFileira - 1)) / AbasPorFileira;
             int ativa = _abaDosChefes ? 7 : _abaDoBunker ? 6 : _abaDaFauna ? 5 : _abaDasHabilidades ? 4 : _abaDoCorpo ? 3 : _abaDosSobreviventes ? 2 : _abaDoClima ? 1 : 0;
             var antes = GUI.color;
             for (int i = 0; i < NomesDasAbas.Length; i++)
             {
                 GUI.color = i == ativa ? Color.white : new Color(1f, 1f, 1f, 0.55f);
-                if (GUI.Button(new Rect(painel.x + i * (w + vao), y, w, h), NomesDasAbas[i], _aba)) MostrarAba(i);
+                var r = new Rect(painel.x + (i % AbasPorFileira) * (w + vao), y + (i / AbasPorFileira) * (h + entreAsFileiras), w, h);
+                if (GUI.Button(r, NomesDasAbas[i], _aba)) MostrarAba(i);
             }
             GUI.color = antes;
         }
@@ -105,7 +110,9 @@ namespace ZombieCityCleaner.UI
             for (int k = 0; k < TestesDoClima.Length; k++)
             {
                 var r = new Rect(k % 2 == 0 ? x : x2, y + (k / 2) * 30 * u, meio, 26 * u);
-                if (!GUI.Button(r, TestesDoClima[k].nome, _botao)) continue;
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a letra menor nos nomes compridos ("Tocha
+                // acesa na mão", "Brutamonte enterrado"); "Tornado em cima de mim" em duas linhas de 10, que cabem nos 26
+                if (!GUI.Button(r, TestesDoClima[k].nome, BotaoQueCabe(TestesDoClima[k].nome, r.width))) continue;
                 if (TestesDoClima[k].acao >= 13 && TestesDoClima[k].acao < 30) TesteDoFogoRpc((byte)TestesDoClima[k].acao);
                 else TesteDoClimaRpc((byte)TestesDoClima[k].acao);
             }

@@ -26,6 +26,9 @@ namespace ZombieCityCleaner.Loot
         // zumbis especiais deixam e os kits da base (o núcleo, o muro e o portão de toras; ConstrucoesNoMundo.Base.cs)
         OlhoDoBrutamonte = 36, GargantaDoLong = 37, CabecaDoOco = 38, CabecaDeChefe = 39,
         NucleoDaBase = 40, MuroDeToras = 41, PortaoDeToras = 42,
+        // a mesa de ferramentas (25/11/2026, a pedido: "seria interessante dar para criar a mesa de ferramentas que fazem os
+        // itens"): o kit, feito à mão; montada, é a bancada onde sai quase tudo (ConstrucoesNoMundo.Mesa.cs)
+        MesaDeFerramentas = 43,
         Municao9mm = 48, Municao556, Municao12, Municao762,
         // a munição das armas de sucata (09/11/2026): a de prego e a de parafuso
         MunicaoPrego = 52, MunicaoParafuso = 53,
@@ -209,6 +212,12 @@ namespace ZombieCityCleaner.Loot
         public static DadosDaBranca Branca(Item i) => EhBranca(i) ? _brancas[i - Item.Faca] : null;
 
         /// <summary>
+        /// A arma branca pesada, que quebra a estátua (o Oco de pedra no sol) em uns 3 golpes (25/11/2026, a etapa 7): o machado
+        /// e o bastão com pregos. A faca, a lança e a tocha só lascam (o acerto na pedra tira pouco).
+        /// </summary>
+        public static bool QuebraPedra(Item i) => i == Item.Machado || i == Item.Bastao;
+
+        /// <summary>
         /// Na primeira pessoa há mais dois modelos, depois dos de <see cref="Modelos"/>: os punhos da mão vazia
         /// (Jogador_FP_Maos.fbx, para o soco) e a mão com o taco de sinuca em pé (Jogador_FP_Taco.fbx, sem o taco: o
         /// <c>TacoNaMao</c> põe o de cada cor no osso gun).
@@ -323,7 +332,7 @@ namespace ZombieCityCleaner.Loot
             Material(Item.Pano, "Pano", "pano", "o pano", "panos", "Retalhos. Bandagem, corda, mochila.", 10),
             Material(Item.Corda, "Corda", "corda", "a corda", "cordas", "Um rolo de corda.", 5),
             Material(Item.FitaAdesiva, "FitaAdesiva", "fita adesiva", "a fita adesiva", "fitas adesivas", "Silver tape. Conserta qualquer coisa.", 5),
-            Material(Item.Ferramenta, "Ferramenta", "ferramenta", "a ferramenta", "ferramentas", "Martelo e chave. Não gasta: só precisa ter.", 3),
+            Material(Item.Ferramenta, "Ferramenta", "ferramenta", "a ferramenta", "ferramentas", "Martelo e chave velhos. Já não servem para nada: desmonte em sucata.", 3),
             Material(Item.PecasDeMetal, "PecasDeMetal", "peças de metal", "as peças de metal", "peças de metal", "Parafusos, molas e chapas.", 10),
             Material(Item.Fios, "Fios", "fios", "os fios", "fios", "Fio de cobre e linha.", 10),
             Material(Item.Pregos, "Pregos", "pregos", "os pregos", "pregos", "Um punhado de pregos.", 50),
@@ -473,6 +482,10 @@ namespace ZombieCityCleaner.Loot
                      "Um pedaço de muro de 3 m de toras pregadas. Monte dentro da área de um núcleo da base: os zumbis param nele e batem até quebrar.", 1, TipoDeLoot.Construcao),
             Material(Item.PortaoDeToras, "PortaoDeToras", "portão de toras", "o portão de toras", "portões de toras",
                      "Um portão de toras de 3 m que abre e fecha no E. Monte dentro da área de um núcleo da base.", 1, TipoDeLoot.Construcao),
+            // a mesa de ferramentas (25/11/2026; no fim, para os índices dos outros não mudarem)
+            // (no mesmo dia, ela virou a mesa de oficina, o modelo do bunker: o nome do item no código ficou, para o número não mudar)
+            Material(Item.MesaDeFerramentas, "MesaDeFerramentas", "mesa de oficina", "a mesa de oficina", "mesas de oficina",
+                     "As tábuas, os pregos e as ferramentas de uma mesa de oficina. Monte no chão (botão direito no kit): nela sai o que precisa de ferramenta (as armas, a lança, a base...). À mão, só as coisas simples.", 1, TipoDeLoot.Construcao),
         };
         static int[] _indiceDoLoot;
         static int[] _comModelo;
@@ -523,7 +536,8 @@ namespace ZombieCityCleaner.Loot
             get { foreach (var l in _loot) yield return l.item; }
         }
         /// <summary>Um kit de montar no mundo (a fogueira, a cama, a barricada).</summary>
-        public static bool EhConstrucao(Item i) => (i >= Item.Fogueira && i <= Item.Barricada) || i == Item.KitFogueira || EhArmadilha(i) || EhDaBase(i);
+        public static bool EhConstrucao(Item i) => (i >= Item.Fogueira && i <= Item.Barricada) || i == Item.KitFogueira || EhArmadilha(i) || EhDaBase(i)
+                                                   || i == Item.MesaDeFerramentas;
         /// <summary>(24/11/2026) Uma construção da base: o núcleo, o muro e o portão de toras (ConstrucoesNoMundo.Base.cs).</summary>
         public static bool EhDaBase(Item i) => i >= Item.NucleoDaBase && i <= Item.PortaoDeToras;
         /// <summary>(24/11/2026) Um troféu dos zumbis especiais: sobe o nível do núcleo da base.</summary>
@@ -854,6 +868,7 @@ namespace ZombieCityCleaner.Loot
             // a base (24/11/2026): o núcleo é grande; o muro e o portão, compridos
             if (i == Item.NucleoDaBase || i == Item.CabecaDeChefe) return new UnityEngine.Vector2Int(2, 2);
             if (i == Item.MuroDeToras || i == Item.PortaoDeToras) return new UnityEngine.Vector2Int(3, 2);
+            if (i == Item.MesaDeFerramentas) return new UnityEngine.Vector2Int(3, 2);   // (o kit da mesa, 25/11/2026)
             if (IndiceDoLoot(i) >= 0) return new UnityEngine.Vector2Int(1, 1);   // o saque: uma célula (por enquanto)
             if (EhSinuca(i)) return _sinuca[IndiceDaSinuca(i)].tamanho;
             int m = Modelo(i);

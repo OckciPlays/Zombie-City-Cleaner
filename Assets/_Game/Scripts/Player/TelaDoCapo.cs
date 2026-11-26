@@ -375,7 +375,13 @@ namespace ZombieCityCleaner.Player
                 int estado = pecas.Estado(k);
                 string nome = Itens.Nome(Itens.DaPeca(k)).ToUpperInvariant();
                 bool grande = k == destaque;
-                float w = (grande ? 300f : 150f) * u, h = (grande ? 104f : 46f) * u;
+                string numero = tem ? $"{estado}%" : "falta";
+                var num = new GUIStyle(_nome) { alignment = TextAnchor.UpperRight };
+                num.normal.textColor = tem ? PecasDoMotor.CorDoEstado(estado) : TextoApagado;
+                // (26/11/2026, a pedido do Pedro: os textos cortados) a pequena com a largura do nome e do número (e as margens de
+                // 10): na de 150, o "VELA DE IGNIÇÃO" e o "100%" ficavam um em cima do outro
+                float w = grande ? 300f * u : Mathf.Max(150f * u, _nome.CalcSize(new GUIContent(nome)).x + num.CalcSize(new GUIContent(numero)).x + 32f * u);
+                float h = (grande ? 104f : 46f) * u;
                 var r = new Rect(ponto.x - w / 2f, ponto.y - h - 14 * u, w, h);
                 r.x = Mathf.Clamp(r.x, 8 * u, Screen.width - w - 8 * u);
                 r.y = Mathf.Clamp(r.y, 8 * u, Screen.height - h - 8 * u);
@@ -385,9 +391,7 @@ namespace ZombieCityCleaner.Player
                 Moldura(r, Mathf.Max(1f, Mathf.Round((grande ? 2 : 1) * u)), grande ? Destaque : Borda);
                 var cor = tem ? PecasDoMotor.CorDoEstado(estado) : TextoApagado;
                 GUI.Label(new Rect(r.x + 10 * u, r.y + 5 * u, r.width - 20 * u, 20 * u), nome, _nome);
-                var num = new GUIStyle(_nome) { alignment = TextAnchor.UpperRight };
-                num.normal.textColor = cor;
-                GUI.Label(new Rect(r.x + 10 * u, r.y + 5 * u, r.width - 20 * u, 20 * u), tem ? $"{estado}%" : "falta", num);
+                GUI.Label(new Rect(r.x + 10 * u, r.y + 5 * u, r.width - 20 * u, 20 * u), numero, num);
                 var barra = new Rect(r.x + 10 * u, r.y + 28 * u, r.width - 20 * u, 8 * u);
                 Ret(barra, new Color(0f, 0f, 0f, 0.6f));
                 if (tem) Ret(new Rect(barra.x, barra.y, barra.width * estado / 100f, barra.height), cor);

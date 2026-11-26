@@ -131,24 +131,24 @@ namespace ZombieCityCleaner.Loot
             R(Item.Tocha, 1, false, Item.Nada, P(Item.Madeira), P(Item.Pano)),
             R(Item.Bastao, 1, false, Item.Nada, P(Item.Madeira, 2), P(Item.Pregos, 6)),
             // na bancada
-            R(Item.Barricada, 1, true, Item.Ferramenta, P(Item.Madeira, 4), P(Item.Pregos, 8)),
+            R(Item.Barricada, 1, true, Item.Nada, P(Item.Madeira, 4), P(Item.Pregos, 8)),
             R(Item.MochilaPequena, 1, true, Item.Nada, P(Item.Pano, 6), P(Item.Corda, 2), P(Item.FitaAdesiva)),
-            R(Item.KitDeReparo, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 3), P(Item.FitaAdesiva), P(Item.Fios)),
+            R(Item.KitDeReparo, 1, true, Item.Nada, P(Item.PecasDeMetal, 3), P(Item.FitaAdesiva), P(Item.Fios)),
             R(Item.Lanca, 1, true, Item.Nada, P(Item.Madeira, 2), P(Item.PecasDeMetal), P(Item.FitaAdesiva)),
             // a árvore de habilidades (06/11/2026): no fim (o índice vai pela rede). O Faz-tudo, na bancada
-            H(Player.Habilidade.FazTudo, Item.Gazua, 2, false, Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Fios)),
+            H(Player.Habilidade.FazTudo, Item.Gazua, 2, false, Item.Nada, P(Item.PecasDeMetal), P(Item.Fios)),
             H(Player.Habilidade.FazTudo, Item.Faca, 1, false, Item.Nada, P(Item.PecasDeMetal, 2), P(Item.FitaAdesiva), P(Item.Madeira)),
             H(Player.Habilidade.FazTudo, Item.MochilaMedia, 1, false, Item.Nada, P(Item.Pano, 8), P(Item.Corda, 2), P(Item.FitaAdesiva, 2)),
             // o Artesão, na mesa de oficina
-            H(Player.Habilidade.Artesao, Item.Machado, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 3), P(Item.Madeira, 2), P(Item.FitaAdesiva)),
-            H(Player.Habilidade.Artesao, Item.PeDeCabra, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 4)),
+            H(Player.Habilidade.Artesao, Item.Machado, 1, true, Item.Nada, P(Item.PecasDeMetal, 3), P(Item.Madeira, 2), P(Item.FitaAdesiva)),
+            H(Player.Habilidade.Artesao, Item.PeDeCabra, 1, true, Item.Nada, P(Item.PecasDeMetal, 4)),
             H(Player.Habilidade.Artesao, Item.MochilaGrande, 1, true, Item.Nada, P(Item.Pano, 12), P(Item.Corda, 3), P(Item.FitaAdesiva, 3)),
-            H(Player.Habilidade.Artesao, Item.Lanterna, 1, true, Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Fios, 2), P(Item.FitaAdesiva)),
+            H(Player.Habilidade.Artesao, Item.Lanterna, 1, true, Item.Nada, P(Item.PecasDeMetal, 2), P(Item.Fios, 2), P(Item.FitaAdesiva)),
             // o Armeiro, na mesa de oficina: a munição, com a pólvora
-            H(Player.Habilidade.Armeiro, Item.Municao9mm, 15, true, Item.Ferramenta, P(Item.Polvora), P(Item.PecasDeMetal)),
-            H(Player.Habilidade.Armeiro, Item.Municao12, 8, true, Item.Ferramenta, P(Item.Polvora), P(Item.PecasDeMetal), P(Item.Pano)),
-            H(Player.Habilidade.Armeiro, Item.Municao556, 12, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal)),
-            H(Player.Habilidade.Armeiro, Item.Municao762, 10, true, Item.Ferramenta, P(Item.Polvora, 2), P(Item.PecasDeMetal, 2)),
+            H(Player.Habilidade.Armeiro, Item.Municao9mm, 15, true, Item.Nada, P(Item.Polvora), P(Item.PecasDeMetal)),
+            H(Player.Habilidade.Armeiro, Item.Municao12, 8, true, Item.Nada, P(Item.Polvora), P(Item.PecasDeMetal), P(Item.Pano)),
+            H(Player.Habilidade.Armeiro, Item.Municao556, 12, true, Item.Nada, P(Item.Polvora, 2), P(Item.PecasDeMetal)),
+            H(Player.Habilidade.Armeiro, Item.Municao762, 10, true, Item.Nada, P(Item.Polvora, 2), P(Item.PecasDeMetal, 2)),
             // o Armeiro de sucata (09/11/2026): a pistola e as munições na bancada; a submetralhadora e o rifle na mesa de oficina
             H(Player.Habilidade.PistolaDeSucata, Item.PistolaSucata, 1, false, Item.Nada, P(Item.Sucata, 6), P(Item.Madeira), P(Item.FitaAdesiva)),
             H(Player.Habilidade.PistolaDeSucata, Item.MunicaoPrego, 10, false, Item.Nada, P(Item.Polvora), P(Item.Sucata)),
@@ -183,26 +183,88 @@ namespace ZombieCityCleaner.Loot
             // as armadilhas (11/11/2026, a etapa 5a; os números no Player/ArmadilhasDoJogador.cs): todas na bancada. Não existe
             // lata vazia como item: as latas do alarme saem da sucata. A cerca de fogo gasta 2 combustíveis (o galão e o rastro)
             H(Player.Habilidade.AlarmeDeLatas, Item.AlarmeLatas, 1, false, Item.Nada, P(Item.Sucata, 2), P(Item.Corda), P(Item.Madeira)),
-            H(Player.Habilidade.TapeteDePregos, Item.TapetePregos, 1, false, Item.Ferramenta, P(Item.Madeira), P(Item.Pregos, 12)),
-            H(Player.Habilidade.Estacas, Item.Estacas, 1, false, Item.Ferramenta, P(Item.Madeira, 4), P(Item.Corda)),
+            H(Player.Habilidade.TapeteDePregos, Item.TapetePregos, 1, false, Item.Nada, P(Item.Madeira), P(Item.Pregos, 12)),
+            H(Player.Habilidade.Estacas, Item.Estacas, 1, false, Item.Nada, P(Item.Madeira, 4), P(Item.Corda)),
             F(Player.Habilidade.CercaDeFogo, Item.CercaFogo, false, P(Item.Pano)).ComCombustivel(2),
             // as tábuas para barricada (11/11/2026, a etapa 5b; no fim, para os índices das outras não mudarem): pregadas numa
             // porta ou numa janela das casas (os números no Player/ArmadilhasDoJogador.cs)
-            H(Player.Habilidade.BarricadaDeTabuas, Item.TabuasBarricada, 1, false, Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 6)),
+            H(Player.Habilidade.BarricadaDeTabuas, Item.TabuasBarricada, 1, false, Item.Nada, P(Item.Madeira, 3), P(Item.Pregos, 6)),
             // a carne de caça assada na fogueira acesa (12/11/2026, a fauna; no fim, para os índices das outras não mudarem)
             Fogo(Item.CarneAssada, 1, P(Item.CarneCrua)),
             // o assar na fogueira (18/11/2026, a etapa 2 da fogueira; desde então, as receitas de fogo daqui não se fazem mais:
             // o peixe e a carne vão no espeto, na própria fogueira): o espeto de 2 gravetos, em qualquer lugar, e a panela de
             // sucata, na bancada (ela também aparece nas cozinhas)
             R(Item.Espeto, 1, false, Item.Nada, P(Item.Gravetos, 2)),
-            R(Item.Panela, 1, true, Item.Ferramenta, P(Item.Sucata, 3)),
+            R(Item.Panela, 1, true, Item.Nada, P(Item.Sucata, 3)),
             // a base (24/11/2026, a pedido: "começar a realizar o modo construção do jogo (criar muros e tudo)"; no fim, para os
             // índices das outras não mudarem): o núcleo, o braseiro de sucata, na bancada; o muro e o portão, das toras das árvores
             // derrubadas, pregados com a ferramenta, em qualquer lugar
-            R(Item.NucleoDaBase, 1, true, Item.Ferramenta, P(Item.Sucata, 6), P(Item.PecasDeMetal, 2), P(Item.Toras, 2)),
-            R(Item.MuroDeToras, 1, false, Item.Ferramenta, P(Item.Toras, 3), P(Item.Pregos, 4)),
-            R(Item.PortaoDeToras, 1, false, Item.Ferramenta, P(Item.Toras, 3), P(Item.Pregos, 6), P(Item.PecasDeMetal)),
+            R(Item.NucleoDaBase, 1, true, Item.Nada, P(Item.Sucata, 6), P(Item.PecasDeMetal, 2), P(Item.Toras, 2)),
+            R(Item.MuroDeToras, 1, false, Item.Nada, P(Item.Toras, 3), P(Item.Pregos, 4)),
+            R(Item.PortaoDeToras, 1, false, Item.Nada, P(Item.Toras, 3), P(Item.Pregos, 6), P(Item.PecasDeMetal)),
+            // a mesa de ferramentas (25/11/2026; no fim, para os índices das outras não mudarem): à mão, das madeiras e das
+            // toras. A madeira vem primeiro: é ela que ensina a receita (ConstrucoesNoMundo.Mesa.cs)
+            R(Item.MesaDeFerramentas, 1, false, Item.Nada, P(Item.Madeira, 4), P(Item.Toras, 2)),
         };
+
+        /// <summary>
+        /// O que sai à mão, em qualquer lugar (25/11/2026, revisto no mesmo dia, a pedido: "o que conseguiríamos fazer com as
+        /// próprias mãos e o que precisamos de mais ferramentas? As coisas que precisamos de mais ferramentas vão pra mesa"):
+        /// as bandagens, a tala, a corda, a fogueira, a tocha, o espeto, a isca, a cama improvisada, o kit de reparo, o kit da
+        /// mesa de oficina e, com a habilidade, a gazua, o molotov, a cerca de fogo e as tábuas para barricada (estas pedem um
+        /// machado na mochila). O resto só sai na mesa de oficina.
+        /// </summary>
+        public static bool AMao(Item resultado) => _aMao.Contains(resultado);
+
+        static readonly HashSet<Item> _aMao = new HashSet<Item>
+        {
+            Item.MesaDeFerramentas, Item.Bandagem, Item.BandagemAntisseptica, Item.Tala, Item.Corda, Item.Fogueira, Item.Tocha,
+            Item.Espeto, Item.Isca, Item.Cama, Item.KitDeReparo, Item.Gazua, Item.Molotov, Item.CercaFogo, Item.TabuasBarricada,
+        };
+
+        // (25/11/2026, a pedido: "panela e lanterna não são mais craftáveis") continuam no saque
+        static readonly HashSet<Item> _naoSeFazem = new HashSet<Item> { Item.Panela, Item.Lanterna };
+
+        /// <summary>
+        /// A receita não aparece na aba Criar nem se faz: as do assar (na própria fogueira desde 18/11/2026) e as que saíram do
+        /// craft (a panela e a lanterna, 25/11/2026; o lugar delas fica, para os índices das outras não mudarem).
+        /// </summary>
+        public static bool Escondida(Receita r) => r == null || r.fogo || _naoSeFazem.Contains(r.resultado);
+
+        /// <summary>O material-chave da receita (25/11/2026): o primeiro do que ela gasta. Ao pegá-lo, ela é aprendida.</summary>
+        public static Item Chave(Receita r) => r != null && r.gasta != null && r.gasta.Length > 0 ? r.gasta[0].item : Item.Nada;
+
+        /// <summary>
+        /// As receitas (os índices em <see cref="Todas"/>) que o item ensina, como material-chave; null: nenhuma. As da
+        /// habilidade e as escondidas ficam de fora (elas não se aprendem pelo material).
+        /// </summary>
+        public static int[] DaChave(Item item) => _daChave.TryGetValue(item, out var ks) ? ks : null;
+
+        static readonly Dictionary<Item, int[]> _daChave = new Dictionary<Item, int[]>();
+
+        static Receitas()
+        {
+            // (25/11/2026) o que não sai à mão pede a mesa de oficina. Uma mesa só, padrão: a diferença entre a bancada e a
+            // oficina (a do bunker, com as receitas maiores) acabou; toda mesa de oficina faz tudo o que é da mesa
+            foreach (var r in Todas)
+            {
+                r.oficina = false;
+                r.bancada = !r.fogo && !AMao(r.resultado);
+                // as tábuas para barricada, à mão: cortadas no machado (que não gasta)
+                if (r.resultado == Item.TabuasBarricada) r.ferramenta = Item.Machado;
+            }
+            var lista = new Dictionary<Item, List<int>>();
+            for (int k = 0; k < Todas.Length; k++)
+            {
+                var r = Todas[k];
+                if (Escondida(r) || r.habilidade >= 0) continue;
+                var chave = Chave(r);
+                if (chave == Item.Nada) continue;
+                if (!lista.TryGetValue(chave, out var l)) lista[chave] = l = new List<int>();
+                l.Add(k);
+            }
+            foreach (var par in lista) _daChave[par.Key] = par.Value.ToArray();
+        }
 
         // a receita do fogo (11/11/2026): a da habilidade, com 1 combustível
         static Receita F(Player.Habilidade h, Item resultado, bool oficina, params Parte[] gasta)
@@ -230,30 +292,32 @@ namespace ZombieCityCleaner.Loot
             D(Item.KitDeReparo, "desmontar", Item.Nada, P(Item.PecasDeMetal, 2), P(Item.FitaAdesiva)),
             D(Item.Fogueira, "desmontar", Item.Nada, P(Item.Madeira, 3)),
             D(Item.Cama, "desmontar", Item.Nada, P(Item.Pano, 3), P(Item.Madeira, 2)),
-            D(Item.Barricada, "desmontar", Item.Ferramenta, P(Item.Madeira, 3), P(Item.Pregos, 4)),
+            D(Item.Barricada, "desmontar", Item.Nada, P(Item.Madeira, 3), P(Item.Pregos, 4)),
             // as armas viram peças de metal (a matéria do kit de reparo) e, desde 09/11/2026, sucata (a 2ª leva: "desconstruindo
             // algum material que possui metal em sua composição"); a quebrada também (a de fogo fica, esperando o kit)
-            D(Item.Pistola, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 3)),
-            D(Item.Submetralhadora, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 5)),
-            D(Item.Rifle, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5)),
-            D(Item.Espingarda, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal), P(Item.Sucata, 4), P(Item.Madeira)),
-            D(Item.Sniper, "desmontar", Item.Ferramenta, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5), P(Item.Madeira)),
+            D(Item.Pistola, "desmontar", Item.Nada, P(Item.PecasDeMetal), P(Item.Sucata, 3)),
+            D(Item.Submetralhadora, "desmontar", Item.Nada, P(Item.PecasDeMetal), P(Item.Sucata, 5)),
+            D(Item.Rifle, "desmontar", Item.Nada, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5)),
+            D(Item.Espingarda, "desmontar", Item.Nada, P(Item.PecasDeMetal), P(Item.Sucata, 4), P(Item.Madeira)),
+            D(Item.Sniper, "desmontar", Item.Nada, P(Item.PecasDeMetal, 2), P(Item.Sucata, 5), P(Item.Madeira)),
             D(Item.Faca, "desmontar", Item.Nada, P(Item.Sucata)),
             D(Item.Machado, "desmontar", Item.Nada, P(Item.Sucata, 2), P(Item.Madeira)),
             D(Item.Bastao, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Pregos, 3)),
             D(Item.Lanca, "desmontar", Item.Nada, P(Item.Madeira), P(Item.Sucata)),
             // (09/11/2026, a sucata, 2ª leva) as armas de sucata voltam a ser sucata (menos que a receita: perde-se um pouco)
             D(Item.PistolaSucata, "desmontar", Item.Nada, P(Item.Sucata, 4)),
-            D(Item.SubmetralhadoraSucata, "desmontar", Item.Ferramenta, P(Item.Sucata, 8)),
-            D(Item.RifleSucata, "desmontar", Item.Ferramenta, P(Item.Sucata, 7), P(Item.Madeira)),
-            // as ferramentas e o metal solto: o martelo e a chave, as peças de metal e o pé de cabra
+            D(Item.SubmetralhadoraSucata, "desmontar", Item.Nada, P(Item.Sucata, 8)),
+            D(Item.RifleSucata, "desmontar", Item.Nada, P(Item.Sucata, 7), P(Item.Madeira)),
+            // as ferramentas e o metal solto: o martelo e a chave, as peças de metal e o pé de cabra. (25/11/2026, a pedido: "devemos
+            // tirar aquelas ferramentas que existem, pois acho que estão mais atrapalhando do que ajudando atualmente, tirar do
+            // craft também") a ferramenta não é mais pedida em nada nem aparece no saque; a de um save antigo vira sucata
             D(Item.Ferramenta, "desmontar", Item.Nada, P(Item.Sucata, 2)),
             D(Item.PecasDeMetal, "desmontar", Item.Nada, P(Item.Sucata, 2)),
             D(Item.PeDeCabra, "desmontar", Item.Nada, P(Item.Sucata, 2)),
             // as peças de carro (a vela, a bateria, o radiador e o macaco; o pneu não: é borracha)
             D(Item.Vela, "desmontar", Item.Nada, P(Item.Sucata)),
-            D(Item.Bateria, "desmontar", Item.Ferramenta, P(Item.Sucata, 2)),
-            D(Item.Radiador, "desmontar", Item.Ferramenta, P(Item.Sucata, 3)),
+            D(Item.Bateria, "desmontar", Item.Nada, P(Item.Sucata, 2)),
+            D(Item.Radiador, "desmontar", Item.Nada, P(Item.Sucata, 3)),
             D(Item.Macaco, "desmontar", Item.Nada, P(Item.Sucata, 3)),
         };
 

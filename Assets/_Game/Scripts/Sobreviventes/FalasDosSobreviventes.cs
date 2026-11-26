@@ -7,7 +7,9 @@ namespace ZombieCityCleaner.Sobreviventes
 {
     /// <summary>O que um sobrevivente fala (cada uma com umas variações).</summary>
     public enum Frase : byte { Contato, Atirando, Recarregando, Zumbis, CaiuUm, Fugindo, Sumiu, ParaAi, AbaixaArma, Ola, Traidor,
-        FicaAi, GuardaArma, Estepe, PneuRuim, Valeu, Pronto, Obrigado, EuAvisei }
+        FicaAi, GuardaArma, Estepe, PneuRuim, Valeu, Pronto, Obrigado, EuAvisei,
+        // (25/11/2026, o Capitão: Sobrevivente.Escolta.cs e Sobrevivente.Cacamba.cs)
+        Amigo, Esperem, NaCacamba }
 
     /// <summary>
     /// As falas dos sobreviventes (02/11/2026, a pedido: "por hora sem voz, mas textos seria interessante com algum som
@@ -40,6 +42,10 @@ namespace ZombieCityCleaner.Sobreviventes
             [Frase.Pronto] = new[] { "Pronto! Valeu mesmo. Toma, é seu.", "Tá feito. Toma aqui, pela ajuda." },
             [Frase.Obrigado] = new[] { "Valeu pela ajuda.", "A gente te deve essa.", "Se cuida na estrada." },
             [Frase.EuAvisei] = new[] { "Eu avisei!", "Ele vai atirar!", "Derruba ele!" },
+            // o Capitão (25/11/2026): o tiro ou o golpe de um jogador nele, ficando para trás e subindo na caçamba
+            [Frase.Amigo] = new[] { "Ei! Sou eu!", "Cuidado com isso aí!", "Olha pra onde aponta isso!", "Do nosso lado, lembra?" },
+            [Frase.Esperem] = new[] { "Esperem! Tô indo!", "Não me deixem pra trás!", "Já tô chegando!" },
+            [Frase.NaCacamba] = new[] { "Eu vou na caçamba!", "Pode ir, eu cubro a traseira!", "Tô em cima, vai!" },
         };
 
         struct Fala

@@ -60,9 +60,33 @@ namespace ZombieCityCleaner.Mundo
         }
 
         /// <summary>O cargo do líder e o do major da comunidade do bunker (a ficha mostra ao lado do nome).</summary>
-        public const string CargoDoLider = "Líder do bunker", CargoDoMajor = "Major";
+        public const string CargoDoLider = "Líder do bunker", CargoDoMajor = "Capitão";
+        // (25/11/2026: o major virou o Capitão das saídas, o Peter Ziquinatti, "mas me chame de Capitão"; o corpo dele é o do
+        // Capitão no pátio, LakewoodNaCena.Missao.cs, e não um morador lá dentro: MoradoresDoBunker.Corpos)
         /// <summary>Os nomes fixos do líder e do major (22/11/2026, o Pedro: "Major - Peter Ziquinatti. Líder - Gus Rodrigues").</summary>
         public const string NomeDoLider = "Gus", SobrenomeDoLider = "Rodrigues", NomeDoMajor = "Peter", SobrenomeDoMajor = "Ziquinatti";
+        /// <summary>
+        /// O Ygayr Franscheschy (25/11/2026, a etapa 8, a pedido do Pedro: "um morador fixo, sempre na mesma cadeira da sala
+        /// comum do B1, fumando um cigarro atrás do outro"): o professor de filosofia que passou meses num porão.
+        /// </summary>
+        public const string NomeDoYgayr = "Ygayr", SobrenomeDoYgayr = "Franscheschy";
+
+        /// <summary>A ficha do Ygayr: 42 a 47 anos, fumante e pessimista (MoradoresDoBunker.Conversa.cs o põe no bunker).</summary>
+        public static FichaDoMorador OYgayr(int semente, int id)
+        {
+            var r = new Random(Misturar(semente, 11));
+            var y = Gerar(r, new Pedido { mulher = false, idadeMin = 42, idadeMax = 47, antes = "Professor", depois = "Porao" }, id);
+            y.nome = NomeDoYgayr;
+            y.sobrenome = SobrenomeDoYgayr;
+            y.apelido = "";
+            y.tracos.Clear();
+            y.tracos.Add(ListasDosMoradores.Fumante);
+            y.tracos.Add("Pessimista");
+            y.grupo = 0;
+            y.lacos.Clear();
+            return y;
+        }
+
         /// <summary>Quantos moram no bunker da comunidade no começo (o líder, o major e os grupos inteiros até chegar nisso).</summary>
         public const int MoradoresDaComunidade = 8;
 

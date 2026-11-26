@@ -85,5 +85,25 @@ namespace ZombieCityCleaner.Loot
             }
             return lista.ToArray();
         }
+
+        // o kit da mesa de ferramentas (25/11/2026): as tábuas empilhadas, amarradas, com o martelo, a serra e a caixinha de
+        // pregos por cima
+        static Caixa[] KitDaMesa() => new[]
+        {
+            C(0f, 0.02f, -0.12f, 0.8f, 0.04f, 0.14f, 8, 3),
+            C(0f, 0.02f, 0.03f, 0.8f, 0.04f, 0.14f, 7, 3),
+            C(0f, 0.06f, -0.05f, 0.78f, 0.04f, 0.14f, 7, 3, 3f),
+            C(0f, 0.06f, 0.1f, 0.78f, 0.04f, 0.12f, 8, 3, -2f),
+            C(-0.28f, 0.05f, 0f, 0.03f, 0.1f, 0.34f, 13, 4),
+            C(0.28f, 0.05f, 0f, 0.03f, 0.1f, 0.34f, 13, 4),
+            // o martelo: o cabo e a cabeça
+            C(-0.08f, 0.095f, -0.02f, 0.26f, 0.025f, 0.03f, 8, 3, 20f),
+            C(0.04f, 0.1f, -0.06f, 0.035f, 0.04f, 0.09f, 1, 3, 20f),
+            // a serra: a lâmina e o cabo
+            C(0.12f, 0.087f, 0.08f, 0.3f, 0.006f, 0.08f, 2, 3, -10f),
+            C(0.3f, 0.092f, 0.11f, 0.07f, 0.02f, 0.06f, 7, 3, -10f),
+            // a caixinha de pregos
+            C(-0.25f, 0.105f, 0.09f, 0.08f, 0.05f, 0.06f, 4, 3),
+        };
     }
 }

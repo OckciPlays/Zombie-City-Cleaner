@@ -494,6 +494,7 @@ namespace ZombieCityCleaner.Vehicles
         public override void OnNetworkSpawn()
         {
             _ocupantes.OnValueChanged += AoMudarOcupantes;
+            PorOsItensDaCacamba();   // (25/11/2026: o que está na caçamba, deitado no chão dela; Carro.Cacamba.cs)
             if (IsServer)
             {
                 // a moto só tem a vela (a bateria e o radiador ficam em 100% e não gastam; os pneus não contam)
@@ -1263,6 +1264,12 @@ namespace ZombieCityCleaner.Vehicles
         void PorRodaRpc(byte roda, ushort id, RpcParams parametros = default)
         {
             if (!_erguido.Value || _ergueu < 0.98f || !NaRodaDoMacaco(roda) || !PertoDaRoda(parametros.Receive.SenderClientId, roda, out var inventario)) return;
+            // (25/11/2026, a etapa 7) a caminhonete da família só aceita as peças na submissão do conserto
+            if (!World.LakewoodNaCena.PodeConsertar(this, out var motivo))
+            {
+                inventario.AvisarODono(motivo);
+                return;
+            }
             var p = _pneus.Value;
             if (p.Tem(roda)) return;
             int estado;
@@ -1565,7 +1572,7 @@ namespace ZombieCityCleaner.Vehicles
             {
                 var parte = _encostados[i].GetComponent<Sobreviventes.ParteDoSobrevivente>();
                 var s = parte != null ? parte.sobrevivente : null;
-                if (s == null || s.Morto) continue;
+                if (s == null || s.Morto || s.Imortal) continue;   // (25/11/2026: o Capitão, que vai na caçamba, não é atropelado)
                 ulong id = s.NetworkObjectId;
                 if (_pessoasAtropeladas.TryGetValue(id, out float ate) && Time.time < ate) continue;
                 _pessoasAtropeladas[id] = Time.time + 0.7f;
@@ -1674,6 +1681,12 @@ namespace ZombieCityCleaner.Vehicles
         void PorPecaRpc(byte peca, ushort id, RpcParams parametros = default)
         {
             if (MotorLigado || !PertoDoCapo(parametros.Receive.SenderClientId, out var inventario)) return;
+            // (25/11/2026, a etapa 7) a caminhonete da família só aceita as peças na submissão do conserto
+            if (!World.LakewoodNaCena.PodeConsertar(this, out var motivo))
+            {
+                inventario.AvisarODono(motivo);
+                return;
+            }
             var p = _pecas.Value;
             if (!p.Por(peca, inventario, id)) return;
             _pecas.Value = p;

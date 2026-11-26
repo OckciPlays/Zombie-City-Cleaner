@@ -96,12 +96,26 @@ namespace ZombieCityCleaner.DiaZero
         Transform _caos;
         readonly List<(Light luz, float base_, float semente)> _fogos = new List<(Light, float, float)>();
         int _chamasNosCarros;
+        // (25/11/2026, o save do Dia 0) o quadro em que a vila virou a noite do colapso, e os NPCs de quem foge
+        int _quadroDaFuga;
+        NpcsDoDiaZero _npcsDaFuga;
+
+        /// <summary>
+        /// A noite do colapso já está montada para as figuras dos Ocos (25/11/2026, o save do Dia 0): os NPCs do dia já saíram (o
+        /// Destroy só acontece no fim do quadro) e os de quem foge já estão na rua (eles nascem no Update seguinte). Antes, o
+        /// palco que entra já na fuga (a fuga que voltou do save, o cliente que entra no meio dela) fazia tudo no mesmo quadro,
+        /// e os perseguidores ficavam sem quem perseguir. Sem os NPCs (sem o modelo deles), libera em uns 2 s.
+        /// </summary>
+        public bool ProntaParaAsFiguras =>
+            _naFuga && Time.frameCount > _quadroDaFuga + 1 &&
+            (_npcsDaFuga == null || _npcsDaFuga.npc == null || _npcsDaFuga.Quantos > 0 || Npcs.Count == 0 || Time.frameCount > _quadroDaFuga + 120);
 
         /// <summary>A vila vira a noite do colapso (nesta máquina, uma vez por fuga).</summary>
         public void VirarAFuga()
         {
             if (_naFuga || !Pronta) return;
             _naFuga = true;
+            _quadroDaFuga = Time.frameCount;
             var lw = LakewoodNaCena.Instancia;
             if (lw == null) return;
             // as pessoas e os carros do dia normal saem
@@ -121,6 +135,7 @@ namespace ZombieCityCleaner.DiaZero
             novos.npc = npc;
             novos.particulas = particulas;
             novos.carros = 0;
+            _npcsDaFuga = novos;
             if (npc != null) PorOsCorpos(lw, npc);
             PorOsCarrosBatidos(lw);
             PorAChegada(lw, npc);

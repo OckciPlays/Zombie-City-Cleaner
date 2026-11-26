@@ -68,7 +68,8 @@ namespace ZombieCityCleaner.Sobreviventes
                     Item.Tala, Item.BandagemAntisseptica,
                     // (06/11/2026) o calmante, da mente
                     Item.Calmante },
-            new[] { Item.Pneu, Item.Bateria, Item.Vela, Item.Radiador, Item.Macaco, Item.Galao, Item.KitDeReparo, Item.Ferramenta },
+            // (25/11/2026: a ferramenta saiu do jogo; no lugar dela, para o índice do estoque salvo não mudar, a sucata)
+            new[] { Item.Pneu, Item.Bateria, Item.Vela, Item.Radiador, Item.Macaco, Item.Galao, Item.KitDeReparo, Item.Sucata },
             new[] { Item.Madeira, Item.Toras, Item.Pano, Item.Corda, Item.FitaAdesiva, Item.PecasDeMetal, Item.Fios, Item.Pregos, Item.Isca, Item.VaraDePesca,
                     // (06/11/2026) no fim: a pólvora do Armeiro
                     Item.Polvora,

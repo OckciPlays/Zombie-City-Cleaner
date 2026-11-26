@@ -35,20 +35,34 @@ namespace ZombieCityCleaner.World
         int _chaveDoDia = -1;
         NetworkObject _caminhoneteDoDia;
         readonly Dictionary<int, ObraNaCena> _obraDoLote = new Dictionary<int, ObraNaCena>();
+        // (25/11/2026, o save do Dia 0) o quadro em que o palco entrou (a caminhonete espera o seguinte: todos os OnNetworkSpawn
+        // já rodaram); só no anfitrião: o save desta partida já lido (uma vez por partida: o mundo salvo dela), o primeiro palco
+        // dela veio do save (a caminhonete e a chave são as do save), este palco adota a caminhonete do save, e a chave da
+        // caminhonete já foi posta neste Dia 0 (vai no save: não põe outra)
+        int _quadroDoPalco;
+        Salvar.MundoSalvo _diaZeroLidoDe;
+        bool _palcoVeioDoSave, _adotarACaminhonete, _chaveDoDiaPosta;
+        // (26/11/2026, a integração do save do Dia 0) só no anfitrião: os veículos do bunker da partida nova esperam o
+        // Salvamento.Restaurar (LiberarOsVeiculosDoBunker)
+        bool _veiculosEsperamOSave;
 
         /// <summary>O palco do Dia 0 está na cena (a Woodcreek do Dia 0).</summary>
         public static bool ComPalcoDoDiaZero => Instancia != null && Instancia._palco != null;
 
         /// <summary>
         /// Em cada máquina (no Update, e já no spawn da <see cref="MundoDeLakewood"/>, antes de o jogador nascer): o palco entra
-        /// com o Dia 0 e sai com a época de depois (a tela dos 5 anos já cobriu a troca).
+        /// com o Dia 0 e sai com a época de depois (a tela dos 5 anos já cobriu a troca). (25/11/2026, o save do Dia 0) Ele
+        /// entra também na fuga, com a época de antes: a fuga que voltou do save, e o cliente que entra no meio dela (antes, ele
+        /// ficava sem a casa, sem o caos e com os nascimentos no bunker, chegando na hora).
         /// </summary>
         public void AcompanharODiaZero()
         {
             var m = MundoDeLakewood.Instancia;
-            bool noDia = m != null && m.NoDiaZero;
-            if (noDia && _palco == null && palcoDoDiaZero != null) CriarOPalco();
-            else if (!noDia && _palco != null && !(m != null && m.Antes)) TirarOPalco();
+            LerODiaZeroDoSave();
+            LiberarOsVeiculosDoBunker();
+            bool comPalco = m != null && (m.NoDiaZero || (m.NaFuga && m.Antes));
+            if (comPalco && _palco == null && palcoDoDiaZero != null) CriarOPalco();
+            else if (!comPalco && _palco != null && !(m != null && m.Antes)) TirarOPalco();
             if (_palco != null)
             {
                 PorACaminhonete();
@@ -56,6 +70,7 @@ namespace ZombieCityCleaner.World
                 EsperarACasa();
             }
             else if (_esperandoACasa) SoltarDaCasa();
+            PorOArmazem();   // (25/11/2026: o armazém da garagem da casa da família, LakewoodNaCena.Armazem.cs)
             AcompanharAFugaNaCena();   // (a fuga: LakewoodNaCena.Fuga.cs)
             AcompanharAMissao();   // (24/11/2026: a primeira missão depois dos 5 anos, LakewoodNaCena.Missao.cs)
         }
@@ -79,6 +94,12 @@ namespace ZombieCityCleaner.World
             }
             _caminhonetePosta = false;
             _chavePosta = false;
+            // (25/11/2026, o save do Dia 0) o primeiro palco da partida que voltou do save fica com a caminhonete e a chave do
+            // save; os outros (o Dia 0 de novo pelo F1) começam como sempre
+            _quadroDoPalco = Time.frameCount;
+            _adotarACaminhonete = _palcoVeioDoSave;
+            _palcoVeioDoSave = false;
+            if (!_adotarACaminhonete) _chaveDoDiaPosta = false;
         }
 
         void TirarOPalco()
@@ -95,6 +116,7 @@ namespace ZombieCityCleaner.World
                 var mundo = MundoDeLakewood.Instancia;
                 if (mundo != null && mundo.Chegou) DeixarACaminhoneteNaCasa();
                 else LevarACaminhoneteAoBunker();
+                _chaveDoDiaPosta = false;   // (25/11/2026, o save do Dia 0: o Dia 0 e a fuga acabaram)
             }
             Debug.Log("[Dia 0] O palco da Woodcreek saiu (a época de depois).");
         }
@@ -178,29 +200,48 @@ namespace ZombieCityCleaner.World
         public static int CacambaComAsCompras => EstantesDoBunker.Instancia != null ? EstantesDoBunker.Instancia.Quantos(CacambaDaFamilia) : 0;
 
         // no anfitrião, uma vez por Dia 0: a caminhonete na entrada da garagem da casa da família (parada até alguém chegar
-        // e o chão de lá ter colisão: o Carro.Parado)
+        // e o chão de lá ter colisão: o Carro.Parado). (25/11/2026, o save do Dia 0) Ela espera o Salvamento.Restaurar (a do
+        // save nasce nele, e antes este palco a despachava, perdendo o lugar e a gasolina, ou ficavam duas, conforme a ordem);
+        // no primeiro palco da partida que voltou do save, a caminhonete da família que já existe é adotada
         void PorACaminhonete()
         {
             if (_caminhonetePosta || caminhonete == null) return;
             var rede = NetworkManager.Singleton;
             if (rede == null || !rede.IsListening) return;
-            _caminhonetePosta = true;
-            if (!rede.IsServer) return;
+            if (!rede.IsServer)
+            {
+                _caminhonetePosta = true;
+                return;
+            }
             var w = WoodcreekDoDiaZero.Atual;
-            if (w == null || !w.Pronta) return;
-            foreach (var c in Carro.Todos.ToArray())
-                if (c != null && c.IsSpawned && c.name.StartsWith(caminhonete.name)) c.NetworkObject.Despawn(true);
-            var nova = Instantiate(caminhonete, w.LugarDaCaminhonete, Quaternion.Euler(0f, w.GiroDaCaminhonete, 0f));
-            nova.name = caminhonete.name;
-            var carro = nova.GetComponent<Carro>();
-            if (carro != null) carro.ArrumadoDeFabrica();
-            _caminhoneteDoDia = nova.GetComponent<NetworkObject>();
-            _caminhoneteDoDia.Spawn(true);
+            if (w == null || !w.Pronta || !Salvar.Salvamento.JaRestaurou || Time.frameCount <= _quadroDoPalco) return;
+            _caminhonetePosta = true;
+            var doSave = _adotarACaminhonete ? CaminhoneteDaFamilia() : null;
+            _adotarACaminhonete = false;
+            if (doSave != null)
+            {
+                // (não deveria haver outra: se houver, sai)
+                foreach (var c in Carro.Todos.ToArray())
+                    if (c != null && c != doSave && c.IsSpawned && c.name.StartsWith(caminhonete.name)) c.NetworkObject.Despawn(true);
+                _caminhoneteDoDia = doSave.NetworkObject;
+                Debug.Log($"[Dia 0] A caminhonete da família veio do save ({SetorDe(doSave.transform.position)}).");
+            }
+            else
+            {
+                foreach (var c in Carro.Todos.ToArray())
+                    if (c != null && c.IsSpawned && c.name.StartsWith(caminhonete.name)) c.NetworkObject.Despawn(true);
+                var nova = Instantiate(caminhonete, w.LugarDaCaminhonete, Quaternion.Euler(0f, w.GiroDaCaminhonete, 0f));
+                nova.name = caminhonete.name;
+                var carro = nova.GetComponent<Carro>();
+                if (carro != null) carro.ArrumadoDeFabrica();
+                _caminhoneteDoDia = nova.GetComponent<NetworkObject>();
+                _caminhoneteDoDia.Spawn(true);
+                Debug.Log($"[Dia 0] A caminhonete da família na entrada da garagem ({SetorDe(w.LugarDaCaminhonete)}).");
+            }
             // (24/11/2026: onde ela fica nos 5 anos depois da fuga, quebrada: a primeira missão)
             _caminhoneteNaCasa = w.LugarDaCaminhonete;
             _giroNaCasa = w.GiroDaCaminhonete;
             _temCaminhoneteNaCasa = true;
-            Debug.Log($"[Dia 0] A caminhonete da família na entrada da garagem ({SetorDe(w.LugarDaCaminhonete)}).");
         }
 
         /// <summary>
@@ -218,7 +259,9 @@ namespace ZombieCityCleaner.World
 
         // no anfitrião, uma vez por Dia 0 (depois da caminhonete, e com os itens do mundo já na rede): a chave dela na mesa da
         // sala da nossa casa (23/11/2026, o Pedro: "está faltando a chave da caminhonete no início do jogo, na nossa casa").
-        // Se já há uma chave ali (um save do meio do Dia 0), não põe outra.
+        // Se já há uma chave ali, não põe outra. (25/11/2026, o save do Dia 0) Com a chave já posta neste Dia 0 (a marca do
+        // save, _chaveDoDiaPosta), ela não aparece de novo: a que está no chão é a do dia (a mais perto da mesa), e sem
+        // nenhuma no chão, alguém a pegou (ou ela está na caçamba ou no armazém). Na fuga, a chave nunca é posta.
         void PorAChave()
         {
             if (_chavePosta || !_caminhonetePosta) return;
@@ -236,33 +279,57 @@ namespace ZombieCityCleaner.World
             _chavePosta = true;
             var chave = carro.chaveDoVeiculo;
             if (chave == Item.Nada) return;
+            int achada = -1;
+            float melhor = float.MaxValue;
             foreach (var it in itens.Copia())
-                if (it.item == chave && (it.apoio - w.LugarDaChave).sqrMagnitude < 1f)
+            {
+                if (it.item != chave) continue;
+                float d = (it.apoio - w.LugarDaChave).sqrMagnitude;
+                if ((d < 1f || _chaveDoDiaPosta) && d < melhor)
                 {
-                    _chaveDoDia = it.id;
-                    return;
+                    melhor = d;
+                    achada = it.id;
                 }
+            }
+            if (achada >= 0)
+            {
+                _chaveDoDia = achada;
+                _chaveDoDiaPosta = true;
+                return;
+            }
+            var mundo = MundoDeLakewood.Instancia;
+            if (_chaveDoDiaPosta || mundo == null || !mundo.NoDiaZero)
+            {
+                _chaveDoDia = -1;
+                _chaveDoDiaPosta = true;
+                Debug.Log("[Dia 0] A chave da caminhonete já foi posta neste Dia 0 e não está no chão: está com alguém (ou na caçamba, ou no armazém). Não vai outra.");
+                return;
+            }
             itens.Criar(chave, w.LugarDaChave, w.GiroDaChave);
             _chaveDoDia = itens.UltimoCriado;
+            _chaveDoDiaPosta = true;
             Debug.Log($"[Dia 0] A chave da caminhonete em {w.MovelDaChave}, na sala da nossa casa ({SetorDe(w.LugarDaChave)}).");
         }
 
         /// <summary>
         /// No anfitrião (o caixa do Dia 0): a compra vai para a caçamba da caminhonete da família (a pilha completa a do
-        /// mesmo item). Sem lugar, ela fica no chão atrás da caminhonete (false).
+        /// mesmo item). Desde 25/11/2026 o caixa só vende o que cabe (<see cref="CabeNaCacamba"/>), e nada vai mais para o
+        /// chão atrás dela (ficava flutuando, sem física, e não andava com ela). False se não coube.
         /// </summary>
         public static bool GuardarNaCacamba(Item item, byte desgaste)
         {
             var estantes = EstantesDoBunker.Instancia;
-            if (estantes != null && estantes.IsSpawned && estantes.GuardarNasEstantes(new[] { CacambaDaFamilia }, item, -1, desgaste, 0)) return true;
-            var lw = Instancia;
-            var itens = ItensNoMundo.Instancia;
-            if (lw == null || itens == null) return false;
-            var c = lw._caminhoneteDoDia != null ? lw._caminhoneteDoDia.GetComponent<Carro>() : null;
-            var ponto = c != null ? c.PontoDoPortaMalas - c.transform.forward * 0.8f : (WoodcreekDoDiaZero.Atual != null ? WoodcreekDoDiaZero.Atual.LugarDaCaminhonete : Vector3.zero);
-            ponto += new Vector3(Random.Range(-0.6f, 0.6f), 0.3f, Random.Range(-0.6f, 0.6f));
-            itens.Criar(item, ponto, Random.Range(0f, 360f), -1, desgaste);
-            return false;
+            return estantes != null && estantes.IsSpawned && estantes.GuardarNasEstantes(new[] { CacambaDaFamilia }, item, -1, desgaste, 0);
+        }
+
+        /// <summary>No anfitrião (o caixa do Dia 0, antes de cobrar): tudo isto cabe na caçamba da caminhonete da família?</summary>
+        public static bool CabeNaCacamba(IList<Item> itens)
+        {
+            var estantes = EstantesDoBunker.Instancia;
+            if (estantes == null || !estantes.IsSpawned) return false;
+            var lista = new List<(Item, int)>();
+            foreach (var i in itens) lista.Add((i, -1));
+            return estantes.CabemNasEstantes(new[] { CacambaDaFamilia }, lista);
         }
 
         // no anfitrião, no fim do Dia 0: a caminhonete (com a caçamba como estava) no pátio do bunker, de frente para o
@@ -282,19 +349,93 @@ namespace ZombieCityCleaner.World
             if (carro != null) carro.ArrumadoDeFabrica();
             nova.GetComponent<NetworkObject>().Spawn(true);
             var itens = ItensNoMundo.Instancia;
-            // a chave do Dia 0 (a da mesa da sala) pega por alguém vai com ele: no bunker, não aparece outra
-            bool pegaram = itens != null && carro != null && _chaveDoDia >= 0 && itens.Do((ushort)_chaveDoDia) != carro.chaveDoVeiculo;
+            // a chave do Dia 0 (a da mesa da sala) pega por alguém vai com ele: no bunker, não aparece outra. (25/11/2026, o save
+            // do Dia 0) A chave já posta que não estava no chão quando o Dia 0 voltou do save também está com alguém
+            bool pegaram = (_chaveDoDiaPosta && _chaveDoDia < 0) ||
+                           (itens != null && carro != null && _chaveDoDia >= 0 && itens.Do((ushort)_chaveDoDia) != carro.chaveDoVeiculo);
             _chaveDoDia = -1;
             if (pegaram) Debug.Log("[Dia 0] A chave da caminhonete está com quem a pegou na mesa da sala: no bunker, não vai outra.");
-            if (itens != null && carro != null && carro.chaveDoVeiculo != Item.Nada && !pegaram && _nascimentosNoBunker != null && _nascimentosNoBunker.Length >= 2)
-            {
-                var meio = Vector3.Lerp(_nascimentosNoBunker[0], _nascimentosNoBunker[1], 0.5f) + Vector3.down * 0.05f;
-                var lado = _nascimentosNoBunker[1] - _nascimentosNoBunker[0];
-                lado.y = 0f;
-                itens.Criar(carro.chaveDoVeiculo, meio + (lado.sqrMagnitude > 0.01f ? lado.normalized * 0.75f : Vector3.zero), lugar.Giro + 55f);
-            }
+            if (carro != null && !pegaram) PorAChaveNaSala(carro.chaveDoVeiculo);
             int naCacamba = EstantesDoBunker.Instancia != null ? EstantesDoBunker.Instancia.Quantos(CacambaDaFamilia) : 0;
             Debug.Log($"[Dia 0] A caminhonete foi para o pátio do bunker, com {naCacamba} coisas na caçamba; a chave na sala de operações.");
+        }
+
+        // no anfitrião: a chave no chão da sala de operações do bunker, ao lado das dos outros veículos (false sem a sala).
+        // (25/11/2026, a revisão: o bug 77, saiu do LevarACaminhoneteAoBunker; a caminhonete posta sem o Dia 0 usa também)
+        bool PorAChaveNaSala(Item chave)
+        {
+            var itens = ItensNoMundo.Instancia;
+            var lugar = Chao != null ? Chao.Bunker : null;
+            if (itens == null || !itens.IsSpawned || lugar == null || chave == Item.Nada || _nascimentosNoBunker == null || _nascimentosNoBunker.Length < 2) return false;
+            var meio = Vector3.Lerp(_nascimentosNoBunker[0], _nascimentosNoBunker[1], 0.5f) + Vector3.down * 0.05f;
+            var lado = _nascimentosNoBunker[1] - _nascimentosNoBunker[0];
+            lado.y = 0f;
+            itens.Criar(chave, meio + (lado.sqrMagnitude > 0.01f ? lado.normalized * 0.75f : Vector3.zero), lugar.Giro + 55f);
+            return true;
+        }
+
+        // ------------------------------------------------------------------ o save do Dia 0 e da fuga (25/11/2026)
+
+        /// <summary>
+        /// No anfitrião (o Salvamento.Salvar, na época de antes; 25/11/2026, a pedido do Pedro: "Sim, salvar o Dia 0"): o que
+        /// o palco precisa para voltar do save sem duplicar nada. A chave da caminhonete já foi posta neste Dia 0 (o Continuar
+        /// não põe outra na mesa), a fuga já passou o que cada um levava para o armazém (o Continuar não passa de novo) e o
+        /// que não coube nele nem na caçamba (vai para o chão da garagem nos 5 anos).
+        /// </summary>
+        public void ParaSalvarODiaZero(Salvar.MundoSalvo m)
+        {
+            var rede = NetworkManager.Singleton;
+            if (m == null || rede == null || !rede.IsServer) return;
+            LerODiaZeroDoSave();   // (antes de escrever por cima do que veio do save)
+            var mundo = MundoDeLakewood.Instancia;
+            m.chaveDoDiaPosta = _chaveDoDiaPosta;
+            m.fugaGuardouOArmazem = mundo != null && mundo.NaFuga && ArmazemDaFugaFeito(mundo);
+            if (m.foraDoArmazem == null) m.foraDoArmazem = new List<Salvar.ItemForaDoArmazem>();
+            ForaDoArmazemParaSalvar(m.foraDoArmazem);
+        }
+
+        // no anfitrião, a cada quadro (só compara o mundo salvo) e antes de salvar: uma vez por partida, o que o save guardou
+        // do Dia 0 e da fuga, se a partida voltou de um deles (a MundoDeLakewood.Retomada). Uma partida nova (outro mundo
+        // salvo) começa sem nada disso
+        void LerODiaZeroDoSave()
+        {
+            var salvo = Salvar.Salvamento.Atual;
+            if (salvo == null || ReferenceEquals(salvo, _diaZeroLidoDe)) return;
+            var m = MundoDeLakewood.Instancia;
+            var rede = NetworkManager.Singleton;
+            if (m == null || !m.IsSpawned || rede == null || !rede.IsServer) return;
+            _diaZeroLidoDe = salvo;
+            _palcoVeioDoSave = false;
+            _chaveDoDiaPosta = false;
+            _guardouNaTentativa = -2;
+            _armazemFeitoNoSave = false;
+            _foraDoArmazem.Clear();
+            // (26/11/2026, a integração do save do Dia 0) os veículos do bunker são de cada partida (os da anterior saíram com
+            // ela): a marca de já postos ficava da partida anterior, sem a cena recarregar, e um save do Dia 0 ou da fuga
+            // gravado antes deles (o Salvamento.Carregando falso, MundoSalvo.SemOsVeiculosDoBunker), aberto pelo Continuar sem
+            // fechar o jogo, nunca os recebia: o save seguinte já ia sem eles, para sempre. Até o save voltar, eles ficam
+            // marcados como postos (o PorOsDaPartida não põe nada), e depois o PorOsDaPartida decide de novo
+            _veiculosPostos = _armasPostas = true;
+            _chaves.Clear();
+            _veiculosEsperamOSave = true;
+            if (!m.Retomada) return;
+            _palcoVeioDoSave = true;
+            _chaveDoDiaPosta = salvo.chaveDoDiaPosta;
+            _armazemFeitoNoSave = salvo.fugaGuardouOArmazem;
+            int fora = RestaurarOForaDoArmazem(salvo.foraDoArmazem);
+            Debug.Log($"[Dia 0] Do save: a chave da caminhonete {(_chaveDoDiaPosta ? "já posta" : "ainda por pôr")}, o armazém da fuga " +
+                      $"{(_armazemFeitoNoSave ? "já guardado" : "por guardar")}, {fora} coisas que não couberam nele.");
+        }
+
+        // (26/11/2026, a integração do save do Dia 0) no anfitrião, a cada quadro: com o save desta partida de volta (ou logo
+        // de cara, num jogo novo), os veículos do bunker voltam a ser decididos pelo PorOsDaPartida: os do save já estão na
+        // cena (o Salvamento.Carregando marca como postos), e os que faltam entram com a garagem pronta, como num jogo novo.
+        // Antes do Restaurar, não: as chaves deles iriam para o chão do mundo, que o Restaurar troca pelo do save, e elas sumiam
+        void LiberarOsVeiculosDoBunker()
+        {
+            if (!_veiculosEsperamOSave || !Salvar.Salvamento.JaRestaurou) return;
+            _veiculosEsperamOSave = false;
+            _veiculosPostos = _armasPostas = false;
         }
     }
 }

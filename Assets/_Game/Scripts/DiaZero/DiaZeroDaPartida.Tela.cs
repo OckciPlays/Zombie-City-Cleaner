@@ -57,7 +57,8 @@ namespace ZombieCityCleaner.DiaZero
             GUI.depth = -5;
             if (TelaDoCaixa.Aberta) TelaDoCaixa.Desenhar(this, u);
             if (!JogadorRede.Local.Criado || GravacaoNoMundo.SemHud) return;
-            Canto(u);
+            // (25/11/2026) no Lakewood, a carteira e o carrinho estão no caderno das missões (UI/CadernoDeMissoes)
+            if (!NoLakewood) Canto(u);
             DesenharOLobby(u);
             // o aviso do carrinho (embaixo da mira) e a mensagem do Dia 0 (mais embaixo)
             if (Carrinho.Aviso != null && Time.time < Carrinho.AvisoAte)
@@ -70,7 +71,8 @@ namespace ZombieCityCleaner.DiaZero
         void Canto(float u)
         {
             ulong eu = NetworkManager.LocalClientId;
-            float x = Screen.width - 420 * u, y = 54 * u, w = 400 * u;
+            // (embaixo do minimapa: antes, a carteira ficava por cima dele)
+            float x = Screen.width - 420 * u, y = Mathf.Max(54 * u, UI.MinimapaDoMundo.Fundo(u) + 12 * u), w = 400 * u;
             Sombra(new Rect(x, y, w, 30 * u), PrecosDoDiaZero.Dinheiro(Dinheiro(eu)), _canto);
             Sombra(new Rect(x, y + 28 * u, w, 20 * u), "suas economias", _cantoPequeno);
             y += 56 * u;
@@ -125,8 +127,18 @@ namespace ZombieCityCleaner.DiaZero
                       NoLakewood ? "Vocês sobreviveram no bunker da comunidade, na encosta do lago. Lá fora, o mundo mudou."
                                  : "A porta do abrigo ficou fechada. Lá fora, o mundo mudou.", _texto);
             if (!string.IsNullOrEmpty(_quemFicouFora))
-                GUI.Label(new Rect(Screen.width * 0.2f, Screen.height * 0.38f + 140 * u, Screen.width * 0.6f, 40 * u),
-                          $"{_quemFicouFora} ficou de fora quando a porta fechou: as compras ficaram para trás.", _texto);
+            {
+                // (26/11/2026, a pedido do Pedro: os textos cortados) com três ou quatro nomes a frase quebrava em duas linhas,
+                // que no meio da caixa de 40u perdiam o alto da primeira e o pé da segunda (e a caixa entrava na de cima): ela
+                // começa onde a de cima acaba, com a altura das linhas. Com mais de um, "Ana e Pedro ficaram de fora"
+                string quem = _quemFicouFora;
+                int ultima = quem.LastIndexOf(", ", System.StringComparison.Ordinal);
+                if (ultima >= 0) quem = quem.Substring(0, ultima) + " e " + quem.Substring(ultima + 2);
+                var frase = new GUIContent($"{quem} {(ultima >= 0 ? "ficaram" : "ficou")} de fora quando a porta fechou: as compras ficaram para trás.");
+                float largura = Screen.width * 0.6f;
+                float alto = Mathf.Max(34 * u, _texto.CalcHeight(frase, largura) + 4 * u);
+                GUI.Label(new Rect(Screen.width * 0.2f, Screen.height * 0.38f + 146 * u, largura, alto), frase, _texto);
+            }
             if (_prontoDesde < 0f && _mundo != null)
             {
                 // a barra da geração (fina, embaixo)

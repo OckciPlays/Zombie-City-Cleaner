@@ -172,7 +172,8 @@ namespace ZombieCityCleaner.World
             if (IsSpawned && !IsServer) Dia = DiaRede.Value;
             bool mandaNaHora = !IsSpawned || IsServer;
             var teclado = Keyboard.current;
-            if (mandaNaHora && teclado != null)
+            // (25/11/2026: só com o F1 liberado; na build, o anfitrião mudava a hora de todos sem querer)
+            if (mandaNaHora && teclado != null && UI.MenuDoDesenvolvedor.Disponivel)
             {
                 if (teclado.pageUpKey.wasPressedThisFrame) Hora = Mathf.Repeat(Hora + 1f, 24f);
                 if (teclado.pageDownKey.wasPressedThisFrame) Hora = Mathf.Repeat(Hora - 1f, 24f);

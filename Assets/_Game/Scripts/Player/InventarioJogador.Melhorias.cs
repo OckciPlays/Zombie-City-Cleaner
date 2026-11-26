@@ -22,7 +22,7 @@ namespace ZombieCityCleaner.Player
         public ulong MelhoriasDaMao => MelhoriasDe(IdNaMao);
 
         /// <summary>A peça pode ir nesta arma agora? Se não, o motivo (para o painel).</summary>
-        public bool PodePorMelhoria(ushort arma, ushort peca, out string motivo)
+        public bool PodePorMelhoria(ushort arma, ushort peca, out string motivo, bool mesaJaConferida = false)
         {
             motivo = null;
             if (!Achar(arma, out var a) || !Itens.DeSucata(a.item)) motivo = "Escolha uma arma de sucata";
@@ -30,9 +30,14 @@ namespace ZombieCityCleaner.Player
             else if (!Melhorias.Serve(Melhorias.PecaDo(p.item), Itens.Arma(a.item)))
                 motivo = $"{TelaDoInventario.Maiuscula(Itens.NomeComArtigo(p.item))} não serve n{(Itens.NomeComArtigo(a.item).StartsWith("o ") ? "o" : "a")} {Itens.Nome(a.item)}";
             else if (Melhorias.Posta(a.cores, Melhorias.PecaDo(p.item))) motivo = "Já está posta";
-            else if (!Bancada.Perto(transform.position)) motivo = "Precisa de uma bancada perto";
+            else if (!mesaJaConferida && !Bancada.Perto(transform.position)) motivo = "Precisa de uma mesa de oficina perto";
             return motivo == null;
         }
+
+        // (25/11/2026, a revisão, o mesmo do CriarRpc: o bug 76) no anfitrião, a mesa de uma casa onde só o cliente está não
+        // existe: vale a palavra do cliente, medida na máquina dele. A do jogador do anfitrião continua conferida aqui
+        bool MesaPerto(bool pertoDaMesa) =>
+            Bancada.Perto(transform.position) || (pertoDaMesa && OwnerClientId != NetworkManager.ServerClientId);
 
         /// <summary>No dono: põe a peça da mochila na arma de sucata (o anfitrião confere e gasta a peça).</summary>
         public void PorMelhoria(ushort arma, ushort peca)
@@ -42,7 +47,7 @@ namespace ZombieCityCleaner.Player
                 if (motivo != null) AvisoLocal(motivo);
                 return;
             }
-            PorMelhoriaRpc(arma, peca);
+            PorMelhoriaRpc(arma, peca, Bancada.Perto(transform.position));
             Efeitos.Som(Efeitos.Recarga, transform.position + Vector3.up * 1.2f, 0.5f, false);
         }
 
@@ -52,7 +57,7 @@ namespace ZombieCityCleaner.Player
             if (!Achar(arma, out var a) || !Itens.DeSucata(a.item) || !Melhorias.Posta(a.cores, peca)) return;
             if (!Bancada.Perto(transform.position))
             {
-                AvisoLocal("Precisa de uma bancada perto");
+                AvisoLocal("Precisa de uma mesa de oficina perto");
                 return;
             }
             // o carregador estendido que sai leva as balas a mais: o anfitrião precisa saber quantas o pente tem agora
@@ -62,14 +67,19 @@ namespace ZombieCityCleaner.Player
                 GuardarPenteRpc(arma, (ushort)Mathf.Max(0, balas));
                 _arma.LimitarPente(arma, Armas.Dados(Itens.Arma(a.item)).capacidade);
             }
-            TirarMelhoriaRpc(arma, (byte)peca);
+            TirarMelhoriaRpc(arma, (byte)peca, true);
             Efeitos.Som(Efeitos.Recarga, transform.position + Vector3.up * 1.2f, 0.5f, false);
         }
 
         [Rpc(SendTo.Server)]
-        void PorMelhoriaRpc(ushort arma, ushort peca, RpcParams parametros = default)
+        void PorMelhoriaRpc(ushort arma, ushort peca, bool pertoDaMesa, RpcParams parametros = default)
         {
-            if (parametros.Receive.SenderClientId != OwnerClientId || !PodePorMelhoria(arma, peca, out _)) return;
+            if (parametros.Receive.SenderClientId != OwnerClientId) return;
+            if (!PodePorMelhoria(arma, peca, out var motivo, MesaPerto(pertoDaMesa)))
+            {
+                if (!string.IsNullOrEmpty(motivo)) AvisoRpc($"Não deu para pôr a peça: {char.ToLowerInvariant(motivo[0]) + motivo.Substring(1)}");
+                return;
+            }
             Achar(peca, out var p);
             var qual = Melhorias.PecaDo(p.item);
             TirarUm(peca);
@@ -87,10 +97,15 @@ namespace ZombieCityCleaner.Player
         }
 
         [Rpc(SendTo.Server)]
-        void TirarMelhoriaRpc(ushort arma, byte peca, RpcParams parametros = default)
+        void TirarMelhoriaRpc(ushort arma, byte peca, bool pertoDaMesa, RpcParams parametros = default)
         {
             int k = Indice(arma);
-            if (parametros.Receive.SenderClientId != OwnerClientId || k < 0 || peca >= Melhorias.Quantas || !Bancada.Perto(transform.position)) return;
+            if (parametros.Receive.SenderClientId != OwnerClientId || k < 0 || peca >= Melhorias.Quantas) return;
+            if (!MesaPerto(pertoDaMesa))
+            {
+                AvisoRpc("Não deu para tirar a peça: precisa de uma mesa de oficina perto");
+                return;
+            }
             var it = Mochila[k];
             var qual = (PecaDaMelhoria)peca;
             if (!Itens.DeSucata(it.item) || !Melhorias.Posta(it.cores, qual)) return;

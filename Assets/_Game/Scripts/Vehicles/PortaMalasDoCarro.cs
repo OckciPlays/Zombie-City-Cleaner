@@ -44,6 +44,8 @@ namespace ZombieCityCleaner.Vehicles
             {
                 if (DeTras(quem))
                 {
+                    // (25/11/2026, a revisão: o bug 82) na fuga, a caçamba da família fica para trás: a dica diz o porquê
+                    if (World.EstantesDoBunker.FechadaNaFuga(carro.CacambaDeGuardar)) return World.EstantesDoBunker.MotivoNaFuga(carro.CacambaDeGuardar);
                     int n = Guardadas();
                     return n == 0 ? "[E] Abrir a caçamba (vazia)" : $"[E] Abrir a caçamba ({n} {(n == 1 ? "coisa" : "coisas")})";
                 }
@@ -87,13 +89,26 @@ namespace ZombieCityCleaner.Vehicles
             carro.PedirPortaMalas(false);
         }
 
-        // quem está atrás da caminhonete (na tampa de trás), com as estantes na cena: abre o que está guardado na caçamba
+        // quem está atrás da caminhonete (na tampa de trás), com as estantes na cena: abre o que está guardado na caçamba.
+        // (26/11/2026, a pedido do Pedro: "está mais difícil de subir na caçamba dela e montar, precisamos mirar bem lá atrás
+        // para poder sentar") antes, "atrás" era qualquer ponto depois do meio da caçamba (o z do carro abaixo de -1,1): de pé
+        // ao lado dela, quase toda a lateral dava "Abrir a caçamba", e a subida só aparecia mirando bem embaixo, na lateral
+        // atrás da roda. Agora, atrás é só quem passou da tampa mais do que passou da lateral (pela caixa deste gatilho, que
+        // envolve a caçamba toda): ao lado dela, a caçamba inteira é a subida
         bool DeTras(ArmaJogador quem)
         {
             var e = World.EstantesDoBunker.Instancia;
             if (e == null || !e.IsSpawned || carro.CacambaDeGuardar < 0) return false;
-            return carro.transform.InverseTransformPoint(quem.transform.position).z < carro.pontoDoPortaMalas.z + 0.4f;
+            if (_caixa == null) _caixa = GetComponent<BoxCollider>();
+            if (_caixa == null) return carro.transform.InverseTransformPoint(quem.transform.position).z < carro.pontoDoPortaMalas.z - 0.9f;
+            var p = transform.InverseTransformPoint(quem.transform.position) - _caixa.center;
+            var meia = _caixa.size * 0.5f;
+            float passouDaTampa = -meia.z - p.z;              // (para trás da tampa: positivo)
+            float passouDoLado = Mathf.Abs(p.x) - meia.x;     // (para fora da lateral: positivo)
+            return passouDaTampa > -0.3f && passouDaTampa >= passouDoLado;
         }
+
+        BoxCollider _caixa;
 
         // quantas coisas estão guardadas na caçamba
         int Guardadas()

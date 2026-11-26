@@ -61,8 +61,8 @@ namespace ZombieCityCleaner.Player
         // a receita escolhida (11/11/2026): a foto menor e os detalhes maiores (os quadrados do que ela pede)
         static readonly Rect AreaDaFotoDaReceita = new Rect(840, 106, 302, 124);
         static readonly Rect AreaDosDetalhesDaReceita = new Rect(840, 238, 302, 334);
-        // (06/11/2026: as 4 abas, com a HABILIDADES, cabem até a coluna da direita)
-        static readonly Rect AbaMochila = new Rect(336, 14, 112, 36), AbaCriar = new Rect(454, 14, 100, 36);
+        // (06/11/2026: as 4 abas, com a HABILIDADES, cabem até a coluna da direita; 25/11/2026: 5, com a ANOTAÇÕES, mais estreitas)
+        static readonly Rect AbaMochila = new Rect(336, 14, 90, 36), AbaCriar = new Rect(431, 14, 70, 36);
         static readonly Rect BotaoFechar = new Rect(W - 52, 12, 36, 36);
         const float AtalhoY = 506f, AtalhoW = 92f, AtalhoH = 60f, AtalhoVao = 12f;   // (era 478 até o grupo PROTEÇÃO, 11/11/2026)
         // o que se veste e já existe: a mochila (o coldre saiu em 31/10/2026), embaixo das roupas da direita (os lugares das
@@ -98,7 +98,7 @@ namespace ZombieCityCleaner.Player
 
         // a aba Corpo (05/11/2026, o sistema de vida por membro): TelaDoInventario.Corpo.cs; a aba Habilidades (06/11/2026,
         // a árvore de habilidades): TelaDoInventario.Habilidades.cs
-        enum Aba { Mochila, Criar, Corpo, Habilidades }
+        enum Aba { Mochila, Criar, Corpo, Habilidades, Anotacoes }   // (as ANOTAÇÕES: 25/11/2026, TelaDoInventario.Anotacoes.cs)
         enum Origem { Nada, Mochila, Atalho, Retrato, Equipamento, Roupa, Estante, Protecao }
 
         Aba _aba;
@@ -122,6 +122,13 @@ namespace ZombieCityCleaner.Player
         float _avisoAte;
         Vector2 _origem;
         GUIStyle _titulo, _nome, _texto, _pequeno, _direita, _centro, _numero, _dica, _fechar, _raridade;
+        // (26/11/2026, a pedido do Pedro: os textos cortados) o nome comprido na letra menor, o valor das linhas dos detalhes
+        // (ao lado do rótulo e, comprido, embaixo dele) e o calibre da caixa de munição em 3 letras, guardados: os textos
+        // medidos não criam estilos novos a cada desenho
+        GUIStyle _nomeMenor, _valorDaLinha, _valorEmbaixo;
+        GUIStyle[] _calibres;
+        readonly GUIContent _conteudoDoAviso = new GUIContent(), _conteudoDoNome = new GUIContent(), _conteudoDoResumo = new GUIContent(),
+            _conteudoDaLinha = new GUIContent(), _conteudoDoCalibre = new GUIContent();
         static Texture2D _circulo;
 
         void OnEnable()
@@ -152,7 +159,31 @@ namespace ZombieCityCleaner.Player
             _receita = Mathf.Clamp(indice, -1, Receitas.Todas.Length - 1);
             _escolhido = 0;
             _equipEscolhido = Item.Nada;
-            _rolagem = Mathf.Clamp(_receita - 2, 0, Mathf.Max(0, Receitas.Todas.Length - ReceitasNaTela));
+            _rolagem = Mathf.Clamp(Visiveis().IndexOf(_receita) - 2, 0, Mathf.Max(0, Visiveis().Count - ReceitasNaTela));
+        }
+
+        /// <summary>A animação do craft (25/11/2026) fecha a mochila; no fim, ela volta na aba Criar.</summary>
+        public void FecharParaOCraft() => Abrir(false);
+
+        // as receitas da aba Criar (25/11/2026: só as que ele sabe; os índices em Receitas.Todas), uma vez por quadro. Longe de
+        // uma mesa de oficina, só as feitas à mão; perto dela, as da mesa também, primeiro (a pedido: "no craft do tab, deixar
+        // coisas mais simples mesmo")
+        readonly List<int> _visiveis = new List<int>();
+        int _visiveisNoQuadro = -1;
+
+        List<int> Visiveis()
+        {
+            if (_visiveisNoQuadro == Time.frameCount) return _visiveis;
+            _visiveisNoQuadro = Time.frameCount;
+            _visiveis.Clear();
+            if (inventario == null) return _visiveis;
+            bool naMesa = Bancada.Perto(inventario.transform.position);
+            if (naMesa)
+                for (int k = 0; k < Receitas.Todas.Length; k++)
+                    if (Receitas.Todas[k].bancada && inventario.ConheceAReceita(k)) _visiveis.Add(k);
+            for (int k = 0; k < Receitas.Todas.Length; k++)
+                if (!Receitas.Todas[k].bancada && inventario.ConheceAReceita(k)) _visiveis.Add(k);
+            return _visiveis;
         }
 
         public void AbrirNaAbaCriar()
@@ -219,9 +250,17 @@ namespace ZombieCityCleaner.Player
             else if (teclado != null && teclado.hKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0 && !QuantosAberto) TeclaDoCorpo();
             // K: direto na aba HABILIDADES (06/11/2026)
             else if (teclado != null && teclado.kKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0 && !QuantosAberto) TeclaDasHabilidades();
+            // P: direto na aba ANOTAÇÕES (25/11/2026, o caderno das missões)
+            else if (teclado != null && teclado.pKey.wasPressedThisFrame && !MenuOnline.Aberto && GUIUtility.keyboardControl == 0 && !QuantosAberto) TeclaDasAnotacoes();
             if (!Aberta) return;
             ConferirEstante();
             if (!Aberta) return;
+            // (25/11/2026, a etapa 9) no caderno do P, ← e → viram a folha
+            if (_aba == Aba.Anotacoes && teclado != null && GUIUtility.keyboardControl == 0)
+            {
+                if (teclado.leftArrowKey.wasPressedThisFrame) UI.CadernoDeMissoes.Virar(-1);
+                else if (teclado.rightArrowKey.wasPressedThisFrame) UI.CadernoDeMissoes.Virar(1);
+            }
             _retrato?.Atualizar();
             AtualizarImagemDoCorpo();   // (a foto da aba CORPO, só quando o personagem muda: 11/11/2026)
             // arrastando, o botão solto fora da janela do jogo não chega ao OnGUI: solto há uns quadros, solta onde o
@@ -295,7 +334,9 @@ namespace ZombieCityCleaner.Player
             if (EstanteApertada(out var daEstante)) item = daEstante.item;
             else if (_apertou == Origem.Mochila && inventario.Achar(_idApertado, out var it)) item = it.item;
             else return;
-            var t = InventarioJogador.TamanhoNaGrade(item, _girado);
+            // (25/11/2026, a revisão: o bug 81) a mochila vinda da estante tem o tamanho dela na estante (na grade é 0 × 0)
+            var t = Itens.EhMochila(item) && _apertou == Origem.Estante ? World.EstantesDoBunker.TamanhoNaEstante(item, _girado)
+                : InventarioJogador.TamanhoNaGrade(item, _girado);
             if (t.x == t.y) return;
             // o ponto em que ele foi pego está na medida da grade de onde ele saiu
             float c = _celulaDaPega;
@@ -406,7 +447,11 @@ namespace ZombieCityCleaner.Player
                         // o item da estante: pegar para a mochila (no primeiro lugar livre)
                         int estante = _estante;
                         ushort idDaEstante = daEstanteDoMenu.id;
-                        Opcao("Pegar (para a mochila)", () => Estantes?.Pegar(estante, idDaEstante, -1, -1, false));
+                        // (25/11/2026, a revisão: o bug 81) a mochila guardada não vai para dentro da outra: o Pegar a veste (trocando
+                        // pela vestida, quando cabe); o menu diz isso
+                        string rotulo = !Itens.EhMochila(daEstanteDoMenu.item) ? "Pegar (para a mochila)"
+                            : inventario.MochilaVestida.Value != Item.Nada ? "Vestir (trocar pela sua mochila)" : "Vestir";
+                        Opcao(rotulo, () => Estantes?.Pegar(estante, idDaEstante, -1, -1, false));
                     }
                     else if (AtalhoEm(m, out int atalhoDoMenu) && inventario.Achar(inventario.Atalho(atalhoDoMenu), out var noAtalho))
                     {
@@ -426,8 +471,12 @@ namespace ZombieCityCleaner.Player
                     _menuEm = m;
                     e.Use();
                     break;
+                case EventType.ScrollWheel when _aba == Aba.Anotacoes:
+                    UI.CadernoDeMissoes.Virar(e.delta.y > 0f ? 1 : -1);   // (a roda vira a folha do caderno do P)
+                    e.Use();
+                    break;
                 case EventType.ScrollWheel when _aba == Aba.Criar:
-                    _rolagem = Mathf.Clamp(_rolagem + (e.delta.y > 0f ? 1 : -1), 0, Mathf.Max(0, Receitas.Todas.Length - ReceitasNaTela));
+                    _rolagem = Mathf.Clamp(_rolagem + (e.delta.y > 0f ? 1 : -1), 0, Mathf.Max(0, Visiveis().Count - ReceitasNaTela));
                     e.Use();
                     break;
                 case EventType.MouseDown when e.button == 0 && MenuAberto:
@@ -460,13 +509,17 @@ namespace ZombieCityCleaner.Player
                     else if (_aba == Aba.Corpo && CliqueNaAbaCorpo(m)) { }
                     else if (Em(AbaHabilidades).Contains(m)) IrParaAbaHabilidades();
                     else if (_aba == Aba.Habilidades && CliqueNaAbaHabilidades(m)) { }
+                    else if (Em(AbaAnotacoes).Contains(m)) IrParaAbaAnotacoes();
+                    // (25/11/2026, a etapa 9: o caderno do P) as abas de papel e as setas de virar a folha
+                    else if (_aba == Aba.Anotacoes && UI.CadernoDeMissoes.CliqueNoCaderno(m, Em(AreaDasAnotacoes), _u)) { }
+                    else if (BotaoDeDescarregar().Contains(m)) DescarregarACacamba();   // (o armazém da casa da família, 25/11/2026)
                     else if (_aba == Aba.Criar && CliqueNaCriar(m)) { }   // (a barra e o painel das melhorias, 10/11/2026)
                     else if (_aba == Aba.Criar && ReceitaEm(m, out int receita, out bool noBotao))
                     {
                         _receita = receita;
                         _escolhido = 0;
                         _equipEscolhido = Item.Nada;
-                        if (noBotao) inventario.Criar(receita);
+                        if (noBotao) inventario.CriarComAnimacao(receita);   // (com a animação, 25/11/2026: AnimacaoDoCraft.cs)
                     }
                     else if (_aba == Aba.Mochila && ItemEm(m, out var it, out var r))
                     {
@@ -767,6 +820,7 @@ namespace ZombieCityCleaner.Player
             }
             else if (_aba == Aba.Corpo) Corpo(mouse);
             else if (_aba == Aba.Habilidades) AbaDasHabilidades(mouse);
+            else if (_aba == Aba.Anotacoes) AbaDasAnotacoes();
             else Criar(mouse);
             if (_estante >= 0 && FormaAberta != null) DesenharEstante(mouse);
             else Detalhes();
@@ -781,7 +835,7 @@ namespace ZombieCityCleaner.Player
         {
             float u = _u;
             Rotulo(Em(new Rect(AreaDoRetrato.x + 4, 18, 300, 28)), "EQUIPAMENTO", _titulo);
-            foreach (var (r, nome, aba) in new[] { (AbaMochila, "MOCHILA", Aba.Mochila), (AbaCriar, "CRIAR", Aba.Criar), (AbaCorpo, "CORPO", Aba.Corpo), (AbaHabilidades, "HABILIDADES", Aba.Habilidades) })
+            foreach (var (r, nome, aba) in new[] { (AbaMochila, "MOCHILA", Aba.Mochila), (AbaCriar, "CRIAR", Aba.Criar), (AbaCorpo, "CORPO", Aba.Corpo), (AbaHabilidades, "HABILIDADES", Aba.Habilidades), (AbaAnotacoes, "ANOTAÇÕES", Aba.Anotacoes) })
             {
                 var a = Em(r);
                 bool ativa = _aba == aba;
@@ -792,7 +846,7 @@ namespace ZombieCityCleaner.Player
                 PorCor(_titulo, CorDoTexto);
             }
             bool comEstante = _estante >= 0 && FormaAberta != null;
-            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : _aba == Aba.Habilidades ? "A ÁRVORE" : "DETALHES", _titulo);
+            Rotulo(Em(new Rect(AreaDoNome.x + 4, 18, 300, 28)), comEstante ? FormaAberta.nome.ToUpperInvariant() : _aba == Aba.Corpo ? "A PARTE ESCOLHIDA" : _aba == Aba.Habilidades ? "A ÁRVORE" : _aba == Aba.Anotacoes ? "" : "DETALHES", _titulo);
             // o dinheiro do personagem (02/11/2026: o que sobrou do Dia 0; os comerciantes vêm depois); com a estante aberta,
             // o nome dela fica no lugar
             if (!comEstante && inventario != null && inventario.IsSpawned)
@@ -951,17 +1005,31 @@ namespace ZombieCityCleaner.Player
                 PorCor(_texto, antes);
                 return;
             }
-            Aviso(new Rect(a.x + 2, a.y + 50, a.width, 22));
+            // (26/11/2026, a pedido do Pedro: os textos cortados) até o fim do rodapé (3 linhas): o aviso comprido, como o do
+            // desmontar com o Sucateiro, quebrava e a 2ª linha saía cortada na caixa de uma linha só
+            Aviso(new Rect(a.x + 2, a.y + 50, a.width, 22), 58);
         }
 
-        // o aviso do que foi feito (uma receita, uma desmontagem), por uns segundos
-        void Aviso(Rect r)
+        bool AvisoAtivo => _aviso != null && Time.unscaledTime <= _avisoAte;
+
+        // o aviso do que foi feito (uma receita, uma desmontagem), por uns segundos. (26/11/2026, a pedido do Pedro: os textos
+        // cortados) com a altura medida, até alturaMaxima (a 720p; 0, a da caixa): o que não cabe na letra do texto vai na
+        // pequena, e o que nem nela couber fica nas linhas inteiras que cabem (a de baixo não sai cortada ao meio)
+        void Aviso(Rect r, float alturaMaxima = 0f)
         {
-            if (_aviso == null || Time.unscaledTime > _avisoAte) return;
-            var antes = _texto.normal.textColor;
-            PorCor(_texto, Destaque);
-            GUI.Label(Em(r), _aviso, _texto);
-            PorCor(_texto, antes);
+            if (!AvisoAtivo) return;
+            var e = Em(r);
+            float maximo = (alturaMaxima > 0f ? alturaMaxima : r.height) * _u;
+            _conteudoDoAviso.text = _aviso;
+            var est = _texto.CalcHeight(_conteudoDoAviso, e.width) <= maximo ? _texto : _pequeno;
+            float alto = est.CalcHeight(_conteudoDoAviso, e.width);
+            if (alto > maximo) alto = Mathf.Max(est.lineHeight, Mathf.Floor(maximo / est.lineHeight) * est.lineHeight);
+            e.height = Mathf.Max(e.height, alto);
+            if (e.height > maximo) e.height = alto;
+            var antes = est.normal.textColor;
+            PorCor(est, Destaque);
+            GUI.Label(e, _conteudoDoAviso, est);
+            PorCor(est, antes);
         }
 
         // um item: o fundo pela espécie (arma, comida, água), o ícone (girado 90° no sentido do relógio, se o item está
@@ -1019,7 +1087,13 @@ namespace ZombieCityCleaner.Player
                 // o calibre em cima (as caixas são parecidas) e as balas embaixo, com uma faixa escura para ler
                 var cal = Itens.NomeDoCalibre(Itens.CalibreDa(it.item));
                 Ret(new Rect(r.x, r.y, r.width, 14 * u), new Color(0f, 0f, 0f, 0.45f));
-                GUI.Label(new Rect(r.x + 3 * u, r.y - 1 * u, r.width, 15 * u), cal == "calibre 12" ? "cal. 12" : cal, _pequeno);
+                // (26/11/2026, a pedido do Pedro: os textos cortados) o calibre numa linha só, na maior letra que cabe na caixa
+                // (12, 10 ou 9): na mochila grande e nas estantes a célula é estreita, e o "parafuso" (e, nas menores, o
+                // "cal. 12" e o "prego") quebrava numa 2ª linha cortada. O "parafuso" que nem assim cabe vira "paraf."; onde
+                // nada cabe (a caçamba), fica a dica do mouse, que diz o nome da caixa
+                var caixaDoCalibre = new Rect(r.x + 2 * u, r.y - 1 * u, r.width - 2 * u, 15 * u);
+                if (CalibreQueCabe(cal == "calibre 12" ? "cal. 12" : cal, caixaDoCalibre.width, out var estiloDoCalibre))
+                    GUI.Label(caixaDoCalibre, _conteudoDoCalibre, estiloDoCalibre);
                 Ret(new Rect(r.x, r.yMax - 15 * u, r.width, 15 * u), new Color(0f, 0f, 0f, 0.45f));
                 GUI.Label(new Rect(r.x, r.yMax - 17 * u, r.width - 4 * u, 16 * u), it.qtd.ToString(), _direita);
             }
@@ -1055,6 +1129,26 @@ namespace ZombieCityCleaner.Player
             if (escolhido) Moldura(r, Mathf.Max(1f, Mathf.Round(2 * u)), Destaque);
         }
 
+        // (26/11/2026) o calibre na maior das 3 letras que cabe na largura (fica no _conteudoDoCalibre); o "parafuso" que não
+        // cabe tenta o "paraf.". false: nada cabe
+        bool CalibreQueCabe(string texto, float largura, out GUIStyle estilo)
+        {
+            for (int vez = 0; vez < 2; vez++)
+            {
+                _conteudoDoCalibre.text = texto;
+                foreach (var e in _calibres)
+                    if (e.CalcSize(_conteudoDoCalibre).x <= largura)
+                    {
+                        estilo = e;
+                        return true;
+                    }
+                if (texto != "parafuso") break;
+                texto = "paraf.";
+            }
+            estilo = null;
+            return false;
+        }
+
         // o fundo de cada espécie de item: as armas, a munição, as peças e as do saque
         static Color FundoDo(Item item)
         {
@@ -1081,11 +1175,12 @@ namespace ZombieCityCleaner.Player
         {
             receita = -1;
             noBotao = false;
-            for (int i = 0; i < ReceitasNaTela && i + _rolagem < Receitas.Todas.Length; i++)
+            var vis = Visiveis();
+            for (int i = 0; i < ReceitasNaTela && i + _rolagem < vis.Count; i++)
             {
                 var l = LinhaDaReceitaNaTela(i);
                 if (!l.Contains(m)) continue;
-                receita = i + _rolagem;
+                receita = vis[i + _rolagem];
                 noBotao = BotaoDeCriar(l).Contains(m);
                 return true;
             }
@@ -1107,13 +1202,23 @@ namespace ZombieCityCleaner.Player
                 PainelDasMelhorias(mouse);
                 return;
             }
-            var todas = Receitas.Todas;
-            _rolagem = Mathf.Clamp(_rolagem, 0, Mathf.Max(0, todas.Length - ReceitasNaTela));
+            // (25/11/2026: só as receitas aprendidas; a escolhida que sumiu, como a da habilidade tirada, sai da escolha)
+            var vis = Visiveis();
+            if (_receita >= 0 && !vis.Contains(_receita)) _receita = -1;
+            _rolagem = Mathf.Clamp(_rolagem, 0, Mathf.Max(0, vis.Count - ReceitasNaTela));
             var linha = new GUIStyle(_pequeno) { wordWrap = false, alignment = TextAnchor.MiddleLeft, fontStyle = FontStyle.Bold };
-            for (int i = 0; i < ReceitasNaTela && i + _rolagem < todas.Length; i++)
+            if (vis.Count == 0)
             {
-                int k = i + _rolagem;
-                var rec = todas[k];
+                var vazio = new GUIStyle(_texto) { alignment = TextAnchor.MiddleCenter, wordWrap = true };
+                PorCor(vazio, TextoApagado);
+                GUI.Label(Encolher(Em(new Rect(AreaDasReceitas.x, AreaDasReceitas.y + BarraDaCriar, AreaDasReceitas.width, 90)), 12 * u),
+                    Bancada.Perto(inventario.transform.position) ? "Nenhuma receita ainda. Elas são aprendidas pegando os materiais: a madeira, o pano, a sucata..."
+                    : "Nenhuma receita à mão ainda. Elas são aprendidas pegando os materiais (a madeira, o pano...); as da mesa de oficina aparecem perto dela.", vazio);
+            }
+            for (int i = 0; i < ReceitasNaTela && i + _rolagem < vis.Count; i++)
+            {
+                int k = vis[i + _rolagem];
+                var rec = Receitas.Todas[k];
                 var l = LinhaDaReceitaNaTela(i);
                 bool pode = inventario.PodeCriar(rec, out _);
                 Ret(l, k == _receita ? new Color(0f, 0f, 0f, 0.32f) : l.Contains(mouse) ? new Color(0f, 0f, 0f, 0.22f) : new Color(0f, 0f, 0f, 0.14f));
@@ -1151,7 +1256,7 @@ namespace ZombieCityCleaner.Player
                     _miudos.Add((IconeDaHabilidade(h, !sabe), new Color(0f, 0f, 0f, 0.35f), null, sabe, $"Habilidade: {Habilidades.Nome(h)}{(rec.nivel > 1 ? $", nível {rec.nivel}" : "")}"));
                 }
                 if (rec.oficina) _miudos.Add((null, default, "oficina", Bancada.PertoDaOficina(inventario.transform.position), "Na mesa de oficina (no bunker)"));
-                else if (rec.bancada) _miudos.Add((null, default, "bancada", Bancada.Perto(inventario.transform.position), "Perto de uma bancada"));
+                else if (rec.bancada) _miudos.Add((null, default, "mesa", Bancada.Perto(inventario.transform.position), "Na mesa de oficina"));
                 else if (rec.fogo) _miudos.Add((null, default, "fogo", InventarioJogador.FogoPerto(inventario.transform.position), "Perto de uma fogueira acesa"));
                 float reticencias = linha.CalcSize(new GUIContent("...")).x;
                 for (int p = 0; p < _miudos.Count; p++)
@@ -1192,10 +1297,17 @@ namespace ZombieCityCleaner.Player
                 PorCor(estilo, pode ? new Color(0.1f, 0.09f, 0.07f) : TextoApagado);
                 GUI.Label(b, "CRIAR", estilo);
             }
-            // embaixo: a bancada (à esquerda) e, se há mais receitas que linhas, a dica de rolar (à direita)
-            if (todas.Length > ReceitasNaTela)
+            // embaixo: a bancada (à esquerda) e, se há mais receitas que linhas, a dica de rolar (à direita). (26/11/2026, a
+            // pedido do Pedro: os textos cortados) o aviso do que foi feito fica no lugar delas enquanto aparece, com até duas
+            // linhas: embaixo delas, colado no fundo da janela, ele passava da borda e a 2ª linha saía cortada
+            if (AvisoAtivo)
             {
-                string rolar = _rolagem + ReceitasNaTela < todas.Length ? "role para ver mais ▼" : "▲ role para voltar";
+                Aviso(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 4, AreaDasReceitas.width, 34), 34);
+                return;
+            }
+            if (vis.Count > ReceitasNaTela)
+            {
+                string rolar = _rolagem + ReceitasNaTela < vis.Count ? "role para ver mais ▼" : "▲ role para voltar";
                 GUI.Label(Em(new Rect(AreaDasReceitas.x, AreaDasReceitas.yMax + 6, AreaDasReceitas.width - 2, 18)), rolar,
                     new GUIStyle(_pequeno) { alignment = TextAnchor.UpperRight });
             }
@@ -1203,8 +1315,7 @@ namespace ZombieCityCleaner.Player
             var aviso = new GUIStyle(_pequeno) { wordWrap = false };
             PorCor(aviso, perto ? Bom : TextoApagado);
             GUI.Label(Em(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 6, AreaDasReceitas.width - 140, 18)),
-                perto ? "Bancada perto: todas as receitas valem." : "Longe de uma bancada (há uma no bunker).", aviso);
-            Aviso(new Rect(AreaDasReceitas.x + 2, AreaDasReceitas.yMax + 26, AreaDasReceitas.width, 20));
+                perto ? "Mesa de oficina perto: as receitas dela vêm primeiro." : "Longe de uma mesa de oficina: só o que se faz à mão.", aviso);
         }
 
         // os detalhes da receita escolhida (refeitos a pedido, 11/11/2026: o resumo encavalava na linha de baixo e o
@@ -1215,20 +1326,22 @@ namespace ZombieCityCleaner.Player
         {
             float u = _u;
             var mouse = MouseNaTela;
-            GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(rec.resultado)) + (rec.qtd > 1 ? $" ×{rec.qtd}" : ""), _nome);
+            NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(rec.resultado)) + (rec.qtd > 1 ? $" ×{rec.qtd}" : ""), CorDoTexto);
             var imagem = inventario.FotoDe(rec.resultado);
             if (imagem == null) imagem = inventario.IconeDe(rec.resultado);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 8 * u), imagem, ScaleMode.ScaleToFit);
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u;
 
-            // o resumo: até 3 linhas na letra do texto; mais que isso, na pequena (e o que passar, cortado)
+            // o resumo: até 3 linhas na letra do texto; mais que isso, na pequena. (26/11/2026, a pedido do Pedro: os textos
+            // cortados) o teto é de 6 linhas inteiras: o de 4,2 mostrava a ponta da 5ª (o resumo da mesa de oficina), cortada ao
+            // meio, e a coluna da receita tem lugar (6 linhas, duas fileiras de quadrados e as duas linhas de baixo cabem)
             _conteudoDaReceita.text = Itens.Resumo(rec.resultado);
             var resumo = _texto;
             float alto = resumo.CalcHeight(_conteudoDaReceita, w);
             if (alto > resumo.lineHeight * 3.2f)
             {
                 resumo = _pequeno;
-                alto = Mathf.Min(resumo.CalcHeight(_conteudoDaReceita, w), resumo.lineHeight * 4.2f);
+                alto = Mathf.Min(resumo.CalcHeight(_conteudoDaReceita, w), resumo.lineHeight * 6f);
             }
             GUI.Label(new Rect(x, y, w, alto), _conteudoDaReceita, resumo);
             y += alto + 10 * u;
@@ -1278,7 +1391,7 @@ namespace ZombieCityCleaner.Player
             bool lugarOk = rec.oficina ? Bancada.PertoDaOficina(inventario.transform.position)
                          : rec.bancada ? Bancada.Perto(inventario.transform.position)
                          : !rec.fogo || InventarioJogador.FogoPerto(inventario.transform.position);
-            string lugar = rec.oficina ? "Na mesa de oficina (no bunker)" : rec.bancada ? "Perto de uma bancada" : rec.fogo ? "Perto de uma fogueira acesa" : "Em qualquer lugar";
+            string lugar = rec.bancada ? "Na mesa de oficina" : rec.fogo ? "Perto de uma fogueira acesa" : "À mão, em qualquer lugar";
             LinhaComMarca(new Rect(x, y, w, 22 * u), lugar, lugarOk, null);
             y += 24 * u;
             if (rec.habilidade >= 0)
@@ -1319,7 +1432,9 @@ namespace ZombieCityCleaner.Player
             {
                 _numeroDoPedido = new GUIStyle(_titulo) { fontSize = Mathf.RoundToInt(15 * u), alignment = TextAnchor.MiddleCenter, wordWrap = false };
                 _nomeDoPedido = new GUIStyle(_pequeno) { fontSize = Mathf.RoundToInt(11 * u), alignment = TextAnchor.UpperCenter, wordWrap = false, clipping = TextClipping.Overflow };
-                _topoDoPedido = new GUIStyle(_pequeno) { fontSize = Mathf.RoundToInt(9 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = false };
+                // (26/11/2026, a pedido do Pedro: os textos cortados) a letra 8: na 9, o "NÃO GASTA" (o machado das tábuas para
+                // barricada) passava do quadrado e as pontas saíam cortadas
+                _topoDoPedido = new GUIStyle(_pequeno) { fontSize = Mathf.RoundToInt(8 * u), fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = false };
             }
             bool sob = r.Contains(mouse);
             Ret(r, fundo);
@@ -1402,16 +1517,36 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>O texto cortado com "…" para caber na largura (no estilo dado).</summary>
+        /// <remarks>
+        /// (26/11/2026, a revisão dos textos cortados: agora ele corre a cada quadro por item, nas linhas apertadas dos
+        /// curativos da aba Corpo e nas fichas das MELHORIAS; o de antes criava um GUIContent e uma string a cada letra tirada,
+        /// dezenas por linha. Um GUIContent guardado e a busca pelo meio: o mesmo resultado, o maior pedaço que cabe, com
+        /// umas 6 medidas.)
+        /// </remarks>
         internal static string Cortar(string s, GUIStyle estilo, float largura)
         {
-            if (string.IsNullOrEmpty(s) || estilo.CalcSize(new GUIContent(s)).x <= largura) return s;
-            for (int n = s.Length - 1; n > 1; n--)
+            if (string.IsNullOrEmpty(s)) return s;
+            _conteudoDoCortar.text = s;
+            if (estilo.CalcSize(_conteudoDoCortar).x <= largura) return s;
+            // o pedaço (de 2 a s.Length - 1 letras) cresce com as letras: a largura dele também, e o maior que cabe é o de antes
+            string melhor = null;
+            int de = 2, ate = s.Length - 1;
+            while (de <= ate)
             {
+                int n = (de + ate) / 2;
                 string t = s.Substring(0, n).TrimEnd() + "…";
-                if (estilo.CalcSize(new GUIContent(t)).x <= largura) return t;
+                _conteudoDoCortar.text = t;
+                if (estilo.CalcSize(_conteudoDoCortar).x <= largura)
+                {
+                    melhor = t;
+                    de = n + 1;
+                }
+                else ate = n - 1;
             }
-            return "…";
+            return melhor ?? "…";
         }
+
+        static readonly GUIContent _conteudoDoCortar = new GUIContent();
 
         // as melhorias postas numa arma ("silenciador de garrafa PET (12 tiros) · mira de ferro ajustada"; a legenda da foto)
         static string NomesDasMelhorias(ulong b)
@@ -1426,13 +1561,17 @@ namespace ZombieCityCleaner.Player
             return string.Join("  ·  ", nomes);
         }
 
-        // as receitas que gastam o item ("bandagem, corda e cama"; vazio: nenhuma)
-        static string ServePara(Item item)
+        // as receitas que gastam o item ("bandagem, corda e cama"; vazio: nenhuma). Desde 25/11/2026, só as que ele sabe
+        string ServePara(Item item)
         {
             var nomes = new List<string>();
-            foreach (var r in Receitas.Todas)
+            for (int k = 0; k < Receitas.Todas.Length; k++)
+            {
+                if (inventario == null || !inventario.ConheceAReceita(k)) continue;
+                var r = Receitas.Todas[k];
                 foreach (var g in r.gasta)
                     if (g.item == item && !nomes.Contains(Itens.Nome(r.resultado))) nomes.Add(Itens.Nome(r.resultado));
+            }
             return nomes.Count <= 1 ? (nomes.Count == 1 ? nomes[0] : "") : string.Join(", ", nomes.GetRange(0, nomes.Count - 1)) + " e " + nomes[nomes.Count - 1];
         }
 
@@ -1450,15 +1589,35 @@ namespace ZombieCityCleaner.Player
                 ColunaDasHabilidades(_ultimoMouse);
                 return;
             }
+            // a aba Anotações: o caderno aberto cobre a coluna (TelaDoInventario.Anotacoes.cs)
+            if (_aba == Aba.Anotacoes) return;
             float u = _u;
             var nome = Em(AreaDoNome);
             var foto = Em(AreaDaFoto);
             var det = Em(AreaDosDetalhes);
             // a receita (11/11/2026): a foto menor e os detalhes maiores, para os quadrados do que ela pede
-            if (_aba == Aba.Criar && _receita >= 0 && _receita < Receitas.Todas.Length && !Vestido(_equipEscolhido) && !RoupaEscolhida(out _) && !ProtecaoEscolhida(out _))
+            bool daReceita = _aba == Aba.Criar && _receita >= 0 && _receita < Receitas.Todas.Length;
+            bool vestida = Vestido(_equipEscolhido) || RoupaEscolhida(out _) || ProtecaoEscolhida(out _);
+            if (daReceita && !vestida)
             {
                 foto = Em(AreaDaFotoDaReceita);
                 det = Em(AreaDosDetalhesDaReceita);
+            }
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o item da mochila, com os detalhes medidos antes: o que não
+            // cabe embaixo da foto grande (as armas que se desmontam, os curativos, o resumo de várias linhas passavam do fundo
+            // da janela) sobe o começo dos detalhes e a foto encolhe só o que precisa, até o tamanho da da receita; se nem assim
+            // couber, o resumo vai na letra pequena
+            var estiloDoResumo = _texto;
+            if (!daReceita && !vestida && inventario.Achar(_escolhido, out var medido))
+            {
+                float precisa = AlturaDosDetalhes(medido, _texto, det.width) + 4f * u;
+                if (precisa > det.height)
+                {
+                    float alto = Mathf.Min(precisa, AreaDosDetalhesDaReceita.height * u);
+                    det = new Rect(det.x, det.yMax - alto, det.width, alto);
+                    foto.height = det.y - (AreaDosDetalhes.y - AreaDaFoto.yMax) * u - foto.y;
+                    if (precisa > alto) estiloDoResumo = _pequeno;
+                }
             }
             Ret(nome, Painel);
             Ret(foto, Painel);
@@ -1494,13 +1653,11 @@ namespace ZombieCityCleaner.Player
             if (Mundo.CatalogoDoSaque.RaridadeDo((int)item, out var raridade))
             {
                 var cor = Mundo.CatalogoDoSaque.Cores[(int)raridade];
-                PorCor(_nome, cor);
                 PorCor(_raridade, cor);
-                GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 100 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+                NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 100 * u, nome.height), Maiuscula(Itens.Nome(item)), cor);
                 GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Mundo.CatalogoDoSaque.NomesDasRaridades[(int)raridade].ToUpperInvariant(), _raridade);
-                PorCor(_nome, CorDoTexto);
             }
-            else GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+            else NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), CorDoTexto);
             var imagem = inventario.FotoDe(it);
             if (imagem == null) imagem = inventario.IconeDe(it);
             // a arma de sucata com as melhorias (10/11/2026): a foto com as peças postas por cima
@@ -1513,24 +1670,50 @@ namespace ZombieCityCleaner.Player
             }
             else if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
 
-            float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;
-            GUI.Label(new Rect(x, y, w, 20 * u), Itens.Resumo(item), _texto);
-            y += 30 * u;
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o resumo com a altura medida: a caixa de uma linha cortava a 2ª
+            // ao meio (o de quase todo item passa de uma linha). As linhas descem junto
+            float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u;
+            _conteudoDoResumo.text = Itens.Resumo(item);
+            float altoDoResumo = Mathf.Max(20 * u, estiloDoResumo.CalcHeight(_conteudoDoResumo, w));
+            GUI.Label(new Rect(x, y, w, altoDoResumo), _conteudoDoResumo, estiloDoResumo);
+            LinhasDoItem(it, x, y + altoDoResumo + 10 * u, w, det.yMax, false);
+        }
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados) a altura que os detalhes do item pedem na coluna de largura dada (a
+        // margem de cima, o resumo na letra dada e as linhas), para a coluna escolher a foto antes de desenhar
+        float AlturaDosDetalhes(ItemNaMochila it, GUIStyle estiloDoResumo, float largura)
+        {
+            float u = _u, w = largura - 24 * u;
+            _conteudoDoResumo.text = Itens.Resumo(it.item);
+            float y = 10 * u + Mathf.Max(20 * u, estiloDoResumo.CalcHeight(_conteudoDoResumo, w)) + 10 * u;
+            return LinhasDoItem(it, 0f, y, w, float.MaxValue, true);
+        }
+
+        /// <summary>
+        /// As linhas dos detalhes do item (o rótulo à esquerda e o valor à direita, ou, comprido, embaixo dele), a partir de
+        /// <paramref name="y"/>; devolve onde elas acabam. Medindo, só a altura, sem desenhar; a linha que passaria de
+        /// <paramref name="fim"/> não é desenhada (26/11/2026: não fica mais em cima da borda da janela).
+        /// </summary>
+        float LinhasDoItem(ItemNaMochila it, float x, float y, float w, float fim, bool medir)
+        {
+            float u = _u, linha = 22 * u;
+            var item = it.item;
             void Linha(string rotulo, string valor)
             {
-                GUI.Label(new Rect(x, y, w, linha), rotulo, _texto);
-                var negrito = new GUIStyle(_texto) { alignment = TextAnchor.UpperRight, fontStyle = FontStyle.Bold, wordWrap = false };
-                float cabe = w - _texto.CalcSize(new GUIContent(rotulo)).x - 12 * u;
-                if (negrito.CalcSize(new GUIContent(valor)).x > cabe)
+                _conteudoDaLinha.text = rotulo;
+                float cabe = w - _texto.CalcSize(_conteudoDaLinha).x - 12 * u;
+                bool desenhar = !medir && y + linha <= fim;
+                if (desenhar) GUI.Label(new Rect(x, y, w, linha), _conteudoDaLinha, _texto);
+                _conteudoDaLinha.text = valor;
+                if (_valorDaLinha.CalcSize(_conteudoDaLinha).x > cabe)
                 {
                     // o valor comprido vai embaixo do rótulo, quebrando as linhas
-                    var embaixo = new GUIStyle(negrito) { alignment = TextAnchor.UpperLeft, wordWrap = true };
-                    float altura = embaixo.CalcHeight(new GUIContent(valor), w);
-                    GUI.Label(new Rect(x, y + linha - 2 * u, w, altura), valor, embaixo);
+                    float altura = _valorEmbaixo.CalcHeight(_conteudoDaLinha, w);
+                    if (!medir && y + linha - 2 * u + altura <= fim) GUI.Label(new Rect(x, y + linha - 2 * u, w, altura), _conteudoDaLinha, _valorEmbaixo);
                     y += altura;
                 }
-                else GUI.Label(new Rect(x, y, w, linha), valor, negrito);
-                Ret(new Rect(x, y + linha - 3 * u, w, 1), new Color(1f, 1f, 1f, 0.07f));
+                else if (desenhar) GUI.Label(new Rect(x, y, w, linha), _conteudoDaLinha, _valorDaLinha);
+                if (!medir && y + linha <= fim) Ret(new Rect(x, y + linha - 3 * u, w, 1), new Color(1f, 1f, 1f, 0.07f));
                 y += linha;
             }
             var t = Itens.Tamanho(item);
@@ -1549,7 +1732,10 @@ namespace ZombieCityCleaner.Player
             {
                 // uma melhoria das armas de sucata (10/11/2026): onde vai, o que faz e, no silenciador, quantos tiros ainda dá
                 var p = Melhorias.PecaDo(item);
-                Linha("Vai n" + (p == PecaDaMelhoria.Luneta ? "o rifle de sucata" : p == PecaDaMelhoria.CarregadorLongo ? "a pistola e na submetralhadora de sucata" : "as armas de sucata"), "");
+                // (26/11/2026, a pedido do Pedro: os textos cortados) o rótulo curto e o lugar no valor (que vai embaixo, medido,
+                // quando é comprido): o "Vai na pistola e na submetralhadora de sucata" inteiro no rótulo, numa caixa de uma
+                // linha, quebrava e o "sucata" saía cortado
+                Linha("Serve para", p == PecaDaMelhoria.Luneta ? "o rifle de sucata" : p == PecaDaMelhoria.CarregadorLongo ? "a pistola e a submetralhadora de sucata" : "as armas de sucata");
                 Linha("Faz", Melhorias.Efeito(p));
                 if (Melhorias.Duracao(p) > 0)
                     Linha("Ainda dá", $"{Melhorias.Duracao(p) - Melhorias.TirosDoDesgaste(p, it.desgaste)} tiros");
@@ -1570,7 +1756,7 @@ namespace ZombieCityCleaner.Player
                 var cal = Itens.CalibreDa(item);
                 Linha("Balas", $"{it.qtd} de {Itens.MaxPorCaixa}");
                 Linha("Calibre", Itens.NomeDoCalibre(cal));
-                Linha("Serve em", Itens.ArmasDoCalibre(cal));
+                Linha("Serve para", Itens.ArmasDoCalibre(cal));   // (26/11/2026: "serve em a pistola" lia errado)
                 Linha("Total na mochila", inventario.BalasDe(cal).ToString());
             }
             else if (Itens.EhPeca(item))
@@ -1638,13 +1824,27 @@ namespace ZombieCityCleaner.Player
             var desmonta = Receitas.DesmontagemDe(item);
             if (desmonta != null) Linha(Maiuscula(desmonta.verbo), Receitas.Lista(ViraComBonus(desmonta)));
             if (!Itens.EhLoot(item)) Linha("Tamanho", $"{t.x} × {t.y}");
+            return y;
+        }
+
+        /// <summary>
+        /// O nome no alto da coluna da direita (26/11/2026, a pedido do Pedro: os textos cortados): o que quebra em duas linhas
+        /// vai na letra menor (duas linhas da 19 não cabem nos 40 da faixa, e o alto e o pé das letras saíam cortados).
+        /// </summary>
+        void NomeNaFaixa(Rect caixa, string texto, Color cor)
+        {
+            _conteudoDoNome.text = texto;
+            var est = _nome.CalcHeight(_conteudoDoNome, caixa.width) <= caixa.height ? _nome : _nomeMenor;
+            PorCor(est, cor);
+            GUI.Label(caixa, _conteudoDoNome, est);
+            PorCor(est, CorDoTexto);
         }
 
         // a mochila ou o coldre vestido: o nome, a foto, o espaço que dá e quantas armas leva
         void DetalhesDoEquipamento(Item item, Rect nome, Rect foto, Rect det)
         {
             float u = _u;
-            GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+            NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), CorDoTexto);
             var imagem = inventario.FotoDe(item);
             if (imagem == null) imagem = inventario.IconeDe(item);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
@@ -1823,6 +2023,18 @@ namespace ZombieCityCleaner.Player
             _fechar = Estilo(18, FontStyle.Bold, TextAnchor.MiddleCenter, CorDoTexto);
             _raridade = Estilo(12, FontStyle.Bold, TextAnchor.MiddleRight, CorDoTexto);
             _raridade.wordWrap = false;
+            // (26/11/2026, a pedido do Pedro: os textos cortados) duas linhas da 16 cabem na faixa do nome (40); as da 19, não
+            _nomeMenor = Estilo(16, FontStyle.Bold, TextAnchor.MiddleLeft, CorDoTexto);
+            _valorDaLinha = Estilo(14, FontStyle.Bold, TextAnchor.UpperRight, CorDoTexto);
+            _valorDaLinha.wordWrap = false;
+            _valorEmbaixo = Estilo(14, FontStyle.Bold, TextAnchor.UpperLeft, CorDoTexto);
+            GUIStyle EstiloDoCalibre(int tamanho)
+            {
+                var s = Estilo(tamanho, FontStyle.Normal, TextAnchor.UpperLeft, TextoApagado);
+                s.wordWrap = false;
+                return s;
+            }
+            _calibres = new[] { EstiloDoCalibre(12), EstiloDoCalibre(10), EstiloDoCalibre(9) };
         }
     }
 }

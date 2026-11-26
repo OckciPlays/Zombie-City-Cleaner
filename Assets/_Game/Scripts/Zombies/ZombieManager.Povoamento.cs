@@ -295,6 +295,12 @@ namespace ZombieCityCleaner.Zombies
             return false;
         }
 
+        /// <summary>
+        /// No anfitrião: os zumbis de uma missão (o Id e a geração: 25/11/2026, a horda da rua da casa da família), que não
+        /// voltam ao pool por estarem longe de todos (antes, quem ficava a mais de 130 m saía da contagem da missão).
+        /// </summary>
+        public readonly HashSet<(int id, byte geracao)> DaMissao = new HashSet<(int, byte)>();
+
         // a cada 2 s: os de longe voltam ao pool, e as células longe de todos podem se povoar de novo
         void Recolher(float agora)
         {
@@ -304,7 +310,7 @@ namespace ZombieCityCleaner.Zombies
             for (int i = _ativos.Count - 1; i >= 0; i--)
             {
                 var z = _ativos[i];
-                if (z.Morto || z.Engajado || z.EhChefe || PertoDeAlguem(z.transform.position, r2)) continue;   // (o chefe vai embora pela regra dele: ZombieManager.Chefes.cs)
+                if (z.Morto || z.Engajado || z.EhChefe || PertoDeAlguem(z.transform.position, r2) || DaMissao.Contains((z.Id, z.Geracao))) continue;   // (o chefe vai embora pela regra dele: ZombieManager.Chefes.cs)
                 Devolver(z);
             }
             float c = celulaDoPovoamento, rc = (distanciaDeRecolher + c) * (distanciaDeRecolher + c);

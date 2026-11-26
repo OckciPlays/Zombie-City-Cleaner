@@ -120,24 +120,26 @@ namespace ZombieCityCleaner.Loot
 
         // ------------------------------------------------------------------ desmontar e consertar
 
-        /// <summary>O jogador local pode desmontar a barricada de tábuas (do lado dela, com a ferramenta).</summary>
+        /// <summary>
+        /// O jogador local pode desmontar a barricada de tábuas (do lado dela; desde 25/11/2026 sem a ferramenta, que saiu do
+        /// jogo: as tábuas saem na mão).
+        /// </summary>
         public bool PodeDesmontar(Construcao c, ArmaJogador quem) =>
-            c.tipo == Item.TabuasBarricada && quem != null && quem.Inventario != null && DoLadoDela(c, quem.transform.position)
-            && quem.Inventario.Quantos(Item.Ferramenta) > 0;
+            c.tipo == Item.TabuasBarricada && quem != null && quem.Inventario != null && DoLadoDela(c, quem.transform.position);
 
-        /// <summary>O jogador local pode consertar a barricada de tábuas (o nível 2, do lado dela, gasta, com os materiais e a ferramenta).</summary>
+        /// <summary>O jogador local pode consertar a barricada de tábuas (o nível 2, do lado dela, gasta, com os materiais).</summary>
         public bool PodeConsertar(Construcao c, ArmaJogador quem)
         {
             if (c.tipo != Item.TabuasBarricada || quem == null || quem.Inventario == null || !DoLadoDela(c, quem.transform.position)) return false;
             var inv = quem.Inventario;
-            return A.BarricadaDe(quem.GetComponent<JogadorRede>()) >= 2 && c.valor < MaximoDe(c) - 0.5f && inv.Quantos(Item.Ferramenta) > 0
+            return A.BarricadaDe(quem.GetComponent<JogadorRede>()) >= 2 && c.valor < MaximoDe(c) - 0.5f
                    && inv.Quantos(Item.Madeira) >= A.MadeiraDoConserto && inv.Quantos(Item.Pregos) >= A.PregosDoConserto;
         }
 
         public void PedirDesmontar(ushort id) => DesmontarRpc(id);
         public void PedirConsertar(ushort id) => ConsertarRpc(id);
 
-        // o anfitrião confere quem pede: perto (4 m), do lado dela, com a ferramenta
+        // o anfitrião confere quem pede: perto (4 m), do lado dela
         bool PodeMexer(ulong cliente, ushort id, out int k, out Construcao c, out InventarioJogador inventario)
         {
             inventario = InventarioDe(NetworkManager, cliente);
@@ -148,7 +150,7 @@ namespace ZombieCityCleaner.Loot
             if (c.tipo != Item.TabuasBarricada) return false;
             var pes = inventario.transform.position;
             if ((MeioDaBarricada(c.pos, Janela(c), c.altura) - (pes + Vector3.up)).sqrMagnitude > 4f * 4f) return false;
-            return DoLadoDela(c, pes) && inventario.Quantos(Item.Ferramenta) > 0;
+            return DoLadoDela(c, pes);
         }
 
         [Rpc(SendTo.Server)]
@@ -235,7 +237,7 @@ namespace ZombieCityCleaner.Loot
             for (int k = _lista.Count - 1; k >= 0; k--)
             {
                 var c = _lista[k];
-                // (e o muro e o portão fechado da base, 24/11/2026)
+                // (e o muro e o portão fechado da base, 24/11/2026; e a mesa de oficina montada, 25/11/2026, a revisão: o ZumbisBatem)
                 if (c.tipo != Item.Barricada && c.tipo != Item.TabuasBarricada && !ZumbisBatem(c)) continue;
                 int zumbis = ZumbisNa(c);
                 if (zumbis == 0) continue;
@@ -252,7 +254,7 @@ namespace ZombieCityCleaner.Loot
                     continue;
                 }
                 _lista.RemoveAt(k);
-                // sobram umas tábuas no chão (do muro e do portão, uma tora)
+                // sobram umas tábuas no chão (do muro e do portão, uma tora; da mesa, as 2 madeiras, como a barricada)
                 if (c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras) ItensNoMundo.Instancia?.Criar(Item.Toras, c.pos, c.giro, 1);
                 else ItensNoMundo.Instancia?.Criar(Item.Madeira, c.pos, c.giro, 2);
             }
@@ -380,9 +382,7 @@ namespace ZombieCityCleaner.Loot
             if (!DoLadoDela(c, quem.transform.position)) return s + "   ·   pregada do outro lado";
             // (curta, numa linha só: a barra do segurar fica logo embaixo; 11/11/2026, a foto do conserto mostrou a dica em duas)
             if (PodeConsertar(c, quem)) return s + $"   ·   [segure o clique] Consertar +{A.Conserto * 100f:0}%   ·   [segure E] Desmontar";
-            s += quem.Inventario.Quantos(Item.Ferramenta) > 0
-                ? "   ·   [segure E] Desmontar" + (pct >= A.TabuasVoltamCom ? "" : " (sobram 2 madeiras)")
-                : "   ·   a ferramenta desmonta";
+            s += "   ·   [segure E] Desmontar" + (pct >= A.TabuasVoltamCom ? "" : " (sobram 2 madeiras)");
             if (c.valor < max - 0.5f && A.BarricadaDe(quem.GetComponent<JogadorRede>()) >= 2)
                 s += $"   ·   conserto: {A.MadeiraDoConserto} madeira, {A.PregosDoConserto} pregos";
             return s;

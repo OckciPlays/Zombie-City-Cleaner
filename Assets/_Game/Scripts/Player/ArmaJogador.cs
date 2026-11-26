@@ -187,6 +187,13 @@ namespace ZombieCityCleaner.Player
         static Texture2D _texturaDaLuneta;
         Interagivel _alvo;
         string _dica;
+        // a altura da dica na tela, medida só quando ela (ou a tela) muda (26/11/2026, a pedido do Pedro: os textos cortados
+        // pela metade; as dicas montadas com $"..." a cada quadro só são medidas de novo quando o texto muda de verdade)
+        string _dicaMedida;
+        float _larguraDaDica, _alturaDaDica;
+        int _telaDaDica;
+        readonly GUIContent _conteudoDaDica = new GUIContent();
+        readonly GUIContent _conteudoDoPneu = new GUIContent();
         /// <summary>
         /// No dono, a cada tiro (06/11/2026, a mente: o zumbi falso na linha vira fantasma, o Player/Alucinacoes): de onde e
         /// para onde a câmera apontava.
@@ -194,6 +201,9 @@ namespace ZombieCityCleaner.Player
         public static event System.Action<Vector3, Vector3> AtirouLocal;
         /// <summary>O E tem um alvo agora (a porta, o item, a janela): o curativo no amigo cede a vez (TratarOAmigo).</summary>
         public bool TemAlvoDoE => _alvo != null;
+        /// <summary>O que o E usa agora e a dica dele embaixo da mira (26/11/2026: para os testes no Play conferirem a mira).</summary>
+        public Interagivel AlvoDoE => _alvo;
+        public string DicaAgora => _dica;
         // o pente de cada arma da mochila, pelo Id dela (a que nunca esteve na mão: o que o anfitrião guardou)
         readonly System.Collections.Generic.Dictionary<ushort, int> _pentes = new System.Collections.Generic.Dictionary<ushort, int>();
         ushort _id, _ultimaArma;
@@ -811,6 +821,20 @@ namespace ZombieCityCleaner.Player
         // o golpe: na cabeça (todas as armas, o soco também), o dano vale 3 vezes no zumbi, e o golpe que mata só explode a
         // cabeça se tiver corte (o soco, o bastão e a tocha, 0, derrubam com ela no lugar); num braço ou numa perna, só as
         // que acertam o membro (porRegiao: o machado e a lança) o levam, com o corte; o resto conta como o tronco
+        /// <summary>
+        /// O dano do golpe pesado na estátua (25/11/2026, a etapa 7): um terço da vida do Oco (100) depois do que a pedra tira
+        /// (<see cref="AjustesDeZumbi.danoNaPedra"/>, 25% do acerto passa): 3 golpes quebram a casca inteira.
+        /// </summary>
+        public static float DanoQueQuebraAEstatua
+        {
+            get
+            {
+                var zm = ZombieManager.Instancia;
+                float passa = zm != null ? zm.ajustes.danoNaPedra : 0.25f;
+                return (100f / 3f + 0.5f) / Mathf.Max(0.05f, passa);
+            }
+        }
+
         void Golpear(float alcance, float raio, float dano, bool faca, bool porRegiao, float corte)
         {
             var cam = rede.Olho;
@@ -834,7 +858,7 @@ namespace ZombieCityCleaner.Player
                 if (parte != null && parte.sobrevivente != null)
                 {
                     Efeitos.Som(faca ? Efeitos.GolpeDaArma(NaMao) : Efeitos.SocoCarne, ponto, faca ? 0.9f : 0.8f, false);
-                    Sangue.Respingo(ponto, -cam.forward);
+                    if (!parte.sobrevivente.Imortal) Sangue.Respingo(ponto, -cam.forward);   // (25/11/2026: o Capitão não sangra)
                     _marcaAte = Time.time + 0.18f;
                     _marcaNaCabeca = parte.regiao == Sobreviventes.RegiaoDoSobrevivente.Cabeca;
                     rede.AcertarSobrevivente(parte.sobrevivente, parte.regiao, dano, ponto, false);
@@ -861,12 +885,24 @@ namespace ZombieCityCleaner.Player
                     _marcaAte = Time.time + 0.18f;
                     // Pelas costas (06/11/2026, o Assassino): a arma branca nas costas de um Oco que não caça você mata
                     if (faca && !pedra && PelasCostas(hitbox.zumbi)) dano = 1000f;
-                    bool naCabeca = hitbox.regiao == RegiaoDoCorpo.Cabeca;
+                    // (25/11/2026, a etapa 7, a pedido: "o machado e as armas brancas pesadas quebram a casca em uns 3 golpes") na
+                    // estátua, o machado e o bastão com pregos batem como marreta: 3 golpes quebram a casca, onde pegar
+                    // (25/11/2026, a revisão: só na estátua de verdade, a do sol, já parada. O DePedra também vale no casco do
+                    // Brutamonte e no Blindado agachado, e ali o golpe de marreta tirava uns 40 por machadada em vez de 7,5: o
+                    // olho perdia o sentido. E o golpe respeita o vigor: sem fôlego, ele sai fraco também na pedra)
+                    var z = hitbox.zumbi;
+                    bool quebra = pedra && Itens.QuebraPedra(NaMao) && z.Petrificado && z.tipo != TipoDeZumbi.Brutamonte && z.tipo != TipoDeZumbi.Chefe;
+                    if (quebra)
+                    {
+                        var branca = Itens.Branca(NaMao);
+                        dano = DanoQueQuebraAEstatua * (branca != null && branca.dano > 0f ? Mathf.Min(1f, dano / branca.dano) : 1f);
+                    }
+                    bool naCabeca = !quebra && hitbox.regiao == RegiaoDoCorpo.Cabeca;
                     _marcaNaCabeca = naCabeca;
                     if (naCabeca) rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Cabeca, Membro.Nenhum, dano, ponto, false, corte);
                     // o olho do Brutamonte e o papo do Long (os especiais) contam como eles mesmos
-                    else if (hitbox.regiao == RegiaoDoCorpo.Olho || hitbox.regiao == RegiaoDoCorpo.Papo) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, Membro.Nenhum, dano, ponto, false, corte);
-                    else if (porRegiao) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, hitbox.membro, dano, ponto, false, corte);
+                    else if (!quebra && (hitbox.regiao == RegiaoDoCorpo.Olho || hitbox.regiao == RegiaoDoCorpo.Papo)) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, Membro.Nenhum, dano, ponto, false, corte);
+                    else if (porRegiao && !quebra) rede.AcertarZumbi(hitbox.zumbi, hitbox.regiao, hitbox.membro, dano, ponto, false, corte);
                     else rede.AcertarZumbi(hitbox.zumbi, RegiaoDoCorpo.Tronco, Membro.Nenhum, dano, ponto, false);
                     rede.AnunciarPancada(ponto, !pedra);
                     if (faca) Inventario.Desgastar(_id, Itens.DesgastePorUso(NaMao));   // a arma branca gasta a cada golpe que pega
@@ -1297,11 +1333,13 @@ namespace ZombieCityCleaner.Player
                 if (hit.collider.gameObject.layer == Sobreviventes.Sobrevivente.Camada && (parte == null || parte.sobrevivente == null || parte.sobrevivente.Morto)) continue;   // os corpos no chão
                 if (parte != null && parte.sobrevivente != null)
                 {
-                    Sangue.Respingo(hit.point, hit.normal);
+                    // (25/11/2026) o Capitão não sangra: o tiro para nele como num colete (ele reclama, sem perder vida)
+                    bool imortal = parte.sobrevivente.Imortal;
+                    if (!imortal) Sangue.Respingo(hit.point, hit.normal);
                     _gente.Add(new NaGente { parte = parte, ponto = hit.point, distancia = hit.distance });
                     _marcaAte = Time.time + 0.18f;
                     _marcaNaCabeca |= parte.regiao == Sobreviventes.RegiaoDoSobrevivente.Cabeca;
-                    impacto = new JogadorRede.Impacto { tipo = JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
+                    impacto = new JogadorRede.Impacto { tipo = imortal ? JogadorRede.TipoDeAcerto.Outro : JogadorRede.TipoDeAcerto.Carne, ponto = hit.point, normal = hit.normal };
                     parou = true;
                     break;
                 }
@@ -1530,6 +1568,7 @@ namespace ZombieCityCleaner.Player
             _segurarDesde = Time.time;
             _segurarTempo = t;
             _segurarPeloClique = false;
+            _segurarComToque = _alvo.ToqueUsa(this);
         }
 
         /// <summary>
@@ -1543,6 +1582,7 @@ namespace ZombieCityCleaner.Player
             _segurarDesde = Time.time;
             _segurarTempo = tempo;
             _segurarPeloClique = true;
+            _segurarComToque = false;
         }
 
         Interagivel _segurando;
@@ -1551,8 +1591,14 @@ namespace ZombieCityCleaner.Player
         // um toque no E (soltar antes disto, em s) usa a coisa que deixa (Interagivel.ToqueUsa)
         const float ToqueCurto = 0.3f;
 
-        /// <summary>A coisa em que o jogador está segurando o E (ou o clique) agora (null: nenhuma).</summary>
-        public Interagivel SegurandoAgora => _segurando;
+        // (26/11/2026, a pedido do Pedro: "toda vez ela aparece um breve momento a barrinha como se fosse tirar") no que
+        // também usa o toque curto (a mesa de oficina, a fogueira, o núcleo, o portão, a porta com as tábuas), o segurar só
+        // aparece (a barra, o texto e o som) depois do tempo do toque: antes disso, ainda pode ser só um toque
+        bool _segurarComToque;
+        bool AindaPodeSerToque => _segurando != null && _segurarComToque && !_segurarPeloClique && Time.time - _segurarDesde < ToqueCurto;
+
+        /// <summary>A coisa em que o jogador está segurando o E (ou o clique) agora (null: nenhuma, ou ainda pode ser um toque).</summary>
+        public Interagivel SegurandoAgora => AindaPodeSerToque ? null : _segurando;
         /// <summary>O que se segura agora é o clique (o conserto da barricada de tábuas), não o E.</summary>
         public bool SegurandoPeloClique => _segurando != null && _segurarPeloClique;
 
@@ -1613,11 +1659,16 @@ namespace ZombieCityCleaner.Player
             {
                 var pesado = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.LowerRight);
                 pesado.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
-                GUI.Label(new Rect(Screen.width - 420 * u, Screen.height - 50 * u, 400 * u, 30 * u),
-                    Inventario.PneuDasMaosFurado
-                        ? $"PNEU FURADO NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  R: REMENDAR  ·  G: LARGAR"
-                        : Inventario.EstadoDoPneuNasMaos == 0 ? "PNEU RASGADO NAS MÃOS (SEM REMENDO)  ·  G: LARGAR"
-                        : $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR", pesado);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o do pneu furado (484u) e o do rasgado (446u)
+                // não cabiam nos 400u (à esquerda fica a barra de atalhos): quebravam numa caixa de uma linha só, e a de cima
+                // saía cortada no alto. Agora em duas linhas de propósito, o que fazer embaixo, com a altura delas, subindo a
+                // partir do fundo de antes (altura − 20u; em cima, nada até os símbolos dos estados, em altura − 132u)
+                _conteudoDoPneu.text = Inventario.PneuDasMaosFurado
+                    ? $"PNEU FURADO NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)\nR: REMENDAR  ·  G: LARGAR"
+                    : Inventario.EstadoDoPneuNasMaos == 0 ? "PNEU RASGADO NAS MÃOS (SEM REMENDO)\nG: LARGAR"
+                    : $"PNEU NAS MÃOS ({Inventario.EstadoDoPneuNasMaos}%)  ·  PESADO  ·  G: LARGAR";
+                float altoDoPneu = Mathf.Max(30f * u, pesado.CalcHeight(_conteudoDoPneu, 400f * u));
+                GUI.Label(new Rect(Screen.width - 420 * u, Screen.height - 20 * u - altoDoPneu, 400 * u, altoDoPneu), _conteudoDoPneu, pesado);
             }
             else if (ComArma)
             {
@@ -1635,7 +1686,10 @@ namespace ZombieCityCleaner.Player
                 {
                     var aviso = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.LowerRight, true);
                     aviso.normal.textColor = new Color(1f, 0.5f, 0.42f);
-                    GUI.Label(new Rect(Screen.width - 360 * u, Screen.height - 122 * u, 340 * u, 24 * u),
+                    // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 420u: o "ARMA QUEBRADA: USE UM KIT DE
+                    // REPARO" (328u) ficava a 2% do fim dos 340u, e qualquer diferença no desenho da letra o quebrava numa
+                    // segunda linha cortada (à esquerda, nessa altura, não há nada)
+                    GUI.Label(new Rect(Screen.width - 440 * u, Screen.height - 122 * u, 420 * u, 24 * u),
                         desgaste >= 100 ? "ARMA QUEBRADA: USE UM KIT DE REPARO" : "EMPERROU", aviso);
                 }
                 if (Time.time < _semMunicaoAte)
@@ -1651,24 +1705,48 @@ namespace ZombieCityCleaner.Player
                 // com uma sombra embaixo, para ler na frente de coisa clara (a porta na luz da lanterna)
                 // (a do saque tem o nome do item na cor da raridade: a sombra vai sem a cor)
                 var dica = EstilosDoHud.Rotulo(Mathf.RoundToInt(17 * u), FontStyle.Normal, TextAnchor.UpperCenter, true);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a dica mais larga (até 900u) e com a altura
+                // dela: a que não cabia nos 600u (a mesa de oficina com as sobras, o núcleo da base, a barricada de tábuas, a
+                // cama, o alarme, a porta trancada, a fogueira portátil) quebrava numa segunda linha que a caixa de 30u cortava
+                // ao meio. Agora a que ainda não cabe sai em duas linhas inteiras, crescendo para cima: o fundo fica nos mesmos
+                // cy + 70u de antes, e a barra e o texto do segurar (e os do Tratamento e o XP, que ficam ali) não mudam
+                float largura = Mathf.Min(900f * u, Screen.width - 32f * u);
+                if (_dica != _dicaMedida || largura != _larguraDaDica || Screen.height != _telaDaDica)
+                {
+                    _dicaMedida = _dica;
+                    _larguraDaDica = largura;
+                    _telaDaDica = Screen.height;
+                    _conteudoDaDica.text = _dica;
+                    _alturaDaDica = Mathf.Max(30f * u, dica.CalcHeight(_conteudoDaDica, largura));
+                }
+                // (sem subir até a mira, que vai até cy + 13u: com três linhas, numa janela estreita, ela desce)
+                var caixa = new Rect(cx - largura / 2f, Mathf.Max(cy + 16f * u, cy + 70f * u - _alturaDaDica), largura, _alturaDaDica);
                 dica.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
                 float s = Mathf.Max(1f, Mathf.Round(1.5f * u));
-                GUI.Label(new Rect(cx - 300 * u + s, cy + 40 * u + s, 600 * u, 30 * u), SemCor(_dica), dica);
+                GUI.Label(new Rect(caixa.x + s, caixa.y + s, caixa.width, caixa.height), SemCor(_dica), dica);
                 dica.normal.textColor = new Color(0.95f, 0.93f, 0.85f);
-                GUI.Label(new Rect(cx - 300 * u, cy + 40 * u, 600 * u, 30 * u), _dica, dica);
+                GUI.Label(caixa, _dica, dica);
                 // segurando o E: a barra do tempo (e o que está fazendo)
-                if (_segurando != null && _segurarTempo > 0f)
+                if (_segurando != null && _segurarTempo > 0f && !AindaPodeSerToque)
                 {
-                    float k = Mathf.Clamp01((Time.time - _segurarDesde) / _segurarTempo), w = 220 * u, h = Mathf.Max(3f, Mathf.Round(6 * u));
-                    var barra = new Rect(cx - w / 2, cy + 74 * u, w, h);
+                    // (26/11/2026) depois do tempo do toque, a barra começa vazia e enche no que falta
+                    float atraso = _segurarComToque && !_segurarPeloClique ? ToqueCurto : 0f;
+                    float k = Mathf.Clamp01((Time.time - _segurarDesde - atraso) / Mathf.Max(0.05f, _segurarTempo - atraso));
+                    float w = 220 * u, h = Mathf.Max(3f, Mathf.Round(6 * u));
+                    // (logo embaixo da dica: nos cy + 74u de sempre, só mais embaixo se ela tiver descido)
+                    var barra = new Rect(cx - w / 2, Mathf.Max(cy + 74 * u, caixa.yMax + 4 * u), w, h);
                     Retangulo(barra.x - 1, barra.y - 1, barra.width + 2, barra.height + 2, new Color(0f, 0f, 0f, 0.6f));
                     Retangulo(barra.x, barra.y, barra.width * k, barra.height, new Color(0.95f, 0.85f, 0.45f, 0.95f));
                     string texto = _segurando.Segurando(this);
                     if (texto != null)
                     {
                         var pequeno = EstilosDoHud.Rotulo(Mathf.RoundToInt(14 * u), FontStyle.Normal, TextAnchor.UpperCenter);
+                        // (26/11/2026, o teste da mesa: "Desmontando a mesa" sumia no tampo claro) com a sombra, como a dica
+                        float sombra = Mathf.Max(1f, Mathf.Round(1.5f * u));
+                        pequeno.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
+                        GUI.Label(new Rect(cx - 300 * u + sombra, barra.y + 10 * u + sombra, 600 * u, 24 * u), texto, pequeno);
                         pequeno.normal.textColor = new Color(0.9f, 0.88f, 0.8f);
-                        GUI.Label(new Rect(cx - 300 * u, cy + 84 * u, 600 * u, 24 * u), texto, pequeno);
+                        GUI.Label(new Rect(cx - 300 * u, barra.y + 10 * u, 600 * u, 24 * u), texto, pequeno);
                     }
                 }
             }

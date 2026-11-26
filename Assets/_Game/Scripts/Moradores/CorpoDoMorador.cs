@@ -105,6 +105,8 @@ namespace ZombieCityCleaner.Moradores
         /// <summary>As tragadas e as tacadas (contadores: cada uma que sobe toca o clipe dela em todas as máquinas).</summary>
         public readonly NetworkVariable<byte> Tragadas = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<byte> Tacadas = new(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        /// <summary>O que a conversa mostra dele (25/11/2026, a etapa 8: <see cref="ConversaDoMorador"/>; o anfitrião escreve).</summary>
+        public readonly NetworkVariable<FalaDoMorador> Fala = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         static readonly int SpeedId = Animator.StringToHash("Speed");
         static readonly int MancandoId = Animator.StringToHash("Mancando");
@@ -132,13 +134,19 @@ namespace ZombieCityCleaner.Moradores
         // a ficha e a ação do começo (o anfitrião põe antes do Spawn; as variáveis da rede só valem a partir dele)
         QuemEOMorador _quemInicial;
         byte _acaoInicial;
+        FalaDoMorador _falaInicial;
         bool _comInicial;
 
-        /// <summary>No anfitrião, antes do Spawn: quem é e a ação do começo (vão junto com o corpo para as outras máquinas).</summary>
-        public void Preparar(QuemEOMorador quem, byte acao)
+        /// <summary>
+        /// No anfitrião, antes do Spawn: quem é, a ação do começo e a fala da conversa (vão junto com o corpo para as outras
+        /// máquinas). (25/11/2026, a revisão: a fala também; antes, ela só chegava na rodada seguinte, até 3 s depois, e a
+        /// conversa aberta nesse meio mostrava a fala vazia.)
+        /// </summary>
+        public void Preparar(QuemEOMorador quem, byte acao, FalaDoMorador fala = default)
         {
             _quemInicial = quem;
             _acaoInicial = acao;
+            _falaInicial = fala;
             _comInicial = true;
         }
 
@@ -148,6 +156,7 @@ namespace ZombieCityCleaner.Moradores
             {
                 Quem.Value = _quemInicial;
                 Acao.Value = _acaoInicial;
+                if (_falaInicial.Pronta) Fala.Value = _falaInicial;
                 _comInicial = false;
             }
             Todos.Add(this);
@@ -173,6 +182,26 @@ namespace ZombieCityCleaner.Moradores
             if (corpo != null) foreach (var t in corpo.GetComponentsInChildren<Transform>(true)) if (t.name.StartsWith("P_")) t.gameObject.SetActive(false);
             Vestir();
             Mostrar(Acao.Value, true);
+            // a conversa (25/11/2026, a etapa 8): o E nele abre a tela, em todas as máquinas
+            if (GetComponent<ConversaDoMorador>() == null)
+            {
+                var conversa = gameObject.AddComponent<ConversaDoMorador>();
+                conversa.corpo = this;
+                DiaZero.ConversaComNpc.Por(gameObject, conversa);
+            }
+        }
+
+        /// <summary>Quem conversa (a tela abriu ou fechou): o anfitrião o segura parado (MoradoresDoBunker.Conversa.cs).</summary>
+        public void PedirConversa(bool comecou)
+        {
+            if (IsSpawned) ConversaRpc(comecou);
+        }
+
+        [Rpc(SendTo.Server)]
+        void ConversaRpc(bool comecou, RpcParams parametros = default)
+        {
+            if (!NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var cliente) || cliente.PlayerObject == null) return;
+            MoradoresDoBunker.Instancia?.ConversaComMorador(this, cliente.PlayerObject.GetComponent<JogadorRede>(), comecou);
         }
 
         public override void OnNetworkDespawn()

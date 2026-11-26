@@ -94,7 +94,9 @@ namespace ZombieCityCleaner.UI
             if (!VidaJogador.CorpoAnda) texto += "\nO corpo não anda agora (o Dia 0, ou o mundo carregando): os golpes só tiram da vida geral, e a queda não machuca";
             _conteudoDoCorpo.text = texto;
             float alturaDoTexto = _texto.CalcHeight(_conteudoDoCorpo, w);
-            const int linhas = 15;
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade: 17, com os efeitos da mente em duas fileiras e o
+            // sono, o vício, a roupa, o vigor e a cerca em três; eram 15)
+            const int linhas = 17;
             const float rotuloDaInfeccao = 20f;   // a linha do rótulo "Infecção" (menor que um botão)
             float altura = 8 * u + 28 * u + alturaDoTexto + 8 * u + linhas * passo * u + rotuloDaInfeccao * u + 6 * u;
             var area = new Rect(x0, aoLado.y, largura, altura);
@@ -117,7 +119,7 @@ namespace ZombieCityCleaner.UI
             for (int p = 0; p < PartesDoTeste.Length; p++)
             {
                 bool escolhida = (int)_parteDoTeste == p;
-                if (GUI.Toggle(new Rect(x + p * (sexto + 4 * u), y, sexto, alto * u), escolhida, PartesDoTeste[p], _botao) && !escolhida)
+                if (GUI.Toggle(new Rect(x + p * (sexto + 4 * u), y, sexto, alto * u), escolhida, PartesDoTeste[p], BotaoQueCabe(PartesDoTeste[p], sexto)) && !escolhida)
                     _parteDoTeste = (ParteDoCorpo)p;
             }
             y += passo * u;
@@ -140,8 +142,11 @@ namespace ZombieCityCleaner.UI
             float rotulo = 52 * u, quarto = (w - rotulo - 3 * 4 * u) / 4f;
             GUI.Label(new Rect(x, y + 3 * u, rotulo, 20 * u), "Queda", _texto);
             for (int k = 0; k < QuedasDeConta.Length; k++)
-                if (GUI.Button(new Rect(x + rotulo + k * (quarto + 4 * u), y, quarto, alto * u), $"{QuedasDeConta[k]} m", _botao))
+            {
+                string metros = $"{QuedasDeConta[k]} m";
+                if (GUI.Button(new Rect(x + rotulo + k * (quarto + 4 * u), y, quarto, alto * u), metros, BotaoQueCabe(metros, quarto)))
                     TesteDoCorpoRpc(CorpoQueda, parte, (byte)QuedasDeConta[k]);
+            }
             y += passo * u;
             // as quedas de verdade: sobe e cai (o QuedaDoJogador mede)
             float rotuloDeVerdade = 112 * u, metade = (w - rotuloDeVerdade - 4 * u) / 2f;
@@ -156,8 +161,10 @@ namespace ZombieCityCleaner.UI
             y += passo * u;
 
             // a etapa 2: o amanhecer (o sorteio de cada ferida aberta, mesmo nova), o spray quase no fim e a infecção na fase
-            if (GUI.Button(new Rect(x, y, meio, alto * u), "Amanhecer agora", _botao)) TesteDoCorpoRpc(CorpoAmanhecer, parte, 0);
-            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Spray com 1 uso", _botao)) TesteDoCorpoRpc(CorpoSpray, parte, 0);
+            // (26/11/2026, a pedido do Pedro: os textos cortados ...) a letra menor no que passa do botão (como nas partes e nas
+            // quedas, em cima)
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Amanhecer agora", BotaoQueCabe("Amanhecer agora", meio))) TesteDoCorpoRpc(CorpoAmanhecer, parte, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Spray com 1 uso", BotaoQueCabe("Spray com 1 uso", meio))) TesteDoCorpoRpc(CorpoSpray, parte, 0);
             y += passo * u;
             GUI.Label(new Rect(x, y, w, rotuloDaInfeccao * u), "Infecção (vinda da parte escolhida)", _texto);
             y += rotuloDaInfeccao * u;
@@ -168,35 +175,51 @@ namespace ZombieCityCleaner.UI
             y += passo * u;
             if (GUI.Button(new Rect(x, y, w, alto * u), "Os curativos (na mochila)", _botao)) TesteDoCorpoRpc(CorpoCurativos, parte, 0);
             y += passo * u;
-            // a mente: o valor (100, 70, 40, 15, 0) e um susto
-            float rotuloDaMente = 44 * u, sextoDaMente = (w - rotuloDaMente - 5 * 4 * u) / 6f;
+            // a mente: o valor (100, 70, 40, 15, 0). (26/11/2026, a pedido do Pedro: os textos cortados pela metade. Com os 6
+            // botões de 27 aqui, "100" e "Susto" não cabiam; e os efeitos, embaixo, eram desenhados uns por cima dos outros, o
+            // "Crise" coberto pelo "Vulto", sem nenhum nome caber nos 27. O susto foi para a fileira dos efeitos)
+            float rotuloDaMente = 44 * u, quintoDaMente = (w - rotuloDaMente - 4 * 4 * u) / 5f;
             GUI.Label(new Rect(x, y + 3 * u, rotuloDaMente, 20 * u), "Mente", _texto);
             for (int k = 0; k < MentesDeTeste.Length; k++)
-                if (GUI.Button(new Rect(x + rotuloDaMente + k * (sextoDaMente + 4 * u), y, sextoDaMente, alto * u), MentesDeTeste[k].ToString(), _botao))
+            {
+                string valorDaMente = MentesDeTeste[k].ToString();
+                if (GUI.Button(new Rect(x + rotuloDaMente + k * (quintoDaMente + 4 * u), y, quintoDaMente, alto * u), valorDaMente, BotaoQueCabe(valorDaMente, quintoDaMente)))
                     TesteDoCorpoRpc(CorpoMente, parte, (byte)MentesDeTeste[k]);
-            if (GUI.Button(new Rect(x + rotuloDaMente + 5 * (sextoDaMente + 4 * u), y, sextoDaMente, alto * u), "Susto", _botao))
+            }
+            y += passo * u;
+            // a etapa 2 da mente: o susto (pedido ao anfitrião, como antes) e cada efeito na hora (só aqui, no dono; o desmaio
+            // pede ao anfitrião), em duas fileiras: o susto, a crise, o vulto e os falsos em quartos; os amigos, a fuga e o
+            // desmaio em terços (26/11/2026, a revisão dos textos cortados: o comentário dizia que o susto era no dono)
+            float quartoDaMente = (w - 3 * 4 * u) / 4f;
+            if (GUI.Button(new Rect(x, y, quartoDaMente, alto * u), "Susto", BotaoQueCabe("Susto", quartoDaMente)))
                 TesteDoCorpoRpc(CorpoSusto, parte, 0);
-            y += passo * u;
-            // a etapa 2 da mente: cada efeito na hora (só aqui, no dono; o desmaio pede ao anfitrião)
             for (int k = 0; k < EfeitosDaMente.Length; k++)
-                if (GUI.Button(new Rect(x + k * (sextoDaMente + 4 * u), y, sextoDaMente + (k == 0 ? rotuloDaMente - 4 * u : 0f), alto * u), EfeitosDaMente[k], _botao))
-                    EfeitoDaMente(k);
-            y += passo * u;
-            // a etapa 3: o cansaço (70: com sono; 95: exausto), dormir aqui (como na cama) e viciar (já em abstinência)
-            float quartoDoSono = (w - 3 * 4 * u) / 4f;
+            {
+                var r = k < 3 ? new Rect(x + (k + 1) * (quartoDaMente + 4 * u), y, quartoDaMente, alto * u)
+                              : new Rect(x + (k - 3) * (terco + 6 * u), y + passo * u, terco, alto * u);
+                if (GUI.Button(r, EfeitosDaMente[k], BotaoQueCabe(EfeitosDaMente[k], r.width))) EfeitoDaMente(k);
+            }
+            y += 2 * passo * u;
+            // a etapa 3: o cansaço (70: com sono; 95: exausto), dormir aqui (como na cama) e viciar (já em abstinência). Em
+            // terços (26/11/2026: "Dormir aqui" e "Cerca fogo" não cabiam no quarto): o sono numa fileira, o vício na de baixo
             for (int k = 0; k < TestesDoSono.Length; k++)
-                if (GUI.Button(new Rect(x + k * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), TestesDoSono[k], _botao))
+            {
+                var r = new Rect(x + (k % 3) * (terco + 6 * u), y + (k / 3) * passo * u, terco, alto * u);
+                if (GUI.Button(r, TestesDoSono[k], BotaoQueCabe(TestesDoSono[k], terco)))
                     TesteDoCorpoRpc(k == 0 ? CorpoCansaco : k == 1 ? CorpoCansaco : k == 2 ? CorpoDormir : CorpoVicio, parte, (byte)(k == 0 ? 90 : 100));
+            }
             y += passo * u;
-            // 12/11/2026: molhar e secar a roupa (no anfitrião), zerar o vigor (no dono) e a cerca de fogo a 4 m (para atirar)
-            if (GUI.Button(new Rect(x, y, quartoDoSono, alto * u), "Molhar", _botao)) TesteDoCorpoRpc(CorpoMolhar, parte, 0);
-            if (GUI.Button(new Rect(x + (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Secar", _botao)) TesteDoCorpoRpc(CorpoSecar, parte, 0);
-            if (GUI.Button(new Rect(x + 2 * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Vigor 0", _botao))
+            // 12/11/2026: molhar e secar a roupa (no anfitrião), ao lado do vício; zerar o vigor (no dono) e a cerca de fogo a 4 m
+            // (para atirar), na fileira de baixo
+            if (GUI.Button(new Rect(x + (terco + 6 * u), y, terco, alto * u), "Molhar", _botao)) TesteDoCorpoRpc(CorpoMolhar, parte, 0);
+            if (GUI.Button(new Rect(x + 2 * (terco + 6 * u), y, terco, alto * u), "Secar", _botao)) TesteDoCorpoRpc(CorpoSecar, parte, 0);
+            y += passo * u;
+            if (GUI.Button(new Rect(x, y, meio, alto * u), "Vigor 0", _botao))
             {
                 if (VigorDoJogador.Local != null) VigorDoJogador.Local.PorDeTeste(0f);
                 else Avisar("Ande um pouco primeiro (o vigor nasce com o movimento).");
             }
-            if (GUI.Button(new Rect(x + 3 * (quartoDoSono + 4 * u), y, quartoDoSono, alto * u), "Cerca fogo", _botao)) TesteDoCorpoRpc(CorpoCerca, parte, 0);
+            if (GUI.Button(new Rect(x2, y, meio, alto * u), "Cerca fogo", _botao)) TesteDoCorpoRpc(CorpoCerca, parte, 0);
             return area;
         }
 

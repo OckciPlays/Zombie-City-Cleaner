@@ -204,7 +204,8 @@ namespace ZombieCityCleaner.Sobreviventes
         {
             if (!IsSpawned || corpo == null || corpo.animador == null) return;
             float medida;
-            if (IsServer && agente != null && agente.enabled) medida = new Vector3(agente.velocity.x, 0f, agente.velocity.z).magnitude;
+            if (NaCacamba) medida = 0f;   // (25/11/2026: na caçamba, ele anda com o carro, parado nela)
+            else if (IsServer && agente != null && agente.enabled) medida = new Vector3(agente.velocity.x, 0f, agente.velocity.z).magnitude;
             else
             {
                 // os outros medem a posição recebida (como o corpo dos outros jogadores)
@@ -243,7 +244,7 @@ namespace ZombieCityCleaner.Sobreviventes
         // no anfitrião: o agente liga quando há NavMesh embaixo (até 2 m)
         void LigarOAgente()
         {
-            if (agente == null || agente.enabled || _morto.Value) return;
+            if (agente == null || agente.enabled || _morto.Value || NaCacamba) return;
             // (o chão primeiro: perto, na altura dos pés; senão, o mais perto, sem subir mais de meio metro, como no tampo
             // de um balcão)
             if (!NavMesh.SamplePosition(transform.position, out var hit, 0.6f, NavMesh.AllAreas)
@@ -328,6 +329,12 @@ namespace ZombieCityCleaner.Sobreviventes
         public void LevarTiro(RegiaoDoSobrevivente regiao, float dano, Vector3 ponto, JogadorRede autor, bool tiro = true)
         {
             if (!IsServer || _morto.Value) return;
+            // (25/11/2026) o Capitão não sangra nem perde vida: reclama
+            if (Imortal)
+            {
+                if (autor != null) Reclamar();
+                return;
+            }
             SangueRpc(ponto, autor != null ? (autor.transform.position + Vector3.up * 1.5f - ponto).normalized : Vector3.up,
                       autor != null ? autor.OwnerClientId : ulong.MaxValue);
             bool blindado = Identidade.Value.papel == PapelDoSobrevivente.Militar;

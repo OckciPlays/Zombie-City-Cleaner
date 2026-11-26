@@ -124,7 +124,16 @@ namespace ZombieCityCleaner.Player
             p.xp = Mathf.Clamp(p.xp, 0, 10_000_000);
             if (Habilidades.Migrar(ref p))
                 Debug.Log($"[Habilidades] A árvore mudou (a de 09/11/2026): os pontos de {_rede?.Aparencia.Value.nome} voltaram (nível {p.Nivel}, {p.xp} XP).");
-            var limpo = new ProgressoDoPersonagem { xp = p.xp, avisoDaArvore = p.avisoDaArvore };
+            // (25/11/2026: as receitas aprendidas vão junto, somadas às que ele aprendeu antes de o personagem chegar, como
+            // as compras do Dia 0)
+            var agora = Progresso.Value;
+            // (25/11/2026, a etapa 9) e o caderno do P: os zumbis vistos e os bichos caçados, do mesmo jeito
+            var limpo = new ProgressoDoPersonagem { xp = p.xp, avisoDaArvore = p.avisoDaArvore,
+                                                    receitas0 = p.receitas0 | agora.receitas0, receitas1 = p.receitas1 | agora.receitas1,
+                                                    zumbisVistos = p.zumbisVistos | agora.zumbisVistos,
+                                                    cacados0 = ProgressoDoPersonagem.MaiorPorByte(p.cacados0, agora.cacados0),
+                                                    cacados1 = ProgressoDoPersonagem.MaiorPorByte(p.cacados1, agora.cacados1),
+                                                    cacados2 = ProgressoDoPersonagem.MaiorPorByte(p.cacados2, agora.cacados2) };
             for (int i = 0; i < Habilidades.Quantas; i++)
             {
                 var h = (Habilidade)i;
@@ -137,6 +146,7 @@ namespace ZombieCityCleaner.Player
             }
             if (limpo.Gastos > limpo.Nivel) limpo.Esquecer();
             Progresso.Value = limpo;
+            ProgressoChegou();   // (a primeira olhada nas receitas depois disso é calada: InventarioJogador.Receitas.cs)
         }
 
         /// <summary>

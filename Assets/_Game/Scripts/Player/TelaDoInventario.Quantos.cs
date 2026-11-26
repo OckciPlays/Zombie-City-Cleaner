@@ -17,7 +17,7 @@ namespace ZombieCityCleaner.Player
         ushort _quantosId;
         int _quantos = 1;
         bool _quantosDigitando, _quantosArrastando;
-        GUIStyle _quantosGrande, _quantosBotao;
+        GUIStyle _quantosGrande, _quantosBotao, _quantosPasso;
         float _uDoQuantos = -1f;
 
         static readonly (string texto, int passo)[] PassosDoQuantos =
@@ -198,6 +198,9 @@ namespace ZombieCityCleaner.Player
             PorCor(_quantosGrande, Destaque);
             _quantosBotao = new GUIStyle(_titulo) { alignment = TextAnchor.MiddleCenter, wordWrap = false, clipping = TextClipping.Clip };
             PorCor(_quantosBotao, CorDoTexto);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) os passos na letra 14: na 15, o "Metade" passava do botão em
+            // 1600x900 e as pontas saíam cortadas
+            _quantosPasso = new GUIStyle(_quantosBotao) { fontSize = Mathf.RoundToInt(14f * _u) };
         }
 
         void DesenharQuantos(Vector2 mouse)
@@ -224,7 +227,7 @@ namespace ZombieCityCleaner.Player
             Ret(new Rect(barra.x, barra.y, barra.width * t, barra.height), new Color(Destaque.r, Destaque.g, Destaque.b, 0.5f));
             Ret(new Rect(Mathf.Round(barra.x + barra.width * t - 4f * u), barra.y - 4f * u, 8f * u, barra.height + 8f * u), Destaque);
             // os passos
-            for (int i = 0; i < PassosDoQuantos.Length; i++) BotaoDoQuantos(BotaoDoPasso(p, i), PassosDoQuantos[i].texto, mouse, false);
+            for (int i = 0; i < PassosDoQuantos.Length; i++) BotaoDoQuantos(BotaoDoPasso(p, i), PassosDoQuantos[i].texto, mouse, false, _quantosPasso);
             GUI.Label(new Rect(p.x, p.y + 156f * u, p.width, 16f * u), "Digite o número  ·  Enter: largar  ·  clique fora: cancela", _centro);
             // cancelar e largar
             int n = Mathf.Clamp(_quantos, 1, max);
@@ -232,13 +235,13 @@ namespace ZombieCityCleaner.Player
             BotaoDoQuantos(BotaoLargarDoQuantos(p), municao ? $"Largar {n} {(n == 1 ? "bala" : "balas")}" : $"Largar {n}", mouse, true);
         }
 
-        void BotaoDoQuantos(Rect r, string texto, Vector2 mouse, bool principal)
+        void BotaoDoQuantos(Rect r, string texto, Vector2 mouse, bool principal, GUIStyle estilo = null)
         {
             bool sobre = r.Contains(mouse);
             Ret(r, principal ? new Color(0.36f, 0.29f, 0.1f, 0.96f) : new Color(0.19f, 0.19f, 0.18f, 0.96f));
             if (sobre) Ret(r, new Color(0.98f, 0.82f, 0.36f, 0.22f));
             Moldura(r, Mathf.Max(1f, Mathf.Round(_u)), sobre || principal ? Destaque : BordaClara);
-            GUI.Label(r, texto, _quantosBotao);
+            GUI.Label(r, texto, estilo ?? _quantosBotao);
         }
     }
 }

@@ -118,31 +118,47 @@ namespace ZombieCityCleaner.Player
                 var manca = PartesDoCorpo.PorQueManca(e);
                 _porQueManca = manca != null ? "MANCANDO: " + manca : null;
             }
+            // (a linha dos porquês começa no alto da silhueta; a do pior estado, quando não cabe embaixo dela, também vai para
+            // lá, e os porquês sobem acima dela)
+            float yPorQue = area.y - 2f * u;
+            if (!string.IsNullOrEmpty(_linha))
+            {
+                // a letra de 12 (a do HUD); se não couber antes da barra de atalhos (a tela 5:4), a de 10
+                float largura = Mathf.Max(60f * u, inicioDosAtalhos - 8f * u - x);
+                var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold);
+                _conteudo.text = _linha;
+                if (estilo.CalcSize(_conteudo).x > largura) estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(10 * u), FontStyle.Bold);
+                var cor = _corDaLinha;
+                cor.a *= _alfa;
+                // (sem passar do começo da barra de atalhos)
+                largura = Mathf.Min(Mathf.Max(largura, estilo.CalcSize(_conteudo).x + 4f), Mathf.Max(60f * u, inicioDosAtalhos - 4f * u - x));
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) com a altura dela: na tela 16:10 (164u até a
+                // barra de atalhos), "FERIDA INFECCIONADA: BRAÇO ESQ." não cabe nem na letra de 10 e quebrava em duas linhas
+                // numa caixa de uma, a de baixo cortada. Em duas linhas, ela desce até 2u do fundo da tela (embaixo da silhueta,
+                // que vai até altura − 34u); com mais (as telas 4:3 e 5:4), ela vai para cima da silhueta, como os porquês
+                float alto = Mathf.Max(18f * u, estilo.CalcHeight(_conteudo, largura));
+                float yLinha;
+                if (alto <= 31f * u) yLinha = Mathf.Min(Screen.height - 30f * u, Screen.height - 2f * u - alto);
+                else
+                {
+                    yLinha = yPorQue - alto;
+                    yPorQue = yLinha - 1f * u;
+                }
+                // a sombra do texto, para ler em cima de qualquer chão
+                estilo.normal.textColor = new Color(0f, 0f, 0f, 0.7f * _alfa);
+                GUI.Label(new Rect(x + 1f, yLinha + 1f, largura, alto), _conteudo, estilo);
+                estilo.normal.textColor = cor;
+                GUI.Label(new Rect(x, yLinha, largura, alto), _conteudo, estilo);
+            }
             if (_porQueTreme != null || _porQueManca != null)
             {
                 // de baixo para cima, a partir do alto da silhueta; quebra a linha (para cima) se não couber antes da barra
                 // de atalhos, que é o limite à direita
                 float larguraDoPorQue = Mathf.Max(60f * u, inicioDosAtalhos - 4f * u - x);
-                float yPorQue = area.y - 2f * u;
                 var estiloDoPorQue = EstilosDoHud.Rotulo(Mathf.RoundToInt(11 * u), FontStyle.Bold);
                 if (_porQueManca != null) yPorQue = LinhaDoPorQue(_porQueManca, x, yPorQue, larguraDoPorQue, estiloDoPorQue, u);
                 if (_porQueTreme != null) LinhaDoPorQue(_porQueTreme, x, yPorQue, larguraDoPorQue, estiloDoPorQue, u);
             }
-            if (string.IsNullOrEmpty(_linha)) return;
-            // a letra de 12 (a do HUD); se não couber antes da barra de atalhos (a tela 5:4), a de 10
-            float largura = Mathf.Max(60f * u, inicioDosAtalhos - 8f * u - x);
-            var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold);
-            _conteudo.text = _linha;
-            if (estilo.CalcSize(_conteudo).x > largura) estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(10 * u), FontStyle.Bold);
-            var cor = _corDaLinha;
-            cor.a *= _alfa;
-            // a sombra do texto, para ler em cima de qualquer chão
-            estilo.normal.textColor = new Color(0f, 0f, 0f, 0.7f * _alfa);
-            // (sem passar do começo da barra de atalhos)
-            largura = Mathf.Min(Mathf.Max(largura, estilo.CalcSize(_conteudo).x + 4f), Mathf.Max(60f * u, inicioDosAtalhos - 4f * u - x));
-            GUI.Label(new Rect(x + 1f, Screen.height - 30f * u + 1f, largura, 18f * u), _linha, estilo);
-            estilo.normal.textColor = cor;
-            GUI.Label(new Rect(x, Screen.height - 30f * u, largura, 18f * u), _linha, estilo);
         }
 
         // uma linha do "por quê" (com a sombra), terminando em baixo; devolve o y de cima dela, para a próxima

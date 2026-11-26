@@ -68,6 +68,9 @@ namespace ZombieCityCleaner.DiaZero
     ///    ponto de nascimento (no mundo com o bunker, a sala de operações dele), e o anfitrião guarda as compras nos
     ///    depósitos do bunker (<see cref="EntregarNoBunker"/>; sem o bunker, no mesmo lugar delas no chão da casa da
     ///    família, <see cref="ItensNoMundo"/>). O dinheiro que sobrou fica guardado (para os acampamentos, depois).
+    /// (25/11/2026, o save do Dia 0) No Lakewood, o Dia 0 é salvo (<see cref="PodeSalvarODia"/>, <see cref="ParaSalvar"/>): as
+    /// carteiras e as compras vão pela chave do personagem, e o Continuar devolve cada uma a quem chega, com a rua já
+    /// liberada se o jornal tinha acabado.
     /// </summary>
     public partial class DiaZeroDaPartida : NetworkBehaviour
     {
@@ -102,6 +105,28 @@ namespace ZombieCityCleaner.DiaZero
         public static bool CarregandoARua => Instancia != null && Instancia.IsSpawned && Instancia.MundoNoDiaZero &&
                                             !Instancia._passagem && (!Instancia._ruaPronta || JogadorRede.Local == null);
 
+        /// <summary>
+        /// O Dia 0 do Lakewood pode ser salvo agora (25/11/2026, o save do Dia 0; o Salvamento pergunta, no anfitrião): o Dia 0
+        /// está acontecendo, a rua já carregou (a tela "UM DIA NORMAL" acabou e o jogador daqui nasceu), fora da passagem (a
+        /// porta fechando, a tela dos 30 dias), e o que veio do save (as carteiras, as compras, a caminhonete) já voltou.
+        /// </summary>
+        public static bool PodeSalvarODia
+        {
+            get
+            {
+                var d = Instancia;
+                return d != null && d.IsSpawned && d.NoLakewood && d.MundoNoDiaZero && d._ruaPronta && d._diaLido && !d._passagem &&
+                       JogadorRede.Local != null && Salvar.Salvamento.JaRestaurou;
+            }
+        }
+
+        /// <summary>
+        /// Nesta máquina, a partida passou pelo Dia 0 e a passagem dele (a porta, a tela dos 30 dias ou a dos 5 anos) ainda
+        /// não acabou (25/11/2026, o save do Dia 0): a primeira tentativa da fuga começa na casa por ela. Falso numa fuga que
+        /// voltou do save, ou para quem entrou no meio dela (a FugaNaTela leva para a casa).
+        /// </summary>
+        public static bool VindoDoDiaZero => Instancia != null && Instancia.IsSpawned && Instancia._estavaNoDia;
+
         NetworkList<CarteiraDoDia> _carteiras;
         NetworkList<CompraDoDia> _compras;
         ushort _proximoId = 1, _proximoLugar;
@@ -131,10 +156,21 @@ namespace ZombieCityCleaner.DiaZero
         string _mensagem;
         float _mensagemAte;
 
+        // (25/11/2026, o save do Dia 0) no anfitrião, fora da rede: a chave do personagem de cada clientId que já esteve na
+        // partida (também a de quem saiu: as carteiras e as compras vão no save pela chave, porque o clientId muda de uma
+        // sessão para outra), e o que veio do save para quem ainda não chegou (cada um pega o seu quando a chave dele chega)
+        readonly Dictionary<ulong, ulong> _chaveDoCliente = new Dictionary<ulong, ulong>();
+        readonly Dictionary<ulong, List<(int dinheiro, int gasto)>> _carteirasDoSave = new Dictionary<ulong, List<(int, int)>>();
+        readonly Dictionary<ulong, List<CompraDoDia>> _comprasDoSave = new Dictionary<ulong, List<CompraDoDia>>();
+        // o save desta partida já foi lido (uma vez por partida), e o Dia 0 de agora já passou pelo ComecouODia (antes dele,
+        // o ParaSalvar não mexe no que está no save)
+        bool _retomouOSave, _diaLido;
+
         void Awake()
         {
             _carteiras = new NetworkList<CarteiraDoDia>();
             _compras = new NetworkList<CompraDoDia>();
+            CriarAsPausas();   // (25/11/2026: os NPCs parados na conversa, DiaZeroDaPartida.Conversas.cs)
             _mundo = GetComponent<MundoDaPartida>();
             _lakewood = GetComponent<MundoDeLakewood>();
             Instancia = this;
@@ -152,11 +188,17 @@ namespace ZombieCityCleaner.DiaZero
             {
                 _carteiras.Clear();
                 _compras.Clear();
+                _pausas.Clear();
                 _proximoId = 1;
                 _proximoLugar = 0;
                 _levar.Clear();
                 ComecarOLobby();
                 NetworkManager.OnClientDisconnectCallback += AoSair;
+                // (25/11/2026, o save do Dia 0) uma partida nova: as chaves e o save de novo
+                _chaveDoCliente.Clear();
+                _carteirasDoSave.Clear();
+                _comprasDoSave.Clear();
+                _retomouOSave = _diaLido = false;
             }
             _compras.OnListChanged += AoMudarAsCompras;
             if (_mundo != null) _mundo.FicouPronto += AoFicarProntoOMundo;
@@ -188,6 +230,7 @@ namespace ZombieCityCleaner.DiaZero
         void Update()
         {
             if (!IsSpawned || (_mundo == null && _lakewood == null)) return;
+            if (Time.frameCount % 60 == 0) AcompanharAsPausas();
             // o dia limpo (o sol e as cores do mundo normal) no Dia 0 e na tela dos 5 anos, até o mundo aparecer (no Lakewood,
             // quem cuida é a época)
             if (_mundo != null) AmbienteDoDia.DiaLimpo = _mundo.NoDiaZero || (_passagem && _prontoDesde < 0f) ? 1f : 0f;
@@ -195,6 +238,13 @@ namespace ZombieCityCleaner.DiaZero
             {
                 if (!_estavaNoDia && NoLakewood) ComecouODia();
                 _estavaNoDia = true;
+                // (25/11/2026, o save do Dia 0) no anfitrião: a chave de quem chega (a carteira e as compras do save vão para
+                // ele), e a rua já liberada quando o caderno passou do jornal
+                if (IsServer && NoLakewood)
+                {
+                    AcompanharAsChaves();
+                    RuaPeloPasso();
+                }
                 CarregarARua();
                 if (_ruaPronta) NaRua();
             }
@@ -219,6 +269,20 @@ namespace ZombieCityCleaner.DiaZero
             _proximoId = 1;
             _proximoLugar = 0;
             ComecarOLobby();
+            // (25/11/2026, o save do Dia 0) a partida que voltou de um save do Dia 0: depois de zerar, as carteiras e as compras
+            // salvas ficam esperando cada um chegar (a chave dele: AcompanharAsChaves), e a rua volta liberada se o jornal já
+            // tinha acabado. Uma vez por partida (o Dia 0 de novo pelo F1 começa do zero, como sempre)
+            _carteirasDoSave.Clear();
+            _comprasDoSave.Clear();
+            _chaveDoCliente.Clear();
+            if (_lakewood != null && _lakewood.Retomada && !_retomouOSave)
+            {
+                _retomouOSave = true;
+                LerODiaDoSave(Salvar.Salvamento.Atual);
+            }
+            _diaLido = true;
+            RuaPeloPasso();
+            AcompanharAsChaves();
         }
 
         void CarregarARua()
@@ -331,6 +395,7 @@ namespace ZombieCityCleaner.DiaZero
 
         void AoSair(ulong cliente)
         {
+            AcompanharAsPausas(cliente);
             _esperandoARua.Remove(cliente);
             _viram.Remove(cliente);
             ConferirATv();
@@ -350,6 +415,7 @@ namespace ZombieCityCleaner.DiaZero
         void NaRua()
         {
             if (IsServer && Fase == FaseDoDia.Tv) ConferirATv();
+            CampanhaNaRua();   // (25/11/2026: as compras e a volta para casa no caderno, DiaZeroDaPartida.Campanha.cs)
             var j = JogadorRede.Local;
             if (j == null) return;
             NoLobby(j);
@@ -395,7 +461,7 @@ namespace ZombieCityCleaner.DiaZero
         public int Compras(ulong cliente)
         {
             int n = 0;
-            foreach (var c in _compras) if (c.cliente == cliente) n += Mathf.Max(1, Itens.EmPilha(c.item) && !Itens.EhMunicao(c.item) ? c.qtd : 1);
+            foreach (var c in _compras) if (c.cliente == cliente) n += Contar(c);
             return n;
         }
 
@@ -466,19 +532,37 @@ namespace ZombieCityCleaner.DiaZero
                 ResultadoRpc(false, total, carteira.dinheiro, alvo);
                 return;
             }
+            // (25/11/2026, a pedido: "Quando compramos item demais e lotamos o seu inventário, ela simplesmente começa a aparecer
+            // alguns itens em cima da caçamba que fica flutuando") no Lakewood, o caixa só vende o que cabe na caçamba: nada é
+            // cobrado, e o carrinho fica como estava
+            if (NoLakewood)
+            {
+                var itens = new List<Item>();
+                foreach (byte i in pedido.produtos)
+                {
+                    var p = PrecosDoDiaZero.DaLoja(loja, i);
+                    if (p.HasValue) itens.Add(p.Value.item);
+                }
+                if (itens.Count > 0 && !LakewoodNaCena.CabeNaCacamba(itens))
+                {
+                    CacambaCheiaRpc(alvo);
+                    return;
+                }
+            }
             carteira.dinheiro -= total;
             carteira.gasto += total;
             _carteiras[k] = carteira;
-            int noChao = 0;
+            int naoCouberam = 0;
             foreach (byte i in pedido.produtos)
             {
                 var p = PrecosDoDiaZero.DaLoja(loja, i);
                 if (!p.HasValue) continue;
                 Guardar(cliente, p.Value);
                 // no Lakewood (22/11/2026, o Pedro: "Caçamba da caminhonete"), a compra vai já para a caçamba
-                if (NoLakewood && !LakewoodNaCena.GuardarNaCacamba(p.Value.item, p.Value.desgaste)) noChao++;
+                if (NoLakewood && !LakewoodNaCena.GuardarNaCacamba(p.Value.item, p.Value.desgaste)) naoCouberam++;
             }
-            if (noChao > 0) Debug.LogWarning($"[Dia 0] A caçamba encheu: {noChao} compras ficaram no chão atrás da caminhonete.");
+            if (naoCouberam > 0) Debug.LogWarning($"[Dia 0] {naoCouberam} compras não couberam na caçamba (a conta do caixa errou).");
+            _proximaContaDaCampanha = 0f;   // (o caderno conta as compras já no quadro seguinte)
             Debug.Log($"[Dia 0] O jogador {cliente} pagou {PrecosDoDiaZero.Dinheiro(total)} na {PrecosDoDiaZero.Nome(loja)} ({pedido.produtos.Length} produtos, {pedido.roupas.Length / 2} roupas); sobraram {PrecosDoDiaZero.Dinheiro(carteira.dinheiro)}.");
             ResultadoRpc(true, total, carteira.dinheiro, alvo);
         }
@@ -510,6 +594,176 @@ namespace ZombieCityCleaner.DiaZero
             });
         }
 
+        // quantas coisas uma compra conta (a pilha, pelo número dentro dela; a caixa de munição e o resto, por uma)
+        static int Contar(CompraDoDia c) => Mathf.Max(1, Itens.EmPilha(c.item) && !Itens.EhMunicao(c.item) ? c.qtd : 1);
+
+        // ------------------------------------------------------------------ o save do Dia 0 (25/11/2026)
+
+        /// <summary>
+        /// No anfitrião (o Salvamento.Salvar, no Dia 0 do Lakewood; 25/11/2026, a pedido do Pedro: "Sim, salvar o Dia 0"): as
+        /// carteiras e as compras de cada um, pela chave do personagem (o clientId muda de uma sessão para outra). Vão também
+        /// as de quem saiu da partida e as de quem estava no save e ainda não voltou. Fora do Dia 0, as listas ficam vazias (na
+        /// porta, o saldo já foi para o dinheiro de cada um). A caçamba e o armazém já vão no save pelas estantes.
+        /// </summary>
+        public void ParaSalvar(Salvar.MundoSalvo m)
+        {
+            if (m == null || !IsSpawned || !IsServer) return;
+            if (m.carteirasDoDia == null) m.carteirasDoDia = new List<Salvar.CarteiraSalva>();
+            if (m.comprasDoDia == null) m.comprasDoDia = new List<Salvar.CompraSalva>();
+            bool noDia = NoLakewood && MundoNoDiaZero;
+            // (o Dia 0 que voltou do save ainda não leu o dele: o que está lá fica como está)
+            if (noDia && !_diaLido) return;
+            m.carteirasDoDia.Clear();
+            m.comprasDoDia.Clear();
+            if (!noDia) return;
+            AcompanharAsChaves();
+            int semChave = 0;
+            foreach (var c in _carteiras)
+            {
+                if (!ChaveDo(c.cliente, out ulong chave)) { semChave++; continue; }
+                m.carteirasDoDia.Add(new Salvar.CarteiraSalva { chave = unchecked((long)chave), dinheiro = c.dinheiro, gasto = c.gasto });
+            }
+            foreach (var c in _compras)
+            {
+                if (!ChaveDo(c.cliente, out ulong chave)) { semChave++; continue; }
+                m.comprasDoDia.Add(new Salvar.CompraSalva { chave = unchecked((long)chave), item = (int)c.item, qtd = c.qtd, desgaste = c.desgaste });
+            }
+            foreach (var kv in _carteirasDoSave)
+                foreach (var (dinheiro, gasto) in kv.Value)
+                    m.carteirasDoDia.Add(new Salvar.CarteiraSalva { chave = unchecked((long)kv.Key), dinheiro = dinheiro, gasto = gasto });
+            foreach (var kv in _comprasDoSave)
+                foreach (var c in kv.Value)
+                    m.comprasDoDia.Add(new Salvar.CompraSalva { chave = unchecked((long)kv.Key), item = (int)c.item, qtd = c.qtd, desgaste = c.desgaste });
+            if (semChave > 0) Debug.LogWarning($"[Dia 0] {semChave} carteiras ou compras sem a chave do personagem (quem pagou saiu antes de ela chegar): não foram para o save.");
+        }
+
+        // no anfitrião: a chave do personagem de quem tem este clientId (a guardada, ou a do jogador dele agora)
+        bool ChaveDo(ulong cliente, out ulong chave)
+        {
+            if (_chaveDoCliente.TryGetValue(cliente, out chave) && chave != 0) return true;
+            foreach (var j in JogadorRede.Todos)
+                if (j != null && j.IsSpawned && j.OwnerClientId == cliente && j.Chave.Value != 0)
+                {
+                    chave = j.Chave.Value;
+                    return true;
+                }
+            chave = 0;
+            return false;
+        }
+
+        // no anfitrião, no ComecouODia de um Dia 0 que voltou do save: o que cada um tinha (pela chave), esperando ele chegar
+        void LerODiaDoSave(Salvar.MundoSalvo salvo)
+        {
+            if (salvo == null) return;
+            int carteiras = 0, compras = 0;
+            if (salvo.carteirasDoDia != null)
+                foreach (var c in salvo.carteirasDoDia)
+                {
+                    ulong chave = unchecked((ulong)c.chave);
+                    if (chave == 0) continue;
+                    if (!_carteirasDoSave.TryGetValue(chave, out var lista)) _carteirasDoSave[chave] = lista = new List<(int, int)>();
+                    lista.Add((Mathf.Max(0, c.dinheiro), Mathf.Max(0, c.gasto)));
+                    carteiras++;
+                }
+            if (salvo.comprasDoDia != null)
+                foreach (var c in salvo.comprasDoDia)
+                {
+                    ulong chave = unchecked((ulong)c.chave);
+                    var item = (Item)(byte)Mathf.Clamp(c.item, 0, 255);
+                    if (chave == 0 || item == Item.Nada || !Enum.IsDefined(typeof(Item), item)) continue;
+                    if (!_comprasDoSave.TryGetValue(chave, out var lista)) _comprasDoSave[chave] = lista = new List<CompraDoDia>();
+                    lista.Add(new CompraDoDia
+                    {
+                        item = item, qtd = (ushort)Mathf.Clamp(c.qtd, 0, ushort.MaxValue), desgaste = (byte)Mathf.Clamp(c.desgaste, 0, 100),
+                    });
+                    compras++;
+                }
+            Debug.Log($"[Dia 0] O Dia 0 voltou do save: {carteiras} carteiras e {compras} compras esperando cada um chegar; a rua {(_lakewood.Passo > CampanhaDeLakewood.JornalNaTv ? "já liberada" : "com o jornal de novo")}.");
+        }
+
+        // no anfitrião, a cada quadro do Dia 0: a chave de cada jogador, quando ela chega (o dono a escreve depois do spawn)
+        void AcompanharAsChaves()
+        {
+            if (!IsServer || !NoLakewood || !_diaLido) return;
+            foreach (var j in JogadorRede.Todos)
+            {
+                if (j == null || !j.IsSpawned) continue;
+                ulong chave = j.Chave.Value, cliente = j.OwnerClientId;
+                if (chave == 0 || (_chaveDoCliente.TryGetValue(cliente, out ulong ja) && ja == chave)) continue;
+                _chaveDoCliente[cliente] = chave;
+                AoChegarAChave(cliente, chave);
+            }
+        }
+
+        // no anfitrião, uma vez por clientId: o personagem chegou. A carteira e as compras dele no save (a partida que voltou
+        // do save), ou as do clientId de antes dele nesta partida (ele saiu e voltou: antes, ganhava outros $ 1.000 e os
+        // limites zeravam), passam para o clientId de agora
+        void AoChegarAChave(ulong cliente, ulong chave)
+        {
+            bool doSave = false;
+            if (_carteirasDoSave.TryGetValue(chave, out var salvas) && salvas.Count > 0)
+            {
+                var (dinheiro, gasto) = salvas[0];
+                salvas.RemoveAt(0);
+                if (salvas.Count == 0) _carteirasDoSave.Remove(chave);
+                JuntarNaCarteira(cliente, dinheiro, gasto);
+                doSave = true;
+            }
+            if (_comprasDoSave.TryGetValue(chave, out var compras))
+            {
+                _comprasDoSave.Remove(chave);
+                foreach (var c in compras)
+                {
+                    var nova = c;
+                    nova.id = _proximoId++;
+                    nova.cliente = cliente;
+                    nova.lugar = _proximoLugar++;
+                    _compras.Add(nova);
+                }
+                doSave = true;
+            }
+            if (doSave) Debug.Log($"[Dia 0] O jogador {cliente} voltou do save: {PrecosDoDiaZero.Dinheiro(Dinheiro(cliente))} na carteira, {Compras(cliente)} compras.");
+            // o mesmo personagem com outro clientId nesta partida (que já saiu)
+            var antes = new List<ulong>();
+            foreach (var kv in _chaveDoCliente)
+                if (kv.Key != cliente && kv.Value == chave && !NetworkManager.ConnectedClients.ContainsKey(kv.Key)) antes.Add(kv.Key);
+            foreach (ulong velho in antes)
+            {
+                _chaveDoCliente.Remove(velho);
+                int k = Carteira(velho);
+                if (k >= 0)
+                {
+                    var c = _carteiras[k];
+                    _carteiras.RemoveAt(k);
+                    JuntarNaCarteira(cliente, c.dinheiro, c.gasto);
+                }
+                for (int i = 0; i < _compras.Count; i++)
+                {
+                    if (_compras[i].cliente != velho) continue;
+                    var c = _compras[i];
+                    c.cliente = cliente;
+                    _compras[i] = c;
+                }
+                Debug.Log($"[Dia 0] O jogador {cliente} voltou para a partida (era o {velho}): a carteira e as compras dele continuam.");
+            }
+        }
+
+        // no anfitrião: a carteira de antes (do save, ou de outro clientId) no clientId de agora; o que ele já fez com a nova
+        // (os $ 1.000 do CriarNaRua, o que gastou, o F1) entra por cima
+        void JuntarNaCarteira(ulong cliente, int dinheiro, int gasto)
+        {
+            int k = Carteira(cliente);
+            if (k < 0)
+            {
+                _carteiras.Add(new CarteiraDoDia { cliente = cliente, dinheiro = dinheiro, gasto = gasto });
+                return;
+            }
+            var c = _carteiras[k];
+            c.dinheiro = Mathf.Max(0, dinheiro + c.dinheiro - PrecosDoDiaZero.Economias);
+            c.gasto += gasto;
+            _carteiras[k] = c;
+        }
+
         /// <summary>Anfitrião → quem pagou: deu certo (ou faltou dinheiro).</summary>
         [Rpc(SendTo.SpecifiedInParams)]
         void ResultadoRpc(bool pago, int total, int sobrou, RpcParams parametros = default)
@@ -525,6 +779,14 @@ namespace ZombieCityCleaner.DiaZero
             }
             else Avisar(total > 0 ? $"Não deu: o total é {PrecosDoDiaZero.Dinheiro(total)} e você tem {PrecosDoDiaZero.Dinheiro(sobrou)}. Tire alguma coisa do carrinho."
                                   : "Não deu para pagar agora.");
+        }
+
+        /// <summary>Anfitrião → quem pagou: as compras não cabem na caçamba da caminhonete (25/11/2026; nada foi cobrado).</summary>
+        [Rpc(SendTo.SpecifiedInParams)]
+        void CacambaCheiaRpc(RpcParams parametros = default)
+        {
+            _pagando = false;
+            Avisar("A caçamba da caminhonete não tem lugar para tudo isso: leve as compras para casa, guarde no armazém da garagem e volte. Ou tire alguma coisa do carrinho.", 7f);
         }
 
         /// <summary>Anfitrião → quem pagou: passou do limite por jogador de um item (05/11/2026; nada foi cobrado).</summary>
@@ -606,7 +868,14 @@ namespace ZombieCityCleaner.DiaZero
         /// <summary>O jogador local fecha a porta do abrigo (de dentro de casa).</summary>
         public void PedirFecharAPorta()
         {
-            if (IsSpawned && MundoNoDiaZero) FecharAPortaRpc(false);
+            if (!IsSpawned || !MundoNoDiaZero) return;
+            // (25/11/2026, o caderno das missões) as chaves só trancam na vez delas: antes, o que falta
+            if (!PodeTrancar(out string falta))
+            {
+                Avisar(falta);
+                return;
+            }
+            FecharAPortaRpc(false);
         }
 
         /// <summary>O F1: pular o Dia 0 (todos levam as compras, onde estiverem).</summary>
@@ -640,6 +909,8 @@ namespace ZombieCityCleaner.DiaZero
             ulong quem = parametros.Receive.SenderClientId;
             if (!pular && rua != null && NetworkManager.ConnectedClients.TryGetValue(quem, out var c) && c.PlayerObject != null &&
                 !rua.DentroDaCasa(c.PlayerObject.transform.position)) return;
+            if (!pular && !PodeTrancar(out _)) return;   // (25/11/2026: o caderno das missões, na vez das chaves)
+            ConcluirNoDiaZero(CampanhaDeLakewood.FecheACasa);
             var fora = new List<string>();
             var deFora = new HashSet<ulong>();
             // (no Lakewood, as compras já estão na caçamba: quem ficou fora vai junto, sem perder nada)
@@ -709,6 +980,8 @@ namespace ZombieCityCleaner.DiaZero
             _passagem = true;
             _passagemDesde = Time.unscaledTime;
             _prontoDesde = -1f;
+            // (25/11/2026, a revisão: um craft no meio desligava a cena quando acabava; primeiro ele para, depois a cena liga)
+            AnimacaoDoCraft.CancelarNoJogadorLocal();
             MenuOnline.Cinema = true;
             TelaDoCaixa.Fechar();
             Carrinho.Esvaziar(true);

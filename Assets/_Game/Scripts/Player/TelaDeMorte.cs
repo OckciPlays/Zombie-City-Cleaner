@@ -79,7 +79,9 @@ namespace ZombieCityCleaner.Player
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = new Color(1f, 1f, 1f, a);
             float y = Screen.height * 0.3f;
-            GUI.Label(new Rect(0, y, Screen.width, 70 * u), "VOCÊ MORREU", _titulo);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 76u com o mesmo meio: a letra de 58 precisa de
+            // ~70u, e a ponta do circunflexo do Ê passava do alto da caixa de 70u (a causa, embaixo, começa em y + 76u)
+            GUI.Label(new Rect(0, y - 3 * u, Screen.width, 76 * u), "VOCÊ MORREU", _titulo);
             y += 76 * u;
             GUI.Label(new Rect(0, y, Screen.width, 32 * u), _vida.Causa, _causa);
             y += 40 * u;

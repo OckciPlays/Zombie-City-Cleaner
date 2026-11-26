@@ -89,7 +89,19 @@ namespace ZombieCityCleaner.DiaZero
         {
             if (Fase == FaseDoDia.Rua) return;
             _fase.Value = (byte)FaseDoDia.Rua;
+            ConcluirNoDiaZero(World.CampanhaDeLakewood.JornalNaTv);   // (25/11/2026: o caderno das missões)
             Debug.Log("[Dia 0] A rua foi liberada: as compras começaram.");
+        }
+
+        // no anfitrião (25/11/2026, o save do Dia 0): com o caderno já depois do jornal (o Dia 0 que voltou do save), a rua
+        // fica liberada, sem a TV de novo. A fase do dia não vai no save: sai do passo (a TV no meio volta para a casa, com o
+        // jornal do começo, porque o relógio dela é o da sessão)
+        void RuaPeloPasso()
+        {
+            if (!IsServer || Fase == FaseDoDia.Rua || !NaCampanha || _lakewood.Passo <= World.CampanhaDeLakewood.JornalNaTv) return;
+            _fase.Value = (byte)FaseDoDia.Rua;
+            _viram.Clear();
+            Debug.Log("[Dia 0] O caderno já passou do jornal: a rua está liberada.");
         }
 
         // no anfitrião: com todos que têm o jogador tendo visto o jornal (ou o tempo dele passado), a rua é liberada

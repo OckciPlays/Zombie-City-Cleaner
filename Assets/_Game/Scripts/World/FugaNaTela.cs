@@ -15,7 +15,8 @@ namespace ZombieCityCleaner.World
     ///  - a missão no canto de cima, à direita: "FUJA PARA O BUNKER", o que fazer e quantos metros faltam até o portão;
     ///  - a marca "Bunker" do mapa (o alfinete com a distância, posta pelo anfitrião) leva até o portão;
     ///  - os gritos pela vila, de vez em quando, e o Gus chamando no portão (a fala embaixo, como no cinema);
-    ///  - a cada tentativa nova (<see cref="MundoDeLakewood.Tentativa"/>), o jogador local volta para a sala da casa;
+    ///  - a cada tentativa nova (<see cref="MundoDeLakewood.Tentativa"/>), o jogador local volta para a sala da casa (também na
+    ///    primeira, quando ela não vem da tela dos 30 dias: a fuga que voltou do save, ou quem entrou no meio dela);
     ///  - a tela da fuga que falhou (alguém morreu), até o recomeço;
     ///  - a tela dos 5 anos (todos chegaram ao bunker): quando a época volta para depois e o palco sai, o jogador vai para a
     ///    sala de operações do bunker, e a tela clareia.
@@ -37,19 +38,37 @@ namespace ZombieCityCleaner.World
         void Update()
         {
             var m = Mundo;
-            if (m == null || !m.IsSpawned) return;
+            if (m == null || !m.IsSpawned)
+            {
+                // (26/11/2026, a integração do save do Dia 0) fora da rede, a tela volta ao começo: a cena não recarrega entre
+                // uma partida e outra, e o número da tentativa vista, a tela da falha e a dos 5 anos ficavam da partida
+                // anterior (sair no meio da fuga e, sem fechar o jogo, abrir um save da fuga, ou entrar na de um amigo)
+                _tentativaVista = 0;
+                _falhaDesde = -1f;
+                _naChegada = _chegadaFeita = _prontoNoBunker = _despertar = false;
+                return;
+            }
             var j = JogadorRede.Local;
             // a tentativa nova: o jogador local na sala da casa (já com a tela da falha por cima)
             if (m.NaFuga && m.Tentativa != _tentativaVista && j != null)
             {
-                bool primeira = _tentativaVista == 0;
-                _tentativaVista = m.Tentativa;
-                // (a primeira vem da tela dos 30 dias: o DiaZeroDaPartida já pôs na sala)
-                if (!primeira) IrParaACasa(j);
-                _despertar = true;   // (23/11/2026: o despertar, quando a fuga começa a contar)
+                // (a primeira vem da tela dos 30 dias: o DiaZeroDaPartida põe na sala. 25/11/2026, o save do Dia 0: menos na fuga
+                // que voltou do save e para quem entrou no meio dela, que não passaram pela tela; esses vão para a casa já, com
+                // o palco pronto: sem ele, os pontos de nascimento ainda são os do bunker, e a chegada seria na hora)
+                bool pelaTela = _tentativaVista == 0 && DiaZeroDaPartida.VindoDoDiaZero;
+                var palco = WoodcreekDoDiaZero.Atual;
+                if (pelaTela || (palco != null && palco.Pronta && LakewoodNaCena.ComPalcoDoDiaZero))
+                {
+                    _tentativaVista = m.Tentativa;
+                    if (!pelaTela) IrParaACasa(j);
+                    _despertar = true;   // (23/11/2026: o despertar, quando a fuga começa a contar)
+                }
             }
-            // a tela da falha fica até a tentativa nova começar (a volta para a casa fica por baixo dela)
-            if (m.Falhou || (m.NaFuga && m.Tentativa > 1 && m.TempoDaFuga < 0f)) { if (_falhaDesde < 0f) _falhaDesde = Time.unscaledTime; }
+            // a tela da falha fica até a tentativa nova começar (a volta para a casa fica por baixo dela). (26/11/2026, a
+            // integração do save do Dia 0) Só depois de uma falha vista: antes, qualquer tentativa depois da primeira com o
+            // relógio ainda negativo era uma falha, e o número não volta a 1 sem fechar o jogo; a fuga que voltou do save
+            // esperando o mundo (até 90 s) e a tela dos 30 dias de uma segunda fuga mostravam "A FUGA FALHOU"
+            if (m.Falhou || (_falhaDesde >= 0f && m.NaFuga && m.TempoDaFuga < 0f)) { if (_falhaDesde < 0f) _falhaDesde = Time.unscaledTime; }
             else _falhaDesde = -1f;
             // a chegada: a tela preta cobre a troca da época; com o palco fora, a sala de operações
             // (a chegada fica marcada na rede até a próxima fuga: a tela dos 5 anos passa uma vez só)
@@ -60,6 +79,8 @@ namespace ZombieCityCleaner.World
                 _chegadaFeita = true;
                 _prontoNoBunker = false;
                 _chegadaDesde = Time.unscaledTime;
+                // (25/11/2026, a revisão: um craft no meio desligava a cena quando acabava; primeiro ele para, depois a cena liga)
+                AnimacaoDoCraft.CancelarNoJogadorLocal();
                 MenuOnline.Cinema = true;
                 if (j != null) j.GetComponent<MovimentoPrimeiraPessoa>().Voando = true;
             }
@@ -248,13 +269,8 @@ namespace ZombieCityCleaner.World
             var lw = LakewoodNaCena.Instancia;
             if (j == null || lw == null || !lw.PortaoDoBunker(out var portao)) return;
             GUI.depth = -5;
-            // a missão, no canto de cima, à direita
-            float metros = Vector3.Distance(new Vector3(j.transform.position.x, 0f, j.transform.position.z), new Vector3(portao.x, 0f, portao.z));
-            float x = Screen.width - 430 * u, w = 410 * u, y = 50 * u;
-            Sombra(new Rect(x, y, w, 26 * u), "MISSÃO  ·  FUJA PARA O BUNKER", _titulo);
-            Sombra(new Rect(x, y + 28 * u, w, 44 * u), "Desça a rua até o bunker da comunidade, na beira do lago. Não pare: a cidade caiu.", _texto);
-            Sombra(new Rect(x, y + 72 * u, w, 22 * u), $"{metros:0} m até o portão", _pequeno);
-            if (m.Tentativa > 1) Sombra(new Rect(x, y + 92 * u, w, 22 * u), $"tentativa {m.Tentativa}", _pequeno);
+            // (25/11/2026) a missão, a distância até o portão e a tentativa estão no caderno das missões (UI/CadernoDeMissoes),
+            // no canto de cima à esquerda; antes, ficavam por cima do minimapa
             // o Gus chamando no portão (a fala embaixo, sem caixa, como no cinema)
             var wc = WoodcreekDoDiaZero.Atual;
             var gus = wc != null ? wc.ChamadoNoPortao : null;

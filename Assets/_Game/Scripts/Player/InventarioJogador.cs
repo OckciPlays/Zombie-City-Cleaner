@@ -358,9 +358,10 @@ namespace ZombieCityCleaner.Player
 
         /// <summary>
         /// A receita pode sair agora? Se não, o que falta (para a tela): os ingredientes, a ferramenta (que não gasta) e,
-        /// nas da bancada, estar perto de uma.
+        /// nas da bancada, estar perto de uma. Com <paramref name="mesaJaConferida"/>, a mesa não é conferida aqui (o
+        /// anfitrião, com a palavra do cliente: <see cref="CriarRpc"/>).
         /// </summary>
-        public bool PodeCriar(Receita r, out string falta)
+        public bool PodeCriar(Receita r, out string falta, bool mesaJaConferida = false)
         {
             falta = null;
             // (06/11/2026, a árvore de habilidades: a receita destravada pela habilidade; a mesa de oficina do bunker)
@@ -368,16 +369,19 @@ namespace ZombieCityCleaner.Player
                 falta = r.nivel > 1 ? $"Precisa de {Habilidades.Nome((Habilidade)r.habilidade)} no nível {r.nivel} (K)"
                     : $"Precisa da habilidade {Habilidades.Nome((Habilidade)r.habilidade)} (K)";
             else if (r.oficina && !Bancada.PertoDaOficina(transform.position)) falta = "Precisa da mesa de oficina (no bunker)";
-            else if (r.bancada && !Bancada.Perto(transform.position)) falta = "Precisa de uma bancada perto";
+            else if (r.bancada && !mesaJaConferida && !Bancada.Perto(transform.position)) falta = "Precisa de uma mesa de oficina perto";
             // (18/11/2026, a etapa 2 da fogueira: o assar é na própria fogueira, no espeto, e não mais pela fabricação)
             else if (r.fogo) falta = "Asse na própria fogueira: com ele na mão, clique no fogo (precisa de um espeto)";
-            else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.Nome(r.ferramenta)} na mochila";
+            else if (r.ferramenta != Item.Nada && Quantos(r.ferramenta) == 0) falta = $"Precisa ter {Itens.NomeComArtigo(r.ferramenta)} na mochila";
             else
             {
                 foreach (var g in GastaDe(r))
                     if (Quantos(g.item) < g.qtd)
                     {
-                        falta = $"Falta {Itens.ComNumero(g.item, g.qtd - Quantos(g.item))}";
+                        // (25/11/2026, a revisão: o texto vai também no aviso de quando não dá, "Não deu para fazer a lança:
+                        // faltam 2 madeiras"; antes era "falta 2 madeiras")
+                        int faltam = g.qtd - Quantos(g.item);
+                        falta = $"{(faltam > 1 ? "Faltam" : "Falta")} {Itens.ComNumero(g.item, faltam)}";
                         break;
                     }
                 // o combustível (11/11/2026, a etapa 4): 1 álcool ou a gasolina de um galão
@@ -825,6 +829,12 @@ namespace ZombieCityCleaner.Player
             if (IsOwner) AvisoLocal("Só quem tem o Borracheiro (o Ladrão, K) remenda o pneu");
         }
 
+        /// <summary>No anfitrião: um aviso no HUD (e no rodapé da mochila) do dono deste inventário (25/11/2026: o armazém).</summary>
+        public void AvisarODono(string texto)
+        {
+            if (IsServer && IsSpawned) AvisoRpc(texto);
+        }
+
         [Rpc(SendTo.Owner)]
         void AvisoRpc(string texto)
         {
@@ -844,11 +854,25 @@ namespace ZombieCityCleaner.Player
         }
 
         [Rpc(SendTo.Server)]
-        void CriarRpc(byte k, RpcParams parametros = default)
+        void CriarRpc(byte k, bool pertoDaMesa, RpcParams parametros = default)
         {
             if (parametros.Receive.SenderClientId != OwnerClientId || k >= Receitas.Todas.Length) return;
             var r = Receitas.Todas[k];
-            if (!PodeCriar(r, out _)) return;
+            // (25/11/2026, a revisão: o cliente na mesa de uma casa, de uma obra ou da loja de armas) as mesas das casas só
+            // existem perto de cada jogador: os móveis de perto são montados em volta do jogador local (MobiliaNovaDoMundo), e
+            // no anfitrião a casa onde só o cliente está não tem a Bancada. O Bancada.Perto daqui dava false, e o RPC voltava
+            // calado: a animação tocava, o item aparecia no tampo, e nada chegava na mochila. Agora vale a palavra do cliente
+            // (medida na máquina dele, no Criar): o grupo é de amigos. A do jogador do anfitrião continua conferida aqui
+            bool mesa = Bancada.Perto(transform.position) || (pertoDaMesa && OwnerClientId != NetworkManager.ServerClientId);
+            // (e, quando não dá, o dono fica sabendo o porquê, em vez de o pedido sumir sem aviso)
+            string falta = null;
+            if (!ConheceAReceita(k)) falta = "a receita ainda não foi aprendida";   // (a receita aprendida, 25/11/2026)
+            else if (!PodeCriar(r, out falta, mesa)) falta = string.IsNullOrEmpty(falta) ? "faltou alguma coisa" : char.ToLowerInvariant(falta[0]) + falta.Substring(1);
+            if (falta != null)
+            {
+                AvisoRpc($"Não deu para fazer {Itens.NomeComArtigo(r.resultado)}: {falta}");
+                return;
+            }
             var gasta = GastaDe(r);
             foreach (var g in gasta) TirarQuantos(g.item, g.qtd);
             for (int c = 0; c < r.combustivel; c++)
@@ -1106,8 +1130,17 @@ namespace ZombieCityCleaner.Player
         /// <summary>Faz a receita (o índice em <see cref="Receitas.Todas"/>; o anfitrião confere).</summary>
         public void Criar(int receita)
         {
-            if (receita < 0 || receita >= Receitas.Todas.Length || !PodeCriar(Receitas.Todas[receita], out _)) return;
-            CriarRpc((byte)receita);
+            if (receita < 0 || receita >= Receitas.Todas.Length || !ConheceAReceita(receita)) return;
+            var r = Receitas.Todas[receita];
+            // (25/11/2026, a revisão) no fim da animação, algo pode ter mudado (a mesa montada quebrou, um material saiu da
+            // mochila): o aviso diz o porquê, em vez de o item feito no tampo não chegar sem explicação
+            if (!PodeCriar(r, out var falta))
+            {
+                if (!string.IsNullOrEmpty(falta)) AvisoLocal($"Não deu para fazer {Itens.NomeComArtigo(r.resultado)}: {char.ToLowerInvariant(falta[0]) + falta.Substring(1)}");
+                return;
+            }
+            // (25/11/2026, a revisão: a mesa de uma casa só existe perto deste jogador; o anfitrião confia no que ele mede aqui)
+            CriarRpc((byte)receita, Bancada.Perto(transform.position));
             Efeitos.Som(Efeitos.Largar, transform.position + Vector3.up * 0.8f, 0.6f, false);
         }
 
@@ -1472,12 +1505,27 @@ namespace ZombieCityCleaner.Player
             inv._avisoNoHudAte = Time.time + 2.8f;
         }
 
+        /// <summary>
+        /// (25/11/2026, a revisão) Um jogador desta máquina que não é o jogador local: só o figurante das gravações (é do
+        /// anfitrião, mas não é ele). A conta não usa o campo do figurante: os arquivos dos vídeos ficam só neste
+        /// computador, e o jogo compila sem eles.
+        /// </summary>
+        bool JogadorDeMentira => IsOwner && _rede != null && JogadorRede.Local != _rede;
+
         void Update()
         {
             if (IsSpawned && IsServer)
             {
                 GastarPilhas(Time.deltaTime);
                 GastarLampiao(Time.deltaTime);   // (11/11/2026, a etapa 4: InventarioJogador.Fogo.cs)
+                // (25/11/2026, a revisão: os figurantes das gravações) o jogador do anfitrião que não é o jogador local (o
+                // amigo de mentira dos vídeos) não aprende receitas nem anota zumbis: o aviso e o som da caneta iam para o
+                // anfitrião, no meio da tomada
+                if (!JogadorDeMentira)
+                {
+                    OlharAsReceitas();   // (as receitas aprendidas, 25/11/2026: InventarioJogador.Receitas.cs)
+                    OlharOsZumbis();     // (o caderno do P, 25/11/2026, a etapa 9: InventarioJogador.Caderno.cs)
+                }
             }
             if (IsSpawned && IsOwner && _pedirComeco) EnviarPersonagem();   // o personagem (InventarioJogador.Personagem.cs)
             if (IsSpawned) PneuQueSeVe();

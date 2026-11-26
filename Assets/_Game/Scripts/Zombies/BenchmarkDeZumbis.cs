@@ -54,7 +54,8 @@ namespace ZombieCityCleaner.Zombies
         {
             var teclado = Keyboard.current;
             var m = ZombieManager.Instancia;
-            if (!Rodando && teclado != null && teclado.f9Key.wasPressedThisFrame && m != null && m.IsSpawned && m.IsServer) StartCoroutine(Rodar());
+            // (25/11/2026: só com o F1 liberado; na build, o F9 do anfitrião soltava o teste no meio da partida)
+            if (!Rodando && teclado != null && teclado.f9Key.wasPressedThisFrame && m != null && m.IsSpawned && m.IsServer && UI.MenuDoDesenvolvedor.Disponivel) StartCoroutine(Rodar());
         }
 
         IEnumerator Automatico()

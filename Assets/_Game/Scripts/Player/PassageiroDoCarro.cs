@@ -85,6 +85,8 @@ namespace ZombieCityCleaner.Player
         float _yaw3, _pitch3 = 12f, _distancia3 = 6f, _mexeuNaCamera;
         string _aviso;
         float _avisoAte;
+        // para medir a altura do aviso e da linha da ignição (26/11/2026, a pedido do Pedro: os textos cortados pela metade)
+        readonly GUIContent _conteudoDoAviso = new GUIContent();
         // a chave: pega (um clique nela), o mouse gira a chave e não olha; na partida, o mini-game
         bool _segurandoChave, _naPartidaAntes, _fervendoAntes;
         // os avisos do desgaste (01/11/2026): o que estava assim no quadro anterior
@@ -1542,9 +1544,16 @@ namespace ZombieCityCleaner.Player
             if (aviso != null)
             {
                 var a = EstilosDoHud.Rotulo(Mathf.RoundToInt(18 * u), FontStyle.Normal, TextAnchor.MiddleCenter);
-                // com o mostrador da chave aberto, o aviso vai para cima dele (embaixo ficam as instruções)
-                float y = Lugar == 0 && _segurandoChave && !_terceira ? Screen.height / 2f - 140f * u - 40f * u : Screen.height / 2f + 130 * u;
-                Sombra(new Rect(Screen.width / 2f - 300 * u, y, 600 * u, 30 * u), aviso, a, new Color(0.95f, 0.93f, 0.85f));
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 800u e a altura do aviso: o do pneu murchando
+                // (639u), o da vela gasta (614u) e o da ligação direta (606u) passavam dos 600u e saíam em duas linhas cortadas
+                // numa caixa de uma, a de cima no alto e a de baixo embaixo
+                float largura = Mathf.Min(800f * u, Screen.width - 32f * u);
+                _conteudoDoAviso.text = aviso;
+                float alto = Mathf.Max(30f * u, a.CalcHeight(_conteudoDoAviso, largura));
+                // com o mostrador da chave aberto, o aviso vai para cima dele (embaixo ficam as instruções), crescendo para cima
+                // a partir do fundo de antes (altura/2 − 150u; o mostrador começa em altura/2 − 140u)
+                float y = Lugar == 0 && _segurandoChave && !_terceira ? Screen.height / 2f - 150f * u - alto : Screen.height / 2f + 130 * u;
+                Sombra(new Rect(Screen.width / 2f - largura / 2f, y, largura, alto), aviso, a, new Color(0.95f, 0.93f, 0.85f));
             }
         }
 
@@ -1592,7 +1601,14 @@ namespace ZombieCityCleaner.Player
                                  : $"S{SemAChave.Substring(1)}: olhe para a ignição, {onde}, e clique para fazer a ligação direta")
                     : Carro.LigacaoDireta ? "Olhe para a ignição e clique para tentar a ligação direta de novo"
                     : "Olhe para a chave e clique nela para dar a partida";
-                Sombra(new Rect(cx - 360 * u, Screen.height - 62 * u, 720 * u, 24 * u), texto, dica, new Color(0.95f, 0.85f, 0.55f));
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a da Fat Boy ("... no tanque, atrás do
+                // velocímetro, e clique para fazer a ligação direta", 722u) não cabia nos 720u: quebrava, e a linha de cima saía
+                // cortada no alto. Agora 800u, como a linha de baixo, e a altura dela, subindo a partir do fundo de antes
+                // (altura − 38u, logo acima da linha dos comandos; em cima, até o aviso do meio da tela, não há nada)
+                float largura = Mathf.Min(800f * u, Screen.width - 32f * u);
+                _conteudoDoAviso.text = texto;
+                float alto = Mathf.Max(24f * u, dica.CalcHeight(_conteudoDoAviso, largura));
+                Sombra(new Rect(cx - largura / 2f, Screen.height - 38 * u - alto, largura, alto), texto, dica, new Color(0.95f, 0.85f, 0.55f));
             }
         }
 

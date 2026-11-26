@@ -158,6 +158,9 @@ namespace ZombieCityCleaner.Loot
                 var d = c;
                 d.id = _proximoId++;
                 if (Itens.EhFogueira(d.tipo)) d.valor = d.valor > 0f ? Agora + d.valor : 0f;
+                // (25/11/2026, a revisão) a mesa de um save de antes da vida dela vinha com o valor 0: volta com a vida cheia (a
+                // de agora nunca fica salva sem vida: com 0, ela já quebrou e saiu da lista)
+                if (d.tipo == Item.MesaDeFerramentas && (d.valor <= 0f || d.valor > VidaDaMesa)) d.valor = VidaDaMesa;
                 _lista.Add(d);
                 if (d.tipo == Item.TabuasBarricada) _barricadasDosVaos[d.vao] = d.id;
                 // (a porta ou a janela dela fica fechada: a lista das portas do save já a tem fechada, e o anfitrião confere)
@@ -171,6 +174,7 @@ namespace ZombieCityCleaner.Loot
             if (tipo == Item.KitFogueira) return ItensDoFogo.Fogueira;   // a portátil (11/11/2026): do Resources/ItensDoFogo
             if (Itens.EhArmadilha(tipo)) return ItensDasArmadilhas.Montada(tipo);   // as armadilhas (11/11/2026): do Resources/ItensDasArmadilhas
             if (Itens.EhDaBase(tipo)) return MalhaDaBase(tipo);   // o núcleo, o muro e o portão (24/11/2026: ConstrucoesNoMundo.Base.cs)
+            if (tipo == Item.MesaDeFerramentas) return MalhaDaMesa();   // (25/11/2026: ConstrucoesNoMundo.Mesa.cs)
             int k = tipo - Item.Fogueira;
             return Itens.EhConstrucao(tipo) && malhas != null && k >= 0 && k < malhas.Length ? malhas[k] : null;
         }
@@ -197,7 +201,9 @@ namespace ZombieCityCleaner.Loot
             {
                 float baixo = Mathf.Max(b.min.y, 0f) + 0.11f + Mathf.Min(0.35f, 0.14f * Mathf.Max(b.extents.x, b.extents.z)), alto = b.max.y;
                 centro = ponto + rot * new Vector3(b.center.x, (baixo + alto) * 0.5f, b.center.z);
-                meia = new Vector3(b.extents.x - 0.02f, Mathf.Max(0.01f, (alto - baixo) * 0.5f), b.extents.z - 0.02f);
+                // (25/11/2026) as pontas com 12 cm de folga: encaixado na ponta de outro muro (as toras se tocam), o portão
+                // virado para o outro lado dava "Não cabe aqui"
+                meia = new Vector3(b.extents.x - 0.12f, Mathf.Max(0.01f, (alto - baixo) * 0.5f), b.extents.z - 0.02f);
             }
             var batidas = Physics.OverlapBox(centro, meia, rot, MascaraDeMontar, QueryTriggerInteraction.Ignore);
             foreach (var c in batidas)
@@ -334,6 +340,7 @@ namespace ZombieCityCleaner.Loot
             if (kit.item == Item.NucleoDaBase) valor = 1f;
             else if (kit.item == Item.MuroDeToras) valor = VidaDoMuro;
             else if (kit.item == Item.PortaoDeToras) valor = VidaDoPortao;
+            else if (kit.item == Item.MesaDeFerramentas) valor = VidaDaMesa;   // (a mesa, com a vida cheia: 25/11/2026, a revisão)
             // na chuva, fora de um teto (o de quem monta ou o do anfitrião), a fogueira fica montada, apagada, e a lenha do kit
             // volta como 1 madeira (a que acende depois, debaixo de um teto ou sem chuva; 05/11/2026)
             bool apagadaNaChuva = kit.item == Item.Fogueira && ChoveNoFogo && !cobertoParaQuemMonta && !World.Tempo.SobTeto(ponto);
@@ -450,6 +457,7 @@ namespace ZombieCityCleaner.Loot
         /// <summary>
         /// Só no anfitrião: o Brutamonte passa por cima das barricadas (elas caem e sobram tábuas) e, desde 11/11/2026 (a
         /// etapa 5a), das estacas: elas quebram (sobram 2 madeiras), mas ele (<paramref name="quem"/>) leva o dano delas.
+        /// Desde a revisão de 25/11/2026, também a mesa de oficina montada (sobram 2 madeiras).
         /// </summary>
         public void QuebrarBarricadasPerto(Vector3 ponto, float raio, Zumbi quem = null)
         {
@@ -459,8 +467,9 @@ namespace ZombieCityCleaner.Loot
                 var c = _lista[k];
                 // (e as barricadas de tábuas das portas e das janelas, 11/11/2026, a etapa 5b: a porta volta a abrir, fechada)
                 // (e o muro e o portão de toras, 24/11/2026: sobra uma tora)
+                // (e a mesa de oficina montada, 25/11/2026, a revisão: sem isso, ela segurava até o Brutamonte e os chefes)
                 bool toras = c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras;
-                if (c.tipo != Item.Barricada && c.tipo != Item.Estacas && c.tipo != Item.TabuasBarricada && !toras) continue;
+                if (c.tipo != Item.Barricada && c.tipo != Item.Estacas && c.tipo != Item.TabuasBarricada && !toras && c.tipo != Item.MesaDeFerramentas) continue;
                 Vector3 d = c.pos - ponto;
                 d.y = 0f;
                 if (d.sqrMagnitude > raio * raio) continue;
@@ -522,7 +531,8 @@ namespace ZombieCityCleaner.Loot
             var b = CaixaDe(c);   // (a de tábuas, 11/11/2026: a malha da porta ou da janela, no tamanho do vão)
             // (o muro e o portão da base, 24/11/2026: quem perdeu o jogador de vista atrás dele e procura ali também bate;
             // no teste, os zumbis encostados no muro paravam de bater assim que o jogador sumia atrás dele)
-            bool daBase = c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras;
+            // (e a mesa de oficina montada, 25/11/2026, a revisão: na frente de uma porta, o jogador fica fora da vista lá dentro)
+            bool daBase = c.tipo == Item.MuroDeToras || c.tipo == Item.PortaoDeToras || c.tipo == Item.MesaDeFerramentas;
             int n = 0;
             foreach (var z in zm.Ativos)
             {
@@ -575,7 +585,9 @@ namespace ZombieCityCleaner.Loot
             if (tabuas) go.transform.localScale = EscalaDoVao(c);
             go.AddComponent<MeshFilter>().sharedMesh = malha;
             var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = material;
+            // (a mesa de oficina, 25/11/2026: o material da paleta do modelo dela)
+            var daMesa = c.tipo == Item.MesaDeFerramentas ? MaterialDaMesa : null;
+            r.sharedMaterial = daMesa != null ? daMesa : material;
             r.shadowCastingMode = ShadowCastingMode.On;
             // (a de tábuas: o colisor é o da inteira, mesmo danificada)
             var inteira = tabuas ? ItensDasArmadilhas.Barricada(Janela(c), false) : malha;
@@ -586,14 +598,15 @@ namespace ZombieCityCleaner.Loot
             // a fogueira e a cama não seguram ninguém (passa-se por cima); a barricada, sim (e as estacas, 11/11/2026, e a
             // de tábuas, na porta e na janela)
             // (a base, 24/11/2026: o núcleo e o muro seguram; o portão faz a dele no MontarDaBase)
-            col.isTrigger = c.tipo != Item.Barricada && c.tipo != Item.Estacas && !tabuas && !Itens.EhDaBase(c.tipo);
+            // (a mesa de ferramentas, 25/11/2026: segura, como um móvel)
+            col.isTrigger = c.tipo != Item.Barricada && c.tipo != Item.Estacas && !tabuas && !Itens.EhDaBase(c.tipo) && c.tipo != Item.MesaDeFerramentas;
             var mira = go.AddComponent<ConstrucaoNaMira>();
             mira.mundo = this;
             mira.id = c.id;
             if (Itens.EhDaBase(c.tipo)) MontarDaBase(go, c);
             // (a de tábuas na porta também corta o NavMesh: os zumbis que querem entrar param nela; na janela, não precisa,
             // o peitoril já fica fora do NavMesh)
-            if (c.tipo == Item.Barricada || c.tipo == Item.Estacas || (tabuas && !Janela(c)))
+            if (c.tipo == Item.Barricada || c.tipo == Item.Estacas || c.tipo == Item.MesaDeFerramentas || (tabuas && !Janela(c)))
             {
                 var obstaculo = go.AddComponent<NavMeshObstacle>();
                 obstaculo.shape = NavMeshObstacleShape.Box;
@@ -721,6 +734,11 @@ namespace ZombieCityCleaner.Loot
                 case Item.MuroDeToras:
                 case Item.PortaoDeToras:
                     return ConstrucoesNoMundo.DicaDaBase(c, quem);   // (24/11/2026: ConstrucoesNoMundo.Base.cs)
+                case Item.MesaDeFerramentas:
+                    // (25/11/2026; a vida, na revisão do mesmo dia: abaixo da metade, desmontada, ela vira 2 madeiras, como o muro vira uma tora)
+                    float pctDaMesa = c.valor / ConstrucoesNoMundo.MaximoDe(c) * 100f;
+                    return $"Mesa de oficina ({Mathf.CeilToInt(pctDaMesa)}%)   ·   [E] Criar   ·   [segure E] Desmontar"
+                           + (pctDaMesa >= ConstrucoesNoMundo.MesaVoltaInteiraCom ? "" : " (sobram 2 madeiras)");
             }
             return null;
         }
@@ -753,6 +771,8 @@ namespace ZombieCityCleaner.Loot
                 Salvar.Salvamento.PedirDormir();
                 JogadorRede.Local?.Vida?.PedirDormir();   // a mente (06/11/2026): dormir de verdade (o cansaço, a noite passando)
             }
+            // (25/11/2026) a mesa de ferramentas: o E abre a aba Criar da mochila (nesta máquina)
+            else if (d.Value.tipo == Item.MesaDeFerramentas) quem.GetComponent<TelaDoInventario>()?.AbrirNaAbaCriar();
             // a cama de outro jogador, só a dica de quem é (10/11/2026: só quem montou recolhe; o anfitrião confere também)
             // (a barricada de tábuas, 11/11/2026: só segurando o E ou o clique)
             else if (d.Value.tipo != Item.Cama && d.Value.tipo != Item.TabuasBarricada) mundo.PedirUsar(id);
@@ -806,14 +826,15 @@ namespace ZombieCityCleaner.Loot
         public override bool ToqueUsa(ArmaJogador quem)
         {
             var d = mundo.Dados(id);
-            return d != null && (Itens.EhFogueira(d.Value.tipo) || d.Value.tipo == Item.NucleoDaBase || d.Value.tipo == Item.PortaoDeToras);
+            return d != null && (Itens.EhFogueira(d.Value.tipo) || d.Value.tipo == Item.NucleoDaBase || d.Value.tipo == Item.PortaoDeToras
+                                 || d.Value.tipo == Item.MesaDeFerramentas);
         }
 
         public override float Segurar(ArmaJogador quem)
         {
             var d = mundo.Dados(id);
             _segurandoOClique = false;
-            _desmontandoABase = d != null && Itens.EhDaBase(d.Value.tipo);
+            _desmontandoABase = d != null && (Itens.EhDaBase(d.Value.tipo) || d.Value.tipo == Item.MesaDeFerramentas);   // (e a mesa, 25/11/2026)
             if (_desmontandoABase) return ConstrucoesNoMundo.SegundosDeDesmontarABase;
             _sentando = d != null && Itens.EhFogueira(d.Value.tipo) && mundo.Acesa(d.Value) && !SentarNoFogo.Sentado;
             if (_sentando) return 0.6f;

@@ -108,7 +108,11 @@ namespace ZombieCityCleaner.DiaZero
 
         public void AoConversar(bool comecou)
         {
-            if (_npc != null) _npc.Conversando = comecou;
+            if (_npc == null) return;
+            _npc.Conversando = comecou;
+            // (25/11/2026) e em todas as máquinas, pelo anfitrião: parado enquanto conversa (DiaZeroDaPartida.Conversas.cs)
+            var d = DiaZeroDaPartida.Instancia;
+            if (d != null) d.ConversarComNpc(_npc.Indice, comecou);
         }
 
         bool Doente => _npc != null && _npc.Doente;

@@ -29,13 +29,16 @@ namespace ZombieCityCleaner.Player
     public partial class TelaDoInventario
     {
         // as medidas, a 720p: a área da grade (a silhueta e as etiquetas) e a coluna dos detalhes (os curativos)
-        static readonly Rect AbaCorpo = new Rect(560, 14, 104, 36);
+        static readonly Rect AbaCorpo = new Rect(506, 14, 74, 36);   // (25/11/2026: mais estreita, para a ANOTAÇÕES caber)
         static readonly Rect AreaDoCorpo = new Rect(GradeX, 58, GradeMaxW, 486);
         static readonly Rect SilhuetaGrande = new Rect(500, 66, 158, 310);
         // a imagem do personagem (11/11/2026), entre as etiquetas e até a linha da infecção (a vida geral saiu)
         static readonly Rect AreaDaImagemDoCorpo = new Rect(496, 60, 166, 358);
         static readonly Rect BotaoParar = new Rect(GradeX + GradeMaxW - 96, 458, 90, 30);
-        const float EtiquetaW = 150f, EtiquetaH = 96f, PassoDaEtiqueta = 106f;
+        // (26/11/2026, a pedido do Pedro: os textos cortados) a etiqueta mais alta (era 96, no passo de 106): com muitos estados
+        // numa parte, nem a letra menor cabia e a última linha saía cortada ao meio. A de baixo acaba em 386, antes da fileira dos
+        // estados (418)
+        const float EtiquetaW = 150f, EtiquetaH = 104f, PassoDaEtiqueta = 108f;
         const float CurativosY = 230f, PassoDoCurativo = 56f;
         // o fim da coluna dos curativos (o fim da área dos detalhes): cabem 6 no passo cheio; com mais, o passo encolhe
         static float FimDosCurativos => AreaDosDetalhes.yMax - 4f;
@@ -628,7 +631,10 @@ namespace ZombieCityCleaner.Player
             {
                 var texto = new GUIStyle(_texto) { fontStyle = FontStyle.Bold, wordWrap = false };
                 PorCor(texto, Destaque);
-                GUI.Label(Em(new Rect(x, 460f, w - 104f, 20f)), string.IsNullOrEmpty(t.Texto) ? "Tratando…" : t.Texto, texto);
+                // (26/11/2026, a pedido do Pedro: os textos cortados) com "…" onde não cabe: o curativo no amigo de nome comprido
+                // ("Pondo a tala na perna esquerda de ...") passava da caixa e saía cortado à direita
+                var caixaDoTratamento = Em(new Rect(x, 460f, w - 104f, 20f));
+                GUI.Label(caixaDoTratamento, Cortar(string.IsNullOrEmpty(t.Texto) ? "Tratando…" : t.Texto, texto, caixaDoTratamento.width), texto);
                 var b = Em(new Rect(x, 484f, w - 104f, 6f));
                 Ret(Encolher(b, -1f), new Color(0f, 0f, 0f, 0.6f));
                 Ret(new Rect(b.x, b.y, b.width * Mathf.Clamp01(t.Progresso), b.height), new Color(0.95f, 0.85f, 0.45f, 0.95f));
@@ -643,7 +649,9 @@ namespace ZombieCityCleaner.Player
                 GUI.Label(Em(new Rect(x, 460f, w, 20f)), "Clique numa parte: escolher (de novo: o automático)", _texto);
                 GUI.Label(Em(new Rect(x, 482f, w, 20f)), "Clique num curativo, à direita: usar   ·   botão direito na parte: opções   ·   H: esta aba", _pequeno);
             }
-            Aviso(new Rect(x, 512f, w, 22f));
+            // (26/11/2026, a pedido do Pedro: os textos cortados) até 2 linhas (o fim da área, 548): o aviso do curativo ("Braço
+            // esquerdo enfaixado: parou de sangrar, e protegido até o amanhecer (...)") quebrava e a 2ª saía cortada
+            Aviso(new Rect(x, 512f, w, 22f), 36f);
         }
 
         /// <summary>
@@ -665,7 +673,7 @@ namespace ZombieCityCleaner.Player
         }
 
         // a etiqueta da parte (como as do capô): o nome e a vida, a barra e o estado em palavras
-        GUIStyle _estiloDoNome, _estiloDoNumero, _estiloDoEstado, _estiloDoEstadoMenor;
+        GUIStyle _estiloDoNome, _estiloDoNumero, _estiloDoEstado, _estiloDoEstadoMenor, _estiloDoEstadoMinimo;
         readonly GUIContent _conteudoDoEstado = new GUIContent();
 
         void EtiquetaDaParte(in EstadoDoCorpo e, ParteDoCorpo p, bool sob)
@@ -703,11 +711,15 @@ namespace ZombieCityCleaner.Player
             {
                 _estiloDoEstado = new GUIStyle(_pequeno) { wordWrap = true };
                 _estiloDoEstadoMenor = new GUIStyle(_pequeno) { wordWrap = true, fontSize = Mathf.Max(8, Mathf.RoundToInt(_pequeno.fontSize * 0.85f)) };
+                _estiloDoEstadoMinimo = new GUIStyle(_pequeno) { wordWrap = true, fontSize = Mathf.Max(8, Mathf.RoundToInt(9f * u)) };
             }
-            // a etapa 2 pôs mais coisas na ferida (protegida, o dia dela): o que não couber vai na letra menor
+            // a etapa 2 pôs mais coisas na ferida (protegida, o dia dela): o que não couber vai na letra menor (26/11/2026, a
+            // pedido do Pedro: os textos cortados: e, se nem nela couber, na mínima, de 9; em 1600x900 a menor ainda cortava a
+            // última linha)
             var areaDoEstado = new Rect(r.x + 8 * u, r.y + 42 * u, r.width - 16 * u, r.height - 44 * u);
             _conteudoDoEstado.text = palavras;
-            var est = _estiloDoEstado.CalcHeight(_conteudoDoEstado, areaDoEstado.width) > areaDoEstado.height ? _estiloDoEstadoMenor : _estiloDoEstado;
+            var est = _estiloDoEstado.CalcHeight(_conteudoDoEstado, areaDoEstado.width) <= areaDoEstado.height ? _estiloDoEstado
+                : _estiloDoEstadoMenor.CalcHeight(_conteudoDoEstado, areaDoEstado.width) <= areaDoEstado.height ? _estiloDoEstadoMenor : _estiloDoEstadoMinimo;
             PorCor(est, grave ? Ruim : vida < 100 || e.Faixa(p) || e.Tala(p) || e.Ferida(p) ? CorDoTexto : TextoApagado);
             GUI.Label(areaDoEstado, _conteudoDoEstado, est);
         }
@@ -808,8 +820,15 @@ namespace ZombieCityCleaner.Player
                 PorCor(qtd, n > 0 ? CorDoTexto : TextoApagado);
                 GUI.Label(new Rect(tx, r.y + topo, tw, 20 * u), quantos, qtd);
                 PorCor(baixo, serve ? (sobre ? Destaque : TextoApagado) : new Color(0.9f, 0.6f, 0.52f, 0.85f));
-                float yDeBaixo = apertado ? 19 * u : 24 * u;
-                GUI.Label(new Rect(tx, r.y + yDeBaixo, tw, Mathf.Max(12 * u, r.height - yDeBaixo - 1 * u)), serve ? CliqueDo(e, item, parte) : motivo ?? "", baixo);
+                // (26/11/2026, a pedido do Pedro: os textos cortados) apertado (7 curativos ou mais), o texto de baixo, numa linha
+                // só, com "…" onde não cabe (o "Clique: enfaixar e proteger o braço esquerdo (3 s)" passava da linha, cortado), e
+                // o inteiro na dica do mouse; a caixa com pelo menos uma linha inteira (com 10, era mais baixa que a letra) e,
+                // no passo cheio, com as duas linhas inteiras (a de baixo perdia o pé das letras)
+                float yDeBaixo = apertado ? 18 * u : 24 * u;
+                string deBaixo = serve ? CliqueDo(e, item, parte) : motivo ?? "";
+                string mostrado = apertado ? Cortar(deBaixo, baixo, tw) : deBaixo;
+                GUI.Label(new Rect(tx, r.y + yDeBaixo, tw, Mathf.Max(baixo.lineHeight + 1f, r.height - yDeBaixo)), mostrado, baixo);
+                if (sobre && mostrado != deBaixo) _dicaTexto = deBaixo;
             }
         }
 

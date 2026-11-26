@@ -78,6 +78,71 @@ namespace ZombieCityCleaner.Player
         public ulong niveis0, niveis1, niveis2;
         /// <summary>A árvore mudou e os pontos voltaram: a aba K mostra o aviso uma vez (e o anfitrião apaga).</summary>
         public bool avisoDaArvore;
+        /// <summary>
+        /// As receitas aprendidas pelo material-chave (25/11/2026): um bit por receita de <see cref="Loot.Receitas.Todas"/>,
+        /// as 0 a 63 e as 64 a 127 (InventarioJogador.Receitas.cs).
+        /// </summary>
+        public ulong receitas0, receitas1;
+        /// <summary>
+        /// O caderno do P (25/11/2026, a etapa 9): os zumbis que ele já viu, um bit por tipo (0 a 3: o Oco, o Corredor, o Long
+        /// e o Brutamonte, na ordem do TipoDeZumbi; 8 em diante, os chefes, na ordem do QualChefe). InventarioJogador.Caderno.cs.
+        /// </summary>
+        public uint zumbisVistos;
+        /// <summary>
+        /// O caderno do P: quantos bichos de cada espécie ele caçou, 8 bits por espécie (até 255; a ordem da Especie): as 0 a 7,
+        /// as 8 a 15 e as 16 a 23.
+        /// </summary>
+        public ulong cacados0, cacados1, cacados2;
+
+        /// <summary>Ele já viu esse zumbi (o bit do caderno)?</summary>
+        public bool ViuOZumbi(int bit) => bit >= 0 && bit < 32 && ((zumbisVistos >> bit) & 1u) != 0u;
+
+        /// <summary>Marca o zumbi como visto.</summary>
+        public void VerOZumbi(int bit)
+        {
+            if (bit >= 0 && bit < 32) zumbisVistos |= 1u << bit;
+        }
+
+        /// <summary>Quantos bichos dessa espécie (o número da Especie) ele caçou.</summary>
+        public int Cacados(int especie)
+        {
+            if (especie < 0 || especie >= 24) return 0;
+            ulong w = especie < 8 ? cacados0 : especie < 16 ? cacados1 : cacados2;
+            return (int)((w >> (8 * (especie & 7))) & 0xFFUL);
+        }
+
+        /// <summary>Mais um bicho dessa espécie caçado (para em 255).</summary>
+        public void Cacar(int especie)
+        {
+            if (especie < 0 || especie >= 24 || Cacados(especie) >= 255) return;
+            ulong mais = 1UL << (8 * (especie & 7));
+            if (especie < 8) cacados0 += mais;
+            else if (especie < 16) cacados1 += mais;
+            else cacados2 += mais;
+        }
+
+        /// <summary>O maior de cada um dos 8 bytes (junta as contas do save com as de antes de o personagem chegar).</summary>
+        public static ulong MaiorPorByte(ulong a, ulong b)
+        {
+            ulong r = 0UL;
+            for (int i = 0; i < 8; i++)
+            {
+                ulong x = (a >> (8 * i)) & 0xFFUL, y = (b >> (8 * i)) & 0xFFUL;
+                r |= Math.Max(x, y) << (8 * i);
+            }
+            return r;
+        }
+
+        /// <summary>Ele já aprendeu a receita (o índice em <see cref="Loot.Receitas.Todas"/>)?</summary>
+        public bool SabeAReceita(int k) => k >= 0 && k < 128 && (((k < 64 ? receitas0 : receitas1) >> (k & 63)) & 1UL) != 0UL;
+
+        /// <summary>Marca a receita como aprendida.</summary>
+        public void AprenderAReceita(int k)
+        {
+            if (k < 0 || k >= 128) return;
+            if (k < 64) receitas0 |= 1UL << k;
+            else receitas1 |= 1UL << (k & 63);
+        }
 
         /// <summary>Quantos pontos ele tem no nó (0 a 3).</summary>
         public int PontosEm(Habilidade h)
@@ -125,10 +190,16 @@ namespace ZombieCityCleaner.Player
         }
 
         public bool Equals(ProgressoDoPersonagem o) => xp == o.xp && aprendidas == o.aprendidas && niveis0 == o.niveis0
-                                                       && niveis1 == o.niveis1 && niveis2 == o.niveis2 && avisoDaArvore == o.avisoDaArvore;
+                                                       && niveis1 == o.niveis1 && niveis2 == o.niveis2 && avisoDaArvore == o.avisoDaArvore
+                                                       && receitas0 == o.receitas0 && receitas1 == o.receitas1
+                                                       && zumbisVistos == o.zumbisVistos && cacados0 == o.cacados0
+                                                       && cacados1 == o.cacados1 && cacados2 == o.cacados2;
         public override bool Equals(object o) => o is ProgressoDoPersonagem p && Equals(p);
         public override int GetHashCode() => xp ^ aprendidas.GetHashCode() ^ (niveis0.GetHashCode() * 3) ^ (niveis1.GetHashCode() * 7)
-                                             ^ (niveis2.GetHashCode() * 13) ^ (avisoDaArvore ? 1 << 30 : 0);
+                                             ^ (niveis2.GetHashCode() * 13) ^ (avisoDaArvore ? 1 << 30 : 0)
+                                             ^ (receitas0.GetHashCode() * 17) ^ (receitas1.GetHashCode() * 19)
+                                             ^ ((int)zumbisVistos * 23) ^ (cacados0.GetHashCode() * 29) ^ (cacados1.GetHashCode() * 31)
+                                             ^ (cacados2.GetHashCode() * 37);
     }
 
     /// <summary>

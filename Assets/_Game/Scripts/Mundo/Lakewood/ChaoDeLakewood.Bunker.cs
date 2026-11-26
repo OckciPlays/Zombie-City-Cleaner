@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ZombieCityCleaner.Mundo
@@ -115,6 +116,68 @@ namespace ZombieCityCleaner.Mundo
         {
             Bunker = LugarDoBunker.De(Mapa);
             if (Bunker != null) Buracos.Add(Bunker.Buraco);
+        }
+
+        // ------------------------------------------------------------------ o relevo de longe embaixo do bunker
+
+        /// <summary>A folga (m) em volta da caixa do bunker nas células do relevo de longe que saem dos setores.</summary>
+        const float FolgaDoLongeNoBunker = 3f;
+
+        /// <summary>
+        /// (25/11/2026, a pedido do Pedro: "um pedaço de terra nos andares inferiores, na cozinha e mais embaixo") a célula do
+        /// relevo de longe (o canto e as medidas, no mapa) encosta na caixa do bunker? O relevo de longe fica 6 m abaixo do
+        /// chão: embaixo do pátio, isso é o B2 (a cozinha), e onde o relevo desce, o B3 e o B4. Essas células saem da malha
+        /// dos setores (<see cref="Longe"/>) e vão para a <see cref="LongeDoBunker"/>, que a cena só mostra de longe (perto,
+        /// os blocos de perto cobrem o lugar, com o buraco).
+        /// </summary>
+        public bool CelulaDeLongeNoBunker(float x0, float z0, float lx, float lz)
+        {
+            if (Bunker == null) return false;
+            var (c, _, _, meia) = Bunker.Buraco;
+            float r = meia.magnitude + FolgaDoLongeNoBunker;
+            float dx = Mathf.Max(Mathf.Max(x0 - c.x, 0f), c.x - (x0 + lx));
+            float dz = Mathf.Max(Mathf.Max(z0 - c.y, 0f), c.y - (z0 + lz));
+            return dx * dx + dz * dz < r * r;
+        }
+
+        /// <summary>
+        /// As células do relevo de longe que encostam na caixa do bunker (<see cref="CelulaDeLongeNoBunker"/>), numa malha só
+        /// delas, com os mesmos vértices da grade do mapa todo (sem emenda com os setores). Null sem o bunker.
+        /// </summary>
+        public MalhaDoBloco LongeDoBunker(float passo = PassoDeLonge)
+        {
+            if (Bunker == null) return null;
+            var (c, _, _, meia) = Bunker.Buraco;
+            float r = meia.magnitude + FolgaDoLongeNoBunker;
+            int i0 = Mathf.FloorToInt((c.x - r) / passo), i1 = Mathf.FloorToInt((c.x + r) / passo);
+            int j0 = Mathf.FloorToInt((c.y - r) / passo), j1 = Mathf.FloorToInt((c.y + r) / passo);
+            var v = new List<Vector3>();
+            var cor = new List<Color32>();
+            var uv = new List<Vector2>();
+            System.Span<float> f = stackalloc float[MapaDeLakewood.Coberturas];
+            for (int j = j0; j <= j1; j++)
+            for (int i = i0; i <= i1; i++)
+            {
+                if (!CelulaDeLongeNoBunker(i * passo, j * passo, passo, passo)) continue;
+                // os cantos na ordem da malha dos setores: (i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)
+                var p = new Vector3[4];
+                var k = new Color32[4];
+                var u = new Vector2[4];
+                for (int q = 0; q < 4; q++)
+                {
+                    int a = i + (q >= 2 ? 1 : 0), b = j + (q == 1 || q == 2 ? 1 : 0);
+                    float x = a * passo, z = b * passo;
+                    p[q] = new Vector3(x, VerticeDeLonge(passo, a, b), z);
+                    CorECopaDeLonge(x, z, Relevo.Altura(x, z), f, out k[q], out u[q]);
+                }
+                v.Add(p[0]); v.Add(p[1]); v.Add(p[2]);
+                cor.Add(k[0]); cor.Add(k[1]); cor.Add(k[2]);
+                uv.Add(u[0]); uv.Add(u[1]); uv.Add(u[2]);
+                v.Add(p[0]); v.Add(p[2]); v.Add(p[3]);
+                cor.Add(k[0]); cor.Add(k[2]); cor.Add(k[3]);
+                uv.Add(u[0]); uv.Add(u[2]); uv.Add(u[3]);
+            }
+            return v.Count > 0 ? Fechar(v, cor, uv) : null;
         }
     }
 }

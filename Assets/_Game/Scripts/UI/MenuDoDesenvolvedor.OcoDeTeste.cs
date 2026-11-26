@@ -12,6 +12,7 @@ namespace ZombieCityCleaner.UI
     public partial class MenuDoDesenvolvedor
     {
         static string[] _nomesDasVersoes;
+        static string _modoMaisLargo;   // (o nome de animação mais largo, achado uma vez)
 
         Rect PainelDoOco(float u, Rect aoLado)
         {
@@ -49,7 +50,15 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(x, y, w, 22 * u), "Animação (todos)", _texto);
             y += 22 * u;
             int atual = (int)OcoDeTeste.ModoDeTodos;
-            int escolhido = GUI.SelectionGrid(new Rect(x, y, w, linhasModo * 30 * u), atual, OcoDeTeste.NomesDosModos, 2, _botao);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a grade usa um estilo só: o do nome mais largo
+            // ("Atacar (sem dano)" passava da célula), na metade da largura menos o vão de 4 entre as duas colunas
+            if (_modoMaisLargo == null)
+            {
+                _modoMaisLargo = "";
+                foreach (var n in OcoDeTeste.NomesDosModos)
+                    if (_botao.CalcSize(new GUIContent(n)).x > _botao.CalcSize(new GUIContent(_modoMaisLargo)).x) _modoMaisLargo = n;
+            }
+            int escolhido = GUI.SelectionGrid(new Rect(x, y, w, linhasModo * 30 * u), atual, OcoDeTeste.NomesDosModos, 2, BotaoQueCabe(_modoMaisLargo, (w - 4f) / 2f));
             if (escolhido != atual) OcoDeTeste.MudarTodos((OcoDeTeste.Modo)escolhido);
             return area;
         }

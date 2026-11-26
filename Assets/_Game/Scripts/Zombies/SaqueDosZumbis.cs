@@ -65,7 +65,7 @@ namespace ZombieCityCleaner.Zombies
         static Entrada[] DoOficio(string modelo)
         {
             if (modelo.Contains("Enfermeira")) return new[] { L(Item.Atadura, 6), L(Item.Gaze, 5), L(Item.Comprimidos, 4), L(Item.Desinfetante, 3), L(Item.Antibiotico, 1), R("Jaleco", 2), R("Mascara_Cirurgica", 4) };
-            if (modelo.Contains("Mecanico")) return new[] { L(Item.PecasDeMetal, 5), L(Item.Fios, 4), L(Item.FitaAdesiva, 3), L(Item.Pregos, 3, 3, 10), L(Item.Ferramenta, 1), R("Calca_Trabalho", 2), R("Cinto_Ferramentas", 1) };
+            if (modelo.Contains("Mecanico")) return new[] { L(Item.PecasDeMetal, 5), L(Item.Fios, 4), L(Item.FitaAdesiva, 3), L(Item.Pregos, 3, 3, 10), R("Calca_Trabalho", 2), R("Cinto_Ferramentas", 1) };
             if (modelo.Contains("Estudante")) return new[] { L(Item.Salgadinho, 5), L(Item.Chocolate, 4), L(Item.RefrigeranteLata, 4), L(Item.Energetico, 2), R("Moletom_Ziper", 2), R("Tenis_Cano", 1) };
             if (modelo.Contains("Executivo")) return new[] { L(Item.Comprimidos, 2), L(Item.MacoDeCigarros, 3, 4, 18), R("Camisa_Social", 3), R("Calca_Social", 2), R("Sapato_Social", 2) };
             if (modelo.Contains("Lenhador")) return new[] { L(Item.Madeira, 5, 1, 2), L(Item.Corda, 3), L(Item.Gravetos, 3, 1, 3), R("Camisa_Xadrez", 3), R("Bota_Trabalho", 2), R("Gorro", 1) };

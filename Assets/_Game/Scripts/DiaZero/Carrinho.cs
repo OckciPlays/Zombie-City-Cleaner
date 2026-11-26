@@ -132,6 +132,21 @@ namespace ZombieCityCleaner.DiaZero
             _antes = null;
         }
 
+        /// <summary>
+        /// A aparência para o save do personagem (25/11/2026, o save do Dia 0: o jogo grava no meio das compras): as roupas
+        /// provadas e ainda não pagas voltam às de antes de provar (as pagas ficam). Sem nada provado, a mesma aparência.
+        /// </summary>
+        public static AparenciaDoJogador SemAsProvadas(AparenciaDoJogador a)
+        {
+            if (!_antes.HasValue) return a;
+            var antes = _antes.Value;
+            // (o colete e o "por cima" não vão juntos, e o ComDaLoja de um tira o outro: como no antes só um dos dois tem peça,
+            // os dois voltam como estavam)
+            for (int l = 0; l < AparenciaDoJogador.LugaresDaLoja.Length; l++)
+                if (a.DaLoja(l) != antes.DaLoja(l)) a = a.ComDaLoja(l, antes.DaLoja(l));
+            return a;
+        }
+
         /// <summary>O nome de uma peça para o texto ("Capacete_Militar" → "capacete militar").</summary>
         public static string Nome(string peca) => peca.Replace('_', ' ').ToLowerInvariant()
             .Replace("bone", "boné").Replace("oculos", "óculos").Replace("mascara", "máscara").Replace("calca", "calça")

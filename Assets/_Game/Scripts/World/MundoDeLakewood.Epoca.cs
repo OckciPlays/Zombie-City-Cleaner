@@ -15,7 +15,9 @@ namespace ZombieCityCleaner.World
     /// A época do Lakewood na rede (22/11/2026, a Woodcreek de antes, a etapa 3 do Docs/23-Campanha-e-Mapa.md): o anfitrião
     /// muda (hoje, pelo F1; na campanha, o D0 começa no antes e a passagem dos 5 anos volta para o depois), e cada máquina
     /// troca o mundo dela (o <see cref="LakewoodNaCena"/>: as obras novas, os gramados, os postes, os materiais limpos, e os
-    /// sistemas do mundo de depois desligados). Não vai no save: o jogo salvo é sempre o de depois.
+    /// sistemas do mundo de depois desligados). Não vai no save: ela sai da fase salva da campanha (25/11/2026, o save do Dia
+    /// 0: o Dia 0 e a fuga são a época de antes, e voltam nela já no spawn, MundoDeLakewood.DiaZero.cs; as outras fases, a de
+    /// depois).
     /// </summary>
     public partial class MundoDeLakewood
     {

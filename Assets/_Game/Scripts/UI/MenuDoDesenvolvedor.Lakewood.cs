@@ -12,7 +12,7 @@ namespace ZombieCityCleaner.UI
 {
     /// <summary>
     /// O painel do Lakewood (a cena Lakewood, Plano_Lakewood), ao lado do menu do desenvolvedor: onde você está (o setor, a
-    /// altura do chão, a água e a velocidade), quantos blocos estão montados; a neblina (ligada ou não, nesta máquina; o N);
+    /// altura do chão, a água e a velocidade), quantos blocos estão montados; a neblina (ligada ou não, nesta máquina; no F1);
     /// voar (F2); a régua (marcar um ponto e ver a distância e a diferença de altura até ele); ir para um ponto (as
     /// coordenadas, a partida, o meio, a barragem, as cidades, os lugares e as ilhas); e trazer o carro.
     /// </summary>
@@ -39,13 +39,13 @@ namespace ZombieCityCleaner.UI
             }
             if (teclado == null || MenuOnline.Aberto) return;
             if (teclado.f2Key.wasPressedThisFrame) Voar(!Movimento.Voando);
-            if (teclado.nKey.wasPressedThisFrame) TrocarANeblinaDeLakewood();
+            // (25/11/2026, a pedido: a neblina sai do N, que fica só para o minimapa; ela é a linha "Sem neblina" do F1)
         }
 
         void TrocarANeblinaDeLakewood()
         {
             AmbienteDoDia.SemNeblina = !AmbienteDoDia.SemNeblina;
-            Avisar(AmbienteDoDia.SemNeblina ? "Sem neblina: a câmera vê o condado inteiro (N liga de novo)." : "Com a neblina.");
+            Avisar(AmbienteDoDia.SemNeblina ? "Sem neblina: a câmera vê o mapa inteiro." : "Com a neblina.");
         }
 
         void IrParaEmLakewood(float x, float z)
@@ -152,7 +152,8 @@ namespace ZombieCityCleaner.UI
             if (lw == null || lw.ChaoNoMapa == null) return default;
             var lugares = LugaresDeLakewood();
             int linhasDeLugares = (lugares.Count + 1) / 2;
-            var area = new Rect(menu.xMax + 8 * u, menu.y, 300 * u, (458 + 32 * linhasDeLugares) * u);
+            // (458 + as 8 de onde você está e as 12 da régua, 26/11/2026)
+            var area = new Rect(menu.xMax + 8 * u, menu.y, 300 * u, (478 + 32 * linhasDeLugares) * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -167,12 +168,15 @@ namespace ZombieCityCleaner.UI
             var noMapa = OrigemDeLakewood.NoMapa(p);   // (o x e o z que aparecem são os do mapa, os das imagens)
             float chao = lw.ChaoNoMundo.Altura(p.x, p.z);
             string agua = lw.ChaoNoMundo.Agua(p.x, p.z, out float nivel) ? $", água {nivel:F1}" : "";
-            GUI.Label(new Rect(x, y, w, 72 * u),
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 5 linhas: a primeira quebra sempre, e a dos blocos
+            // também, com muitos blocos e plantas (eram 4, e a última saía cortada). (26/11/2026, a revisão dos textos cortados:
+            // 82, não 80; 5 linhas de 13 com o padding passam um pouco de 80; o botão continua no 84)
+            GUI.Label(new Rect(x, y, w, 82 * u),
                 $"Você: x {noMapa.x:F0}, z {noMapa.z:F0} do mapa, altura {p.y:F1} · setor {lw.SetorDe(p)}\nchão {chao:F1}{agua} · {_velocidadeLw:F0} km/h\n" +
                 $"{lw.Blocos} blocos ({lw.BlocosComColisao} com colisão), {lw.PlantasNaVista} plantas", _texto);
-            y += 76 * u;
+            y += 84 * u;
             float bw = (w - 8 * u) / 2f;
-            if (GUI.Button(new Rect(x, y, bw, 28 * u), AmbienteDoDia.SemNeblina ? "Ligar a neblina (N)" : "Tirar a neblina (N)", _botao)) TrocarANeblinaDeLakewood();
+            if (GUI.Button(new Rect(x, y, bw, 28 * u), AmbienteDoDia.SemNeblina ? "Ligar a neblina" : "Tirar a neblina", _botao)) TrocarANeblinaDeLakewood();
             if (GUI.Button(new Rect(x + bw + 8 * u, y, bw, 28 * u), Movimento.Voando ? "Parar de voar (F2)" : "Voar (F2)", _botao)) Voar(!Movimento.Voando);
             y += 36 * u;
 
@@ -190,8 +194,9 @@ namespace ZombieCityCleaner.UI
                 float dh = new Vector2(p.x - m.x, p.z - m.z).magnitude;
                 regua = $"Até a marca: {dh:F1} m ({dh / 1609.34f:F2} mi), altura {p.y - m.y:+0.0;-0.0} m";
             }
-            GUI.Label(new Rect(x, y, w, 22 * u), regua, _texto);
-            y += 28 * u;
+            // (em duas linhas, 26/11/2026: dos 100 m em diante a linha quebra, e a altura saía cortada ao meio)
+            GUI.Label(new Rect(x, y, w, 36 * u), regua, _texto);
+            y += 40 * u;
 
             GUI.Label(new Rect(x, y + 4 * u, 50 * u, 22 * u), "Ir para", _texto);
             GUI.Label(new Rect(x + 52 * u, y + 4 * u, 14 * u, 22 * u), "x", _texto);

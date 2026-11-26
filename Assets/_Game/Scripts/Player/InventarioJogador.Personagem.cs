@@ -127,7 +127,8 @@ namespace ZombieCityCleaner.Player
     /// O personagem (02/11/2026, a pedido: o save; "cada um leva o seu personagem"): o dinheiro dele e o que ele leva quando
     /// entra num mundo. O dono, ao criar o personagem (<see cref="JogadorRede.Criar"/>), manda o personagem salvo ao
     /// anfitrião (<see cref="CarregarRpc"/>), ou pede o começo de um novo (<see cref="NovoRpc"/>: a pistola e a lanterna no
-    /// chão, menos no Dia 0 e no vídeo). No Dia 0, o personagem salvo espera a porta do abrigo (<see cref="Salvamento"/>).
+    /// chão, menos no Dia 0 e no vídeo; na fuga, só a lanterna). No Dia 0 do mundo sorteado, o personagem salvo espera a porta
+    /// do abrigo (<see cref="Salvamento"/>); no do Lakewood, ele entra já (e, desde 25/11/2026, o Dia 0 também grava).
     /// O dono também enche o arquivo dele com o que está na rede (<see cref="Encher"/>), quando o mundo salva.
     /// </summary>
     public partial class InventarioJogador
@@ -253,11 +254,20 @@ namespace ZombieCityCleaner.Player
             if (parametros.Receive.SenderClientId != OwnerClientId) return;
             // na cena de vídeo, de mãos vazias; no Dia 0 também (a vida normal: o que tiver, foi comprado)
             if (ModoVideo.SemArma || World.MundoDoJogo.NoDiaZeroAgora) return;   // (e no Dia 0 do Lakewood, 22/11/2026)
-            Receber(Item.Pistola);
+            // na fuga (25/11/2026, o save do Dia 0: um personagem novo entra numa fuga que voltou do save), sem a pistola do
+            // começo: como os outros, só com as roupas e a lanterna
+            var lakewood = World.MundoDeLakewood.Instancia;
+            bool naFuga = lakewood != null && lakewood.NaFuga;
+            if (!naFuga) Receber(Item.Pistola);
             if (!_lanternaDoComeco)
             {
                 _lanternaDoComeco = true;
                 StartCoroutine(LanternaDoComeco());
+            }
+            if (naFuga)
+            {
+                CarregadoRpc(0, 0, 0, 0);
+                return;
             }
             ushort pistola = Primeiro(Item.Pistola);
             CarregadoRpc(pistola, 0, 0, 0);
@@ -402,7 +412,9 @@ namespace ZombieCityCleaner.Player
                     p.viciado = _rede.Vida.TemEfeito(VidaJogador.EfeitoViciado);
                 }
                 p.progresso = Progresso.Value;   // o XP e as habilidades (06/11/2026)
-                if (_rede.Criado) p.Vestir(_rede.Aparencia.Value);
+                // (25/11/2026, o save do Dia 0: o jogo grava no meio das compras) as roupas da loja provadas e ainda não
+                // pagas não vão: o carrinho desta máquina sabe quais são (as pagas ficam na aparência até a porta)
+                if (_rede.Criado) p.Vestir(IsOwner ? DiaZero.Carrinho.SemAsProvadas(_rede.Aparencia.Value) : _rede.Aparencia.Value);
             }
             var fs = GetComponent<FomeESede>();
             if (fs != null)

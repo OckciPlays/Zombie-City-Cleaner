@@ -154,7 +154,12 @@ namespace ZombieCityCleaner.Zombies
             _proximoGrupo = (_proximoGrupo + 1) % Grupos;
             return g;
         }
-        bool _info;
+        /// <summary>
+        /// A linha dos zumbis no canto de cima à esquerda (a contagem, os níveis e a rede). (25/11/2026, a pedido: "tirar as
+        /// opções do lado esquerdo superior... está apenas poluindo o jogo") só pelo botão do F1, desligada de início; antes,
+        /// o F3 (o mesmo dos itens) a ligava.
+        /// </summary>
+        public static bool InfoNoCanto;
 
         void OnEnable() => Instancia = this;
 
@@ -219,8 +224,6 @@ namespace ZombieCityCleaner.Zombies
         void Update()
         {
             if (!IsSpawned) return;
-            var teclado = Keyboard.current;
-            if (teclado != null && teclado.f3Key.wasPressedThisFrame) _info = !_info;
             if (IsServer)
             {
                 float agora = Time.time, dt = Time.deltaTime;
@@ -849,7 +852,7 @@ namespace ZombieCityCleaner.Zombies
 
         void OnGUI()
         {
-            if (!_info || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
+            if (!InfoNoCanto || !IsSpawned || MenuOnline.Aberto || ModoVideo.Ligado || GravacaoNoMundo.SemHud) return;
             ContarNiveis(out int perto, out int medio, out int longe);
             float u = Screen.height / 720f;
             var estilo = EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u));

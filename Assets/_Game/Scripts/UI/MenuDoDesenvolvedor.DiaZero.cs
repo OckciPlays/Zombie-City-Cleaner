@@ -59,7 +59,8 @@ namespace ZombieCityCleaner.UI
             {
                 var r = new Rect(k % 2 == 0 ? x : x + meio + 6 * u, y + (k / 2) * 30 * u, meio, 26 * u);
                 k++;
-                if (!GUI.Button(r, nome, _botao)) return;
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade: "Ferragens e autopeças" passava do botão)
+                if (!GUI.Button(r, nome, BotaoQueCabe(nome, r.width))) return;
                 var mov = GetComponent<MovimentoPrimeiraPessoa>();
                 if (mov != null) mov.Teleportar(ponto + Vector3.up * 0.1f, giro);
             }

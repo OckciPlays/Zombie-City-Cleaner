@@ -25,8 +25,14 @@ namespace ZombieCityCleaner.Salvar
     ///    mundo mexidos, a mobília aberta, o saque já pego, as portas e as janelas das casas, as estantes do bunker, os
     ///    sustos, o painel de armas e os dois carros (no lugar dos do começo, que o <see cref="MundoDaPartida"/> não cria);
     ///    cada personagem que entra vai para onde estava (<see cref="AoCarregarPersonagem"/>);
-    ///  - no Dia 0, o personagem salvo de quem entra espera a porta do abrigo (<see cref="GuardarParaDepois"/>).
+    ///  - no Dia 0 do mundo sorteado, o personagem salvo de quem entra espera a porta do abrigo (<see cref="GuardarParaDepois"/>).
     /// Sem <see cref="Atual"/> (os testes, a linha de comando, o robô), a partida não salva.
+    /// <para>
+    /// O Dia 0 e a fuga do Lakewood (25/11/2026, o save do Dia 0, a pedido do Pedro: "Sim, salvar o Dia 0") gravam como o
+    /// resto: sozinhos a cada 5 minutos e ao sair, só com a rua pronta e fora das passagens (<see cref="MundoJogavel"/>), com
+    /// as carteiras e as compras do dia, a chave da caminhonete, o armazém da fuga e o que não coube nele. O Continuar volta
+    /// na casa da família (o MundoDeLakewood retoma o Dia 0 ou a fuga já no spawn).
+    /// </para>
     /// <para>
     /// No Lakewood (12/11/2026, a parte 8 do "O jogo do mundo sorteado no Lakewood"), no "Mundo (Lakewood)", com o
     /// <see cref="MundoDeLakewood"/>: o mesmo save, com a semente da partida, as árvores, os painéis e as marcas de lá, e os
@@ -41,9 +47,38 @@ namespace ZombieCityCleaner.Salvar
         public static Salvamento Instancia { get; private set; }
 
         /// <summary>O mundo salvo desta partida (no anfitrião; posto pelo menu antes de hospedar). Null: não salva.</summary>
-        public static MundoSalvo Atual { get; set; }
-        /// <summary>A partida veio do save (o mundo já tem estado): os carros e a chave do começo não são criados.</summary>
-        public static bool Carregando => Atual != null && Atual.temEstado;
+        public static MundoSalvo Atual
+        {
+            get => _atual;
+            set
+            {
+                _atual = value;
+                // (25/11/2026, o save do Dia 0) o "veio do save" fica o de quando o menu pôs o mundo: antes, ele era lido ao
+                // vivo, e o primeiro save de um mundo novo (agora já no Dia 0) fazia a partida de agora parecer carregada
+                _veioDoSave = value != null && value.temEstado;
+                _carregando = _veioDoSave && !(value.lakewood && value.SemOsVeiculosDoBunker);
+                _jaRestaurou = false;
+            }
+        }
+        static MundoSalvo _atual;
+        static bool _veioDoSave, _carregando, _jaRestaurou;
+
+        /// <summary>
+        /// A partida veio do save (o mundo já tinha estado quando o menu o pôs): os carros e a chave do começo não são criados.
+        /// Não muda no meio da partida (25/11/2026). Um save do Dia 0 ou da fuga gravado antes de os veículos do bunker
+        /// entrarem não conta aqui: eles entram como num jogo novo (<see cref="MundoSalvo.SemOsVeiculosDoBunker"/>).
+        /// </summary>
+        public static bool Carregando => _atual != null && _carregando;
+
+        /// <summary>A partida veio de um save, que o <see cref="Restaurar"/> põe no lugar quando o mundo fica pronto (25/11/2026).</summary>
+        public static bool VeioDoSave => _atual != null && _veioDoSave;
+
+        /// <summary>
+        /// (25/11/2026, o save do Dia 0) O que veio do save já está no mundo: verdadeiro quando o <see cref="Restaurar"/> desta
+        /// partida acabou, ou logo de cara numa partida sem save (o jogo novo, quem entrou num mundo de outro, os testes).
+        /// Falso enquanto um save ainda vai ser restaurado. Zera a cada partida.
+        /// </summary>
+        public static bool JaRestaurou => !VeioDoSave || _jaRestaurou;
 
         // sem o Domain Reload, o mundo de um Play ficava para o próximo
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -73,8 +108,19 @@ namespace ZombieCityCleaner.Salvar
             _lakewood = GetComponent<MundoDeLakewood>();
         }
 
-        // o mundo está jogável: o sorteado pronto e fora do Dia 0, ou o Lakewood com a partida começada
-        bool MundoJogavel => _mundo != null ? _mundo.Pronto && !_mundo.NoDiaZero : _lakewood != null && _lakewood.Pronto && !_lakewood.Antes;
+        // o mundo está jogável: o sorteado pronto e fora do Dia 0, ou o Lakewood com a partida começada. Na época de antes
+        // (25/11/2026, o save do Dia 0), só no Dia 0 com a rua pronta e fora da passagem, ou na fuga depois da tela dos 30 dias,
+        // fora da falha e da chegada; fora disso (a porta fechando, as telas, os 1,8 s até a época de depois), não
+        bool MundoJogavel => _mundo != null ? _mundo.Pronto && !_mundo.NoDiaZero
+            : _lakewood != null && _lakewood.Pronto && (!_lakewood.Antes || LakewoodNoAntesPodeSalvar);
+
+        bool LakewoodNoAntesPodeSalvar => _lakewood.NoDiaZero ? DiaZero.DiaZeroDaPartida.PodeSalvarODia : _lakewood.PodeSalvarAFuga;
+
+        /// <summary>
+        /// No anfitrião: o mundo pode ser salvo agora (pronto, e fora do Dia 0 do mundo sorteado e das passagens do Dia 0 e da
+        /// fuga do Lakewood). O menu de pausa avisa quando não (25/11/2026).
+        /// </summary>
+        public bool PodeSalvarAgora => IsSpawned && IsServer && Atual != null && MundoJogavel;
 
         public override void OnDestroy()
         {
@@ -89,9 +135,11 @@ namespace ZombieCityCleaner.Salvar
             if (_mundo == null && _lakewood == null) _lakewood = MundoDeLakewood.Instancia;
             _viuOLakewoodPronto = false;
             _restaurado = false;
+            _jaRestaurou = false;   // (25/11/2026: o Salvamento.JaRestaurou zera a cada partida)
             _saindo = false;
             _depois.Clear();
             SalvouEm = -1f;
+            _primeiroEm = -1f;
             if (IsServer) _modo.Value = Atual != null ? (byte)Atual.Modo : (byte)255;
             if (_mundo != null) _mundo.FicouPronto += AoFicarPronto;
         }
@@ -106,7 +154,13 @@ namespace ZombieCityCleaner.Salvar
         {
             if (!IsServer) return;
             _proximo = Time.unscaledTime + MinutosEntreSalvamentos * 60f;
-            if (Carregando && !_restaurado) Restaurar();
+            if (VeioDoSave && !_restaurado)
+            {
+                // (25/11/2026) o JaRestaurou fica verdadeiro mesmo se algo der errado no meio: quem espera por ele (a
+                // caminhonete do Dia 0) não fica parado para sempre
+                try { Restaurar(); }
+                finally { _jaRestaurou = true; }
+            }
             // quem esperou o Dia 0 passou os 5 anos no abrigo: o corpo sara e a vida volta cheia (05/11/2026)
             foreach (var (cliente, p) in _depois)
             {
@@ -126,11 +180,18 @@ namespace ZombieCityCleaner.Salvar
                 _viuOLakewoodPronto = true;
                 AoFicarPronto(null);
             }
-            if (!IsServer || !Salva || !MundoJogavel) return;
+            if (!IsServer || !Salva) return;
+            if (!MundoJogavel)
+            {
+                // (25/11/2026) o primeiro salvamento conta os segundos de novo quando o mundo volta a ficar jogável
+                if (Atual != null && !Atual.temEstado) _primeiroEm = -1f;
+                return;
+            }
             // o primeiro salvamento (12/11/2026, a pedido: "tenho o personagem, tenho o mundo, porém não consigo ir em
             // continuar"): o mundo só entra no Continuar depois de salvo, e saindo no Dia 0, no modo "só dormindo" sem dormir,
             // ou fechando antes do primeiro automático, ele nunca era. Agora, em qualquer modo, um mundo que ainda não foi
-            // salvo salva uma vez logo que fica jogável (pronto e fora do Dia 0: o abrigo abriu, ou o mundo carregou)
+            // salvo salva uma vez logo que fica jogável (pronto e fora do Dia 0 do mundo sorteado: o abrigo abriu, ou o mundo
+            // carregou; no Lakewood, desde 25/11/2026, já no Dia 0, com a rua pronta)
             if (Atual != null && !Atual.temEstado)
             {
                 if (_primeiroEm < 0f) _primeiroEm = Time.unscaledTime + SegundosAntesDoPrimeiro;
@@ -155,7 +216,8 @@ namespace ZombieCityCleaner.Salvar
 
         /// <summary>
         /// No anfitrião: grava o mundo e pede a cada jogador que grave o próprio personagem. Não salva sem um mundo salvo,
-        /// antes de o mundo ficar pronto, nem no Dia 0.
+        /// antes de o mundo ficar pronto, nem no Dia 0 do mundo sorteado; no Lakewood, o Dia 0 e a fuga salvam fora das
+        /// passagens (25/11/2026, <see cref="MundoJogavel"/>).
         /// </summary>
         public bool Salvar(string motivo)
         {
@@ -216,7 +278,37 @@ namespace ZombieCityCleaner.Salvar
 
             m.arvoresCortadas = _mundo != null ? _mundo.ArvoresCortadas() : _lakewood.ArvoresCortadas();   // (06/11/2026)
             m.troncosNoChao = _lakewood != null ? _lakewood.TroncosNoChao() : new List<World.TroncoNoChao>();   // (18/11/2026)
-            if (_lakewood != null) m.primeiraMissao = m.primeiraMissao || _lakewood.PrimeiraMissaoCumprida;   // (24/11/2026, a primeira missão)
+            if (_lakewood != null)
+            {
+                m.primeiraMissao = m.primeiraMissao || _lakewood.PrimeiraMissaoCumprida;   // (24/11/2026, a primeira missão)
+                _lakewood.CampanhaParaSalvar(out m.faseDaCampanha, out m.passoDaCampanha);   // (25/11/2026, o caderno das missões)
+                m.campanhaComDiaZero = _lakewood.ComDiaZero;
+                m.campanhaComOBunker = _lakewood.ComOBunker;   // (25/11/2026, a revisão: o tutorial do Gus aconteceu aqui)
+            }
+            // (25/11/2026, o save do Dia 0) na época de antes, o que é só do Dia 0 e da fuga: as carteiras e as compras de cada
+            // um (pela chave do personagem), a chave da caminhonete posta, o armazém da fuga feito e o que não coube nele. Fora
+            // dela, nada disso (um Dia 0 de novo pelo F1 não herda o de antes)
+            if (_lakewood != null && _lakewood.Antes)
+            {
+                try
+                {
+                    DiaZero.DiaZeroDaPartida.Instancia?.ParaSalvar(m);
+                    LakewoodNaCena.Instancia?.ParaSalvarODiaZero(m);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[Save] O Dia 0 não deu para salvar agora (o mundo fica como estava no arquivo): {e}");
+                    return false;
+                }
+            }
+            else
+            {
+                m.carteirasDoDia?.Clear();
+                m.comprasDoDia?.Clear();
+                m.chaveDoDiaPosta = false;
+                m.fugaGuardouOArmazem = false;
+                m.foraDoArmazem?.Clear();
+            }
             m.paineisDesmontados = _mundo != null ? _mundo.PaineisDesmontados() : _lakewood.PaineisDesmontados();   // (09/11/2026, a sucata)
             m.fauna = Fauna.FaunaDoMundo.NiveisParaSalvar();   // a população das regiões caçadas (12/11/2026)
             Fauna.FaunaDoMundo.CastoresParaSalvar(out m.tocasDosCastores, out m.arvoresRoidas);   // as tocas e os tocos roídos (12/11/2026)
@@ -281,7 +373,12 @@ namespace ZombieCityCleaner.Salvar
             var marcasDoMundo = _mundo != null ? _mundo.CopiaDasMarcas() : _lakewood != null ? _lakewood.CopiaDasMarcas() : null;
             if (marcasDoMundo != null)
                 foreach (var (tipo, pos, cor, texto, autor) in marcasDoMundo)
+                {
+                    // (25/11/2026, o save do Dia 0) a marca "Bunker" da fuga não vai: a tentativa põe de novo, e ela sai sozinha
+                    if (_lakewood != null && tipo == UI.TipoDeMarca.Anotacao && texto == MundoDeLakewood.MarcaDoBunker &&
+                        autor == MundoDeLakewood.AutorDaMarcaDoBunker) continue;
                     m.marcas.Add(new MarcaSalva { tipo = (int)tipo, pos = pos, cor = cor, texto = texto, autor = autor });
+                }
 
             m.mochilas.Clear();
             if (MochilasNoChao.Instancia != null)
@@ -297,8 +394,10 @@ namespace ZombieCityCleaner.Salvar
                     m.mochilas.Add(s);
                 }
 
+            // (25/11/2026: a posição da época de antes fica marcada; ela não vale nos 5 anos depois)
+            bool antes = _lakewood != null && _lakewood.Antes;
             foreach (var j in JogadorRede.Todos)
-                if (j != null && j.Criado) m.LembrarPosicao(j.Chave.Value, j.transform.position, j.transform.eulerAngles.y);
+                if (j != null && j.Criado) m.LembrarPosicao(j.Chave.Value, j.transform.position, j.transform.eulerAngles.y, antes);
 
             m.temEstado = true;
             try
@@ -311,7 +410,9 @@ namespace ZombieCityCleaner.Salvar
                 return false;
             }
             SalvarPersonagensRpc(motivo == "dormindo");
-            Debug.Log($"[Save] O mundo \"{m.nome}\" foi salvo ({motivo}): dia {m.dia}, {CicloDoDia.Relogio()}, {m.itens.Count} itens no chão, " +
+            string noAntes = m.NoDiaZero ? $" no Dia 0 (a submissão {m.passoDaCampanha}, {m.carteirasDoDia?.Count ?? 0} carteiras, {m.comprasDoDia?.Count ?? 0} compras)"
+                : m.NaFuga ? $" na fuga (o armazém {(m.fugaGuardouOArmazem ? "já guardado" : "ainda não guardado")}, {m.foraDoArmazem?.Count ?? 0} fora dele)" : "";
+            Debug.Log($"[Save] O mundo \"{m.nome}\" foi salvo{noAntes} ({motivo}): dia {m.dia}, {CicloDoDia.Relogio()}, {m.itens.Count} itens no chão, " +
                       $"{m.construcoes.Count} construções, {m.carros.Count} carros, {m.carrosDoMundo.Count} carros do mundo mexidos, {m.saquePego.Count} itens do saque pegos, " +
                       $"{m.portas.Count} portas e janelas mexidas, {m.estantes.Count} itens nas estantes, {m.posicoes.Count} posições.");
             return true;
@@ -398,7 +499,8 @@ namespace ZombieCityCleaner.Salvar
         public static void LembrarPosicao(JogadorRede j)
         {
             if (Atual == null || j == null || !j.Criado || j.Chave.Value == 0) return;
-            Atual.LembrarPosicao(j.Chave.Value, j.transform.position, j.transform.eulerAngles.y);
+            var lakewood = MundoDeLakewood.Instancia;
+            Atual.LembrarPosicao(j.Chave.Value, j.transform.position, j.transform.eulerAngles.y, lakewood != null && lakewood.Antes);
         }
 
         /// <summary>No anfitrião: o personagem salvo de quem entra no Dia 0 espera a porta do abrigo.</summary>
@@ -407,12 +509,17 @@ namespace ZombieCityCleaner.Salvar
             if (IsServer && inventario != null) _depois[inventario.OwnerClientId] = p;
         }
 
-        /// <summary>No anfitrião: o personagem salvo entrou; se ele já esteve neste mundo, vai para onde estava.</summary>
+        /// <summary>
+        /// No anfitrião: o personagem salvo entrou; se ele já esteve neste mundo, vai para onde estava. Na época de antes
+        /// (25/11/2026, o save do Dia 0), não: no Dia 0 e na fuga todos começam na casa da família (o palco põe os nascimentos
+        /// na sala, e o Dia 0 e a fuga levam para lá); e a posição gravada na época de antes não vale nos 5 anos depois.
+        /// </summary>
         public void AoCarregarPersonagem(JogadorRede j)
         {
             if (!IsServer || j == null || Atual == null) return;
+            if (_lakewood != null && _lakewood.Antes) return;
             var pos = Atual.PosicaoDe(j.Chave.Value);
-            if (pos == null) return;
+            if (pos == null || pos.antes) return;
             IrParaRpc(pos.pos, pos.giro, RpcTarget.Single(j.OwnerClientId, RpcTargetUse.Temp));
         }
 
@@ -544,7 +651,7 @@ namespace ZombieCityCleaner.Salvar
             {
                 _lakewood.RestaurarArvores(m.arvoresCortadas);
                 _lakewood.RestaurarTroncos(m.troncosNoChao);   // as árvores caídas (18/11/2026)
-                _lakewood.PrimeiraMissaoCumprida = m.primeiraMissao;   // a primeira missão já cumprida (24/11/2026)
+                _lakewood.RestaurarACampanha(m.faseDaCampanha, m.passoDaCampanha, m.primeiraMissao, m.campanhaComDiaZero, m.campanhaComOBunker);   // o caderno das missões (25/11/2026)
                 _lakewood.RestaurarPaineis(m.paineisDesmontados);
             }
             Fauna.FaunaDoMundo.Restaurar(m.fauna);   // a população das regiões caçadas (12/11/2026)
@@ -638,7 +745,8 @@ namespace ZombieCityCleaner.Salvar
             {
                 // os caiaques do Lakewood (17/11/2026: os do F3 > Veículos; o mapa fixo não põe um sozinho)
                 if (m.caiaques != null) foreach (var k in m.caiaques) Caiaque.Criar(k.pos, k.giro);
-                Debug.Log($"[Save] O Lakewood voltou (a partida {m.semente}): dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
+                string noAntes = m.NoDiaZero ? $" no Dia 0 (a submissão {m.passoDaCampanha})" : m.NaFuga ? " na fuga" : "";
+                Debug.Log($"[Save] O Lakewood voltou{noAntes} (a partida {m.semente}): dia {m.dia}, {CicloDoDia.Relogio()}, {itens.Count} itens no chão, {construcoes.Count} construções, " +
                           $"{m.carros.Count} veículos, {m.caiaques?.Count ?? 0} caiaques, {mexidos.Count} carros do mundo mexidos, {m.arvoresCortadas.Count} árvores cortadas, {pegos.Count} itens do saque pegos, " +
                           $"{portas.Count} portas e janelas mexidas.");
                 return;

@@ -56,7 +56,7 @@ namespace ZombieCityCleaner.UI
         [System.NonSerialized] Font _fonte;
         GUIStyle _eTitulo, _eCaixa, _eCaixaDireita, _eSub, _eCampo, _eDicaDoCampo, _eOpcao, _eOpcaoEscolhida, _eOpcao2,
                  _eBotao, _eBotaoPequeno, _eBotaoGrande, _eSeta, _eNome, _eInfo, _eInfoApagado, _eDica, _eErro, _eMundo,
-                 _eDetalheDoMundo, _eAviso;
+                 _eDetalheDoMundo, _eAviso, _eNomeMenor;
         float _qDosEstilos;
 
         void Quadro()
@@ -113,6 +113,59 @@ namespace ZombieCityCleaner.UI
             _eDetalheDoMundo = E(rotulo, 14, FontStyle.Normal, Cores.Apagado, TextAnchor.MiddleLeft);
             _eDetalheDoMundo.clipping = TextClipping.Clip;
             _eAviso = E(rotulo, 13, FontStyle.Normal, Cores.Ruim, TextAnchor.MiddleRight);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o nome do personagem que não cabe entre as setas
+            // numa letra menor (NomeQueCabe); com os estilos novos, o que foi medido nos de antes é esquecido
+            _eNomeMenor = E(rotulo, 21, FontStyle.Bold, Cores.Claro, TextAnchor.MiddleCenter);
+            _estiloDoNomeMedido = null;
+            _larguraDoAviso = -1f;
+            _cortados.Clear();
+        }
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) os textos da lista dos mundos que não cabem na largura,
+        // já com as reticências, guardados: o OnGUI roda várias vezes por quadro, e cortar mede o texto de novo a cada letra
+        // tirada
+        readonly System.Collections.Generic.Dictionary<(string, GUIStyle), (float largura, string texto)> _cortados =
+            new System.Collections.Generic.Dictionary<(string, GUIStyle), (float largura, string texto)>();
+        float _larguraDoAviso = -1f;
+        const string AvisoDoGerador = "gerador antigo: o mapa pode ter mudado";
+
+        string CaberNaLista(string texto, GUIStyle estilo, float largura)
+        {
+            if (string.IsNullOrEmpty(texto)) return texto;
+            var chave = (texto, estilo);
+            if (_cortados.TryGetValue(chave, out var c) && Mathf.Approximately(c.largura, largura)) return c.texto;
+            string t = Opcoes.Caber(texto, estilo, largura);
+            _cortados[chave] = (largura, t);
+            return t;
+        }
+
+        // o nome do personagem no painel (o que cabe e em que letra), guardado para o nome e a largura em que foi medido
+        string _nomeMedido, _nomeQueCabe;
+        float _larguraDoNomeMedido;
+        [System.NonSerialized] GUIStyle _estiloDoNomeMedido;
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) um nome de 16 letras em maiúsculas largas passava da
+        // caixa entre as setas (no painel estreito do Continuar) e saía cortado dos dois lados: ele sai numa letra menor e, se
+        // nem assim couber, com as reticências
+        string NomeQueCabe(string nome, float largura, out GUIStyle estilo)
+        {
+            if (_estiloDoNomeMedido == null || nome != _nomeMedido || !Mathf.Approximately(largura, _larguraDoNomeMedido))
+            {
+                _nomeMedido = nome;
+                _larguraDoNomeMedido = largura;
+                if (_eNome.CalcSize(new GUIContent(nome)).x <= largura)
+                {
+                    _estiloDoNomeMedido = _eNome;
+                    _nomeQueCabe = nome;
+                }
+                else
+                {
+                    _estiloDoNomeMedido = _eNomeMenor;
+                    _nomeQueCabe = Opcoes.Caber(nome, _eNomeMenor, largura);
+                }
+            }
+            estilo = _estiloDoNomeMedido;
+            return _nomeQueCabe;
         }
 
         // ------------------------------------------------------------------ as telas
@@ -178,6 +231,15 @@ namespace ZombieCityCleaner.UI
             foreach (var m in mundos) if (m.id == _mundoEscolhido) escolhido = m;
             if (escolhido == null && mundos.Count > 0) escolhido = mundos[0];
             _mundoEscolhido = escolhido?.id;
+            // (25/11/2026, o bug do Continuar) ao escolher um mundo, o personagem passa a ser o que jogou nele por último; sem
+            // ninguém dele neste computador, o último jogado. Nunca o "Novo personagem" sozinho: esse só com as setas
+            if (escolhido != null && _personagemDoMundoDe != escolhido.id)
+            {
+                _personagemDoMundoDe = escolhido.id;
+                int k = PersonagemDoMundo(escolhido);
+                _indiceDoPersonagem = k >= 0 ? k : 0;
+                _apagarPersonagem = null;
+            }
 
             // embaixo, antes da lista: um clique ali não pode cair numa linha escondida da lista (os cliques da lista
             // também conferem se o mouse está nela)
@@ -207,7 +269,9 @@ namespace ZombieCityCleaner.UI
                 return;
             }
             bool naLista = GUI.enabled && area.Contains(e.mousePosition);
-            float linha = 70 * _q, vao = 6 * _q, total = mundos.Count * linha - vao;
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a linha ficou mais alta (de 70 para 90): embaixo do
+            // nome, o tamanho e o resumo numa linha e quem jogou na outra
+            float linha = 90 * _q, vao = 6 * _q, total = mundos.Count * linha - vao;
             bool rola = total > area.height;
             float largura = area.width - (rola ? 12 * _q : 0f);
             _rolagemDosMundos = GUI.BeginScrollView(area, _rolagemDosMundos, new Rect(0, 0, largura, total), false, false, GUIStyle.none, GUIStyle.none);
@@ -221,12 +285,28 @@ namespace ZombieCityCleaner.UI
                 bool sobre = naLista && r.Contains(e.mousePosition);
                 Retangulo(r, escolhida ? Cores.OpcaoEscolhida : sobre ? Cores.OpcaoSobre : Cores.Opcao);
                 Moldura(r, escolhida ? Cores.Vermelho : Cores.Borda, escolhida ? 1.6f * _q : _q);
-                var nome = new Rect(r.x + 14 * _q, r.y + 8 * _q, r.width - 168 * _q, 28 * _q);
-                GUI.Label(nome, m.nome, _eMundo);
+                // (25/11/2026: no Lakewood os jogos têm todos o mesmo nome; quem jogou em cada um ajuda a achar o seu)
+                string quem = NomesDeQuemJogou(m);
+                // (26/11/2026) sem ninguém, o nome e o resumo descem para o meio da linha
+                float desce = quem.Length > 0 ? 0f : 11 * _q;
+                var nome = new Rect(r.x + 14 * _q, r.y + 8 * _q + desce, r.width - 168 * _q, 28 * _q);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) com o aviso do gerador antigo, o nome fica só no
+                // espaço à esquerda dele, com as reticências: um nome comprido passava por baixo do aviso, um texto em cima do outro
                 if (m.versaoDoGerador != 0 && m.versaoDoGerador != GeradorDoMundo.Versao)
-                    GUI.Label(nome, "gerador antigo: o mapa pode ter mudado", _eAviso);
-                GUI.Label(new Rect(r.x + 14 * _q, r.y + 36 * _q, r.width - 168 * _q, 22 * _q),
-                    $"{NomesDosTamanhos[Mathf.Clamp(m.tamanho, 0, 2)]} · {m.Resumo()}", _eDetalheDoMundo);
+                {
+                    if (_larguraDoAviso < 0f) _larguraDoAviso = _eAviso.CalcSize(new GUIContent(AvisoDoGerador)).x + 12 * _q;
+                    GUI.Label(nome, CaberNaLista(m.nome, _eMundo, nome.width - _larguraDoAviso), _eMundo);
+                    GUI.Label(nome, AvisoDoGerador, _eAviso);
+                }
+                else GUI.Label(nome, m.nome, _eMundo);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o tamanho e o resumo numa linha, e quem jogou na
+                // de baixo, com as reticências se os nomes não couberem: numa linha só, com três nomes ou nomes compridos, o fim
+                // passava da caixa e saía cortado no meio de uma letra (sumia a data e a hora)
+                string tamanho = m.lakewood ? "" : NomesDosTamanhos[Mathf.Clamp(m.tamanho, 0, 2)] + " · ";
+                float largTexto = r.width - 168 * _q;
+                GUI.Label(new Rect(r.x + 14 * _q, r.y + 36 * _q + desce, largTexto, 20 * _q), tamanho + m.Resumo(), _eDetalheDoMundo);
+                if (quem.Length > 0)
+                    GUI.Label(new Rect(r.x + 14 * _q, r.y + 58 * _q, largTexto, 20 * _q), CaberNaLista("com " + quem, _eDetalheDoMundo, largTexto), _eDetalheDoMundo);
                 // o apagar (o segundo clique confirma)
                 bool confirmar = _apagarMundo == m.id;
                 var ra = new Rect(r.xMax - 136 * _q, r.y + (r.height - 32 * _q) / 2f, 120 * _q, 32 * _q);
@@ -268,6 +348,60 @@ namespace ZombieCityCleaner.UI
             if (jogar != null) Jogar(jogar);
         }
 
+        // ------------------------------------------------------------------ quem jogou em cada mundo (25/11/2026)
+
+        // só as posições do arquivo do mundo (o resto do JSON é ignorado): a chave de cada personagem que já esteve nele
+        [System.Serializable]
+        class SoAsPosicoes
+        {
+            public System.Collections.Generic.List<PosicaoSalva> posicoes;
+        }
+
+        System.Collections.Generic.List<long> QuemJogou(MundoSalvo m)
+        {
+            if (m == null || string.IsNullOrEmpty(m.id)) return new System.Collections.Generic.List<long>();
+            if (_quemJogouNoMundo.TryGetValue(m.id, out var lista)) return lista;
+            lista = new System.Collections.Generic.List<long>();
+            try
+            {
+                var arquivo = System.IO.Path.Combine(MundoSalvo.Pasta, m.id + ".json");
+                if (System.IO.File.Exists(arquivo))
+                {
+                    var so = JsonUtility.FromJson<SoAsPosicoes>(System.IO.File.ReadAllText(arquivo));
+                    if (so?.posicoes != null) foreach (var p in so.posicoes) lista.Add(p.chave);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[Save] Quem jogou no mundo {m.id}: {e.Message}");
+            }
+            _quemJogouNoMundo[m.id] = lista;
+            return lista;
+        }
+
+        /// <summary>O índice (na lista dos personagens) do que jogou no mundo por último; -1 se nenhum dele está neste computador.</summary>
+        int PersonagemDoMundo(MundoSalvo m)
+        {
+            var quem = QuemJogou(m);
+            var lista = Personagens();   // (os jogados por último primeiro)
+            for (int i = 0; i < lista.Count; i++)
+                if (quem.Contains(unchecked((long)lista[i].Chave))) return i;
+            return -1;
+        }
+
+        // os nomes de quem jogou no mundo e ainda está neste computador ("asd e sergio")
+        string NomesDeQuemJogou(MundoSalvo m)
+        {
+            var quem = QuemJogou(m);
+            if (quem.Count == 0) return "";
+            var nomes = new System.Collections.Generic.List<string>();
+            foreach (var p in Personagens())
+                if (quem.Contains(unchecked((long)p.Chave)) && !string.IsNullOrEmpty(p.nome) && !nomes.Contains(p.nome)) nomes.Add(p.nome);
+            if (nomes.Count == 0) return "";
+            if (nomes.Count > 3) return string.Join(", ", nomes.GetRange(0, 3)) + $" e mais {nomes.Count - 3}";
+            return nomes.Count == 1 ? nomes[0] : string.Join(", ", nomes.GetRange(0, nomes.Count - 1)) + " e " + nomes[nomes.Count - 1];
+        }
+
         /// <summary>
         /// O painel do personagem (no Novo jogo e no Continuar): os salvos neste computador e o "Novo personagem", com as
         /// setas; o salvo mostra o dinheiro e o que leva, e pode ser apagado (com um segundo clique).
@@ -293,15 +427,25 @@ namespace ZombieCityCleaner.UI
                     _apagarPersonagem = null;
                 }
             }
-            GUI.Label(R(cx + 50, y + 36, cw - 100, 52), novo ? "NOVO PERSONAGEM" : p.nome, _eNome);
+            // (26/11/2026: um nome que não cabe sai numa letra menor: NomeQueCabe)
+            var caixaDoNome = R(cx + 50, y + 36, cw - 100, 52);
+            string nomeQueCabe = NomeQueCabe(novo ? "NOVO PERSONAGEM" : p.nome, caixaDoNome.width, out var estiloDoNome);
+            GUI.Label(caixaDoNome, nomeQueCabe, estiloDoNome);
+            // (25/11/2026) no Continuar, o painel diz se esse personagem já jogou no mundo escolhido
+            MundoSalvo doMundo = null;
+            if (_continuar) foreach (var m in Mundos()) if (m.id == _mundoEscolhido) doMundo = m;
             if (novo)
             {
                 GUI.Label(R(cx, y + 100, cw, 24), "Você cria a aparência ao entrar.", _eInfo);
-                GUI.Label(R(cx, y + 124, cw, 22), "Num mundo novo, ele começa pelo Dia 0.", _eInfoApagado);
+                GUI.Label(R(cx, y + 124, cw, 22), doMundo != null ? "Ele entra no mundo escolhido, que continua de onde parou."
+                    : "Num mundo novo, ele começa pelo Dia 0.", _eInfoApagado);
                 return;
             }
             GUI.Label(R(cx, y + 100, cw, 24), p.Resumo(), _eInfo);
-            if (!string.IsNullOrEmpty(p.ultimoMundo)) GUI.Label(R(cx, y + 124, cw, 22), "Último mundo: " + p.ultimoMundo, _eInfoApagado);
+            if (doMundo != null)
+                GUI.Label(R(cx, y + 124, cw, 22), QuemJogou(doMundo).Contains(unchecked((long)p.Chave)) ? "Jogou neste mundo."
+                    : "Ainda não jogou neste mundo.", _eInfoApagado);
+            else if (!string.IsNullOrEmpty(p.ultimoMundo)) GUI.Label(R(cx, y + 124, cw, 22), "Último mundo: " + p.ultimoMundo, _eInfoApagado);
             bool confirmar = _apagarPersonagem == p.id;
             if (confirmar) GUI.Label(R(cx, y + h - 46, cw - 130, 30), "Clique de novo para apagar.", _eErro);
             if (BotaoPequeno(cx + cw - 120, y + h - 46, 120, 30, confirmar ? "CONFIRMAR" : "APAGAR", confirmar))
@@ -368,9 +512,14 @@ namespace ZombieCityCleaner.UI
         }
 
         // o erro da conexão, embaixo, entre o voltar e o botão vermelho
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa cresce com o erro (uma mensagem de 4 linhas
+        // saía com a de cima e a de baixo cortadas na de 68), com o mesmo meio de antes, entre 596 (os painéis acabam em 590) e
+        // 716; dos lados, o voltar acaba em 190 e o botão vermelho começa em 880
         void Erro()
         {
-            if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(R(210, 630, 650, 68), _sessao.Erro, _eErro);
+            if (string.IsNullOrEmpty(_sessao.Erro)) return;
+            float altura = Mathf.Clamp(AlturaDe(_sessao.Erro, _eErro, 650 * _q) / _q + 2f, 68f, 120f);
+            GUI.Label(R(210, Mathf.Clamp(664f - altura / 2f, 596f, 716f - altura), 650, altura), _sessao.Erro, _eErro);
         }
 
         /// <summary>
@@ -425,7 +574,10 @@ namespace ZombieCityCleaner.UI
             if (embaixo == null) GUI.Label(r, nome, estilo);
             else
             {
-                GUI.Label(R(x, y + 6, w, h / 2f - 3), nome, estilo);
+                // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa do nome 4 unidades mais alta, com o
+                // mesmo meio: os acentos das maiúsculas da Bahnschrift (MÉDIO, AUTOMÁTICO, SÓ DORMINDO) sobem acima da linha da
+                // letra e, na caixa justa, podiam perder a ponta
+                GUI.Label(R(x, y + 4, w, h / 2f + 1), nome, estilo);
                 GUI.Label(R(x, y + h / 2f + 1, w, h / 2f - 8), embaixo, _eOpcao2);
             }
             Moldura(r, escolhida ? Cores.Vermelho : sobre ? Cores.Apagado : Cores.Borda, escolhida ? 1.6f * _q : _q);

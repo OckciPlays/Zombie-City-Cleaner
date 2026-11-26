@@ -71,6 +71,20 @@ namespace ZombieCityCleaner.Moradores
             public bool livre;
             public Vector3 livreRaiz;
             public float livreGiro;
+
+            // a conversa (25/11/2026, a etapa 8: MoradoresDoBunker.Conversa.cs): quem conversa, até quando, e desde quando (o
+            // tempo de verdade e as horas do jogo, para o horário dele andar o tempo parado)
+            // (25/11/2026, a revisão: todos os que conversam com ele, e não só o último que abriu: com dois jogadores na mesma
+            // conversa, quando o último fechava, ele voltava a andar no meio da conversa do outro; 'naConversa': segurado agora)
+            public readonly List<Player.JogadorRede> conversandoCom = new List<Player.JogadorRede>();
+            public bool naConversa;
+            public float conversandoAte, conversaDesde, conversaDesdeAgora;
+
+            /// <summary>
+            /// O corpo dele estava lá fora, no pátio, no último quadro (<see cref="ForaDoBunker"/>; 25/11/2026, a revisão: na ida, o
+            /// lugar dele fica livre; na volta, ele recomeça no lugar da atividade de agora: <see cref="IrEVoltarDoPatio"/>).
+            /// </summary>
+            public bool noPatio;
         }
 
         const float Tick = 0.5f;
@@ -149,9 +163,17 @@ namespace ZombieCityCleaner.Moradores
                 HumorDeTodos(dh, agora);
                 LigarOLazer();
             }
-            foreach (var m in _moradores) Viver(m, agora);
+            foreach (var m in _moradores)
+            {
+                // (25/11/2026, a etapa 8) conversando, ele fica parado; o Ygayr, na cadeira dele (MoradoresDoBunker.Conversa.cs)
+                if (Conversando(m, agora)) continue;
+                IrEVoltarDoPatio(m, agora);   // (25/11/2026, a revisão: o Capitão e o Gus do tutorial)
+                CuidarDoYgayr(m, agora);
+                Viver(m, agora);
+            }
             AtualizarAPartida();
             Corpos(agora);
+            AtualizarAsFalas();
         }
 
         // ------------------------------------------------------------------ o começo e o fim
@@ -181,6 +203,8 @@ namespace ZombieCityCleaner.Moradores
                 salvo.proximoMorador = npcs.proximoId;
                 Debug.Log($"[Moradores] A comunidade do bunker (o Lakewood): {bunker.Count} moradores ({string.Join(", ", bunker.ConvertAll(f => f.NomeComCargo))}) e {mapa.Count} pelo mapa.");
             }
+            PorOYgayr(salvo);   // (25/11/2026, a etapa 8: o fumante da sala comum, também nos jogos salvos de antes)
+            OCargoDoCapitao(salvo);   // (25/11/2026, a revisão: nos salvos de antes, o terminal ainda dizia "Peter Ziquinatti, major")
             if (salvo != null && salvo.moradores != null)
                 foreach (var f in salvo.moradores) Acrescentar(f, salvo.vidaDosMoradores?.Find(v => v.id == f.id));
             DarAsCamas();
@@ -203,6 +227,9 @@ namespace ZombieCityCleaner.Moradores
             // o lugar de antes (o save): se não existe mais (os lugares mudaram), ele decide de novo
             if (v.lugar >= LugaresDoBunker.Todos.Length) v.lugar = -1;
             if (v.cama >= LugaresDoBunker.Todos.Length || (v.cama >= 0 && LugaresDoBunker.Todos[v.cama].tipo != TipoDoLugar.Cama)) v.cama = -1;
+            // (25/11/2026, a revisão) num save de antes do Ygayr, quem estava na cadeira dele decide de novo (antes, ficava lá, e
+            // o Ygayr sentava por cima dele)
+            if (salva != null && v.lugar >= 0 && v.lugar == CadeiraDoYgayr && !EhOYgayr(f)) v.lugar = -1;
             if (salva != null && v.lugar >= 0 && !_ocupados.ContainsKey(v.lugar)) _ocupados[v.lugar] = f.id;
             else if (salva != null) { v.lugar = -1; v.noLugar = false; }
             _moradores.Add(m);
@@ -417,6 +444,10 @@ namespace ZombieCityCleaner.Moradores
             // a sinuca, no lazer (ou buscar o taco e a caixa de bolas para ela)
             if (at == AtividadeDoMorador.Lazer && calmo && QuerSinuca(m, agora, dura)) return;
             var (lugar, acao) = Escolher(m, at);
+            // (25/11/2026, a revisão) o Capitão (e o Gus no tutorial), sem corpo aqui dentro: a atividade, sem tomar o lugar de
+            // ninguém (fica onde está, no papel; a cama é só dele). Antes, ele "sentava" no sofá da TV com os jogadores ali, a
+            // TV ligava diante do sofá vazio, e o lugar ficava tomado para os outros
+            if (ForaDoBunker(m) && lugar >= 0 && lugar != v.cama) lugar = -1;
             Mudar(m, at, lugar, acao, agora + dura, agora);
         }
 
@@ -490,15 +521,17 @@ namespace ZombieCityCleaner.Moradores
             return l >= 0 ? l : Livre(m, TipoDoLugar.Sofa, 1);
         }
 
-        bool Livre(int lugar, Morador m) => !_ocupados.TryGetValue(lugar, out int quem) || quem == m.ficha.id;
+        // (25/11/2026: a cadeira do Ygayr é só dele)
+        bool Livre(int lugar, Morador m) => (lugar != CadeiraDoYgayr || EhOYgayr(m.ficha)) && (!_ocupados.TryGetValue(lugar, out int quem) || quem == m.ficha.id);
 
         // um lugar livre do tipo (de preferência no andar; o de agora fica, se for do tipo), ou -1; 'serve' filtra (o em pé do
         // lazer só nos cômodos de ficar à toa)
         int Livre(Morador m, TipoDoLugar tipo, int andar, System.Func<LugarDoMorador, bool> serve = null)
         {
             var v = m.vida;
+            // (25/11/2026, a revisão: o de agora só se ainda é dele; a cadeira do Ygayr não fica com mais ninguém)
             if (v.lugar >= 0 && LugaresDoBunker.Todos[v.lugar].tipo == tipo && (andar < 0 || LugaresDoBunker.Todos[v.lugar].andar == andar)
-                && (serve == null || serve(LugaresDoBunker.Todos[v.lugar]))) return v.lugar;
+                && (serve == null || serve(LugaresDoBunker.Todos[v.lugar])) && Livre(v.lugar, m)) return v.lugar;
             var noAndar = new List<int>();
             var outros = new List<int>();
             foreach (int i in LugaresDoBunker.DoTipo(tipo))
@@ -757,6 +790,14 @@ namespace ZombieCityCleaner.Moradores
             foreach (var m in _moradores)
             {
                 var v = m.vida;
+                // (25/11/2026) o Peter Ziquinatti é o Capitão das saídas: o corpo dele é o do pátio (LakewoodNaCena.Missao.cs,
+                // um Sobrevivente aliado), e ele não aparece de novo aqui dentro; no papel, segue a rotina
+                // (25/11/2026, a etapa 6) e o Gus, durante o tutorial: ele está no pátio (LakewoodNaCena.Tutorial.cs)
+                if (ForaDoBunker(m))
+                {
+                    if (m.corpo != null) Tirar(m, true);
+                    continue;
+                }
                 if (m.corpo != null)
                 {
                     if (!m.corpo.IsSpawned) { m.corpo = null; continue; }
@@ -792,12 +833,90 @@ namespace ZombieCityCleaner.Moradores
             }
         }
 
+        /// <summary>A ficha é a do Peter Ziquinatti, o Capitão (o major de antes; os saves antigos dizem "Major" no cargo).</summary>
+        public static bool EhOCapitao(FichaDoMorador f) =>
+            f != null && f.nome == SorteioDosMoradores.NomeDoMajor && f.sobrenome == SorteioDosMoradores.SobrenomeDoMajor;
+
+        // (25/11/2026, a revisão) o cargo de antes do Peter ("Major") vira o de agora ("Capitão"), no bunker e no mapa: a
+        // ficha vai no save, e a troca fica gravada. Outro cargo fica como está
+        static void OCargoDoCapitao(MundoSalvo salvo)
+        {
+            if (salvo == null) return;
+            foreach (var lista in new[] { salvo.moradores, salvo.npcsDoMapa })
+            {
+                if (lista == null) continue;
+                foreach (var f in lista)
+                    if (EhOCapitao(f) && string.Equals(f.cargo, "Major", System.StringComparison.OrdinalIgnoreCase))
+                        f.cargo = SorteioDosMoradores.CargoDoMajor;
+            }
+        }
+
+        /// <summary>O morador é o Gus Rodrigues, o líder (no tutorial, o corpo dele é o do pátio).</summary>
+        public static bool EhOGus(FichaDoMorador f) =>
+            f != null && f.nome == SorteioDosMoradores.NomeDoLider && f.sobrenome == SorteioDosMoradores.SobrenomeDoLider;
+
+        static bool GusNoPatio => MundoDeLakewood.Instancia != null && MundoDeLakewood.Instancia.Fase == FaseDaCampanha.OBunker;
+
+        /// <summary>
+        /// O corpo dele está lá fora, no pátio (o Capitão sempre; o Gus durante o tutorial): aqui dentro, ele nunca ganha corpo e
+        /// só segue a rotina no papel (25/11/2026, a revisão: sem tomar os lugares dos outros, sem ligar a TV diante de um sofá
+        /// vazio e sem entrar na sinuca).
+        /// </summary>
+        static bool ForaDoBunker(Morador m) => EhOCapitao(m.ficha) || (EhOGus(m.ficha) && GusNoPatio);
+
+        // (25/11/2026, a revisão) a ida para o pátio e a volta (o Gus, no começo e no fim do tutorial; o Capitão, só a ida).
+        // Na ida, o lugar de agora fica livre para os outros na hora, e não só quando a atividade acabar (num save de antes, o
+        // Capitão guardava o sofá da TV por até 2 horas do jogo); a cama é dele, e a busca no estoque, a sinuca e a crise acabam
+        // como estão. Na volta: lá fora, a rotina dele seguia sem lugar aqui dentro (o Decidir), e o ponto dele no bunker ficou
+        // velho (num jogo novo, nem existia: o ponto zero da obra). Ele recomeça já no lugar da atividade de agora, como no
+        // começo, em vez de o corpo aparecer em pé num ponto qualquer (ou sair andando dele, no papel)
+        void IrEVoltarDoPatio(Morador m, float agora)
+        {
+            bool fora = ForaDoBunker(m);
+            if (fora == m.noPatio) return;
+            m.noPatio = fora;
+            var v = m.vida;
+            if (fora)
+            {
+                // (o corpo sai já, antes de o lugar mudar: andando até ele, o ComCorpo deste quadro ainda o procuraria)
+                if (m.corpo != null) Tirar(m, true);
+                var at = v.Atividade;
+                bool solta = at != AtividadeDoMorador.Buscar && at != AtividadeDoMorador.Guardar && at != AtividadeDoMorador.Sinuca
+                             && at != AtividadeDoMorador.Crise;
+                if (solta && v.lugar >= 0 && v.lugar != v.cama)
+                {
+                    if (_ocupados.TryGetValue(v.lugar, out int quem) && quem == m.ficha.id) _ocupados.Remove(v.lugar);
+                    v.lugar = -1;
+                    v.noLugar = true;
+                }
+                return;
+            }
+            if (v.lugar < 0) ComecarNoLugar(m, agora);
+            else if (!v.noLugar)
+            {
+                var l = LugaresDoBunker.Todos[v.lugar];
+                v.noLugar = true;
+                v.andar = l.andar;
+                v.pos = l.raiz;
+                v.giro = l.giro;
+            }
+            // (nenhum lugar livre: em pé na porta da escada do B1)
+            if (v.lugar < 0)
+            {
+                v.noLugar = true;
+                v.andar = 1;
+                v.pos = LugaresDoBunker.NaEscada(1);
+            }
+        }
+
         // o corpo novo: no lugar já acomodado (sentado, deitado), ou em pé no caminho (com o agente no NavMesh)
         bool Por(Morador m, Vector3 local, float giro, byte acao, bool noLugar)
         {
             var go = Instantiate(_prefab, Mundo(local), Quaternion.Euler(0f, GiroNoMundo(giro), 0f));
             var c = go.GetComponent<CorpoDoMorador>();
-            c.Preparar(QuemEOMorador.Da(m.ficha, m.Nome), noLugar ? acao : (byte)0);
+            // (25/11/2026, a revisão: a fala da conversa vai junto com o corpo, como o Quem; antes, até a rodada seguinte das
+            // falas, a conversa mostrava "Ygayr, guarda" e "Quem é você?" respondia ".")
+            c.Preparar(QuemEOMorador.Da(m.ficha, m.Nome), noLugar ? acao : (byte)0, FalaDoMorador.Da(m.ficha, m.vida));
             go.GetComponent<NetworkObject>().Spawn(true);
             if (!noLugar && !c.LigarOAgente())
             {

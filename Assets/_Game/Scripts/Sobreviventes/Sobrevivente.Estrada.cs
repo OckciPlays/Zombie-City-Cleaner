@@ -79,6 +79,7 @@ namespace ZombieCityCleaner.Sobreviventes
         void LateUpdate()
         {
             if (!IsSpawned || corpo == null) return;
+            PresoNaCacamba();   // (25/11/2026) o Capitão na caçamba da caminhonete (Sobrevivente.Cacamba.cs)
             InclinarOCorpo();   // (18/11/2026) o tronco inclinado espiando pela quina (Sobrevivente.Pose.cs)
             if (!DaEstrada) return;
             _pesoDaPose = Mathf.MoveTowards(_pesoDaPose, _ajoelhado.Value && !_caido ? 1f : 0f, Time.deltaTime * 3f);

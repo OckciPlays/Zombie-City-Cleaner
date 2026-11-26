@@ -177,7 +177,10 @@ namespace ZombieCityCleaner.Player
             if (icone != null) GUI.DrawTexture(new Rect(mouse - _pega, new Vector2(LadoDaRoupa * u, LadoDaRoupa * u)), icone, ScaleMode.ScaleToFit);
             string texto = !Janela.Contains(mouse) ? "soltar: largar no chão"
                 : _aba == Aba.Mochila && Em(AreaDaGrade).Contains(mouse) ? "soltar: guardar na mochila" : "solte na mochila, ou fora da janela para largar";
-            GUI.Label(new Rect(mouse.x + 14 * u, mouse.y - 20 * u, 260 * u, 20 * u), texto, _dica);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) a largura do texto, como no arrasto da estante: na de 260, as
+            // pontas do "solte na mochila, ou fora da janela para largar" saíam cortadas
+            float largura = _dica.CalcSize(new GUIContent(texto)).x + 8 * u;
+            GUI.Label(new Rect(Mathf.Min(mouse.x + 14 * u, Screen.width - largura), mouse.y - 20 * u, largura, 20 * u), texto, _dica);
         }
 
         // a roupa vestida escolhida: o nome, a foto (com as cores dela), o lugar e como tirar
@@ -186,7 +189,8 @@ namespace ZombieCityCleaner.Player
             float u = _u;
             var roupas = inventario.Roupas.Value;
             var item = roupas.Peca(l);
-            GUI.Label(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), _nome);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o nome comprido ("Camisa de uniforme de manga longa") na letra menor
+            NomeNaFaixa(new Rect(nome.x + 10 * u, nome.y, nome.width - 20 * u, nome.height), Maiuscula(Itens.Nome(item)), CorDoTexto);
             var imagem = Icones.Icone(item, roupas.Cores(l), true);
             if (imagem != null) GUI.DrawTexture(Encolher(foto, 10 * u), imagem, ScaleMode.ScaleToFit);
             float x = det.x + 12 * u, w = det.width - 24 * u, y = det.y + 10 * u, linha = 22 * u;

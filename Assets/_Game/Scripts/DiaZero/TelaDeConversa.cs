@@ -169,7 +169,9 @@ namespace ZombieCityCleaner.DiaZero
             float w = 820 * u, x0 = (Screen.width - w) / 2f;
             float alturaDaFala = _texto.CalcHeight(new GUIContent(_fala ?? ""), w - 40 * u);
             float linha = 38 * u;
-            float h = 24 * u + 30 * u + alturaDaFala + 16 * u + _perguntas.Count * (linha + 6 * u) + 30 * u;
+            MedirAsPerguntas(w - 40 * u, linha);
+            float h = 24 * u + 30 * u + alturaDaFala + 16 * u + 30 * u;
+            for (int i = 0; i < _alturasDasPerguntas.Count; i++) h += _alturasDasPerguntas[i] + 6 * u;
             float y0 = Screen.height - h - 40 * u;
             Caixa(new Rect(x0, y0, w, h), new Color(0.05f, 0.05f, 0.05f, 0.88f));
             Caixa(new Rect(x0, y0, w, 3 * u), new Color(0.72f, 0.58f, 0.2f, 0.95f));
@@ -178,19 +180,47 @@ namespace ZombieCityCleaner.DiaZero
             y += 30 * u;
             GUI.Label(new Rect(x0 + 20 * u, y, w - 40 * u, alturaDaFala), _fala ?? "", _texto);
             y += alturaDaFala + 16 * u;
-            for (int i = 0; i < _perguntas.Count; i++)
+            for (int i = 0; i < _perguntas.Count && i < _textosDasPerguntas.Count; i++)
             {
-                if (GUI.Button(new Rect(x0 + 20 * u, y, w - 40 * u, linha), $"{i + 1}.  {_perguntas[i].texto}", _botao))
+                float alto = _alturasDasPerguntas[i];
+                if (GUI.Button(new Rect(x0 + 20 * u, y, w - 40 * u, alto), _textosDasPerguntas[i], _botao))
                 {
                     Escolher(i);
                     return;
                 }
-                y += linha + 6 * u;
+                y += alto + 6 * u;
             }
             var dica = new GUIStyle(_botao) { fontSize = Mathf.RoundToInt(12 * u), alignment = TextAnchor.MiddleRight };
             dica.normal.background = null;
             dica.normal.textColor = new Color(0.65f, 0.63f, 0.58f);
             GUI.Label(new Rect(x0 + 20 * u, y0 + h - 28 * u, w - 40 * u, 22 * u), "1 a 9 ou o clique escolhem  ·  E, TAB ou ESC fecham", dica);
+        }
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados) os botões das perguntas tinham 38u, a altura de uma linha: a
+        // pergunta mais comprida (a do Capitão, "A nossa casa, na Spruce Lane...") já ocupa 93 a 97% da largura e, quebrada em
+        // duas linhas (uma pergunta nova um pouco maior, outra tela), perdia o alto da de cima e o pé da de baixo. A altura de
+        // cada botão sai da CalcHeight (no mínimo os 38u de antes), medida só quando as perguntas, a largura ou a escala mudam
+        readonly List<GUIContent> _textosDasPerguntas = new List<GUIContent>();
+        readonly List<float> _alturasDasPerguntas = new List<float>();
+        List<Pergunta> _perguntasMedidas;
+        GUIStyle _botaoDasMedidas;
+        float _larguraDasMedidas = -1f;
+
+        void MedirAsPerguntas(float largura, float linha)
+        {
+            if (_perguntasMedidas == _perguntas && _botaoDasMedidas == _botao && Mathf.Approximately(_larguraDasMedidas, largura)
+                && _textosDasPerguntas.Count == _perguntas.Count) return;
+            _perguntasMedidas = _perguntas;
+            _botaoDasMedidas = _botao;
+            _larguraDasMedidas = largura;
+            _textosDasPerguntas.Clear();
+            _alturasDasPerguntas.Clear();
+            for (int i = 0; i < _perguntas.Count; i++)
+            {
+                var c = new GUIContent($"{i + 1}.  {_perguntas[i].texto}");
+                _textosDasPerguntas.Add(c);
+                _alturasDasPerguntas.Add(Mathf.Max(linha, _botao.CalcHeight(c, largura) + 6 * _u));
+            }
         }
 
         static Texture2D _branco;

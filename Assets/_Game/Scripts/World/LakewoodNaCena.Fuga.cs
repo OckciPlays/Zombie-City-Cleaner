@@ -29,6 +29,20 @@ namespace ZombieCityCleaner.World
         const float NascerAte = 85f;
         string _ultimaChegada;
         bool _fugaLimpa = true;
+        // (25/11/2026, o save do Dia 0) só no anfitrião: a tentativa em que o armazém guardou o que cada um levava (-2: nenhuma),
+        // e a marca do save de que a fuga dele já tinha guardado (a fuga que voltou do save não guarda de novo)
+        int _guardouNaTentativa = -2;
+        bool _armazemFeitoNoSave;
+
+        // no anfitrião: a fuga de agora já passou o que cada um levava para o armazém (a primeira tentativa dela, nesta partida
+        // ou na do save: a MundoDeLakewood.PrimeiraTentativa fica -1 na fuga que voltou do save já guardada)
+        bool ArmazemDaFugaFeito(MundoDeLakewood m) =>
+            m.PrimeiraTentativa < 0 || _guardouNaTentativa == m.PrimeiraTentativa || ArmazemFeitoNoSave(m);
+
+        // (26/11/2026, a revisão do save do Dia 0) a marca do save só vale para a fuga que voltou dele (a Retomada): o F1
+        // "Começar o Dia 0" fica ligado no meio da fuga, e as chaves de novo começam outra fuga, que guarda o armazém como
+        // sempre (antes, a marca durava a partida inteira, e essa fuga saía de mochila)
+        bool ArmazemFeitoNoSave(MundoDeLakewood m) => _armazemFeitoNoSave && m.Retomada;
 
         // (no AcompanharODiaZero, a cada quadro)
         void AcompanharAFugaNaCena()
@@ -52,8 +66,10 @@ namespace ZombieCityCleaner.World
             if (w == null || !w.Pronta) return;
             w.VirarAFuga();
             // as figuras dos Ocos (os que devoram os corpos e os que perseguem quem foge), de novo a cada tentativa, em cada
-            // máquina (24/11/2026)
-            if (m.TempoDaFuga >= 0f && _tentativaDasFiguras != m.Tentativa)
+            // máquina (24/11/2026). (25/11/2026, o save do Dia 0: com o palco que entra já na fuga, o VirarAFuga e as figuras
+            // caíam no mesmo quadro, e os perseguidores iam atrás dos NPCs do dia, que estavam saindo; a WoodcreekDoDiaZero diz
+            // quando os da fuga já estão na rua)
+            if (m.TempoDaFuga >= 0f && _tentativaDasFiguras != m.Tentativa && w.ProntaParaAsFiguras)
             {
                 _tentativaDasFiguras = m.Tentativa;
                 int figuras = w.RefazerAsFiguras();
@@ -152,6 +168,19 @@ namespace ZombieCityCleaner.World
         {
             var zm = ZombieManager.Instancia;
             if (zm != null) zm.RecolherTodos();
+            // (25/11/2026, a pedido: "seria interessante a gente sair de casa apenas com as roupas") na primeira tentativa, o
+            // que cada um leva fica no armazém da garagem (LakewoodNaCena.Armazem.cs); na fuga, ele não abre mais
+            // (EstantesDoBunker.FechadaNaFuga). (25/11/2026, a revisão: era a "tentativa 1", e o número não volta a 1 numa
+            // segunda fuga na mesma partida; a primeira é a das chaves, MundoDeLakewood.PrimeiraTentativa, e o
+            // _tentativaMontada faz isto uma vez por tentativa, mesmo com as chaves de novo no meio de uma fuga, pelo F1)
+            // (25/11/2026, o save do Dia 0) A fuga que voltou do save já guardada não guarda de novo (a PrimeiraTentativa fica -1,
+            // e a marca do save também segura): quem volta pelo save chega só com as roupas e a lanterna; a lanterna vai abaixo
+            // para quem não tem, como sempre
+            if (m.Tentativa == m.PrimeiraTentativa && !ArmazemFeitoNoSave(m))
+            {
+                GuardarTudoNoArmazem();
+                _guardouNaTentativa = m.Tentativa;
+            }
             foreach (var j in JogadorRede.Todos)
             {
                 if (j == null) continue;
@@ -178,6 +207,13 @@ namespace ZombieCityCleaner.World
         void LimparAFuga(MundoDeLakewood m)
         {
             _fugaLimpa = true;
+            // (25/11/2026, o save do Dia 0) a fuga acabou: a próxima (o Dia 0 de novo pelo F1) guarda o armazém de novo
+            _guardouNaTentativa = -2;
+            _armazemFeitoNoSave = false;
+            // (25/11/2026, a revisão) o que não coube no armazém vai para o chão da garagem nos 5 anos (CincoAnosNoArmazem, na
+            // chegada; o "Pular a fuga" do F1 também chega); a fuga que acaba sem a chegada (hoje, só a partida que fecha no
+            // meio dela) não passa por ele: o chão da garagem já agora
+            if (m != null && !m.Chegou) DeixarNaGaragemOQueNaoCoube(false);
             _porNascer.Clear();
             var bunker = BunkerDoMundo.Instancia;
             if (bunker != null) bunker.PorAPorta(BunkerDoMundo.Portao, false);

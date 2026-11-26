@@ -59,6 +59,33 @@ namespace ZombieCityCleaner.Salvar
         public bool caminhonete;
         /// <summary>A primeira missão depois dos 5 anos (retomar a Woodcreek e consertar a caminhonete) já foi cumprida (24/11/2026).</summary>
         public bool primeiraMissao;
+        /// <summary>
+        /// A fase da campanha e a submissão da vez (25/11/2026, o caderno das missões: World.FaseDaCampanha). -1 num save de
+        /// antes dele: a campanha sai da <see cref="primeiraMissao"/>.
+        /// </summary>
+        public int faseDaCampanha = -1, passoDaCampanha;
+        /// <summary>A campanha começou pelo Dia 0 (25/11/2026): as anotações da mochila mostram o Dia 0 e a fuga riscados.</summary>
+        public bool campanhaComDiaZero;
+        /// <summary>
+        /// A fase do bunker (o tutorial do Gus) aconteceu neste mundo (25/11/2026, a revisão): as anotações da mochila só a
+        /// mostram então. Falso num save de antes do caderno (ele foi direto para o Capitão); num save de hoje sem ela, o
+        /// <see cref="campanhaComDiaZero"/> diz que houve (World.MundoDeLakewood.RestaurarACampanha).
+        /// </summary>
+        public bool campanhaComOBunker;
+        /// <summary>
+        /// (25/11/2026, o save do Dia 0: o jogo grava no Dia 0 e na fuga, e o Continuar volta neles) A carteira de cada
+        /// jogador no Dia 0, pela chave do personagem (o clientId muda de uma sessão para outra). Vazia fora da época de antes
+        /// e num save de antes disso. Escrita pelo DiaZeroDaPartida.ParaSalvar.
+        /// </summary>
+        public List<CarteiraSalva> carteirasDoDia = new List<CarteiraSalva>();
+        /// <summary>(25/11/2026, o save do Dia 0) O que cada jogador comprou no Dia 0 (a conta do "Compre recursos" e os limites por jogador).</summary>
+        public List<CompraSalva> comprasDoDia = new List<CompraSalva>();
+        /// <summary>(25/11/2026, o save do Dia 0) A chave da caminhonete já foi posta na mesa da sala (não pôr outra).</summary>
+        public bool chaveDoDiaPosta;
+        /// <summary>(25/11/2026, o save do Dia 0) A fuga já passou tudo de cada um para o armazém da garagem (não passar de novo).</summary>
+        public bool fugaGuardouOArmazem;
+        /// <summary>(25/11/2026, o save do Dia 0) O que não coube no armazém na fuga (vai para o chão da garagem nos 5 anos).</summary>
+        public List<ItemForaDoArmazem> foraDoArmazem = new List<ItemForaDoArmazem>();
         /// <summary>Onde os caiaques ficaram (06/11/2026).</summary>
         public List<CaiaqueSalvo> caiaques = new List<CaiaqueSalvo>();
         public string criadoEm, salvoEm;
@@ -180,11 +207,39 @@ namespace ZombieCityCleaner.Salvar
             _ => "Só dormindo",
         };
 
-        /// <summary>A linha da lista do Continuar.</summary>
+        /// <summary>
+        /// A linha da lista do Continuar. Um save do Dia 0 ou da fuga (25/11/2026, o save do Dia 0) mostra "Dia 0" ou "a fuga"
+        /// no lugar do dia e da hora.
+        /// </summary>
         public string Resumo()
         {
             string quando = DateTime.TryParse(salvoEm, out var d) ? d.ToString("dd/MM/yyyy HH:mm") : "";
-            return $"dia {dia} · {Mathf.FloorToInt(hora):00}:{Mathf.FloorToInt(hora % 1f * 60f):00} · {NomeDoModo(Modo)} · {quando}";
+            string onde = NoDiaZero ? "Dia 0" : NaFuga ? "a fuga"
+                : $"dia {dia} · {Mathf.FloorToInt(hora):00}:{Mathf.FloorToInt(hora % 1f * 60f):00}";
+            return $"{onde} · {NomeDoModo(Modo)} · {quando}";
+        }
+
+        /// <summary>(25/11/2026, o save do Dia 0) Um jogo do Lakewood salvo no Dia 0.</summary>
+        public bool NoDiaZero => lakewood && faseDaCampanha == (int)World.FaseDaCampanha.DiaZero;
+        /// <summary>(25/11/2026, o save do Dia 0) Um jogo do Lakewood salvo na fuga (a noite do colapso).</summary>
+        public bool NaFuga => lakewood && faseDaCampanha == (int)World.FaseDaCampanha.Fuga;
+
+        /// <summary>
+        /// (25/11/2026, o save do Dia 0) Um save do Dia 0 ou da fuga gravado antes de os veículos do bunker da comunidade
+        /// entrarem (a perua, o cupê e as motos: o LakewoodNaCena só os põe com a garagem do bunker montada, perto de alguém).
+        /// Ao carregar, eles são postos como num jogo novo (<see cref="Salvamento.Carregando"/> falso); a caminhonete da
+        /// família (o número 10) não conta.
+        /// </summary>
+        public bool SemOsVeiculosDoBunker
+        {
+            get
+            {
+                if (!NoDiaZero && !NaFuga) return false;
+                if (carros != null)
+                    foreach (var c in carros)
+                        if (c != null && c.qual >= 0 && c.qual < World.MundoDaPartida.QualDaCaminhonete) return false;
+                return true;
+            }
         }
 
         /// <summary>Um save do Lakewood de antes da origem no meio: as posições do mundo de antes (o do mapa) vão para o de agora.</summary>
@@ -234,13 +289,15 @@ namespace ZombieCityCleaner.Salvar
             return null;
         }
 
-        public void LembrarPosicao(ulong chave, Vector3 pos, float giro)
+        /// <summary>Onde o personagem estava; 'antes': na época de antes (o Dia 0 e a fuga, na Woodcreek de antes).</summary>
+        public void LembrarPosicao(ulong chave, Vector3 pos, float giro, bool antes = false)
         {
             if (chave == 0) return;
             var p = PosicaoDe(chave);
             if (p == null) posicoes.Add(p = new PosicaoSalva { chave = unchecked((long)chave) });
             p.pos = pos;
             p.giro = giro;
+            p.antes = antes;
         }
 
         // ------------------------------------------------------------------ os arquivos
@@ -291,6 +348,8 @@ namespace ZombieCityCleaner.Salvar
                     {
                         id = m.id, nome = m.nome, semente = m.semente, tamanho = m.tamanho, versaoDoGerador = m.versaoDoGerador, lakewood = m.lakewood,
                         modo = m.modo, fogoAmigo = m.fogoAmigo, criadoEm = m.criadoEm, salvoEm = m.salvoEm, dia = m.dia, hora = m.hora, temEstado = true,
+                        // (25/11/2026, o save do Dia 0: a lista mostra "Dia 0" ou "a fuga")
+                        faseDaCampanha = m.faseDaCampanha, passoDaCampanha = m.passoDaCampanha,
                     });
                 }
                 catch (Exception e)
@@ -402,6 +461,39 @@ namespace ZombieCityCleaner.Salvar
         public long chave;
         public Vector3 pos;
         public float giro;
+        /// <summary>
+        /// (25/11/2026, o save do Dia 0) A posição é da época de antes (o Dia 0 ou a fuga, na Woodcreek de antes): ela não
+        /// vale para o mundo de depois (quem volta depois dos 5 anos nasce no bunker, e não na Woodcreek abandonada), e no Dia
+        /// 0 e na fuga todos começam na casa. Falso num save de antes disso.
+        /// </summary>
+        public bool antes;
+    }
+
+    /// <summary>
+    /// A carteira de um jogador no Dia 0 (25/11/2026, o save do Dia 0): a chave do personagem (a JogadorRede.Chave, unchecked),
+    /// o dinheiro que sobrou e o que ele já gastou.
+    /// </summary>
+    [Serializable]
+    public class CarteiraSalva
+    {
+        public long chave;
+        public int dinheiro, gasto;
+    }
+
+    /// <summary>Uma compra de um jogador no Dia 0 (25/11/2026, o save do Dia 0): a chave do personagem, o item, a quantidade e o desgaste.</summary>
+    [Serializable]
+    public class CompraSalva
+    {
+        public long chave;
+        public int item, qtd, desgaste;
+    }
+
+    /// <summary>Um item que não coube no armazém da garagem na fuga (25/11/2026, o save do Dia 0): vai para o chão da garagem nos 5 anos.</summary>
+    [Serializable]
+    public class ItemForaDoArmazem
+    {
+        public int item, qtd, desgaste;
+        public long cores;
     }
 
     /// <summary>Um grupo de busca: a cidade, a parte dela (a cidade grande tem 6; um save antigo, 0), a geração e quem vive.</summary>

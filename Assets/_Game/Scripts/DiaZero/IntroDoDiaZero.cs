@@ -158,6 +158,8 @@ namespace ZombieCityCleaner.DiaZero
             Tocando = true;
             _compartilhada = compartilhada;
             _saindo = false;
+            // (25/11/2026, a revisão: um craft no meio desligava a cena quando acabava; primeiro ele para, depois a cena liga)
+            AnimacaoDoCraft.CancelarNoJogadorLocal();
             MenuOnline.Cinema = true;
             _desde = Time.time - jaFoi;
             Montar();

@@ -19,9 +19,34 @@ namespace ZombieCityCleaner.UI
             ("Ligar o motor (vazio)", 10),
         };
 
+        static readonly GUIContent _conteudoDoCarro = new GUIContent();
+
         Rect PainelDoCarro(float u, Rect emCima)
         {
-            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 286 * u);
+            // o estado primeiro (26/11/2026, a pedido do Pedro: os textos cortados pela metade): a caixa tinha 4 linhas, mas
+            // os pneus e a linha da vela, do radiador e da carência quebram (em 1920x1080, sempre), e a última saía cortada ou
+            // sumia; agora o painel cresce com o texto, e o SAVE, embaixo, desce junto
+            var c = CarroPerto(transform.position);
+            float alturaDoEstado = 72 * u;
+            if (c != null)
+            {
+                var p = c.Pneus;
+                string pneus = "";
+                for (int i = 0; i < PneusDoCarro.Quantas; i++)
+                {
+                    string e = !p.Tem(i) ? "–" : p[i] + "%" + ((c.PneusMurchando & (1 << i)) != 0 ? "↓" : "");
+                    pneus += (i == 0 ? "" : i == 2 ? " · tr " : " ") + e;
+                }
+                var pc = c.Pecas;
+                _conteudoDoCarro.text =
+                    $"pneus: fr {pneus}\n" +
+                    $"gasolina: {c.Gasolina:0.0} de {c.Tanque:0} L\n" +
+                    $"motor: {(c.MotorLigado ? (c.Vazio ? "ligado, sem ninguém" : "ligado") : c.Estado == Carro.EstadoDoMotor.SemChave ? "sem a chave" : "desligado")}\n" +
+                    $"vela {pc.Estado(PecasDoMotor.Vela)}% · radiador {pc.Estado(PecasDoMotor.Radiador)}%{(c.RadiadorVazando ? " (vaza)" : "")}" +
+                    (IsServer ? $" · carência {Mathf.Max(0f, c.Carencia):0} s" : "");
+                alturaDoEstado = Mathf.Max(72 * u, _texto.CalcHeight(_conteudoDoCarro, emCima.width - 24 * u));
+            }
+            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 286 * u + alturaDoEstado - 72 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -33,31 +58,18 @@ namespace ZombieCityCleaner.UI
             float meio = (w - 6 * u) / 2f, x2 = x + meio + 6 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "CARRO (TESTE)", _titulo);
             y += 24 * u;
-            var c = CarroPerto(transform.position);
             if (c == null)
             {
                 GUI.Label(new Rect(x, y, w, 40 * u), "Nenhum carro a menos de 25 m.", _texto);
                 return area;
             }
-            var p = c.Pneus;
-            string pneus = "";
-            for (int i = 0; i < PneusDoCarro.Quantas; i++)
-            {
-                string e = !p.Tem(i) ? "–" : p[i] + "%" + ((c.PneusMurchando & (1 << i)) != 0 ? "↓" : "");
-                pneus += (i == 0 ? "" : i == 2 ? " · tr " : " ") + e;
-            }
-            var pc = c.Pecas;
-            GUI.Label(new Rect(x, y, w, 72 * u),
-                $"pneus: fr {pneus}\n" +
-                $"gasolina: {c.Gasolina:0.0} de {c.Tanque:0} L\n" +
-                $"motor: {(c.MotorLigado ? (c.Vazio ? "ligado, sem ninguém" : "ligado") : c.Estado == Carro.EstadoDoMotor.SemChave ? "sem a chave" : "desligado")}\n" +
-                $"vela {pc.Estado(PecasDoMotor.Vela)}% · radiador {pc.Estado(PecasDoMotor.Radiador)}%{(c.RadiadorVazando ? " (vaza)" : "")}" +
-                (IsServer ? $" · carência {Mathf.Max(0f, c.Carencia):0} s" : ""), _texto);
-            y += 76 * u;
+            GUI.Label(new Rect(x, y, w, alturaDoEstado), _conteudoDoCarro, _texto);
+            y += alturaDoEstado + 4 * u;
             for (int k = 0; k < TestesDoCarro.Length; k++)
             {
                 var r = new Rect(k % 2 == 0 ? x : x2, y + (k / 2) * 30 * u, meio, 26 * u);
-                if (GUI.Button(r, TestesDoCarro[k].nome, _botao)) TesteDoCarroRpc((byte)TestesDoCarro[k].acao);
+                // (a letra menor em "Ligar o motor (vazio)" e "Estourar um pneu", que passavam do botão, 26/11/2026)
+                if (GUI.Button(r, TestesDoCarro[k].nome, BotaoQueCabe(TestesDoCarro[k].nome, meio))) TesteDoCarroRpc((byte)TestesDoCarro[k].acao);
             }
             return area;
         }

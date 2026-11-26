@@ -558,6 +558,9 @@ namespace ZombieCityCleaner.Mundo
             void Saia(int ia, int ja, int ib, int jb)
             {
                 Vector3 a = P(ia, ja), b = P(ib, jb), a2 = a + Vector3.down * 3f, b2 = b + Vector3.down * 3f;
+                // (25/11/2026) a saia não desce no buraco: a borda de um bloco que cruza a caixa do bunker punha uma faixa
+                // de terra de 3 m na sala comum (B1); a célula do lado já saiu (Furada)
+                if (buracos && (NoBuraco(a.x, a.z, 0.05f) || NoBuraco(b.x, b.z, 0.05f))) return;
                 Color32 ca = C(ia, ja), cb = C(ib, jb);
                 Tri(a, b, b2, ca, cb, cb);
                 Tri(a, b2, a2, ca, cb, ca);
@@ -630,16 +633,11 @@ namespace ZombieCityCleaner.Mundo
             {
                 float x = canto.x + i * px, z = canto.y + j * pz;
                 float h = Relevo.Altura(x, z);
-                var pd = MapaDeLakewood.Deformar(_sorte, x, z);
-                Mapa.Fracoes(pd.x, pd.y, f);
-                bool agua = Agua(x, z, out _, 6f);
                 // a malha fica 6 m abaixo do chão (escondida sob os blocos de perto), com os pesos das texturas do chão de
                 // perto na cor (as mesmas texturas: sem emenda) e a copa da mata no UV (a altura, até 11 m, e a fração de
                 // mata), que o ChaoDeLonge.shader só levanta longe da câmera
                 alt[j * lado + i] = naGrade ? VerticeDeLonge(passo, gi + i, gj + j) : h - FundoDoLonge;
-                cor[j * lado + i] = Pesos(x, z, h);
-                float mata = agua ? 0f : Mathf.Clamp01(f[(int)Cobertura.Mata] + f[(int)Cobertura.Agua]);
-                copa[j * lado + i] = new Vector2(mata * 11f / 16f, mata);
+                CorECopaDeLonge(x, z, h, f, out cor[j * lado + i], out copa[j * lado + i]);
             }
             var v = new List<Vector3>(n * m * 6);
             var c = new List<Color32>(n * m * 6);
@@ -647,6 +645,10 @@ namespace ZombieCityCleaner.Mundo
             for (int j = 0; j < m; j++)
             for (int i = 0; i < n; i++)
             {
+                // (25/11/2026, a pedido: "um pedaço de terra nos andares inferiores, na cozinha e mais embaixo") as células
+                // que encostam na caixa do bunker vão para uma malha só delas (LongeDoBunker, ChaoDeLakewood.Bunker.cs), que
+                // a cena esconde com a câmera perto: 6 m abaixo do pátio, o relevo de longe atravessava o B2 e os de baixo
+                if (CelulaDeLongeNoBunker(canto.x + i * px, canto.y + j * pz, px, pz)) continue;
                 Vector3 P(int a, int b) => new Vector3(canto.x + a * px, alt[b * lado + a], canto.y + b * pz);
                 Color32 C(int a, int b) => cor[b * lado + a];
                 Vector2 U(int a, int b) => copa[b * lado + a];
@@ -658,6 +660,17 @@ namespace ZombieCityCleaner.Mundo
                 uv.Add(U(i, j)); uv.Add(U(i + 1, j + 1)); uv.Add(U(i + 1, j));
             }
             return Fechar(v, c, uv);
+        }
+
+        // a cor (os pesos das texturas do chão de perto) e a copa da mata (no UV) de um vértice do relevo de longe
+        void CorECopaDeLonge(float x, float z, float h, Span<float> f, out Color32 cor, out Vector2 copa)
+        {
+            var pd = MapaDeLakewood.Deformar(_sorte, x, z);
+            Mapa.Fracoes(pd.x, pd.y, f);
+            bool agua = Agua(x, z, out _, 6f);
+            cor = Pesos(x, z, h);
+            float mata = agua ? 0f : Mathf.Clamp01(f[(int)Cobertura.Mata] + f[(int)Cobertura.Agua]);
+            copa = new Vector2(mata * 11f / 16f, mata);
         }
 
         // a cor do relevo de longe num ponto: a mistura das coberturas (as frações já calculadas), com a textura das copas,

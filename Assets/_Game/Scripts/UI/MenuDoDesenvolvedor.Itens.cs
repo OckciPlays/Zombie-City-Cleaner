@@ -58,7 +58,17 @@ namespace ZombieCityCleaner.UI
             // a altura da maior lista (a janela não pula ao trocar): a dos óculos (12, com os lugares e as cores em cima) ou
             // a maior espécie
             float altura = 8 + 30 + 34 + grade + 6 + Mathf.Max(92 + 6 * 32, (maior + 1) / 2 * 32) + 44;
-            var area = new Rect(12 * u, 40 * u, 380 * u, altura * u);
+            // o aviso do pé com a altura do texto (26/11/2026, a pedido do Pedro: os textos cortados pela metade: com as roupas
+            // de nome comprido, "Sem espaço nos bolsos para a camisa de uniforme de manga longa: ...", são 3 linhas, e a caixa
+            // tinha 2); o painel cresce embaixo com ele
+            bool comAviso = _aviso != null && Time.time < _avisoAte;
+            float alturaDoAviso = 36 * u;
+            if (comAviso)
+            {
+                _conteudoDoAviso.text = _aviso;
+                alturaDoAviso = Mathf.Max(36 * u, _texto.CalcHeight(_conteudoDoAviso, 356 * u));
+            }
+            var area = new Rect(12 * u, 40 * u, 380 * u, altura * u + alturaDoAviso - 36 * u);
             Area = area;
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
@@ -91,7 +101,9 @@ namespace ZombieCityCleaner.UI
                     var item = Itens.DaRoupa(k);
                     var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
                     i++;
-                    if (GUI.Button(r, TelaDoInventario.Maiuscula(Itens.Nome(item)), _botao)) PedirItem(item, inventario, CoresParaARoupa(item));
+                    // (a letra menor no nome que passa do botão, "Camisa de uniforme de manga longa", 26/11/2026)
+                    string nome = TelaDoInventario.Maiuscula(Itens.Nome(item));
+                    if (GUI.Button(r, nome, BotaoQueCabe(nome, bw))) PedirItem(item, inventario, CoresParaARoupa(item));
                 }
             }
             else
@@ -101,10 +113,11 @@ namespace ZombieCityCleaner.UI
                 {
                     var item = lista[i];
                     var r = new Rect(x + (i % 2) * (bw + 8 * u), y + (i / 2) * 32 * u, bw, 26 * u);
-                    if (GUI.Button(r, TelaDoInventario.Maiuscula(Itens.Nome(item)), _botao)) PedirItem(item, inventario, 0);
+                    string nome = TelaDoInventario.Maiuscula(Itens.Nome(item));
+                    if (GUI.Button(r, nome, BotaoQueCabe(nome, bw))) PedirItem(item, inventario, 0);
                 }
             }
-            if (_aviso != null && Time.time < _avisoAte) GUI.Label(new Rect(x, area.yMax - 40 * u, w, 36 * u), _aviso, _texto);
+            if (comAviso) GUI.Label(new Rect(x, area.yMax - 4 * u - alturaDoAviso, w, alturaDoAviso), _conteudoDoAviso, _texto);
         }
 
         void PedirItem(Item item, InventarioJogador inventario, ulong cores)

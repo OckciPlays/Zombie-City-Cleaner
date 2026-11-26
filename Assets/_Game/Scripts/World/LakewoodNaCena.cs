@@ -410,6 +410,31 @@ namespace ZombieCityCleaner.World
                 go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
                 _longe.Add(go);
             }
+            // (25/11/2026) o pedaço do relevo de longe embaixo do bunker, à parte: só aparece com a câmera longe
+            // (EsconderOLongeDoBunker); perto, ele atravessava os andares de baixo (ChaoDeLakewood.LongeDoBunker)
+            var doBunker = Chao.LongeDoBunker();
+            if (doBunker != null)
+            {
+                var meio = Chao.Bunker.Meio;
+                mapa.SetorDe(meio.x, meio.y, out int si, out int sj);
+                _longeDoBunker = Objeto("Longe do bunker", ParaMesh(doBunker, "Longe do bunker"), MaterialDeLonge(), _setores[si, sj]);
+                _longeDoBunker.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+                _longe.Add(_longeDoBunker);
+            }
+        }
+
+        GameObject _longeDoBunker;
+
+        /// <summary>
+        /// O relevo de longe embaixo do bunker só com a câmera longe dele: dentro do raio dos blocos de perto (menos um bloco
+        /// de folga), eles cobrem o lugar, e o bunker fica sem a terra de longe atravessando a cozinha e os andares de baixo.
+        /// </summary>
+        void EsconderOLongeDoBunker(Vector3 c)
+        {
+            if (_longeDoBunker == null || Chao?.Bunker == null) return;
+            float raio = (_semNeblina ? raioSemNeblina : raioComNeblina) - ChaoDeLakewood.TamanhoDoBloco - 6f;
+            bool longe = (new Vector2(c.x, c.z) - Chao.Bunker.Meio).sqrMagnitude > raio * raio;
+            if (_longeDoBunker.activeSelf != longe) _longeDoBunker.SetActive(longe);
         }
 
         // ------------------------------------------------------------------ todo quadro
@@ -448,6 +473,7 @@ namespace ZombieCityCleaner.World
             }
             Receber();
             GarantirOChao();
+            EsconderOLongeDoBunker(c);
             EsperarOBunker();
             ReceberAsObras();
             PorOCarro();

@@ -33,6 +33,12 @@ namespace ZombieCityCleaner.UI
         /// <summary>0 pequeno, 1 grande, 2 escondido.</summary>
         public static int Tamanho { get; private set; }
 
+        /// <summary>
+        /// Onde o minimapa acaba na tela (px; 0 escondido), para o que fica no canto de cima à direita descer para baixo dele
+        /// (25/11/2026: a carteira do Dia 0 ficava por cima dele).
+        /// </summary>
+        public static float Fundo(float u) => Tamanho >= Lados.Length ? 0f : (Opcoes.MostrarFps ? 44f : 30f) * u + Lados[Tamanho] * u + 3f * u;
+
         MapaDoMundo _mapa;
         IMarcasDoMundo _mundoOuvido;
         float _proximoPing;
@@ -310,6 +316,24 @@ namespace ZombieCityCleaner.UI
             GUI.BeginGroup(area);
             var meio = new Vector2(lado / 2f, lado / 2f);
             Vector2 NoMini(Vector3 mundoPos) => meio + new Vector2(mundoPos.x - p.x, -(mundoPos.z - p.z)) * escala;
+            // (25/11/2026, a etapa 7) a área da missão da vez (a casa da família e a rua para retomar): um círculo, vermelho
+            // onde é para lutar, amarelo no caminho
+            if (World.LakewoodNaCena.AreaDaMissao(out var centroDaArea, out float raioDaArea, out bool deLuta))
+            {
+                var q = NoMini(centroDaArea);
+                float s = raioDaArea * 2f * escala;
+                var circulo = Player.TelaDoInventario.Circulo();
+                var cor = deLuta ? new Color(1f, 0.28f, 0.18f) : new Color(1f, 0.82f, 0.2f);
+                var caixa = new Rect(q.x - s / 2f, q.y - s / 2f, s, s);
+                // o fundo, de leve, e a borda bem marcada (só o fundo sumia no mapa claro)
+                GUI.color = new Color(cor.r, cor.g, cor.b, 0.32f);
+                GUI.DrawTexture(caixa, circulo);
+                GUI.color = new Color(cor.r, cor.g, cor.b, 0.95f);
+                GUI.DrawTexture(caixa, Anel);
+                float c = 7f * u;
+                GUI.DrawTexture(new Rect(q.x - c / 2f, q.y - c / 2f, c, c), circulo);
+                GUI.color = antes;
+            }
             // as marcas e os pings
             var lista = mundo.Marcas;
             if (lista != null)
@@ -351,6 +375,29 @@ namespace ZombieCityCleaner.UI
             GUI.Label(new Rect(area.x + 1, area.y + 2 * u + 1, area.width, 18 * u), "N", _norte);
             GUI.color = antes;
             GUI.Label(new Rect(area.x, area.y + 2 * u, area.width, 18 * u), "N", _norte);
+        }
+
+        // o anel da área da missão (25/11/2026, a etapa 7): branco, a borda de uns 7% do raio, feito uma vez
+        static Texture2D _anel;
+        static Texture2D Anel
+        {
+            get
+            {
+                if (_anel != null) return _anel;
+                const int n = 128;
+                _anel = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Anel da área", wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.DontSave };
+                var px = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float d = new Vector2(x + 0.5f - n / 2f, y + 0.5f - n / 2f).magnitude / (n / 2f);
+                        float a = Mathf.Clamp01((d - 0.86f) / 0.03f) * Mathf.Clamp01((1f - d) / 0.03f);
+                        px[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                    }
+                _anel.SetPixels32(px);
+                _anel.Apply();
+                return _anel;
+            }
         }
 
         static void Seta(Texture2D seta, Vector2 p, Vector3 frente, float lado, Color cor)

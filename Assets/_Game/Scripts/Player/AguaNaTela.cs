@@ -79,6 +79,10 @@ namespace ZombieCityCleaner.Player
             {
                 _u = u;
                 _estilo = new GUIStyle(EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold, TextAnchor.MiddleCenter));
+                // (26/11/2026, a revisão dos textos cortados: o padding de cima e de baixo do GUI.skin.label é em pixels e não
+                // cresce com a tela; a 1280 × 720 a caixa de 18u deixava ~12 px para a linha de ~13,8 px, e o Ô de FÔLEGO
+                // ainda saía cortado. Sem ele, a linha cabe nos 18u em qualquer tela, com o mesmo meio: é uma cópia, só daqui)
+                _estilo.padding = new RectOffset(_estilo.padding.left, _estilo.padding.right, 0, 0);
             }
             float w = 160 * u, h = 7 * u, x = Screen.width * 0.5f - w / 2f, y = Screen.height * 0.5f + 46 * u;
             Retangulo(new Rect(x, y, w, h), new Color(0f, 0f, 0f, 0.5f));
@@ -86,7 +90,9 @@ namespace ZombieCityCleaner.Player
             Retangulo(new Rect(x, y, w * folego / 100f, h), cor);
             _estilo.normal.textColor = cor;
             // (na tona, o fôlego cai só no nado rápido: sem ele, é só parar de correr)
-            GUI.Label(new Rect(x, y - 18 * u, w, 16 * u), folego > 0 || _fundo <= 0.02f ? "FÔLEGO" : "SEM AR: SUBA!", _estilo);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) 18u, com o fundo 1u acima da barra: a letra de 12
+            // precisa de ~16,8u, e a ponta do circunflexo do Ô de FÔLEGO passava do alto da caixa de 16u
+            GUI.Label(new Rect(x, y - 19 * u, w, 18 * u), folego > 0 || _fundo <= 0.02f ? "FÔLEGO" : "SEM AR: SUBA!", _estilo);
         }
 
         static void Retangulo(Rect r, Color c)

@@ -14,6 +14,7 @@ namespace ZombieCityCleaner.UI
     //  - embaixo, o voltar, o erro da conexão e o "Criar o mundo", que hospeda direto (pelo Relay ou na rede local).
     // Desde 12/11/2026 (a parte 8 do "O jogo do mundo sorteado no Lakewood"), o jogo novo salva sozinho (a cada 5 minutos e
     // ao sair) e entra no Continuar do menu principal, que no Lakewood mostra só os jogos dele (com o personagem salvo).
+    // Desde 25/11/2026 (o save do Dia 0), ele salva também no Dia 0 e na fuga, e o Continuar volta neles.
     public partial class MenuOnline
     {
         void TelaDoNovoJogoNoLakewood()
@@ -40,8 +41,9 @@ namespace ZombieCityCleaner.UI
                 : "Você começa no bunker da comunidade, cavado na encosta do lago, na ponta da Woodcreek, a vila do nordeste, com " +
                   "os carros e as motos na garagem.", _eDica);
             if (Botao(cx, 250, 300, 30, d0 ? "COMEÇAR PELO DIA 0: SIM" : "COMEÇAR PELO DIA 0: NÃO")) World.MundoDeLakewood.ComecarPeloDiaZero = !d0;
-            GUI.Label(R(cx, 288, cw, 70), "O jogo salva sozinho a cada 5 minutos e ao sair da partida (o Dia 0 não é salvo), e " +
-                                           "volta pelo Continuar do menu.", _eDica);
+            // (25/11/2026, o save do Dia 0: antes, "o Dia 0 não é salvo")
+            GUI.Label(R(cx, 288, cw, 70), "O jogo salva sozinho a cada 5 minutos e ao sair da partida, também no Dia 0 e na fuga, " +
+                                           "e volta pelo Continuar do menu.", _eDica);
 
             // à esquerda: os moradores (22/11/2026, a etapa 2 do Docs/23: a comunidade do bunker já vem sorteada, sem as cartas)
             Caixa(L, 380, LW, 210, "MORADORES DO BUNKER", "A COMUNIDADE");

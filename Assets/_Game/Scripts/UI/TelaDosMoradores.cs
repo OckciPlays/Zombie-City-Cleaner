@@ -78,6 +78,9 @@ namespace ZombieCityCleaner.UI
         [System.NonSerialized] Texture2D _brilho, _chama;
         [System.NonSerialized] Font _fonte;
         GUIStyle _titulo, _rotulo, _nome, _nomeGrande, _texto, _frase, _pequeno, _botao, _botaoGrande, _chip, _campo, _nomeDaCarta, _numero;
+        // (26/11/2026, a pedido do Pedro: os textos cortados) as letras menores de quando o texto não cabe: o nome da ficha, o
+        // laço na faixa do retrato, o rótulo das fichinhas e o nome da carta em duas linhas
+        GUIStyle _nomeMedio, _nomeMenor, _laco, _lacoMenor, _rotuloMenor, _nomeDaCartaMenor;
         float _uDosEstilos;
 
         /// <summary>Abre a tela com os NPCs da última vez ou com os de um mundo sorteado agora.</summary>
@@ -275,6 +278,12 @@ namespace ZombieCityCleaner.UI
             _campo = Estilo(GUI.skin.textField, 15, FontStyle.Bold, Claro, TextAnchor.MiddleLeft);
             _campo.normal.background = _campo.focused.background = _campo.hover.background = Texture2D.blackTexture;
             _campo.padding = new RectOffset(Mathf.RoundToInt(6 * u), 2, 2, 2);
+            _nomeMedio = Estilo(GUI.skin.label, 18, FontStyle.Bold, Claro, TextAnchor.MiddleLeft);
+            _nomeMenor = Estilo(GUI.skin.label, 16, FontStyle.Bold, Claro, TextAnchor.MiddleLeft);
+            _laco = Estilo(GUI.skin.label, 11, FontStyle.Bold, Claro, TextAnchor.MiddleCenter);
+            _lacoMenor = Estilo(GUI.skin.label, 10, FontStyle.Bold, Claro, TextAnchor.MiddleCenter);
+            _rotuloMenor = Estilo(GUI.skin.label, 12, FontStyle.Bold, Claro, TextAnchor.UpperLeft);
+            _nomeDaCartaMenor = Estilo(GUI.skin.label, 14, FontStyle.Bold, Claro, TextAnchor.UpperLeft, true);
         }
 
         /// <summary>Desenha a tela (no OnGUI do menu); devolve se o jogador voltou ou mandou criar.</summary>
@@ -423,12 +432,26 @@ namespace ZombieCityCleaner.UI
             {
                 var faixa = new Rect(retrato.x, retrato.yMax - 22 * u, retrato.width, 22 * u);
                 Retangulo(faixa, new Color(0.04f, 0.04f, 0.04f, 0.82f));
-                GUI.Label(faixa, laco, new GUIStyle(_chip) { fontSize = Mathf.RoundToInt(11 * u), normal = { textColor = cor } });
+                // (26/11/2026, a pedido do Pedro: os textos cortados) "ex-marido da Stephanie, nesta mão" passava da faixa e,
+                // no meio e sem quebra, saía cortado nas duas pontas: a letra desce um ponto quando não cabe e, se nem assim,
+                // as reticências
+                var estiloDoLaco = _laco.CalcSize(new GUIContent(laco)).x <= faixa.width ? _laco : _lacoMenor;
+                estiloDoLaco.normal.textColor = cor;
+                GUI.Label(faixa, Caber(laco, estiloDoLaco, faixa.width), estiloDoLaco);
             }
 
             // o nome, a idade e o ofício
             float x = r.x + 10 * u, w = r.width - 20 * u, y = r.y + RetratoA * u + 4 * u;
-            GUI.Label(new Rect(x, y, w, 36 * u), f.NomeCompleto, _nomeDaCarta);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o nome comprido em duas linhas ia até a borda de baixo da caixa
+            // de 36u e, em 1280x720, cortava o pé do g e do p da segunda: em duas linhas, a letra desce um ponto
+            // (26/11/2026, a revisão dos textos cortados: com a letra um ponto menor, a segunda linha em 1280x720 ainda ficava
+            // a menos de um pixel da borda de baixo da caixa; em duas linhas, a caixa do nome vai 2u mais para baixo, por cima
+            // do alto da caixa da idade, que é transparente e tem a letra mais embaixo. O nome é medido e desenhado com o mesmo
+            // GUIContent, sem montar o NomeCompleto duas vezes a cada evento)
+            var conteudoDaCarta = new GUIContent(f.NomeCompleto);
+            bool duasLinhas = _nomeDaCarta.CalcHeight(conteudoDaCarta, w) > 36 * u;
+            var estiloDoNome = duasLinhas ? _nomeDaCartaMenor : _nomeDaCarta;
+            GUI.Label(new Rect(x, y, w, (duasLinhas ? 38 : 36) * u), conteudoDaCarta, estiloDoNome);
             y += 36 * u;
             var estiloDaIdade = new GUIStyle(_texto) { fontSize = Mathf.RoundToInt(12 * u) };
             GUI.Label(new Rect(x, y, w, 17 * u), Caber($"{f.idade} anos · {SorteioDosMoradores.NomeDeAntes(f)}", estiloDaIdade, w), estiloDaIdade);
@@ -535,7 +558,14 @@ namespace ZombieCityCleaner.UI
             }
             else
             {
-                GUI.Label(new Rect(xa, y, wa - (Completo ? 112 * u : 0), 30 * u), f.NomeCompleto, _nomeGrande);
+                // (26/11/2026, a pedido do Pedro: os textos cortados) o nome com apelido e sobrenome comprido ('Stephanie "Steph"
+                // Richardson') passava da caixa (o MUDAR O NOME está do lado) e saía cortado no meio de uma letra: a letra
+                // diminui até caber (de 21 para 18 e 16) e, se nem assim, as reticências
+                float largDoNome = wa - (Completo ? 112 * u : 0);
+                var conteudoDoNome = new GUIContent(f.NomeCompleto);
+                var estiloDoNome = _nomeGrande.CalcSize(conteudoDoNome).x <= largDoNome ? _nomeGrande
+                                 : _nomeMedio.CalcSize(conteudoDoNome).x <= largDoNome ? _nomeMedio : _nomeMenor;
+                GUI.Label(new Rect(xa, y, largDoNome, 30 * u), Caber(f.NomeCompleto, estiloDoNome, largDoNome), estiloDoNome);
                 if (Completo && Botao(new Rect(xa + wa - 108 * u, y + 3 * u, 108 * u, 24 * u), "MUDAR O NOME", u, null, _pequeno))
                 {
                     _editando = true;
@@ -625,7 +655,10 @@ namespace ZombieCityCleaner.UI
         // as fichinhas de uma linha (o rótulo à esquerda), quebrando quando não cabem
         float Fichinhas(float x, float y, float w, string titulo, List<(string nome, string efeito)> itens, Color cor, float u)
         {
-            GUI.Label(new Rect(x, y + 3 * u, 80 * u, 18 * u), titulo, _rotulo);
+            // (26/11/2026, a pedido do Pedro: os textos cortados) o "CONDIÇÕES" em negrito enchia a coluna dos rótulos (80u) e
+            // podia perder a ponta do S na borda: quando não cabe, a letra desce um ponto (as fichinhas continuam em 80u)
+            var estiloDoTitulo = _rotulo.CalcSize(new GUIContent(titulo)).x <= 80 * u ? _rotulo : _rotuloMenor;
+            GUI.Label(new Rect(x, y + 3 * u, 80 * u, 18 * u), titulo, estiloDoTitulo);
             float cx = x + 80 * u, cy = y, alto = 22 * u;
             if (itens.Count == 0)
             {

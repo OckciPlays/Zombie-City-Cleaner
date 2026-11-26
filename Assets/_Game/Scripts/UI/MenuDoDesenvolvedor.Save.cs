@@ -11,12 +11,22 @@ namespace ZombieCityCleaner.UI
     /// </summary>
     public partial class MenuDoDesenvolvedor
     {
+        static readonly GUIContent _conteudoDoSave = new GUIContent();
+
         Rect PainelDoSave(float u, Rect emCima)
         {
             var s = Salvamento.Instancia;
             var rede = GetComponent<JogadorRede>();
             if (s == null || !s.IsSpawned || rede == null || DiaZeroDaPartida.NoDia) return default;
-            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 118 * u);
+            // o texto primeiro (26/11/2026, a pedido do Pedro: os textos cortados pela metade): "Esta partida não salva (não
+            // veio do menu)." quebra em duas linhas, e a do personagem e do dinheiro saía cortada embaixo da caixa de 2 linhas;
+            // agora a caixa tem a altura do texto (o nome do personagem também pode ser comprido)
+            string estado = !s.Salva ? "Esta partida não salva (não veio do menu)."
+                : $"{MundoSalvo.NomeDoModo(s.Modo)}" + (s.SalvouEm >= 0f ? $" · salvo há {Mathf.FloorToInt((Time.unscaledTime - s.SalvouEm) / 60f)} min" : " · ainda não salvou");
+            var p = EscolhaDoPersonagem.Atual;
+            _conteudoDoSave.text = $"{estado}\n{(p != null ? p.nome : "sem personagem salvo")} · {PrecosDoDiaZero.Dinheiro(rede.Inventario.Dinheiro.Value)}";
+            float alturaDoEstado = Mathf.Max(36 * u, _texto.CalcHeight(_conteudoDoSave, emCima.width - 24 * u));
+            var area = new Rect(emCima.x, emCima.yMax + 8 * u, emCima.width, 118 * u + alturaDoEstado - 36 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -28,11 +38,8 @@ namespace ZombieCityCleaner.UI
             float meio = (w - 6 * u) / 2f;
             GUI.Label(new Rect(x, y, w, 22 * u), "SAVE", _titulo);
             y += 24 * u;
-            string estado = !s.Salva ? "Esta partida não salva (não veio do menu)."
-                : $"{MundoSalvo.NomeDoModo(s.Modo)}" + (s.SalvouEm >= 0f ? $" · salvo há {Mathf.FloorToInt((Time.unscaledTime - s.SalvouEm) / 60f)} min" : " · ainda não salvou");
-            var p = EscolhaDoPersonagem.Atual;
-            GUI.Label(new Rect(x, y, w, 36 * u), $"{estado}\n{(p != null ? p.nome : "sem personagem salvo")} · {PrecosDoDiaZero.Dinheiro(rede.Inventario.Dinheiro.Value)}", _texto);
-            y += 40 * u;
+            GUI.Label(new Rect(x, y, w, alturaDoEstado), _conteudoDoSave, _texto);
+            y += alturaDoEstado + 4 * u;
             GUI.enabled = s.Salva && s.IsServer;
             if (GUI.Button(new Rect(x, y, meio, 28 * u), "Salvar agora", _botao))
                 Avisar(s.Salvar("F1") ? "Salvo." : "Agora não dá para salvar.");

@@ -116,6 +116,41 @@ namespace ZombieCityCleaner.World
                 if (mf != null) longes.Add((prefab.name, mf.sharedMesh));
             }
             MobiliaNova.Registrar(longes);
+            TrocarABancadaPelaOficina();
+        }
+
+        // (25/11/2026, a pedido do Pedro: "a mesa de oficina que fica no bunker, eu acho que devemos substituir todas e deixar
+        // uma só padrão... eu acho o modelo dela mais bonito") a bancada de madeira das casas, das obras, da loja de armas e do
+        // bunker vira a mesa de oficina (Resources/MesaDeOficina), no tamanho dela (1,6 × 1,84 × 0,75 m: a de 2 m encolhe
+        // uns 15 a 20%) e servindo para o craft como a do bunker. De longe, o desenho continua o da bancada (o das casas é
+        // só o de longe, e a diferença não aparece)
+        bool _bancadaEhOficina;
+
+        void TrocarABancadaPelaOficina()
+        {
+            if (!_moldes.TryGetValue("Bancada", out var antiga) || !MedidasDaMobilia.Tem("Bancada")) return;
+            var prefab = Resources.Load<GameObject>("MesaDeOficina");
+            var caixa = prefab != null ? prefab.GetComponent<BoxCollider>() : null;
+            if (caixa == null) return;
+            var raiz = new GameObject("Bancada");
+            raiz.transform.SetParent(_guardados, false);
+            var oficina = Instantiate(prefab, raiz.transform, false);
+            oficina.name = "MesaDeOficina";
+            Vector3 tam = MedidasDaMobilia.Real("Bancada");
+            Vector2 meio = MedidasDaMobilia.Meio("Bancada");
+            Vector3 c = caixa.center, s = caixa.size;
+            var escala = new Vector3(tam.x / s.x, tam.y / s.y, tam.z / s.z);
+            oficina.transform.localScale = escala;
+            oficina.transform.localPosition = new Vector3(meio.x - c.x * escala.x, MedidasDaMobilia.Baixo("Bancada") - (c.y - s.y * 0.5f) * escala.y,
+                                                          meio.y - c.z * escala.z);
+            foreach (var b in oficina.GetComponentsInChildren<Loot.Bancada>(true))
+            {
+                b.oficina = true;
+                b.alturaDoTampo = Loot.Bancada.TampoDaOficina;
+            }
+            if (antiga.objeto != null) Destroy(antiga.objeto);
+            _moldes["Bancada"] = new Molde { objeto = raiz, malhas = new Mesh[0] };
+            _bancadaEhOficina = true;
         }
 
         public override void OnDestroy()
@@ -296,8 +331,11 @@ namespace ZombieCityCleaner.World
             if (Salvar.CamaDeDormir.EhCama(modelo)) PorOGatilhoDaCama(go, modelo);
             // as bancadas (06/11/2026): a do bunker novo e as das casas eram só o desenho (o Bancada só estava na cena antiga)
             if (modelo == "Bancada")
+            {
                 foreach (var c in go.GetComponentsInChildren<Collider>(true))
                     if (c.GetComponent<Interagivel>() == null) c.gameObject.AddComponent<Loot.Bancada>();
+                if (_bancadaEhOficina) return go;   // (a mesa de oficina no lugar dela, 25/11/2026: sem as cores da variação)
+            }
             var v = VariacaoDe(modelo, variacao);
             if (v == null) return go;
             var filtros = go.GetComponentsInChildren<MeshFilter>(true);

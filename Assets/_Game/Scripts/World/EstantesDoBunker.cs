@@ -24,7 +24,7 @@ namespace ZombieCityCleaner.World
         public byte desgaste;
         public ulong cores;
 
-        public Vector2Int Tamanho => InventarioJogador.TamanhoNaGrade(item, girado);
+        public Vector2Int Tamanho => EstantesDoBunker.TamanhoNaEstante(item, girado);
 
         /// <summary>Como um item da mochila (o desenho da tela; o Id fica 0, para não confundir com os da mochila).</summary>
         public ItemNaMochila ComoDaMochila => new ItemNaMochila { item = item, x = x, y = y, girado = girado, qtd = qtd, desgaste = desgaste, cores = cores };
@@ -76,6 +76,11 @@ namespace ZombieCityCleaner.World
             public float[] alturas;
             public float largura, fundo, vao;
             /// <summary>
+            /// As linhas de cada tábua (25/11/2026): 2 nas estantes; a caçamba da caminhonete é uma grade só, de 8 linhas (o
+            /// pneu, de 3 × 3, cabe nela).
+            /// </summary>
+            public int linhas = LinhasPorTabua;
+            /// <summary>
             /// O suporte dos tacos e a mesinha do fumo (a parte 8 do Plano_NPCs_Bunker.md, a segunda fatia) não têm tábuas: têm
             /// vagas, uma por item (as colunas), cada uma com o que aceita e o lugar dela no móvel (<see cref="vagas"/>).
             /// </summary>
@@ -84,7 +89,7 @@ namespace ZombieCityCleaner.World
             /// dela (x e z) e a altura em que o item assenta (y).</summary>
             public Vector3[] vagas;
             public int Tabuas => alturas.Length;
-            public Vector2Int Grade => new Vector2Int(colunas, Tabuas * LinhasPorTabua);
+            public Vector2Int Grade => new Vector2Int(colunas, Tabuas * linhas);
             public bool Especial => especial != EspecialDaEstante.Nenhuma;
 
             /// <summary>Nas especiais: a vaga aceita o item (os tacos nas 4 do suporte e a caixa de bolas na quinta; os maços na mesinha).</summary>
@@ -145,16 +150,80 @@ namespace ZombieCityCleaner.World
 
         /// <summary>
         /// A caçamba da caminhonete (22/11/2026, o Dia 0 na Woodcreek: o Pedro, "Caçamba da caminhonete": as compras vão para
-        /// ela): uma estante de 12 × 6 (três fundos de 2 linhas, no chão da caçamba), com o número <see cref="BaseDasCacambas"/>
-        /// (uma caminhonete só). O "perto" é o da tampa de trás (<see cref="Vehicles.Carro.PontoDoPortaMalas"/>); quem está na
-        /// caçamba também alcança. Nada aparece por fora, como no caiaque.
+        /// ela), com o número <see cref="BaseDasCacambas"/> (uma caminhonete só). O "perto" é o da tampa de trás
+        /// (<see cref="Vehicles.Carro.PontoDoPortaMalas"/>); quem está na caçamba também alcança. Desde 25/11/2026 (a pedido:
+        /// "começa a aparecer alguns itens em cima da caçamba que fica flutuando... aumentar um pouco o tamanho do inventário
+        /// dela") é uma grade só de 12 × 8 (antes, 12 × 6 em três faixas de 2 linhas, e o pneu de 3 × 3 nunca cabia), e o que
+        /// está nela aparece deitado no chão da caçamba, andando com ela (<c>Carro.PorOsItensDaCacamba</c>).
         /// </summary>
         public const int BaseDasCacambas = 61000;
         const string Cacamba = "CacambaDaCaminhonete";
-        static readonly Forma FormaDaCacamba = new Forma { nome = "caçamba da caminhonete", colunas = 12, alturas = new[] { 0f, 0f, 0f }, largura = 1.5f, fundo = 1.6f, vao = 0.5f };
+        static readonly Forma FormaDaCacamba = new Forma { nome = "caçamba da caminhonete", colunas = 12, linhas = 8, alturas = new[] { 0f }, largura = 1.5f, fundo = 1.6f, vao = 0.7f };
+
+        /// <summary>
+        /// O armazém da casa da família (25/11/2026, a pedido: "Voltar para casa... Guardar itens em armazém"): duas estantes de
+        /// aço no fundo da garagem dela, na Woodcreek (LakewoodNaCena.Armazem.cs), as de número <see cref="BaseDosArmazens"/> e a
+        /// seguinte, de 8 × 10 cada (16 × 10 ao todo). As mesmas nas duas épocas: o que fica nelas no Dia 0 espera os 5 anos.
+        /// </summary>
+        public const int BaseDosArmazens = 62000, EstantesDoArmazem = 2;
+        const string Armazem = "EstanteAco120";
+        // a de aço de 120 do bunker, com o nome do armazém (o cabeçalho da tela)
+        static readonly Forma FormaDoArmazem = new Forma { nome = "armazém da garagem", artigo = "o", colunas = 8, alturas = TabuasDeAco, largura = 1.12f, fundo = 0.37f, vao = 0.42f };
+
+        /// <summary>É uma estante do armazém da casa da família?</summary>
+        public static bool EhDoArmazem(int estante) => estante >= BaseDosArmazens && estante < BaseDosArmazens + EstantesDoArmazem;
+
+        /// <summary>As estantes do armazém, na ordem em que se enchem.</summary>
+        public static readonly int[] OArmazem = { BaseDosArmazens, BaseDosArmazens + 1 };
+
+        /// <summary>Onde fica cada estante do armazém (o pé dela, no mundo: em cada máquina, quando ela é posta).</summary>
+        public static readonly Dictionary<int, Transform> LugarDoArmazem = new Dictionary<int, Transform>();
+
+        /// <summary>
+        /// As células que o item ocupa na estante: as da mochila e, para as mochilas compradas no Dia 0 (que vão para a caçamba e
+        /// para o armazém, vazias; 25/11/2026), deitadas: a pequena 2 × 2, a média 3 × 2 e a grande 4 × 2 (2 linhas, para
+        /// caberem numa tábua das estantes; o 1º teste, com 3 linhas, deixou a mochila presa na caçamba).
+        /// </summary>
+        public static Vector2Int TamanhoNaEstante(Item item, bool girado)
+        {
+            if (!Itens.EhMochila(item)) return InventarioJogador.TamanhoNaGrade(item, girado);
+            var t = item == Item.MochilaPequena ? new Vector2Int(2, 2) : item == Item.MochilaMedia ? new Vector2Int(3, 2) : new Vector2Int(4, 2);
+            return girado ? new Vector2Int(t.y, t.x) : t;
+        }
+
+        /// <summary>
+        /// Só no anfitrião: nada do que está na estante <paramref name="de"/> cabe mais nas <paramref name="para"/> (o armazém
+        /// cheio: a submissão "Guarde as compras" acaba assim mesmo, para as chaves não travarem).
+        /// </summary>
+        public bool NadaMaisCabe(int de, IList<int> para)
+        {
+            foreach (var o in _itens)
+                if (o.estante == de && CabemNasEstantes(para, new[] { (o.item, (int)o.qtd) })) return false;
+            return true;
+        }
+
+        /// <summary>A estante aceita mochilas (a caçamba e o armazém).</summary>
+        public static bool AceitaMochila(int estante) => EhDaCacamba(estante) || EhDoArmazem(estante);
 
         /// <summary>É a caçamba de uma caminhonete?</summary>
         public static bool EhDaCacamba(int estante) => estante >= BaseDasCacambas && estante < BaseDasCacambas + 16;
+
+        /// <summary>
+        /// Durante a fuga, o armazém da casa da família e a caçamba da caminhonete dela não abrem (25/11/2026, a revisão: a fuga
+        /// é "só com as roupas"; antes, dava para voltar à garagem, abrir o armazém e pegar tudo de volta). Em todas as
+        /// máquinas: a tela não abre e a dica diz por quê (<see cref="MotivoNaFuga"/>), e o anfitrião recusa guardar, pegar,
+        /// mover e descarregar (<see cref="Quem"/>). O anfitrião, ele mesmo, continua guardando nelas (a fuga começa guardando
+        /// o que cada um leva, LakewoodNaCena.Armazem.cs).
+        /// </summary>
+        public static bool FechadaNaFuga(int estante)
+        {
+            var m = MundoDeLakewood.Instancia;
+            return m != null && m.NaFuga && (EhDoArmazem(estante) || estante == LakewoodNaCena.CacambaDaFamilia);
+        }
+
+        /// <summary>O aviso de quem tenta abrir o armazém ou a caçamba durante a fuga.</summary>
+        public static string MotivoNaFuga(int estante) =>
+            EhDaCacamba(estante) ? "Não dá tempo: a caçamba fica para trás." : "Não dá tempo: o armazém fica para trás.";
 
         public static bool EhEstante(string modelo) => modelo != null && Formas.ContainsKey(modelo);
         public static Forma FormaDe(string modelo) => modelo != null && Formas.TryGetValue(modelo, out var f) ? f : null;
@@ -164,11 +233,13 @@ namespace ZombieCityCleaner.World
         {
             if (EhDoCaiaque(estante)) return Compartimento;   // (mesmo antes de o caiaque nascer: o save dele carrega)
             if (EhDaCacamba(estante)) return Cacamba;
+            if (EhDoArmazem(estante)) return Armazem;
             var todos = MoveisDoBunker.Todos;
             return estante >= 0 && estante < todos.Length && EhEstante(todos[estante].modelo) ? todos[estante].modelo : null;
         }
 
-        public static Forma FormaDa(int estante) => EhDoCaiaque(estante) ? FormaDoCompartimento : EhDaCacamba(estante) ? FormaDaCacamba : FormaDe(ModeloDa(estante));
+        public static Forma FormaDa(int estante) => EhDoCaiaque(estante) ? FormaDoCompartimento : EhDaCacamba(estante) ? FormaDaCacamba
+            : EhDoArmazem(estante) ? FormaDoArmazem : FormaDe(ModeloDa(estante));
 
         NetworkList<ItemNaEstante> _itens;
         ushort _proximoId = 1;
@@ -272,32 +343,41 @@ namespace ZombieCityCleaner.World
                 foreach (var o in _itens) if (o.estante == estante && o.id != ignorar && o.x == x) return false;
                 return true;
             }
-            var t = InventarioJogador.TamanhoNaGrade(item, girado);
-            if (f == null || t.x <= 0 || x < 0 || y < 0 || x + t.x > f.colunas || y + t.y > f.Grade.y) return false;
-            if (y % LinhasPorTabua + t.y > LinhasPorTabua) return false;
-            foreach (var o in _itens)
-            {
-                if (o.estante != estante || o.id == ignorar) continue;
-                var s = o.Tamanho;
-                if (x < o.x + s.x && o.x < x + t.x && y < o.y + s.y && o.y < y + t.y) return false;
-            }
+            if (f == null || (Itens.EhMochila(item) && !AceitaMochila(estante)) || !CabeNaGrade(f, item, girado, x, y)) return false;
+            foreach (var o in _itens) if (o.estante == estante && o.id != ignorar && !CabeNoLugar(item, girado, x, y, o)) return false;
             return true;
+        }
+
+        // (25/11/2026) as contas do Cabe, para a lista de verdade e para a de mentira do caixa do Dia 0 (CabemNaEstante)
+        static bool CabeNaGrade(Forma f, Item item, bool girado, int x, int y)
+        {
+            var t = TamanhoNaEstante(item, girado);
+            if (t.x <= 0 || x < 0 || y < 0 || x + t.x > f.colunas || y + t.y > f.Grade.y) return false;
+            return y % f.linhas + t.y <= f.linhas;
+        }
+
+        static bool CabeNoLugar(Item item, bool girado, int x, int y, ItemNaEstante o)
+        {
+            var t = TamanhoNaEstante(item, girado);
+            var s = o.Tamanho;
+            return !(x < o.x + s.x && o.x < x + t.x && y < o.y + s.y && o.y < y + t.y);
         }
 
         /// <summary>
         /// O primeiro lugar em que o item cabe, deitado (senão, girado): as tábuas pela altura, da mais perto do peito
         /// (<see cref="AlturaBoa"/>, com a escala dos móveis) para as de longe; em cada uma, da linha de trás para a da frente e
-        /// da esquerda para a direita.
+        /// da esquerda para a direita. <paramref name="ignorar"/>: um item que conta como já fora (25/11/2026, a revisão: a
+        /// mochila que sai, na troca pela vestida).
         /// </summary>
-        public bool Espaco(int estante, Item item, out int x, out int y, out bool girado)
+        public bool Espaco(int estante, Item item, out int x, out int y, out bool girado, ushort ignorar = 0)
         {
             var f = FormaDa(estante);
-            var t = Itens.Tamanho(item);
+            var t = TamanhoNaEstante(item, false);
             girado = false;
             if (f != null && f.Especial)
             {
                 for (x = 0, y = 0; x < f.colunas; x++)
-                    if (Cabe(estante, item, false, x, 0)) return true;
+                    if (Cabe(estante, item, false, x, 0, ignorar)) return true;
                 x = y = -1;
                 return false;
             }
@@ -312,11 +392,11 @@ namespace ZombieCityCleaner.World
                     foreach (int tabua in tabuas)
                     {
                         int faixa = f.Tabuas - 1 - tabua;
-                        for (int linha = 0; linha < LinhasPorTabua; linha++)
+                        for (int linha = 0; linha < f.linhas; linha++)
                             for (x = 0; x < f.colunas; x++)
                             {
-                                y = faixa * LinhasPorTabua + linha;
-                                if (Cabe(estante, item, girado, x, y)) return true;
+                                y = faixa * f.linhas + linha;
+                                if (Cabe(estante, item, girado, x, y, ignorar)) return true;
                             }
                     }
                 }
@@ -356,10 +436,28 @@ namespace ZombieCityCleaner.World
         /// couber (as pilhas completam antes as do mesmo item que já estão nelas). <paramref name="qtd"/>: as balas, o pente
         /// ou quantos há na pilha (-1, o de sempre). Devolve false se ele (ou o resto da pilha) não coube.
         /// </summary>
-        public bool GuardarNasEstantes(IList<int> estantes, Item item, int qtd, int desgaste, ulong cores)
+        public bool GuardarNasEstantes(IList<int> estantes, Item item, int qtd, int desgaste, ulong cores) =>
+            GuardarNasEstantes(estantes, item, qtd, desgaste, cores, out _);
+
+        /// <summary>
+        /// O mesmo, dizendo o que não coube (25/11/2026, a revisão: a pilha pode entrar só em parte, completando as que já
+        /// estão nas estantes; quem guarda o que sobrou precisa do resto certo, e não da pilha inteira):
+        /// <paramref name="sobrou"/> é o resto da pilha (no qtd dela: quantos, ou as balas), ou o qtd do item inteiro, ou 0
+        /// (coube tudo).
+        /// </summary>
+        public bool GuardarNasEstantes(IList<int> estantes, Item item, int qtd, int desgaste, ulong cores, out int sobrou)
         {
-            if (!IsServer || item == Item.Nada || !Itens.NoJogo(item) || Itens.EhEquipamento(item)) return false;
+            sobrou = qtd;
+            if (!IsServer || item == Item.Nada || !Itens.NoJogo(item)) return false;
+            // (25/11/2026) a mochila comprada vai vazia para a caçamba (e para o armazém); nas outras estantes, não
+            if (Itens.EhEquipamento(item))
+            {
+                bool aceita = false;
+                foreach (int e in estantes) aceita |= AceitaMochila(e);
+                if (!aceita) return false;
+            }
             if (qtd < 0) qtd = Itens.QuantidadePadrao(item);
+            sobrou = qtd;
             if (Itens.EmPilha(item))
             {
                 int max = Itens.Pilha(item), resta = Mathf.Max(1, Itens.Quantos(item, qtd));
@@ -376,12 +474,19 @@ namespace ZombieCityCleaner.World
                 while (resta > 0)
                 {
                     int n = Mathf.Min(resta, max);
-                    if (!PorNaPrimeira(estantes, item, n, desgaste, cores)) return false;
+                    if (!PorNaPrimeira(estantes, item, n, desgaste, cores))
+                    {
+                        sobrou = resta;
+                        return false;
+                    }
                     resta -= n;
                 }
+                sobrou = 0;
                 return true;
             }
-            return PorNaPrimeira(estantes, item, qtd, desgaste, cores);
+            if (!PorNaPrimeira(estantes, item, qtd, desgaste, cores)) return false;
+            sobrou = 0;
+            return true;
         }
 
         bool PorNaPrimeira(IList<int> estantes, Item item, int qtd, int desgaste, ulong cores)
@@ -394,6 +499,156 @@ namespace ZombieCityCleaner.World
                 return true;
             }
             return false;
+        }
+
+        // ------------------------------------------------------------------ o caixa do Dia 0 e o armazém (25/11/2026)
+
+        /// <summary>
+        /// Só no anfitrião: todos os itens (cada um com o de sempre: a pilha, as balas) cabem nas estantes, guardados como o
+        /// <see cref="GuardarNasEstantes"/> guardaria (as pilhas completam as do mesmo item; o resto, no primeiro lugar livre)?
+        /// Conta numa cópia, sem mexer na lista da rede: o caixa do Dia 0 só vende o que cabe na caçamba (a pedido: "Quando
+        /// compramos item demais e lotamos o seu inventário, ela simplesmente começa a aparecer alguns itens em cima da caçamba
+        /// que fica flutuando").
+        /// </summary>
+        public bool CabemNasEstantes(IList<int> estantes, IList<(Item item, int qtd)> itens)
+        {
+            var listas = new Dictionary<int, List<ItemNaEstante>>();
+            foreach (int e in estantes)
+            {
+                if (FormaDa(e) == null || listas.ContainsKey(e)) continue;
+                var l = new List<ItemNaEstante>();
+                foreach (var o in _itens) if (o.estante == e) l.Add(o);
+                listas[e] = l;
+            }
+            foreach (var (item, q) in itens)
+            {
+                if (item == Item.Nada || !Itens.NoJogo(item)) continue;
+                int qtd = q < 0 ? Itens.QuantidadePadrao(item) : q;
+                if (Itens.EmPilha(item))
+                {
+                    int max = Itens.Pilha(item), resta = Mathf.Max(1, Itens.Quantos(item, qtd));
+                    foreach (var l in listas.Values)
+                        for (int i = 0; i < l.Count && resta > 0; i++)
+                        {
+                            var o = l[i];
+                            int tem = Itens.Quantos(o.item, o.qtd);
+                            if (o.item != item || tem >= max) continue;
+                            int n = Mathf.Min(resta, max - tem);
+                            o.qtd = (ushort)(tem + n);
+                            l[i] = o;
+                            resta -= n;
+                        }
+                    while (resta > 0)
+                    {
+                        int n = Mathf.Min(resta, max);
+                        if (!PorNaCopia(listas, estantes, item, n)) return false;
+                        resta -= n;
+                    }
+                }
+                else if (!PorNaCopia(listas, estantes, item, qtd)) return false;
+            }
+            return true;
+        }
+
+        // na cópia: no primeiro lugar livre (a mesma ordem do Espaco: deitado, depois girado; as tábuas da mais perto do peito)
+        bool PorNaCopia(Dictionary<int, List<ItemNaEstante>> listas, IList<int> estantes, Item item, int qtd)
+        {
+            foreach (int e in estantes)
+            {
+                if (!listas.TryGetValue(e, out var l)) continue;
+                var f = FormaDa(e);
+                if (f.Especial || (Itens.EhMochila(item) && !AceitaMochila(e))) continue;
+                var t = TamanhoNaEstante(item, false);
+                var tabuas = new List<int>();
+                for (int k = 0; k < f.Tabuas; k++) tabuas.Add(k);
+                tabuas.Sort((a, b) => Mathf.Abs(f.alturas[a] * MedidasDaMobilia.Escala - AlturaBoa).CompareTo(Mathf.Abs(f.alturas[b] * MedidasDaMobilia.Escala - AlturaBoa)));
+                for (int g = 0; g < (t.x != t.y ? 2 : 1); g++)
+                    foreach (int tabua in tabuas)
+                        for (int linha = 0; linha < f.linhas; linha++)
+                            for (int x = 0; x < f.colunas; x++)
+                            {
+                                int y = (f.Tabuas - 1 - tabua) * f.linhas + linha;
+                                bool girado = g == 1;
+                                if (!CabeNaGrade(f, item, girado, x, y)) continue;
+                                bool livre = true;
+                                foreach (var o in l)
+                                    if (!CabeNoLugar(item, girado, x, y, o)) { livre = false; break; }
+                                if (!livre) continue;
+                                l.Add(new ItemNaEstante { estante = (ushort)e, item = item, x = (byte)x, y = (byte)y, girado = girado, qtd = (ushort)Mathf.Clamp(qtd, 0, ushort.MaxValue) });
+                                return true;
+                            }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Só no anfitrião: passa o que couber da estante <paramref name="de"/> para as <paramref name="para"/> (a caçamba para o
+        /// armazém; as coisas de quem foge para o armazém), um item de cada vez, inteiro (o que não cabe fica onde estava).
+        /// </summary>
+        public void Passar(int de, IList<int> para, out int foram, out int ficaram)
+        {
+            foram = ficaram = 0;
+            if (!IsServer) return;
+            var deLa = new List<ItemNaEstante>();
+            foreach (var o in _itens) if (o.estante == de) deLa.Add(o);
+            foreach (var o in deLa)
+            {
+                if (!CabemNasEstantes(para, new[] { (o.item, (int)o.qtd) }))
+                {
+                    ficaram++;
+                    continue;
+                }
+                int k = Indice(de, o.id);
+                if (k < 0) continue;
+                _itens.RemoveAt(k);
+                if (GuardarNasEstantes(para, o.item, o.qtd, o.desgaste, o.cores)) foram++;
+                else
+                {
+                    _itens.Add(o);   // (não devia acontecer: a conta acima disse que cabia)
+                    ficaram++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// "Descarregar no armazém" (a tela da caçamba, 25/11/2026): com a caminhonete perto do armazém da casa da família (a
+        /// tampa de trás a até <see cref="CacambaPertoDoArmazem"/> m de uma estante dele), o que couber da caçamba vai para o
+        /// armazém.
+        /// </summary>
+        public void PedirDescarregar(int cacamba)
+        {
+            if (IsSpawned && EhDaCacamba(cacamba)) DescarregarRpc((ushort)cacamba);
+        }
+
+        /// <summary>Até onde do armazém a caminhonete descarrega (m, da tampa de trás ao pé da estante: a entrada da garagem).</summary>
+        public const float CacambaPertoDoArmazem = 22f;
+
+        /// <summary>A caçamba (a tampa de trás da caminhonete) está perto do armazém da casa da família (em qualquer máquina).</summary>
+        public static bool CacambaPertoDoArmazemDaFamilia(int cacamba)
+        {
+            foreach (var c in Vehicles.Carro.Todos)
+            {
+                if (c == null || !c.cacamba || c.CacambaDeGuardar != cacamba) continue;
+                foreach (var kv in LugarDoArmazem)
+                    if (kv.Value != null && (kv.Value.position - c.PontoDoPortaMalas).sqrMagnitude < CacambaPertoDoArmazem * CacambaPertoDoArmazem) return true;
+            }
+            return false;
+        }
+
+        [Rpc(SendTo.Server)]
+        void DescarregarRpc(ushort cacamba, RpcParams parametros = default)
+        {
+            if (!Quem(parametros, cacamba, out var inventario)) return;
+            if (!CacambaPertoDoArmazemDaFamilia(cacamba))
+            {
+                inventario.AvisarODono("O armazém fica na garagem da casa da família: leve a caminhonete até a entrada dela.");
+                return;
+            }
+            Passar(cacamba, OArmazem, out int foram, out int ficaram);
+            Debug.Log($"[Armazém] A caçamba descarregada: {foram} no armazém, {ficaram} na caçamba.");
+            inventario.AvisarODono(foram == 0 && ficaram == 0 ? "A caçamba já está vazia."
+                : ficaram == 0 ? $"Descarregado: {(foram == 1 ? "1 coisa foi" : $"{foram} coisas foram")} para o armazém da garagem."
+                : $"O armazém encheu: {(foram == 1 ? "1 foi" : $"{foram} foram")}, {(ficaram == 1 ? "1 ficou" : $"{ficaram} ficaram")} na caçamba.");
         }
 
         // ------------------------------------------------------------------ os moradores (a parte 6 do Plano_NPCs_Bunker.md)
@@ -413,7 +668,7 @@ namespace ZombieCityCleaner.World
             // no suporte, a mão pega o taco no meio dele (e a caixa na prateleirinha); na mesinha, no tampo
             if (f.especial == EspecialDaEstante.Suporte) return it.x < 4 ? 1.2f : 1.62f;
             if (f.Especial && it.x >= 0 && it.x < f.vagas.Length) return f.vagas[it.x].y * EscalaDa(it.estante);
-            int tabua = Mathf.Clamp(f.Tabuas - 1 - it.y / LinhasPorTabua, 0, f.Tabuas - 1);
+            int tabua = Mathf.Clamp(f.Tabuas - 1 - it.y / f.linhas, 0, f.Tabuas - 1);
             return f.alturas[tabua] * EscalaDa(it.estante);
         }
 
@@ -493,6 +748,15 @@ namespace ZombieCityCleaner.World
                 }
                 return false;
             }
+            if (EhDoArmazem(estante))
+            {
+                // o pé da estante no fundo da garagem (a frente dela é o +Z)
+                if (!LugarDoArmazem.TryGetValue(estante, out var t) || t == null) return false;
+                var da = ponto - (t.position + t.forward * 0.4f);
+                if (da.y < -1f || da.y > 2.5f) return false;
+                da.y = 0f;
+                return da.magnitude <= distancia + 0.5f;
+            }
             var bunker = BunkerDoMundo.Instancia;
             if (bunker == null || !bunker.PontoDoMovel(estante, out var pe)) return false;
             var d = ponto - pe;
@@ -550,7 +814,99 @@ namespace ZombieCityCleaner.World
             if (!NetworkManager.ConnectedClients.TryGetValue(parametros.Receive.SenderClientId, out var cliente) || cliente.PlayerObject == null) return false;
             if (!Perto(estante, cliente.PlayerObject.transform.position, distanciaMaxima)) return false;
             inventario = cliente.PlayerObject.GetComponent<InventarioJogador>();
-            return inventario != null;
+            if (inventario == null) return false;
+            // (25/11/2026, a revisão) na fuga, o armazém e a caçamba da família ficam para trás: nada de guardar, pegar,
+            // mover nem descarregar (a tela de quem já estava com ela aberta também fecha, TelaDoInventario.Estante.cs)
+            if (FechadaNaFuga(estante))
+            {
+                inventario.AvisarODono(MotivoNaFuga(estante));
+                inventario = null;
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// A mochila guardada (na caçamba ou no armazém) pode ser vestida por este jogador agora? (25/11/2026, a revisão: antes,
+        /// pegar a mochila trocava a vestida sem conferir: a vestida caía no chão, e o que não cabia na nova caía solto.) Sem
+        /// mochila, sim. Com outra vestida, é uma troca (<paramref name="troca"/>): tudo o que ela leva precisa caber na nova
+        /// (a mesma conta do InventarioJogador.Arrumar), e a vestida, vazia, precisa caber na estante, contando o lugar da que
+        /// sai (no armazém, também na outra estante dele). Em qualquer máquina: a tela mostra o motivo antes de soltar, e o
+        /// anfitrião confere de novo no PegarRpc.
+        /// </summary>
+        public bool PodeVestir(int estante, ItemNaEstante nova, InventarioJogador inventario, out bool troca, out string motivo)
+        {
+            troca = false;
+            motivo = null;
+            if (inventario == null || !inventario.IsSpawned || !Itens.EhMochila(nova.item)) return false;
+            var vestida = inventario.MochilaVestida.Value;
+            if (vestida == Item.Nada) return true;
+            if (vestida == nova.item)
+            {
+                motivo = $"Você já veste {Itens.NomeComArtigo(vestida)}.";
+                return false;
+            }
+            troca = true;
+            if (!CabeTudoNaGrade(inventario.Mochila, Itens.EspacoDa(nova.item)))
+            {
+                motivo = $"O que está na sua {Itens.Nome(vestida)} não cabe na {Itens.Nome(nova.item)}: tire umas coisas antes.";
+                return false;
+            }
+            if (!LugarDaVestida(estante, vestida, nova.id, out _, out _, out _, out _))
+            {
+                var f = FormaDa(estante);
+                motivo = $"Não há lugar {(f != null && f.artigo == "o" ? "no" : "na")} {f?.nome} para a sua {Itens.Nome(vestida)}.";
+                return false;
+            }
+            return true;
+        }
+
+        // onde a mochila vestida fica, na troca: na estante da que sai (contando o lugar dela) e, no armazém, senão na outra
+        // estante dele
+        bool LugarDaVestida(int estante, Item vestida, ushort sai, out int destino, out int x, out int y, out bool girado)
+        {
+            destino = estante;
+            if (Espaco(estante, vestida, out x, out y, out girado, sai)) return true;
+            if (EhDoArmazem(estante))
+                foreach (int outra in OArmazem)
+                {
+                    if (outra == estante || !Espaco(outra, vestida, out x, out y, out girado)) continue;
+                    destino = outra;
+                    return true;
+                }
+            return false;
+        }
+
+        // tudo o que está na mochila cabe numa grade deste tamanho? A conta do InventarioJogador.Arrumar, numa cópia: o que
+        // cabe onde está fica; o resto procura lugar, os maiores primeiro
+        static bool CabeTudoNaGrade(NetworkList<ItemNaMochila> mochila, Vector2Int espaco)
+        {
+            var fica = new List<ItemNaMochila>();
+            var sobra = new List<ItemNaMochila>();
+            foreach (var it in mochila) (CabeNaGradeOndeEsta(fica, espaco, it) ? fica : sobra).Add(it);
+            sobra.Sort((a, b) => (b.Tamanho.x * b.Tamanho.y).CompareTo(a.Tamanho.x * a.Tamanho.y));
+            foreach (var it in sobra)
+            {
+                if (!InventarioJogador.EspacoNaGrade(fica, espaco, it.item, out int x, out int y, out bool girado)) return false;
+                var novo = it;
+                novo.x = (byte)x;
+                novo.y = (byte)y;
+                novo.girado = girado;
+                fica.Add(novo);
+            }
+            return true;
+        }
+
+        static bool CabeNaGradeOndeEsta(List<ItemNaMochila> postos, Vector2Int espaco, ItemNaMochila it)
+        {
+            var t = it.Tamanho;
+            if (t.x <= 0 || it.x + t.x > espaco.x || it.y + t.y > espaco.y) return false;
+            foreach (var o in postos)
+            {
+                var s = o.Tamanho;
+                if (it.x < o.x + s.x && o.x < it.x + t.x && it.y < o.y + s.y && o.y < it.y + t.y) return false;
+            }
+            return true;
         }
 
         ushort NovoId()
@@ -616,6 +972,41 @@ namespace ZombieCityCleaner.World
             int k = Indice(estante, id);
             if (k < 0 || !Quem(parametros, estante, out var inventario)) return;
             var it = _itens[k];
+            // (25/11/2026) a mochila da caçamba ou do armazém: quem pega veste. (25/11/2026, a revisão) Com outra vestida, é
+            // uma troca conferida (PodeVestir): o que ela leva passa para a nova, e ela fica na estante, vazia, no lugar da
+            // que saiu; se não couber, nada muda e o dono é avisado (antes, a vestida caía no chão e o resto caía solto)
+            if (Itens.EhMochila(it.item))
+            {
+                if (!PodeVestir(estante, it, inventario, out bool troca, out string motivo))
+                {
+                    if (motivo != null) inventario.AvisarODono(motivo);
+                    return;
+                }
+                var vestida = inventario.MochilaVestida.Value;
+                int destino = estante, vx = 0, vy = 0;
+                bool vg = false;
+                if (troca && !LugarDaVestida(estante, vestida, it.id, out destino, out vx, out vy, out vg)) return;   // (o PodeVestir já conferiu)
+                _itens.RemoveAt(k);
+                // a vestida sai antes, para o Vestir não largar ela no chão; o Arrumar do Vestir passa o que ela levava para a
+                // grade nova (cabe tudo: o PodeVestir conferiu)
+                if (troca) inventario.MochilaVestida.Value = Item.Nada;
+                if (!inventario.Receber(it.item, it.qtd, it.desgaste, it.cores))
+                {
+                    // (não acontece: a mochila sempre é vestida) tudo volta como estava
+                    if (troca) inventario.MochilaVestida.Value = vestida;
+                    _itens.Add(it);
+                    return;
+                }
+                Avisar(parametros, estante, it.item, 1, false);
+                if (troca)
+                {
+                    _itens.Add(new ItemNaEstante { estante = (ushort)destino, id = NovoId(), item = vestida, x = (byte)vx, y = (byte)vy, girado = vg });
+                    Avisar(parametros, destino, vestida, 1, true);
+                    var f = FormaDa(estante);
+                    inventario.AvisarODono($"Você vestiu {Itens.NomeComArtigo(it.item)}; {Itens.NomeComArtigo(vestida)} ficou {(f.artigo == "o" ? "no" : "na")} {f.nome}.");
+                }
+                return;
+            }
             if (x == Livre)
             {
                 if (Itens.EmPilha(it.item))
@@ -809,8 +1200,8 @@ namespace ZombieCityCleaner.World
             if (malha == null) return;
             var f = forma;
             var t = it.Tamanho;
-            int tabua = f.Tabuas - 1 - it.y / EstantesDoBunker.LinhasPorTabua, linha = it.y % EstantesDoBunker.LinhasPorTabua;
-            float cw = f.largura / f.colunas, rd = f.fundo / EstantesDoBunker.LinhasPorTabua;
+            int tabua = f.Tabuas - 1 - it.y / f.linhas, linha = it.y % f.linhas;
+            float cw = f.largura / f.colunas, rd = f.fundo / f.linhas;
             // a coluna 0 fica à esquerda de quem olha de frente (a frente é o +Z do móvel, e a esquerda dele, o +X); a linha
             // 0 é a de trás
             float cx = (f.largura / 2f - (it.x + t.x / 2f) * cw) * s, cz = (-f.fundo / 2f + (linha + t.y / 2f) * rd) * s;
@@ -867,6 +1258,8 @@ namespace ZombieCityCleaner.World
             var e = EstantesDoBunker.Instancia;
             var f = EstantesDoBunker.FormaDa(estante);
             if (e == null || !e.IsSpawned || f == null || quem == null) return null;
+            // (25/11/2026, a revisão) na fuga, o armazém fica para trás: a dica diz por quê, e o E não abre (AbrirEstante)
+            if (EstantesDoBunker.FechadaNaFuga(estante)) return EstantesDoBunker.MotivoNaFuga(estante);
             int n = e.Quantos(estante);
             return $"[E] Abrir {f.artigo} {f.nome}" + (n == 0 ? (f.artigo == "o" ? " (vazio)" : " (vazia)") : n == 1 ? " (1 item)" : $" ({n} itens)");
         }

@@ -365,17 +365,29 @@ namespace ZombieCityCleaner.Loot
             int k = Indice(id);
             if (inventario == null || k < 0) return;
             var c = _lista[k];
-            if (!Itens.EhDaBase(c.tipo) || (inventario.transform.position - c.pos).sqrMagnitude > 4.5f * 4.5f) return;
+            // (e a mesa de ferramentas, 25/11/2026: o kit volta inteiro)
+            bool mesa = c.tipo == Item.MesaDeFerramentas;
+            if ((!Itens.EhDaBase(c.tipo) && !mesa) || (inventario.transform.position - c.pos).sqrMagnitude > 4.5f * 4.5f) return;
             _lista.RemoveAt(k);
             // muito quebrado (abaixo da metade), o muro e o portão viram uma tora
-            bool inteiro = c.tipo == Item.NucleoDaBase || c.valor >= MaximoDe(c) * 0.5f;
+            // (e a mesa, desde que tem vida, 25/11/2026, a revisão: as 2 madeiras de quando ela quebra)
+            bool inteiro = c.tipo == Item.NucleoDaBase || (mesa ? c.valor / MaximoDe(c) * 100f >= MesaVoltaInteiraCom : c.valor >= MaximoDe(c) * 0.5f);
             if (inteiro) inventario.EntregarItem(c.tipo, 1);
+            else if (mesa)
+            {
+                inventario.EntregarItem(Item.Madeira, 2);
+                inventario.AvisarDono("A mesa estava muito quebrada: sobraram 2 madeiras");
+            }
             else inventario.EntregarItem(Item.Toras, 1);
             if (c.tipo == Item.NucleoDaBase && NivelDoNucleo(c) > 1) inventario.AvisarDono("O núcleo voltou para a mochila (o nível e os troféus gastos ficaram)");
         }
 
-        /// <summary>O muro e o portão fechado: os zumbis encostados batem neles (como na barricada).</summary>
-        static bool ZumbisBatem(Construcao c) => c.tipo == Item.MuroDeToras || (c.tipo == Item.PortaoDeToras && (c.extra & BitAberto) == 0);
+        /// <summary>
+        /// O muro, o portão fechado e, desde a revisão de 25/11/2026, a mesa de oficina montada (sólida e cortando o NavMesh,
+        /// ela era uma parede que não quebrava): os zumbis encostados batem neles (como na barricada).
+        /// </summary>
+        static bool ZumbisBatem(Construcao c) => c.tipo == Item.MuroDeToras || (c.tipo == Item.PortaoDeToras && (c.extra & BitAberto) == 0)
+                                                 || c.tipo == Item.MesaDeFerramentas;
 
         // ------------------------------------------------------------------ a mira (ConstrucaoNaMira)
 
@@ -411,7 +423,8 @@ namespace ZombieCityCleaner.Loot
         }
 
         public static string DesmontandoDaBase(Construcao? c) => c == null ? "Desmontando"
-            : c.Value.tipo == Item.NucleoDaBase ? "Apagando o núcleo da base" : c.Value.tipo == Item.PortaoDeToras ? "Desmontando o portão" : "Desmontando o muro";
+            : c.Value.tipo == Item.NucleoDaBase ? "Apagando o núcleo da base" : c.Value.tipo == Item.PortaoDeToras ? "Desmontando o portão"
+            : c.Value.tipo == Item.MesaDeFerramentas ? "Desmontando a mesa" : "Desmontando o muro";
 
         // ------------------------------------------------------------------ encaixar (quem monta)
 

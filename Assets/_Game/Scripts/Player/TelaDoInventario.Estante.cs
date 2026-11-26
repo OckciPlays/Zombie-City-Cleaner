@@ -9,8 +9,10 @@ namespace ZombieCityCleaner.Player
     // com ela na coluna da direita, no lugar dos detalhes: uma faixa por tábua (de cima para baixo), cada uma com a linha
     // de trás e a da frente. Arrastar da mochila para a estante guarda; da estante para a mochila, pega; dentro da
     // estante, move. R gira o que está seguro; o botão direito pega para a mochila (ou guarda, num item da mochila); o Shift +
-    // clique passa a pilha inteira de um lado para o outro (08/11/2026).
-    // Longe da estante (ou fechando a tela), ela sai.
+    // clique passa a pilha inteira de um lado para o outro (08/11/2026). A mochila guardada na caçamba ou no armazém
+    // (25/11/2026, a revisão) vai arrastada para a grade ou para o lugar da mochila: é vestida, ou trocada pela vestida
+    // quando o que ela leva cabe na nova (EstantesDoBunker.PodeVestir).
+    // Longe da estante (ou fechando a tela), ela sai; na fuga, o armazém e a caçamba da família não abrem.
     public partial class TelaDoInventario
     {
         // a coluna da estante (a dos detalhes) e as medidas das faixas
@@ -30,6 +32,12 @@ namespace ZombieCityCleaner.Player
         public void AbrirEstante(int estante)
         {
             if (rede == null || !rede.IsOwner || MenuOnline.Aberto || EstantesDoBunker.FormaDa(estante) == null) return;
+            // (25/11/2026, a revisão) na fuga, o armazém e a caçamba da família ficam para trás (o anfitrião também recusa)
+            if (EstantesDoBunker.FechadaNaFuga(estante))
+            {
+                InventarioJogador.AvisoLocal(EstantesDoBunker.MotivoNaFuga(estante));
+                return;
+            }
             _aba = Aba.Mochila;
             if (!Aberta) Abrir(true);
             _estante = estante;
@@ -39,7 +47,9 @@ namespace ZombieCityCleaner.Player
         void ConferirEstante()
         {
             if (_estante < 0) return;
-            if (!Aberta || Estantes == null || !EstantesDoBunker.Perto(_estante, transform.position, Estantes.distanciaMaxima + 1f))
+            // (e quando a fuga começa com ela aberta: o armazém e a caçamba da família ficam para trás, 25/11/2026)
+            if (!Aberta || Estantes == null || !EstantesDoBunker.Perto(_estante, transform.position, Estantes.distanciaMaxima + 1f)
+                || EstantesDoBunker.FechadaNaFuga(_estante))
             {
                 if (Aberta && _apertou == Origem.Estante) _apertou = Origem.Nada;
                 Abrir(false);
@@ -61,10 +71,11 @@ namespace ZombieCityCleaner.Player
         Vector2 InicioDaEstante(EstantesDoBunker.Forma f, float c) =>
             new Vector2(AreaDaEstante.x + (AreaDaEstante.width - f.colunas * c) / 2f, AreaDaEstante.y + TituloDaEstanteH);
 
-        float AlturaDaFaixa(float c) => EstantesDoBunker.LinhasPorTabua * c + TabuaH + VaoEntreTabuas;
+        // (25/11/2026: as linhas de cada tábua vêm da forma; a caçamba é uma grade só, de 8)
+        static float AlturaDaFaixa(EstantesDoBunker.Forma f, float c) => f.linhas * c + TabuaH + VaoEntreTabuas;
 
         // o topo da linha y da grade (na medida de 720p)
-        float TopoDaLinha(int y, float c) => (y / EstantesDoBunker.LinhasPorTabua) * AlturaDaFaixa(c) + (y % EstantesDoBunker.LinhasPorTabua) * c;
+        static float TopoDaLinha(EstantesDoBunker.Forma f, int y, float c) => (y / f.linhas) * AlturaDaFaixa(f, c) + (y % f.linhas) * c;
 
         Rect RetanguloNaEstante(int x, int y, Vector2Int tamanho)
         {
@@ -72,7 +83,7 @@ namespace ZombieCityCleaner.Player
             if (f.Especial) return Em(RetanguloDaVaga(f, x));
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
-            return Em(new Rect(o.x + x * c, o.y + TopoDaLinha(y, c), tamanho.x * c, tamanho.y * c));
+            return Em(new Rect(o.x + x * c, o.y + TopoDaLinha(f, y, c), tamanho.x * c, tamanho.y * c));
         }
 
         // a área das faixas (na tela), um pouco maior: soltar ali é soltar na estante
@@ -91,7 +102,7 @@ namespace ZombieCityCleaner.Player
             }
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
-            float altura = f.Tabuas * AlturaDaFaixa(c) - VaoEntreTabuas;
+            float altura = f.Tabuas * AlturaDaFaixa(f, c) - VaoEntreTabuas;
             return Encolher(Em(new Rect(o.x, o.y, f.colunas * c, altura)), -10f * _u);
         }
 
@@ -154,13 +165,13 @@ namespace ZombieCityCleaner.Player
             float c = CelulaDaEstante(f);
             var o = InicioDaEstante(f, c);
             var canto = (m - PegaPara(c * _u) - Em(new Rect(o.x, o.y, 0f, 0f)).position) / _u;
-            var t = InventarioJogador.TamanhoNaGrade(item, girado);
+            var t = EstantesDoBunker.TamanhoNaEstante(item, girado);
             x = Mathf.Clamp(Mathf.RoundToInt(canto.x / c), 0, Mathf.Max(0, f.colunas - t.x));
             float melhor = float.MaxValue;
             for (int k = 0; k + t.y <= f.Grade.y; k++)
             {
-                if (k % EstantesDoBunker.LinhasPorTabua + t.y > EstantesDoBunker.LinhasPorTabua) continue;
-                float d = Mathf.Abs(TopoDaLinha(k, c) - canto.y);
+                if (k % f.linhas + t.y > f.linhas) continue;
+                float d = Mathf.Abs(TopoDaLinha(f, k, c) - canto.y);
                 if (d < melhor)
                 {
                     melhor = d;
@@ -190,6 +201,15 @@ namespace ZombieCityCleaner.Player
         {
             var e = Estantes;
             if (e == null || !EstanteApertada(out var it)) return;
+            // (25/11/2026, a revisão: a mochila não tem lugar na grade, o tamanho dela lá é 0 × 0, e o arrasto não fazia nada)
+            // a mochila da caçamba ou do armazém solta na grade ou no lugar da mochila: veste (ou troca pela vestida, se o
+            // que ela leva couber na nova; o anfitrião confere de novo, EstantesDoBunker.PodeVestir)
+            if (Itens.EhMochila(it.item) && (CelulaDoArrasto(m, it.item, _girado, out _, out _) || EquipamentoEm(m, out _)))
+            {
+                if (e.PodeVestir(_estante, it, inventario, out _, out var motivo)) e.Pegar(_estante, it.id, -1, -1, false);
+                else if (motivo != null) InventarioJogador.AvisoLocal(motivo);
+                return;
+            }
             if (CelulaDoArrasto(m, it.item, _girado, out int x, out int y))
             {
                 if (inventario.Cabe(it.item, _girado, x, y)) e.Pegar(_estante, it.id, x, y, _girado);
@@ -261,8 +281,12 @@ namespace ZombieCityCleaner.Player
                 Ret(Encolher(r, 4f * u), new Color(0.55f, 0.32f, 0.12f, 0.85f));
                 Ret(Encolher(r, 12f * u), new Color(0.35f, 0.34f, 0.32f, 0.9f));
                 int bitucas = BunkerDoMundo.Instancia != null ? BunkerDoMundo.Instancia.Bitucas : 0;
-                GUI.Label(new Rect(r.x - 10f * u, r.yMax + 4f * u, r.width + 20f * u, 18f * u),
-                          bitucas == 0 ? "o cinzeiro (limpo)" : bitucas == 1 ? "o cinzeiro (1 bituca)" : $"o cinzeiro ({bitucas} bitucas)", _pequeno);
+                // (26/11/2026, a pedido do Pedro: os textos cortados) a altura medida: "o cinzeiro (12 bitucas)" quebrava e a 2ª
+                // linha saía cortada ao meio (embaixo dele não há nada até as legendas de baixo)
+                var conteudoDoCinzeiro = new GUIContent(bitucas == 0 ? "o cinzeiro (limpo)" : bitucas == 1 ? "o cinzeiro (1 bituca)" : $"o cinzeiro ({bitucas} bitucas)");
+                var caixaDoCinzeiro = new Rect(r.x - 10f * u, r.yMax + 4f * u, r.width + 20f * u, 18f * u);
+                caixaDoCinzeiro.height = Mathf.Max(caixaDoCinzeiro.height, _pequeno.CalcHeight(conteudoDoCinzeiro, caixaDoCinzeiro.width));
+                GUI.Label(caixaDoCinzeiro, conteudoDoCinzeiro, _pequeno);
             }
             // onde o item arrastado cairia: verde se cabe, vermelho se não
             if (_arrastando && (_apertou == Origem.Mochila || _apertou == Origem.Estante))
@@ -307,22 +331,23 @@ namespace ZombieCityCleaner.Player
             var o = InicioDaEstante(f, c);
             int n = e.Quantos(_estante);
             // o nome dela fica no cabeçalho da coluna (no lugar de DETALHES); aqui, quantos itens e a medida das tábuas
-            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), $"{f.Tabuas} tábuas de {f.colunas} × {EstantesDoBunker.LinhasPorTabua}", _texto);
-            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), n == 0 ? "vazia" : n == 1 ? "1 item" : $"{n} itens", _direita);
-            bool aco = f.nome.Contains("aço");
+            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), f.Tabuas == 1 ? $"{f.colunas} × {f.linhas}" : $"{f.Tabuas} tábuas de {f.colunas} × {f.linhas}", _texto);
+            // (25/11/2026, a revisão: "o armazém da garagem" aparecia "vazia")
+            GUI.Label(Em(new Rect(AreaDaEstante.x, AreaDaEstante.y + 2, AreaDaEstante.width, 22)), n == 0 ? (f.artigo == "o" ? "vazio" : "vazia") : n == 1 ? "1 item" : $"{n} itens", _direita);
+            bool aco = f.nome.Contains("aço") || f.nome.Contains("armazém");
             var corDaTabua = aco ? new Color(0.62f, 0.64f, 0.64f, 0.95f) : new Color(0.62f, 0.47f, 0.3f, 0.95f);
             Ret(Encolher(AreaDasFaixas(), 6f * u), Painel);
             for (int t = 0; t < f.Tabuas; t++)
             {
-                float topo = t * AlturaDaFaixa(c);
-                for (int linha = 0; linha < EstantesDoBunker.LinhasPorTabua; linha++)
+                float topo = t * AlturaDaFaixa(f, c);
+                for (int linha = 0; linha < f.linhas; linha++)
                     for (int x = 0; x < f.colunas; x++)
                     {
                         var r = Em(new Rect(o.x + x * c, o.y + topo + linha * c, c, c));
                         Ret(new Rect(r.x + 1, r.y + 1, r.width - 2, r.height - 2), CorDaCelula);
                     }
                 // a tábua embaixo da faixa (o aço, ou a madeira)
-                Ret(Em(new Rect(o.x - 4f, o.y + topo + EstantesDoBunker.LinhasPorTabua * c + 1f, f.colunas * c + 8f, TabuaH - 2f)), corDaTabua);
+                Ret(Em(new Rect(o.x - 4f, o.y + topo + f.linhas * c + 1f, f.colunas * c + 8f, TabuaH - 2f)), corDaTabua);
             }
             // onde o item arrastado cairia: verde se cabe, vermelho se não
             if (_arrastando && (_apertou == Origem.Mochila || _apertou == Origem.Estante))
@@ -338,7 +363,7 @@ namespace ZombieCityCleaner.Player
                 if (item != Item.Nada && CelulaNaEstante(mouse, item, _girado, out int ax, out int ay))
                 {
                     bool cabe = e.Cabe(_estante, item, _girado, ax, ay, ignorar);
-                    Ret(RetanguloNaEstante(ax, ay, InventarioJogador.TamanhoNaGrade(item, _girado)),
+                    Ret(RetanguloNaEstante(ax, ay, EstantesDoBunker.TamanhoNaEstante(item, _girado)),
                         cabe ? new Color(0.35f, 0.85f, 0.35f, 0.3f) : new Color(0.9f, 0.25f, 0.2f, 0.35f));
                 }
             }
@@ -349,21 +374,69 @@ namespace ZombieCityCleaner.Player
                 bool arrastado = _arrastando && _apertou == Origem.Estante && _idApertado == it.id;
                 DesenharItem(it.ComoDaMochila, Encolher(r, 2 * u), it.girado, arrastado ? 0.3f : 1f, false, r.Contains(mouse) && !_arrastando, true);
                 if (r.Contains(mouse) && !_arrastando)
-                    _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)" : "");
+                    _dicaTexto = Maiuscula(Itens.Nome(it.item)) + (Itens.EhMochila(it.item) ? " (vazia: arraste para vestir)"   // (25/11/2026, a revisão)
+                        : Itens.EmPilha(it.item) ? $" ({Itens.Quantos(it.item, it.qtd)} de {Itens.Pilha(it.item)})" : Itens.ComEstado(it.item) ? $" ({it.qtd}%)" : "");
             }
-            float rodape = o.y + f.Tabuas * AlturaDaFaixa(c) - VaoEntreTabuas + 10f;
-            GUI.Label(Em(new Rect(AreaDaEstante.x, rodape, AreaDaEstante.width, 20)), "Arraste da mochila para guardar (Shift + clique: a pilha toda)", _pequeno);
+            float rodape = o.y + f.Tabuas * AlturaDaFaixa(f, c) - VaoEntreTabuas + 10f;
+            // (25/11/2026: o texto longo quebrava em duas linhas por cima da de baixo)
+            GUI.Label(Em(new Rect(AreaDaEstante.x, rodape, AreaDaEstante.width, 20)), "Arraste da mochila para guardar (Shift: a pilha toda)", _pequeno);
             GUI.Label(Em(new Rect(AreaDaEstante.x, rodape + 18, AreaDaEstante.width, 20)), "e daqui para a mochila para pegar", _pequeno);
+            // (25/11/2026) a caçamba perto da garagem da casa da família: o botão que passa tudo para o armazém
+            var botao = BotaoDeDescarregar();
+            if (botao.width > 0f)
+            {
+                bool sobre = botao.Contains(mouse);
+                Ret(botao, sobre ? new Color(0.36f, 0.5f, 0.3f, 0.95f) : new Color(0.26f, 0.36f, 0.22f, 0.92f));
+                Moldura(botao, Mathf.Max(1f, Mathf.Round(u)), BordaClara);
+                GUI.Label(botao, "Descarregar no armazém da garagem", new GUIStyle(_pequeno) { alignment = TextAnchor.MiddleCenter });
+            }
+        }
+
+        /// <summary>
+        /// O botão "Descarregar no armazém da garagem" (na tela, em pixels), embaixo da grade da caçamba, quando a caminhonete
+        /// está na entrada da garagem da casa da família e há o que descarregar; senão, um retângulo vazio.
+        /// </summary>
+        Rect BotaoDeDescarregar()
+        {
+            var f = FormaAberta;
+            var e = Estantes;
+            if (_estante < 0 || f == null || e == null || !EstantesDoBunker.EhDaCacamba(_estante) || e.Quantos(_estante) == 0
+                || !EstantesDoBunker.CacambaPertoDoArmazemDaFamilia(_estante) || EstantesDoBunker.FechadaNaFuga(_estante)) return default;
+            float c = CelulaDaEstante(f);
+            var o = InicioDaEstante(f, c);
+            float rodape = o.y + f.Tabuas * AlturaDaFaixa(f, c) - VaoEntreTabuas + 10f;
+            return Em(new Rect(AreaDaEstante.x + 26f, rodape + 44f, AreaDaEstante.width - 52f, 26f));
+        }
+
+        /// <summary>Para os testes: o clique no botão de descarregar a caçamba.</summary>
+        public void DescarregarACacamba()
+        {
+            if (_estante >= 0 && Estantes != null) Estantes.PedirDescarregar(_estante);
         }
 
         // o item da estante que está sendo arrastado, na medida da grade embaixo do mouse
         void ArrastoDaEstante(Vector2 mouse)
         {
             if (!EstanteApertada(out var it)) return;
-            float c = (CelulaDoArrasto(mouse, it.item, _girado, out _, out _) || FormaAberta == null ? Celula : CelulaDaEstante(FormaAberta)) * _u;
-            var t = InventarioJogador.TamanhoNaGrade(it.item, _girado);
+            bool naGrade = CelulaDoArrasto(mouse, it.item, _girado, out _, out _);
+            float c = (naGrade || FormaAberta == null ? Celula : CelulaDaEstante(FormaAberta)) * _u;
+            // (25/11/2026, a revisão) o tamanho dele na estante: o da mochila guardada é o dela lá (o da grade é 0 × 0, e o
+            // desenho sumia); nos outros itens, os dois são o mesmo
+            var t = EstantesDoBunker.TamanhoNaEstante(it.item, _girado);
             var r = new Rect(mouse - PegaPara(c), new Vector2(t.x * c, t.y * c));
             DesenharItem(it.ComoDaMochila, Encolher(r, 2 * _u), _girado, 0.85f, false, false, true);
+            // a mochila em cima da grade ou do lugar da mochila: o lugar dela verde (veste, ou troca pela vestida) ou
+            // vermelho, e o que acontece ao soltar
+            var e = Estantes;
+            if (!Itens.EhMochila(it.item) || e == null || !(naGrade || EquipamentoEm(mouse, out _))) return;
+            bool pode = e.PodeVestir(_estante, it, inventario, out bool troca, out string motivo);
+            Ret(Em(LugarDaMochila), pode ? new Color(0.35f, 0.85f, 0.35f, 0.35f) : new Color(0.9f, 0.25f, 0.2f, 0.4f));
+            // (25/11/2026, a revisão: "trocar pela sua X" dizia o contrário, dar esta e ficar com a sua; o mesmo texto da troca
+            // no chão, InventarioJogador.DicaDePegar)
+            string texto = !pode ? motivo ?? "Não dá para vestir agora."
+                : troca ? $"soltar: trocar a sua {Itens.Nome(inventario.MochilaVestida.Value)} pela {Itens.Nome(it.item)}" : "soltar: vestir";
+            float w = _dica.CalcSize(new GUIContent(texto)).x + 8f * _u;
+            GUI.Label(new Rect(Mathf.Min(mouse.x + 14 * _u, Screen.width - w), mouse.y - 20 * _u, w, 20 * _u), texto, _dica);
         }
     }
 }

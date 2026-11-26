@@ -94,10 +94,19 @@ namespace ZombieCityCleaner.UI
         // o save (02/11/2026): o personagem escolhido aqui, o modo de salvar do mundo novo e a tela do Continuar (a lista
         // dos mundos salvos)
         bool _continuar;
-        System.Collections.Generic.List<PersonagemSalvo> _personagens;
-        System.Collections.Generic.List<MundoSalvo> _mundos;
+        // (26/11/2026, o teste do save do Dia 0) sem serializar: quando a Unity recarrega o código no editor, ela guarda e devolve
+        // os campos do menu, e a lista ainda não lida (null) voltava como uma lista vazia, que o "??=" não lia de novo. O menu
+        // principal mostrava "nenhum jogo salvo ainda", com o Continuar apagado, no primeiro Play depois de cada compilação
+        [System.NonSerialized] System.Collections.Generic.List<PersonagemSalvo> _personagens;
+        [System.NonSerialized] System.Collections.Generic.List<MundoSalvo> _mundos;
         int _indiceDoPersonagem;
         string _apagarPersonagem, _apagarMundo;
+        // (25/11/2026, a pedido do Pedro: "mesmo apertando em continuar, ele pede para a gente criar um novo personagem")
+        // o Continuar escolhe sozinho o personagem que jogou no mundo escolhido, uma vez por mundo (as setas continuam
+        // trocando); e quem jogou em cada mundo, lido das posições salvas nele (MenuOnline.NovoJogo.cs)
+        string _personagemDoMundoDe;
+        readonly System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<long>> _quemJogouNoMundo =
+            new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<long>>();
         ModoDeSalvar _modoNovo = ModoDeSalvar.Automatico;
         // o fogo amigo do mundo novo (03/11/2026): desligado de começo
         bool _fogoAmigoNovo;
@@ -298,11 +307,12 @@ namespace ZombieCityCleaner.UI
                     _codigoNoTexto = codigoAgora;
                     _jogadoresNoTexto = _sessao.Jogadores;
                     _sementeNoTexto = semente;
-                    string codigo = _sessao.Local ? "partida local" : $"código {_sessao.Codigo}";
                     string mundo = m != null && m.Semente != 0 ? $"  ·  {m.Nome}: semente {m.Semente}, {Tamanhos.Lado(m.Tamanho) / 1000} km" : "";
-                    _textoDaPartida = $"{codigo}  ·  {_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}  ·  ESC: menu";
+                    _textoDaPartida = $"{_sessao.Jogadores}/{SessaoOnline.MaxJogadores} jogadores{mundo}";
                 }
-                if (!GravacaoNoMundo.SemHud) GUI.Label(new Rect(14 * u, 10 * u, 900 * u, 24 * u), _textoDaPartida, _linhaDaPartida);
+                // (25/11/2026, a pedido do Pedro: "tirar as opções do lado esquerdo superior, onde aparece o código da partida,
+                // zumbis vivos... está apenas poluindo o jogo") a linha da partida saiu do canto: o código (com o "Copiar"), os
+                // jogadores e o mundo ficam no menu do ESC (Pausa), e o canto fica para o caderno das missões
                 if (_pausa) Pausa(u);
                 return;
             }
@@ -358,16 +368,42 @@ namespace ZombieCityCleaner.UI
             y += 64 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "Teste sem internet (mesma rede):", _texto);
             y += 26 * u;
-            if (GUI.Button(new Rect(x, y, w * 0.48f, 32 * u), "Hospedar local", _botao)) _sessao.HospedarLocal();
-            _ip = GUI.TextField(new Rect(x + w * 0.52f, y, w * 0.26f, 32 * u), _ip, 40, _campo);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o IP com mais espaço: um de rede local
+            // ("192.168.100.200") não cabia em 0,26 da linha e saía com as pontas cortadas; o "Hospedar local" cabe em 0,38
+            if (GUI.Button(new Rect(x, y, w * 0.38f, 32 * u), "Hospedar local", _botao)) _sessao.HospedarLocal();
+            _ip = GUI.TextField(new Rect(x + w * 0.40f, y, w * 0.38f, 32 * u), _ip, 40, _campo);
             if (GUI.Button(new Rect(x + w * 0.8f, y, w * 0.2f, 32 * u), "Entrar", _botao))
             {
                 ParaEntrar(false);
                 _sessao.EntrarLocal(_ip);
             }
             y += 50 * u;
-            if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, 50 * u), _sessao.Erro, _erro);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa do erro cresce com ele (um de 3 linhas, das
+            // mensagens dos serviços da Unity, saía cortado em cima e embaixo na de 50u), até um pouco antes do "Configurações"
+            if (!string.IsNullOrEmpty(_sessao.Erro))
+            {
+                float alturaDoErro = Mathf.Clamp(AlturaDe(_sessao.Erro, _erro, w + 80 * u), 50 * u, Mathf.Max(50 * u, Screen.height - 76 * u - y));
+                GUI.Label(new Rect(x - 40 * u, y, w + 80 * u, alturaDoErro), _sessao.Erro, _erro);
+            }
             if (GUI.Button(new Rect(x + w * 0.3f, Screen.height - 70 * u, w * 0.4f, 34 * u), "Configurações", _botao)) _opcoes = true;
+        }
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a altura de um texto com quebra na largura dada (o
+        // erro da conexão), guardada: o OnGUI roda várias vezes por quadro
+        string _textoMedido;
+        [System.NonSerialized] GUIStyle _estiloMedido;
+        float _larguraMedida, _alturaMedida;
+
+        float AlturaDe(string texto, GUIStyle estilo, float largura)
+        {
+            if (texto != _textoMedido || estilo != _estiloMedido || !Mathf.Approximately(largura, _larguraMedida))
+            {
+                _textoMedido = texto;
+                _estiloMedido = estilo;
+                _larguraMedida = largura;
+                _alturaMedida = estilo.CalcHeight(new GUIContent(texto), largura);
+            }
+            return _alturaMedida;
         }
 
         // ------------------------------------------------------------------ o menu principal (a cena Mundo)
@@ -379,8 +415,32 @@ namespace ZombieCityCleaner.UI
             Opcoes.Cor(_grande, new Color(0.86f, 0.82f, 0.72f));
             _opcaoDoMenu = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(27 * u), alignment = TextAnchor.MiddleLeft };
             Opcoes.Cor(_opcaoDoMenu, new Color(0.8f, 0.78f, 0.72f));
-            _detalhe = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14 * u), alignment = TextAnchor.MiddleLeft, wordWrap = true };
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) sem a quebra: a linha do Continuar é uma só, e o que
+            // não cabe termina em reticências (LinhaDoContinuar)
+            _detalhe = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14 * u), alignment = TextAnchor.MiddleLeft, wordWrap = false };
             Opcoes.Cor(_detalhe, new Color(0.62f, 0.6f, 0.56f));
+            _linhaDoContinuar = null;
+        }
+
+        // a linha cinza embaixo do Continuar (o nome e o resumo do último mundo), guardada, refeita só quando o mundo ou a
+        // largura mudam
+        [System.NonSerialized] MundoSalvo _linhaDoContinuarDe;
+        float _larguraDaLinhaDoContinuar;
+        [System.NonSerialized] string _linhaDoContinuar;
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) numa linha só: o nome do mundo (até 30 letras) que não
+        // cabe termina em reticências, e o resumo (o dia, a hora, o modo e quando salvou) fica inteiro. Antes, com um nome de
+        // mais de umas 26 letras, a linha quebrava em duas na caixa de uma, e as duas saíam cortadas pela metade
+        string LinhaDoContinuar(MundoSalvo m, float largura)
+        {
+            if (_linhaDoContinuar != null && m == _linhaDoContinuarDe && Mathf.Approximately(largura, _larguraDaLinhaDoContinuar))
+                return _linhaDoContinuar;
+            _linhaDoContinuarDe = m;
+            _larguraDaLinhaDoContinuar = largura;
+            string resto = " · " + m.Resumo();
+            float doNome = largura - (_detalhe.CalcSize(new GUIContent(resto)).x - _detalhe.padding.horizontal);
+            _linhaDoContinuar = Opcoes.Caber(Opcoes.Caber(m.nome, _detalhe, doNome) + resto, _detalhe, largura);
+            return _linhaDoContinuar;
         }
 
         // o título e as quatro opções, à esquerda, sobre o vídeo da cidade (UI/FundoDoMenu). Ao abrir o jogo (e ao voltar de
@@ -413,15 +473,25 @@ namespace ZombieCityCleaner.UI
                 _principal = false;
                 _continuar = true;
                 _personagens = null;
+                // (25/11/2026) o personagem do mundo é escolhido de novo: o "Novo personagem" que a tela do jogo novo do
+                // Lakewood marca não pode vir junto para cá
+                _personagemDoMundoDe = null;
+                _quemJogouNoMundo.Clear();
             }
-            // (12/11/2026: sem mundo, o porquê: o Dia 0 não salva, o mundo entra aqui quando o abrigo abre)
-            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0 ? $"{mundos[0].nome} · {mundos[0].Resumo()}"
+            // (12/11/2026: sem mundo, o porquê: o Dia 0 não salva, o mundo entra aqui quando o abrigo abre. Desde 25/11/2026, o
+            // save do Dia 0, isso é só do mundo sorteado: no Lakewood, o Dia 0 e a fuga salvam, e o jogo entra aqui já no Dia 0)
+            // (26/11/2026: numa linha só, com o nome cortado se não couber: LinhaDoContinuar)
+            GUI.Label(new Rect(x + 2 * u, y + 40 * u, w, 20 * u), mundos.Count > 0 ? LinhaDoContinuar(mundos[0], w)
                 : lakewood ? "nenhum jogo salvo ainda" : "nenhum mundo salvo ainda (o Dia 0 não salva)", _detalhe);
             y += 76 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Configurações", true, u)) _opcoes = true;
             y += 56 * u;
             if (Opcao(new Rect(x, y, w, 46 * u), "Sair", true, u)) SairDoJogo();
-            if (!string.IsNullOrEmpty(_sessao.Erro)) GUI.Label(new Rect(x, y + 70 * u, w, 50 * u), _sessao.Erro, _erro);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa do erro cresce com ele: um de 3 linhas (as
+            // mensagens dos serviços da Unity) saía cortado em cima e embaixo na de 50u. Embaixo dela não há nada
+            if (!string.IsNullOrEmpty(_sessao.Erro))
+                GUI.Label(new Rect(x, y + 70 * u, w, Mathf.Clamp(AlturaDe(_sessao.Erro, _erro, w), 50 * u, Mathf.Max(50 * u, Screen.height - y - 70 * u))),
+                    _sessao.Erro, _erro);
             GUI.color = Color.white;
         }
 
@@ -452,8 +522,11 @@ namespace ZombieCityCleaner.UI
                 _tituloDoJogo.padding = new RectOffset(0, 0, 0, 0);
             }
             Opcoes.Cor(_tituloDoJogo, new Color(0.88f, 0.85f, 0.78f));
-            SombreadoRico(new Rect(x, y, Screen.width, 72 * u), "BUNKER:", "BUN<color=#C42424>K</color>ER:", _tituloDoJogo, u);
-            SombreadoRico(new Rect(x + 26 * u, y + 64 * u, Screen.width, 72 * u), "Outbreak", "<color=#C42424>Out</color>break", _tituloDoJogo, u);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) as caixas da altura da linha da Bahnschrift (1,2 × a
+            // letra), com o mesmo meio de antes (o MiddleLeft centra, então as letras ficam no mesmo lugar): na de 72u, mais baixa
+            // que a linha, o alto das maiúsculas podia sair achatado. As caixas se cobrem, as letras não
+            SombreadoRico(new Rect(x, y - 10 * u, Screen.width, 92 * u), "BUNKER:", "BUN<color=#C42424>K</color>ER:", _tituloDoJogo, u);
+            SombreadoRico(new Rect(x + 26 * u, y + 54 * u, Screen.width, 92 * u), "Outbreak", "<color=#C42424>Out</color>break", _tituloDoJogo, u);
             return y + 136 * u;
         }
 
@@ -711,6 +784,8 @@ namespace ZombieCityCleaner.UI
             }
             float w = 320 * u, x = (Screen.width - w) / 2f, y = Screen.height * 0.35f;
             GUI.Label(new Rect(0, y - 60 * u, Screen.width, 40 * u), "MENU", _titulo);
+            // os jogadores e o mundo (antes, a linha do canto de cima)
+            if (_textoDaPartida != null) GUI.Label(new Rect(0, y - 84 * u, Screen.width, 24 * u), _sessao.Local ? $"Partida local  ·  {_textoDaPartida}" : _textoDaPartida, _texto);
             if (!_sessao.Local)
             {
                 GUI.Label(new Rect(0, y - 20 * u, Screen.width, 24 * u), $"Código para os amigos: {_sessao.Codigo}", _texto);
@@ -718,9 +793,15 @@ namespace ZombieCityCleaner.UI
             }
             if (GUI.Button(new Rect(x, y + 56 * u, w, 36 * u), "Continuar", _botao)) _pausa = false;
             if (GUI.Button(new Rect(x, y + 100 * u, w, 36 * u), "Configurações", _botao)) _opcoes = true;
-            // (12/11/2026: no Dia 0 nada é salvo, e o botão avisa)
-            bool noDiaZero = MundoDoJogo.NoDiaZeroAgora;   // (o do Lakewood também)
-            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), noDiaZero ? "Sair (o Dia 0 não é salvo)" : "Sair da partida", _botao))
+            // (12/11/2026: no Dia 0 nada é salvo, e o botão avisa. 25/11/2026, o save do Dia 0: só no do mundo sorteado; no
+            // Lakewood, o Dia 0 e a fuga salvam, menos nas passagens, e o anfitrião vê quando agora não dá)
+            bool noDiaZero = MundoDaPartida.Instancia != null && MundoDaPartida.Instancia.NoDiaZero;
+            var lakewood = MundoDeLakewood.Instancia;
+            var salvamento = Salvamento.Instancia;
+            bool agoraNao = !noDiaZero && lakewood != null && lakewood.IsSpawned && lakewood.Antes && salvamento != null &&
+                            salvamento.Salva && salvamento.Modo != ModoDeSalvar.Dormindo && salvamento.IsServer && !salvamento.PodeSalvarAgora;
+            if (GUI.Button(new Rect(x, y + 144 * u, w, 36 * u), noDiaZero ? "Sair (o Dia 0 não é salvo)" : agoraNao ? "Sair (agora não dá para salvar)"
+                    : "Sair da partida", _botao))
             {
                 _pausa = false;
                 // nos modos automático e ao sair, salva antes (o anfitrião sai um instante depois, para todos gravarem)

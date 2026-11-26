@@ -18,6 +18,7 @@ namespace ZombieCityCleaner.UI
     public partial class MenuDoDesenvolvedor
     {
         bool _abaDosSobreviventes;
+        static readonly GUIContent _conteudoDosSobreviventes = new GUIContent();
 
         // a aba "Gente", à esquerda das outras duas
         void AbaDosSobreviventes(float u, Rect painel)
@@ -34,9 +35,15 @@ namespace ZombieCityCleaner.UI
             float x0 = aoLado.xMax + 8 * u, largura = 250 * u;
             float x = x0 + 12 * u, w = largura - 24 * u;
             float meio = (w - 6 * u) / 2f, x2 = x + meio + 6 * u;
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o resumo com a altura do texto (uma linha por
+            // grupo; com 3 grupos, ou um fugindo, passava das 3 linhas da caixa de 54) e a linha da base militar com 3 linhas
+            // (com os mortos e o reforço, a 3ª saía cortada): mais 14
+            _conteudoDosSobreviventes.text = ResumoDosSobreviventes();
+            float alturaDoResumo = Mathf.Max(54 * u, _texto.CalcHeight(_conteudoDosSobreviventes, w));
             var area = new Rect(x0, aoLado.y, largura, 8 * u + 28 * u + 58 * u + 30 * u * 3 + 10 * u + 22 * u + 40 * u + 30 * u * 2
                                                      + 10 * u + 22 * u + 40 * u + 30 * u * 2 + 10 * u + 22 * u + 40 * u + 30 * u
-                                                     + 10 * u + 22 * u + 30 * u + 6 * u + 30 * u);
+                                                     + 10 * u + 22 * u + 30 * u + 6 * u + 30 * u
+                                                     + (alturaDoResumo - 54 * u) + 14 * u);
             var antes = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.075f, 0.92f);
             GUI.DrawTexture(area, Texture2D.whiteTexture);
@@ -47,8 +54,8 @@ namespace ZombieCityCleaner.UI
             float y = area.y + 8 * u;
             GUI.Label(new Rect(x, y, w, 22 * u), "SOBREVIVENTES", _titulo);
             y += 28 * u;
-            GUI.Label(new Rect(x, y, w, 54 * u), ResumoDosSobreviventes(), _texto);
-            y += 58 * u;
+            GUI.Label(new Rect(x, y, w, alturaDoResumo), _conteudoDosSobreviventes, _texto);
+            y += alturaDoResumo + 4 * u;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Grupo perto", _botao)) TesteDosSobreviventesRpc(0);
             if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Tirar todos", _botao)) TesteDosSobreviventesRpc(1);
             y += 30 * u;
@@ -123,9 +130,10 @@ namespace ZombieCityCleaner.UI
             string sobreABase = "";
             if (plantaDaBase != null && bases.Grupo(bm) != null) sobreABase = $" {bases.Grupo(bm).Vivos} militares lá.";
             if (plantaDaBase != null && bases.DiaDoReforco(bm) >= 0) sobreABase += $" {bases.Mortos(bm)} mortos; o reforço no dia {bases.DiaDoReforco(bm)}.";
-            GUI.Label(new Rect(x, y, w, 36 * u), plantaDaBase == null ? "Nenhuma base neste mundo." :
-                      $"{plantaDaBase.Lugar.Nome}: {db:0} m.{sobreABase}", _texto);
-            y += 40 * u;
+            // (26/11/2026, a revisão dos textos cortados: 52, não 50; 3 linhas de 13 com o padding passam um pouco de 50)
+            GUI.Label(new Rect(x, y, w, 52 * u), plantaDaBase == null ? "Nenhuma base neste mundo." :
+                      $"{plantaDaBase.Lugar.Nome}: {db:0} m.{sobreABase}", _texto);   // (3 linhas, 26/11/2026; eram 36)
+            y += 54 * u;
             GUI.enabled = plantaDaBase != null;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Ir à base", _botao) && plantaDaBase != null)
             {
@@ -133,7 +141,7 @@ namespace ZombieCityCleaner.UI
                 GetComponent<MovimentoPrimeiraPessoa>().Teleportar(fora + Vector3.up * 0.3f, plantaDaBase.GiroNoMundo(180f));
                 Avisar($"Na estrada, a 45 m do meio da {plantaDaBase.Lugar.Nome}.");
             }
-            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Recomeçar a base", _botao)) TesteDosSobreviventesRpc(10);
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), "Recomeçar a base", BotaoQueCabe("Recomeçar a base", meio))) TesteDosSobreviventesRpc(10);
             GUI.enabled = true;
             y += 40 * u;
 
@@ -143,7 +151,9 @@ namespace ZombieCityCleaner.UI
             var mundoDaPartida = World.MundoDaPartida.Instancia;
             bool fogo = mundoDaPartida != null && mundoDaPartida.FogoAmigo;
             if (GUI.Button(new Rect(x, y, meio, 26 * u), "Morrer agora", _botao)) TesteDosSobreviventesRpc(11);
-            if (GUI.Button(new Rect(x2, y, meio, 26 * u), fogo ? "Fogo amigo: ligado" : "Fogo amigo: desligado", _botao)) TesteDosSobreviventesRpc((byte)(fogo ? 12 : 13));
+            // (26/11/2026, a pedido do Pedro: os textos cortados ...) a letra menor, aqui e no "Recomeçar a base"
+            string fogoAmigo = fogo ? "Fogo amigo: ligado" : "Fogo amigo: desligado";
+            if (GUI.Button(new Rect(x2, y, meio, 26 * u), fogoAmigo, BotaoQueCabe(fogoAmigo, meio))) TesteDosSobreviventesRpc((byte)(fogo ? 12 : 13));
             return area;
         }
 

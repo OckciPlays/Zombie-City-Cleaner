@@ -131,11 +131,11 @@ namespace ZombieCityCleaner.DiaZero
         {
             // com a rua liberada (no lobby, todos ficam na casa até ver o jornal)
             if (!DiaZeroDaPartida.NoDia || DiaZeroDaPartida.Instancia.Fase != FaseDoDia.Rua) return null;
-            string fora = DiaZeroDaPartida.QuemEstaFora();
+            string fora = NomesDeQuemEstaFora.ComE(DiaZeroDaPartida.QuemEstaFora(), out bool varios);
             if (Time.time < _confirmarAte)
                 return string.IsNullOrEmpty(fora)
                     ? "[E] De novo: trancar a casa (o Dia 0 acaba para todos)"
-                    : $"[E] De novo: trancar mesmo assim ({fora} ainda na rua: vem junto)";
+                    : $"[E] De novo: trancar mesmo assim ({fora} ainda na rua: {(varios ? "vêm" : "vem")} junto)";
             return string.IsNullOrEmpty(fora)
                 ? "[E] Trancar a casa e acabar o Dia 0"
                 : $"[E] Trancar a casa e acabar o Dia 0  ·  ainda na rua: {fora}";
@@ -191,11 +191,11 @@ namespace ZombieCityCleaner.DiaZero
         {
             // a porta só abre com a rua liberada (no lobby, todos ficam na casa até ver o jornal)
             if (!DiaZeroDaPartida.NoDia || DiaZeroDaPartida.Instancia.Fase != FaseDoDia.Rua) return null;
-            string fora = DiaZeroDaPartida.QuemEstaFora();
+            string fora = NomesDeQuemEstaFora.ComE(DiaZeroDaPartida.QuemEstaFora(), out bool varios);
             if (Time.time < _confirmarAte)
                 return string.IsNullOrEmpty(fora)
                     ? "[E] De novo: fechar a porta (o dia acaba para todos)"
-                    : $"[E] De novo: fechar mesmo assim ({fora} fora de casa: as compras dele ficam para trás)";
+                    : $"[E] De novo: fechar mesmo assim ({fora} fora de casa: {(varios ? "as compras deles ficam" : "as compras ficam")} para trás)";
             return string.IsNullOrEmpty(fora)
                 ? "[E] Fechar a porta do abrigo e passar o dia"
                 : $"[E] Fechar a porta do abrigo  ·  ainda fora de casa: {fora}";
@@ -210,6 +210,23 @@ namespace ZombieCityCleaner.DiaZero
                 return;
             }
             _confirmarAte = Time.time + 4f;
+        }
+    }
+
+    /// <summary>
+    /// (26/11/2026, a revisão dos textos cortados) os nomes de quem ainda está fora, como o <see cref="DiaZeroDaPartida.QuemEstaFora"/>
+    /// os junta ("Ana, Pedro"), com o "e" antes do último ("Ana e Pedro"), para as dicas das chaves e da porta do abrigo; e se são
+    /// mais de um (o plural da frase)
+    /// </summary>
+    static class NomesDeQuemEstaFora
+    {
+        public static string ComE(string nomes, out bool varios)
+        {
+            varios = false;
+            if (string.IsNullOrEmpty(nomes)) return nomes;
+            int ultima = nomes.LastIndexOf(", ", System.StringComparison.Ordinal);
+            varios = ultima >= 0;
+            return varios ? nomes.Substring(0, ultima) + " e " + nomes.Substring(ultima + 2) : nomes;
         }
     }
 }

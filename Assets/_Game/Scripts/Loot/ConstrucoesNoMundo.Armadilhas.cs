@@ -59,6 +59,7 @@ namespace ZombieCityCleaner.Loot
             Item.TabuasBarricada => A.VidaDaBarricadaDeTabuas(Janela(c), Reforcada(c), c.nivel, Fortaleza(c)),
             Item.MuroDeToras => VidaDoMuro,   // (a base, 24/11/2026)
             Item.PortaoDeToras => VidaDoPortao,
+            Item.MesaDeFerramentas => VidaDaMesa,   // (a mesa de oficina montada, 25/11/2026, a revisão: ConstrucoesNoMundo.Mesa.cs)
             _ => 1f,
         };
 

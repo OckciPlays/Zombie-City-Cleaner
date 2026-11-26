@@ -143,6 +143,12 @@ namespace ZombieCityCleaner.Sobreviventes
         void Pensar()
         {
             if (_morto.Value || agente == null) return;
+            // (25/11/2026) o Capitão na caçamba da caminhonete (Sobrevivente.Cacamba.cs): o agente desligado, atirando de lá
+            if (NaCacamba)
+            {
+                PensarNaCacamba(Time.time);
+                return;
+            }
             if (AlcancarOsJogadores()) return;   // (24/11/2026: o aliado que ficou para trás, Sobrevivente.Escolta.cs)
             if (!agente.enabled)
             {
@@ -185,6 +191,8 @@ namespace ZombieCityCleaner.Sobreviventes
             if (_fugindo) Fugir(agora);
             else if (Escondido && !naRoda) Esconder(agora);
             else if (SairDoFogo(agora)) { }   // o fogo do molotov (11/11/2026, a etapa 4: Sobrevivente.Fogo.cs)
+            // (25/11/2026) o aliado na escolta ou conversando decide sozinho quando atirar: a regra dos 30 m (Sobrevivente.Escolta.cs)
+            else if (Aliado && (escolta || conversandoCom != null)) PensarComoAliado(agora);
             // (18/11/2026) no tiroteio, com o inimigo visto há pouco, só o zumbi colado (a 6 m) tira ele da luta
             else if (_zumbi != null && ZumbiAmeaca(_zumbi)
                      && (!combate || agora - grupo.viuEm > 3f || (_zumbi.transform.position - transform.position).sqrMagnitude < 6f * 6f)) LutarComZumbi(agora);
@@ -1011,6 +1019,12 @@ namespace ZombieCityCleaner.Sobreviventes
         void Ferir(float dano, Vector3 de, JogadorRede autor, bool naCabeca)
         {
             if (!IsServer || _morto.Value) return;
+            // (25/11/2026, a pedido: o Capitão não morre; Sobrevivente.Cacamba.cs) nem o zumbi nem o fogo tiram vida dele
+            if (Imortal)
+            {
+                if (autor != null) Reclamar();
+                return;
+            }
             vida -= dano;
             // ferir alguém do acampamento deixa o acampamento inteiro contra os jogadores
             if (autor != null && DoAcampamento) AcampamentosDoMundo.Instancia?.TornarHostil(acampamento, autor);

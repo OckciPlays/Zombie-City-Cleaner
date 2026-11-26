@@ -45,6 +45,9 @@ namespace ZombieCityCleaner.Player
         /// <summary>Encostado numa proteção sem mirar (ProtecaoDoJogador, 18/11/2026): atrás do ombro, mesmo sem o V.</summary>
         public static bool NaProtecao { get; set; }
 
+        /// <summary>No meio da animação do craft (AnimacaoDoCraft, 25/11/2026): atrás do ombro, mesmo sem o V.</summary>
+        public static bool NoCraft { get; set; }
+
         /// <summary>A câmera está atrás do jogador agora (a pé, fora do capô e da luneta).</summary>
         public bool Ativa { get; private set; }
 
@@ -114,7 +117,7 @@ namespace ZombieCityCleaner.Player
                 return;
             }
             bool naLuneta = arma.ComArma && rede.Mirando.Value && arma.Dados.fovLuneta > 0f;
-            bool querer = (Ligada || NaProtecao) && !(capo != null && capo.Aberta) && !naLuneta && !ModoVideo.Ligado;
+            bool querer = (Ligada || NaProtecao || NoCraft) && !(capo != null && capo.Aberta) && !naLuneta && !ModoVideo.Ligado;
             if (!_conhecida || querer != _aplicada) Aplicar(querer);
             if (!querer)
             {

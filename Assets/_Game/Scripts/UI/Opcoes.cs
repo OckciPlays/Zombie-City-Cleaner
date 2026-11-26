@@ -90,6 +90,23 @@ namespace ZombieCityCleaner.UI
             estilo.normal.textColor = estilo.hover.textColor = estilo.active.textColor = estilo.focused.textColor = cor;
         }
 
+        /// <summary>
+        /// (26/11/2026, a pedido do Pedro: os textos cortados pela metade) O texto que cabe numa linha da largura dada, no estilo
+        /// dado: o que não cabe termina em reticências, em vez de sair cortado no meio de uma letra na borda da caixa (ou de
+        /// quebrar numa segunda linha que não cabe nela). A largura é a da caixa (o CalcSize já conta o padding). Mede o texto
+        /// de novo a cada letra tirada: quem chama a cada quadro guarda o resultado.
+        /// </summary>
+        public static string Caber(string texto, GUIStyle estilo, float largura)
+        {
+            if (string.IsNullOrEmpty(texto) || estilo.CalcSize(new GUIContent(texto)).x <= largura) return texto;
+            for (int n = texto.Length - 1; n > 1; n--)
+            {
+                string t = texto.Substring(0, n).TrimEnd(' ', ',', '·') + "…";
+                if (estilo.CalcSize(new GUIContent(t)).x <= largura) return t;
+            }
+            return "…";
+        }
+
         static string _textoDoFps;
         static int _fpsNoTexto = -1;
 
@@ -139,7 +156,10 @@ namespace ZombieCityCleaner.UI
             // a opção escolhida em amarelo (o "apertado" da pele padrão quase não aparece)
             opcao.onNormal.textColor = opcao.onHover.textColor = opcao.onActive.textColor = new Color(0.98f, 0.85f, 0.45f);
             opcao.onNormal.background = opcao.active.background;
-            GUI.Label(new Rect(0, y - 64 * u, Screen.width, 44 * u), "CONFIGURAÇÕES", titulo);
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a caixa do título mais alta que a linha da letra (na
+            // de 44u, para a letra de 38u, o til do Õ e a cedilha do Ç ficavam rentes às bordas e podiam perder a ponta), com o
+            // mesmo meio de antes (y − 42u); acaba em y − 14u, antes das abas
+            GUI.Label(new Rect(0, y - 70 * u, Screen.width, 56 * u), "CONFIGURAÇÕES", titulo);
             _aba = GUI.SelectionGrid(new Rect(x, y, w, 36 * u), _aba, Abas, Abas.Length, opcao);
             y += 54 * u;
 
@@ -182,7 +202,7 @@ namespace ZombieCityCleaner.UI
             y += 40 * u;
 
             GUI.Label(new Rect(x, y, w, 26 * u), "Limite de FPS", texto);
-            int limite = GUI.SelectionGrid(new Rect(x, y + 32 * u, w, 36 * u), Limite, NomesDosLimites, NomesDosLimites.Length, opcao);
+            int limite = GUI.SelectionGrid(new Rect(x, y + 32 * u, w, 36 * u), Limite, NomesDosLimites, NomesDosLimites.Length, QueCabe(opcao, NomesDosLimites, w));
             if (limite != Limite)
             {
                 Limite = limite;
@@ -233,6 +253,11 @@ namespace ZombieCityCleaner.UI
             public System.Func<AudioClip[]> amostra;
             public float intervalo, ate = 2.5f;
             public int vezes = 1;
+            // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) o "do que ela cuida" que cabe na linha (com as
+            // reticências), guardado para a largura e a letra em que foi medido
+            public float larguraDoSobre = -1f;
+            public int letraDoSobre;
+            public string sobreQueCabe;
         }
 
         static (string grupo, LinhaDoMixer[] linhas)[][] _colunas;
@@ -315,7 +340,7 @@ namespace ZombieCityCleaner.UI
             float W = Mathf.Min(980 * u, Screen.width - 24 * u), X = (Screen.width - W) / 2f, vao = 30 * u, cw = (W - vao) / 2f;
             var nome = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(15 * u), fontStyle = FontStyle.Bold, clipping = TextClipping.Clip };
             Cor(nome, new Color(0.9f, 0.88f, 0.8f));
-            var sobre = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(12 * u), clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft };
+            var sobre = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(12 * u), clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft, wordWrap = false };
             Cor(sobre, new Color(0.62f, 0.6f, 0.55f));
             var pct = new GUIStyle(nome) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Normal };
             var grupo = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13 * u), fontStyle = FontStyle.Bold };
@@ -344,7 +369,18 @@ namespace ZombieCityCleaner.UI
                         float largNome = nome.CalcSize(new GUIContent(l.nome)).x + 8 * u;
                         float direita = l.amostra != null ? 30 * u : 0f;
                         GUI.Label(new Rect(cx, cy, largNome, 22 * u), l.nome, nome);
-                        GUI.Label(new Rect(cx + largNome, cy + 1 * u, cw - largNome - 52 * u - direita, 20 * u), l.sobre, sobre);
+                        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) do que ela cuida numa linha só: o que
+                        // não cabe termina em reticências (com a quebra, numa tela mais estreita que 16:9, o "portas, móveis,
+                        // armadilhas..." virava duas linhas na caixa de uma, e as duas saíam cortadas pela metade); refeito só
+                        // quando a largura ou a letra mudam
+                        float largSobre = cw - largNome - 52 * u - direita;
+                        if (!Mathf.Approximately(l.larguraDoSobre, largSobre) || l.letraDoSobre != sobre.fontSize || l.sobreQueCabe == null)
+                        {
+                            l.larguraDoSobre = largSobre;
+                            l.letraDoSobre = sobre.fontSize;
+                            l.sobreQueCabe = Caber(l.sobre, sobre, largSobre) ?? "";
+                        }
+                        GUI.Label(new Rect(cx + largNome, cy + 1 * u, largSobre, 20 * u), l.sobreQueCabe, sobre);
                         GUI.Label(new Rect(cx + cw - 50 * u - direita, cy, 48 * u, 22 * u), $"{Mathf.RoundToInt(valor * 100f)}%", pct);
                         if (l.amostra != null && GUI.Button(new Rect(cx + cw - 26 * u, cy + 1 * u, 26 * u, 20 * u), "▶", tocar))
                             AmostraDoMixer.Tocar(l.amostra(), l.ler, l.vezes, l.intervalo, l.ate);
@@ -385,9 +421,24 @@ namespace ZombieCityCleaner.UI
         static int NaLinha(float u, float x, float w, ref float y, GUIStyle texto, GUIStyle opcao, string nome, float rotulo, int atual, string[] nomes)
         {
             GUI.Label(new Rect(x, y + 6 * u, rotulo, 26 * u), nome, texto);
-            int novo = GUI.SelectionGrid(new Rect(x + rotulo, y, w - rotulo, 36 * u), atual, nomes, nomes.Length, opcao);
+            int novo = GUI.SelectionGrid(new Rect(x + rotulo, y, w - rotulo, 36 * u), atual, nomes, nomes.Length, QueCabe(opcao, nomes, w - rotulo));
             y += 42 * u;
             return novo;
+        }
+
+        // (26/11/2026, a pedido do Pedro: os textos cortados pela metade) a letra das escolhas de um SelectionGrid desce até o
+        // nome mais comprido caber na célula: o padding e o vão dos botões não crescem com a tela, e a 1280 × 720 o "Média PS1"
+        // passava da célula da pixelação (79 pixels em 75) e saía cortado dos dois lados; o "Sem limite" do FPS ficava a 3
+        // pixels disso. Na tela em que tudo cabe, o estilo é o mesmo de antes
+        static GUIStyle QueCabe(GUIStyle opcao, string[] nomes, float largura)
+        {
+            if (nomes == null || nomes.Length == 0) return opcao;
+            float vao = Mathf.Max(opcao.margin.left, opcao.margin.right);
+            float celula = (largura - vao * (nomes.Length - 1)) / nomes.Length - opcao.padding.horizontal;
+            float maior = 0f;
+            foreach (var n in nomes) maior = Mathf.Max(maior, opcao.CalcSize(new GUIContent(n)).x - opcao.padding.horizontal);
+            if (maior <= celula || celula <= 0f) return opcao;
+            return new GUIStyle(opcao) { fontSize = Mathf.Max(8, Mathf.FloorToInt(opcao.fontSize * celula / maior)) };
         }
 
         static void AbaDosGraficos(float u, float x, float w, ref float y, GUIStyle texto, GUIStyle centro, GUIStyle detalhe, GUIStyle opcao, BarraDoPainel barra)

@@ -113,7 +113,7 @@ namespace ZombieCityCleaner.DiaZero
             {
                 new Produto(Item.KitDeReparo, 30), new Produto(Item.Macaco, 50), new Produto(Item.Pneu, 90), new Produto(Item.Bateria, 120),
                 new Produto(Item.Vela, 10), new Produto(Item.Radiador, 150), new Produto(Item.Galao, 15, 100, "galão de gasolina (vazio)"),
-                new Produto(Item.Corda, 12), new Produto(Item.FitaAdesiva, 6), new Produto(Item.Ferramenta, 25), new Produto(Item.Pregos, 5),
+                new Produto(Item.Corda, 12), new Produto(Item.FitaAdesiva, 6), new Produto(Item.Pregos, 5),
                 new Produto(Item.VaraDePesca, 35), new Produto(Item.Isca, 5), new Produto(Item.Lanterna, 25), new Produto(Item.Pilhas, 8),
                 new Produto(Item.Machado, 45), new Produto(Item.Faca, 40),
                 new Produto(Item.Agua, 2), new Produto(Item.RefrigeranteLata, 1), new Produto(Item.Energetico, 3),
