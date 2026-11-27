@@ -343,6 +343,22 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
+        /// Os braços de fora da mão que estão à mostra agora (os nadando ou os da vara), ou null. O
+        /// <see cref="RoupasNosBracos"/> veste estes também (27/11/2026, a pedido: "você está usando a mão antiga para fazer a
+        /// animação da vara de pesca e não a mão nova. Também para nadar"): antes ele só olhava os <see cref="modelos"/>, e
+        /// com um extra à mostra nenhum deles fica ligado.
+        /// </summary>
+        public GameObject ExtraAMostra
+        {
+            get
+            {
+                foreach (var extra in _extras.Values)
+                    if (extra != null && extra.activeSelf) return extra;
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Os braços de primeira pessoa de fora da mão (07/11/2026: os nadando e os remando, Resources/&lt;recurso&gt;): criados
         /// uma vez junto dos outros (na camada deles), com a pele e a luva do personagem, desligados. Null sem o prefab.
         /// </summary>
@@ -400,8 +416,12 @@ namespace ZombieCityCleaner.Player
             {
                 _bracosDaPonta = b;
                 _pontaDosBracos = null;
+                // (27/11/2026) com a vara que entorta, a ponta no último osso dela; sem, a de antes
                 foreach (var t in b.GetComponentsInChildren<Transform>(true))
-                    if (t.name == "ponta" || t.name == "Ponta") { _pontaDosBracos = t; break; }
+                {
+                    if (t.name == VaraQueEntorta.NomeDaPonta) { _pontaDosBracos = t; break; }
+                    if (_pontaDosBracos == null && (t.name == "ponta" || t.name == "Ponta")) _pontaDosBracos = t;
+                }
             }
             if (_pontaDosBracos == null) return false;
             ponta = _pontaDosBracos.position;

@@ -103,11 +103,12 @@ namespace ZombieCityCleaner.Player
             _ccLigado = _cc == null || _cc.enabled;
             if (_cc != null) _cc.enabled = false;
             if (_passos != null) _passos.enabled = false;
-            // quem senta para remar já pega o remo
+            // quem senta para remar já pega o remo. (27/11/2026) As mãos são aplicadas sempre, mesmo sem mudar: quem chega
+            // nadando vem com o que está na mão escondido (NadoNoCorpo), e no banco da frente (sem o remo) nada o mostrava de
+            // volta: a vara de pesca e, depois, o peixe na mão ficavam invisíveis no corpo
             _remoLocal = lugar == 0;
             _avisouDoRemo = false;
-            _semMaos = false;
-            Maos(lugar == 0);
+            Maos(lugar == 0, true);
             if (!_rede.IsOwner) return;
             if (_movimento != null) _movimento.enabled = false;
             _yaw = 0f;
@@ -131,9 +132,9 @@ namespace ZombieCityCleaner.Player
         }
 
         // as mãos de quem está sentado: com o remo (sem a arma, os braços remando) ou livres (a vara, a arma)
-        void Maos(bool comORemo)
+        void Maos(bool comORemo, bool sempre = false)
         {
-            if (comORemo == _semMaos) return;
+            if (comORemo == _semMaos && !sempre) return;
             _semMaos = comORemo;
             _rede.EsconderNaMao(comORemo);
             if (!_rede.IsOwner) return;
@@ -172,7 +173,7 @@ namespace ZombieCityCleaner.Player
             }
             if (_cc != null) _cc.enabled = _ccLigado;
             if (_passos != null) _passos.enabled = true;
-            Maos(false);
+            Maos(false, true);   // (o que está na mão volta a aparecer ao levantar, de qualquer banco; nadando, o NadoNoCorpo esconde de novo)
             if (!_rede.IsOwner)
             {
                 transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);

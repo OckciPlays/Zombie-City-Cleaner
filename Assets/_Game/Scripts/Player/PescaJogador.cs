@@ -14,13 +14,16 @@ namespace ZombieCityCleaner.Player
     /// <item><b>O arremesso:</b> segurar o clique enche a força (1,1 s); soltando, a boia voa para onde ele olha, de 4 a
     /// 18 m pela força. Na água funda (pelo menos 0,8 m), ela fica; fora dela, volta.</item>
     /// <item><b>A espera:</b> o peixe morde depois de uns 8 a 22 s (mais rápido de manhã cedo, no fim da tarde e com chuva;
-    /// mais devagar de noite). Antes, a boia treme às vezes (as beliscadas): clicar nelas espanta o peixe. Clicar sem
-    /// beliscada recolhe a linha (sem perder a isca).</item>
-    /// <item><b>A mordida:</b> a boia afunda; o clique em 1,2 s fisga.</item>
-    /// <item><b>A puxada:</b> a tensão da linha. Segurando o clique, ele recolhe e a linha estica; o peixe puxa aos
-    /// arrancos (mais forte o maior) e cansa. Tensão demais arrebenta a linha; frouxa demais por 2 s, o peixe solta; longe
-    /// demais, ele leva a linha. Chegando perto, pegou: o anfitrião confere e põe o peixe na mochila
-    /// (<see cref="InventarioJogador.PegouOPeixe"/>), com o XP. O peixe escapando leva a isca.</item>
+    /// mais devagar de noite). Antes, ele belisca a isca: a boia afunda um pouco e volta, com um "plic" e uma onda leve.
+    /// Clicar numa beliscada espanta o peixe; clicar sem beliscada recolhe a linha (sem perder a isca).</item>
+    /// <item><b>A mordida:</b> a boia some de uma vez, puxada para baixo e para o lado, com o respingo; o clique na janela
+    /// fisga, e a vara dá o tranco para trás. Perdendo a janela, a boia volta à tona e a espera recomeça.</item>
+    /// <item><b>A briga</b> (desde 27/11/2026, a etapa 3 da pesca nova: <see cref="BrigaDoPeixe"/>, na tela o
+    /// <see cref="UI.CirculoDaPesca"/>): o círculo da água embaixo da mira, com o peixe andando pelo jeito dele e a boia
+    /// levada pelo mouse (a câmera e o corpo param). A boia em cima do peixe enche a barra e a carretilha recolhe; longe,
+    /// ela esvazia. Cheia, pegou: o anfitrião confere e põe o peixe na mochila (<see cref="InventarioJogador.PegouOPeixe"/>),
+    /// com o XP. Vazia (ou em 60 s), escapou, e o peixe leva a isca. No lago, a boia acompanha o peixe numa roda em volta de
+    /// onde ele fisgou e vem chegando conforme a barra enche.</item>
     /// </list>
     /// Os peixes maiores ficam na água mais funda (o meio do lago, de caiaque). Na margem ou no caiaque (o lugar da frente).
     /// <para>As habilidades (o ramo Pesca): a Paciência (morde 40% mais rápido), a Isca fina (40% de chance de não gastar
@@ -28,6 +31,11 @@ namespace ZombieCityCleaner.Player
     /// (a truta-dourada, rara, do fundo).</para>
     /// <para>A boia e a linha aparecem para todos: a boia vai pela rede (<see cref="InventarioJogador.BoiaNaRede"/>), e os
     /// outros desenham a linha da vara do corpo (<see cref="PescaVista"/>).</para>
+    /// <para>Desde 27/11/2026 (a pesca nova, a pedido: "Eu quero tirar os textos, não quero deixar nada escrito, ao invés
+    /// disso pensei em fazer uma boia que funcione real"), nada escrito: a boia conta tudo. O peixe é sorteado já no começo
+    /// da espera, e o jeito dele (<see cref="JeitoDoPeixe"/>) diz quantas beliscadas, quanto a boia afunda em cada uma e o
+    /// tempo para fisgar: o maior belisca mais e dá menos tempo. Só ficam a barrinha da força (sem os metros), o "Sem isca
+    /// na mochila" e o "Pescou ...!" do anfitrião.</para>
     /// </summary>
     public class PescaJogador : MonoBehaviour
     {
@@ -36,10 +44,20 @@ namespace ZombieCityCleaner.Player
         public const float AlcanceDoLance = 18f, LanceMinimo = 4f, FundoMinimo = 0.8f;
         /// <summary>A força enche em tanto tempo (s).</summary>
         const float TempoDaForca = 1.1f;
-        /// <summary>A janela para fisgar depois da mordida (s).</summary>
-        const float JanelaDaMordida = 1.2f;
-        /// <summary>A puxada: recolhendo (m/s), quanto o peixe leva solto (m/s por força) e até onde chega para pegar (m).</summary>
-        const float Recolhe = 2.0f, Leva = 2.2f, Pegou = 1.3f;
+        /// <summary>O tranco da fisgada (s): a vara vai para trás, por cima do ombro, e cai no puxar.</summary>
+        public const float DuracaoDoTranco = 0.18f;
+        /// <summary>A mordida: a boia some em tanto tempo (s), quanto passa da tona (m) e quanto o peixe a arrasta (m).</summary>
+        const float Sumindo = 0.12f, AbaixoDaTona = 0.12f, Arrasto = 0.4f;
+        /// <summary>O máximo de beliscadas numa espera (a truta-dourada chega a 6).</summary>
+        const int MaxBeliscadas = 8;
+        /// <summary>
+        /// A força na ponta da vara (de 0 a 1, a <see cref="VaraQueEntorta"/>): esperando, o peso da boia; beliscando, mais o
+        /// quanto a boia afundou (a beliscada mais funda); na mordida, forte. Na briga, a fisgada leva a 1, e depois vão os
+        /// arrancos do peixe e o quanto a boia está longe dele.
+        /// </summary>
+        public const float ForcaEsperando = 0.05f, ForcaDaBeliscada = 0.45f, ForcaDaMordida = 0.8f;
+        /// <summary>A boia no lago na briga: o raio da roda em volta de onde ele fisgou (m) e até onde ela chega do jogador (m).</summary>
+        const float RodaNoLago = 3f, PertoDoJogador = 2.5f;
 
         /// <summary>As fases da boia (também na rede, para os outros desenharem).</summary>
         public enum Fase : byte { Parado, Voando, Esperando, Beliscando, Mordendo, Puxando, Carregando }
@@ -52,26 +70,38 @@ namespace ZombieCityCleaner.Player
         float _tempo, _carga, _espera, _voo, _altura;
         bool _naTerra;
         Item _peixe;
+        JeitoDoPeixe _jeito;
         Vector3 _pontoDaBoia, _deOnde, _boiaAgora;
-        // as beliscadas da espera: os momentos (s desde o começo da espera) e a que está acontecendo
-        readonly float[] _beliscadas = new float[3];
+        // as beliscadas da espera: quando começa cada uma (s desde o começo da espera), quanto dura e quanto da boia afunda
+        readonly float[] _beliscadas = new float[MaxBeliscadas], _duracaoDaBeliscada = new float[MaxBeliscadas], _funduraDaBeliscada = new float[MaxBeliscadas];
         int _quantasBeliscadas;
-        float _beliscandoAte = -1f;
+        // o bagre arrasta a boia na beliscada, e todo peixe na mordida: para este lado (no plano da água)
+        Vector3 _arrasto;
+        float _trancoAte = -1f;
+        // a boia pulando (o peixe espantado) e voltando à tona (a mordida perdida): desde quando e de que fundura (m)
+        float _puloEm = -10f, _voltaEm = -10f, _voltaDe;
+        // a beliscada de agora: quanto da boia está embaixo (0 a 1), para a vara
+        float _afundadaAgora;
+        // a vara dos braços que entorta (a etapa 2) e o último rumo da linha nela (para ela assentar com a linha recolhida)
+        VaraQueEntorta _dobraDosBracos;
+        Vector3 _rumoDosBracos = Vector3.down;
         // a puxada
-        float _tensao, _distancia, _distanciaInicial, _puxao, _trocaDoPeixe, _folegoDoPeixe, _folegoTotal, _forca, _frouxa, _proximaCatraca;
-        bool _peixePuxando, _segura;
-        Vector3 _rumoDoPeixe;
+        // a briga no círculo (a etapa 3): onde ele fisgou e o ponto com água mais perto do jogador, até onde a boia vem
+        BrigaDoPeixe _briga;
+        Vector3 _ondeFisgou, _pertoNaAgua;
+        float _proximaCatraca;
+        bool _segura;
+        MovimentoPrimeiraPessoa _movimento;
         int _botaoNoQuadro = -1;
         float _proximaRede;
-        GUIStyle _estilo, _estiloPequeno;
-        float _u;
-        static AudioClip _plop, _estalo;
+        static AudioClip _plop;
 
         void Awake()
         {
             _rede = GetComponent<JogadorRede>();
             _arma = GetComponent<ArmaJogador>();
             _inventario = GetComponent<InventarioJogador>();
+            _movimento = GetComponent<MovimentoPrimeiraPessoa>();
         }
 
         void OnEnable() => Local = this;
@@ -89,8 +119,22 @@ namespace ZombieCityCleaner.Player
         public Fase FaseAgora => _fase;
         /// <summary>A força do lance carregando (0 a 1).</summary>
         public float Carga => _fase == Fase.Carregando ? _carga : 0f;
-        /// <summary>Na puxada, segurando o botão: a carretilha recolhe.</summary>
-        public bool Recolhendo => _fase == Fase.Puxando && _segura;
+        /// <summary>Na briga, com a boia em cima do peixe: a carretilha recolhe (a mão gira a manivela rápido).</summary>
+        public bool Recolhendo => _fase == Fase.Puxando && _briga != null && _briga.NoPeixe;
+        /// <summary>A briga de agora (null fora dela): para os testes e a tela.</summary>
+        public BrigaDoPeixe Briga => _fase == Fase.Puxando ? _briga : null;
+        /// <summary>A boia como ela está desenhada agora (no mundo), para a vara entortar para o lado dela.</summary>
+        public Vector3 BoiaAgora => _boiaAgora;
+
+        /// <summary>A força na ponta da vara agora (0 a 1; veja <see cref="ForcaEsperando"/>).</summary>
+        public float ForcaNaVara => _fase switch
+        {
+            Fase.Voando or Fase.Esperando => ForcaEsperando,
+            Fase.Beliscando => ForcaEsperando + ForcaDaBeliscada * _afundadaAgora,
+            Fase.Mordendo => ForcaDaMordida,
+            Fase.Puxando => Time.time < _trancoAte ? 1f : _briga != null ? Mathf.Clamp01(0.3f + 0.4f * _briga.Arranco + 0.3f * _briga.Longe) : 0.3f,
+            _ => 0f,
+        };
 
         // ------------------------------------------------------------------ os braços com a vara (07/11/2026)
 
@@ -126,7 +170,9 @@ namespace ZombieCityCleaner.Player
                 _bracosVistos = b;
                 _bracos = b.GetComponentInChildren<Animator>(true);
                 _estadoDosBracos = SacarId;
+                _dobraDosBracos = VaraQueEntorta.De(b.transform);
             }
+            EntortarOsBracos();
             if (_bracos == null || !_bracos.isActiveAndEnabled) return;
             _bracos.SetFloat(SpeedId, _rede.Velocidade);
             var fase = _fase;
@@ -147,8 +193,18 @@ namespace ZombieCityCleaner.Player
                     else if (_estadoDosBracos != LancarId) IrNosBracos(LancarId, 0.08f);
                     break;
                 case Fase.Puxando:
-                    IrNosBracos(PuxarId, 0.2f);
-                    rapidez = _segura ? 1f : 0.35f;
+                    if (Time.time < _trancoAte)
+                    {
+                        // a fisgada: o tranco, a vara para trás por cima do ombro (o começo do Lancar até o alto do preparo,
+                        // tocado à mão em 0,18 s), e daí o Puxar
+                        float k = 1f - (_trancoAte - Time.time) / DuracaoDoTranco;
+                        _estadoDosBracos = LancarId;
+                        _bracos.Play(LancarId, 0, Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI * 0.5f) * (VaraNoCorpo.LancarPreparo / VaraNoCorpo.LancarDuracao));
+                        rapidez = 0f;
+                        break;
+                    }
+                    IrNosBracos(PuxarId, 0.12f);
+                    rapidez = Recolhendo ? 1f : 0.35f;
                     break;
                 default:
                 {
@@ -160,6 +216,25 @@ namespace ZombieCityCleaner.Player
                 }
             }
             _bracos.speed = rapidez;
+        }
+
+        /// <summary>
+        /// A vara dos braços entortando (a etapa 2), depois da animação deles: para o lado da linha, que no mundo vai da ponta
+        /// (onde ela aparece na tela) até a boia; os braços são desenhados por outra câmera, perto da origem, e o rumo passa
+        /// para lá pelo olhar (o mesmo na tela). Sem a linha, ela assenta de volta, reta.
+        /// </summary>
+        void EntortarOsBracos()
+        {
+            if (_dobraDosBracos == null) return;
+            if (_fase != Fase.Parado && _fase != Fase.Carregando)
+            {
+                Vector3 rumo = _boiaAgora - Ponta();
+                var mundo = _rede.cameraMundo;
+                var bracos = _rede.cameraBracos;
+                if (mundo != null && bracos != null) rumo = bracos.transform.TransformDirection(mundo.transform.InverseTransformDirection(rumo));
+                if (rumo.sqrMagnitude > 1e-6f) _rumoDosBracos = rumo;
+            }
+            _dobraDosBracos.Aplicar(ForcaNaVara, _rumoDosBracos, Time.deltaTime);
         }
 
         void IrNosBracos(int estado, float duracao)
@@ -187,13 +262,13 @@ namespace ZombieCityCleaner.Player
                     if (soltou || !segura) Lancar();
                     break;
                 case Fase.Voando:
-                    if (apertou) Recolher("Recolheu a linha");
+                    if (apertou) Recolher();
                     break;
                 case Fase.Esperando:
                 case Fase.Beliscando:
                     if (!apertou) break;
                     if (_fase == Fase.Beliscando) Espantar();
-                    else Recolher("Recolheu a linha");
+                    else Recolher();
                     break;
                 case Fase.Mordendo:
                     if (apertou) Fisgar();
@@ -253,21 +328,52 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ a espera, a mordida
 
+        /// <summary>
+        /// A espera: o peixe já é sorteado aqui (para as beliscadas serem dele), e o jeito dele diz quantas beliscadas vêm, quanto
+        /// cada uma afunda a boia e quanto dura. Elas ficam espalhadas pela espera, uma em cada pedaço dela, e a última acaba
+        /// pelo menos 1,4 s antes da mordida (a mordida não se mistura com uma beliscada). A espera cresce, se precisar, para
+        /// caber as beliscadas do peixe mais nervoso.
+        /// </summary>
         void ComecarAEspera(float vezes = 1f)
         {
             _fase = Fase.Esperando;
             _tempo = 0f;
-            _espera = SortearEspera() * vezes;
-            _quantasBeliscadas = Random.Range(0, 4);
-            for (int i = 0; i < _quantasBeliscadas; i++) _beliscadas[i] = Random.Range(2f, Mathf.Max(2.5f, _espera - 1.2f));
-            _beliscandoAte = -1f;
+            _peixe = SortearPeixe();
+            _jeito = JeitoDoPeixe.De(_peixe);
+            _quantasBeliscadas = Mathf.Clamp(Random.Range(_jeito.beliscadasMin, _jeito.beliscadasMax + 1), 0, MaxBeliscadas);
+            _espera = Mathf.Max(SortearEspera() * vezes, 3.5f + 1.8f * _quantasBeliscadas);
+            float inicio = Mathf.Min(2f, _espera * 0.25f), fim = _espera - 1.1f;
+            float pedaco = (fim - inicio) / Mathf.Max(1, _quantasBeliscadas);
+            for (int i = 0; i < _quantasBeliscadas; i++)
+            {
+                _duracaoDaBeliscada[i] = Random.Range(_jeito.duracaoMin, _jeito.duracaoMax);
+                _funduraDaBeliscada[i] = Random.Range(_jeito.afundaMin, _jeito.afundaMax);
+                _beliscadas[i] = inicio + pedaco * i + Random.Range(0f, Mathf.Max(0f, pedaco - _duracaoDaBeliscada[i] - 0.3f));
+            }
+            // o lado para onde o peixe leva a boia: mais para longe do jogador que para perto
+            Vector3 longe = _pontoDaBoia - transform.position;
+            longe.y = 0f;
+            longe = longe.sqrMagnitude > 0.01f ? longe.normalized : transform.forward;
+            _arrasto = (longe * Random.Range(0.3f, 1f) + Vector3.Cross(Vector3.up, longe) * Random.Range(-1f, 1f)).normalized;
             Rede(true);
         }
 
+        /// <summary>
+        /// O clique numa beliscada: o peixe se assusta (a espera recomeça, mais longa), sem texto: a boia dá um pulo, vem um
+        /// pouco para perto (a linha puxou) e a água mexe.
+        /// </summary>
         void Espantar()
         {
-            InventarioJogador.AvisoLocal("Puxou cedo: o peixe se assustou (espere a boia afundar)");
-            Plop(_pontoDaBoia, 0.35f);
+            Vector3 perto = transform.position - _pontoDaBoia;
+            perto.y = 0f;
+            if (perto.sqrMagnitude > 1f)
+            {
+                var novo = _pontoDaBoia + perto.normalized * 0.3f;
+                if (Agua.Nivel(novo, out float nivel) && Agua.Fundura(new Vector3(novo.x, nivel, novo.z)) >= FundoMinimo * 0.5f)
+                    _pontoDaBoia = new Vector3(novo.x, nivel, novo.z);
+            }
+            _puloEm = Time.time;
+            Plop(_pontoDaBoia, 0.3f);
             AguaNaSuperficie.Onda(_pontoDaBoia, 0.5f);
             ComecarAEspera(1.5f);
         }
@@ -276,38 +382,27 @@ namespace ZombieCityCleaner.Player
         {
             _fase = Fase.Puxando;
             _tempo = 0f;
-            _tensao = 0.3f;
-            _frouxa = 0f;
-            Vector3 eu = new Vector3(transform.position.x, _pontoDaBoia.y, transform.position.z);
-            _distancia = _distanciaInicial = Mathf.Max(Pegou + 1f, Vector3.Distance(eu, _pontoDaBoia));
-            _rumoDoPeixe = (_pontoDaBoia - eu).normalized;
-            // o peixe: a força dos arrancos e quanto tempo de arranco ele aguenta antes de cansar
-            (_forca, _folegoTotal) = _peixe switch
-            {
-                Item.PeixePequeno => (0.35f, 4f),
-                Item.PeixeMedio => (0.55f, 7f),
-                Item.PeixeGrande => (0.8f, 11f),
-                Item.Bagre => (0.7f, 12f),
-                _ => (0.95f, 14f),
-            };
-            _folegoDoPeixe = _folegoTotal;
-            _peixePuxando = true;
-            _trocaDoPeixe = Random.Range(0.8f, 1.6f);
+            _trancoAte = Time.time + DuracaoDoTranco;
+            // a boia estava embaixo d'água, arrastada pelo peixe: a briga começa dali
+            var arrastada = new Vector3(_boiaAgora.x, _pontoDaBoia.y, _boiaAgora.z);
+            if (Agua.Fundura(arrastada) >= FundoMinimo * 0.5f) _pontoDaBoia = arrastada;
+            // a briga no círculo, pelo jeito do peixe; a câmera e o corpo param até ela acabar
+            _briga = new BrigaDoPeixe(_jeito ?? JeitoDoPeixe.De(_peixe));
+            _ondeFisgou = _pontoDaBoia;
+            _pertoNaAgua = PertoNaAgua();
+            if (_movimento != null) _movimento.NaBriga = true;
             Plop(_pontoDaBoia, 0.8f);
             AguaNaSuperficie.Respingo(_pontoDaBoia, 10, 0.6f);
             Rede(true);
         }
 
-        void Escapou(string aviso, bool arrebentou = false)
+        // o peixe escapou (sem texto: ele foge do círculo e a linha volta); leva a isca, menos com a Isca fina
+        void Escapou()
         {
             bool fina = Random.value < 0.2f * Habilidades.Pontos(_rede, Habilidade.IscaFina);   // (a Isca fina: 20% por ponto)
             _inventario.PegouOPeixe(Item.Nada, !fina);
-            InventarioJogador.AvisoLocal(aviso + (fina ? " (a isca ficou no anzol)" : ""));
-            if (arrebentou)
-            {
-                if (_estalo == null) _estalo = GerarEstalo();
-                Efeitos.Som(_estalo, _rede.Olho.position, 0.7f, false);
-            }
+            if (_briga != null) CirculoDaPesca.Acabou(_briga);
+            AguaNaSuperficie.Onda(_boiaAgora, 0.6f);
             Recolher();
         }
 
@@ -315,6 +410,7 @@ namespace ZombieCityCleaner.Player
         {
             bool fina = Random.value < 0.2f * Habilidades.Pontos(_rede, Habilidade.IscaFina);   // (a Isca fina: 20% por ponto)
             _inventario.PegouOPeixe(_peixe, !fina);
+            if (_briga != null) CirculoDaPesca.Acabou(_briga);   // (o peixe salta do círculo)
             AguaNaSuperficie.Respingo(_boiaAgora, 14, 0.8f);
             Plop(_boiaAgora, 0.9f);
             Recolher();
@@ -361,10 +457,11 @@ namespace ZombieCityCleaner.Player
 
         // ------------------------------------------------------------------ a cada quadro
 
-        void Recolher(string aviso = null)
+        void Recolher()
         {
-            if (aviso != null) InventarioJogador.AvisoLocal(aviso);
             _fase = Fase.Parado;
+            _briga = null;
+            if (_movimento != null) _movimento.NaBriga = false;
             _linha.Esconder();
             Rede(true);
         }
@@ -407,9 +504,10 @@ namespace ZombieCityCleaner.Player
                     folga = 0.25f;
                     if (k >= 1f)
                     {
+                        // fora da água funda, a linha volta (sem texto: a boia bate no chão e vem)
                         if (_naTerra)
                         {
-                            Recolher("A boia caiu fora da água funda");
+                            Recolher();
                             return;
                         }
                         Plop(_pontoDaBoia, 0.5f);
@@ -421,48 +519,85 @@ namespace ZombieCityCleaner.Player
                 case Fase.Esperando:
                 case Fase.Beliscando:
                 {
-                    // as beliscadas: a boia treme e afunda um pouco por 0,4 s
-                    bool belisca = false;
+                    // as beliscadas (o jeito do peixe): a boia desce rápido até a fundura da beliscada, fica um instante,
+                    // tremendo, e volta com um repique; o bagre a arrasta um pouco para o lado
+                    int agora = -1;
+                    float s = 0f;
                     for (int i = 0; i < _quantasBeliscadas; i++)
-                        if (_tempo >= _beliscadas[i] && _tempo < _beliscadas[i] + 0.4f) belisca = true;
-                    if (belisca && _fase == Fase.Esperando)
+                    {
+                        float d = _tempo - _beliscadas[i];
+                        if (d >= 0f && d < _duracaoDaBeliscada[i])
+                        {
+                            agora = i;
+                            s = d / _duracaoDaBeliscada[i];
+                            break;
+                        }
+                    }
+                    if (agora >= 0 && _fase == Fase.Esperando)
                     {
                         _fase = Fase.Beliscando;
-                        Plop(_pontoDaBoia, 0.15f);
-                        AguaNaSuperficie.Onda(_pontoDaBoia, 0.3f);
+                        Plop(_pontoDaBoia, 0.06f + 0.14f * _funduraDaBeliscada[agora]);
+                        AguaNaSuperficie.Onda(_pontoDaBoia, 0.2f + 0.3f * _funduraDaBeliscada[agora]);
                         Rede(true);
                     }
-                    else if (!belisca && _fase == Fase.Beliscando)
+                    else if (agora < 0 && _fase == Fase.Beliscando)
                     {
                         _fase = Fase.Esperando;
                         Rede(true);
                     }
-                    _boiaAgora = _pontoDaBoia + Vector3.up * (Mathf.Sin(Time.time * 2.2f) * 0.02f)
-                                 + (belisca ? Vector3.down * (0.025f + 0.015f * Mathf.Sin(_tempo * 40f)) : Vector3.zero);
+                    _boiaAgora = BoiaNaAgua(_pontoDaBoia);
+                    _afundadaAgora = 0f;
+                    if (agora >= 0)
+                    {
+                        float curva = CurvaDaBeliscada(s);
+                        _afundadaAgora = _funduraDaBeliscada[agora] * Mathf.Max(0f, curva);
+                        _boiaAgora += Vector3.down * (_linha.AcimaDaAgua * _funduraDaBeliscada[agora] * curva * (1f + 0.12f * Mathf.Sin(_tempo * 38f)));
+                        if (_jeito.arrasta) _boiaAgora += _arrasto * (0.12f * Mathf.Max(0f, curva));
+                        folga = 0.8f;
+                    }
+                    // o pulo do espanto e a volta à tona da mordida perdida
+                    float p = (Time.time - _puloEm) / 0.3f;
+                    if (p < 1f) _boiaAgora += Vector3.up * (0.05f * Mathf.Sin(p * Mathf.PI));
+                    float v = (Time.time - _voltaEm) / 0.35f;
+                    if (v < 1f) _boiaAgora += Vector3.down * (_voltaDe * (1f - Mathf.SmoothStep(0f, 1f, v)));
                     if (_tempo >= _espera)
                     {
+                        // a mordida de verdade: a boia some de uma vez
                         _fase = Fase.Mordendo;
                         _tempo = 0f;
-                        _peixe = SortearPeixe();
                         Plop(_pontoDaBoia, 0.9f);
                         AguaNaSuperficie.Onda(_pontoDaBoia, 0.8f);
+                        AguaNaSuperficie.Respingo(_pontoDaBoia, 6, 0.35f);
                         Rede(true);
                     }
                     break;
                 }
                 case Fase.Mordendo:
-                    // a boia afunda e volta: 1,2 s para fisgar
-                    _boiaAgora = _pontoDaBoia + Vector3.down * (0.12f + 0.06f * Mathf.Sin(_tempo * 30f));
-                    folga = 0.6f;
-                    if (_tempo > JanelaDaMordida)
+                {
+                    // a mordida: a boia some em 0,12 s (passa da tona uns 12 cm) e é arrastada uns 40 cm para o lado do peixe,
+                    // tremendo embaixo d'água; a janela é a do peixe (o maior dá menos tempo)
+                    float k = Mathf.Clamp01(_tempo / Sumindo);
+                    float a = Mathf.Clamp01(_tempo / 0.6f);
+                    float fundo = (_linha.AcimaDaAgua + AbaixoDaTona) * (1f - (1f - k) * (1f - k));
+                    _boiaAgora = _pontoDaBoia + _arrasto * (Arrasto * (1f - (1f - a) * (1f - a)))
+                                 + Vector3.down * (fundo + 0.02f * Mathf.Sin(_tempo * 25f) * k);
+                    folga = 0.15f;
+                    if (_tempo > _jeito.janela)
                     {
-                        InventarioJogador.AvisoLocal("O peixe soltou a isca: clique quando a boia afundar");
+                        // perdeu a janela: o peixe soltou, a boia volta à tona de onde ele a deixou, e a espera recomeça
+                        var solta = new Vector3(_boiaAgora.x, _pontoDaBoia.y, _boiaAgora.z);
+                        if (Agua.Fundura(solta) >= FundoMinimo * 0.5f) _pontoDaBoia = solta;
+                        _voltaDe = _pontoDaBoia.y - _boiaAgora.y;
+                        _voltaEm = Time.time;
+                        Plop(_pontoDaBoia, 0.3f);
+                        AguaNaSuperficie.Onda(_pontoDaBoia, 0.45f);
                         ComecarAEspera(0.6f);
                     }
                     break;
+                }
                 case Fase.Puxando:
-                    if (Puxada(dt)) return;
-                    folga = Mathf.Clamp01(1f - _tensao * 1.4f);
+                    if (Briga_(dt)) return;
+                    folga = 0.08f;
                     break;
             }
             _linha.Desenhar(Ponta(), _boiaAgora, folga);
@@ -470,65 +605,92 @@ namespace ZombieCityCleaner.Player
         }
 
         /// <summary>
-        /// A puxada, a cada quadro: o peixe dá arrancos (a força dele, menor quando cansa) e descansa; segurando, a linha
-        /// recolhe e estica; solta, ela afrouxa e o peixe leva linha nos arrancos. Devolve se acabou (pegou ou escapou).
+        /// A briga no círculo, a cada quadro (a etapa 3: <see cref="BrigaDoPeixe"/>): depois do tranco da fisgada, o olhar (que
+        /// na briga não gira a câmera) leva a boia do círculo. No lago, a boia acompanha o peixe numa roda (o círculo da tela
+        /// deitado na água: o x para o lado, o y para longe) em volta de onde ele fisgou, e a roda vem para perto do jogador e
+        /// encolhe conforme a barra enche. Com a boia em cima do peixe, a carretilha recolhe (o som do molinete). Devolve se
+        /// acabou (pegou ou escapou).
         /// </summary>
-        bool Puxada(float dt)
+        bool Briga_(float dt)
         {
-            _trocaDoPeixe -= dt;
-            if (_trocaDoPeixe <= 0f)
+            if (Time.time >= _trancoAte) _briga.Passo(_movimento != null ? _movimento.OlharDaBriga : Vector2.zero, dt);
+            if (_briga.NoPeixe && Time.time >= _proximaCatraca)
             {
-                _peixePuxando = !_peixePuxando;
-                _trocaDoPeixe = _peixePuxando ? Random.Range(0.5f, 1.6f) * (_folegoDoPeixe > 0f ? 1f : 0.5f) : Random.Range(0.6f, 1.6f);
+                _proximaCatraca = Time.time + 0.075f;
+                // (20/11/2026) o molinete recolhendo: grãos da fita rebobinando (o sfxjar)
+                Efeitos.Som(SonsGravados.Um("Pesca", "molinete_"), _rede.Olho.position, 0.3f, false);
             }
-            if (_peixePuxando) _folegoDoPeixe = Mathf.Max(0f, _folegoDoPeixe - dt);
-            float cansado = Mathf.Lerp(0.45f, 1f, _folegoDoPeixe / Mathf.Max(0.1f, _folegoTotal));
-            float alvo = _peixePuxando ? _forca * cansado * (0.85f + 0.15f * Mathf.Sin(_tempo * 9f)) : 0.08f;
-            _puxao = Mathf.MoveTowards(_puxao, alvo, dt * 3f);
-            if (_segura)
-            {
-                _distancia -= Recolhe * (1f - 0.65f * _puxao) * dt;
-                if (Time.time >= _proximaCatraca)
-                {
-                    _proximaCatraca = Time.time + 0.075f;
-                    // (20/11/2026) o molinete recolhendo: grãos da fita rebobinando (o sfxjar; a catraca feita em código, a
-                    // reserva dele, saiu)
-                    Efeitos.Som(SonsGravados.Um("Pesca", "molinete_"), _rede.Olho.position, 0.3f, false);
-                }
-            }
-            else if (_puxao > 0.15f) _distancia += _puxao * Leva * dt;
-            float tensaoAlvo = _segura ? 0.3f + 0.75f * _puxao : 0.04f + 0.2f * _puxao;
-            _tensao = Mathf.MoveTowards(_tensao, tensaoAlvo, (tensaoAlvo > _tensao ? 1.3f : 2.2f) * dt);
-            _frouxa = _tensao < 0.1f ? _frouxa + dt : 0f;
-            // a boia vai com o peixe: na linha até ele, para os lados nos arrancos
-            Vector3 eu = new Vector3(transform.position.x, _pontoDaBoia.y, transform.position.z);
-            Vector3 lado = Vector3.Cross(Vector3.up, _rumoDoPeixe);
-            _boiaAgora = eu + _rumoDoPeixe * _distancia + lado * (Mathf.Sin(_tempo * 2.7f) * 0.7f * _puxao)
-                         + Vector3.down * (0.04f + 0.08f * _puxao);
-            if (_tensao >= 1f) { Escapou("A linha arrebentou: o peixe foi embora", true); return true; }
-            if (_frouxa > 2.2f) { Escapou("A linha afrouxou: o peixe soltou"); return true; }
-            if (_distancia > _distanciaInicial + 7f) { Escapou("O peixe levou a linha longe e escapou"); return true; }
-            if (_tempo > 60f) { Escapou("Demorou demais: o peixe escapou"); return true; }
-            if (_distancia <= Pegou) { Pegou_(); return true; }
+            float perto = Mathf.Clamp01((_briga.Captura - BrigaDoPeixe.Comeco) / (1f - BrigaDoPeixe.Comeco));
+            Vector3 centro = Vector3.Lerp(_ondeFisgou, _pertoNaAgua, perto);
+            Vector3 longe = centro - transform.position;
+            longe.y = 0f;
+            longe = longe.sqrMagnitude > 0.01f ? longe.normalized : transform.forward;
+            Vector3 lado = Vector3.Cross(Vector3.up, longe);
+            float roda = RodaNoLago * Mathf.Lerp(1f, 0.45f, perto);
+            Vector3 alvo = centro + (lado * _briga.Peixe.x + longe * _briga.Peixe.y) * roda + Vector3.down * (0.05f + 0.08f * _briga.Arranco);
+            _boiaAgora = Vector3.Lerp(_boiaAgora, alvo, 1f - Mathf.Exp(-8f * dt));
+            if (_briga.Pegou) { Pegou_(); return true; }
+            if (_briga.Escapou) { Escapou(); return true; }
             return false;
         }
 
-        // a ponta da vara: a do corpo, na terceira pessoa; a dos braços, na primeira (onde ela aparece na tela)
+        // o ponto mais perto do jogador, na reta até onde ele fisgou, que ainda tem água (a boia não chega na terra)
+        Vector3 PertoNaAgua()
+        {
+            Vector3 eu = new Vector3(transform.position.x, _ondeFisgou.y, transform.position.z);
+            Vector3 rumo = eu - _ondeFisgou;
+            float total = rumo.magnitude;
+            if (total < 0.01f) return _ondeFisgou;
+            rumo /= total;
+            Vector3 melhor = _ondeFisgou;
+            for (float d = 0.5f; d <= total - PertoDoJogador; d += 0.5f)
+            {
+                var p = _ondeFisgou + rumo * d;
+                if (!Agua.Nivel(p, out float nivel) || Agua.Fundura(new Vector3(p.x, nivel, p.z)) < 0.3f) break;
+                melhor = new Vector3(p.x, _ondeFisgou.y, p.z);
+            }
+            return melhor;
+        }
+
+        // ------------------------------------------------------------------ a boia
+
+        /// <summary>A boia parada na água: sobe e desce devagar com as ondinhas (pouco, para a beliscada aparecer).</summary>
+        public static Vector3 BoiaNaAgua(Vector3 ponto) => ponto + Vector3.up * (Mathf.Sin(Time.time * 2.2f) * 0.012f);
+
+        /// <summary>
+        /// Uma beliscada, de 0 (o começo) a 1 (o fim): quanto da fundura dela a boia está embaixo. Desce rápido (o primeiro
+        /// quinto), fica, e volta com um repique (passa um pouco da tona, para cima, e assenta).
+        /// </summary>
+        public static float CurvaDaBeliscada(float s)
+        {
+            if (s <= 0f || s >= 1f) return 0f;
+            if (s < 0.22f) return Mathf.SmoothStep(0f, 1f, s / 0.22f);
+            if (s < 0.45f) return 1f;
+            float k = (s - 0.45f) / 0.55f;
+            return Mathf.Pow(1f - k, 1.5f) * Mathf.Cos(k * Mathf.PI * 1.5f);
+        }
+
+        // a ponta da vara: a do corpo, na terceira pessoa; a dos braços, na primeira (onde ela aparece na tela). No vídeo, com a
+        // câmera do filme olhando o corpo (27/11/2026, o vídeo 36: o ModoVideo.Olho), também a do corpo: a dos braços saía no
+        // ar, na frente do rosto, longe da ponta da vara que a câmera vê
         Vector3 Ponta()
         {
             var terceira = _rede.TerceiraPessoa;
-            if (terceira != null && terceira.Ativa && LinhaDaPesca.PontaNoCorpo(_rede, out var noCorpo)) return noCorpo;
+            bool corpoNaTela = (terceira != null && terceira.Ativa) || (Video.ModoVideo.Ligado && Video.ModoVideo.Olho.HasValue);
+            if (corpoNaTela && LinhaDaPesca.PontaNoCorpo(_rede, out var noCorpo)) return noCorpo;
             return LinhaDaPesca.PontaNaTela(_rede, _arma);
         }
 
-        // a boia para os outros (xyz, o ponto; w, a fase); no puxar, dez vezes por segundo
+        // a boia para os outros (xyz, o ponto; w, a fase, e na puxada a força na vara na fração); no puxar, dez vezes por segundo
         void Rede(bool agora)
         {
             if (_inventario == null || !_inventario.IsSpawned) return;
             _proximaRede = Time.time + 0.1f;
             var f = _fase == Fase.Carregando ? Fase.Parado : _fase;
             Vector3 p = _fase == Fase.Puxando ? _boiaAgora : _pontoDaBoia;
-            var v = f == Fase.Parado ? Vector4.zero : new Vector4(p.x, p.y, p.z, (float)f);
+            // (27/11/2026, a vara que entorta) na puxada, a força na vara vai junto, na fração do w (quem lê usa o FloorToInt)
+            float w = (float)f + (f == Fase.Puxando ? Mathf.Clamp(ForcaNaVara, 0f, 0.99f) : 0f);
+            var v = f == Fase.Parado ? Vector4.zero : new Vector4(p.x, p.y, p.z, w);
             if (agora || (v - _inventario.BoiaNaRede.Value).sqrMagnitude > 0.0025f) _inventario.BoiaNaRede.Value = v;
         }
 
@@ -556,82 +718,30 @@ namespace ZombieCityCleaner.Player
             return SomGerado.Clip("Plop", dados, taxa);
         }
 
-        // a linha arrebentando: um estalo e um zunido que cai
-        static AudioClip GerarEstalo()
-        {
-            const int taxa = 22050;
-            int n = taxa / 3;
-            var dados = new float[n];
-            var r = new System.Random(9);
-            float fase = 0f;
-            for (int i = 0; i < n; i++)
-            {
-                float t = i / (float)taxa;
-                fase += 2f * Mathf.PI * Mathf.Lerp(1800f, 300f, Mathf.Clamp01(t * 4f)) / taxa;
-                dados[i] = (float)(r.NextDouble() * 2 - 1) * Mathf.Exp(-t * 90f) * 0.8f + Mathf.Sin(fase) * Mathf.Exp(-t * 9f) * 0.4f;
-            }
-            return SomGerado.Clip("Linha arrebentando", dados, taxa);
-        }
-
         // ------------------------------------------------------------------ a tela
 
+        /// <summary>
+        /// A tela da pesca, sem nada escrito (27/11/2026): carregando, só a barrinha fina da força, embaixo da mira; na briga,
+        /// o círculo (<see cref="CirculoDaPesca"/>), e depois dela o fim (o peixe saltando ou fugindo). Esperando, beliscando e
+        /// na mordida, nada: a boia conta.
+        /// </summary>
         void OnGUI()
         {
-            if (_fase == Fase.Parado || _rede == null || !_rede.IsOwner || MenuOnline.Aberto || MenuOnline.Cinema) return;
+            // (gravando um vídeo, nada de HUD: 27/11/2026, o vídeo 36, como as outras telas do jogo)
+            if (_rede == null || !_rede.IsOwner || MenuOnline.Aberto || MenuOnline.Cinema || Video.ModoVideo.Ligado) return;
             if (Event.current.type != EventType.Repaint) return;
+            if (_fase == Fase.Puxando && _briga != null)
+            {
+                CirculoDaPesca.Desenhar(_briga);
+                return;
+            }
+            if (CirculoDaPesca.Mostrando) CirculoDaPesca.DesenharFim();
+            if (_fase != Fase.Carregando) return;
             float u = Screen.height / 720f;
-            if (_estilo == null || !Mathf.Approximately(u, _u))
-            {
-                _u = u;
-                _estilo = new GUIStyle(EstilosDoHud.Rotulo(Mathf.RoundToInt(15 * u), FontStyle.Bold, TextAnchor.MiddleCenter));
-                _estiloPequeno = new GUIStyle(EstilosDoHud.Rotulo(Mathf.RoundToInt(12 * u), FontStyle.Bold, TextAnchor.MiddleCenter));
-            }
-            float cx = Screen.width * 0.5f, y = Screen.height * 0.5f + 90 * u;
-            var claro = new Color(0.95f, 0.93f, 0.86f);
-            float w = 260 * u, h = 14 * u, x = cx - w / 2f, yb = y + 28 * u;
-            switch (_fase)
-            {
-                case Fase.Carregando:
-                    Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u), "Solte para lançar", claro, _estilo);
-                    Retangulo(new Rect(x, yb, w, h), new Color(0f, 0f, 0f, 0.55f));
-                    Retangulo(new Rect(x, yb, w * _carga, h), Color.Lerp(new Color(0.45f, 0.8f, 1f, 0.9f), new Color(1f, 0.85f, 0.3f, 0.95f), _carga));
-                    Texto(new Rect(x, yb + h + 2 * u, w, 18 * u), $"{Mathf.Lerp(LanceMinimo, AlcanceDoLance, _carga):0} m", claro, _estiloPequeno);
-                    break;
-                case Fase.Esperando:
-                    Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u), "Esperando o peixe (clique: recolher a linha)", claro, _estilo);
-                    break;
-                case Fase.Beliscando:
-                    Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u), "Beliscando... espere a boia afundar", new Color(0.8f, 0.9f, 1f), _estilo);
-                    break;
-                case Fase.Mordendo:
-                    Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u), "MORDEU! Clique!", new Color(1f, 0.85f, 0.3f), _estilo);
-                    break;
-                case Fase.Puxando:
-                {
-                    bool puxando = _puxao > 0.4f;
-                    Texto(new Rect(cx - 300 * u, y, 600 * u, 24 * u),
-                        puxando ? "O PEIXE ESTÁ PUXANDO: solte!" : "Segure o clique para recolher",
-                        puxando ? new Color(1f, 0.55f, 0.25f) : claro, _estilo);
-                    // a tensão: frouxa (amarelo), boa (verde), perto de arrebentar (vermelho)
-                    Retangulo(new Rect(x, yb, w, h), new Color(0f, 0f, 0f, 0.55f));
-                    Retangulo(new Rect(x, yb, w * 0.12f, h), new Color(0.9f, 0.8f, 0.25f, 0.55f));
-                    Retangulo(new Rect(x + w * 0.12f, yb, w * 0.73f, h), new Color(0.3f, 0.75f, 0.35f, 0.55f));
-                    Retangulo(new Rect(x + w * 0.85f, yb, w * 0.15f, h), new Color(0.9f, 0.25f, 0.2f, 0.7f));
-                    float px = x + w * Mathf.Clamp01(_tensao);
-                    Retangulo(new Rect(px - 2 * u, yb - 4 * u, 4 * u, h + 8 * u), Color.white);
-                    Texto(new Rect(x, yb + h + 2 * u, w, 18 * u), $"TENSÃO DA LINHA · o peixe a {_distancia:0.0} m", claro, _estiloPequeno);
-                    break;
-                }
-            }
-        }
-
-        void Texto(Rect r, string t, Color c, GUIStyle estilo)
-        {
-            if (string.IsNullOrEmpty(t)) return;
-            estilo.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
-            GUI.Label(new Rect(r.x + 1.5f, r.y + 1.5f, r.width, r.height), t, estilo);
-            estilo.normal.textColor = c;
-            GUI.Label(r, t, estilo);
+            float cx = Screen.width * 0.5f, yb = Screen.height * 0.5f + 60 * u;
+            float w = 120 * u, h = 4 * u, x = cx - w / 2f;
+            Retangulo(new Rect(x - u, yb - u, w + 2 * u, h + 2 * u), new Color(0f, 0f, 0f, 0.45f));
+            Retangulo(new Rect(x, yb, w * _carga, h), Color.Lerp(new Color(0.75f, 0.9f, 1f, 0.85f), new Color(1f, 0.85f, 0.35f, 0.95f), _carga));
         }
 
         static void Retangulo(Rect r, Color c)

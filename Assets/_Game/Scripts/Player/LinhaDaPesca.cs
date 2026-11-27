@@ -22,16 +22,42 @@ namespace ZombieCityCleaner.Player
         static readonly Vector3[] _caminho = new Vector3[Pontos];
 
         public bool Visivel => _boia != null && _boia.activeSelf;
-        public Vector3 PosicaoDaBoia => _boia != null ? _boia.transform.position : Vector3.zero;
+        /// <summary>O ponto da boia (o da linha d'água dela) do último desenho.</summary>
+        public Vector3 PosicaoDaBoia => _boia != null ? _ponto : Vector3.zero;
+        Vector3 _ponto;
 
-        /// <summary>A boia em 'boia' e a linha de 'ponta' até ela; 'folga' de 0 (esticada) a 1 (frouxa).</summary>
+        /// <summary>
+        /// Quanto da boia fica fora d'água (m), parada: da linha d'água dela até o topo do desenho (27/11/2026, a pesca nova:
+        /// a beliscada afunda uma parte disso, e a mordida leva tudo para baixo). Cria o desenho, se ainda não existir.
+        /// </summary>
+        public float AcimaDaAgua
+        {
+            get
+            {
+                Criar();
+                return _acima;
+            }
+        }
+        float _acima = 0.04f, _calado;
+
+        /// <summary>
+        /// A parte da altura da boia que fica embaixo d'água, parada (27/11/2026, as fotos da pesca nova: ela ficava inteira em
+        /// cima d'água, como apoiada nela). Na boia do jogo, a metade branca de baixo afunda e a vermelha fica de fora.
+        /// </summary>
+        const float FracaoNaAgua = 0.4f;
+
+        /// <summary>
+        /// A boia em 'boia' (o ponto da linha d'água dela: na tona, parada) e a linha de 'ponta' até ela; 'folga' de 0
+        /// (esticada) a 1 (frouxa).
+        /// </summary>
         public void Desenhar(Vector3 ponta, Vector3 boia, float folga)
         {
             Criar();
             _boia.SetActive(true);
-            _boia.transform.position = boia;
+            _ponto = boia;
+            _boia.transform.position = boia + Vector3.down * _calado;
             _linha.enabled = true;
-            Vector3 topo = boia + Vector3.up * 0.03f;
+            Vector3 topo = boia + Vector3.up * (_acima * 0.6f);
             float comprimento = Vector3.Distance(ponta, topo);
             float barriga = Mathf.Clamp01(folga) * Mathf.Min(1.4f, comprimento * 0.09f);
             for (int i = 0; i < Pontos; i++)
@@ -67,6 +93,16 @@ namespace ZombieCityCleaner.Player
             }
             foreach (var c in _boia.GetComponentsInChildren<Collider>()) Object.Destroy(c);
             _boia.name = "Boia da pesca";
+            // a linha d'água e o que fica fora d'água, pelo desenho (a boia nasce na origem; até 25 cm, por segurança)
+            var desenhos = _boia.GetComponentsInChildren<Renderer>();
+            if (desenhos.Length > 0)
+            {
+                var caixa = desenhos[0].bounds;
+                for (int i = 1; i < desenhos.Length; i++) caixa.Encapsulate(desenhos[i].bounds);
+                float baixo = caixa.min.y - _boia.transform.position.y, alto = Mathf.Min(caixa.max.y - _boia.transform.position.y, baixo + 0.25f);
+                _calado = baixo + FracaoNaAgua * (alto - baixo);
+                _acima = Mathf.Max(0.01f, alto - _calado);
+            }
             var go = new GameObject("Linha da pesca");
             _linha = go.AddComponent<LineRenderer>();
             _linha.positionCount = Pontos;

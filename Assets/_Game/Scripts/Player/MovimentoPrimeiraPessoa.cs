@@ -56,6 +56,15 @@ namespace ZombieCityCleaner.Player
         public const float GiroSentadoMaximo = 110f;
         /// <summary>Os testes (pelo MCP): o olhar a mais a cada quadro (graus: x para os lados, y para cima).</summary>
         public static Vector2 OlharNoTeste;
+
+        /// <summary>
+        /// Na briga com o peixe (27/11/2026, a pesca nova: <see cref="BrigaDoPeixe"/>): a câmera não gira e o corpo não anda; o
+        /// olhar deste quadro (o mouse ou o analógico direito, em graus) vai para a boia do círculo, em
+        /// <see cref="OlharDaBriga"/>.
+        /// </summary>
+        [System.NonSerialized] public bool NaBriga;
+        /// <summary>O olhar deste quadro na briga (graus: x para a direita, y para cima); zero fora dela.</summary>
+        public Vector2 OlharDaBriga { get; private set; }
         float _giroDaCabeca;
         bool _olhoVoltando;
 
@@ -384,6 +393,13 @@ namespace ZombieCityCleaner.Player
             }
 
             olhar += OlharNoTeste;
+            // na briga com o peixe, o olhar vai para a boia do círculo; a câmera e o corpo ficam parados
+            OlharDaBriga = NaBriga ? olhar : Vector2.zero;
+            if (NaBriga)
+            {
+                olhar = mover = Vector2.zero;
+                correr = pular = abaixar = false;
+            }
             // sentado no chão, o olhar vira só a cabeça; levantando, o corpo vira para onde ela olhava (18/11/2026)
             if (CorpoParado) _giroDaCabeca = Mathf.Clamp(_giroDaCabeca + olhar.x, -GiroSentadoMaximo, GiroSentadoMaximo);
             else

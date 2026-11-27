@@ -87,6 +87,8 @@ namespace ZombieCityCleaner.EditorTools
             else Debug.LogWarning($"Vara: falta {FbxDaVara} (rode o Blender/vara_animacoes.py).");
             AssetDatabase.SaveAssets();
             Debug.Log($"A vara de pesca montada ({feitos} de 3 partes).");
+            // (27/11/2026) os prefabs foram refeitos: os ossos da ponta que entorta de novo
+            MontagemDaVaraQueEntorta.Montar();
         }
 
         // ------------------------------------------------------------------ a primeira pessoa

@@ -70,7 +70,16 @@ namespace ZombieCityCleaner.Player
                     m = i;
                     break;
                 }
-            if (m < 0 || m >= _rede.pintaveis.Length || !(_rede.pintaveis[m] is SkinnedMeshRenderer fp) || fp.sharedMesh == null) return;
+            SkinnedMeshRenderer fp = null;
+            if (m >= 0 && m < _rede.pintaveis.Length) fp = _rede.pintaveis[m] as SkinnedMeshRenderer;
+            else if (m < 0)
+            {
+                // (27/11/2026) os braços de fora da mão (nadando, com a vara): sem eles aqui, a pele antiga deles aparecia, com
+                // a mão de antes. A chave deles (para os ossos medidos) vem do nome, sempre negativa: não bate com um modelo
+                var extra = _arma.ExtraAMostra;
+                if (extra != null && (fp = PeleDe(extra)) != null) m = -2 - (Animator.StringToHash(extra.name) & 0x3fffffff);
+            }
+            if (fp == null || fp.sharedMesh == null) return;
             if (_semPele == null)
             {
                 var roupas = Roupas.ItensDasRoupas.Carregar();
@@ -86,6 +95,14 @@ namespace ZombieCityCleaner.Player
                 mats[0] = _semPele;
                 fp.sharedMaterials = mats;
             }
+        }
+
+        // a malha dos braços de um extra (a do prefab dele; as cópias vestidas, filhas dele depois da montagem, ficam de fora)
+        static SkinnedMeshRenderer PeleDe(GameObject extra)
+        {
+            foreach (var r in extra.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (!r.name.StartsWith("Nos braços")) return r;
+            return null;
         }
 
         void OnDestroy()

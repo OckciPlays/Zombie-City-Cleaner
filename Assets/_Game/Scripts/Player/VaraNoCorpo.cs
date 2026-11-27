@@ -55,8 +55,11 @@ namespace ZombieCityCleaner.Player
         RuntimeAnimatorController _controladorVisto;
         bool _temEstados, _naVara, _desenhoVisivel = true, _desenhoAplicado;
         int _estado;
-        float _giro, _recolherAte = -1f;
+        float _giro, _recolherAte = -1f, _trancoDesde = -1f, _desdeDaFase;
         PescaJogador.Fase _faseAntes;
+        // a ponta que entorta (a etapa 2 da pesca nova) e o último rumo da linha
+        VaraQueEntorta _dobra;
+        Vector3 _rumoDaLinha = Vector3.down;
 
         static bool _procurou;
         static GameObject _prefab;
@@ -129,6 +132,37 @@ namespace ZombieCityCleaner.Player
             _vara.transform.SetPositionAndRotation(_mao.position, _mao.rotation);
             Desenho();
             Animar(animador);
+            Entortar();
+        }
+
+        /// <summary>
+        /// A ponta da vara entortando (27/11/2026, a etapa 2 da pesca nova: <see cref="VaraQueEntorta"/>) para o lado da boia:
+        /// no dono, pela força que a pesca dele calcula; nos outros, pela fase da rede (e, na puxada, pela força que vai junto).
+        /// Sem a linha, ela assenta de volta, reta.
+        /// </summary>
+        void Entortar()
+        {
+            if (_dobra == null) return;
+            var fase = FaseAgora(out _);
+            float alvo;
+            Vector3 boia;
+            if (_rede.IsOwner && _pesca != null)
+            {
+                alvo = _pesca.ForcaNaVara;
+                boia = _pesca.BoiaAgora;
+            }
+            else
+            {
+                var v = _inventario.BoiaNaRede.Value;
+                alvo = VaraQueEntorta.ForcaPelaRede(fase, v.w - (int)fase, _desdeDaFase);
+                boia = v;
+            }
+            if (fase != PescaJogador.Fase.Parado && fase != PescaJogador.Fase.Carregando && _ponta != null)
+            {
+                var rumo = boia - _ponta.position;
+                if (rumo.sqrMagnitude > 1e-6f) _rumoDaLinha = rumo;
+            }
+            _dobra.Aplicar(alvo, _rumoDaLinha, Time.deltaTime);
         }
 
         // ------------------------------------------------------------------ o que ele faz
@@ -140,6 +174,8 @@ namespace ZombieCityCleaner.Player
             if (fase == PescaJogador.Fase.Parado && _faseAntes != PescaJogador.Fase.Parado && _faseAntes != PescaJogador.Fase.Carregando)
                 _recolherAte = Time.time + RecolherDepois;
             bool soltou = fase == PescaJogador.Fase.Voando && _faseAntes != PescaJogador.Fase.Voando;
+            if (fase == PescaJogador.Fase.Puxando && _faseAntes != PescaJogador.Fase.Puxando) _trancoDesde = Time.time;
+            if (fase != _faseAntes) _desdeDaFase = Time.time;
             var antes = _faseAntes;
             _faseAntes = fase;
             if (!animador.isInitialized) return;
@@ -165,8 +201,19 @@ namespace ZombieCityCleaner.Player
                     }
                     break;
                 case PescaJogador.Fase.Puxando:
-                    Ir(animador, PuxarId, 0.2f);
+                {
+                    // a fisgada (27/11/2026, a pesca nova: "faz uma animação de puxar a vara para trás"): o tranco, a vara vai
+                    // para trás por cima do ombro em 0,18 s (o começo do Lancar até o alto do preparo, tocado à mão, sem clipe
+                    // novo), e daí ela cai no Puxar
+                    float k = (Time.time - _trancoDesde) / PescaJogador.DuracaoDoTranco;
+                    if (k < 1f)
+                    {
+                        _estado = LancarId;
+                        animador.Play(LancarId, CamadaDosBracos, Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI * 0.5f) * (LancarPreparo / LancarDuracao));
+                    }
+                    else Ir(animador, PuxarId, 0.15f);
                     break;
+                }
                 default:
                     // esperando, beliscando, mordendo ou parado: segurando (o lance termina antes)
                     if (_estado == LancarId && EstadoAgora(animador) == LancarId && Normalizado(animador) < 0.98f) break;
@@ -221,7 +268,7 @@ namespace ZombieCityCleaner.Player
                 carga = _pesca.Carga;
                 return _pesca.FaseAgora;
             }
-            return (PescaJogador.Fase)Mathf.RoundToInt(_inventario.BoiaNaRede.Value.w);
+            return (PescaJogador.Fase)Mathf.FloorToInt(_inventario.BoiaNaRede.Value.w + 0.001f);   // (a fração é a força na vara)
         }
 
         // ------------------------------------------------------------------ as peças
@@ -234,12 +281,17 @@ namespace ZombieCityCleaner.Player
             _manivela = _ponta = null;
             _giro = 0f;
             int camada = _rede.animadorCorpo != null ? _rede.animadorCorpo.gameObject.layer : gameObject.layer;
+            Transform pontaQueEntorta = null;
             foreach (var t in _vara.GetComponentsInChildren<Transform>(true))
             {
                 t.gameObject.layer = camada;
                 if (t.name == "Manivela") _manivela = t;
                 else if (t.name == "Ponta") _ponta = t;
+                else if (t.name == VaraQueEntorta.NomeDaPonta) pontaQueEntorta = t;
             }
+            // (27/11/2026) a vara que entorta: a linha sai da ponta no último osso
+            if (pontaQueEntorta != null) _ponta = pontaQueEntorta;
+            _dobra = VaraQueEntorta.De(_vara.transform);
             foreach (var c in _vara.GetComponentsInChildren<Collider>(true)) Destroy(c);
             // o eixo da manivela: o da carretilha, de lado na vara (no espaço do pai dela, a vara), no espaço da manivela
             if (_manivela != null)
